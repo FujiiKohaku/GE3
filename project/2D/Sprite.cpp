@@ -34,19 +34,23 @@ void Sprite::Update()
     // -------------------------------
     // 頂点データを設定
     // -------------------------------
-    vertexData[0].position = { 0.0f, 1.0f, 0.0f, 1.0f }; // 左下
+    float left = 0.0f - anchorPoint_.x;
+    float right = 1.0f - anchorPoint_.x;
+    float top = 0.0f - anchorPoint_.y;
+    float bottom = 1.0f - anchorPoint_.y;
+    vertexData[0].position = { left, bottom, 0.0f, 1.0f }; // 左下
     vertexData[0].texcoord = { 0.0f, 1.0f };
     vertexData[0].normal = { 0.0f, 0.0f, -1.0f };
 
-    vertexData[1].position = { 0.0f, 0.0f, 0.0f, 1.0f }; // 左上
+    vertexData[1].position = { left, top, 0.0f, 1.0f }; // 左上
     vertexData[1].texcoord = { 0.0f, 0.0f };
     vertexData[1].normal = { 0.0f, 0.0f, -1.0f };
 
-    vertexData[2].position = { 1.0f, 1.0f, 0.0f, 1.0f }; // 右下
+    vertexData[2].position = { right, bottom, 0.0f, 1.0f }; // 右下
     vertexData[2].texcoord = { 1.0f, 1.0f };
     vertexData[2].normal = { 0.0f, 0.0f, -1.0f };
 
-    vertexData[3].position = { 1.0f, 0.0f, 0.0f, 1.0f }; // 右上
+    vertexData[3].position = { right, top, 0.0f, 1.0f }; // 右上
     vertexData[3].texcoord = { 1.0f, 0.0f };
     vertexData[3].normal = { 0.0f, 0.0f, -1.0f };
 
@@ -126,7 +130,7 @@ void Sprite::CreateVertexBuffer()
     indexResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * 6);
 
     // -------------------------------
-    // 頂点バッファビュー設定 
+    // 頂点バッファビュー設定
     // -------------------------------
     vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
     vertexBufferView.SizeInBytes = UINT(sizeof(VertexData) * 4);
