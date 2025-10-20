@@ -6,7 +6,7 @@
 // ================================
 // スプライトの初期化
 // ================================
-void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePath)
+void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePath)　
 {
     // SpriteManagerを記録（描画管理用）
     spriteManager_ = spriteManager;
