@@ -105,6 +105,8 @@ void Game::Initialize()
     // SpriteManager
     spriteManager_ = new SpriteManager();
     spriteManager_->Initialize(dxCommon_);
+    sprite_ = new Sprite();
+    sprite_->Initialize(spriteManager_, "resources/uvChecker.png");
 
     // =============================
     // 3. 3D関連の初期化
@@ -254,25 +256,33 @@ void Game::Update()
         t = 0.0f;
     //============================================
 
-     // static float t = 0.0f;
-     // t += 0.5f; // ← 高速で回すのがコツ（0.01じゃ遅すぎ）
+    // static float t = 0.0f;
+    // t += 0.5f; // ← 高速で回すのがコツ（0.01じゃ遅すぎ）
 
-     // // 速いsin波で小刻みに揺らす
-     // float shake = std::sin(t * 90.0f) * 0.05f; // 周波数60、振幅0.05
+    // // 速いsin波で小刻みに揺らす
+    // float shake = std::sin(t * 90.0f) * 0.05f; // 周波数60、振幅0.05
 
-     //float baseScale = 1.0f + std::sin(t) * 0.5f;
-     //  float scale = baseScale + shake;
+    // float baseScale = 1.0f + std::sin(t) * 0.5f;
+    //   float scale = baseScale + shake;
 
-     // player2_.SetScale({ scale, scale, scale });
+    // player2_.SetScale({ scale, scale, scale });
 
-     // if (t > 6.28f)
-     //     t = 0.0f;
+    // if (t > 6.28f)
+    //     t = 0.0f;
 
     // 各3Dオブジェクトの更新
 
     player2_.Update();
 
     camera_->Update();
+    // 回転を加える
+    static float angle = 0.0f;
+    angle += 0.05f; // 毎フレーム回転（ラジアン単位）
+
+    // スプライトに反映
+    sprite_->SetRotation(angle);
+    sprite_->SetAnchorPoint({ -0.5f, -0.5f });
+    sprite_->Update();
 }
 
 void Game::Draw()
@@ -280,7 +290,7 @@ void Game::Draw()
     // ==============================
     //  描画処理（Draw）
     // ==============================
-
+    spriteManager_->PreDraw();
     // バックバッファの切り替え準備
     dxCommon_->PreDraw();
 
@@ -288,6 +298,8 @@ void Game::Draw()
     object3dManager_->PreDraw(); // 3D描画準備
 
     player2_.Draw();
+
+    sprite_->Draw();
 
     // ----- ImGui描画（デバッグUI） -----
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon_->GetCommandList());
@@ -305,7 +317,7 @@ void Game::Finalize()
     delete object3dManager_;
     sprites_.clear();
     delete spriteManager_;
-
+    delete sprite_;
     // 2. ImGuiを破棄（DirectXがまだ生きているうちに）
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();

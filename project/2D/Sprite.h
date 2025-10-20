@@ -133,4 +133,17 @@ private:
     void CreateVertexBuffer(); // 頂点バッファ生成
     void CreateMaterialBuffer(); // マテリアルバッファ生成
     void CreateTransformationMatrixBuffer(); // 変換行列バッファ生成
+
+    // ===============================
+    // スプライト拡張
+    // ===============================
+
+    // アンカーポイント
+    Vector2 anchorPoint_ = { 0.0f, 0.0f };
+
+public:
+    // getter
+    const Vector2& GetAnchorPoint() const { return anchorPoint_; }
+    // setter
+    void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
 };
