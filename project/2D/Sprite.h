@@ -146,20 +146,31 @@ private:
     // 上下フリップ
     bool isFlipY_ = false;
 
+    // テクスチャ左上座標
+    Vector2 textureLeftTop_ = { 0.0f, 0.0f };
+    // テクスチャ切り出しサイズ
+    Vector2 textureSize_ = { 100.0f, 100.0f };
+
 public:
     // getter
     const Vector2& GetAnchorPoint() const { return anchorPoint_; }
     // setter
     void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
+
     // ========================================
     // Setter
     // ========================================
     void SetIsFlipX(bool isFlipX) { isFlipX_ = isFlipX; }
     void SetIsFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
-
+    // --- セッター ---
+    void SetTextureLeftTop(const Vector2& leftTop) { textureLeftTop_ = leftTop; }
+    void SetTextureSize(const Vector2& size) { textureSize_ = size; }
     // ========================================
     // Getter
     // ========================================
     bool GetIsFlipX() const { return isFlipX_; }
     bool GetIsFlipY() const { return isFlipY_; }
+    // --- ゲッター ---
+    const Vector2& GetTextureLeftTop() const { return textureLeftTop_; }
+    const Vector2& GetTextureSize() const { return textureSize_; }
 };
