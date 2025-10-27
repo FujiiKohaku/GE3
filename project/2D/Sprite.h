@@ -141,9 +141,25 @@ private:
     // アンカーポイント
     Vector2 anchorPoint_ = { 0.0f, 0.0f };
 
+    // 左右フリップ
+    bool isFlipX_ = false;
+    // 上下フリップ
+    bool isFlipY_ = false;
+
 public:
     // getter
     const Vector2& GetAnchorPoint() const { return anchorPoint_; }
     // setter
     void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
+    // ========================================
+    // Setter
+    // ========================================
+    void SetIsFlipX(bool isFlipX) { isFlipX_ = isFlipX; }
+    void SetIsFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
+
+    // ========================================
+    // Getter
+    // ========================================
+    bool GetIsFlipX() const { return isFlipX_; }
+    bool GetIsFlipY() const { return isFlipY_; }
 };
