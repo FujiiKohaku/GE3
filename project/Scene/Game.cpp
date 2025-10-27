@@ -105,6 +105,8 @@ void Game::Initialize()
     // SpriteManager
     spriteManager_ = new SpriteManager();
     spriteManager_->Initialize(dxCommon_);
+    sprite_ = new Sprite();
+    sprite_->Initialize(spriteManager_, "resources/uvChecker.png");
 
     // =============================
     // 3. 3D関連の初期化
@@ -222,6 +224,7 @@ void Game::Update()
     ImGui::Begin("Camera Controller");
     ImGui::SliderFloat3("Translate", &camera_->GetTranslate().x, -50.0f, 50.0f);
     ImGui::SliderFloat3("Rotate", &camera_->GetRotate().x, -3.14f, 3.14f);
+
     ImGui::End();
 
     ImGui::Render(); // ImGuiの内部コマンドを生成（描画直前に呼ぶ）
@@ -233,70 +236,56 @@ void Game::Update()
     input_->Update();
 
     //============================================
-    static float t = 0.0f;
-    static float s = 0.0f;
-    // 時間を進める
-    t += 0.1f;
-    s += 3.5f;
-    // 爆発的拡大＋バウンド減衰
-    float explosion = std::exp(-t * 1.0f) * std::sin(s * 100.0f); // 減衰振動
-    float scale = 1.0f + std::abs(explosion) * 4.0f; // 最大約5倍！
 
-    // 微振動で「ブルッ」と揺れる演出
-    float shake = std::sin(s * 60.0f) * 0.05f;
-    scale += shake;
-
-    // スケール適用
-    player2_.SetScale({ scale, scale, scale });
-
-    // ループ
-    if (t > 6.28f)
-        t = 0.0f;
     //============================================
 
-     // static float t = 0.0f;
-     // t += 0.5f; // ← 高速で回すのがコツ（0.01じゃ遅すぎ）
+    // static float t = 0.0f;
+    // t += 0.5f; // ← 高速で回すのがコツ（0.01じゃ遅すぎ）
 
-     // // 速いsin波で小刻みに揺らす
-     // float shake = std::sin(t * 90.0f) * 0.05f; // 周波数60、振幅0.05
+    // // 速いsin波で小刻みに揺らす
+    // float shake = std::sin(t * 90.0f) * 0.05f; // 周波数60、振幅0.05
 
-     //float baseScale = 1.0f + std::sin(t) * 0.5f;
-     //  float scale = baseScale + shake;
+    // float baseScale = 1.0f + std::sin(t) * 0.5f;
+    //   float scale = baseScale + shake;
 
-     // player2_.SetScale({ scale, scale, scale });
+    // player2_.SetScale({ scale, scale, scale });
 
-     // if (t > 6.28f)
-     //     t = 0.0f;
+    // if (t > 6.28f)
+    //     t = 0.0f;
 
     // 各3Dオブジェクトの更新
 
     player2_.Update();
 
     camera_->Update();
+
+
+    sprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    sprite_->SetPosition({ 300.0f, 200.0f });
+    //sprite_->SetIsFlipY(true);
+    // テクスチャ内の切り出し位置とサイズを設定
+    //sprite_->SetTextureLeftTop({ 0.0f, 0.0f }); // 左上の位置（ピクセル単位）
+    //sprite_->SetTextureSize({ 64.0f, 64.0f }); // 切り抜きサイズ（幅×高さ）
+
+    sprite_->Update();
 }
 
 void Game::Draw()
 {
-    // ==============================
-    //  描画処理（Draw）
-    // ==============================
-
-    // バックバッファの切り替え準備
+    // ===== 3D描画 =====
     dxCommon_->PreDraw();
-
-    // ----- 3Dオブジェクト描画 -----
-    object3dManager_->PreDraw(); // 3D描画準備
-
+    object3dManager_->PreDraw();
     player2_.Draw();
 
-    // ----- ImGui描画（デバッグUI） -----
+    // ===== 2D描画（スプライト） =====
+    spriteManager_->PreDraw();
+    sprite_->Draw();
+
+    // ===== ImGui（最前面） =====
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon_->GetCommandList());
 
-    // ----- 描画終了処理 -----
+    // ===== 終了 =====
     dxCommon_->PostDraw();
-
-    // コマンドリスト状態確認ログ
-    Logger::Log("CommandList state check before Close()");
 }
 
 void Game::Finalize()
@@ -305,7 +294,7 @@ void Game::Finalize()
     delete object3dManager_;
     sprites_.clear();
     delete spriteManager_;
-
+    delete sprite_;
     // 2. ImGuiを破棄（DirectXがまだ生きているうちに）
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();

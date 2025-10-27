@@ -133,4 +133,46 @@ private:
     void CreateVertexBuffer(); // 頂点バッファ生成
     void CreateMaterialBuffer(); // マテリアルバッファ生成
     void CreateTransformationMatrixBuffer(); // 変換行列バッファ生成
+
+    // ===============================
+    // スプライト拡張
+    // ===============================
+
+    // アンカーポイント
+    Vector2 anchorPoint_ = { 0.0f, 0.0f };
+
+    // 左右フリップ
+    bool isFlipX_ = false;
+    // 上下フリップ
+    bool isFlipY_ = false;
+
+    // テクスチャ左上座標
+    Vector2 textureLeftTop_;
+    // テクスチャ切り出しサイズ
+    Vector2 textureSize_;
+    // テクスチャサイズをイメージに合わせる
+    void AdjustTextureSize();
+
+public:
+    // getter
+    const Vector2& GetAnchorPoint() const { return anchorPoint_; }
+    // setter
+    void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
+
+    // ========================================
+    // Setter
+    // ========================================
+    void SetIsFlipX(bool isFlipX) { isFlipX_ = isFlipX; }
+    void SetIsFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
+    // --- セッター ---
+    void SetTextureLeftTop(const Vector2& leftTop) { textureLeftTop_ = leftTop; }
+    void SetTextureSize(const Vector2& size) { textureSize_ = size; }
+    // ========================================
+    // Getter
+    // ========================================
+    bool GetIsFlipX() const { return isFlipX_; }
+    bool GetIsFlipY() const { return isFlipY_; }
+    // --- ゲッター ---
+    const Vector2& GetTextureLeftTop() const { return textureLeftTop_; }
+    const Vector2& GetTextureSize() const { return textureSize_; }
 };
