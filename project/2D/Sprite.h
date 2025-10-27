@@ -147,16 +147,18 @@ private:
     bool isFlipY_ = false;
 
     // テクスチャ左上座標
-    Vector2 textureLeftTop_ = { 0.0f, 0.0f };
+    Vector2 textureLeftTop_;
     // テクスチャ切り出しサイズ
-    Vector2 textureSize_ = { 100.0f, 100.0f };
+    Vector2 textureSize_;
+    // テクスチャサイズをイメージに合わせる
+    void AdjustTextureSize();
 
 public:
     // getter
     const Vector2& GetAnchorPoint() const { return anchorPoint_; }
     // setter
     void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
-     
+
     // ========================================
     // Setter
     // ========================================

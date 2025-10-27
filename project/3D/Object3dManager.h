@@ -48,4 +48,5 @@ private:
     ID3DBlob* errorBlob = nullptr;
 
     Camera* defaultCamera_ = nullptr;
+
 };

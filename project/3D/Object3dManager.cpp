@@ -180,4 +180,6 @@ void Object3dManager::CreateGraphicsPipeline()
     hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
         &desc, IID_PPV_ARGS(&graphicsPipelineState));
 }
+
 #pragma endregion
+
