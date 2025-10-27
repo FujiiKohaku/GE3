@@ -260,9 +260,9 @@ void Game::Update()
     camera_->Update();
 
 
-    sprite_->SetAnchorPoint({ 0.5f, 0.0f });
+    sprite_->SetAnchorPoint({ 0.5f, 0.5f });
     sprite_->SetPosition({ 300.0f, 200.0f });
-    //sprite_->SetIsFlipY(true);
+    sprite_->SetIsFlipY(true);
     sprite_->Update();
 }
 

@@ -118,22 +118,39 @@ void SpriteManager::CreateGraphicsPipeline()
 {
     HRESULT hr;
 
-    // ------------------------------
-    // 入力レイアウト（頂点の構造）
-    // ------------------------------
-    D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
-    inputElementDescs[0].SemanticName = "POSITION";
-    inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+   // ------------------------------
+// 入力レイアウト（頂点構造）
+// ------------------------------
+D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
 
-    inputElementDescs[1].SemanticName = "TEXCOORD";
-    inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+// POSITION
+inputElementDescs[0].SemanticName = "POSITION";
+inputElementDescs[0].SemanticIndex = 0;
+inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+inputElementDescs[0].AlignedByteOffset = 0; // 最初の要素は 0
+inputElementDescs[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
-    inputElementDescs[2].SemanticName = "NORMAL";
-    inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
 
-    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
-    inputLayoutDesc.pInputElementDescs = inputElementDescs;
-    inputLayoutDesc.NumElements = _countof(inputElementDescs);
+// TEXCOORD
+inputElementDescs[1].SemanticName = "TEXCOORD";
+inputElementDescs[1].SemanticIndex = 0;
+inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+inputElementDescs[1].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+
+
+// NORMAL
+inputElementDescs[2].SemanticName = "NORMAL";
+inputElementDescs[2].SemanticIndex = 0;
+inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+
+
+// 登録
+D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+inputLayoutDesc.pInputElementDescs = inputElementDescs;
+inputLayoutDesc.NumElements = _countof(inputElementDescs);
+
 
     // ------------------------------
     // ブレンド設定（透明度の扱い）
