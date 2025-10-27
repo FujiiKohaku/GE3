@@ -156,7 +156,7 @@ public:
     const Vector2& GetAnchorPoint() const { return anchorPoint_; }
     // setter
     void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
-
+     
     // ========================================
     // Setter
     // ========================================
