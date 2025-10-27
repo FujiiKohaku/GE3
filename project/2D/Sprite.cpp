@@ -38,6 +38,17 @@ void Sprite::Update()
     float right = 1.0f - anchorPoint_.x;
     float top = 0.0f - anchorPoint_.y;
     float bottom = 1.0f - anchorPoint_.y;
+
+    // 左右反転
+    if (isFlipX_) {
+        left = -left;
+        right = -right;
+    }
+    // 上下反転
+    if (isFlipY_) {
+        top = -top;
+        bottom = -bottom;
+    }
     vertexData[0].position = { left, bottom, 0.0f, 1.0f }; // 左下
     vertexData[0].texcoord = { 0.0f, 1.0f };
     vertexData[0].normal = { 0.0f, 0.0f, -1.0f };
