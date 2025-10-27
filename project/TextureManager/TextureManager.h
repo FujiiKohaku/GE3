@@ -69,4 +69,7 @@ private:
     // SRV管理
     static uint32_t kSRVIndexTop; // SRVインデックスの開始番号（0番はImGui用）
     static const uint32_t kMaxSRVCount = 512; // 最大テクスチャ数（任意に設定可能）
+public:
+    // メタデータを取得
+    const DirectX::TexMetadata& GetMetaData(uint32_t textureIndex);
 };

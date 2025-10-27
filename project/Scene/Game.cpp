@@ -100,13 +100,13 @@ void Game::Initialize()
 
     // TextureManager（シングルトン）
     TextureManager::GetInstance()->Initialize(dxCommon_);
-    TextureManager::GetInstance()->LoadTexture("resources/y.png");
+    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
 
     // SpriteManager
     spriteManager_ = new SpriteManager();
     spriteManager_->Initialize(dxCommon_);
     sprite_ = new Sprite();
-    sprite_->Initialize(spriteManager_, "resources/y.png");
+    sprite_->Initialize(spriteManager_, "resources/uvChecker.png");
 
     // =============================
     // 3. 3D関連の初期化
@@ -260,9 +260,13 @@ void Game::Update()
     camera_->Update();
 
 
-    sprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    sprite_->SetAnchorPoint({ 0.0f, 0.0f });
     sprite_->SetPosition({ 300.0f, 200.0f });
-    sprite_->SetIsFlipY(true);
+    //sprite_->SetIsFlipY(true);
+    // テクスチャ内の切り出し位置とサイズを設定
+    //sprite_->SetTextureLeftTop({ 0.0f, 0.0f }); // 左上の位置（ピクセル単位）
+    //sprite_->SetTextureSize({ 64.0f, 64.0f }); // 切り抜きサイズ（幅×高さ）
+
     sprite_->Update();
 }
 
