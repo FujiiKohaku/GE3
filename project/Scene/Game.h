@@ -71,4 +71,5 @@ private:
     SoundData bgm;
     bool isEnd = false;
     Camera* camera_;
+    Sprite* sprite_ = nullptr;
 };
