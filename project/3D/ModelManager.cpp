@@ -10,7 +10,7 @@ void ModelManager::LoadModel(const std::string& filepath)
         return;
     }
 
-    // モデルの製紙絵と読み込み初期化
+    // モデルの製紙絵と読み込み初期化 
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon_, "resources", filepath);
 
