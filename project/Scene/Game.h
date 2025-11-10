@@ -20,6 +20,7 @@
 #include "Utility.h"
 #include "WinApp.h"
 #include "modelManager.h"
+#include "srvmanager.h"
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -69,4 +70,5 @@ private:
     bool isEnd = false;
     Camera* camera_;
     Sprite* sprite_ = nullptr;
+   /* SrvManager* srvManager_ = nullptr;*/
 };
