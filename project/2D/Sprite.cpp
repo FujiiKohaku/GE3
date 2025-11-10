@@ -20,8 +20,13 @@ void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePat
     // 変換行列バッファを作成（位置・回転・スケール）
     CreateTransformationMatrixBuffer();
 
-    // 指定のテクスチャを読み込み・番号取得
-    textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath);
+    
+
+     //  テクスチャを読み込み（TextureManagerに登録される）
+    TextureManager::GetInstance()->LoadTexture(textureFilePath);
+
+    //  ファイルパスをメンバーに保持
+    textureFilePath_ = textureFilePath;
 
      AdjustTextureSize();
 }
@@ -54,7 +59,7 @@ void Sprite::Update()
     // -------------------------------
     //  テクスチャのメタデータ取得
     // -------------------------------
-    const DirectX::TexMetadata& metadata = TextureManager::GetInstance()->GetMetaData(textureIndex);
+    const DirectX::TexMetadata& metadata = TextureManager::GetInstance()->GetMetaData(textureFilePath_);
 
 
 
@@ -139,7 +144,7 @@ void Sprite::Draw()
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
 
     // テクスチャ（SRV）をセット
-    commandList->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(textureIndex));
+    commandList->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(textureFilePath_));
 
     // 描画コマンド実行（6頂点＝2枚の三角形）
     commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
@@ -222,7 +227,7 @@ void Sprite::AdjustTextureSize()
     // -------------------------------
     // テクスチャメタデータを取得
     // -------------------------------
-    const DirectX::TexMetadata& metadata = TextureManager::GetInstance()->GetMetaData(textureIndex);
+    const DirectX::TexMetadata& metadata = TextureManager::GetInstance()->GetMetaData(textureFilePath_);
 
     // -------------------------------
     // 切り出しサイズをテクスチャ全体サイズに合わせる

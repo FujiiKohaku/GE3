@@ -19,24 +19,23 @@ public:
     // 初期化
     void Initialize(WinApp* winApp);
 
-    // SRVの指定番号のCPUデスクリプタハンドルを取得する
-    D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUDescriptorHandle(uint32_t index);
+    //// SRVの指定番号のCPUデスクリプタハンドルを取得する
+    //D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUDescriptorHandle(uint32_t index);
 
-    D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUDescriptorHandle(uint32_t index);
+    //D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUDescriptorHandle(uint32_t index);
     // 描画前の処理
     void PreDraw();
     // 描画後の処理
     void PostDraw();
-    // 最大SRV数(最大テクスチャ枚数)
-    static const uint32_t kMaxSRVCount;
+ 
     // Getter
     ID3D12Device* GetDevice() const { return device.Get(); }
     ID3D12GraphicsCommandList* GetCommandList() const { return commandList.Get(); }
     ID3D12CommandAllocator* GetCommandAllocator() const { return commandAllocator.Get(); }
     ID3D12CommandQueue* GetCommandQueue() const { return commandQueue.Get(); }
     // SRVヒープとサイズのGetter
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVDescriptorHeap() const { return srvDescriptorHeap; }
-    uint32_t GetSRVDescriptorSize() const { return descriptorSizeSRV; }
+    //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVDescriptorHeap() const { return srvDescriptorHeap; }
+    //uint32_t GetSRVDescriptorSize() const { return descriptorSizeSRV; }
     // シェーダーコンパイル関数
     Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& filepath, const wchar_t* profile);
     // リソース生成関数
@@ -83,10 +82,9 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[2];
     // DSV用のヒープでディスクリプタの数は１。DSVはshader内で触るものではないので,ShaderVisibleはfalse
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap = nullptr;
-    // SRV用のヒープ
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap = nullptr;
 
-    uint32_t descriptorSizeSRV = 0;
+
+
     uint32_t descriptorSizeRTV = 0;
     uint32_t descriptorSizeDSV = 0;
     // スワップチェーンから取得したバックバッファリソース（2枚分）
@@ -131,7 +129,7 @@ private:
     void InitializeScissorRect();
     // DXCコンパイラの生成
     void InitializeDxcCompiler();
-    // IMGUI初期化
-    void InitializeImGui();
+    //// IMGUI初期化
+    //void InitializeImGui();
 
 };

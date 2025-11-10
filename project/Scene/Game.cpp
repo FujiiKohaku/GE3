@@ -72,17 +72,17 @@ void Game::Update()
     // ==============================
     //  ImGuiフレーム開始
     // ==============================
-    ImGui_ImplDX12_NewFrame();
+ /*   ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
+    ImGui::NewFrame();*/
 
     // --- 開発用UI ---
-    ImGui::Begin("Camera Controller");
+ /*   ImGui::Begin("Camera Controller");
     ImGui::SliderFloat3("Translate", &camera_->GetTranslate().x, -50.0f, 50.0f);
     ImGui::SliderFloat3("Rotate", &camera_->GetRotate().x, -3.14f, 3.14f);
     ImGui::End();
 
-    ImGui::Render();
+    ImGui::Render();*/
 
     // ==============================
     //  更新処理
@@ -97,6 +97,7 @@ void Game::Draw()
 {
     // ===== 3D描画 =====
     dxCommon_->PreDraw();
+  
     object3dManager_->PreDraw();
     player2_.Draw();
 
@@ -104,8 +105,8 @@ void Game::Draw()
     spriteManager_->PreDraw();
     sprite_->Draw();
 
-    // ===== ImGui描画 =====
-    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon_->GetCommandList());
+    //// ===== ImGui描画 =====
+    //ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon_->GetCommandList());
 
     // ===== フレーム終了 =====
     dxCommon_->PostDraw();
@@ -127,10 +128,10 @@ void Game::Finalize()
     // --- 入力 ---
     delete input_;
 
-    // --- ImGui ---
-    ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
+    //// --- ImGui ---
+    //ImGui_ImplDX12_Shutdown();
+    //ImGui_ImplWin32_Shutdown();
+    //ImGui::DestroyContext();
 
     // --- モデル・サウンド ---
     ModelManager::GetInstance()->Finalize();

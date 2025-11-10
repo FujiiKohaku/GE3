@@ -80,7 +80,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -105,7 +105,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -134,7 +134,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <Optimization>Disabled</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -195,6 +195,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="3D\Model.cpp" />
     <ClCompile Include="3D\ModelCommon.cpp" />
     <ClCompile Include="3D\ModelManager.cpp" />
+    <ClCompile Include="SrvManager\SrvManager.cpp" />
     <ClCompile Include="StringUtility\StringUtility.cpp" />
     <ClCompile Include="TextureManager\TextureManager.cpp" />
     <ClCompile Include="Winapp\Utility.cpp">
@@ -252,6 +253,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="3D\Model.h" />
     <ClInclude Include="3D\ModelCommon.h" />
     <ClInclude Include="3D\ModelManager.h" />
+    <ClInclude Include="SrvManager\SrvManager.h" />
     <ClInclude Include="StringUtility\StringUtility.h" />
     <ClInclude Include="TextureManager\TextureManager.h" />
     <ClInclude Include="Winapp\Utility.h" />
