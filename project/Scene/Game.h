@@ -49,17 +49,14 @@
 #pragma comment(lib, "dxcompiler.lib")
 class Game {
 public:
-    void Initialize();
+    void Initialize(WinApp* winApp, DirectXCommon* dxCommon);
     void Update();
     void Draw();
     void Finalize();
 
-    // ゲッター
-    WinApp* GetWinApp() const { return winApp_; }
-
 private:
-    WinApp* winApp_ = nullptr;
     DirectXCommon* dxCommon_ = nullptr;
+    WinApp* winApp_ = nullptr;
     Input* input_ = nullptr;
     SoundManager soundManager_;
     Object3dManager* object3dManager_ = nullptr;
