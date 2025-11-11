@@ -1,4 +1,5 @@
 #include "SrvManager.h"
+
 // 最大SRV数(最大テクスチャ枚数)//kMaxSRVCountは512です
 const uint32_t SrvManager::kMaxSRVCount = 512;
 

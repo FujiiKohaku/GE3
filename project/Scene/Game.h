@@ -1,26 +1,6 @@
 #pragma once
-// ======================= ヘッダー・ライブラリ関連 ==========================
+// ======================= 標準ライブラリ ==========================
 #define _USE_MATH_DEFINES
-// 標準ライブラリ//
-#include "Camera.h"
-#include "D3DResourceLeakChecker.h"
-#include "DebugCamera.h"
-#include "DirectXCommon.h"
-#include "Input.h"
-#include "MatrixMath.h"
-#include "Model.h"
-#include "ModelCommon.h"
-#include "Object3D.h"
-#include "Object3dManager.h"
-#include "SoundManager.h"
-#include "Sprite.h"
-#include "SpriteManager.h"
-#include "TextureManager.h"
-#include "Unknwn.h"
-#include "Utility.h"
-#include "WinApp.h"
-#include "modelManager.h"
-#include "srvmanager.h"
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -30,45 +10,102 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
-// Windows・DirectX関連
-#include <Windows.h> //ウィンドウAPIで消す
+
+// ======================= Windows・DirectX関連 =====================
+#include <Windows.h>
 #include <d3d12.h>
 #include <dbghelp.h>
 #include <dxcapi.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
-// 外部ライブラリ//
+
+// ======================= DirectXTex / ImGui =======================
 #include "DirectXTex/DirectXTex.h"
 #include "DirectXTex/d3dx12.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_dx12.h"
 #include "imgui/imgui_impl_win32.h"
-// リンカオプション
+
+// ======================= リンカオプション =========================
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "dxcompiler.lib")
+
+// ======================= 自作エンジン関連 =========================
+#include "Camera.h"
+#include "D3DResourceLeakChecker.h"
+#include "DebugCamera.h"
+#include "DirectXCommon.h"
+#include "Input.h"
+#include "MatrixMath.h"
+#include "Model.h"
+#include "ModelCommon.h"
+#include "ModelManager.h"
+#include "Object3D.h"
+#include "Object3dManager.h"
+#include "SoundManager.h"
+#include "Sprite.h"
+#include "SpriteManager.h"
+#include "SrvManager.h"
+#include "TextureManager.h"
+#include "Utility.h"
+#include "WinApp.h"
+
+// ======================= パーティクル関連 =========================
+#include "ParticleEmitter.h"
+#include "ParticleManager.h"
+
+// ================================================================
+// Game クラス
+// ================================================================
 class Game {
 public:
+    // ------------------------------
+    // 基本処理
+    // ------------------------------
     void Initialize(WinApp* winApp, DirectXCommon* dxCommon);
     void Update();
     void Draw();
     void Finalize();
 
 private:
+    // ------------------------------
+    // Core システム
+    // ------------------------------
     DirectXCommon* dxCommon_ = nullptr;
     WinApp* winApp_ = nullptr;
     Input* input_ = nullptr;
-    SoundManager soundManager_;
-    Object3dManager* object3dManager_ = nullptr;
-    SpriteManager* spriteManager_ = nullptr;
-    DebugCamera debugCamera_;
+    Camera* camera_ = nullptr;
+
+    // ------------------------------
+    // グラフィック / モデル
+    // ------------------------------
     ModelCommon modelCommon_;
-    std::vector<Sprite*> sprites_;
-    Object3d object3d_, player2_, enemy_;
-    SoundData bgm;
-    bool isEnd = false;
-    Camera* camera_;
+    Object3dManager* object3dManager_ = nullptr;
+    Object3d player2_;
+    DebugCamera debugCamera_;
+
+    // ------------------------------
+    // スプライト
+    // ------------------------------
+    SpriteManager* spriteManager_ = nullptr;
     Sprite* sprite_ = nullptr;
-   /* SrvManager* srvManager_ = nullptr;*/
+    std::vector<Sprite*> sprites_;
+
+    // ------------------------------
+    // サウンド
+    // ------------------------------
+    SoundManager soundManager_;
+    SoundData bgm;
+
+    // ------------------------------
+    // パーティクル
+    // ------------------------------
+    ParticleEmitter* emitter_ = nullptr;
+
+    // ------------------------------
+    // ゲーム状態
+    // ------------------------------
+    bool isEnd_ = false;
 };
