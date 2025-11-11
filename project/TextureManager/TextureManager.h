@@ -40,19 +40,8 @@ public:
     // ファイルパスからGPUハンドルを取得
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU(const std::string& filePath);
 
-     // メタデータを取得
+    // メタデータを取得
     const DirectX::TexMetadata& GetMetaData(const std::string& filepath);
-
-private:
-    //==================================================================
-    //  シングルトン制御
-    //==================================================================
-    static TextureManager* instance;
-    TextureManager() = default;
-    ~TextureManager() = default;
-    TextureManager(const TextureManager&) = delete;
-    TextureManager& operator=(const TextureManager&) = delete;
-
     //==================================================================
     //  内部構造体
     //==================================================================
@@ -64,6 +53,18 @@ private:
         D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU {}; // CPUハンドル
         D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU {}; // GPUハンドル
     };
+
+private:
+    //==================================================================
+    //  シングルトン制御
+    //==================================================================
+    static TextureManager* instance;
+    TextureManager() = default;
+    ~TextureManager() = default;
+    TextureManager(const TextureManager&) = delete;
+    TextureManager& operator=(const TextureManager&) = delete;
+
+
 
     //==================================================================
     //  メンバ変数
@@ -79,5 +80,14 @@ private:
 
     SrvManager* srvManager_ = nullptr; // SRVマネージャーの参照
 
-
+    public:
+    // 指定したテクスチャ情報を取得
+    const TextureData* GetTextureData(const std::string& filePath) const
+    {
+        auto it = textureDatas.find(filePath);
+        if (it != textureDatas.end()) {
+            return &it->second;
+        }
+        return nullptr;
+    }
 };
