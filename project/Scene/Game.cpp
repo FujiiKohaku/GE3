@@ -99,6 +99,8 @@ void Game::Draw()
 
 
 
+
+
 void Game::Finalize()
 {
     delete object3dManager_;
