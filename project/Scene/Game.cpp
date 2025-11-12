@@ -94,7 +94,7 @@ void Game::Draw()
     ParticleManager::GetInstance()->Draw();
 
     dxCommon_->PostDraw();
-}
+} 
 
 void Game::Finalize()
 {
