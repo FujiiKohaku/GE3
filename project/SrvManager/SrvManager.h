@@ -13,7 +13,7 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index);
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index);
-
+    ID3D12DescriptorHeap* GetDescriptorHeap() const { return descriptorHeap.Get(); }
     // SRV生成(テクスチャ用)
     void CreateSRVforTexture2D(uint32_t srvIndex, ID3D12Resource* pResource, DXGI_FORMAT Format, UINT MipLevels);
     // SRV生成(バッファ用)
