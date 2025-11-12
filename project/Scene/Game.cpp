@@ -84,17 +84,22 @@ void Game::Draw()
 {
     dxCommon_->PreDraw();
 
+    // ← Spriteや3DがSetDescriptorHeapsする前にParticleManagerを描画しない
     object3dManager_->PreDraw();
     player2_.Draw();
 
     spriteManager_->PreDraw();
     sprite_->Draw();
 
-    // パーティクル描画
+    // ✅ ParticleManagerを最後に描画する
     ParticleManager::GetInstance()->Draw();
 
     dxCommon_->PostDraw();
-}
+} 
+
+
+
+
 
 void Game::Finalize()
 {
