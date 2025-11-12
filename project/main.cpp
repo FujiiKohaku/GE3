@@ -48,7 +48,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     // ==============================
     // 3. メインループ
-    // ==============================
+    // ============================== 
     MSG msg {};
     while (msg.message != WM_QUIT) {
 
