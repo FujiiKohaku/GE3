@@ -21,7 +21,7 @@ public:
     // SRVセットコマンド
     void SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_t srvIndex);
     bool CanAllocate() const;
-    // 最大SRV数(最大テクスチャ枚数)
+    // 最大SRV数(最大テクスチャ枚数) 
     static const uint32_t kMaxSRVCount;
 
 private:
