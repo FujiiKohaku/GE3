@@ -339,7 +339,7 @@ void ParticleManager::CreateParticleGroup(const std::string name, const std::str
 
     // SRVをSrvManagerで作成
     group.textureSrvIndex = srvManager_->Allocate();
-    srvManager_->CreateSRVforTexture2D( group.textureSrvIndex,  texResource, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, static_cast<UINT>(textureData->metadata.mipLevels));
+    srvManager_->CreateSRVforTexture2D( group.textureSrvIndex,  texResource,textureData->metadata.format, static_cast<UINT>(textureData->metadata.mipLevels));
 
     // -------------------------
     // インスタンシング用リソース生成
