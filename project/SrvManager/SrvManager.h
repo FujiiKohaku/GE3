@@ -13,7 +13,7 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index);
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index);
-    ID3D12DescriptorHeap* GetDescriptorHeap() const { return descriptorHeap.Get(); }
+
     // SRV生成(テクスチャ用)
     void CreateSRVforTexture2D(uint32_t srvIndex, ID3D12Resource* pResource, DXGI_FORMAT Format, UINT MipLevels);
     // SRV生成(バッファ用)
@@ -21,12 +21,11 @@ public:
     // SRVセットコマンド
     void SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_t srvIndex);
     bool CanAllocate() const;
-    // 最大SRV数(最大テクスチャ枚数) 
+    // 最大SRV数(最大テクスチャ枚数)
     static const uint32_t kMaxSRVCount;
 
 private:
     DirectXCommon* dxCommon_ = nullptr;
-
 
     // SRV用のヒープ
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;

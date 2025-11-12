@@ -12,7 +12,7 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     CreateRootSignature();
     CreateGraphicsPipeline();
     // 頂点バッファの生成
-     CreateVertexBuffer();
+    CreateVertexBuffer();
 }
 
 void ParticleManager::Update()
@@ -81,10 +81,6 @@ void ParticleManager::Draw()
     // コマンドリストを取得
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
-    // === SRVヒープ設定（これが抜けると不安定になる） ===
-    ID3D12DescriptorHeap* heaps[] = { srvManager_->GetDescriptorHeap() };
-    commandList->SetDescriptorHeaps(1, heaps);
-
     // ルートシグネチャを設定
     commandList->SetGraphicsRootSignature(rootSignature.Get());
 
@@ -104,6 +100,7 @@ void ParticleManager::Draw()
     for (auto& groupPair : particleGroups_) {
         ParticleGroup& group = groupPair.second;
 
+        // パーティクルが存在しないグループはスキップ
         if (group.particles.empty())
             continue;
 
@@ -116,14 +113,12 @@ void ParticleManager::Draw()
         // ==========================
         // 描画コマンド発行（インスタンシング描画）
         // ==========================
-        commandList->DrawIndexedInstanced(6,  group.instanceCount,  0, 0, 0);
+        commandList->DrawIndexedInstanced(
+            6, // 6インデックス分（四角形）
+            group.instanceCount, // インスタンス数（パーティクルの数）
+            0, 0, 0);
     }
-
-    // ★ここでバリアは不要★
-    // （PostDrawがやるので、ここでは書かないこと）
 }
-
-
 
 void ParticleManager::CreateRootSignature()
 {
@@ -195,7 +190,6 @@ void ParticleManager::CreateRootSignature()
         IID_PPV_ARGS(&rootSignature));
     assert(SUCCEEDED(hr));
 }
-
 
 void ParticleManager::CreateGraphicsPipeline()
 {
@@ -272,7 +266,7 @@ void ParticleManager::CreateGraphicsPipeline()
     desc.RasterizerState = rasterizerDesc;
     desc.DepthStencilState = depthStencilDesc;
     desc.NumRenderTargets = 1;
-    desc.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -321,7 +315,6 @@ void ParticleManager::CreateVertexBuffer()
     indexData_[5] = 3;
 }
 
-
 void ParticleManager::CreateParticleGroup(const std::string name, const std::string textureFilePath)
 {
     // すでに同名グループが存在しないことを確認
@@ -343,11 +336,7 @@ void ParticleManager::CreateParticleGroup(const std::string name, const std::str
 
     // SRVをSrvManagerで作成
     group.textureSrvIndex = srvManager_->Allocate();
-<<<<<<< HEAD
-    srvManager_->CreateSRVforTexture2D( group.textureSrvIndex,  texResource, textureData->metadata.format, static_cast<UINT>(textureData->metadata.mipLevels));
-=======
-    srvManager_->CreateSRVforTexture2D( group.textureSrvIndex,  texResource,textureData->metadata.format, static_cast<UINT>(textureData->metadata.mipLevels));
->>>>>>> 4fa8c2b7def8b407d7afe59ba6524db97d33198a
+    srvManager_->CreateSRVforTexture2D(group.textureSrvIndex, texResource, textureData->metadata.format, static_cast<UINT>(textureData->metadata.mipLevels));
 
     // -------------------------
     // インスタンシング用リソース生成
@@ -357,7 +346,7 @@ void ParticleManager::CreateParticleGroup(const std::string name, const std::str
     group.instancingResource->Map(0, nullptr, reinterpret_cast<void**>(&group.instancingData));
 
     group.instancingSrvIndex = srvManager_->Allocate();
-    srvManager_->CreateSRVforStructuredBuffer( group.instancingSrvIndex, group.instancingResource.Get(), kMaxInstance, sizeof(InstancingData));
+    srvManager_->CreateSRVforStructuredBuffer(group.instancingSrvIndex, group.instancingResource.Get(), kMaxInstance, sizeof(InstancingData));
 
     // -------------------------
     // 登録
