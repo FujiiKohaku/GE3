@@ -1,6 +1,4 @@
 #include "Game.h"
-#include "ParticleEmitter.h"
-#include "ParticleManager.h"
 #include <numbers>
 
 void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon)
@@ -50,13 +48,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon)
 #pragma endregion
 
 #pragma region パーティクル関連
-    // ① パーティクルグループ登録
-    ParticleManager::GetInstance()->CreateParticleGroup("UV", "resources/uvChecker.png");
-
-    // ② エミッタ生成と設定
-    emitter_ = new ParticleEmitter();
-    emitter_->SetGroupName("UV");
-    emitter_->SetPosition({ 0, 5, 0 });
+   
 #pragma endregion
 }
 
@@ -67,17 +59,9 @@ void Game::Update()
     camera_->Update();
     sprite_->Update();
 
-    // プレイヤーの位置を取得
-    Vector3 pos = player2_.GetTranslate();
+  
 
-    // エミッタ位置をプレイヤーに追従
-    emitter_->SetPosition(pos);
-
-    // パーティクルを発生（1フレームごと）
-    emitter_->Emit();
-
-    // パーティクル全体更新
-    ParticleManager::GetInstance()->Update();
+  
 }
 
 void Game::Draw()
@@ -90,8 +74,7 @@ void Game::Draw()
     spriteManager_->PreDraw();
     sprite_->Draw();
 
-    // パーティクル描画
-    ParticleManager::GetInstance()->Draw();
+   
 
     dxCommon_->PostDraw();
 }
