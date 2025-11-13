@@ -74,10 +74,7 @@ void Model::Draw()
     // ===============================
     // テクスチャ設定
     // ===============================
-    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = modelCommon_->GetDxCommon()->GetGPUDescriptorHandle(
-        modelCommon_->GetDxCommon()->GetSRVDescriptorHeap(),
-        modelCommon_->GetDxCommon()->GetSRVDescriptorSize(),
-        modelData_.material.textureIndex);
+    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(modelData_.material.textureFilePath);
 
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
 

@@ -125,7 +125,7 @@ private:
     // テクスチャ関連
     // ===============================
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_ {}; // GPUハンドル
-    int textureIndex = 0; // テクスチャ番号
+    std::string textureFilePath_;
 
     // ===============================
     // 内部処理関数
