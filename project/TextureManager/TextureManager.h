@@ -2,12 +2,13 @@
 #include "DirectXCommon.h"
 #include "DirectXTex/DirectXTex.h"
 #include "DirectXTex/d3dx12.h"
+#include "SrvManager.h"
 #include <algorithm> // std::find_if
 #include <cassert> // assert
 #include <string> // std::string
+#include <unordered_map>
 #include <vector> // std::vector
 #include <wrl.h> // ComPtr
-
 //==================================================================
 //  TextureManagerクラス
 //  テクスチャの読み込み・管理を行うシングルトンクラス
@@ -26,7 +27,7 @@ public:
     //  初期化・読み込み
     //==================================================================
     // 初期化（DirectXCommonを受け取る）
-    void Initialize(DirectXCommon* dxCommon);
+    void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager);
     // テクスチャ読み込み（同名ファイルは二重読み込みしない）
     void LoadTexture(const std::string& filePath);
 
@@ -35,8 +36,23 @@ public:
     //==================================================================
     // ファイルパスからSRVインデックスを取得
     uint32_t GetTextureIndexByFilePath(const std::string& filePath);
-    // テクスチャ番号からGPUハンドルを取得
-    D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU(uint32_t textureIndex);
+
+    // ファイルパスからGPUハンドルを取得
+    D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU(const std::string& filePath);
+
+    // メタデータを取得
+    const DirectX::TexMetadata& GetMetaData(const std::string& filepath);
+    //==================================================================
+    //  内部構造体
+    //==================================================================
+    // テクスチャ1枚分のデータ
+    struct TextureData {
+        DirectX::TexMetadata metadata; // メタデータ（幅・高さなど）
+        Microsoft::WRL::ComPtr<ID3D12Resource> resource; // テクスチャリソース
+        uint32_t srvIndex; // SRVインデックス
+        D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU {}; // CPUハンドル
+        D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU {}; // GPUハンドル
+    };
 
 private:
     //==================================================================
@@ -48,28 +64,30 @@ private:
     TextureManager(const TextureManager&) = delete;
     TextureManager& operator=(const TextureManager&) = delete;
 
-    //==================================================================
-    //  内部構造体
-    //==================================================================
-    // テクスチャ1枚分のデータ
-    struct TextureData {
-        std::string filePath; // ファイルパス
-        DirectX::TexMetadata metadata; // メタデータ（幅・高さなど）
-        Microsoft::WRL::ComPtr<ID3D12Resource> resource; // テクスチャリソース
-        D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU {}; // CPUハンドル
-        D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU {}; // GPUハンドル
-    };
+
 
     //==================================================================
     //  メンバ変数
     //==================================================================
-    std::vector<TextureData> textureDatas; // テクスチャの配列
+    // テクスチャデータ
+    std::unordered_map<std::string, TextureData> textureDatas;
+
     DirectXCommon* dxCommon_ = nullptr; // DX共通クラスの参照
 
     // SRV管理
     static uint32_t kSRVIndexTop; // SRVインデックスの開始番号（0番はImGui用）
     static const uint32_t kMaxSRVCount = 512; // 最大テクスチャ数（任意に設定可能）
-public:
-    // メタデータを取得
-    const DirectX::TexMetadata& GetMetaData(uint32_t textureIndex);
+
+    SrvManager* srvManager_ = nullptr; // SRVマネージャーの参照
+
+    public:
+    // 指定したテクスチャ情報を取得
+    const TextureData* GetTextureData(const std::string& filePath) const
+    {
+        auto it = textureDatas.find(filePath);
+        if (it != textureDatas.end()) {
+            return &it->second;
+        }
+        return nullptr;
+    }
 };
