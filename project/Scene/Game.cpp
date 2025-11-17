@@ -109,6 +109,27 @@ void Game::Update()
         light->direction = Normalize(light->direction);
 
     }
+    ImGui::Separator();
+    ImGui::Text("Blend Mode");
+
+    // 現在のモードを取得
+    int blendMode = object3dManager_->GetBlendMode();
+
+    // 選択肢リスト
+    const char* blendNames[] = {
+        "None",
+        "Normal ",
+        "Add",
+        "Subtract ",
+        "Multiply",
+        "Screen "
+    };
+
+    // ドロップダウン
+    if (ImGui::Combo("Blend", &blendMode, blendNames, IM_ARRAYSIZE(blendNames))) {
+        object3dManager_->SetBlendMode(static_cast<BlendMode>(blendMode));
+    }
+
 
     ImGui::End();
 #endif
