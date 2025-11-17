@@ -22,9 +22,7 @@
 // ======================= DirectXTex / ImGui =======================
 #include "DirectXTex/DirectXTex.h"
 #include "DirectXTex/d3dx12.h"
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_dx12.h"
-#include "imgui/imgui_impl_win32.h"
+
 
 // ======================= リンカオプション =========================
 #pragma comment(lib, "d3d12.lib")

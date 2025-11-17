@@ -1,9 +1,9 @@
 #include "DirectXCommon.h"
+#include "ImGuiManager.h"
 #include "Scene/Game.h"
 #include "SrvManager.h"
 #include "TextureManager.h"
 #include "WinApp.h"
-
 // ======================= ImGui用ウィンドウプロシージャ =====================
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -40,6 +40,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     D3DResourceLeakChecker leakChecker;
 
     // -------------------------------
+    // Imgui初期化
+    // -------------------------------
+    ImGuiManager* imguiManager = new ImGuiManager();
+    imguiManager->Initialize(winApp,dxCommon,srvManager);
+
+    // -------------------------------
     // ゲーム本体初期化
     // -------------------------------
     Game* game = new Game();
@@ -69,7 +75,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     game->Finalize();
     TextureManager::GetInstance()->Finalize();
     ParticleManager::GetInstance()->Finalize();
-
+    delete imguiManager;
     delete srvManager;
     delete game;
     delete dxCommon;
