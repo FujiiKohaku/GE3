@@ -48,7 +48,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon)
 #pragma endregion
 
 #pragma region パーティクル関連
-   
+
 #pragma endregion
 }
 
@@ -59,14 +59,12 @@ void Game::Update()
     camera_->Update();
     sprite_->Update();
 
-  
-
-  
+    camera_->DebugUpdate();
 }
 
 void Game::Draw()
 {
-    dxCommon_->PreDraw();
+   
 
     object3dManager_->PreDraw();
     player2_.Draw();
@@ -74,9 +72,7 @@ void Game::Draw()
     spriteManager_->PreDraw();
     sprite_->Draw();
 
-   
-
-    dxCommon_->PostDraw();
+  
 }
 
 void Game::Finalize()

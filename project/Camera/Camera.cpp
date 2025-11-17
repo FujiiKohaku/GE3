@@ -12,6 +12,8 @@ Camera::Camera()
 {
 }
 
+
+
 void Camera::Update()
 {
 
@@ -19,4 +21,23 @@ void Camera::Update()
     viewMatrix_ = MatrixMath::Inverse(worldMatrix_);
     projectionMatrix_ = MatrixMath::MakePerspectiveFovMatrix(0.45f, static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight), 0.1f, 100.0f);
     viewProjectionMatrix_ = MatrixMath::Multiply(viewMatrix_, projectionMatrix_);
+}
+
+void Camera::DebugUpdate()
+{
+#ifdef USE_IMGUI
+
+    ImGui::Begin("Settings");
+
+    // 位置（移動）
+    ImGui::DragFloat3( "CameraTranslate",&transform_.translate.x, 0.01f, -10.0f,10.0f);
+
+    // 回転（角度）
+    ImGui::SliderAngle("CameraRotateX", &transform_.rotate.x);
+    ImGui::SliderAngle("CameraRotateY", &transform_.rotate.y);
+    ImGui::SliderAngle("CameraRotateZ", &transform_.rotate.z);
+
+    ImGui::End();
+
+#endif
 }
