@@ -43,7 +43,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // Imgui初期化
     // -------------------------------
     ImGuiManager* imguiManager = new ImGuiManager();
-    imguiManager->Initialize(winApp,dxCommon,srvManager);
+    imguiManager->Initialize(winApp, dxCommon, srvManager);
 
     // -------------------------------
     // ゲーム本体初期化
@@ -61,12 +61,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             break;
         }
 
+        // ======== ImGui開始 ========
+        imguiManager->Begin();
+
+        // ======== 更新 ========
         game->Update();
 
-        // SRVヒープセットはParticleManagerを使う前に
+        // ======== ImGui終了 ========
+        imguiManager->End();
+
+        // ======== 描画 ============
         srvManager->PreDraw();
 
+        dxCommon->PreDraw(); // ← GAMEの中じゃなくここに
         game->Draw();
+
+        imguiManager->Draw(); // 必ず最後
+
+        dxCommon->PostDraw();
     }
 
     // ==============================
