@@ -33,6 +33,11 @@ public:
     ID3D12GraphicsCommandList* GetCommandList() const { return commandList.Get(); }
     ID3D12CommandAllocator* GetCommandAllocator() const { return commandAllocator.Get(); }
     ID3D12CommandQueue* GetCommandQueue() const { return commandQueue.Get(); }
+    size_t GetSwapChainResourcesNum() const
+    {
+        return kSwapChainBufferCount;
+    }
+
     // SRVヒープとサイズのGetter
     //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetSRVDescriptorHeap() const { return srvDescriptorHeap; }
     //uint32_t GetSRVDescriptorSize() const { return descriptorSizeSRV; }
@@ -87,6 +92,7 @@ private:
 
     uint32_t descriptorSizeRTV = 0;
     uint32_t descriptorSizeDSV = 0;
+    static const uint32_t kSwapChainBufferCount = 2; // 2枚のバックバッファ
     // スワップチェーンから取得したバックバッファリソース（2枚分）
     std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> swapChainResources;
     // フェンス
