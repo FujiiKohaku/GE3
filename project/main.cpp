@@ -75,6 +75,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     game->Finalize();
     TextureManager::GetInstance()->Finalize();
     ParticleManager::GetInstance()->Finalize();
+    imguiManager->Finalize();
     delete imguiManager;
     delete srvManager;
     delete game;

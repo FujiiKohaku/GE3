@@ -15,10 +15,10 @@ void ImGuiManager::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManage
     //  SRVマネージャからSRV確保
     uint32_t srvIndex = srvManager_->Allocate();
 
-    //ImGuiコンテキスト生成
+    // ImGuiコンテキスト生成
     ImGui::CreateContext();
 
-    // Win32側の初期化 
+    // Win32側の初期化
     ImGui_ImplWin32_Init(winApp_->GetHwnd());
 
     // スタイル（好きなやつ）
@@ -44,5 +44,8 @@ void ImGuiManager::Draw()
 }
 void ImGuiManager::Finalize()
 {
-    // Cleanup ImGui resources
+    // 後始末
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 }
