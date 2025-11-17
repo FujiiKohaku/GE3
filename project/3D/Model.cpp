@@ -38,13 +38,13 @@ void Model::Initialize(ModelCommon* modelCommon, const std::string& directorypat
     // ===============================
     // マテリアルの初期化
     // ===============================
-    materialResource_ = modelCommon_->GetDxCommon()->CreateBufferResource(sizeof(Material));
-    materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
+    //materialResource_ = modelCommon_->GetDxCommon()->CreateBufferResource(sizeof(Material));
+    //materialResource_->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
 
-    // デフォルト設定（白・ライティング無効）
-    materialData_->color = { 1, 1, 1, 1 };
-    materialData_->enableLighting = false;
-    materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
+    //// デフォルト設定（白・ライティング無効）
+    //materialData_->color = { 1, 1, 1, 1 };
+    //materialData_->enableLighting = true;
+    //materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
 
     // ===============================
     // テクスチャの読み込み・登録
@@ -69,7 +69,7 @@ void Model::Draw()
     // ===============================
     // マテリアル設定
     // ===============================
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+    //commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
 
     // ===============================
     // テクスチャ設定

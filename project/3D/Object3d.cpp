@@ -29,7 +29,17 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     directionalLightData->color = { 1, 1, 1, 1 };
     directionalLightData->direction = MatrixMath::Normalize({ 0, -1, 0 });
     directionalLightData->intensity = 1.0f;
+    // マテリアルリソース作成
+    materialResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(Material));
 
+    // マテリアル初期化
+    // 書き込み用アドレス取得
+    materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
+
+    // デフォルト値設定（白・ライティング無効）
+    materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    materialData_->enableLighting = true;
+    materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     // ================================
     // Transform初期値設定
     // ================================
@@ -74,6 +84,7 @@ void Object3d::Draw()
 {
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
 
+    commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     // Transform定数バッファをセット
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
 
