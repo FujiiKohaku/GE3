@@ -77,6 +77,8 @@ public:
     const Vector3& GetScale() const { return transform.scale; }
     const Vector3& GetRotate() const { return transform.rotate; }
     const Vector3& GetTranslate() const { return transform.translate; }
+    DirectionalLight* GetLight() { return directionalLightData; }
+    Object3d::Material* GetMaterial() { return materialData_; }
 
 private:
     // ===============================
@@ -87,7 +89,7 @@ private:
     Model* model_ = nullptr;
     // バッファ系
     /*  Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;*/
-    // Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
+     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource;
 
@@ -95,7 +97,7 @@ private:
     /*   Material* materialData = nullptr;*/
     TransformationMatrix* transformationMatrixData = nullptr;
     DirectionalLight* directionalLightData = nullptr;
-
+    Material* materialData_ = nullptr;
     // Transform
     Transform transform;
     Transform cameraTransform;
