@@ -29,10 +29,10 @@ void Camera::DebugUpdate()
 
     ImGui::Begin("Settings");
 
-    // ˆÊ’uiˆÚ“®j
+    // ä½ç½®ï¼ˆç§»å‹•ï¼‰
     ImGui::DragFloat3( "CameraTranslate",&transform_.translate.x, 0.01f, -10.0f,10.0f);
 
-    // ‰ñ“]iŠp“xj
+    // å›è»¢ï¼ˆè§’åº¦ï¼‰
     ImGui::SliderAngle("CameraRotateX", &transform_.rotate.x);
     ImGui::SliderAngle("CameraRotateY", &transform_.rotate.y);
     ImGui::SliderAngle("CameraRotateZ", &transform_.rotate.z);
