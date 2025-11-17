@@ -1,9 +1,9 @@
 #include "DirectXCommon.h"
+#include "ImGuiManager.h"
 #include "Scene/Game.h"
 #include "SrvManager.h"
 #include "TextureManager.h"
 #include "WinApp.h"
-
 // ======================= ImGui用ウィンドウプロシージャ =====================
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -40,6 +40,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     D3DResourceLeakChecker leakChecker;
 
     // -------------------------------
+    // Imgui初期化
+    // -------------------------------
+    ImGuiManager* imguiManager = new ImGuiManager();
+    imguiManager->Initialize(winApp, dxCommon, srvManager);
+
+    // -------------------------------
     // ゲーム本体初期化
     // -------------------------------
     Game* game = new Game();
@@ -55,12 +61,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
             break;
         }
 
+        // ======== ImGui開始 ========
+        imguiManager->Begin();
+
+        // ======== 更新 ========
         game->Update();
 
-        // SRVヒープセットはParticleManagerを使う前に
+        // ======== ImGui終了 ========
+        imguiManager->End();
+
+        // ======== 描画 ============
         srvManager->PreDraw();
 
+        dxCommon->PreDraw(); // ← GAMEの中じゃなくここに
         game->Draw();
+
+        imguiManager->Draw(); // 必ず最後
+
+        dxCommon->PostDraw();
     }
 
     // ==============================
@@ -69,7 +87,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     game->Finalize();
     TextureManager::GetInstance()->Finalize();
     ParticleManager::GetInstance()->Finalize();
-
+    imguiManager->Finalize();
+    delete imguiManager;
     delete srvManager;
     delete game;
     delete dxCommon;

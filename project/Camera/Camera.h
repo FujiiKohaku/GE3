@@ -2,6 +2,7 @@
 #include "MatrixMath.h"
 #include "Struct.h"
 #include "WinApp.h"
+#include "ImGuiManager.h"
 struct Transform {
     Vector3 scale;
     Vector3 rotate;
@@ -12,6 +13,8 @@ class Camera {
 public:
     // デフォルトコンストラクタ宣言
     Camera();
+
+    void DebugUpdate();
 
     // 更新
     void Update();
