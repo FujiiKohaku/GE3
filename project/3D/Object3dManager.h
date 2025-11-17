@@ -1,8 +1,10 @@
 #pragma once
 #include "Camera.h"
 #include "DirectXCommon.h"
+#include "blendutil.h"
 class Object3dManager {
 public:
+    
     //=========================================
     // 初期化処理（DirectXCommonを受け取る）
     //=========================================
@@ -19,10 +21,18 @@ public:
     //=========================================
     DirectXCommon* GetDxCommon() const { return dxCommon_; }
     Camera* GetDefaultCamera() const { return defaultCamera_; }
+    BlendMode GetBlendMode() const
+    {
+        return static_cast<BlendMode>(currentBlendMode);
+    }
     //=========================================
     // setter
     //=========================================
     void SetDefaultCamera(Camera* camera) { defaultCamera_ = camera; }
+    void SetBlendMode(BlendMode mode)
+    {
+        currentBlendMode = mode;
+    }
 
 private:
     //=========================================
@@ -48,5 +58,6 @@ private:
     ID3DBlob* errorBlob = nullptr;
 
     Camera* defaultCamera_ = nullptr;
-
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+    int currentBlendMode = kBlendModeNormal;
 };

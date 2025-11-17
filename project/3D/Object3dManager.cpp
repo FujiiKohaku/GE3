@@ -17,15 +17,18 @@ void Object3dManager::Initialize(DirectXCommon* dxCommon)
 #pragma region 描画準備処理
 void Object3dManager::PreDraw()
 {
-    // プリミティブ形状（三角形リスト）を設定
-    dxCommon_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    auto* commandList = dxCommon_->GetCommandList();
 
-    // ルートシグネチャを設定
-    dxCommon_->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
+    // プリミティブ形状（三角形リスト）
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // グラフィックスパイプラインステートを設定（PSO）
-    dxCommon_->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
+    // RootSignature 設定
+    commandList->SetGraphicsRootSignature(rootSignature.Get());
+
+    //  ブレンドモードに応じた PSO を適用
+    commandList->SetPipelineState(pipelineStates[currentBlendMode].Get());
 }
+
 #pragma endregion
 
 #pragma region ルートシグネチャ作成
@@ -132,15 +135,15 @@ void Object3dManager::CreateGraphicsPipeline()
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
     // ====== ブレンド設定 ======
-    D3D12_BLEND_DESC blendDesc {};
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;// 全ての色要素を書き込む
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;// ブレンド有効化
-    blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-    blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    // D3D12_BLEND_DESC blendDesc {};
+    // blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;// 全ての色要素を書き込む
+    // blendDesc.RenderTarget[0].BlendEnable = TRUE;// ブレンド有効化
+    // blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    // blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+    // blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    // blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+    // blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+    // blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 
     // ====== ラスタライザ設定 ======
     D3D12_RASTERIZER_DESC rasterizerDesc {};
@@ -152,7 +155,7 @@ void Object3dManager::CreateGraphicsPipeline()
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
     depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    
+
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
@@ -161,26 +164,30 @@ void Object3dManager::CreateGraphicsPipeline()
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ====== PSO設定 ======
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC desc {};
-    desc.pRootSignature = rootSignature.Get();
-    desc.InputLayout = inputLayoutDesc;
-    desc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
-    desc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
-    desc.BlendState = blendDesc;
-    desc.RasterizerState = rasterizerDesc;
-    desc.DepthStencilState = depthStencilDesc;
-    desc.NumRenderTargets = 1;
-    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    desc.DepthStencilState = depthStencilDesc;
-    desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    desc.SampleDesc.Count = 1;
-    desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
-    desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
+    baseDesc.pRootSignature = rootSignature.Get();
+    baseDesc.InputLayout = inputLayoutDesc;
+    baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
+    baseDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
+    baseDesc.RasterizerState = rasterizerDesc;
+    baseDesc.DepthStencilState = depthStencilDesc;
+    baseDesc.NumRenderTargets = 1;
+    baseDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    baseDesc.DepthStencilState = depthStencilDesc;
+    baseDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    baseDesc.SampleDesc.Count = 1;
+    baseDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    baseDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    // ブレンド設定（とりあえずなしで初期化）
+    baseDesc.BlendState = CreateBlendDesc(kBlendModeNone);
+    // PSOを保存する配列
+    pipelineStates[kCountOfBlendMode];
 
-    // PSOを生成
-    hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
-        &desc, IID_PPV_ARGS(&graphicsPipelineState));
+    for (int i = 0; i < kCountOfBlendMode; i++) {
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc; // 共通設定コピー
+        desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i)); // ブレンドだけ切替
+        dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineStates[i]));
+    }
 }
 
 #pragma endregion
-
