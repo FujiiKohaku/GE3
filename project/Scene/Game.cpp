@@ -14,6 +14,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon)
 
     sprite_ = new Sprite();
     sprite_->Initialize(spriteManager_, "resources/uvChecker.png");
+    sprite_->SetPosition({ 100.0f, 100.0f });
 #pragma endregion
 
 #pragma region 3D関連
@@ -58,21 +59,27 @@ void Game::Update()
     player2_.Update();
     camera_->Update();
     sprite_->Update();
+#ifdef USE_IMGUI
 
+    // 現在の座標を取得
+    Vector2 pos = sprite_->GetPosition();
+    ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_Always);
+    // 実数4桁・小数1桁で表示
+    ImGui::SliderFloat2("Position", (float*)&pos, 0.0f, 500.0f, "%.1f");
+    // 変更を反映
+    sprite_->SetPosition(pos);
+#endif
     camera_->DebugUpdate();
 }
 
 void Game::Draw()
 {
-   
 
     object3dManager_->PreDraw();
     player2_.Draw();
 
     spriteManager_->PreDraw();
     sprite_->Draw();
-
-  
 }
 
 void Game::Finalize()
