@@ -23,7 +23,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     //float32_t4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 
     // UV座標を同次座標系に拡張して（x, y, 1.0）、アフィン変換を適用する
-    float4 transformedUV = mul(float32_t4(input.texcoord,0.0f, 1.0f), gMaterial.uvTransform);
+    float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
     // 変換後のUV座標を使ってテクスチャから色をサンプリングする
     float32_t4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
         
@@ -36,7 +36,9 @@ PixelShaderOutput main(VertexShaderOutput input)
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
         float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
         
-        output.color = cos * gMaterial.color * textureColor;
+    
+        output.color.rgb = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity;    
+        output.color.a = gMaterial.color.a * textureColor.a;
         
         
     }

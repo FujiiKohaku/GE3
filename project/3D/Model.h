@@ -76,6 +76,7 @@ public:
 
     // getter
     const Object3d::ModelData& GetModelData() const { return modelData_; }
+   
 
 private:
     // ===============================
