@@ -1,11 +1,11 @@
 #include "Game.h"
 #include <numbers>
 
-void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon)
+void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager)
 {
     winApp_ = winApp;
     dxCommon_ = dxCommon;
-
+    srvManager_ = srvManager;
 #pragma region Sprite関連
     spriteManager_ = new SpriteManager();
     spriteManager_->Initialize(dxCommon_);
@@ -50,6 +50,41 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon)
 
 #pragma region パーティクル関連
 
+    Vector3 normal = { 0, 0, 1 };
+    VertexData quad[4] = {
+        { { -1, 1, 0, 1 }, { 0, 0 }, normal },
+        { { 1, 1, 0, 1 }, { 1, 0 }, normal },
+        { { -1, -1, 0, 1 }, { 0, 1 }, normal },
+        { { 1, -1, 0, 1 }, { 1, 1 }, normal }
+    };
+
+    particleVB_ = dxCommon_->CreateBufferResource(sizeof(quad));
+
+    void* mapped = nullptr;
+    particleVB_->Map(0, nullptr, &mapped);
+    memcpy(mapped, quad, sizeof(quad));
+    particleVB_->Unmap(0, nullptr);
+    uint32_t indices[6] = { 0, 1, 2, 2, 1, 3 };
+    // インデックスバッファ生成
+    particleIB_ = dxCommon_->CreateBufferResource(sizeof(indices));
+
+    uint32_t* mappedIndex = nullptr;
+    particleIB_->Map(0, nullptr, (void**)&mappedIndex);
+    memcpy(mappedIndex, indices, sizeof(indices));
+    particleIB_->Unmap(0, nullptr);
+
+    particleIBV_.BufferLocation = particleIB_->GetGPUVirtualAddress();
+    particleIBV_.SizeInBytes = sizeof(indices);
+    particleIBV_.Format = DXGI_FORMAT_R32_UINT;
+
+    particleWVP_ = dxCommon_->CreateBufferResource(sizeof(Matrix4x4));
+    particleWVP_->Map(0, nullptr, (void**)&particleWVPData_);
+
+    particleMaterial_ = dxCommon_->CreateBufferResource(sizeof(Material));
+    particleMaterial_->Map(0, nullptr, (void**)&particleMaterialData_);
+    particleMaterialData_->color = { 1, 1, 1, 1 };
+    particleMaterialData_->enableLighting = false;
+
 #pragma endregion
 }
 
@@ -66,7 +101,7 @@ void Game::Update()
     Vector2 pos = sprite_->GetPosition();
     ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_Always);
     // 実数4桁・小数1桁で表示
-   // ImGui::SliderFloat2("Position", (float*)&pos, 0.0f, 500.0f, "%.1f");
+    // ImGui::SliderFloat2("Position", (float*)&pos, 0.0f, 500.0f, "%.1f");
     // 変更を反映
     sprite_->SetPosition(pos);
 #endif
@@ -97,7 +132,7 @@ void Game::Update()
         Object3d::DirectionalLight* light = player2_.GetLight();
         Object3d::Material* material = player2_.GetMaterial();
 
-       ImGui::Separator();
+        ImGui::Separator();
         ImGui::Text("Directional Light");
 
         ImGui::ColorEdit3("Light Color", &light->color.x);
@@ -107,7 +142,6 @@ void Game::Update()
 
         //  方向ベクトルの正規化
         light->direction = Normalize(light->direction);
-
     }
     ImGui::Separator();
     ImGui::Text("Blend Mode");
@@ -130,12 +164,20 @@ void Game::Update()
         object3dManager_->SetBlendMode(static_cast<BlendMode>(blendMode));
     }
 
-
     ImGui::End();
 #endif
 
-
     camera_->DebugUpdate();
+    Matrix4x4 world = MatrixMath::MakeAffineMatrix(
+        { 1, 1, 1 },
+        { 0, 0, 0 },
+        { 0, 0, 0 } // パーティクルの位置
+    );
+
+    Matrix4x4 view = camera_->GetViewMatrix();
+    Matrix4x4 proj = camera_->GetProjectionMatrix();
+
+    *particleWVPData_ = MatrixMath::Multiply(world, MatrixMath::Multiply(view, proj));
 }
 
 void Game::Draw()
@@ -143,6 +185,28 @@ void Game::Draw()
 
     object3dManager_->PreDraw();
     player2_.Draw();
+
+   
+
+    //auto* cmd = dxCommon_->GetCommandList();
+    //cmd->SetGraphicsRootConstantBufferView(0, particleMaterial_->GetGPUVirtualAddress());
+    //cmd->SetGraphicsRootConstantBufferView(1, particleWVP_->GetGPUVirtualAddress());
+    //cmd->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleTexture_));
+    //// VB
+    //cmd->IASetVertexBuffers(0, 1, &particleVBV_);
+
+    //// IB
+    //cmd->IASetIndexBuffer(&particleIBV_);
+
+
+    //// 定数バッファ（RootParameter 0 or 1）
+    //cmd->SetGraphicsRootConstantBufferView(1, particleWVP_->GetGPUVirtualAddress());
+
+    //// テクスチャ（RootParameter 2）
+    //cmd->SetGraphicsRootDescriptorTable(2,TextureManager::GetInstance()->GetSrvHandleGPU("resources/uvChecker.png"));
+
+    //// 描画
+    //cmd->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
     spriteManager_->PreDraw();
     sprite_->Draw();
@@ -155,7 +219,6 @@ void Game::Finalize()
     delete sprite_;
     delete camera_;
     delete input_;
-    delete emitter_; // ← 忘れず解放
 
     ModelManager::GetInstance()->Finalize();
     soundManager_.Finalize(&bgm);

@@ -29,8 +29,3 @@ void ParticleEmitter::SetPosition(const Vector3& pos)
     position_ = pos;
 }
 
-void ParticleEmitter::Emit()
-{
-    // パーティクルを発生させる
-    ParticleManager::GetInstance()->Emit(groupName_, position_, 10);
-}
