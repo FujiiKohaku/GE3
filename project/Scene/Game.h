@@ -23,7 +23,6 @@
 #include "DirectXTex/DirectXTex.h"
 #include "DirectXTex/d3dx12.h"
 
-
 // ======================= リンカオプション =========================
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -49,10 +48,7 @@
 #include "TextureManager.h"
 #include "Utility.h"
 #include "WinApp.h"
-
 // ======================= パーティクル関連 =========================
-#include "ParticleEmitter.h"
-#include "ParticleManager.h"
 
 // ================================================================
 // Game クラス
@@ -62,7 +58,7 @@ public:
     // ------------------------------
     // 基本処理
     // ------------------------------
-    void Initialize(WinApp* winApp, DirectXCommon* dxCommon);
+    void Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager);
     void Update();
     void Draw();
     void Finalize();
@@ -75,7 +71,7 @@ private:
     WinApp* winApp_ = nullptr;
     Input* input_ = nullptr;
     Camera* camera_ = nullptr;
-
+    SrvManager* srvManager_ = nullptr;
     // ------------------------------
     // グラフィック / モデル
     // ------------------------------
@@ -83,7 +79,6 @@ private:
     Object3dManager* object3dManager_ = nullptr;
     Object3d player2_;
     DebugCamera debugCamera_;
-
     // ------------------------------
     // スプライト
     // ------------------------------
@@ -99,12 +94,37 @@ private:
 
     // ------------------------------
     // パーティクル
-    // ------------------------------
-    ParticleEmitter* emitter_ = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> particleVB_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> particleIB_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> particleWVP_;
+    D3D12_VERTEX_BUFFER_VIEW particleVBV_;
+    D3D12_INDEX_BUFFER_VIEW particleIBV_;
+
+    Matrix4x4* particleWVPData_;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> particleMaterial_ = nullptr;
+    Object3d::Material* particleMaterialData_ = nullptr;
+    std::string particleTexture_ = "resources/uvChecker.png";
 
     // ------------------------------
     // ゲーム状態
     // ------------------------------
     bool isEnd_ = false;
-    
+    //------------------------------
+    // パーティクル生成構造体
+    //------------------------------
+    struct Material {
+        std::string textureFilePath; // テクスチャの場所
+    };
+    struct VertexData {
+        Vector4 position;
+        Vector2 texcoord;
+        Vector3 normal;
+    };
+    struct ModelData {
+        std::vector<VertexData> vertices; // 頂点4つ
+        std::vector<uint32_t> indices; // 三角形2つ分の番号
+        Material material; // テクスチャ
+    };
+    ModelData modelData;
 };

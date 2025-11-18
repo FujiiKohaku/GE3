@@ -1,10 +1,23 @@
 #include "Particle.hlsli"
 
-Texture2D tex : register(t0);
-SamplerState smp : register(s0);
-
-float4 main(VertexShaderOutput input) : SV_TARGET
+PixelShaderOutput main(VertexShaderOutput input)
 {
-    float4 color = tex.Sample(smp, input.texcoord);
-    return color;
+    PixelShaderOutput output;
+
+    // UV変換は Sprite と同じ（使わないなら input.texcoord を直接使う）
+    float32_t4 uv = mul(float32_t4(input.texcoord, 0, 1), gMaterial.uvTransform);
+
+    // テクスチャ読み込み
+    float32_t4 texColor = gTexture.Sample(gSampler, uv.xy);
+
+    // 色を掛ける（gMaterial.color は頂点カラー）
+    output.color = texColor * gMaterial.color;
+
+    // αが0なら描画しない（透明な部分を捨てる）
+    if (output.color.a == 0.0f)
+    {
+        discard;
+    }
+
+    return output;
 }

@@ -2,100 +2,83 @@
 #include "DirectXCommon.h"
 #include "MatrixMath.h"
 #include "SrvManager.h"
+#include "TextureManager.h"
 #include <d3d12.h>
-#include <random>
+#include <string>
 #include <wrl.h>
-/// <summary>
-/// パーティクルを管理するマネージャ（シングルトン）
-/// </summary>
+
 class ParticleManager {
 public:
-    // ===== シングルトン =====
-    static ParticleManager* GetInstance();
+    using ComPtr = Microsoft::WRL::ComPtr<ID3D12Resource>;
 
-    // ===== 基本処理 =====
+    struct VertexData {
+        Vector4 position;
+        Vector2 texcoord;
+        Vector3 normal;
+    };
+
+    struct Transform {
+        Vector3 scale = { 1, 1, 1 };
+        Vector3 rotate = { 0, 0, 0 };
+        Vector3 translate = { 0, 0, 0 };
+    };
+    struct TransformationMatrix {
+        Matrix4x4 WVP; // ワールド × ビュー × プロジェクション
+        Matrix4x4 World; // ワールド行列（法線用）
+    };
+
+    Transform transform_;
+
+    // ============================================================
+    //           初期化・更新・描画
+    // ============================================================
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager);
     void Update();
-    void Draw();
-    void Finalize();
-    void CreateParticleGroup(const std::string name, const std::string textureFilePath);
-
-    void Emit(const std::string name, const Vector3& position, uint32_t count);
+    void Draw(ID3D12GraphicsCommandList* commandList);
 
 private:
-    // ===== 頂点データ =====
-    struct VertexData {
-        Vector3 position; // 頂点の座標
-        Vector2 texCoord; // テクスチャ座標
-    };
-    struct Particle {
-        Vector3 position;
-        Vector3 velocity;
-        float lifeTime;
-        float currentTime;
-    };
-    struct InstancingData {
-        Matrix4x4 matWorld;
-        Vector4 color;
-    };
+    // ============================================================
+    //           RootSignature & PSO（Sprite / Object3D と同じ設計）
+    // ============================================================
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
 
-    struct ParticleGroup {
-        // ========================
-        // マテリアル関連
-        // ========================
-        std::string textureFilePath; // 使用するテクスチャのファイルパス
-        uint32_t textureSrvIndex = 0; // テクスチャ用SRVインデックス
+    void CreateRootSignature();
+    void CreateGraphicsPipeline();
+    void CreateInstancingBuffer();
 
-        // ========================
-        // パーティクル本体リスト
-        // ========================
-        std::list<Particle> particles; // パーティクルのリスト（型は後で定義予定）
+    void CreateSrvBuffer();
 
-        // ========================
-        // インスタンシング描画用
-        // ========================
-        uint32_t instancingSrvIndex = 0; // インスタンシングデータ用SRVインデックス
-        Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource; // GPUリソース
-        uint32_t instanceCount = 0; // インスタンス数
-        InstancingData* instancingData = nullptr; // 書き込み用ポインタ
-    };
-    // ===== シングルトン用 =====
-    ParticleManager() = default;
-    ~ParticleManager() = default;
-    ParticleManager(const ParticleManager&) = delete;
-    ParticleManager& operator=(const ParticleManager&) = delete;
+private:
+    // ============================================================
+    //           GPU リソース（Vertex / Index / WVP / Material）
+    // ============================================================
+    ComPtr vertexResource_;
+    ComPtr indexResource_;
+    ComPtr materialResource_;
+    ComPtr wvpResource_;
+    ComPtr instancingResource;
+    // GPU View
+    D3D12_VERTEX_BUFFER_VIEW vbv_ {};
+    D3D12_INDEX_BUFFER_VIEW ibv_ {};
 
-    // ===== メンバ =====
-    DirectXCommon* dxCommon_ = nullptr; // DirectX共通処理
-    SrvManager* srvManager_ = nullptr; // SRVマネージャ
-    std::unordered_map<std::string, ParticleGroup> particleGroups_;
-    // 乱数生成エンジン
-    std::mt19937 randomEngine_;
+    // CPU 書き込みポインタ
+    Matrix4x4* wvpData_ = nullptr;
+    Vector4* materialData_ = nullptr;
 
-    // パイプラインステートオブジェクト（PSO）
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
+    // SRV (SrvManager で管理するテクスチャ)
+    uint32_t textureSrvIndex_ = 0;
 
-    // 頂点バッファ関連
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_; // 頂点バッファ
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView_ {};
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_; // インデックスバッファ
-    D3D12_INDEX_BUFFER_VIEW indexBufferView_ {};
-    // CPU側アクセス用ポインタ
-    VertexData* vertexData_ = nullptr;
-    uint32_t* indexData_ = nullptr;
-
-    static const uint32_t kVertexCount = 4;
-    VertexData vertices_[kVertexCount];
-    // シリアライズ・エラー出力用
+    // 外部依存
+    DirectXCommon* dxCommon_ = nullptr;
+    SrvManager* srvManager_ = nullptr;
+    std::string texturePath_;
+    // シリアライズ用Blob
     ID3DBlob* signatureBlob = nullptr;
     ID3DBlob* errorBlob = nullptr;
-    static ParticleManager* instance; 
+    // パーティクルの最大個数
 
-
-private:
-    // ===== 内部処理 =====
-    void CreateGraphicsPipeline();
-    void CreateRootSignature();
-    void CreateVertexBuffer();
+    // 2. const を使う
+    const uint32_t kNumInstance = 100; // OK (コンパイラによる)
+  
 };

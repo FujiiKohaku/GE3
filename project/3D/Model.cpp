@@ -32,8 +32,7 @@ void Model::Initialize(ModelCommon* modelCommon, const std::string& directorypat
     // CPU側から頂点データを転送
     VertexData* vertexData = nullptr;
     vertexResource_->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-    std::memcpy(vertexData, modelData_.vertices.data(),
-        sizeof(VertexData) * modelData_.vertices.size());
+    std::memcpy(vertexData, modelData_.vertices.data(), sizeof(VertexData) * modelData_.vertices.size());
 
     // ===============================
     // マテリアルの初期化

@@ -1,10 +1,11 @@
 #include "Particle.hlsli"
-
-VertexShaderOutput main(VertexShaderInput input)
+StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
+VertexShaderOutput main(VertexSgaderInput input, uint32_t instanceId : SV_InstanceID)
 {
     VertexShaderOutput output;
-    float4 pos = float4(input.position, 1.0f);
-    output.position = mul(pos, viewProjection);
+    output.position = mul(input.position, gTransformationMatrices[instanceId].WVP);
     output.texcoord = input.texcoord;
+    output.normal = normalize(mul(input.normal, (float32_t3x3) gTransformationMatrices[instanceId].World));
     return output;
 }
+

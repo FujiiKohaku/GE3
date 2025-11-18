@@ -32,7 +32,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // 2. 各マネージャ初期化
     // ==============================
     TextureManager::GetInstance()->Initialize(dxCommon, srvManager);
-    ParticleManager::GetInstance()->Initialize(dxCommon, srvManager);
+    
 
     // -------------------------------
     // リーク検出
@@ -49,8 +49,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // ゲーム本体初期化
     // -------------------------------
     Game* game = new Game();
-    game->Initialize(winApp, dxCommon);
+    game->Initialize(winApp, dxCommon, srvManager);
 
+
+   
     // ==============================
     // 3. メインループ
     // ==============================
@@ -86,7 +88,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     // ==============================
     game->Finalize();
     TextureManager::GetInstance()->Finalize();
-    ParticleManager::GetInstance()->Finalize();
+    
     imguiManager->Finalize();
     delete imguiManager;
     delete srvManager;
