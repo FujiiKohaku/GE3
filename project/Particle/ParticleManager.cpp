@@ -12,9 +12,9 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     CreateInstancingBuffer();
 
     CreateSrvBuffer();
-    Transform transforms;
-    transforms
-
+   
+    transforms;
+}
 void ParticleManager::Update()
 {
 }

@@ -21,8 +21,7 @@ void Model::Initialize(ModelCommon* modelCommon, const std::string& directorypat
     // ===============================
     // 頂点バッファの生成
     // ===============================
-    vertexResource_ = modelCommon_->GetDxCommon()->CreateBufferResource(
-        sizeof(VertexData) * modelData_.vertices.size());
+    vertexResource_ = modelCommon_->GetDxCommon()->CreateBufferResource( sizeof(VertexData) * modelData_.vertices.size());
 
     // バッファビュー設定
     vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();

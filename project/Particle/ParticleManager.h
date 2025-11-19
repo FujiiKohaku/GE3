@@ -80,5 +80,5 @@ private:
 
     // 2. const を使う
     const uint32_t kNumInstance = 100; // OK (コンパイラによる)
-  
+    Transform transforms[100] = {}
 };

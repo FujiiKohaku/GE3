@@ -50,51 +50,145 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvMa
 
 #pragma region パーティクル関連
 
-    Vector3 normal = { 0, 0, 1 };
-    VertexData quad[4] = {
-        { { -1, 1, 0, 1 }, { 0, 0 }, normal },
-        { { 1, 1, 0, 1 }, { 1, 0 }, normal },
-        { { -1, -1, 0, 1 }, { 0, 1 }, normal },
-        { { 1, -1, 0, 1 }, { 1, 1 }, normal }
-    };
+#pragma endregion
+#pragma region 三角形作成
 
-    particleVB_ = dxCommon_->CreateBufferResource(sizeof(quad));
+    // ===========================
+    // ① 頂点データ作成
+    // ===========================
+    VertexData vertices[4] {};
 
-    void* mapped = nullptr;
-    particleVB_->Map(0, nullptr, &mapped);
-    memcpy(mapped, quad, sizeof(quad));
-    particleVB_->Unmap(0, nullptr);
-    uint32_t indices[6] = { 0, 1, 2, 2, 1, 3 };
-    // インデックスバッファ生成
-    particleIB_ = dxCommon_->CreateBufferResource(sizeof(indices));
+    // 左上
+    vertices[0].position = { -0.5f, 0.5f, 0, -1.0f };
+    vertices[0].texcoord = { 0, 0 };
+    vertices[0].normal = { 0, 0, -1 };
 
-    uint32_t* mappedIndex = nullptr;
-    particleIB_->Map(0, nullptr, (void**)&mappedIndex);
-    memcpy(mappedIndex, indices, sizeof(indices));
-    particleIB_->Unmap(0, nullptr);
+    // 右上
+    vertices[1].position = { 0.5f, 0.5f, 0, -1.0f };
+    vertices[1].texcoord = { 1, 0 };
+    vertices[1].normal = { 0, 0, -1 };
 
-    particleIBV_.BufferLocation = particleIB_->GetGPUVirtualAddress();
-    particleIBV_.SizeInBytes = sizeof(indices);
-    particleIBV_.Format = DXGI_FORMAT_R32_UINT;
+    // 右下
+    vertices[2].position = { 0.5f, -0.5f, 0, -1.0f };
+    vertices[2].texcoord = { 1, 1 };
+    vertices[2].normal = { 0, 0, -1 };
 
-    particleWVP_ = dxCommon_->CreateBufferResource(sizeof(Matrix4x4));
-    particleWVP_->Map(0, nullptr, (void**)&particleWVPData_);
+    // 左下
+    vertices[3].position = { -0.5f, -0.5f, 0, -1.0f };
+    vertices[3].texcoord = { 0, 1 };
+    vertices[3].normal = { 0, 0, -1 };
 
-    particleMaterial_ = dxCommon_->CreateBufferResource(sizeof(Material));
-    particleMaterial_->Map(0, nullptr, (void**)&particleMaterialData_);
-    particleMaterialData_->color = { 1, 1, 1, 1 };
-    particleMaterialData_->enableLighting = false;
+    // ===========================
+    // ② 頂点バッファ作成
+    // ===========================
+    vertexResource = dxCommon_->CreateBufferResource(sizeof(vertices));
+
+    VertexData* vbData = nullptr;
+    vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vbData));
+    memcpy(vbData, vertices, sizeof(vertices));
+    vertexResource->Unmap(0, nullptr);
+
+    vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+    vertexBufferView.SizeInBytes = sizeof(vertices);
+    vertexBufferView.StrideInBytes = sizeof(VertexData);
+
+    // ===========================
+    // ③ マテリアルCB作成（Root[0]）
+    // ===========================
+    materialResource = dxCommon_->CreateBufferResource(sizeof(Material));
+    Material* matCB = nullptr;
+    materialResource->Map(0, nullptr, reinterpret_cast<void**>(&matCB));
+
+    // CPU側の struct に値を入れる
+    materialData_.color = { 1, 1, 1, 1 }; // 白
+    materialData_.enableLighting = 0; // とりあえずライティングなし
+    materialData_.padding[0] = 0.0f;
+    materialData_.padding[1] = 0.0f;
+    materialData_.padding[2] = 0.0f;
+    materialData_.uvTransform = MatrixMath::MakeIdentity4x4();
+
+    // CB にコピー
+    *matCB = materialData_;
+    materialResource->Unmap(0, nullptr);
+
+    // ===========================
+    // TransformCB（板ポリ用）
+    // ===========================
+    transformResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
+
+    
+
+    // ===========================
+    // ⑤ DirectionalLightCB作成（Root[3]）
+    // ===========================
+    lightResource = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
+    DirectionalLight* lightCB = nullptr;
+    lightResource->Map(0, nullptr, reinterpret_cast<void**>(&lightCB));
+
+    lightData_.color = { 1, 1, 1, 1 };
+    lightData_.direction = { 0.0f, -1.0f, 0.0f };
+    lightData_.intensity = 1.0f;
+
+    *lightCB = lightData_;
+    lightResource->Unmap(0, nullptr);
+
+    // ===========================
+    // ⑥ テクスチャSRVハンドル取得
+    // ===========================
+    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
+    srvHandle = TextureManager::GetInstance()->GetSrvHandleGPU("resources/uvChecker.png");
+
+    indexResource = dxCommon_->CreateBufferResource(sizeof(indexList));
+
+    uint32_t* ibData = nullptr;
+    indexResource->Map(0, nullptr, reinterpret_cast<void**>(&ibData));
+    memcpy(ibData, indexList, sizeof(indexList));
+    indexResource->Unmap(0, nullptr);
+
+    indexBufferView.BufferLocation = indexResource->GetGPUVirtualAddress();
+    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+    indexBufferView.SizeInBytes = sizeof(indexList);
 
 #pragma endregion
 }
 
 void Game::Update()
 {
+    // ------------------------------
+    // 板ポリ Transform 更新
+    // ------------------------------
+    {
+        TransformationMatrix* transCB = nullptr;
+        transformResource->Map(0, nullptr, (void**)&transCB);
+
+        // ▼ IMGUI で調整できる Transform（例：transformBoard_）
+        Matrix4x4 world = MatrixMath::MakeAffineMatrix(
+            transformBoard_.scale,
+            transformBoard_.rotate,
+            transformBoard_.translate);
+
+        // ▼ カメラの ViewProjection（Object3d と同じ）
+        Matrix4x4 vp = camera_->GetViewProjectionMatrix();
+
+        // ▼ WVP = World × VP
+        Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
+
+        // ▼ GPU に送る
+        transformData_.World = world;
+        transformData_.WVP = wvp;
+
+        *transCB = transformData_;
+        transformResource->Unmap(0, nullptr);
+    }
+
+
+
     input_->Update();
     player2_.Update();
     camera_->Update();
     sprite_->Update();
 
+    camera_->DebugUpdate();
 #ifdef USE_IMGUI
 
     // 現在の座標を取得
@@ -165,51 +259,43 @@ void Game::Update()
     }
 
     ImGui::End();
+    ImGui::Begin("Board Debug");
+
+    ImGui::DragFloat3("Board Pos", &transformBoard_.translate.x, 0.1f);
+    ImGui::DragFloat3("Board Rot", &transformBoard_.rotate.x, 0.01f);
+    ImGui::DragFloat3("Board Scale", &transformBoard_.scale.x, 0.01f);
+
+    ImGui::End();
 #endif
-
-    camera_->DebugUpdate();
-    Matrix4x4 world = MatrixMath::MakeAffineMatrix(
-        { 1, 1, 1 },
-        { 0, 0, 0 },
-        { 0, 0, 0 } // パーティクルの位置
-    );
-
-    Matrix4x4 view = camera_->GetViewMatrix();
-    Matrix4x4 proj = camera_->GetProjectionMatrix();
-
-    *particleWVPData_ = MatrixMath::Multiply(world, MatrixMath::Multiply(view, proj));
 }
 
 void Game::Draw()
 {
+    // ① 3D描画ブロック
+    {
+        object3dManager_->PreDraw();
+        auto* cmd = dxCommon_->GetCommandList();
+        // Root[0] : Material（b0, PS）
+        cmd->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+        // Root[1] : Transform（b0, VS）
+        cmd->SetGraphicsRootConstantBufferView(1, transformResource->GetGPUVirtualAddress());
+        // Root[2] : Texture (t0, PS)
+        cmd->SetGraphicsRootDescriptorTable(2, srvHandle);
+        // Root[3] : DirectionalLight（b1, PS）
+        cmd->SetGraphicsRootConstantBufferView(3, lightResource->GetGPUVirtualAddress());
+        cmd->IASetIndexBuffer(&indexBufferView);
+        cmd->IASetVertexBuffers(0, 1, &vertexBufferView);
 
-    object3dManager_->PreDraw();
-    player2_.Draw();
+        cmd->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
-   
+        player2_.Draw();
+    }
 
-    //auto* cmd = dxCommon_->GetCommandList();
-    //cmd->SetGraphicsRootConstantBufferView(0, particleMaterial_->GetGPUVirtualAddress());
-    //cmd->SetGraphicsRootConstantBufferView(1, particleWVP_->GetGPUVirtualAddress());
-    //cmd->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleTexture_));
-    //// VB
-    //cmd->IASetVertexBuffers(0, 1, &particleVBV_);
-
-    //// IB
-    //cmd->IASetIndexBuffer(&particleIBV_);
-
-
-    //// 定数バッファ（RootParameter 0 or 1）
-    //cmd->SetGraphicsRootConstantBufferView(1, particleWVP_->GetGPUVirtualAddress());
-
-    //// テクスチャ（RootParameter 2）
-    //cmd->SetGraphicsRootDescriptorTable(2,TextureManager::GetInstance()->GetSrvHandleGPU("resources/uvChecker.png"));
-
-    //// 描画
-    //cmd->DrawIndexedInstanced(6, 1, 0, 0, 0);
-
-    spriteManager_->PreDraw();
-    sprite_->Draw();
+    // ② 2D描画ブロック
+    {
+        spriteManager_->PreDraw();
+        // sprite_->Draw();
+    }
 }
 
 void Game::Finalize()
