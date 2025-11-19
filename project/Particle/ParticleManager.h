@@ -68,7 +68,7 @@ public:
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
     void Update();
     void Draw();
-
+    void PreDraw();
 
 private:
     // ============================================================

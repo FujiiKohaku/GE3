@@ -147,6 +147,7 @@ void Game::Draw()
 
         player2_.Draw();
 
+        particleManager_->PreDraw();
         particleManager_->Draw();
     }
 
