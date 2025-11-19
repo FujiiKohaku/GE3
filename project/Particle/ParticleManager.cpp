@@ -37,6 +37,16 @@ void ParticleManager::Draw()
 
     cmd->DrawIndexedInstanced(6, kNumInstance, 0, 0, 0);
 }
+void ParticleManager::PreDraw()
+{
+    auto* cmd = dxCommon_->GetCommandList();
+
+    // パーティクル用の PSO と RootSignature を使う！
+    cmd->SetPipelineState(pipelineState.Get());
+    cmd->SetGraphicsRootSignature(rootSignature.Get());
+
+    // 必要なら IA 設定もここで
+}
 
 void ParticleManager::CreateRootSignature()
 {
@@ -237,7 +247,7 @@ void ParticleManager::InitTransforms()
     for (uint32_t i = 0; i < kNumInstance; ++i) {
         transforms[i].scale = { 1.0f, 1.0f, 1.0f };
         transforms[i].rotate = { 0.0f, 0.0f, 0.0f };
-        transforms[i].translate = { i * 0.1f, i * 0.1f, i * 0.1f };
+        transforms[i].translate = { i * 0.1f, i * 0.1f, i * -0.1f };
     }
 }
 void ParticleManager::UpdateTransforms()
