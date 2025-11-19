@@ -41,6 +41,7 @@
 #include "ModelManager.h"
 #include "Object3D.h"
 #include "Object3dManager.h"
+#include "ParticleManager.h"
 #include "SoundManager.h"
 #include "Sprite.h"
 #include "SpriteManager.h"
@@ -147,5 +148,5 @@ private:
         Vector3 translate;
     };
 
-    
+    ParticleManager* particleManager_ = nullptr;
 };

@@ -1,17 +1,18 @@
 #include "ParticleManager.h"
 #include <cassert>
 
-void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager)
+void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
     dxCommon_ = dxCommon;
     srvManager_ = srvManager;
+    camera_ = camera;
 
     CreateRootSignature();
     CreateGraphicsPipeline();
     CreateInstancingBuffer();
     CreateSrvBuffer();
-
     InitTransforms();
+    CreateBoardMesh();
 }
 void ParticleManager::Update()
 {
@@ -21,52 +22,60 @@ void ParticleManager::Update()
 void ParticleManager::Draw()
 {
     auto* cmd = dxCommon_->GetCommandList();
-    // Root[0] : Material（b0, PS）
+
+    // [0] b0（Material CBV: PS）
     cmd->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    // Root[1] : Transform（b0, VS）
-    cmd->SetGraphicsRootConstantBufferView(1, transformResource->GetGPUVirtualAddress());
-    // Root[2] : Texture (t0, PS)
+
+    // [1] t0（Instancing StructuredBuffer: VS）
+    cmd->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU_);
+
+    // [2] t1（Texture SRV: PS）
     cmd->SetGraphicsRootDescriptorTable(2, srvHandle);
-    // Root[3] : DirectionalLight（b1, PS）
-    cmd->SetGraphicsRootConstantBufferView(3, lightResource->GetGPUVirtualAddress());
-    cmd->IASetIndexBuffer(&indexBufferView);
+
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView);
+    cmd->IASetIndexBuffer(&indexBufferView);
 
-    cmd->DrawIndexedInstanced(6, 1, 0, 0, 0);
+    cmd->DrawIndexedInstanced(6, kNumInstance, 0, 0, 0);
 }
-
 
 void ParticleManager::CreateRootSignature()
 {
 
     // ========= SRV (t0) : Instancing Transform =========
-    D3D12_DESCRIPTOR_RANGE descriptorRangeForInstancing[1] = {};
-    descriptorRangeForInstancing[0].BaseShaderRegister = 0; // t0 0から始まる
-    descriptorRangeForInstancing[0].NumDescriptors = 1; // 数は1つだけ
-    descriptorRangeForInstancing[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    D3D12_DESCRIPTOR_RANGE instancingRange {};
+    instancingRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    instancingRange.NumDescriptors = 1;
+    instancingRange.BaseShaderRegister = 0; // t0
+    instancingRange.RegisterSpace = 0;
+    instancingRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     // ========= SRV (t1) : Texture =========
     D3D12_DESCRIPTOR_RANGE texRange {};
     texRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     texRange.NumDescriptors = 1;
     texRange.BaseShaderRegister = 1; // t1
+    texRange.RegisterSpace = 0;
     texRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     // ========= RootParameters =========
-    D3D12_ROOT_PARAMETER rootParams[2] {};
+    D3D12_ROOT_PARAMETER rootParams[3] = {};
 
-    // [0] Texture（PixelShader）
-    rootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    // [0] Material (b0, PS)
+    rootParams[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParams[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParams[0].DescriptorTable.NumDescriptorRanges = 1;
-    rootParams[0].DescriptorTable.pDescriptorRanges = &texRange;
+    rootParams[0].Descriptor.ShaderRegister = 0; // b0
 
-    // [1] Instance Transform（VertexShader）
-    rootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE; // DescriptorTableを使う
-    rootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX; // VertexShaderで使う
-    rootParams[1].DescriptorTable.pDescriptorRanges = &descriptorRangeForInstancing; // Tableの中身の配列を指定
-    rootParams[1].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeForInstancing); // 配列数
+    // [1] Instancing SRV (t0, VS)
+    rootParams[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParams[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParams[1].DescriptorTable.NumDescriptorRanges = 1;
+    rootParams[1].DescriptorTable.pDescriptorRanges = &instancingRange;
+
+    // [2] Texture SRV (t1, PS)
+    rootParams[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParams[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParams[2].DescriptorTable.NumDescriptorRanges = 1;
+    rootParams[2].DescriptorTable.pDescriptorRanges = &texRange;
 
     // ========= Sampler =========
     D3D12_STATIC_SAMPLER_DESC sampler {};
@@ -162,8 +171,8 @@ void ParticleManager::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Particle.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Particle.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ====== PSO設定 ======
@@ -184,8 +193,7 @@ void ParticleManager::CreateGraphicsPipeline()
     desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
     // PSOを生成
-    hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
-        &desc, IID_PPV_ARGS(&pipelineState));
+    hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineState));
 }
 
 void ParticleManager::CreateInstancingBuffer()
@@ -219,12 +227,9 @@ void ParticleManager::CreateSrvBuffer()
     auto handleCPU = srvManager_->GetCPUDescriptorHandle(3);
     auto handleGPU = srvManager_->GetGPUDescriptorHandle(3);
 
-    dxCommon_->GetDevice()->CreateShaderResourceView(
-        instancingResource.Get(),
-        &instancingSrvDesc,
-        handleCPU);
+    dxCommon_->GetDevice()->CreateShaderResourceView(instancingResource.Get(), &instancingSrvDesc, handleCPU);
 
-    instancingSrvHandleGPU_ = handleGPU; 
+    instancingSrvHandleGPU_ = handleGPU;
 }
 
 void ParticleManager::InitTransforms()
@@ -263,7 +268,6 @@ void ParticleManager::CreateBoardMesh()
     // ===========================
     // ① 頂点データ作成
     // ===========================
-    VertexData vertices[4] {};
 
     // 左上
     vertices[0].position = { -0.5f, 0.5f, 0, -1.0f };

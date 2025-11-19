@@ -11,7 +11,7 @@ class ParticleManager {
 public:
     using ComPtr = Microsoft::WRL::ComPtr<ID3D12Resource>;
 
-      // マテリアル情報（色・ライティング・UV変換など）
+    // マテリアル情報（色・ライティング・UV変換など）
     struct Material {
         Vector4 color; // 色
         int32_t enableLighting; // ライティング有効フラグ
@@ -37,7 +37,9 @@ public:
         std::string textureFilePath;
         uint32_t textureIndex = 0;
     };
-
+    Material materialData_ {};
+    TransformationMatrix transformData_ {};
+    DirectionalLight lightData_ {};
     // 頂点データ
     struct VertexData {
         Vector4 position;
@@ -63,9 +65,10 @@ public:
     // ============================================================
     //           初期化・更新・描画
     // ============================================================
-    void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager);
+    void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
     void Update();
     void Draw();
+
 
 private:
     // ============================================================
@@ -98,7 +101,6 @@ private:
 
     // CPU 書き込みポインタ
     Matrix4x4* wvpData_ = nullptr;
-    Vector4* materialData_ = nullptr;
 
     // SRV (SrvManager で管理するテクスチャ)
     uint32_t textureSrvIndex_ = 0;
@@ -140,10 +142,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> transformResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> lightResource;
 
-    Material materialData_ {};
-    TransformationMatrix transformData_ {};
-    DirectionalLight lightData_ {};
-
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
     uint32_t indexList[6] = { 0, 1, 2, 0, 2, 3 };
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource; // IB本体
@@ -154,4 +152,6 @@ private:
         { 0.0f, 0.0f, 0.0f }, // rotate
         { 0.0f, 0.0f, -30.0f }, // translate
     };
+
+   VertexData vertices[4];
 };

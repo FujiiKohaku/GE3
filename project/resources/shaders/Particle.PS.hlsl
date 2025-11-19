@@ -1,7 +1,11 @@
 #include "Particle.hlsli"
 
+ConstantBuffer<Material> gMaterial : register(b0);//グローバル変数にする
+SamplerState gSampler : register(s0);
+Texture2D<float32_t4> gTexture : register(t1);
 PixelShaderOutput main(VertexShaderOutput input)
 {
+    
     PixelShaderOutput output;
 
     // UV変換は Sprite と同じ（使わないなら input.texcoord を直接使う）
