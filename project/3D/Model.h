@@ -76,9 +76,18 @@ public:
 
     // getter
     const Object3d::ModelData& GetModelData() const { return modelData_; }
-   
+    void SetTexture(const std::string& filePath)
+    {
+        textureFilePath_ = filePath;
+    }
+
+    const std::string& GetTexture() const
+    {
+        return textureFilePath_;
+    }
 
 private:
+    std::string textureFilePath_;
     // ===============================
     // GPUリソース関連
     // ===============================

@@ -93,38 +93,92 @@ private:
     SoundData bgm;
 
     // ------------------------------
-    // パーティクル
-    Microsoft::WRL::ComPtr<ID3D12Resource> particleVB_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> particleIB_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> particleWVP_;
-    D3D12_VERTEX_BUFFER_VIEW particleVBV_;
-    D3D12_INDEX_BUFFER_VIEW particleIBV_;
-
-    Matrix4x4* particleWVPData_;
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> particleMaterial_ = nullptr;
-    Object3d::Material* particleMaterialData_ = nullptr;
-    std::string particleTexture_ = "resources/uvChecker.png";
-
-    // ------------------------------
     // ゲーム状態
     // ------------------------------
     bool isEnd_ = false;
     //------------------------------
     // パーティクル生成構造体
     //------------------------------
+    //
+    // マテリアル情報（色・ライティング・UV変換など）
     struct Material {
-        std::string textureFilePath; // テクスチャの場所
+        Vector4 color; // 色
+        int32_t enableLighting; // ライティング有効フラグ
+        float padding[3]; // アライメント調整
+        Matrix4x4 uvTransform; // UV変換行列
     };
+
+    // 変換行列（WVP＋World）
+    struct TransformationMatrix {
+        Matrix4x4 WVP;
+        Matrix4x4 World;
+    };
+
+    // 平行光源データ
+    struct DirectionalLight {
+        Vector4 color;
+        Vector3 direction;
+        float intensity;
+    };
+
+    // マテリアル外部データ（ファイルパス・テクスチャ番号）
+    struct MaterialData {
+        std::string textureFilePath;
+        uint32_t textureIndex = 0;
+    };
+
+    // 頂点データ
     struct VertexData {
         Vector4 position;
         Vector2 texcoord;
         Vector3 normal;
     };
+
+    // モデル全体データ（頂点配列＋マテリアル）
     struct ModelData {
-        std::vector<VertexData> vertices; // 頂点4つ
-        std::vector<uint32_t> indices; // 三角形2つ分の番号
-        Material material; // テクスチャ
+        std::vector<VertexData> vertices;
+        MaterialData material;
     };
-    ModelData modelData;
+
+    // Transform情報（スケール・回転・位置）
+    struct Transform {
+        Vector3 scale;
+        Vector3 rotate;
+        Vector3 translate;
+    };
+
+    // ------------------------------
+    // パーティクル
+    // ▼ 板ポリ用：定数バッファ（GPU の箱）
+    // ------------------------------
+
+    // ------------------------------
+    // 三角形描画用
+    // ------------------------------
+    // 三角形描画用
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
+    D3D12_HEAP_PROPERTIES uploadHeapProperties {};
+    D3D12_RESOURCE_DESC vertexResourceDesc {};
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
+
+    // マテリアル / 変換 / ライト用 CB
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource;
+
+    Material materialData_ {};
+    TransformationMatrix transformData_ {};
+    DirectionalLight lightData_ {};
+
+    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
+    uint32_t indexList[6] = { 0, 1, 2, 0, 2, 3 };
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource; // IB本体
+    D3D12_INDEX_BUFFER_VIEW indexBufferView {}; // IBビュー
+
+    Transform transformBoard_ = {
+        { 1.0f, 1.0f, 1.0f }, // scale
+        { 0.0f, 0.0f, 0.0f }, // rotate
+        { 0.0f, 0.0f, -30.0f }, // translate 
+    };
 };

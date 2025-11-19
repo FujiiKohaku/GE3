@@ -182,9 +182,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="ImGuiManager\ImGuiManager.cpp" />
-    <ClCompile Include="Particle\Particle.cpp" />
-    <ClCompile Include="Particle\ParticleEmitter.cpp" />
-    <ClCompile Include="Particle\ParticleManager.cpp" />
     <ClCompile Include="Scene\Game.cpp" />
     <ClCompile Include="input\Input.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
@@ -261,9 +258,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_textedit.h" />
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
     <ClInclude Include="ImGuiManager\ImGuiManager.h" />
-    <ClInclude Include="Particle\Particle.h" />
-    <ClInclude Include="Particle\ParticleEmitter.h" />
-    <ClInclude Include="Particle\ParticleManager.h" />
     <ClInclude Include="Scene\Game.h" />
     <ClInclude Include="input\Input.h" />
     <ClInclude Include="Logger\Logger.h" />
