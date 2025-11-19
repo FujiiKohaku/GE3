@@ -147,38 +147,5 @@ private:
         Vector3 translate;
     };
 
-    // ------------------------------
-    // パーティクル
-    // ▼ 板ポリ用：定数バッファ（GPU の箱）
-    // ------------------------------
-
-    // ------------------------------
-    // 三角形描画用
-    // ------------------------------
-    // 三角形描画用
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
-    D3D12_HEAP_PROPERTIES uploadHeapProperties {};
-    D3D12_RESOURCE_DESC vertexResourceDesc {};
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
-
-    // マテリアル / 変換 / ライト用 CB
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
-    Microsoft::WRL::ComPtr<ID3D12Resource> transformResource;
-    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource;
-
-    Material materialData_ {};
-    TransformationMatrix transformData_ {};
-    DirectionalLight lightData_ {};
-
-    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
-    uint32_t indexList[6] = { 0, 1, 2, 0, 2, 3 };
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource; // IB本体
-    D3D12_INDEX_BUFFER_VIEW indexBufferView {}; // IBビュー
-
-    Transform transformBoard_ = {
-        { 1.0f, 1.0f, 1.0f }, // scale
-        { 0.0f, 0.0f, 0.0f }, // rotate
-        { 0.0f, 0.0f, -30.0f }, // translate 
-    };
+    
 };
