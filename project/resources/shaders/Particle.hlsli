@@ -1,4 +1,3 @@
-StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
 //03_00
 struct VertexShaderOutput
 {
@@ -6,7 +5,16 @@ struct VertexShaderOutput
     float32_t2 texcoord : TEXCOORD0;
     float32_t3 normal : NORMAL0;
 };
-
+struct VertexShaderInput
+{
+    float32_t4 position : POSITION;
+    float32_t2 texcoord : TEXCOORD0;
+    float32_t3 normal : NORMAL0;
+};
+struct PixelShaderOutput
+{
+    float32_t4 color : SV_Target0;
+};
 //05_03
 struct Material
 {

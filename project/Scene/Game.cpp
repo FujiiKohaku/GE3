@@ -24,6 +24,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvMa
     camera_ = new Camera();
     camera_->SetTranslate({ 0.0f, 0.0f, -10.0f });
     object3dManager_->SetDefaultCamera(camera_);
+    
 
     modelCommon_.Initialize(dxCommon_);
 
@@ -49,26 +50,20 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvMa
 #pragma endregion
 
 #pragma region パーティクル関連
-
-#pragma endregion
-#pragma region 三角形作成
-
-   
-
+    particleManager_ = new ParticleManager();
+    particleManager_->Initialize(dxCommon_, srvManager_,camera_);
+ 
 #pragma endregion
 }
 
 void Game::Update()
 {
-    
-
-
 
     input_->Update();
     player2_.Update();
     camera_->Update();
     sprite_->Update();
-
+    particleManager_->Update();
     camera_->DebugUpdate();
 #ifdef USE_IMGUI
 
@@ -140,13 +135,7 @@ void Game::Update()
     }
 
     ImGui::End();
-    ImGui::Begin("Board Debug");
 
-    ImGui::DragFloat3("Board Pos", &transformBoard_.translate.x, 0.1f);
-    ImGui::DragFloat3("Board Rot", &transformBoard_.rotate.x, 0.01f);
-    ImGui::DragFloat3("Board Scale", &transformBoard_.scale.x, 0.01f);
-
-    ImGui::End();
 #endif
 }
 
@@ -156,8 +145,9 @@ void Game::Draw()
     {
         object3dManager_->PreDraw();
 
-
         player2_.Draw();
+
+        particleManager_->Draw();
     }
 
     // ② 2D描画ブロック
@@ -174,7 +164,7 @@ void Game::Finalize()
     delete sprite_;
     delete camera_;
     delete input_;
-
+    delete particleManager_;
     ModelManager::GetInstance()->Finalize();
     soundManager_.Finalize(&bgm);
 }
