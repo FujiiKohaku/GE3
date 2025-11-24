@@ -11,7 +11,7 @@ D3D12_BLEND_DESC CreateBlendDesc(BlendMode mode)
         blendDesc.RenderTarget[0].BlendEnable = FALSE;
         break;
 
-    case kBlendModeNormal: // í èÌÉAÉãÉtÉ@
+    case kBlendModeNormal: // ÈÄöÂ∏∏„Ç¢„É´„Éï„Ç°
         blendDesc.RenderTarget[0].BlendEnable = TRUE;
         blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
@@ -21,7 +21,7 @@ D3D12_BLEND_DESC CreateBlendDesc(BlendMode mode)
         blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
         break;
 
-    case kBlendModeAdd: // â¡éZ
+    case kBlendModeAdd: // Âä†ÁÆó
         blendDesc.RenderTarget[0].BlendEnable = TRUE;
         blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
@@ -31,7 +31,7 @@ D3D12_BLEND_DESC CreateBlendDesc(BlendMode mode)
         blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
         break;
 
-    case kBlendModeSubtract: // å∏éZ
+    case kBlendModeSubtract: // Ê∏õÁÆó
         blendDesc.RenderTarget[0].BlendEnable = TRUE;
         blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
@@ -41,7 +41,7 @@ D3D12_BLEND_DESC CreateBlendDesc(BlendMode mode)
         blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_REV_SUBTRACT;
         break;
 
-    case kBlendModeMultiply: // èÊéZ
+    case kBlendModeMultiply: // ‰πóÁÆó
         blendDesc.RenderTarget[0].BlendEnable = TRUE;
         blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
@@ -51,7 +51,7 @@ D3D12_BLEND_DESC CreateBlendDesc(BlendMode mode)
         blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
         break;
 
-    case kBlendModeScreen: // ÉXÉNÉäÅ[Éì
+    case kBlendModeScreen: // „Çπ„ÇØ„É™„Éº„É≥
         blendDesc.RenderTarget[0].BlendEnable = TRUE;
         blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
         blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;

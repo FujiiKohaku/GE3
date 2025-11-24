@@ -1,11 +1,13 @@
 #include "ParticleManager.h"
 #include <cassert>
-
 void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
     dxCommon_ = dxCommon;
     srvManager_ = srvManager;
     camera_ = camera;
+
+    // 乱数生成器の初期化（メンバ変数に代入）
+    randomEngine_ = std::mt19937(seedGenerator_());
 
     CreateRootSignature();
     CreateGraphicsPipeline();
@@ -16,6 +18,12 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
 }
 void ParticleManager::Update()
 {
+    const float kDeltaTime = 1.0f / 60.0f;
+
+    for (uint32_t i = 0; i < kNumInstance; ++i) {
+        particles[i].transform.translate += particles[i].velocity * kDeltaTime;
+    }
+
     UpdateTransforms();
 }
 
@@ -245,11 +253,11 @@ void ParticleManager::CreateSrvBuffer()
 void ParticleManager::InitTransforms()
 {
     for (uint32_t i = 0; i < kNumInstance; ++i) {
-        transforms[i].scale = { 1.0f, 1.0f, 1.0f };
-        transforms[i].rotate = { 0.0f, 0.0f, 0.0f };
-        transforms[i].translate = { i * 0.1f, i * 0.1f, i * -0.1f };
+
+       particles[i] = MakeNewParticle(randomEngine_);
     }
 }
+
 void ParticleManager::UpdateTransforms()
 {
     // instancingResource を map
@@ -261,9 +269,9 @@ void ParticleManager::UpdateTransforms()
     for (uint32_t i = 0; i < kNumInstance; ++i) {
 
         Matrix4x4 world = MatrixMath::MakeAffineMatrix(
-            transforms[i].scale,
-            transforms[i].rotate,
-            transforms[i].translate);
+            particles[i].transform.scale,
+            particles[i].transform.rotate,
+            particles[i].transform.translate);
 
         Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
 
@@ -273,6 +281,7 @@ void ParticleManager::UpdateTransforms()
 
     instancingResource->Unmap(0, nullptr);
 }
+
 void ParticleManager::CreateBoardMesh()
 {
     // ===========================
@@ -371,27 +380,53 @@ void ParticleManager::CreateBoardMesh()
     // ------------------------------
     // 板ポリ Transform 更新
     // ------------------------------
-    {
-        TransformationMatrix* transCB = nullptr;
-        transformResource->Map(0, nullptr, (void**)&transCB);
 
-        // ▼ IMGUI で調整できる Transform（例：transformBoard_）
-        Matrix4x4 world = MatrixMath::MakeAffineMatrix(
-            transformBoard_.scale,
-            transformBoard_.rotate,
-            transformBoard_.translate);
+    TransformationMatrix* transCB = nullptr;
+    transformResource->Map(0, nullptr, (void**)&transCB);
 
-        // ▼ カメラの ViewProjection（Object3d と同じ）
-        Matrix4x4 vp = camera_->GetViewProjectionMatrix();
+    //  IMGUI で調整できる Transform（例：transformBoard_）
+    Matrix4x4 world = MatrixMath::MakeAffineMatrix(
+        transformBoard_.scale,
+        transformBoard_.rotate,
+        transformBoard_.translate);
 
-        // ▼ WVP = World × VP
-        Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
+    //  カメラの ViewProjection（Object3d と同じ）
+    Matrix4x4 vp = camera_->GetViewProjectionMatrix();
 
-        // ▼ GPU に送る
-        transformData_.World = world;
-        transformData_.WVP = wvp;
+    //  WVP = World × VP
+    Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
 
-        *transCB = transformData_;
-        transformResource->Unmap(0, nullptr);
-    }
+    // GPU に送る
+    transformData_.World = world;
+    transformData_.WVP = wvp;
+
+    *transCB = transformData_;
+    transformResource->Unmap(0, nullptr);
+}
+
+
+
+
+
+ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine)
+{
+    std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+    Particle particle;
+
+    particle.transform.scale = { 1.0f, 1.0f, 1.0f };
+    particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
+
+    particle.transform.translate = {
+        distribution(randomEngine),
+        distribution(randomEngine),
+        distribution(randomEngine)
+    };
+
+    particle.velocity = {
+        distribution(randomEngine),
+        distribution(randomEngine),
+        distribution(randomEngine)
+    };
+
+    return particle;
 }
