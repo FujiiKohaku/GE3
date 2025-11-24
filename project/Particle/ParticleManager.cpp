@@ -218,15 +218,16 @@ void ParticleManager::CreateInstancingBuffer()
 {
     // GPUバッファを作成
     instancingResource = dxCommon_->CreateBufferResource(
-        sizeof(TransformationMatrix) * kNumInstance);
+        sizeof(ParticleForGPU) * kNumInstance);
 
     // 初期化
-    TransformationMatrix* instanceData = nullptr;
+    ParticleForGPU* instanceData = nullptr;
     instancingResource->Map(0, nullptr, (void**)&instanceData);
 
     for (uint32_t i = 0; i < kNumInstance; i++) {
         instanceData[i].WVP = MatrixMath::MakeIdentity4x4();
         instanceData[i].World = MatrixMath::MakeIdentity4x4();
+        instanceData[i].color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     instancingResource->Unmap(0, nullptr);
@@ -240,7 +241,7 @@ void ParticleManager::CreateSrvBuffer()
     instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
     instancingSrvDesc.Buffer.FirstElement = 0;
     instancingSrvDesc.Buffer.NumElements = kNumInstance;
-    instancingSrvDesc.Buffer.StructureByteStride = sizeof(TransformationMatrix);
+    instancingSrvDesc.Buffer.StructureByteStride = sizeof(ParticleForGPU);
 
     auto handleCPU = srvManager_->GetCPUDescriptorHandle(3);
     auto handleGPU = srvManager_->GetGPUDescriptorHandle(3);
@@ -254,14 +255,14 @@ void ParticleManager::InitTransforms()
 {
     for (uint32_t i = 0; i < kNumInstance; ++i) {
 
-       particles[i] = MakeNewParticle(randomEngine_);
+        particles[i] = MakeNewParticle(randomEngine_);
     }
 }
 
 void ParticleManager::UpdateTransforms()
 {
     // instancingResource を map
-    TransformationMatrix* instanceData = nullptr;
+    ParticleForGPU* instanceData = nullptr;
     instancingResource->Map(0, nullptr, (void**)&instanceData);
 
     Matrix4x4 vp = camera_->GetViewProjectionMatrix();
@@ -277,6 +278,7 @@ void ParticleManager::UpdateTransforms()
 
         instanceData[i].World = world;
         instanceData[i].WVP = wvp;
+        instanceData[i].color = particles[i].color;
     }
 
     instancingResource->Unmap(0, nullptr);
@@ -404,13 +406,11 @@ void ParticleManager::CreateBoardMesh()
     transformResource->Unmap(0, nullptr);
 }
 
-
-
-
-
 ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine)
 {
     std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+
+    std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
     Particle particle;
 
     particle.transform.scale = { 1.0f, 1.0f, 1.0f };
@@ -427,6 +427,11 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomE
         distribution(randomEngine),
         distribution(randomEngine)
     };
+
+    particle.color = { distColor(randomEngine),
+        distColor(randomEngine),
+        distColor(randomEngine),
+        1.0f };
 
     return particle;
 }

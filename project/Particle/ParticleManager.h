@@ -52,6 +52,13 @@ public:
     struct Particle {
         Transform transform;
         Vector3 velocity;
+        Vector4 color;
+    };
+
+    struct ParticleForGPU {
+        Matrix4x4 WVP;
+        Matrix4x4 World;
+        Vector4 color;
     };
 
 public:
@@ -97,7 +104,6 @@ private:
     ComPtr transformResource; // CB: Board Transform
     ComPtr lightResource; // CB: Light
     ComPtr instancingResource; // StructuredBuffer
-
     // -------- Views --------
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
     D3D12_INDEX_BUFFER_VIEW indexBufferView {};

@@ -15,7 +15,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float32_t4 texColor = gTexture.Sample(gSampler, uv.xy);
 
     // 色を掛ける（gMaterial.color は頂点カラー）
-    output.color = texColor * gMaterial.color;
+    output.color = gMaterial.color * texColor * input.color;
 
     // αが0なら描画しない（透明な部分を捨てる）
     if (output.color.a == 0.0f)
