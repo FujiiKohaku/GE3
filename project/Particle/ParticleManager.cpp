@@ -35,6 +35,7 @@ void ParticleManager::Update()
 {
 
     UpdateTransforms();
+    ImGui();
 }
 
 void ParticleManager::Draw()
@@ -67,12 +68,8 @@ void ParticleManager::Draw()
 void ParticleManager::PreDraw()
 {
     auto* cmd = dxCommon_->GetCommandList();
-
-    // パーティクル用の PSO と RootSignature を使う！
-    cmd->SetPipelineState(pipelineState.Get());
     cmd->SetGraphicsRootSignature(rootSignature.Get());
-
-   
+    cmd->SetPipelineState(pipelineStates[currentBlendMode_].Get());
 }
 
 void ParticleManager::CreateRootSignature()
@@ -184,17 +181,6 @@ void ParticleManager::CreateGraphicsPipeline()
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
-    // ====== ブレンド設定 ======
-    D3D12_BLEND_DESC blendDesc {};
-    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-    blendDesc.RenderTarget[0].BlendEnable = TRUE;
-    blendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-    blendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-    blendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-    blendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-    blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-
     // ====== ラスタライザ設定 ======
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
@@ -213,24 +199,34 @@ void ParticleManager::CreateGraphicsPipeline()
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ====== PSO設定 ======
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC desc {};
-    desc.pRootSignature = rootSignature.Get();
-    desc.InputLayout = inputLayoutDesc;
-    desc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
-    desc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
-    desc.BlendState = blendDesc;
-    desc.RasterizerState = rasterizerDesc;
-    desc.DepthStencilState = depthStencilDesc;
-    desc.NumRenderTargets = 1;
-    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    desc.DepthStencilState = depthStencilDesc;
-    desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    desc.SampleDesc.Count = 1;
-    desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
-    desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC base {};
+    base.pRootSignature = rootSignature.Get();
+    base.InputLayout = inputLayoutDesc;
+    base.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
+    base.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
+    base.RasterizerState = rasterizerDesc;
+    base.DepthStencilState = depthStencilDesc;
+    base.NumRenderTargets = 1;
+    base.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    base.DepthStencilState = depthStencilDesc;
+    base.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    base.SampleDesc.Count = 1;
+    base.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+    base.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-    // PSOを生成
-    hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineState));
+// PSO 配列を作る
+    for (int i = 0; i < (int)BlendMode::kCountOfBlendMode; i++) {
+
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = base;
+        desc.BlendState = CreateBlendDesc((BlendMode)i);
+
+        dxCommon_->GetDevice()->CreateGraphicsPipelineState(
+            &desc,
+            IID_PPV_ARGS(&pipelineStates[i]) // ← ここを直す！
+        );
+    }
+
+
 }
 
 void ParticleManager::CreateInstancingBuffer()
@@ -462,4 +458,40 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomE
     particle.currentTime = 0;
 
     return particle;
+}
+
+
+void ParticleManager::ImGui()
+{
+    if (ImGui::Begin("Particle Manager")) {
+
+        // -----------------------
+        // TransformBoard_ の調整
+        // -----------------------
+        ImGui::Text("Board Transform");
+     
+
+        // -----------------------
+        // BlendMode
+        // -----------------------
+        const char* blendNames[] = {
+            "None",
+            "Normal",
+            "Add",
+            "Subtract",
+            "Multiply",
+            "Screen"
+        };
+
+        int mode = currentBlendMode_;
+        if (ImGui::Combo("Blend Mode", &mode, blendNames, IM_ARRAYSIZE(blendNames))) {
+            currentBlendMode_ = mode;
+        }
+
+       
+
+       
+    }
+
+    ImGui::End();
 }
