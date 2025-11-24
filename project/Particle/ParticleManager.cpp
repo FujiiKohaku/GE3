@@ -16,19 +16,17 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     InitTransforms();
     CreateBoardMesh();
 }
+
 void ParticleManager::Update()
 {
-    const float kDeltaTime = 1.0f / 60.0f;
-
-    for (uint32_t i = 0; i < kNumInstance; ++i) {
-        particles[i].transform.translate += particles[i].velocity * kDeltaTime;
-    }
 
     UpdateTransforms();
 }
 
 void ParticleManager::Draw()
 {
+    if (numInstance_ == 0)
+        return;
     auto* cmd = dxCommon_->GetCommandList();
 
     // [0] b0（Material CBV: PS）
@@ -43,7 +41,7 @@ void ParticleManager::Draw()
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView);
     cmd->IASetIndexBuffer(&indexBufferView);
 
-    cmd->DrawIndexedInstanced(6, kNumInstance, 0, 0, 0);
+    cmd->DrawIndexedInstanced(6, numInstance_, 0, 0, 0);
 }
 void ParticleManager::PreDraw()
 {
@@ -185,7 +183,7 @@ void ParticleManager::CreateGraphicsPipeline()
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
-    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
@@ -217,20 +215,17 @@ void ParticleManager::CreateGraphicsPipeline()
 void ParticleManager::CreateInstancingBuffer()
 {
     // GPUバッファを作成
-    instancingResource = dxCommon_->CreateBufferResource(
-        sizeof(ParticleForGPU) * kNumInstance);
+    instancingResource = dxCommon_->CreateBufferResource(sizeof(ParticleForGPU) * kNumMaxInstance);
 
     // 初期化
-    ParticleForGPU* instanceData = nullptr;
-    instancingResource->Map(0, nullptr, (void**)&instanceData);
 
-    for (uint32_t i = 0; i < kNumInstance; i++) {
-        instanceData[i].WVP = MatrixMath::MakeIdentity4x4();
-        instanceData[i].World = MatrixMath::MakeIdentity4x4();
-        instanceData[i].color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    instancingResource->Map(0, nullptr, (void**)&instanceData_);
+
+    for (uint32_t i = 0; i < kNumMaxInstance; i++) {
+        instanceData_[i].WVP = MatrixMath::MakeIdentity4x4();
+        instanceData_[i].World = MatrixMath::MakeIdentity4x4();
+        instanceData_[i].color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     }
-
-    instancingResource->Unmap(0, nullptr);
 }
 
 void ParticleManager::CreateSrvBuffer()
@@ -240,7 +235,7 @@ void ParticleManager::CreateSrvBuffer()
     instancingSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     instancingSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
     instancingSrvDesc.Buffer.FirstElement = 0;
-    instancingSrvDesc.Buffer.NumElements = kNumInstance;
+    instancingSrvDesc.Buffer.NumElements = kNumMaxInstance;
     instancingSrvDesc.Buffer.StructureByteStride = sizeof(ParticleForGPU);
 
     auto handleCPU = srvManager_->GetCPUDescriptorHandle(3);
@@ -253,7 +248,7 @@ void ParticleManager::CreateSrvBuffer()
 
 void ParticleManager::InitTransforms()
 {
-    for (uint32_t i = 0; i < kNumInstance; ++i) {
+    for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
 
         particles[i] = MakeNewParticle(randomEngine_);
     }
@@ -262,26 +257,32 @@ void ParticleManager::InitTransforms()
 void ParticleManager::UpdateTransforms()
 {
     // instancingResource を map
-    ParticleForGPU* instanceData = nullptr;
-    instancingResource->Map(0, nullptr, (void**)&instanceData);
 
     Matrix4x4 vp = camera_->GetViewProjectionMatrix();
+    const float kDeltaTime = 1.0f / 60.0f;
+    numInstance_ = 0; //
 
-    for (uint32_t i = 0; i < kNumInstance; ++i) {
+    for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
 
-        Matrix4x4 world = MatrixMath::MakeAffineMatrix(
-            particles[i].transform.scale,
-            particles[i].transform.rotate,
-            particles[i].transform.translate);
+        if (particles[i].lifeTime <= particles[i].currentTime) {
+            particles[i] = MakeNewParticle(randomEngine_); // 生まれ直し
+        }
+
+        particles[i].transform.translate += particles[i].velocity * kDeltaTime;
+        particles[i].currentTime += kDeltaTime; // 経過時間を足す
+
+        float alpha = 1.0f - (particles[i].currentTime / particles[i].lifeTime);
+
+        Matrix4x4 world = MatrixMath::MakeAffineMatrix(particles[i].transform.scale, particles[i].transform.rotate, particles[i].transform.translate);
 
         Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
 
-        instanceData[i].World = world;
-        instanceData[i].WVP = wvp;
-        instanceData[i].color = particles[i].color;
+        instanceData_[numInstance_].World = world;
+        instanceData_[numInstance_].WVP = wvp;
+        instanceData_[numInstance_].color = particles[i].color;
+        instanceData_[numInstance_].color.w = alpha;
+        ++numInstance_;
     }
-
-    instancingResource->Unmap(0, nullptr);
 }
 
 void ParticleManager::CreateBoardMesh()
@@ -411,6 +412,9 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomE
     std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
 
     std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
+
+    std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
+
     Particle particle;
 
     particle.transform.scale = { 1.0f, 1.0f, 1.0f };
@@ -432,6 +436,9 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomE
         distColor(randomEngine),
         distColor(randomEngine),
         1.0f };
+
+    particle.lifeTime = distTime(randomEngine);
+    particle.currentTime = 0;
 
     return particle;
 }

@@ -53,6 +53,8 @@ public:
         Transform transform;
         Vector3 velocity;
         Vector4 color;
+        float lifeTime;
+        float currentTime;
     };
 
     struct ParticleForGPU {
@@ -94,9 +96,9 @@ private:
     std::mt19937 randomEngine_;
 
     // -------- Instance Count --------
-    static const uint32_t kNumInstance = 100;
-    Particle particles[kNumInstance] = {};
-
+    static const uint32_t kNumMaxInstance = 10;
+    Particle particles[kNumMaxInstance] = {};
+    uint32_t numInstance_ = 0; // 描画すべきインスタンス数
     // -------- GPU Buffers --------
     ComPtr vertexResource; // VB
     ComPtr indexResource; // IB
@@ -104,6 +106,7 @@ private:
     ComPtr transformResource; // CB: Board Transform
     ComPtr lightResource; // CB: Light
     ComPtr instancingResource; // StructuredBuffer
+    ParticleForGPU* instanceData_ = nullptr;
     // -------- Views --------
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
     D3D12_INDEX_BUFFER_VIEW indexBufferView {};
@@ -127,4 +130,5 @@ private:
     Material materialData_;
     TransformationMatrix transformData_;
     DirectionalLight lightData_;
+    
 };
