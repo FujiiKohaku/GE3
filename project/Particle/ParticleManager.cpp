@@ -2,20 +2,34 @@
 #include <cassert>
 void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
+    // エンジンやカメラを保存しておく
     dxCommon_ = dxCommon;
     srvManager_ = srvManager;
     camera_ = camera;
 
-    // 乱数生成器の初期化（メンバ変数に代入）
+    // パーティクルのランダム生成に使う装置を準備
     randomEngine_ = std::mt19937(seedGenerator_());
 
+    // シェーダーにどうデータを渡すかを決める
     CreateRootSignature();
+
+    // パーティクルの描画方法をまとめた“パイプライン”を作る
     CreateGraphicsPipeline();
+
+    // パーティクル100個ぶんのデータを入れる箱を作る
     CreateInstancingBuffer();
+
+    // その箱をシェーダーから読めるように登録する
     CreateSrvBuffer();
+
+    // パーティクルが最初にどこにいて、どんなスピードか決める
     InitTransforms();
+
+    // パーティクルの形となる四角ポリゴンを作る
     CreateBoardMesh();
 }
+
+
 
 void ParticleManager::Update()
 {
@@ -25,24 +39,31 @@ void ParticleManager::Update()
 
 void ParticleManager::Draw()
 {
+    // 描くパーティクルが1つもないなら何もしない
     if (numInstance_ == 0)
         return;
+
     auto* cmd = dxCommon_->GetCommandList();
 
-    // [0] b0（Material CBV: PS）
+    // 色や明るさなどのマテリアル情報
     cmd->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 
-    // [1] t0（Instancing StructuredBuffer: VS）
+    // パーティクルたちの位置や色のまとめデータ
     cmd->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU_);
 
-    // [2] t1（Texture SRV: PS）
+    // 四角に貼るテクスチャ
     cmd->SetGraphicsRootDescriptorTable(2, srvHandle);
 
+    // 四角ポリゴンの形（頂点）
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+    // 四角ポリゴンのつなぎ順（インデックス）
     cmd->IASetIndexBuffer(&indexBufferView);
 
+    // 四角 × パーティクル数ぶん描く
     cmd->DrawIndexedInstanced(6, numInstance_, 0, 0, 0);
 }
+
 void ParticleManager::PreDraw()
 {
     auto* cmd = dxCommon_->GetCommandList();
@@ -51,7 +72,7 @@ void ParticleManager::PreDraw()
     cmd->SetPipelineState(pipelineState.Get());
     cmd->SetGraphicsRootSignature(rootSignature.Get());
 
-    // 必要なら IA 設定もここで
+   
 }
 
 void ParticleManager::CreateRootSignature()
