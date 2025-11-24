@@ -1,9 +1,10 @@
 #pragma once
+#include "Camera.h"
 #include "DirectXCommon.h"
-#include "MatrixMath.h"
 #include "SrvManager.h"
 #include "TextureManager.h"
-#include "camera.h"
+#include "blendutil.h" // BlendMode ここで定義
+
 #include <d3d12.h>
 #include <random>
 #include <string>
@@ -13,7 +14,9 @@ class ParticleManager {
 public:
     using ComPtr = Microsoft::WRL::ComPtr<ID3D12Resource>;
 
-    // -------- Material --------
+    // =========================================================
+    // GPU に送る構造体
+    // =========================================================
     struct Material {
         Vector4 color;
         int32_t enableLighting;
@@ -21,34 +24,23 @@ public:
         Matrix4x4 uvTransform;
     };
 
-    // -------- Transform Matrix --------
     struct TransformationMatrix {
         Matrix4x4 WVP;
         Matrix4x4 World;
     };
 
-    // -------- Light --------
     struct DirectionalLight {
         Vector4 color;
         Vector3 direction;
         float intensity;
     };
 
-    // -------- Vertex --------
     struct VertexData {
         Vector4 position;
         Vector2 texcoord;
         Vector3 normal;
     };
 
-    // -------- Transform --------
-    struct Transform {
-        Vector3 scale;
-        Vector3 rotate;
-        Vector3 translate;
-    };
-
-    // -------- Particle --------
     struct Particle {
         Transform transform;
         Vector3 velocity;
@@ -64,71 +56,88 @@ public:
     };
 
 public:
-    // -------- Public Methods --------
+    // =========================================================
+    // 基本操作
+    // =========================================================
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
     void Update();
-    void Draw();
     void PreDraw();
+    void Draw();
+
+    // BlendMode の setter
+    void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
+    void ImGui();
 
 private:
-    // -------- RootSig & PSO --------
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
-
+    // =========================================================
+    // 内部処理
+    // =========================================================
     void CreateRootSignature();
     void CreateGraphicsPipeline();
     void CreateInstancingBuffer();
     void CreateSrvBuffer();
+    void CreateBoardMesh();
     void InitTransforms();
     void UpdateTransforms();
-    void CreateBoardMesh();
-
     Particle MakeNewParticle(std::mt19937& randomEngine);
 
 private:
-    // -------- External ----------
+    // =========================================================
+    // DirectX / 外部依存
+    // =========================================================
     DirectXCommon* dxCommon_ = nullptr;
     SrvManager* srvManager_ = nullptr;
     Camera* camera_ = nullptr;
 
-    // -------- RNG --------
-    std::random_device seedGenerator_;
-    std::mt19937 randomEngine_;
+    // =========================================================
+    // RootSignature / PSO（BlendMode対応）
+    // =========================================================
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+    int currentBlendMode_ = kBlendModeNormal;
 
-    // -------- Instance Count --------
-    static const uint32_t kNumMaxInstance = 10;
-    Particle particles[kNumMaxInstance] = {};
-    uint32_t numInstance_ = 0; // 描画すべきインスタンス数
-    // -------- GPU Buffers --------
-    ComPtr vertexResource; // VB
-    ComPtr indexResource; // IB
-    ComPtr materialResource; // CB: Material
-    ComPtr transformResource; // CB: Board Transform
-    ComPtr lightResource; // CB: Light
-    ComPtr instancingResource; // StructuredBuffer
-    ParticleForGPU* instanceData_ = nullptr;
-    // -------- Views --------
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
-    D3D12_INDEX_BUFFER_VIEW indexBufferView {};
+    // =========================================================
+    // GPU リソース（SRV / StructuredBuffer / CB）
+    // =========================================================
+    ComPtr instancingResource;
+    ParticleForGPU* instanceData_ = nullptr; // map しっぱなし用
 
-    // -------- SRV Handles --------
+    uint32_t numInstance_ = 0;
+    static const uint32_t kNumMaxInstance = 50;
+
+    // パーティクル本体
+    Particle particles[kNumMaxInstance];
+
+    // SRV の GPU ハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
 
-    // -------- Mesh --------
+    // Material / Transform / Light 用 CB
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource;
+
+    Material materialData_ {};
+    TransformationMatrix transformData_ {};
+    DirectionalLight lightData_ {};
+
+    // 板ポリ mesh
     VertexData vertices[4];
     uint32_t indexList[6] = { 0, 1, 2, 0, 2, 3 };
 
-    // -------- Board Transform --------
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
+
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
+    D3D12_INDEX_BUFFER_VIEW indexBufferView {};
+    // パーティクル板ポリ用の Transform
     Transform transformBoard_ = {
-        { 1.0f, 1.0f, 1.0f },
-        { 0.0f, 0.0f, 0.0f },
-        { 0.0f, 0.0f, -30.0f }
+        { 1.0f, 1.0f, 1.0f }, // scale
+        { 0.0f, 0.0f, 0.0f }, // rotate
+        { 0.0f, 0.0f, 0.0f } // translate
     };
 
-    // -------- CPU Cache --------
-    Material materialData_;
-    TransformationMatrix transformData_;
-    DirectionalLight lightData_;
-    
+    // 乱数
+    std::random_device seedGenerator_;
+    std::mt19937 randomEngine_;
 };

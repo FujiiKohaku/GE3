@@ -35,7 +35,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvMa
     ModelManager::GetInstance()->LoadModel("fence.obj");
     player2_.Initialize(object3dManager_);
     player2_.SetModel("fence.obj");
-    player2_.SetTranslate({ 3.0f, 0.0f, 0.0f });
+    player2_.SetTranslate({ 3.0f, 0.0f, 10.0f });
     player2_.SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 #pragma endregion
 
