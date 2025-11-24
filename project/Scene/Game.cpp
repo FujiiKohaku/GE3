@@ -22,7 +22,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvMa
     object3dManager_->Initialize(dxCommon_);
 
     camera_ = new Camera();
-    camera_->SetTranslate({ 0.0f, 0.0f, -10.0f });
+    camera_->SetTranslate({ 0.0f, 0.0f, -1.0f });
     object3dManager_->SetDefaultCamera(camera_);
     
 
