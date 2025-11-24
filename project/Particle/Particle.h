@@ -1,10 +1,10 @@
 #pragma once
-#include "Struct.h" // Vector2, Vector3, Vector4, Matrix4x4 ‚È‚Ç
-#include "TextureManager.h" // ƒeƒNƒXƒ`ƒƒŠÇ—
-#include <cstdint> // uint32_t ‚È‚Ç
-#include <d3d12.h> // D3D12ŠÖ˜AŒ^iID3D12Resource‚È‚Çj
+#include "Struct.h" // Vector2, Vector3, Vector4, Matrix4x4 ãªã©
+#include "TextureManager.h" // ãƒ†ã‚¯ã‚¹ãƒãƒ£ç®¡ç†
+#include <cstdint> // uint32_t ãªã©
+#include <d3d12.h> // D3D12é–¢é€£å‹ï¼ˆID3D12Resourceãªã©ï¼‰
 #include <string> // std::string
-#include <wrl.h> // ComPtrƒXƒ}[ƒgƒ|ƒCƒ“ƒ^
+#include <wrl.h> // ComPtrã‚¹ãƒãƒ¼ãƒˆãƒã‚¤ãƒ³ã‚¿
 class Particle {
 public:
    
