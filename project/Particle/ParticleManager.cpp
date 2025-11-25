@@ -1,5 +1,6 @@
 #include "ParticleManager.h"
 #include <cassert>
+#include <numbers>
 void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
     // エンジンやカメラを保存しておく
@@ -29,12 +30,12 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     CreateBoardMesh();
 }
 
-
-
 void ParticleManager::Update()
 {
 
+   
     UpdateTransforms();
+
     ImGui();
 }
 
@@ -214,7 +215,7 @@ void ParticleManager::CreateGraphicsPipeline()
     base.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     base.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-// PSO 配列を作る
+    // PSO 配列を作る
     for (int i = 0; i < (int)BlendMode::kCountOfBlendMode; i++) {
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = base;
@@ -225,8 +226,6 @@ void ParticleManager::CreateGraphicsPipeline()
             IID_PPV_ARGS(&pipelineStates[i]) // ← ここを直す！
         );
     }
-
-
 }
 
 void ParticleManager::CreateInstancingBuffer()
@@ -273,24 +272,54 @@ void ParticleManager::InitTransforms()
 
 void ParticleManager::UpdateTransforms()
 {
-    // instancingResource を map
+    // ---------- ビルボード行列（カメラの回転だけ） ----------
+    Matrix4x4 cameraMat = camera_->GetWorldMatrix();
 
+    // 平行移動を消す（回転だけ残す）
+    cameraMat.m[3][0] = 0.0f;
+    cameraMat.m[3][1] = 0.0f;
+    cameraMat.m[3][2] = 0.0f;
+
+    // 板ポリの前向き補正（必要なら角度を変えてOK）
+    Matrix4x4 backToFrontMatrix = MatrixMath::MakeRotateYMatrix(0.0f);
+
+    // ビルボード行列
+    Matrix4x4 billboardMatrix = MatrixMath::Multiply(backToFrontMatrix, cameraMat);
+
+    // ---------- 共通 ----------
     Matrix4x4 vp = camera_->GetViewProjectionMatrix();
     const float kDeltaTime = 1.0f / 60.0f;
-    numInstance_ = 0; //
+    numInstance_ = 0;
 
     for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
 
         if (particles[i].lifeTime <= particles[i].currentTime) {
-            particles[i] = MakeNewParticle(randomEngine_); // 生まれ直し
+            particles[i] = MakeNewParticle(randomEngine_);
         }
 
         particles[i].transform.translate += particles[i].velocity * kDeltaTime;
-        particles[i].currentTime += kDeltaTime; // 経過時間を足す
+        particles[i].currentTime += kDeltaTime;
 
         float alpha = 1.0f - (particles[i].currentTime / particles[i].lifeTime);
 
-        Matrix4x4 world = MatrixMath::MakeAffineMatrix(particles[i].transform.scale, particles[i].transform.rotate, particles[i].transform.translate);
+        Matrix4x4 scaleMat = MatrixMath::Matrix4x4MakeScaleMatrix(particles[i].transform.scale);
+        Matrix4x4 transMat = MatrixMath::MakeTranslateMatrix(particles[i].transform.translate);
+
+        Matrix4x4 world;
+
+      
+        if (useBillboard_) {
+            // ビルボード：カメラの方を向く
+            world = MatrixMath::Multiply(
+                MatrixMath::Multiply(scaleMat, billboardMatrix),
+                transMat);
+        } else {
+            // ビルボード OFF：元の回転を使う
+            world = MatrixMath::MakeAffineMatrix(
+                particles[i].transform.scale,
+                particles[i].transform.rotate,
+                particles[i].transform.translate);
+        }
 
         Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
 
@@ -298,9 +327,12 @@ void ParticleManager::UpdateTransforms()
         instanceData_[numInstance_].WVP = wvp;
         instanceData_[numInstance_].color = particles[i].color;
         instanceData_[numInstance_].color.w = alpha;
+
         ++numInstance_;
     }
 }
+
+
 
 void ParticleManager::CreateBoardMesh()
 {
@@ -460,7 +492,6 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomE
     return particle;
 }
 
-
 void ParticleManager::ImGui()
 {
     if (ImGui::Begin("Particle Manager")) {
@@ -469,7 +500,6 @@ void ParticleManager::ImGui()
         // TransformBoard_ の調整
         // -----------------------
         ImGui::Text("Board Transform");
-     
 
         // -----------------------
         // BlendMode
@@ -488,9 +518,7 @@ void ParticleManager::ImGui()
             currentBlendMode_ = mode;
         }
 
-       
-
-       
+        ImGui::Checkbox("Use Billboard", &useBillboard_);
     }
 
     ImGui::End();

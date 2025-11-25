@@ -140,4 +140,5 @@ private:
     // 乱数
     std::random_device seedGenerator_;
     std::mt19937 randomEngine_;
+    bool useBillboard_ = true;
 };
