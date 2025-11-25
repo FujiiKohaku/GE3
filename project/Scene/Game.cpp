@@ -11,7 +11,7 @@ void Game::Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvMa
     spriteManager_->Initialize(dxCommon_);
 
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-
+    //TextureManager::GetInstance()->LoadTexture("resources/circle.png");
     sprite_ = new Sprite();
     sprite_->Initialize(spriteManager_, "resources/uvChecker.png");
     sprite_->SetPosition({ 100.0f, 100.0f });
