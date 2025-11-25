@@ -246,6 +246,7 @@ void ParticleManager::CreateInstancingBuffer()
 
 void ParticleManager::CreateSrvBuffer()
 {
+    uint32_t index = srvManager_->Allocate();
     D3D12_SHADER_RESOURCE_VIEW_DESC instancingSrvDesc {};
     instancingSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
     instancingSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -254,8 +255,8 @@ void ParticleManager::CreateSrvBuffer()
     instancingSrvDesc.Buffer.NumElements = kNumMaxInstance;
     instancingSrvDesc.Buffer.StructureByteStride = sizeof(ParticleForGPU);
 
-    auto handleCPU = srvManager_->GetCPUDescriptorHandle(3);
-    auto handleGPU = srvManager_->GetGPUDescriptorHandle(3);
+    auto handleCPU = srvManager_->GetCPUDescriptorHandle(index);
+    auto handleGPU = srvManager_->GetGPUDescriptorHandle(index);
 
     dxCommon_->GetDevice()->CreateShaderResourceView(instancingResource.Get(), &instancingSrvDesc, handleCPU);
 
@@ -415,8 +416,8 @@ void ParticleManager::CreateBoardMesh()
     // ===========================
     // ⑥ テクスチャSRVハンドル取得
     // ===========================
-    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-    srvHandle = TextureManager::GetInstance()->GetSrvHandleGPU("resources/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/circle.png");
+    srvHandle = TextureManager::GetInstance()->GetSrvHandleGPU("resources/circle.png");
 
     indexResource = dxCommon_->CreateBufferResource(sizeof(indexList));
 
