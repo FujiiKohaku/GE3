@@ -267,7 +267,7 @@ void ParticleManager::InitTransforms()
 {
     for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
 
-        particles[i] = MakeNewParticle(randomEngine_);
+        particles[i] = MakeNewParticleFire(randomEngine_);
     }
 }
 
@@ -295,7 +295,7 @@ void ParticleManager::UpdateTransforms()
     for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
 
         if (particles[i].lifeTime <= particles[i].currentTime) {
-            particles[i] = MakeNewParticle(randomEngine_);
+            particles[i] = MakeNewParticleFire(randomEngine_);
         }
 
         particles[i].transform.translate += particles[i].velocity * kDeltaTime;
@@ -523,4 +523,58 @@ void ParticleManager::ImGui()
     }
 
     ImGui::End();
+}
+
+
+ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& randomEngine)
+{
+    std::uniform_real_distribution<float> randPos(-0.3f, 0.3f); // 横揺れ用
+    std::uniform_real_distribution<float> rand01(0.0f, 1.0f); // 色や揺れ用
+    std::uniform_real_distribution<float> randLife(0.5f, 1.2f); // 炎は寿命短め
+
+    Particle p;
+
+    // --------------------------
+    // ① 初期位置：炎の根元に集める
+    // --------------------------
+    p.transform.translate = {
+        randPos(randomEngine), // 横に少し散らす
+        0.0f, // 地面からスタート
+        randPos(randomEngine)
+    };
+
+    // --------------------------
+    // ② 速度：上に流れる炎
+    // --------------------------
+    p.velocity = {
+        randPos(randomEngine) * 0.3f,
+        -(0.8f + rand01(randomEngine) * 1.2f), // Yマイナス方向へ昇る
+        randPos(randomEngine) * 0.3f
+    };
+
+
+    // --------------------------
+    // ③ 色：炎の基本色（赤寄り）
+    // --------------------------
+    // 初期色は赤〜オレンジ
+    p.color = {
+        1.0f, // R（赤）
+        0.3f + rand01(randomEngine) * 0.5f, // G（オレンジ成分）
+        0.0f, // B
+        1.0f // A
+    };
+
+    // --------------------------
+    // ④ 大きさ：少し大きめ
+    // --------------------------
+    p.transform.scale = { 0.8f, 0.8f, 0.8f };
+    p.transform.rotate = { 0.0f, 0.0f, 0.0f }; // 炎は回転しない（ビルボードするため）
+
+    // --------------------------
+    // ⑤ 寿命：短いほど炎っぽい
+    // --------------------------
+    p.lifeTime = randLife(randomEngine);
+    p.currentTime = 0.0f;
+
+    return p;
 }

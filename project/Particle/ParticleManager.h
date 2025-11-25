@@ -80,6 +80,7 @@ private:
     void InitTransforms();
     void UpdateTransforms();
     Particle MakeNewParticle(std::mt19937& randomEngine);
+    Particle MakeNewParticleFire(std::mt19937& randomEngine);
 
 private:
     // =========================================================
