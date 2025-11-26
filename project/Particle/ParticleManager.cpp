@@ -28,12 +28,24 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
 
     // パーティクルの形となる四角ポリゴンを作る
     CreateBoardMesh();
+
+    emitter.count = 3;
+    emitter.frequency = 0.5f; // 0.5秒ごとに発生
+    kdeltaTime = 0.01;
+    emitter.transform.translate = { 0.0f, 0.0f, 0.0f };
+    emitter.transform.rotate = { 0.0f, 0.0f, 0.0f };
+    emitter.transform.scale = { 1.0f, 1.0f, 1.0f };
 }
 
 void ParticleManager::Update()
 {
 
-   
+    emitter.frequencyTime += kdeltaTime; // 時刻を進める
+    if (emitter.frequency <= emitter.frequencyTime) { // 頻度より大きいなら発生
+        particles.splice(particles.end(), Emit(emitter, randomEngine_)); // 発生処理
+        emitter.frequencyTime -= emitter.frequency; // 余計に過ぎた時間も加味して頻度計算する
+    }
+
     UpdateTransforms();
 
     ImGui();
@@ -265,80 +277,78 @@ void ParticleManager::CreateSrvBuffer()
 
 void ParticleManager::InitTransforms()
 {
-    for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
+    // const uint32_t startCount = 10; // 最初に10個生みたい例
 
-        particles[i] = MakeNewParticleFire(randomEngine_);
-    }
+    // for (uint32_t i = 0; i < startCount; ++i) {
+    //     particles.push_back(MakeNewParticleFire(randomEngine_));
+    //     particles.push_back(MakeNewParticleFire(randomEngine_));
+    //     particles.push_back(MakeNewParticleFire(randomEngine_));
+    // }
 }
 
 void ParticleManager::UpdateTransforms()
 {
-    // ---------- ビルボード行列（カメラの回転だけ） ----------
+    // ---------- ビルボード行列 ----------
     Matrix4x4 cameraMat = camera_->GetWorldMatrix();
+    cameraMat.m[3][0] = cameraMat.m[3][1] = cameraMat.m[3][2] = 0.0f;
 
-    // 平行移動を消す（回転だけ残す）
-    cameraMat.m[3][0] = 0.0f;
-    cameraMat.m[3][1] = 0.0f;
-    cameraMat.m[3][2] = 0.0f;
-
-    // 板ポリの前向き補正（必要なら角度を変えてOK）
     Matrix4x4 backToFrontMatrix = MatrixMath::MakeRotateYMatrix(0.0f);
-
-    // ビルボード行列
     Matrix4x4 billboardMatrix = MatrixMath::Multiply(backToFrontMatrix, cameraMat);
 
-    // ---------- 共通 ----------
     Matrix4x4 vp = camera_->GetViewProjectionMatrix();
     const float kDeltaTime = 1.0f / 60.0f;
     numInstance_ = 0;
 
-    for (uint32_t i = 0; i < kNumMaxInstance; ++i) {
+    for (auto it = particles.begin(); it != particles.end();) {
+        Particle& p = *it;
 
-        if (particles[i].lifeTime <= particles[i].currentTime) {
-            particles[i] = MakeNewParticleFire(randomEngine_);
+        // 寿命切れ → 削除
+        if (p.currentTime >= p.lifeTime) {
+            it = particles.erase(it);
+            continue;
         }
 
-        particles[i].transform.translate += particles[i].velocity * kDeltaTime;
-        particles[i].currentTime += kDeltaTime;
+        // 更新
+        p.currentTime += kDeltaTime;
+        p.transform.translate += p.velocity * kDeltaTime;
 
-        float alpha = 1.0f - (particles[i].currentTime / particles[i].lifeTime);
+        // 行列やα計算（あなたのコードをそのまま使う）
+        float alpha = 1.0f - (p.currentTime / p.lifeTime);
 
-        Matrix4x4 scaleMat = MatrixMath::Matrix4x4MakeScaleMatrix(particles[i].transform.scale);
-        Matrix4x4 transMat = MatrixMath::MakeTranslateMatrix(particles[i].transform.translate);
+        Matrix4x4 scaleMat = MatrixMath::Matrix4x4MakeScaleMatrix(p.transform.scale);
+        Matrix4x4 transMat = MatrixMath::MakeTranslateMatrix(p.transform.translate);
 
         Matrix4x4 world;
-
-      
         if (useBillboard_) {
-            // ビルボード：カメラの方を向く
             world = MatrixMath::Multiply(
                 MatrixMath::Multiply(scaleMat, billboardMatrix),
                 transMat);
         } else {
-            // ビルボード OFF：元の回転を使う
             world = MatrixMath::MakeAffineMatrix(
-                particles[i].transform.scale,
-                particles[i].transform.rotate,
-                particles[i].transform.translate);
+                p.transform.scale,
+                p.transform.rotate,
+                p.transform.translate);
         }
 
         Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
 
-        instanceData_[numInstance_].World = world;
-        instanceData_[numInstance_].WVP = wvp;
-        instanceData_[numInstance_].color = particles[i].color;
-        instanceData_[numInstance_].color.w = alpha;
+        // GPU用データに詰める
+        if (numInstance_ < kNumMaxInstance) {
+            instanceData_[numInstance_].World = world;
+            instanceData_[numInstance_].WVP = wvp;
+            instanceData_[numInstance_].color = p.color;
+            instanceData_[numInstance_].color.w = alpha;
+            ++numInstance_;
+        }
 
-        ++numInstance_;
+        ++it; // 次へ
     }
 }
-
-
 
 void ParticleManager::CreateBoardMesh()
 {
     // ===========================
-    // ① 頂点データ作成
+    //  頂点データ作成
     // ===========================
 
     // 左上
@@ -362,7 +372,7 @@ void ParticleManager::CreateBoardMesh()
     vertices[3].normal = { 0, 0, -1 };
 
     // ===========================
-    // ② 頂点バッファ作成
+    //  頂点バッファ作成
     // ===========================
     vertexResource = dxCommon_->CreateBufferResource(sizeof(vertices));
 
@@ -376,7 +386,7 @@ void ParticleManager::CreateBoardMesh()
     vertexBufferView.StrideInBytes = sizeof(VertexData);
 
     // ===========================
-    // ③ マテリアルCB作成（Root[0]）
+    // マテリアルCB作成（Root[0]）
     // ===========================
     materialResource = dxCommon_->CreateBufferResource(sizeof(Material));
     Material* matCB = nullptr;
@@ -400,7 +410,7 @@ void ParticleManager::CreateBoardMesh()
     transformResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
 
     // ===========================
-    // ⑤ DirectionalLightCB作成（Root[3]）
+    //  DirectionalLightCB作成（Root[3]）
     // ===========================
     lightResource = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
     DirectionalLight* lightCB = nullptr;
@@ -414,7 +424,7 @@ void ParticleManager::CreateBoardMesh()
     lightResource->Unmap(0, nullptr);
 
     // ===========================
-    // ⑥ テクスチャSRVハンドル取得
+    //  テクスチャSRVハンドル取得
     // ===========================
     TextureManager::GetInstance()->LoadTexture("resources/circle.png");
     srvHandle = TextureManager::GetInstance()->GetSrvHandleGPU("resources/circle.png");
@@ -457,7 +467,46 @@ void ParticleManager::CreateBoardMesh()
     transformResource->Unmap(0, nullptr);
 }
 
-ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine)
+void ParticleManager::ImGui()
+{
+    if (ImGui::Begin("Particle Manager")) {
+
+        // -----------------------
+        // TransformBoard_ の調整
+        // -----------------------
+        ImGui::Text("Board Transform");
+
+        // -----------------------
+        // BlendMode
+        // -----------------------
+        const char* blendNames[] = {
+            "None",
+            "Normal",
+            "Add",
+            "Subtract",
+            "Multiply",
+            "Screen"
+        };
+
+        int mode = currentBlendMode_;
+        if (ImGui::Combo("Blend Mode", &mode, blendNames, IM_ARRAYSIZE(blendNames))) {
+            currentBlendMode_ = mode;
+        }
+
+        ImGui::Checkbox("Use Billboard", &useBillboard_);
+    }
+
+    if (ImGui::Button("Add Particle")) {
+
+        particles.splice(particles.end(), Emit(emitter, randomEngine_));
+    }
+
+    ImGui::DragFloat3("EmitterTranslate", &emitter.transform.translate.x, 0.01f, -100.0f, 100.0f);
+
+    ImGui::End();
+}
+
+ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate)
 {
     std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
 
@@ -490,41 +539,12 @@ ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomE
     particle.lifeTime = distTime(randomEngine);
     particle.currentTime = 0;
 
+    Vector3 randomTranslate { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
+
+    particle.transform.translate = translate + randomTranslate;
+
     return particle;
 }
-
-void ParticleManager::ImGui()
-{
-    if (ImGui::Begin("Particle Manager")) {
-
-        // -----------------------
-        // TransformBoard_ の調整
-        // -----------------------
-        ImGui::Text("Board Transform");
-
-        // -----------------------
-        // BlendMode
-        // -----------------------
-        const char* blendNames[] = {
-            "None",
-            "Normal",
-            "Add",
-            "Subtract",
-            "Multiply",
-            "Screen"
-        };
-
-        int mode = currentBlendMode_;
-        if (ImGui::Combo("Blend Mode", &mode, blendNames, IM_ARRAYSIZE(blendNames))) {
-            currentBlendMode_ = mode;
-        }
-
-        ImGui::Checkbox("Use Billboard", &useBillboard_);
-    }
-
-    ImGui::End();
-}
-
 
 ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& randomEngine)
 {
@@ -535,7 +555,7 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
     Particle p;
 
     // --------------------------
-    // ① 初期位置：炎の根元に集める
+    //  初期位置：炎の根元に集める
     // --------------------------
     p.transform.translate = {
         randPos(randomEngine), // 横に少し散らす
@@ -544,7 +564,7 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
     };
 
     // --------------------------
-    // ② 速度：上に流れる炎
+    //  速度：上に流れる炎
     // --------------------------
     p.velocity = {
         randPos(randomEngine) * 0.3f,
@@ -552,9 +572,8 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
         randPos(randomEngine) * 0.3f
     };
 
-
     // --------------------------
-    // ③ 色：炎の基本色（赤寄り）
+    // 色：炎の基本色（赤寄り）
     // --------------------------
     // 初期色は赤〜オレンジ
     p.color = {
@@ -565,16 +584,25 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
     };
 
     // --------------------------
-    // ④ 大きさ：少し大きめ
+    //  大きさ：少し大きめ
     // --------------------------
     p.transform.scale = { 0.8f, 0.8f, 0.8f };
     p.transform.rotate = { 0.0f, 0.0f, 0.0f }; // 炎は回転しない（ビルボードするため）
 
     // --------------------------
-    // ⑤ 寿命：短いほど炎っぽい
+    //  寿命：短いほど炎っぽい
     // --------------------------
     p.lifeTime = randLife(randomEngine);
     p.currentTime = 0.0f;
 
     return p;
+}
+
+std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
+{
+    std::list<Particle> particles;
+    for (uint32_t count = 0; count < emitter.count; ++count) {
+        particles.push_back(MakeNewParticle(randomEngine, emitter.transform.translate));
+    }
+    return particles;
 }
