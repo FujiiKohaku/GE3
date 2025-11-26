@@ -6,6 +6,7 @@
 #include "blendutil.h" // BlendMode ここで定義
 
 #include <d3d12.h>
+#include <list>
 #include <random>
 #include <string>
 #include <wrl.h>
@@ -55,6 +56,13 @@ public:
         Vector4 color;
     };
 
+    struct Emitter {
+        Transform transform; // エミッタのトランスフォーム
+        uint32_t count; // 発生数
+        float frequency; // 発生頻度
+        float frequencyTime; // 頻度用時刻
+    };
+
 public:
     // =========================================================
     // 基本操作
@@ -67,6 +75,8 @@ public:
     // BlendMode の setter
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
     void ImGui();
+    // 発せ関数
+    std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine);
 
 private:
     // =========================================================
@@ -79,7 +89,7 @@ private:
     void CreateBoardMesh();
     void InitTransforms();
     void UpdateTransforms();
-    Particle MakeNewParticle(std::mt19937& randomEngine);
+    Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
     Particle MakeNewParticleFire(std::mt19937& randomEngine);
 
 private:
@@ -104,10 +114,10 @@ private:
     ParticleForGPU* instanceData_ = nullptr; // map しっぱなし用
 
     uint32_t numInstance_ = 0;
-    static const uint32_t kNumMaxInstance = 50;
+    static const uint32_t kNumMaxInstance = 100;
 
     // パーティクル本体
-    Particle particles[kNumMaxInstance];
+    std::list<Particle> particles;
 
     // SRV の GPU ハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_ {};
@@ -142,4 +152,7 @@ private:
     std::random_device seedGenerator_;
     std::mt19937 randomEngine_;
     bool useBillboard_ = true;
+    float kdeltaTime;
+    Emitter emitter {};
+    
 };
