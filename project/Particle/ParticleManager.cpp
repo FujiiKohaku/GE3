@@ -23,15 +23,12 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     // その箱をシェーダーから読めるように登録する
     CreateSrvBuffer();
 
-    // パーティクルが最初にどこにいて、どんなスピードか決める
-    InitTransforms();
-
     // パーティクルの形となる四角ポリゴンを作る
     CreateBoardMesh();
 
-    emitter.count = 3;
-    emitter.frequency = 0.5f; // 0.5秒ごとに発生
-    kdeltaTime = 0.01;
+    emitter.count = 300; // 1回のEmitで5つ出す
+    emitter.frequency = 0.5; // 毎フレーム出す (60FPS)
+    kdeltaTime = 0.1f;
     emitter.transform.translate = { 0.0f, 0.0f, 0.0f };
     emitter.transform.rotate = { 0.0f, 0.0f, 0.0f };
     emitter.transform.scale = { 1.0f, 1.0f, 1.0f };
@@ -39,15 +36,48 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
 
 void ParticleManager::Update()
 {
+    emitter.frequencyTime += kdeltaTime;
 
-    emitter.frequencyTime += kdeltaTime; // 時刻を進める
-    if (emitter.frequency <= emitter.frequencyTime) { // 頻度より大きいなら発生
-        particles.splice(particles.end(), Emit(emitter, randomEngine_)); // 発生処理
-        emitter.frequencyTime -= emitter.frequency; // 余計に過ぎた時間も加味して頻度計算する
+    if (emitter.frequencyTime >= emitter.frequency) {
+
+        switch (type) {
+
+        case ParticleType::Normal:
+
+            particles.splice(
+                particles.end(),
+                Emit(emitter, randomEngine_));
+            break;
+
+        case ParticleType::Fire:
+
+            particles.splice(
+                particles.end(),
+                EmitFire(emitter, randomEngine_));
+            break;
+        case ParticleType::Smoke:
+
+            particles.splice(
+                particles.end(),
+                EmitSmoke(emitter, randomEngine_));
+            break;
+        case ParticleType::Spark:
+
+            particles.splice(
+                particles.end(),
+                EmitLightning(emitter, randomEngine_));
+            break;
+        case ParticleType::FireWork:
+            particles.splice(
+                particles.end(),
+                EmitFireworkSpark(emitter, randomEngine_));
+            break;
+        }
+
+        emitter.frequencyTime -= emitter.frequency;
     }
 
     UpdateTransforms();
-
     ImGui();
 }
 
@@ -275,30 +305,19 @@ void ParticleManager::CreateSrvBuffer()
     instancingSrvHandleGPU_ = handleGPU;
 }
 
-void ParticleManager::InitTransforms()
-{
-    // const uint32_t startCount = 10; // 最初に10個生みたい例
-
-    // for (uint32_t i = 0; i < startCount; ++i) {
-    //     particles.push_back(MakeNewParticleFire(randomEngine_));
-    //     particles.push_back(MakeNewParticleFire(randomEngine_));
-    //     particles.push_back(MakeNewParticleFire(randomEngine_));
-    // }
-}
-
 void ParticleManager::UpdateTransforms()
 {
-    // ---------- ビルボード行列 ----------
+    // ビルボード用：カメラの回転だけ取り出す
     Matrix4x4 cameraMat = camera_->GetWorldMatrix();
     cameraMat.m[3][0] = cameraMat.m[3][1] = cameraMat.m[3][2] = 0.0f;
 
-    Matrix4x4 backToFrontMatrix = MatrixMath::MakeRotateYMatrix(0.0f);
-    Matrix4x4 billboardMatrix = MatrixMath::Multiply(backToFrontMatrix, cameraMat);
+    Matrix4x4 billboardMatrix = MatrixMath::Multiply(MatrixMath::MakeRotateYMatrix(0.0f), cameraMat);
 
     Matrix4x4 vp = camera_->GetViewProjectionMatrix();
-    const float kDeltaTime = 1.0f / 60.0f;
-    numInstance_ = 0;
 
+    numInstance_ = 0; // GPU へ送る個数をリセット
+
+    // --- 全パーティクル更新 ---
     for (auto it = particles.begin(); it != particles.end();) {
         Particle& p = *it;
 
@@ -308,36 +327,34 @@ void ParticleManager::UpdateTransforms()
             continue;
         }
 
-        // 更新
-        p.currentTime += kDeltaTime;
-        p.transform.translate += p.velocity * kDeltaTime;
+        // 生存中：時間と位置を更新
+        p.currentTime += kdeltaTime;
+        p.transform.translate += p.velocity * kdeltaTime;
 
-        // 行列やα計算（あなたのコードをそのまま使う）
+        // フェードアウト用 α（0〜1）
         float alpha = 1.0f - (p.currentTime / p.lifeTime);
 
+        // 行列作成（スケール・位置）
         Matrix4x4 scaleMat = MatrixMath::Matrix4x4MakeScaleMatrix(p.transform.scale);
         Matrix4x4 transMat = MatrixMath::MakeTranslateMatrix(p.transform.translate);
 
+        // ワールド行列（ビルボードか普通か）
         Matrix4x4 world;
         if (useBillboard_) {
-            world = MatrixMath::Multiply(
-                MatrixMath::Multiply(scaleMat, billboardMatrix),
-                transMat);
+            world = MatrixMath::Multiply(MatrixMath::Multiply(scaleMat, billboardMatrix), transMat);
         } else {
-            world = MatrixMath::MakeAffineMatrix(
-                p.transform.scale,
-                p.transform.rotate,
-                p.transform.translate);
+            world = MatrixMath::MakeAffineMatrix(p.transform.scale, p.transform.rotate, p.transform.translate);
         }
 
+        // WVP 行列
         Matrix4x4 wvp = MatrixMath::Multiply(world, vp);
 
-        // GPU用データに詰める
+        // GPU へ書き込み
         if (numInstance_ < kNumMaxInstance) {
             instanceData_[numInstance_].World = world;
             instanceData_[numInstance_].WVP = wvp;
             instanceData_[numInstance_].color = p.color;
-            instanceData_[numInstance_].color.w = alpha;
+            instanceData_[numInstance_].color.w = alpha; // 透明度だけ更新
             ++numInstance_;
         }
 
@@ -471,21 +488,42 @@ void ParticleManager::ImGui()
 {
     if (ImGui::Begin("Particle Manager")) {
 
-        // -----------------------
-        // TransformBoard_ の調整
-        // -----------------------
-        ImGui::Text("Board Transform");
-
-        // -----------------------
-        // BlendMode
-        // -----------------------
-        const char* blendNames[] = {
-            "None",
+        // ======================
+        // パーティクルタイプ
+        // ======================
+        const char* particleTypeNames[] = {
             "Normal",
-            "Add",
-            "Subtract",
-            "Multiply",
-            "Screen"
+            "Fire",
+            "Smoke",
+            "Lightning",
+            "FireWork"
+        };
+
+        int selected = static_cast<int>(type);
+        if (ImGui::Combo("Particle Type", &selected, particleTypeNames, IM_ARRAYSIZE(particleTypeNames))) {
+            type = static_cast<ParticleType>(selected);
+        }
+
+        ImGui::Separator();
+
+        // ======================
+        // Emitter Settings
+        // ======================
+        ImGui::Text("Emitter Settings");
+
+        ImGui::DragFloat3("Position", &emitter.transform.translate.x, 0.01f);
+
+        ImGui::DragInt("Count", (int*)&emitter.count, 1, 1, 500);
+
+        ImGui::DragFloat("Frequency", &emitter.frequency, 0.01f, 0.001f, 1.0f);
+        ImGui::DragFloat("kdeltaTime", &kdeltaTime, 0.01f, 0.001f, 1.0f);
+        ImGui::Separator();
+
+        // ======================
+        // Blend Mode
+        // ======================
+        const char* blendNames[] = {
+            "None", "Normal", "Add", "Subtract", "Multiply", "Screen"
         };
 
         int mode = currentBlendMode_;
@@ -496,113 +534,340 @@ void ParticleManager::ImGui()
         ImGui::Checkbox("Use Billboard", &useBillboard_);
     }
 
-    if (ImGui::Button("Add Particle")) {
-
-        particles.splice(particles.end(), Emit(emitter, randomEngine_));
-    }
-
-    ImGui::DragFloat3("EmitterTranslate", &emitter.transform.translate.x, 0.01f, -100.0f, 100.0f);
-
     ImGui::End();
 }
 
-ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate)
+ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& emitPos)
 {
-    std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
-
-    std::uniform_real_distribution<float> distColor(0.0f, 1.0f);
-
-    std::uniform_real_distribution<float> distTime(1.0f, 3.0f);
-
-    Particle particle;
-
-    particle.transform.scale = { 1.0f, 1.0f, 1.0f };
-    particle.transform.rotate = { 0.0f, 0.0f, 0.0f };
-
-    particle.transform.translate = {
-        distribution(randomEngine),
-        distribution(randomEngine),
-        distribution(randomEngine)
-    };
-
-    particle.velocity = {
-        distribution(randomEngine),
-        distribution(randomEngine),
-        distribution(randomEngine)
-    };
-
-    particle.color = { distColor(randomEngine),
-        distColor(randomEngine),
-        distColor(randomEngine),
-        1.0f };
-
-    particle.lifeTime = distTime(randomEngine);
-    particle.currentTime = 0;
-
-    Vector3 randomTranslate { distribution(randomEngine), distribution(randomEngine), distribution(randomEngine) };
-
-    particle.transform.translate = translate + randomTranslate;
-
-    return particle;
-}
-
-ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& randomEngine)
-{
-    std::uniform_real_distribution<float> randPos(-0.3f, 0.3f); // 横揺れ用
-    std::uniform_real_distribution<float> rand01(0.0f, 1.0f); // 色や揺れ用
-    std::uniform_real_distribution<float> randLife(0.5f, 1.2f); // 炎は寿命短め
-
     Particle p;
 
-    // --------------------------
-    //  初期位置：炎の根元に集める
-    // --------------------------
+    // -----------------------------------------
+    // 内部パラメータ
+    // -----------------------------------------
+    float spread = 0.5f; // 広がり
+    float speed = 0.05f; // 飛び散る速さ
+    float scaleMin = 0.05f; // 最小サイズ
+    float scaleMax = 0.15f; // 最大サイズ
+    float lifeMin = 0.5f; // 最短寿命
+    float lifeMax = 1.5f; // 最長寿命
+
+    // ランダム
+    std::uniform_real_distribution<float> distPos(-spread, spread);
+    std::uniform_real_distribution<float> distScale(scaleMin, scaleMax);
+    std::uniform_real_distribution<float> distLife(lifeMin, lifeMax);
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    //  初期位置
     p.transform.translate = {
-        randPos(randomEngine), // 横に少し散らす
-        0.0f, // 地面からスタート
-        randPos(randomEngine)
+        emitPos.x + distPos(randomEngine),
+        emitPos.y + distPos(randomEngine),
+        emitPos.z + distPos(randomEngine)
     };
 
-    // --------------------------
-    //  速度：上に流れる炎
-    // --------------------------
+    //  スケール
+    float s = distScale(randomEngine);
+    p.transform.scale = { s, s, s };
+    p.transform.rotate = { 0, 0, 0 };
+
+    //  速度
     p.velocity = {
-        randPos(randomEngine) * 0.3f,
-        -(0.8f + rand01(randomEngine) * 1.2f), // Yマイナス方向へ昇る
-        randPos(randomEngine) * 0.3f
+        distPos(randomEngine) * speed,
+        distPos(randomEngine) * speed,
+        distPos(randomEngine) * speed
     };
 
-    // --------------------------
-    // 色：炎の基本色（赤寄り）
-    // --------------------------
-    // 初期色は赤〜オレンジ
+    //  色
     p.color = {
-        1.0f, // R（赤）
-        0.3f + rand01(randomEngine) * 0.5f, // G（オレンジ成分）
-        0.0f, // B
-        1.0f // A
+        dist01(randomEngine),
+        dist01(randomEngine),
+        dist01(randomEngine),
+        1.0f
     };
 
-    // --------------------------
-    //  大きさ：少し大きめ
-    // --------------------------
-    p.transform.scale = { 0.8f, 0.8f, 0.8f };
-    p.transform.rotate = { 0.0f, 0.0f, 0.0f }; // 炎は回転しない（ビルボードするため）
-
-    // --------------------------
-    //  寿命：短いほど炎っぽい
-    // --------------------------
-    p.lifeTime = randLife(randomEngine);
+    //  寿命
+    p.lifeTime = distLife(randomEngine);
     p.currentTime = 0.0f;
 
     return p;
 }
 
+ParticleManager::Particle ParticleManager::MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& pos)
+{
+    Particle p;
+
+    // --- ランダム ---
+    std::uniform_real_distribution<float> distXZ(-0.25f, 0.25f); // 横は控えめ
+    std::uniform_real_distribution<float> distUp(0.02f, 0.06f); // 上昇力
+    std::uniform_real_distribution<float> distScale(0.15f, 0.35f); // 大きめ粒
+    std::uniform_real_distribution<float> distLife(1.0f, 2.5f); // 長めの寿命
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    float dx = distXZ(randomEngine);
+    float dz = distXZ(randomEngine);
+
+    p.transform.translate = {
+        pos.x + dx * 0.4f,
+        pos.y,
+        pos.z + dz * 0.4f
+    };
+
+    float s = distScale(randomEngine);
+    p.transform.scale = { s, s, s };
+    p.transform.rotate = { 0, 0, 0 };
+
+    p.velocity = {
+        dx * 0.15f, // 横ブレ
+        distUp(randomEngine), // 上昇
+        dz * 0.15f
+    };
+
+    float t = dist01(randomEngine);
+
+    Vector4 bottom = { 0.9f, 0.9f, 0.9f, 0.8f };
+
+    Vector4 top = { 0.2f, 0.2f, 0.2f, 0.4f };
+
+    p.color = {
+        bottom.x + (top.x - bottom.x) * t,
+        bottom.y + (top.y - bottom.y) * t,
+        bottom.z + (top.z - bottom.z) * t,
+        bottom.w + (top.w - bottom.w) * t
+    };
+
+    p.lifeTime = distLife(randomEngine);
+    p.currentTime = 0.0f;
+
+    return p;
+}
+
+ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& randomEngine, const Vector3& pos)
+{
+    Particle p;
+
+    // --- ランダム ---
+    std::uniform_real_distribution<float> distXZ(-0.15f, 0.15f);
+    std::uniform_real_distribution<float> distUp(0.3f, 0.6f);
+    std::uniform_real_distribution<float> distScale(0.1f, 0.25f);
+    std::uniform_real_distribution<float> distLife(0.5f, 1.0f);
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    float dx = distXZ(randomEngine);
+    float dz = distXZ(randomEngine);
+
+    p.transform.translate = {
+        pos.x + dx * 0.4f,
+        pos.y,
+        pos.z + dz * 0.4f
+    };
+
+    float s = distScale(randomEngine);
+    p.transform.scale = { s, s * 2.5f, s };
+    p.transform.rotate = { 0, 0, 0 };
+
+    p.velocity = {
+        dx * 0.05f,
+        -distUp(randomEngine),
+        dz * 0.05f
+    };
+
+    float t = dist01(randomEngine);
+
+    float a = dist01(randomEngine);
+
+    Vector4 red = { 1.0f, 0.2f, 0.0f, 1.0f };
+    Vector4 orange = { 1.0f, 0.5f, 0.0f, 1.0f };
+    Vector4 yellow = { 1.0f, 0.8f, 0.2f, 1.0f };
+    Vector4 white = { 1.0f, 1.0f, 0.9f, 1.0f };
+
+    Vector4 c1 = (a < 0.33f) ? red : (a < 0.66f) ? orange
+                                                 : yellow;
+
+    Vector4 c2 = white;
+
+    p.color = {
+        c1.x + (c2.x - c1.x) * t * 0.7f,
+        c1.y + (c2.y - c1.y) * t * 0.7f,
+        c1.z + (c2.z - c1.z) * t * 0.7f,
+        1.0f
+    };
+
+    // 寿命
+    p.lifeTime = distLife(randomEngine);
+    p.currentTime = 0.0f;
+
+    return p;
+}
+
+ParticleManager::Particle ParticleManager::MakeNewParticleLightning(std::mt19937& randomEngine, const Vector3& pos)
+{
+    Particle p;
+
+    // --- ランダム ---
+    std::uniform_real_distribution<float> distXZ(-0.15f, 0.15f); // 横ぶれ
+    std::uniform_real_distribution<float> distLength(1.2f, 2.5f);
+    std::uniform_real_distribution<float> distThickness(0.02f, 0.07f);
+    std::uniform_real_distribution<float> distLife(0.05f, 0.12f);
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
+
+    float dx = distXZ(randomEngine);
+    float dz = distXZ(randomEngine);
+
+    p.transform.translate = {
+        pos.x + dx,
+        pos.y,
+        pos.z + dz
+    };
+
+    float len = distLength(randomEngine);
+    float th = distThickness(randomEngine);
+    p.transform.scale = { th, len, th };
+
+    p.transform.rotate = { 0, 0, 0 };
+
+    float vx = distXZ(randomEngine) * 0.2f;
+    float vz = distXZ(randomEngine) * 0.2f;
+
+    p.velocity = {
+        vx,
+        -0.3f, // 下に落ちる雷
+        vz
+    };
+
+    float t = dist01(randomEngine);
+
+    Vector4 inner = { 1.0f, 1.0f, 1.0f, 1.0f }; // 白（中心）
+    Vector4 outer = { 0.3f, 0.5f, 1.0f, 0.6f }; // 青白い
+
+    p.color = {
+        inner.x + (outer.x - inner.x) * t,
+        inner.y + (outer.y - inner.y) * t,
+        inner.z + (outer.z - inner.z) * t,
+        inner.w + (outer.w - inner.w) * t
+    };
+
+    p.lifeTime = distLife(randomEngine);
+    p.currentTime = 0.0f;
+
+    return p;
+}
+
+ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& randomEngine, const Vector3& center)
+{
+    Particle p;
+
+    std::uniform_real_distribution<float> distAngle(0.0f, 6.28318f);
+    float t = distAngle(randomEngine);
+
+    std::uniform_real_distribution<float> distRadius(0.2f, 0.5f);
+    float r = distRadius(randomEngine);
+
+    float targetX = center.x + cosf(t) * r;
+    float targetY = center.y + sinf(t) * r;
+    float targetZ = center.z;
+
+    // 中心から開始
+    p.transform.translate = center;
+
+    // 粒を少し大きく
+    float s = 0.02f;
+    p.transform.scale = { s, s * 4.0f, s };
+    p.transform.rotate = { 0, 0, 0 };
+
+    Vector3 dir = { targetX - center.x, targetY - center.y, 0.0f };
+
+    float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    if (len > 0.00001f) {
+        dir.x /= len;
+        dir.y /= len;
+    }
+
+    p.velocity = { dir.x * 2.5f, dir.y * 2.5f, 0.0f };
+
+    // 色
+    switch (randomEngine() % 4) {
+    case 0:
+        p.color = { 1.0f, 0.3f, 0.5f, 1.0f };
+        break;
+    case 1:
+        p.color = { 0.4f, 0.6f, 1.0f, 1.0f };
+        break;
+    case 2:
+        p.color = { 1.0f, 0.9f, 0.5f, 1.0f };
+        break;
+    case 3:
+        p.color = { 0.9f, 0.4f, 0.1f, 1.0f };
+        break;
+    }
+
+    // 寿命を長めにして見えやすく
+    std::uniform_real_distribution<float> distLife(0.5f, 1.0f);
+    p.lifeTime = distLife(randomEngine);
+    p.currentTime = 0.0f;
+
+    return p;
+}
+
+// エミッターから粒を生む（count 個ぶん生成して返す）
 std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
 {
-    std::list<Particle> particles;
+    std::list<Particle> particles; // 生成した粒を入れる箱
+
+    // emitter.count 回ぶん粒を作る
     for (uint32_t count = 0; count < emitter.count; ++count) {
+
+        // 粒を1つ作って、エミッター位置から生やす
         particles.push_back(MakeNewParticle(randomEngine, emitter.transform.translate));
     }
+
+    return particles; // 作った粒をまとめて返す
+}
+
+std::list<ParticleManager::Particle> ParticleManager::EmitFire(const Emitter& emitter, std::mt19937& randomEngine)
+{
+    std::list<Particle> particles;
+
+    for (uint32_t i = 0; i < emitter.count; ++i) {
+
+        float r = (float)(randomEngine() % 100) / 100.0f;
+
+        if (r < 0.5f) {
+
+            particles.push_back(MakeNewParticleFire(randomEngine, emitter.transform.translate));
+        }
+    }
+
+    return particles;
+}
+
+std::list<ParticleManager::Particle> ParticleManager::EmitSmoke(const Emitter& emitter, std::mt19937& randomEngine)
+{
+    std::list<Particle> particles;
+
+    for (uint32_t i = 0; i < emitter.count; ++i) {
+        particles.push_back(MakeNewParticleSmoke(randomEngine, emitter.transform.translate));
+    }
+
+    return particles;
+}
+
+std::list<ParticleManager::Particle> ParticleManager::EmitLightning(const Emitter& emitter, std::mt19937& randomEngine)
+{
+    std::list<Particle> particles;
+
+    for (uint32_t i = 0; i < emitter.count; ++i) {
+        particles.push_back(MakeNewParticleLightning(randomEngine, emitter.transform.translate));
+    }
+
+    return particles;
+}
+
+std::list<ParticleManager::Particle> ParticleManager::EmitFireworkSpark(const Emitter& emitter, std::mt19937& randomEngine)
+{
+    std::list<Particle> particles;
+
+    for (uint32_t i = 0; i < emitter.count; ++i) {
+        particles.push_back(MakeFireworkSpark(randomEngine, emitter.transform.translate));
+    }
+
     return particles;
 }

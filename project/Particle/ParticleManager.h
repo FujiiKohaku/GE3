@@ -56,12 +56,29 @@ public:
         Vector4 color;
     };
 
-    struct Emitter {
-        Transform transform; // エミッタのトランスフォーム
-        uint32_t count; // 発生数
-        float frequency; // 発生頻度
-        float frequencyTime; // 頻度用時刻
+    struct Shockwave {
+        Vector3 pos;
+        float lifeTime;
+        float currentTime;
+        float startScale;
+        float endScale;
     };
+
+    struct Emitter {
+        Transform transform;
+        uint32_t count;
+        float frequency;
+        float frequencyTime;
+    };
+
+    enum class ParticleType {
+        Normal,
+        Fire,
+        Smoke,
+        Spark,
+        FireWork
+    };
+    ParticleType type;
 
 public:
     // =========================================================
@@ -77,6 +94,10 @@ public:
     void ImGui();
     // 発せ関数
     std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine);
+    std::list<Particle> EmitFire(const Emitter& emitter, std::mt19937& randomEngine);
+    std::list<Particle> EmitSmoke(const Emitter& emitter, std::mt19937& randomEngine);
+    std::list<Particle> EmitLightning(const Emitter& emitter, std::mt19937& randomEngine);
+    std::list<Particle> EmitFireworkSpark(const Emitter& emitter, std::mt19937& randomEngine);
 
 private:
     // =========================================================
@@ -87,16 +108,19 @@ private:
     void CreateInstancingBuffer();
     void CreateSrvBuffer();
     void CreateBoardMesh();
-    void InitTransforms();
     void UpdateTransforms();
     Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
-    Particle MakeNewParticleFire(std::mt19937& randomEngine);
+    Particle MakeNewParticleFire(std::mt19937& randomEngine, const Vector3& translate);
+    Particle MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& translate);
+    Particle MakeNewParticleLightning(std::mt19937& randomEngine, const Vector3& translate);
+    Particle MakeFireworkSpark(std::mt19937& randomEngine, const Vector3& center);
 
 private:
     // =========================================================
     // DirectX / 外部依存
     // =========================================================
-    DirectXCommon* dxCommon_ = nullptr;
+    DirectXCommon* dxCommon_
+        = nullptr;
     SrvManager* srvManager_ = nullptr;
     Camera* camera_ = nullptr;
 
@@ -114,11 +138,12 @@ private:
     ParticleForGPU* instanceData_ = nullptr; // map しっぱなし用
 
     uint32_t numInstance_ = 0;
-    static const uint32_t kNumMaxInstance = 100;
+    static const uint32_t kNumMaxInstance = 500;
 
     // パーティクル本体
     std::list<Particle> particles;
 
+    std::list<Shockwave> shokParticles;
     // SRV の GPU ハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
@@ -154,5 +179,4 @@ private:
     bool useBillboard_ = true;
     float kdeltaTime;
     Emitter emitter {};
-    
 };

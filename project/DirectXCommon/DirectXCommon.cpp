@@ -73,22 +73,25 @@ void DirectXCommon::InitializeDevice()
         debugController->SetEnableGPUBasedValidation(TRUE);
     }
 #endif // _DEBUG
+
     // DXGIファクトリーの生成
     hr = CreateDXGIFactory(IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
     // 初期化の根本的な部分でエラーが出た場合はプログラムが間違っているか、どうにもできない場合が多いのでassertにしておく
     assert(SUCCEEDED(hr));
-    IDXGIAdapter4* useAdapter = nullptr; // com
+
+    IDXGIAdapter4* useAdapter = nullptr; 
+
     // よい順にアダプタを頼む
     for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&useAdapter)) != DXGI_ERROR_NOT_FOUND; ++i) {
 
         // アダプターの情報を取得する
-        DXGI_ADAPTER_DESC3 adapterDesc {}; // com
-        hr = useAdapter->GetDesc3(&adapterDesc); // comGet
+        DXGI_ADAPTER_DESC3 adapterDesc {}; 
+        hr = useAdapter->GetDesc3(&adapterDesc); 
         assert(SUCCEEDED(hr)); // 取得できないのは一大事
         // ソフトウェアアダプタでなければ採用!
-        if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)) { // get
+        if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)) { 
             // 採用したアダプタの情報をログに出力wstringの方なので注意
-            Logger::Log(StringUtility::ConvertString(std::format(L"Use Adapater:{}\n", adapterDesc.Description))); // get
+            Logger::Log(StringUtility::ConvertString(std::format(L"Use Adapater:{}\n", adapterDesc.Description))); 
             break;
         }
         useAdapter = nullptr; // ソフトウェアアダプタの場合は見なかったことにする

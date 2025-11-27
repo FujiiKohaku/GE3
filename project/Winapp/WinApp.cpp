@@ -5,9 +5,7 @@
 #include <Windows.h>
 #include <cstdint>
 
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
-    HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 //==================================================================
 //  ウィンドウプロシージャ
 //  Windowsからのメッセージを処理する
@@ -75,7 +73,7 @@ void WinApp::initialize()
     // ウィンドウ生成
     hwnd_ = CreateWindow(
         wc_.lpszClassName, // クラス名
-        L"CG2", // タイトル
+        L"CG3", // タイトル
         WS_OVERLAPPEDWINDOW, // スタイル
         CW_USEDEFAULT, CW_USEDEFAULT, // 位置（自動）
         wrc.right - wrc.left, // 幅
