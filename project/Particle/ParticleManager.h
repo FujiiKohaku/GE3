@@ -138,7 +138,7 @@ private:
     ParticleForGPU* instanceData_ = nullptr; // map しっぱなし用
 
     uint32_t numInstance_ = 0;
-    static const uint32_t kNumMaxInstance = 500;
+    static const uint32_t kNumMaxInstance = 100;
 
     // パーティクル本体
     std::list<Particle> particles;

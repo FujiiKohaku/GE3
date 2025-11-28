@@ -26,8 +26,8 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     // パーティクルの形となる四角ポリゴンを作る
     CreateBoardMesh();
 
-    emitter.count = 300; // 1回のEmitで5つ出す
-    emitter.frequency = 0.5; // 毎フレーム出す (60FPS)
+    emitter.count = 10; // 1回のEmitで5つ出す
+    emitter.frequency = 0.01; // 毎フレーム出す (60FPS)
     kdeltaTime = 0.1f;
     emitter.transform.translate = { 0.0f, 0.0f, 0.0f };
     emitter.transform.rotate = { 0.0f, 0.0f, 0.0f };
@@ -513,10 +513,10 @@ void ParticleManager::ImGui()
 
         ImGui::DragFloat3("Position", &emitter.transform.translate.x, 0.01f);
 
-        ImGui::DragInt("Count", (int*)&emitter.count, 1, 1, 500);
+        ImGui::DragInt("Count", (int*)&emitter.count, 1, 1, 100);
 
         ImGui::DragFloat("Frequency", &emitter.frequency, 0.01f, 0.001f, 1.0f);
-        ImGui::DragFloat("kdeltaTime", &kdeltaTime, 0.01f, 0.001f, 1.0f);
+
         ImGui::Separator();
 
         // ======================
@@ -644,7 +644,9 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
 {
     Particle p;
 
-    // --- ランダム ---
+    // ---------------------------
+    // ランダム生成
+    // ---------------------------
     std::uniform_real_distribution<float> distXZ(-0.15f, 0.15f);
     std::uniform_real_distribution<float> distUp(0.3f, 0.6f);
     std::uniform_real_distribution<float> distScale(0.1f, 0.25f);
@@ -654,44 +656,53 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
     float dx = distXZ(randomEngine);
     float dz = distXZ(randomEngine);
 
+    
     p.transform.translate = {
         pos.x + dx * 0.4f,
         pos.y,
         pos.z + dz * 0.4f
     };
 
+    
     float s = distScale(randomEngine);
     p.transform.scale = { s, s * 2.5f, s };
     p.transform.rotate = { 0, 0, 0 };
 
+    
     p.velocity = {
         dx * 0.05f,
         -distUp(randomEngine),
         dz * 0.05f
     };
 
-    float t = dist01(randomEngine);
-
+  
     float a = dist01(randomEngine);
+    float t = dist01(randomEngine);
+    t = t * t; 
 
-    Vector4 red = { 1.0f, 0.2f, 0.0f, 1.0f };
-    Vector4 orange = { 1.0f, 0.5f, 0.0f, 1.0f };
-    Vector4 yellow = { 1.0f, 0.8f, 0.2f, 1.0f };
+    Vector4 red = { 1.0f, 0.05f, 0.0f, 1.0f };
+    Vector4 orange = { 1.0f, 0.25f, 0.0f, 1.0f };
+    Vector4 yellow = { 1.0f, 0.85f, 0.1f, 1.0f };
     Vector4 white = { 1.0f, 1.0f, 0.9f, 1.0f };
 
     Vector4 c1 = (a < 0.33f) ? red : (a < 0.66f) ? orange
                                                  : yellow;
 
-    Vector4 c2 = white;
+    float blend = t * 2.0f;
+
+  
+    if (blend > 1.0f) {
+        blend = 1.0f;
+    }
 
     p.color = {
-        c1.x + (c2.x - c1.x) * t * 0.7f,
-        c1.y + (c2.y - c1.y) * t * 0.7f,
-        c1.z + (c2.z - c1.z) * t * 0.7f,
+        c1.x + (white.x - c1.x) * blend,
+        c1.y + (white.y - c1.y) * blend,
+        c1.z + (white.z - c1.z) * blend,
         1.0f
     };
 
-    // 寿命
+   
     p.lifeTime = distLife(randomEngine);
     p.currentTime = 0.0f;
 
@@ -755,57 +766,84 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
 {
     Particle p;
 
+   
     std::uniform_real_distribution<float> distAngle(0.0f, 6.28318f);
-    float t = distAngle(randomEngine);
+    std::uniform_real_distribution<float> distRadius(0.02f, 0.12f); // 中心かなり近め
+    std::uniform_real_distribution<float> distLife(0.4f, 0.9f);
+    std::uniform_real_distribution<float> distSpeed(2.0f, 4.0f); // 強めの飛び散り
+    std::uniform_real_distribution<float> dist01(0.0f, 1.0f);
 
-    std::uniform_real_distribution<float> distRadius(0.2f, 0.5f);
-    float r = distRadius(randomEngine);
+    float angle = distAngle(randomEngine);
+    float radius = distRadius(randomEngine);
 
-    float targetX = center.x + cosf(t) * r;
-    float targetY = center.y + sinf(t) * r;
-    float targetZ = center.z;
+    // 小さくバラける中心スタート
+    float offsetX = cosf(angle) * radius;
+    float offsetY = sinf(angle) * radius;
 
-    // 中心から開始
-    p.transform.translate = center;
+  
+    p.transform.translate = {
+        center.x + offsetX,
+        center.y + offsetY,
+        center.z
+    };
 
-    // 粒を少し大きく
-    float s = 0.02f;
-    p.transform.scale = { s, s * 4.0f, s };
+
+    float s = 0.1f; 
+    p.transform.scale = {
+        s * 0.25f, 
+        s * 1.8f, 
+        s * 0.25f 
+    };
     p.transform.rotate = { 0, 0, 0 };
 
-    Vector3 dir = { targetX - center.x, targetY - center.y, 0.0f };
-
+   
+    Vector3 dir = { offsetX, offsetY, 0.0f };
     float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
+
     if (len > 0.00001f) {
         dir.x /= len;
         dir.y /= len;
     }
 
-    p.velocity = { dir.x * 2.5f, dir.y * 2.5f, 0.0f };
+    float speed = distSpeed(randomEngine);
 
-    // 色
-    switch (randomEngine() % 4) {
-    case 0:
-        p.color = { 1.0f, 0.3f, 0.5f, 1.0f };
-        break;
-    case 1:
-        p.color = { 0.4f, 0.6f, 1.0f, 1.0f };
-        break;
-    case 2:
-        p.color = { 1.0f, 0.9f, 0.5f, 1.0f };
-        break;
-    case 3:
-        p.color = { 0.9f, 0.4f, 0.1f, 1.0f };
-        break;
-    }
+    p.velocity = { dir.x * speed, dir.y * speed, 0.0f };
 
-    // 寿命を長めにして見えやすく
-    std::uniform_real_distribution<float> distLife(0.5f, 1.0f);
+
+    Vector4 corePink = { 1.0f, 0.4f, 0.7f, 1.0f };
+
+    Vector4 outside;
+
+    float c = dist01(randomEngine);
+    if (c < 0.25f)
+        outside = { 1.0f, 0.5f, 0.8f, 1.0f }; 
+    else if (c < 0.50f)
+        outside = { 0.4f, 0.6f, 1.0f, 1.0f }; 
+    else if (c < 0.75f)
+        outside = { 1.0f, 0.9f, 0.4f, 1.0f }; 
+    else
+        outside = { 0.9f, 0.4f, 0.1f, 1.0f }; 
+
+    // 補間値
+    float t = dist01(randomEngine);
+
+    // 色補間（中心ピンク → 外側色）
+    p.color = {
+        corePink.x + (outside.x - corePink.x) * t,
+        corePink.y + (outside.y - corePink.y) * t,
+        corePink.z + (outside.z - corePink.z) * t,
+        1.0f
+    };
+
+    // ================================
+    //  寿命
+    // ================================
     p.lifeTime = distLife(randomEngine);
     p.currentTime = 0.0f;
 
     return p;
 }
+
 
 // エミッターから粒を生む（count 個ぶん生成して返す）
 std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
@@ -822,7 +860,7 @@ std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitte
     return particles; // 作った粒をまとめて返す
 }
 
-std::list<ParticleManager::Particle> ParticleManager::EmitFire(const Emitter& emitter, std::mt19937& randomEngine)
+std::list<ParticleManager::Particle> ParticleManager::EmitFire( const Emitter& emitter, std::mt19937& randomEngine)
 {
     std::list<Particle> particles;
 
@@ -831,9 +869,9 @@ std::list<ParticleManager::Particle> ParticleManager::EmitFire(const Emitter& em
         float r = (float)(randomEngine() % 100) / 100.0f;
 
         if (r < 0.5f) {
-
+            // 50% → 炎の芯 (Core)
             particles.push_back(MakeNewParticleFire(randomEngine, emitter.transform.translate));
-        }
+        } 
     }
 
     return particles;
