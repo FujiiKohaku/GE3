@@ -59,20 +59,29 @@ public:
     // ------------------------------
     // 基本処理
     // ------------------------------
-    void Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager);
+    void Initialize();
     void Update();
     void Draw();
     void Finalize();
 
+    WinApp* GetWinApp() const { return winApp_; }
+
+
+    bool IsEndRequest() const { return endRequest_; }
+
 private:
+    // App
+    WinApp* winApp_ = nullptr;
+    DirectXCommon* dxCommon_ = nullptr;
+    SrvManager* srvManager_ = nullptr;
+    ImGuiManager* imguiManager_ = nullptr;
+    D3DResourceLeakChecker leakChecker_;
     // ------------------------------
     // Core システム
     // ------------------------------
-    DirectXCommon* dxCommon_ = nullptr;
-    WinApp* winApp_ = nullptr;
     Input* input_ = nullptr;
     Camera* camera_ = nullptr;
-    SrvManager* srvManager_ = nullptr;
+
     // ------------------------------
     // グラフィック / モデル
     // ------------------------------
@@ -149,4 +158,6 @@ private:
     };
 
     ParticleManager* particleManager_ = nullptr;
+
+     bool endRequest_ = false;
 };
