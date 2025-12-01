@@ -145,7 +145,7 @@ void Game::Draw()
     {
         object3dManager_->PreDraw();
 
-        player2_.Draw();
+      //  player2_.Draw();
 
         particleManager_->PreDraw();
         particleManager_->Draw();
