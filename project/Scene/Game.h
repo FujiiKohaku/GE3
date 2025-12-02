@@ -49,6 +49,8 @@
 #include "TextureManager.h"
 #include "Utility.h"
 #include "WinApp.h"
+
+#include "GamePlayScene.h"
 // ======================= パーティクル関連 =========================
 
 // ================================================================
@@ -66,16 +68,14 @@ public:
 
     WinApp* GetWinApp() const { return winApp_; }
 
-
     bool IsEndRequest() const { return endRequest_; }
 
 private:
     // App
     WinApp* winApp_ = nullptr;
-    DirectXCommon* dxCommon_ = nullptr;
-    SrvManager* srvManager_ = nullptr;
+
     ImGuiManager* imguiManager_ = nullptr;
-    D3DResourceLeakChecker leakChecker_;
+  
     // ------------------------------
     // Core システム
     // ------------------------------
@@ -86,21 +86,12 @@ private:
     // グラフィック / モデル
     // ------------------------------
     ModelCommon modelCommon_;
-    Object3dManager* object3dManager_ = nullptr;
-    Object3d player2_;
     DebugCamera debugCamera_;
-    // ------------------------------
-    // スプライト
-    // ------------------------------
-    SpriteManager* spriteManager_ = nullptr;
-    Sprite* sprite_ = nullptr;
-    std::vector<Sprite*> sprites_;
 
-    // ------------------------------
-    // サウンド
-    // ------------------------------
-    SoundManager soundManager_;
-    SoundData bgm;
+    // game
+    GamePlayScene* scene_;
+
+
 
     // ------------------------------
     // ゲーム状態
@@ -157,7 +148,5 @@ private:
         Vector3 translate;
     };
 
-    ParticleManager* particleManager_ = nullptr;
-
-     bool endRequest_ = false;
+    bool endRequest_ = false;
 };

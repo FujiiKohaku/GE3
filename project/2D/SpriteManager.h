@@ -2,55 +2,57 @@
 #include "DirectXCommon.h"
 
 // ===============================================
-// SpriteManagerクラス
-//  スプライト（2D描画）の共通処理を管理
+// SpriteManager（Singleton版）
 // ===============================================
 class SpriteManager {
 public:
-    // ===============================
+    //==============================================
+    // インスタンス取得
+    //==============================================
+    static SpriteManager* GetInstance();
+
+    //==============================================
     // 初期化処理
-    // DirectXCommonを受け取り、
-    // ルートシグネチャとPSOを作成する
-    // ===============================
+    //==============================================
     void Initialize(DirectXCommon* dxCommon);
 
-    // ===============================
-    // 描画前準備
-    // トポロジ・ルートシグネチャ・PSO設定
-    // ===============================
+    //==============================================
+    // 描画開始（RootSig/PSO設定）
+    //==============================================
     void PreDraw();
 
-    // ===============================
+    //==============================================
     // Getter
-    // ===============================
+    //==============================================
     DirectXCommon* GetDxCommon() const { return dxCommon_; }
 
 private:
-    // ===============================
-    // 内部関数（初期化補助）
-    // ===============================
+    //----------------------------------------------
+    // Singleton化関連
+    //----------------------------------------------
+    SpriteManager() = default;
+    ~SpriteManager() = default;
+    SpriteManager(const SpriteManager&) = delete;
+    SpriteManager& operator=(const SpriteManager&) = delete;
 
-    // ルートシグネチャの作成
+private:
+    //----------------------------------------------
+    // 内部処理（※元コードそのまま）
+    //----------------------------------------------
     void CreateRootSignature();
-
-    // グラフィックスパイプラインの作成
     void CreateGraphicsPipeline();
 
 private:
-    // ===============================
-    // メンバ変数
-    // ===============================
-
-    // DirectX共通クラス（借りて使うだけ）
+    // DirectX共通クラス（借りるだけ）
     DirectXCommon* dxCommon_ = nullptr;
 
     // ルートシグネチャ
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
 
-    // パイプラインステートオブジェクト（PSO）
+    // PSO
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
 
-    // シリアライズ・エラー出力用
+    // Blob
     ID3DBlob* signatureBlob = nullptr;
     ID3DBlob* errorBlob = nullptr;
 };

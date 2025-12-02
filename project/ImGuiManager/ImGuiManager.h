@@ -14,20 +14,31 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
+
 class ImGuiManager {
 public:
-    ImGuiManager();
-    ~ImGuiManager();
+    // ===== Singleton Access =====
+    static ImGuiManager* GetInstance()
+    {
+        static ImGuiManager instance;
+        return &instance;
+    }
+
+    // ===== Main APIs =====
     void Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager);
     void Update();
     void Finalize();
 
-    // ImGui受付開始
     void Begin();
-    // Imgui受付終了
     void End();
-    // 画面への描画
     void Draw();
+
+private:
+    // ===== Singleton Only =====
+    ImGuiManager() = default;
+    ~ImGuiManager() = default;
+    ImGuiManager(const ImGuiManager&) = delete;
+    ImGuiManager& operator=(const ImGuiManager&) = delete;
 
 private:
     WinApp* winApp_ = nullptr;

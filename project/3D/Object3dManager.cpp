@@ -1,5 +1,10 @@
 #include "Object3dManager.h"
 
+Object3dManager* Object3dManager::GetInstance()
+{
+    static Object3dManager instance;
+    return &instance;
+}
 #pragma region 初期化処理
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -133,8 +138,6 @@ void Object3dManager::CreateGraphicsPipeline()
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
-
-
 
     // ====== ラスタライザ設定 ======
     D3D12_RASTERIZER_DESC rasterizerDesc {};

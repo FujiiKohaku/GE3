@@ -8,34 +8,27 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg
 // ======================= エントリーポイント =====================
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
+    // ここで作る → main の終わりで確実に実行される
+    D3DResourceLeakChecker leakChecker;
 
-    // -------------------------------
-    // ゲーム本体初期化
-    // -------------------------------
-    Game* game = new Game();
-    game->Initialize();
+    Game game;
+    game.Initialize();
 
-    //  メインループ
     MSG msg {};
     while (msg.message != WM_QUIT) {
 
-        if (game->GetWinApp()->ProcessMessage()) {
+        if (game.GetWinApp()->ProcessMessage()) {
             break;
         }
 
-        if (game->IsEndRequest()) {
+        if (game.IsEndRequest()) {
             break;
         }
 
-        game->Update();
-
-        game->Draw();
+        game.Update();
+        game.Draw();
     }
 
-    //  終了処理
-    game->Finalize();
-
-    delete game;
-
+    game.Finalize();
     return 0;
 }
