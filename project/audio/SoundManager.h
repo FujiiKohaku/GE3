@@ -5,40 +5,51 @@
 #include <wrl.h>
 #include <xaudio2.h>
 #pragma comment(lib, "xaudio2.lib")
-// --------------------------------------
-// XAudio2 を使用したサウンド管理クラス
-// ・WAVファイルの読み込み
-// ・再生処理
-// ・メモリ解放
-// ・初期化と終了処理
-// --------------------------------------
 
-// WAVファイルの内容を格納する構造体
+// --------------------------------------
+// WAVファイルデータ保持用
+// --------------------------------------
 struct SoundData {
-    WAVEFORMATEX wfex; // 音声フォーマット情報
-    BYTE* pBuffer; // 音声データバッファ
-    unsigned int bufferSize; // バッファサイズ（バイト単位）
+    WAVEFORMATEX wfex;
+    BYTE* pBuffer = nullptr;
+    unsigned int bufferSize = 0;
 };
 
-// サウンド全体を管理するクラス
+// --------------------------------------
+// XAudio2ベースのサウンド管理クラス
+// Singleton 対応版
+// --------------------------------------
 class SoundManager {
 public:
-    // コンストラクタ・デストラクタ
-    SoundManager();
-    ~SoundManager();
+    // ================================
+    // Singleton
+    // ================================
+    static SoundManager* GetInstance()
+    {
+        static SoundManager instance;
+        return &instance;
+    }
 
-    // XAudio2 を初期化する
+    // ================================
+    // 基本操作
+    // ================================
     void Initialize();
-    // XAudio2 を解放する
     void Finalize(SoundData* soundData);
-    // WAVファイルを読み込んでメモリに展開
+
     SoundData SoundLoadWave(const char* filename);
-    // 音声データをメモリから解放
     void SoundUnload(SoundData* soundData);
-    // 音声を再生
+
     void SoundPlayWave(const SoundData& soundData);
 
 private:
+    // シングルトン用
+    SoundManager() = default;
+    ~SoundManager() = default;
+
+    SoundManager(const SoundManager&) = delete;
+    SoundManager& operator=(const SoundManager&) = delete;
+
+private:
     Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
-    IXAudio2MasteringVoice* masterVoice;
+    IXAudio2MasteringVoice* masterVoice = nullptr;
 };

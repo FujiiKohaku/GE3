@@ -1,9 +1,10 @@
 #pragma once
+
 #include "Camera.h"
 #include "DirectXCommon.h"
 #include "SrvManager.h"
 #include "TextureManager.h"
-#include "blendutil.h" // BlendMode ここで定義
+#include "blendutil.h"
 
 #include <d3d12.h>
 #include <list>
@@ -13,10 +14,17 @@
 
 class ParticleManager {
 public:
-    using ComPtr = Microsoft::WRL::ComPtr<ID3D12Resource>;
+    // =========================================================
+    // Singleton Access
+    // =========================================================
+    static ParticleManager* GetInstance()
+    {
+        static ParticleManager instance;
+        return &instance;
+    }
 
     // =========================================================
-    // GPU に送る構造体
+    // GPUに送る構造体
     // =========================================================
     struct Material {
         Vector4 color;
@@ -78,7 +86,7 @@ public:
         Spark,
         FireWork
     };
-    ParticleType type;
+    ParticleType type = ParticleType::Normal;
 
 public:
     // =========================================================
@@ -91,13 +99,26 @@ public:
 
     // BlendMode の setter
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
+
+    // UI
     void ImGui();
-    // 発せ関数
+
+    // Emit系
     std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine);
     std::list<Particle> EmitFire(const Emitter& emitter, std::mt19937& randomEngine);
     std::list<Particle> EmitSmoke(const Emitter& emitter, std::mt19937& randomEngine);
     std::list<Particle> EmitLightning(const Emitter& emitter, std::mt19937& randomEngine);
     std::list<Particle> EmitFireworkSpark(const Emitter& emitter, std::mt19937& randomEngine);
+
+private:
+    // =========================================================
+    // Singleton Safety
+    // =========================================================
+    ParticleManager() = default;
+    ~ParticleManager() = default;
+
+    ParticleManager(const ParticleManager&) = delete;
+    ParticleManager& operator=(const ParticleManager&) = delete;
 
 private:
     // =========================================================
@@ -109,6 +130,7 @@ private:
     void CreateSrvBuffer();
     void CreateBoardMesh();
     void UpdateTransforms();
+
     Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
     Particle MakeNewParticleFire(std::mt19937& randomEngine, const Vector3& translate);
     Particle MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& translate);
@@ -119,36 +141,32 @@ private:
     // =========================================================
     // DirectX / 外部依存
     // =========================================================
-    DirectXCommon* dxCommon_
-        = nullptr;
+    DirectXCommon* dxCommon_ = nullptr;
     SrvManager* srvManager_ = nullptr;
     Camera* camera_ = nullptr;
 
     // =========================================================
-    // RootSignature / PSO（BlendMode対応）
+    // RootSignature / PSO
     // =========================================================
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
     int currentBlendMode_ = kBlendModeNormal;
 
     // =========================================================
-    // GPU リソース（SRV / StructuredBuffer / CB）
+    // GPU リソース
     // =========================================================
-    ComPtr instancingResource;
-    ParticleForGPU* instanceData_ = nullptr; // map しっぱなし用
-
+    Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
+    ParticleForGPU* instanceData_ = nullptr;
     uint32_t numInstance_ = 0;
+
     static const uint32_t kNumMaxInstance = 100;
 
-    // パーティクル本体
     std::list<Particle> particles;
-
     std::list<Shockwave> shokParticles;
-    // SRV の GPU ハンドル
+
     D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
 
-    // Material / Transform / Light 用 CB
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> transformResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> lightResource;
@@ -157,7 +175,6 @@ private:
     TransformationMatrix transformData_ {};
     DirectionalLight lightData_ {};
 
-    // 板ポリ mesh
     VertexData vertices[4];
     uint32_t indexList[6] = { 0, 1, 2, 0, 2, 3 };
 
@@ -166,17 +183,17 @@ private:
 
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
     D3D12_INDEX_BUFFER_VIEW indexBufferView {};
-    // パーティクル板ポリ用の Transform
+
     Transform transformBoard_ = {
-        { 1.0f, 1.0f, 1.0f }, // scale
-        { 0.0f, 0.0f, 0.0f }, // rotate
-        { 0.0f, 0.0f, 0.0f } // translate
+        { 1.0f, 1.0f, 1.0f },
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f }
     };
 
-    // 乱数
     std::random_device seedGenerator_;
     std::mt19937 randomEngine_;
     bool useBillboard_ = true;
-    float kdeltaTime;
+
+    float kdeltaTime = 0.1f;
     Emitter emitter {};
 };

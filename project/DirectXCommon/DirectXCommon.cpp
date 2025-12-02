@@ -7,7 +7,11 @@
 #include <dxgi1_6.h>
 #include <format>
 #include <wrl.h>
-
+DirectXCommon* DirectXCommon::GetInstance()
+{
+    static DirectXCommon instance;
+    return &instance;
+}
 void DirectXCommon::Initialize(WinApp* winApp)
 {
 

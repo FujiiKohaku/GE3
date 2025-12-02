@@ -1,10 +1,5 @@
 #include "ImGuiManager.h"
-ImGuiManager::ImGuiManager()
-{
-}
-ImGuiManager::~ImGuiManager()
-{
-}
+
 void ImGuiManager::Initialize([[maybe_unused]] WinApp* winApp, [[maybe_unused]] DirectXCommon* dxCommon, [[maybe_unused]] SrvManager* srvManager)
 {
 #ifdef USE_IMGUI
