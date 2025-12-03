@@ -15,7 +15,6 @@ void Game::Initialize()
     TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
     ImGuiManager::GetInstance()->Initialize(winApp_, DirectXCommon::GetInstance(), SrvManager::GetInstance());
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    // TextureManager::GetInstance()->LoadTexture("resources/circle.png")
     ModelManager::GetInstance()->initialize(DirectXCommon::GetInstance());
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     camera_ = new Camera();

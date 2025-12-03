@@ -58,13 +58,12 @@ private:
     //==================================================================
     //  シングルトン制御
     //==================================================================
-    static TextureManager* instance;
-    TextureManager() = default;
-    ~TextureManager() = default;
+    TextureManager();
+    ~TextureManager();
+
+public:
     TextureManager(const TextureManager&) = delete;
     TextureManager& operator=(const TextureManager&) = delete;
-
-
 
     //==================================================================
     //  メンバ変数
@@ -80,7 +79,7 @@ private:
 
     SrvManager* srvManager_ = nullptr; // SRVマネージャーの参照
 
-    public:
+public:
     // 指定したテクスチャ情報を取得
     const TextureData* GetTextureData(const std::string& filePath) const
     {

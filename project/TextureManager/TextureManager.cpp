@@ -1,7 +1,6 @@
 #include "TextureManager.h"
 #include <format>
 
-TextureManager* TextureManager::instance = nullptr;
 // ImGuiで0番を使用するため、1番から使用
 uint32_t TextureManager::kSRVIndexTop = 1;
 
@@ -10,10 +9,8 @@ uint32_t TextureManager::kSRVIndexTop = 1;
 //=================================================================
 TextureManager* TextureManager::GetInstance()
 {
-    if (instance == nullptr) {
-        instance = new TextureManager();
-    }
-    return instance;
+    static TextureManager instance;
+    return &instance;
 }
 
 //=================================================================
@@ -21,10 +18,7 @@ TextureManager* TextureManager::GetInstance()
 //=================================================================
 void TextureManager::Finalize()
 {
-    if (instance) {
-        delete instance;
-        instance = nullptr;
-    }
+
 }
 
 //=================================================================
@@ -44,7 +38,7 @@ void TextureManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager)
 void TextureManager::LoadTexture(const std::string& filePath)
 {
 
-    //読み込み済みテクスチャを検索
+    // 読み込み済みテクスチャを検索
     if (textureDatas.contains(filePath)) {
         return; // すでに読み込まれているなら何もしない
     }
@@ -64,7 +58,7 @@ void TextureManager::LoadTexture(const std::string& filePath)
         DirectX::TEX_FILTER_SRGB, 0, mipImages);
     assert(SUCCEEDED(hr));
 
-// テクスチャデータを追加して書き込む
+    // テクスチャデータを追加して書き込む
     TextureData& textureData = textureDatas[filePath];
 
     // 情報を記録
@@ -141,6 +135,13 @@ const DirectX::TexMetadata& TextureManager::GetMetaData(const std::string& fileP
     }
 
     assert(0 && "指定したテクスチャが読み込まれていません。");
-    static DirectX::TexMetadata dummy {}; 
+    static DirectX::TexMetadata dummy {};
     return dummy;
+}
+
+TextureManager::~TextureManager()
+{
+}
+TextureManager::TextureManager()
+{
 }

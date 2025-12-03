@@ -105,3 +105,10 @@ void SrvManager::Finalize()
     // 借り物を無効化
     dxCommon_ = nullptr;
 }
+
+SrvManager::~SrvManager()
+{
+}
+SrvManager::SrvManager()
+{
+}

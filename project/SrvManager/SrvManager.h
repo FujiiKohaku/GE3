@@ -33,9 +33,10 @@ public:
 
 private:
     // Singleton化要素
-    SrvManager() = default;
-    ~SrvManager() = default;
+    SrvManager();
+    ~SrvManager();
 
+public:
     SrvManager(const SrvManager&) = delete;
     SrvManager& operator=(const SrvManager&) = delete;
 
@@ -47,5 +48,3 @@ private:
     uint32_t descriptorSize = 0;
     uint32_t useIndex = 0;
 };
-
-

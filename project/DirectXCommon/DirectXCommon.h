@@ -15,11 +15,11 @@
 #include "DirectXTex/DirectXTex.h"
 #include "DirectXTex/d3dx12.h"
 
-class DirectXCommon {
+class DirectXCommon final {
 public:
     // ===== Singleton =====
     static DirectXCommon* GetInstance();
-
+    
     // DX初期化
     void Initialize(WinApp* winApp);
 
@@ -63,9 +63,12 @@ public:
 
 private:
     // ===== Singleton化の基本 =====
-    DirectXCommon() = default;
-    ~DirectXCommon() = default;
-    DirectXCommon(const DirectXCommon&) = delete;
+    DirectXCommon();
+    ~DirectXCommon();
+
+public:
+    DirectXCommon(const DirectXCommon& obj) = delete;
+    // 代入演算子を無効
     DirectXCommon& operator=(const DirectXCommon&) = delete;
 
 private:

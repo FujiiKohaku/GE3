@@ -17,13 +17,7 @@
 
 class ImGuiManager {
 public:
-    // ===== Singleton Access =====
-    static ImGuiManager* GetInstance()
-    {
-        static ImGuiManager instance;
-        return &instance;
-    }
-
+    static ImGuiManager* GetInstance();
     // ===== Main APIs =====
     void Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager);
     void Update();
@@ -35,8 +29,8 @@ public:
 
 private:
     // ===== Singleton Only =====
-    ImGuiManager() = default;
-    ~ImGuiManager() = default;
+    ImGuiManager();
+   ~ImGuiManager();
     ImGuiManager(const ImGuiManager&) = delete;
     ImGuiManager& operator=(const ImGuiManager&) = delete;
 

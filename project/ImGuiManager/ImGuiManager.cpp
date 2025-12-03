@@ -1,4 +1,17 @@
 #include "ImGuiManager.h"
+// ===== Singleton Access =====
+ImGuiManager* ImGuiManager::GetInstance()
+{
+    static ImGuiManager instance;
+    return &instance;
+}
+
+ImGuiManager::~ImGuiManager()
+{
+}
+ImGuiManager::ImGuiManager()
+{
+}
 
 void ImGuiManager::Initialize([[maybe_unused]] WinApp* winApp, [[maybe_unused]] DirectXCommon* dxCommon, [[maybe_unused]] SrvManager* srvManager)
 {
@@ -66,6 +79,7 @@ void ImGuiManager::Draw()
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 #endif //  USE_IMGUI
 }
+
 void ImGuiManager::Finalize()
 {
 #ifdef USE_IMGUI
