@@ -51,6 +51,12 @@
 #include "WinApp.h"
 
 #include "GamePlayScene.h"
+
+#include "TitleScene.h"
+
+#include "BaseScene.h"
+
+#include "SceneManager.h"
 // ======================= パーティクル関連 =========================
 
 // ================================================================
@@ -71,15 +77,19 @@ public:
     bool IsEndRequest() const { return endRequest_; }
 
 private:
+    //Scene
+    SceneManager* sceneManager_ = nullptr;
+
+
     // App
     WinApp* winApp_ = nullptr;
 
     ImGuiManager* imguiManager_ = nullptr;
-  
+
     // ------------------------------
     // Core システム
     // ------------------------------
-    Input* input_ = nullptr;
+   
     Camera* camera_ = nullptr;
 
     // ------------------------------
@@ -89,10 +99,8 @@ private:
     DebugCamera debugCamera_;
 
     // game
-    GamePlayScene* scene_;
-
-
-
+    // GamePlayScene* scene_;
+    TitleScene* scene_;
     // ------------------------------
     // ゲーム状態
     // ------------------------------
