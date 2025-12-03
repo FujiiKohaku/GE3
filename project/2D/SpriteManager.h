@@ -32,8 +32,11 @@ private:
     //----------------------------------------------
     // Singleton化関連
     //----------------------------------------------
-    SpriteManager() = default;
-    ~SpriteManager() = default;
+    SpriteManager();
+    ~SpriteManager();
+
+public:
+
     SpriteManager(const SpriteManager&) = delete;
     SpriteManager& operator=(const SpriteManager&) = delete;
 

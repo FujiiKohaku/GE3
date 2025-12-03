@@ -236,3 +236,10 @@ void SpriteManager::Finalize()
     // 依存解除
     dxCommon_ = nullptr;
 }
+
+SpriteManager::~SpriteManager()
+{
+}
+SpriteManager::SpriteManager()
+{
+}

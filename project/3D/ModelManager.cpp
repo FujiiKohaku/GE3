@@ -1,6 +1,10 @@
 #include "ModelManager.h"
 
-ModelManager* ModelManager::instance = nullptr;
+ModelManager* ModelManager::GetInstance()
+{
+    static ModelManager instance;
+    return &instance;
+}
 
 void ModelManager::LoadModel(const std::string& filepath)
 {
@@ -10,7 +14,7 @@ void ModelManager::LoadModel(const std::string& filepath)
         return;
     }
 
-    // モデルの製紙絵と読み込み初期化 
+    // モデルの製紙絵と読み込み初期化
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon_, "resources", filepath);
 
@@ -27,4 +31,11 @@ Model* ModelManager::FindModel(const std::string& filePath)
 
     // 見つからなかった場合はnullptrを返す
     return nullptr;
+}
+
+ModelManager::~ModelManager()
+{
+}
+ModelManager::ModelManager()
+{
 }
