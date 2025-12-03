@@ -45,7 +45,7 @@ void Game::Update()
     // --- ゲーム更新 ---
     Input::GetInstance()->Update();
     camera_->Update();
-  
+
     camera_->DebugUpdate();
 
     // エスケープで離脱
@@ -84,6 +84,10 @@ void Game::Finalize()
     ImGuiManager::GetInstance()->Finalize();
     SrvManager::GetInstance()->Finalize();
     // DirectXCommonはFinalizeしてもデバイス破棄処理だけ。deleteは不要
+    // === デバッグログ ===
+
+
+
     DirectXCommon::GetInstance()->Finalize();
 
     winApp_->Finalize();

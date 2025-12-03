@@ -18,8 +18,12 @@ TextureManager* TextureManager::GetInstance()
 //=================================================================
 void TextureManager::Finalize()
 {
-
+  
+       dxCommon_ = nullptr;
+    srvManager_ = nullptr;
+    textureDatas.clear(); // ComPtr解放（内部Release）
 }
+
 
 //=================================================================
 // 初期化処理

@@ -1,4 +1,3 @@
-
 #include "ImGuiManager.h"
 #include "Scene/Game.h"
 
@@ -8,7 +7,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg
 // ======================= エントリーポイント =====================
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-    // ここで作る → main の終わりで確実に実行される
+
     D3DResourceLeakChecker leakChecker;
 
     Game game;
