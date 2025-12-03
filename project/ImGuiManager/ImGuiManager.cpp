@@ -70,9 +70,20 @@ void ImGuiManager::Finalize()
 {
 #ifdef USE_IMGUI
 
-    // 後始末
+    // DX12 ImGui リソース破棄
+    ImGui_ImplDX12_InvalidateDeviceObjects();
+
+    // 後始末（Win32, DX12 wrapper）
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
+
+    // ImGui本体
     ImGui::DestroyContext();
+
+    // 最後に参照クリア
+    winApp_ = nullptr;
+    dxCommon_ = nullptr;
+    srvManager_ = nullptr;
+
 #endif
 }
