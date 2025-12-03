@@ -131,6 +131,7 @@ void DirectXCommon::InitializeDevice()
     Microsoft::WRL::ComPtr<ID3D12InfoQueue>
         infoQueue = nullptr;
     if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&infoQueue)))) {
+        //消すとより詳細なデバッグができそうだ。。
         // やばいエラー時に止まる
         infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
         // エラー時に止まる
@@ -585,14 +586,15 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_
     // バッファの場合はこれにする決まり02_03
     vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-    // 実際に頂点リソースを作る02_03
+    // ストラクチャードバッファを作成
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
     HRESULT hr = device->CreateCommittedResource(
         &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
         IID_PPV_ARGS(&vertexResource));
     assert(SUCCEEDED(hr));
-
+    //なんか変数に名前を付けれるらしい
+    vertexResource->SetName(L"Test2");
     return vertexResource;
 }
 #pragma endregion

@@ -274,6 +274,7 @@ void ParticleManager::CreateInstancingBuffer()
 {
     // GPUバッファを作成
     instancingResource = dxCommon_->CreateBufferResource(sizeof(ParticleForGPU) * kNumMaxInstance);
+    instancingResource->SetName(L"Test");
 
     // 初期化
 
@@ -553,6 +554,7 @@ void ParticleManager::Finalize()
     }
 
     // GPUリソース解放
+    instancingResource->SetName(L"Instancing");
     instancingResource.Reset();
     materialResource.Reset();
     transformResource.Reset();
