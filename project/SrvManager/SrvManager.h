@@ -28,7 +28,7 @@ public:
     void SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_t srvIndex);
 
     bool CanAllocate() const;
-
+    void Finalize();
     static const uint32_t kMaxSRVCount;
 
 private:
@@ -47,3 +47,5 @@ private:
     uint32_t descriptorSize = 0;
     uint32_t useIndex = 0;
 };
+
+

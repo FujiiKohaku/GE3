@@ -30,6 +30,7 @@ public:
     {
         currentBlendMode = mode;
     }
+    void Finalize();
 
 private:
     // Singleton：外部から new できないようにする

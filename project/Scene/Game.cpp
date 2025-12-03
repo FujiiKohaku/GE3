@@ -76,14 +76,18 @@ void Game::Draw()
 
 void Game::Finalize()
 {
-
-    delete camera_;
-
+    // シーンマネージャーも singleton
+    ParticleManager::GetInstance()->Finalize();
+    Object3dManager::GetInstance()->Finalize();
+    SpriteManager::GetInstance()->Finalize();
     ModelManager::GetInstance()->Finalize();
     TextureManager::GetInstance()->Finalize();
-
     ImGuiManager::GetInstance()->Finalize();
+    SrvManager::GetInstance()->Finalize();
+    // DirectXCommonはFinalizeしてもデバイス破棄処理だけ。deleteは不要
+     DirectXCommon::GetInstance()->Finalize();
 
     winApp_->Finalize();
     delete winApp_;
+    delete camera_;
 }

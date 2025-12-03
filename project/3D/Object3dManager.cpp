@@ -185,3 +185,32 @@ void Object3dManager::CreateGraphicsPipeline()
 }
 
 #pragma endregion
+void Object3dManager::Finalize()
+{
+    // GPU待機（メモリ解放が安全に行われるように）
+    if (dxCommon_) {
+        dxCommon_->WaitForGPU();
+    }
+
+    // ----- Blob解放 -----
+    if (signatureBlob) {
+        signatureBlob->Release();
+        signatureBlob = nullptr;
+    }
+    if (errorBlob) {
+        errorBlob->Release();
+        errorBlob = nullptr;
+    }
+
+    // ----- GPUリソース解放 -----
+    rootSignature.Reset();
+    graphicsPipelineState.Reset();
+
+    for (int i = 0; i < kCountOfBlendMode; i++) {
+        pipelineStates[i].Reset();
+    }
+
+    // ----- ポインタ無効化 -----
+    dxCommon_ = nullptr;
+    defaultCamera_ = nullptr;
+}

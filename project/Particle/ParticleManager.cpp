@@ -537,6 +537,47 @@ void ParticleManager::ImGui()
     ImGui::End();
 }
 
+
+
+void ParticleManager::Finalize()
+{
+    // GPU待機（リソースが消せない場合があるため）
+    if (dxCommon_) {
+        dxCommon_->WaitForGPU();
+    }
+
+    // Unmap
+    if (instancingResource && instanceData_) {
+        instancingResource->Unmap(0, nullptr);
+        instanceData_ = nullptr;
+    }
+
+    // GPUリソース解放
+    instancingResource.Reset();
+    materialResource.Reset();
+    transformResource.Reset();
+    lightResource.Reset();
+    vertexResource.Reset();
+    indexResource.Reset();
+
+    // RootSignature / PSO 解放
+    rootSignature.Reset();
+    for (int i = 0; i < kCountOfBlendMode; i++) {
+        pipelineStates[i].Reset();
+    }
+
+    // 最後にGPU排出
+    if (dxCommon_) {
+        dxCommon_->WaitForGPU();
+    }
+
+    // 依存先も無効化
+    dxCommon_ = nullptr;
+    srvManager_ = nullptr;
+    camera_ = nullptr;
+}
+
+
 ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& emitPos)
 {
     Particle p;

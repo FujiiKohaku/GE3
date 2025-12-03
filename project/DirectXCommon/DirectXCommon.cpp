@@ -694,3 +694,43 @@ void DirectXCommon::WaitForGPU()
         WaitForSingleObject(fenceEvent, INFINITE);
     }
 }
+void DirectXCommon::Finalize()
+{
+    // GPU 完了待ち
+    WaitForGPU();
+
+    // コマンドイベント閉じる
+    if (fenceEvent) {
+        CloseHandle(fenceEvent);
+        fenceEvent = nullptr;
+    }
+
+    // ========= GPU系リソース Reset =========
+    fence.Reset();
+
+    for (auto& buf : swapChainResources) {
+        buf.Reset();
+    }
+
+    depthStencilResource.Reset();
+
+    rtvDescriptorHeap.Reset();
+    dsvDescriptorHeap.Reset();
+
+    swapChain.Reset();
+    commandList.Reset();
+    commandAllocator.Reset();
+    commandQueue.Reset();
+    device.Reset();
+
+    // DXC系
+    includeHandler.Reset();
+    dxcCompiler.Reset();
+    dxcUtils.Reset();
+
+    // DXGI
+    dxgiFactory.Reset();
+
+    // 紐付け解除
+    winApp_ = nullptr;
+}

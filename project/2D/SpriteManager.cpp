@@ -212,3 +212,27 @@ void SpriteManager::CreateGraphicsPipeline()
     hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&graphicsPipelineState));
     assert(SUCCEEDED(hr));
 }
+void SpriteManager::Finalize()
+{
+    // GPUがまだRootSig/PSOを使う可能性があるなら待機
+    if (dxCommon_) {
+        dxCommon_->WaitForGPU();
+    }
+
+    // Blob を順次解放
+    if (signatureBlob) {
+        signatureBlob->Release();
+        signatureBlob = nullptr;
+    }
+    if (errorBlob) {
+        errorBlob->Release();
+        errorBlob = nullptr;
+    }
+
+    // GPUリソース解放
+    rootSignature.Reset();
+    graphicsPipelineState.Reset();
+
+    // 依存解除
+    dxCommon_ = nullptr;
+}

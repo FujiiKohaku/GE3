@@ -10,6 +10,11 @@ DebugCamera::DebugCamera()
     // 正射影行列の作成（左上・右下・近クリップ・遠クリップ）
     orthoGraphicMatrix = DebugCamera::MakeOrthographicMatrix(-160.0f, 160.0f, 200.0f, 300.0f, 0.0f, 1000.0f);
 }
+
+void DebugCamera::Initialize(WinApp* winApp)
+{
+    winApp_ = winApp;
+}
 void DebugCamera::Update()
 {
     const float moveSpeed = 0.1f;
@@ -54,14 +59,4 @@ void DebugCamera::Update()
     // ビュー行列の更新
     cameraMatrix = DebugCamera::MakeAffineMatrix({ 1.0f, 1.0f, 1.0f }, rotation_, translation_);
     viewMatrix = DebugCamera::Inverse(cameraMatrix);
-}
-
-
-
-void DebugCamera::Initialize(WinApp* winApp)
-{
-    winApp_ = winApp;
-
-
-   
 }

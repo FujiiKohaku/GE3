@@ -85,3 +85,23 @@ bool SrvManager::CanAllocate() const
 {
     return useIndex < kMaxSRVCount;
 }
+
+void SrvManager::Finalize()
+{
+    // GPU待機（安全のため）
+    if (dxCommon_) {
+        dxCommon_->WaitForGPU();
+    }
+
+    // DescriptorHeap解放
+    if (descriptorHeap) {
+        descriptorHeap.Reset();
+    }
+
+    // インデックス初期化
+    useIndex = 0;
+    descriptorSize = 0;
+
+    // 借り物を無効化
+    dxCommon_ = nullptr;
+}

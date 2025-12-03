@@ -25,6 +25,8 @@ public:
     // Getter
     //==============================================
     DirectXCommon* GetDxCommon() const { return dxCommon_; }
+    // 終了処理
+    void Finalize();
 
 private:
     //----------------------------------------------
