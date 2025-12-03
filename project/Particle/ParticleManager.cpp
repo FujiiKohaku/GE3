@@ -1,6 +1,14 @@
 #include "ParticleManager.h"
 #include <cassert>
 #include <numbers>
+
+ParticleManager* ParticleManager::GetInstance()
+{
+    static ParticleManager instance;
+
+    return &instance;
+}
+
 void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
     // エンジンやカメラを保存しておく
@@ -538,8 +546,6 @@ void ParticleManager::ImGui()
     ImGui::End();
 }
 
-
-
 void ParticleManager::Finalize()
 {
     // GPU待機（リソースが消せない場合があるため）
@@ -578,7 +584,6 @@ void ParticleManager::Finalize()
     srvManager_ = nullptr;
     camera_ = nullptr;
 }
-
 
 ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& emitPos)
 {
@@ -699,29 +704,25 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
     float dx = distXZ(randomEngine);
     float dz = distXZ(randomEngine);
 
-    
     p.transform.translate = {
         pos.x + dx * 0.4f,
         pos.y,
         pos.z + dz * 0.4f
     };
 
-    
     float s = distScale(randomEngine);
     p.transform.scale = { s, s * 2.5f, s };
     p.transform.rotate = { 0, 0, 0 };
 
-    
     p.velocity = {
         dx * 0.05f,
         -distUp(randomEngine),
         dz * 0.05f
     };
 
-  
     float a = dist01(randomEngine);
     float t = dist01(randomEngine);
-    t = t * t; 
+    t = t * t;
 
     Vector4 red = { 1.0f, 0.05f, 0.0f, 1.0f };
     Vector4 orange = { 1.0f, 0.25f, 0.0f, 1.0f };
@@ -733,7 +734,6 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
 
     float blend = t * 2.0f;
 
-  
     if (blend > 1.0f) {
         blend = 1.0f;
     }
@@ -745,7 +745,6 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
         1.0f
     };
 
-   
     p.lifeTime = distLife(randomEngine);
     p.currentTime = 0.0f;
 
@@ -809,7 +808,6 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
 {
     Particle p;
 
-   
     std::uniform_real_distribution<float> distAngle(0.0f, 6.28318f);
     std::uniform_real_distribution<float> distRadius(0.02f, 0.12f); // 中心かなり近め
     std::uniform_real_distribution<float> distLife(0.4f, 0.9f);
@@ -823,23 +821,20 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
     float offsetX = cosf(angle) * radius;
     float offsetY = sinf(angle) * radius;
 
-  
     p.transform.translate = {
         center.x + offsetX,
         center.y + offsetY,
         center.z
     };
 
-
-    float s = 0.1f; 
+    float s = 0.1f;
     p.transform.scale = {
-        s * 0.25f, 
-        s * 1.8f, 
-        s * 0.25f 
+        s * 0.25f,
+        s * 1.8f,
+        s * 0.25f
     };
     p.transform.rotate = { 0, 0, 0 };
 
-   
     Vector3 dir = { offsetX, offsetY, 0.0f };
     float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
 
@@ -852,20 +847,19 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
 
     p.velocity = { dir.x * speed, dir.y * speed, 0.0f };
 
-
     Vector4 corePink = { 1.0f, 0.4f, 0.7f, 1.0f };
 
     Vector4 outside;
 
     float c = dist01(randomEngine);
     if (c < 0.25f)
-        outside = { 1.0f, 0.5f, 0.8f, 1.0f }; 
+        outside = { 1.0f, 0.5f, 0.8f, 1.0f };
     else if (c < 0.50f)
-        outside = { 0.4f, 0.6f, 1.0f, 1.0f }; 
+        outside = { 0.4f, 0.6f, 1.0f, 1.0f };
     else if (c < 0.75f)
-        outside = { 1.0f, 0.9f, 0.4f, 1.0f }; 
+        outside = { 1.0f, 0.9f, 0.4f, 1.0f };
     else
-        outside = { 0.9f, 0.4f, 0.1f, 1.0f }; 
+        outside = { 0.9f, 0.4f, 0.1f, 1.0f };
 
     // 補間値
     float t = dist01(randomEngine);
@@ -887,7 +881,6 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
     return p;
 }
 
-
 // エミッターから粒を生む（count 個ぶん生成して返す）
 std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
 {
@@ -903,7 +896,7 @@ std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitte
     return particles; // 作った粒をまとめて返す
 }
 
-std::list<ParticleManager::Particle> ParticleManager::EmitFire( const Emitter& emitter, std::mt19937& randomEngine)
+std::list<ParticleManager::Particle> ParticleManager::EmitFire(const Emitter& emitter, std::mt19937& randomEngine)
 {
     std::list<Particle> particles;
 
@@ -914,7 +907,7 @@ std::list<ParticleManager::Particle> ParticleManager::EmitFire( const Emitter& e
         if (r < 0.5f) {
             // 50% → 炎の芯 (Core)
             particles.push_back(MakeNewParticleFire(randomEngine, emitter.transform.translate));
-        } 
+        }
     }
 
     return particles;
@@ -951,4 +944,11 @@ std::list<ParticleManager::Particle> ParticleManager::EmitFireworkSpark(const Em
     }
 
     return particles;
+}
+
+ParticleManager::~ParticleManager()
+{
+}
+ParticleManager::ParticleManager()
+{
 }

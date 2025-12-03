@@ -34,9 +34,10 @@ public:
 
 private:
     // Singleton：外部から new できないようにする
-    Object3dManager() = default;
-    ~Object3dManager() = default;
+    Object3dManager();
+    ~Object3dManager();
 
+public:
     Object3dManager(const Object3dManager&) = delete;
     Object3dManager& operator=(const Object3dManager&) = delete;
 

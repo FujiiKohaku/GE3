@@ -214,3 +214,11 @@ void Object3dManager::Finalize()
     dxCommon_ = nullptr;
     defaultCamera_ = nullptr;
 }
+
+Object3dManager::~Object3dManager()
+{
+}
+
+Object3dManager::Object3dManager()
+{
+}

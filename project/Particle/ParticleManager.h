@@ -17,11 +17,7 @@ public:
     // =========================================================
     // Singleton Access
     // =========================================================
-    static ParticleManager* GetInstance()
-    {
-        static ParticleManager instance;
-        return &instance;
-    }
+    static ParticleManager* GetInstance();
 
     // =========================================================
     // GPUに送る構造体
@@ -114,9 +110,10 @@ private:
     // =========================================================
     // Singleton Safety
     // =========================================================
-    ParticleManager() = default;
-    ~ParticleManager() = default;
+    ParticleManager();
+    ~ParticleManager();
 
+public:
     ParticleManager(const ParticleManager&) = delete;
     ParticleManager& operator=(const ParticleManager&) = delete;
 

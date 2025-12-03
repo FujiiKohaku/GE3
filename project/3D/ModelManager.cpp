@@ -33,6 +33,10 @@ Model* ModelManager::FindModel(const std::string& filePath)
     return nullptr;
 }
 
+void ModelManager::Finalize()
+{
+}
+
 ModelManager::~ModelManager()
 {
 }
