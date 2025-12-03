@@ -96,7 +96,7 @@ public:
     void Update();
     void PreDraw();
     void Draw();
-
+    void Finalize();
     // BlendMode の setter
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
 
