@@ -6,12 +6,6 @@ void GamePlayScene::Initialize()
     sprite_ = new Sprite();
     sprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
     sprite_->SetPosition({ 100.0f, 100.0f });
-    ModelManager::GetInstance()->LoadModel("plane.obj");
-    ModelManager::GetInstance()->LoadModel("axis.obj");
-    ModelManager::GetInstance()->LoadModel("titleTex.obj");
-    ModelManager::GetInstance()->LoadModel("fence.obj");
-    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/fence.png");
     // サウンド関連
     bgm = SoundManager::GetInstance()->SoundLoadWave("Resources/BGM.wav");
     player2_ = new Object3d();
@@ -24,12 +18,10 @@ void GamePlayScene::Initialize()
 void GamePlayScene::Update()
 {
     // ImGuiのBegin/Endは絶対に呼ばない！
-
     ParticleManager::GetInstance()->Update();
     player2_->Update();
     sprite_->Update();
 }
-
 
 void GamePlayScene::Draw3D()
 {
@@ -48,11 +40,9 @@ void GamePlayScene::Draw2D()
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
-  
+
 #endif
 }
-
-
 
 void GamePlayScene::Finalize()
 {

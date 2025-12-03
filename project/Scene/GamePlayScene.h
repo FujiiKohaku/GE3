@@ -1,6 +1,4 @@
 #pragma once
-#include "Camera.h"
-#include "Input.h"
 #include "ModelManager.h"
 #include "Object3d.h"
 #include "Object3dManager.h"
@@ -9,17 +7,19 @@
 #include "Sprite.h"
 #include "SpriteManager.h"
 #include "TextureManager.h"
-class GamePlayScene {
+
+#include "BaseScene.h"
+class GamePlayScene : public BaseScene {
 public:
-    void Initialize();
+    void Initialize() override;
 
-    void Finalize();
+    void Finalize() override;
 
-    void Update();
+    void Update() override;
 
-    void Draw2D();
-    void Draw3D();
-    void DrawImGui();
+    void Draw2D() override;
+    void Draw3D() override;
+    void DrawImGui() override;
 
 private:
     // ------------------------------

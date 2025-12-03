@@ -152,6 +152,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="3D\CreateSphere.cpp" />
+    <ClCompile Include="Scene\SceneManager.cpp" />
+    <ClCompile Include="Scene\BaseScene.cpp" />
     <ClCompile Include="blend\BlendUtil.cpp" />
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="D3DResourceLeakChecker\D3DResourceLeakChecker.cpp" />
@@ -218,6 +220,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="SrvManager\SrvManager.cpp" />
     <ClCompile Include="StringUtility\StringUtility.cpp" />
     <ClCompile Include="TextureManager\TextureManager.cpp" />
+    <ClCompile Include="Scene\TitleScene.cpp" />
     <ClCompile Include="Winapp\Utility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
@@ -248,6 +251,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3D\CreateSphere.h" />
+    <ClInclude Include="Scene\SceneManager.h" />
+    <ClInclude Include="Scene\BaseScene.h" />
     <ClInclude Include="blend\BlendUtil.h" />
     <ClInclude Include="Camera\Camera.h" />
     <ClInclude Include="D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
@@ -282,6 +287,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="SrvManager\SrvManager.h" />
     <ClInclude Include="StringUtility\StringUtility.h" />
     <ClInclude Include="TextureManager\TextureManager.h" />
+    <ClInclude Include="Scene\TitleScene.h" />
     <ClInclude Include="Winapp\Utility.h" />
     <ClInclude Include="math\MatrixMath.h" />
     <ClInclude Include="Winapp\WinApp.h" />

@@ -16,7 +16,6 @@ void Game::Initialize()
     ImGuiManager::GetInstance()->Initialize(winApp_, DirectXCommon::GetInstance(), SrvManager::GetInstance());
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     // TextureManager::GetInstance()->LoadTexture("resources/circle.png")
-
     ModelManager::GetInstance()->initialize(DirectXCommon::GetInstance());
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     camera_ = new Camera();
@@ -24,12 +23,19 @@ void Game::Initialize()
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
     modelCommon_.Initialize(DirectXCommon::GetInstance());
     // 入力関連
-    input_ = new Input();
-    input_->Initialize(winApp_);
+    Input::GetInstance()->Initialize(winApp_);
     // パーティクル関連
     ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
-    scene_ = new GamePlayScene();
-    scene_->Initialize();
+    ModelManager::GetInstance()->LoadModel("plane.obj");
+    ModelManager::GetInstance()->LoadModel("axis.obj");
+    ModelManager::GetInstance()->LoadModel("titleTex.obj");
+    ModelManager::GetInstance()->LoadModel("fence.obj");
+    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/fence.png");
+
+    BaseScene* scene = new TitleScene();
+    // シーンマネージャーに最初のシーンをセット
+    SceneManager::GetInstance()->SetNextScene(scene);
 }
 
 void Game::Update()
@@ -38,17 +44,17 @@ void Game::Update()
     ImGuiManager::GetInstance()->Begin();
 
     // --- ゲーム更新 ---
-    input_->Update();
+    Input::GetInstance()->Update();
     camera_->Update();
     ParticleManager::GetInstance()->Update();
     camera_->DebugUpdate();
 
     // エスケープで離脱
-    if (input_->IsKeyPressed(DIK_ESCAPE)) {
+    if (Input::GetInstance()->IsKeyPressed(DIK_ESCAPE)) {
         endRequest_ = true;
     }
 
-    scene_->Update();
+    SceneManager::GetInstance()->Update();
 
     // ======== ImGui end ========
     ImGuiManager::GetInstance()->End();
@@ -61,9 +67,7 @@ void Game::Draw()
     DirectXCommon::GetInstance()->PreDraw();
 
     // === シーンに渡す ===
-    scene_->Draw3D(); // モデル + パーティクル
-    scene_->Draw2D(); // スプライト
-    scene_->DrawImGui(); // debug UI
+    SceneManager::GetInstance()->Draw();
 
     // === フレーム終了 ===
     ImGuiManager::GetInstance()->Draw();
@@ -72,9 +76,8 @@ void Game::Draw()
 
 void Game::Finalize()
 {
-    delete scene_;
+
     delete camera_;
-    delete input_;
 
     ModelManager::GetInstance()->Finalize();
     TextureManager::GetInstance()->Finalize();

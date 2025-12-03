@@ -5,6 +5,8 @@
 #include <sstream>
 class DebugCamera {
 public:
+    DebugCamera();
+    ~DebugCamera() = default;
 #pragma region 行列関数
     // 単位行列の作成
     Matrix4x4 MakeIdentity4x4()
@@ -232,8 +234,6 @@ private:
     Matrix4x4 viewMatrix = Inverse(cameraMatrix); // ビュー行列はカメラ行列の逆行列
     // 射影行列
     Matrix4x4 orthoGraphicMatrix = MakeOrthographicMatrix(-160.0f, 160.0f, 200.0f, 300.0f, 0.0f, 1000.0f);
-
-    Input input_; // 入力管理クラス
 
     WinApp* winApp_ = nullptr;
 };
