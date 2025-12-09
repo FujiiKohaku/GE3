@@ -48,3 +48,7 @@ inline Vector3 Normalize(const Vector3& v)
 
     return { v.x / len, v.y / len, v.z / len };
 }
+struct AABB {
+    Vector3 min;
+    Vector3 max;
+};

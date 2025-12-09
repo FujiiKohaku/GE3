@@ -19,7 +19,8 @@ class DirectXCommon {
 public:
     // ===== Singleton =====
     static DirectXCommon* GetInstance();
-
+    // インスタンス
+    static DirectXCommon* instance;
     // DX初期化
     void Initialize(WinApp* winApp);
 
@@ -27,7 +28,7 @@ public:
     void PreDraw();
     // 描画後処理
     void PostDraw();
-    void Finalize();
+    static void Finalize();
     // Getter達
     ID3D12Device* GetDevice() const { return device.Get(); }
     ID3D12GraphicsCommandList* GetCommandList() const { return commandList.Get(); }

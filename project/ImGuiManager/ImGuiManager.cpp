@@ -1,4 +1,27 @@
 #include "ImGuiManager.h"
+ImGuiManager* ImGuiManager::instance = nullptr;
+
+ImGuiManager* ImGuiManager::GetInstance()
+{
+    if (instance == nullptr) {
+        instance = new ImGuiManager();
+    }
+    return instance;
+}
+
+void ImGuiManager::Finalize()
+{
+#ifdef USE_IMGUI
+
+    // 後始末
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+#endif
+
+    delete instance;
+    instance = nullptr;
+}
 
 void ImGuiManager::Initialize([[maybe_unused]] WinApp* winApp, [[maybe_unused]] DirectXCommon* dxCommon, [[maybe_unused]] SrvManager* srvManager)
 {
@@ -65,14 +88,4 @@ void ImGuiManager::Draw()
     // 描画コマンドを発行
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 #endif //  USE_IMGUI
-}
-void ImGuiManager::Finalize()
-{
-#ifdef USE_IMGUI
-
-    // 後始末
-    ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
-#endif
 }

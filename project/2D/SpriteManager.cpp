@@ -1,11 +1,14 @@
 #include "SpriteManager.h"
+SpriteManager* SpriteManager::instance = nullptr;//知らないシングルトン
 //==============================================
 // Singleton Instance
 //==============================================
 SpriteManager* SpriteManager::GetInstance()
 {
-    static SpriteManager instance;
-    return &instance;
+    if (instance == nullptr) {
+        instance = new SpriteManager();
+    }
+    return instance;
 }
 // ==============================
 // 初期化処理
@@ -214,25 +217,6 @@ void SpriteManager::CreateGraphicsPipeline()
 }
 void SpriteManager::Finalize()
 {
-    // GPUがまだRootSig/PSOを使う可能性があるなら待機
-    if (dxCommon_) {
-        dxCommon_->WaitForGPU();
-    }
-
-    // Blob を順次解放
-    if (signatureBlob) {
-        signatureBlob->Release();
-        signatureBlob = nullptr;
-    }
-    if (errorBlob) {
-        errorBlob->Release();
-        errorBlob = nullptr;
-    }
-
-    // GPUリソース解放
-    rootSignature.Reset();
-    graphicsPipelineState.Reset();
-
-    // 依存解除
-    dxCommon_ = nullptr;
+    delete instance;
+    instance = nullptr;
 }

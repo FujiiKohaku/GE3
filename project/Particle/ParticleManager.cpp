@@ -32,6 +32,12 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     emitter.transform.translate = { 0.0f, 0.0f, 0.0f };
     emitter.transform.rotate = { 0.0f, 0.0f, 0.0f };
     emitter.transform.scale = { 1.0f, 1.0f, 1.0f };
+
+    // 場　初期設定
+
+    accelerationField_.acceleration = { 15.0f, 0.0f, 0.0f };
+    accelerationField_.area.min = { -1.0f, -1.0f, -1.0f };
+    accelerationField_.area.max = { 1.0f, 1.0f, 1.0f };
 }
 
 void ParticleManager::Update()
@@ -77,6 +83,11 @@ void ParticleManager::Update()
         emitter.frequencyTime -= emitter.frequency;
     }
 
+  for (auto& p : particles) {
+        if (useAccelerationField_ && isCollision(accelerationField_.area, p.transform.translate)) {
+            p.velocity += accelerationField_.acceleration * kdeltaTime;
+        }
+    }
     UpdateTransforms();
     ImGui();
 }
@@ -488,17 +499,10 @@ void ParticleManager::ImGui()
 {
     if (ImGui::Begin("Particle Manager")) {
 
-        // ======================
-        // パーティクルタイプ
-        // ======================
+        // ---- Particle Type ----
         const char* particleTypeNames[] = {
-            "Normal",
-            "Fire",
-            "Smoke",
-            "Lightning",
-            "FireWork"
+            "Normal", "Fire", "Smoke", "Lightning", "FireWork"
         };
-
         int selected = static_cast<int>(type);
         if (ImGui::Combo("Particle Type", &selected, particleTypeNames, IM_ARRAYSIZE(particleTypeNames))) {
             type = static_cast<ParticleType>(selected);
@@ -506,26 +510,35 @@ void ParticleManager::ImGui()
 
         ImGui::Separator();
 
-        // ======================
-        // Emitter Settings
-        // ======================
-        ImGui::Text("Emitter Settings");
-
+        // ---- Emit Settings ----
+        ImGui::Text("Emitter");
         ImGui::DragFloat3("Position", &emitter.transform.translate.x, 0.01f);
-
         ImGui::DragInt("Count", (int*)&emitter.count, 1, 1, 100);
-
         ImGui::DragFloat("Frequency", &emitter.frequency, 0.01f, 0.001f, 1.0f);
+
+        // Buttons
+        if (ImGui::Button("Emit Once")) {
+            particles.splice(particles.end(), Emit(emitter, randomEngine_));
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Clear Particles")) {
+            particles.clear();
+        }
 
         ImGui::Separator();
 
-        // ======================
-        // Blend Mode
-        // ======================
+        // ---- Field ----
+        ImGui::Checkbox("Use Field", &useAccelerationField_);
+        ImGui::DragFloat3("Field Accel", &accelerationField_.acceleration.x, 0.1f);
+        ImGui::DragFloat3("AABB Min", &accelerationField_.area.min.x, 0.1f);
+        ImGui::DragFloat3("AABB Max", &accelerationField_.area.max.x, 0.1f);
+
+        ImGui::Separator();
+
+        // ---- Blend Mode ---
         const char* blendNames[] = {
             "None", "Normal", "Add", "Subtract", "Multiply", "Screen"
         };
-
         int mode = currentBlendMode_;
         if (ImGui::Combo("Blend Mode", &mode, blendNames, IM_ARRAYSIZE(blendNames))) {
             currentBlendMode_ = mode;
@@ -533,11 +546,8 @@ void ParticleManager::ImGui()
 
         ImGui::Checkbox("Use Billboard", &useBillboard_);
     }
-
     ImGui::End();
 }
-
-
 
 void ParticleManager::Finalize()
 {
@@ -576,7 +586,6 @@ void ParticleManager::Finalize()
     srvManager_ = nullptr;
     camera_ = nullptr;
 }
-
 
 ParticleManager::Particle ParticleManager::MakeNewParticle(std::mt19937& randomEngine, const Vector3& emitPos)
 {
@@ -697,29 +706,25 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
     float dx = distXZ(randomEngine);
     float dz = distXZ(randomEngine);
 
-    
     p.transform.translate = {
         pos.x + dx * 0.4f,
         pos.y,
         pos.z + dz * 0.4f
     };
 
-    
     float s = distScale(randomEngine);
     p.transform.scale = { s, s * 2.5f, s };
     p.transform.rotate = { 0, 0, 0 };
 
-    
     p.velocity = {
         dx * 0.05f,
         -distUp(randomEngine),
         dz * 0.05f
     };
 
-  
     float a = dist01(randomEngine);
     float t = dist01(randomEngine);
-    t = t * t; 
+    t = t * t;
 
     Vector4 red = { 1.0f, 0.05f, 0.0f, 1.0f };
     Vector4 orange = { 1.0f, 0.25f, 0.0f, 1.0f };
@@ -731,7 +736,6 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
 
     float blend = t * 2.0f;
 
-  
     if (blend > 1.0f) {
         blend = 1.0f;
     }
@@ -743,7 +747,6 @@ ParticleManager::Particle ParticleManager::MakeNewParticleFire(std::mt19937& ran
         1.0f
     };
 
-   
     p.lifeTime = distLife(randomEngine);
     p.currentTime = 0.0f;
 
@@ -807,7 +810,6 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
 {
     Particle p;
 
-   
     std::uniform_real_distribution<float> distAngle(0.0f, 6.28318f);
     std::uniform_real_distribution<float> distRadius(0.02f, 0.12f); // 中心かなり近め
     std::uniform_real_distribution<float> distLife(0.4f, 0.9f);
@@ -821,23 +823,20 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
     float offsetX = cosf(angle) * radius;
     float offsetY = sinf(angle) * radius;
 
-  
     p.transform.translate = {
         center.x + offsetX,
         center.y + offsetY,
         center.z
     };
 
-
-    float s = 0.1f; 
+    float s = 0.1f;
     p.transform.scale = {
-        s * 0.25f, 
-        s * 1.8f, 
-        s * 0.25f 
+        s * 0.25f,
+        s * 1.8f,
+        s * 0.25f
     };
     p.transform.rotate = { 0, 0, 0 };
 
-   
     Vector3 dir = { offsetX, offsetY, 0.0f };
     float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
 
@@ -850,20 +849,19 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
 
     p.velocity = { dir.x * speed, dir.y * speed, 0.0f };
 
-
     Vector4 corePink = { 1.0f, 0.4f, 0.7f, 1.0f };
 
     Vector4 outside;
 
     float c = dist01(randomEngine);
     if (c < 0.25f)
-        outside = { 1.0f, 0.5f, 0.8f, 1.0f }; 
+        outside = { 1.0f, 0.5f, 0.8f, 1.0f };
     else if (c < 0.50f)
-        outside = { 0.4f, 0.6f, 1.0f, 1.0f }; 
+        outside = { 0.4f, 0.6f, 1.0f, 1.0f };
     else if (c < 0.75f)
-        outside = { 1.0f, 0.9f, 0.4f, 1.0f }; 
+        outside = { 1.0f, 0.9f, 0.4f, 1.0f };
     else
-        outside = { 0.9f, 0.4f, 0.1f, 1.0f }; 
+        outside = { 0.9f, 0.4f, 0.1f, 1.0f };
 
     // 補間値
     float t = dist01(randomEngine);
@@ -885,7 +883,6 @@ ParticleManager::Particle ParticleManager::MakeFireworkSpark(std::mt19937& rando
     return p;
 }
 
-
 // エミッターから粒を生む（count 個ぶん生成して返す）
 std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitter, std::mt19937& randomEngine)
 {
@@ -901,7 +898,7 @@ std::list<ParticleManager::Particle> ParticleManager::Emit(const Emitter& emitte
     return particles; // 作った粒をまとめて返す
 }
 
-std::list<ParticleManager::Particle> ParticleManager::EmitFire( const Emitter& emitter, std::mt19937& randomEngine)
+std::list<ParticleManager::Particle> ParticleManager::EmitFire(const Emitter& emitter, std::mt19937& randomEngine)
 {
     std::list<Particle> particles;
 
@@ -912,7 +909,7 @@ std::list<ParticleManager::Particle> ParticleManager::EmitFire( const Emitter& e
         if (r < 0.5f) {
             // 50% → 炎の芯 (Core)
             particles.push_back(MakeNewParticleFire(randomEngine, emitter.transform.translate));
-        } 
+        }
     }
 
     return particles;
@@ -949,4 +946,10 @@ std::list<ParticleManager::Particle> ParticleManager::EmitFireworkSpark(const Em
     }
 
     return particles;
+}
+
+bool ParticleManager::isCollision(const AABB& aabb, const Vector3& point)
+{
+
+    return (point.x >= aabb.min.x && point.x <= aabb.max.x) && (point.y >= aabb.min.y && point.y <= aabb.max.y) && (point.z >= aabb.min.z && point.z <= aabb.max.z);
 }

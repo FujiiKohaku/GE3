@@ -34,12 +34,13 @@ void GamePlayScene::Draw3D()
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-    sprite_->Draw();
+   // sprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
+    
 
 #endif
 }

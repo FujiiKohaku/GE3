@@ -26,7 +26,7 @@ public:
     //==============================================
     DirectXCommon* GetDxCommon() const { return dxCommon_; }
     // 終了処理
-    void Finalize();
+    static void Finalize();
 
 private:
     //----------------------------------------------
@@ -57,4 +57,5 @@ private:
     // Blob
     ID3DBlob* signatureBlob = nullptr;
     ID3DBlob* errorBlob = nullptr;
+    static SpriteManager* instance;
 };

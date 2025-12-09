@@ -1,17 +1,15 @@
 #pragma once
-
 #include "Camera.h"
 #include "DirectXCommon.h"
 #include "SrvManager.h"
+#include "Struct.h"
 #include "TextureManager.h"
 #include "blendutil.h"
-
 #include <d3d12.h>
 #include <list>
 #include <random>
 #include <string>
 #include <wrl.h>
-
 class ParticleManager {
 public:
     // =========================================================
@@ -88,6 +86,12 @@ public:
     };
     ParticleType type = ParticleType::Normal;
 
+    // 場
+    struct AccelerationField {
+        Vector3 acceleration;
+        AABB area;
+    };
+
 public:
     // =========================================================
     // 基本操作
@@ -136,6 +140,8 @@ private:
     Particle MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& translate);
     Particle MakeNewParticleLightning(std::mt19937& randomEngine, const Vector3& translate);
     Particle MakeFireworkSpark(std::mt19937& randomEngine, const Vector3& center);
+
+    bool isCollision(const AABB& aabb, const Vector3& point);
 
 private:
     // =========================================================
@@ -196,4 +202,10 @@ private:
 
     float kdeltaTime = 0.1f;
     Emitter emitter {};
+
+    AccelerationField accelerationField_;
+    bool useAccelerationField_ = true;
+
+public:
+    bool GetUseAccelerationField() const { return useAccelerationField_; }
 };

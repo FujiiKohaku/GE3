@@ -18,16 +18,14 @@
 class ImGuiManager {
 public:
     // ===== Singleton Access =====
-    static ImGuiManager* GetInstance()
-    {
-        static ImGuiManager instance;
-        return &instance;
-    }
+    static ImGuiManager* GetInstance();
 
+
+    static ImGuiManager* instance;
     // ===== Main APIs =====
     void Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager);
     void Update();
-    void Finalize();
+    static void Finalize();
 
     void Begin();
     void End();

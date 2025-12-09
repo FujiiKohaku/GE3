@@ -2,6 +2,25 @@
 
 ModelManager* ModelManager::instance = nullptr;
 
+ModelManager* ModelManager::GetInstance()
+{
+    if (instance == nullptr) {
+        instance = new ModelManager();
+    }
+    return instance;
+}
+
+void ModelManager::Finalize()
+{
+    delete instance;
+    instance = nullptr;
+}
+void ModelManager::initialize(DirectXCommon* dxCommon)
+{
+
+    modelCommon_ = new ModelCommon();
+    modelCommon_->Initialize(dxCommon);
+}
 void ModelManager::LoadModel(const std::string& filepath)
 {
     // 読み込みモデルを検索
@@ -10,7 +29,7 @@ void ModelManager::LoadModel(const std::string& filepath)
         return;
     }
 
-    // モデルの製紙絵と読み込み初期化 
+    // モデルの製紙絵と読み込み初期化
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon_, "resources", filepath);
 
