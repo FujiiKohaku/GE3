@@ -5,7 +5,6 @@
 #include "SrvManager.h"
 #include "TextureManager.h"
 #include "blendutil.h"
-
 #include <d3d12.h>
 #include <list>
 #include <random>
