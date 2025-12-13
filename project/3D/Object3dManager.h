@@ -2,7 +2,7 @@
 
 #include "Camera.h"
 #include "DirectXCommon.h"
-#include "blendutil.h"
+#include "BlendUtil.h"
 
 class Object3dManager {
 public:
