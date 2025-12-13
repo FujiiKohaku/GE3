@@ -58,7 +58,7 @@ LONG WINAPI Utility::ExportDump(EXCEPTION_POINTERS* exception)
         FILE_SHARE_WRITE | FILE_SHARE_READ, 0, CREATE_ALWAYS, 0, 0);
     // processId(このexeのId)とクラッシュ(例外)の発生したthreadIdを取得
     DWORD processId = GetCurrentProcessId();
-    DWORD threadId = GetCurrentThreadId();　
+    DWORD threadId = GetCurrentThreadId();
     // 設定情報を入力
     MINIDUMP_EXCEPTION_INFORMATION minidumpInformation { 0 };
     minidumpInformation.ThreadId = threadId;
