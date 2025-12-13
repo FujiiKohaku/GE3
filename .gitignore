@@ -315,6 +315,8 @@ MigrationBackup/
 .ionide/
 DirectXGame/DirectXGame.exe
 project/imgui.ini
+# DirectXTex build output
+**/DirectXTex/Bin/
 
 # DirectXTex Compiled Shaders
 **/DirectXTex/Shaders/Compiled/
