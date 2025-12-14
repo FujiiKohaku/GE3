@@ -63,7 +63,7 @@ void ParticleManager::Update()
                 Matrix4x4 scaleMat = MatrixMath::Matrix4x4MakeScaleMatrix(p.transform.scale);
                 Matrix4x4 transMat = MatrixMath::MakeTranslateMatrix(p.transform.translate);
 
-                world = MatrixMath::Multiply( MatrixMath::Multiply(scaleMat, billboardMatrix), transMat);
+                world = MatrixMath::Multiply(MatrixMath::Multiply(scaleMat, billboardMatrix), transMat);
             } else {
                 world = MatrixMath::MakeAffineMatrix(p.transform.scale, p.transform.rotate, p.transform.translate);
             }
@@ -484,40 +484,12 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
     particleGroups_.emplace(name, std::move(group));
 }
 
-
-void ParticleManager::Emit(const std::string name, const Vector3& position, uint32_t count)
+void ParticleManager::Emit(const std::string& name, const Vector3& position, uint32_t count)
 {
-    //  グループ存在チェック
-    auto it = particleGroups_.find(name);
-    assert(it != particleGroups_.end());
+    auto& group = particleGroups_.at(name);
 
-    ParticleGroup& group = it->second;
-
-    // count 個ぶん生成
     for (uint32_t i = 0; i < count; ++i) {
-
-        Particle p {};
-
-        // 位置
-        p.transform.translate = position;
-
-        // 初期値（例）
-        p.transform.scale = { 1.0f, 1.0f, 1.0f };
-        p.transform.rotate = { 0.0f, 0.0f, 0.0f };
-
-        // ランダム速度（例）
-        std::uniform_real_distribution<float> dist(-0.05f, 0.05f);
-        p.velocity = { dist(randomEngine_), dist(randomEngine_), dist(randomEngine_) };
-
-        // 色
-        p.color = { 1, 1, 1, 1 };
-
-        // 寿命
-        p.lifeTime = 1.0f;
-        p.currentTime = 0.0f;
-
-        //  グループに追加
-        group.particles.push_back(p);
+        group.particles.push_back(MakeParticleDefault(position));
     }
 }
 
@@ -563,4 +535,66 @@ void ParticleManager::EmitFire(const std::string& name, const Vector3& position,
 
         group.particles.push_back(p);
     }
+}
+
+ParticleManager::Particle
+ParticleManager::MakeParticleDefault(const Vector3& pos)
+{
+    Particle p {};
+
+    // -----------------------------
+    // 乱数
+    // -----------------------------
+    std::uniform_real_distribution<float> offset(-0.05f, 0.05f); // にじみ
+    std::uniform_real_distribution<float> dir(-1.0f, 1.0f); // 方向
+    std::uniform_real_distribution<float> speed(1.0f, 1.5f); // 広がり強さ
+    std::uniform_real_distribution<float> life(0.8f, 1.0f);
+
+    // -----------------------------
+    // 初期位置（少しだけ散らす）
+    // -----------------------------
+    p.transform.translate = {
+        pos.x + offset(randomEngine_),
+        pos.y + offset(randomEngine_),
+        pos.z + offset(randomEngine_)
+    };
+
+    // -----------------------------
+    // スケール
+    // -----------------------------
+    p.transform.scale = { 0.3f, 0.3f, 0.3f };
+    p.transform.rotate = { 0, 0, 0 };
+
+    // -----------------------------
+    // 速度（全方向に広がる）
+    // -----------------------------
+    Vector3 v {
+        dir(randomEngine_),
+        dir(randomEngine_),
+        dir(randomEngine_)
+    };
+
+    // 正規化
+    float len = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    if (len > 0.0f) {
+        v.x /= len;
+        v.y /= len;
+        v.z /= len;
+    }
+
+    float s = speed(randomEngine_);
+    p.velocity = { v.x * s, v.y * s, v.z * s };
+
+    // -----------------------------
+    // 色
+    // -----------------------------
+    p.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    // -----------------------------
+    // 寿命
+    // -----------------------------
+    p.lifeTime = life(randomEngine_);
+    p.currentTime = 0.0f;
+
+    return p;
 }

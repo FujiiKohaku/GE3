@@ -20,7 +20,7 @@ void GamePlayScene::Initialize()
     Transform t {};
     t.translate = { 0.0f, 0.0f, 0.0f };
 
-    emitter_.Init("circle", t, 30, 0.9f);
+   emitter_.Init("circle", t, 30, 0.1f);
 }
 
 void GamePlayScene::Update()
