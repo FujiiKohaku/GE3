@@ -5,10 +5,10 @@
 
 class ParticleEmitter {
 public:
-    // ��ō���
+    // 空で作れる
     ParticleEmitter();
 
-    // Scene::Initialize �ŌĂԗp
+    // Scene::Initialize で呼ぶ用
     void Init(
         const std::string& groupName,
         const Transform& transform,
