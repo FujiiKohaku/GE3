@@ -1,11 +1,11 @@
-#include "ParticleEmitter.h"
+ï»¿#include "ParticleEmitter.h"
 #include "ParticleManager.h"
 
 static constexpr float kDeltaTime = 0.1f;
 
 ParticleEmitter::ParticleEmitter()
 {
-    // –¢‰Šú‰»ó‘Ô
+    // æœªåˆæœŸåŒ–çŠ¶æ…‹
 }
 
 void ParticleEmitter::Init(
@@ -24,16 +24,13 @@ void ParticleEmitter::Init(
 void ParticleEmitter::Update()
 {
     if (frequency_ <= 0.0f) {
-        return; // Init ‘OƒK[ƒh
+        return; // Init å‰ã‚¬ãƒ¼ãƒ‰
     }
 
     elapsedTime_ += kDeltaTime;
 
     if (elapsedTime_ >= frequency_) {
-        ParticleManager::GetInstance()->Emit(
-            name_,
-            transform_.translate,
-            count_);
+        ParticleManager::GetInstance()->Emit( name_, transform_.translate,count_);
 
         elapsedTime_ -= frequency_;
     }
@@ -42,11 +39,9 @@ void ParticleEmitter::Update()
 void ParticleEmitter::Emit()
 {
     if (count_ == 0) {
-        return; // Init ‘OƒK[ƒh
+        return; // Init å‰ã‚¬ãƒ¼ãƒ‰
     }
 
-    ParticleManager::GetInstance()->Emit(
-        name_,
-        transform_.translate,
-        count_);
+    ParticleManager::GetInstance()->Emit(name_, transform_.translate, count_);
+
 }
