@@ -101,6 +101,8 @@ public:
             lightData_->intensity = intensity;
         }
     }
+    // テクスチャ操作
+    void SetTexture(const std::string& filePath);
 
 private:
     // ----------------
