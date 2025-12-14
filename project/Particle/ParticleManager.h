@@ -112,17 +112,18 @@ public:
     // パーティクルグループ作成
     void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
     // パーティクルの発生
-    void Emit(const std::string name, const Vector3& position, uint32_t count);
+    void Emit(const std::string& name, const Vector3& position, uint32_t count);
     void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
     // UI
     // void ImGui();
+    Particle MakeParticleDefault(const Vector3& pos);
 
-    private :
+private:
     // =========================================================
     // Singleton Safety
     // =========================================================
     ParticleManager()
-    = default;
+        = default;
     ~ParticleManager() = default;
 
     ParticleManager(const ParticleManager&) = delete;
