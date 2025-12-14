@@ -1,31 +1,52 @@
 #include "ParticleEmitter.h"
 #include "ParticleManager.h"
 
-ParticleEmitter::ParticleEmitter() = default;
+static constexpr float kDeltaTime = 0.1f;
 
-ParticleEmitter::ParticleEmitter(const std::string& groupName, const Vector3& position)
-    : groupName_(groupName)
-    , position_(position)
+ParticleEmitter::ParticleEmitter()
 {
+    // –¢‰Šú‰»ó‘Ô
 }
 
-void ParticleEmitter::Initialize()
+void ParticleEmitter::Init(
+    const std::string& groupName,
+    const Transform& transform,
+    uint32_t count,
+    float frequency)
 {
-    // åˆæœŸåŒ–å‡¦ç†ãŒå¿…è¦ãªã‚‰ã“ã“ã«æ›¸ã
+    name_ = groupName;
+    transform_ = transform;
+    count_ = count;
+    frequency_ = frequency;
+    elapsedTime_ = 0.0f;
 }
 
 void ParticleEmitter::Update()
 {
-    // ãƒ‘ãƒ¼ãƒ†ã‚£ã‚¯ãƒ«ã®ä½ç½®ã‚’å‹•ã‹ã—ãŸã„å ´åˆãªã©
+    if (frequency_ <= 0.0f) {
+        return; // Init ‘OƒK[ƒh
+    }
+
+    elapsedTime_ += kDeltaTime;
+
+    if (elapsedTime_ >= frequency_) {
+        ParticleManager::GetInstance()->Emit(
+            name_,
+            transform_.translate,
+            count_);
+
+        elapsedTime_ -= frequency_;
+    }
 }
 
-void ParticleEmitter::SetGroupName(const std::string& name)
+void ParticleEmitter::Emit()
 {
-    groupName_ = name;
-}
+    if (count_ == 0) {
+        return; // Init ‘OƒK[ƒh
+    }
 
-void ParticleEmitter::SetPosition(const Vector3& pos)
-{
-    position_ = pos;
+    ParticleManager::GetInstance()->Emit(
+        name_,
+        transform_.translate,
+        count_);
 }
-

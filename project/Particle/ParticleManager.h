@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Camera.h"
 #include "DirectXCommon.h"
 #include "SrvManager.h"
@@ -9,6 +8,7 @@
 #include <list>
 #include <random>
 #include <string>
+#include <unordered_map>
 #include <wrl.h>
 
 class ParticleManager {
@@ -87,6 +87,17 @@ public:
     };
     ParticleType type = ParticleType::Normal;
 
+    struct ParticleGroup {
+        std::string texturePath;
+        std::list<Particle> particles;
+        Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
+        ParticleForGPU* instanceData = nullptr;
+        D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU {};
+        uint32_t numInstance = 0;
+    };
+
+    std::unordered_map<std::string, ParticleGroup> particleGroups_;
+
 public:
     // =========================================================
     // 基本操作
@@ -98,16 +109,19 @@ public:
     void Finalize();
     // BlendMode の setter
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
-
+    // パーティクルグループ作成
+    void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
+    // パーティクルの発生
+    void Emit(const std::string name, const Vector3& position, uint32_t count);
     // UI
-    void ImGui();
+    //void ImGui();
 
     // Emit系
-    std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine);
-    std::list<Particle> EmitFire(const Emitter& emitter, std::mt19937& randomEngine);
+    // std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine);
+    /*std::list<Particle> EmitFire(const Emitter& emitter, std::mt19937& randomEngine);
     std::list<Particle> EmitSmoke(const Emitter& emitter, std::mt19937& randomEngine);
     std::list<Particle> EmitLightning(const Emitter& emitter, std::mt19937& randomEngine);
-    std::list<Particle> EmitFireworkSpark(const Emitter& emitter, std::mt19937& randomEngine);
+    std::list<Particle> EmitFireworkSpark(const Emitter& emitter, std::mt19937& randomEngine);*/
 
 private:
     // =========================================================
@@ -125,16 +139,16 @@ private:
     // =========================================================
     void CreateRootSignature();
     void CreateGraphicsPipeline();
-    void CreateInstancingBuffer();
-    void CreateSrvBuffer();
+ /*   void CreateInstancingBuffer();*/
+   // void CreateSrvBuffer();
     void CreateBoardMesh();
-    void UpdateTransforms();
+    //void UpdateTransforms();
 
-    Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
-    Particle MakeNewParticleFire(std::mt19937& randomEngine, const Vector3& translate);
-    Particle MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& translate);
-    Particle MakeNewParticleLightning(std::mt19937& randomEngine, const Vector3& translate);
-    Particle MakeFireworkSpark(std::mt19937& randomEngine, const Vector3& center);
+    //Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
+    //Particle MakeNewParticleFire(std::mt19937& randomEngine, const Vector3& translate);
+    //Particle MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& translate);
+    //Particle MakeNewParticleLightning(std::mt19937& randomEngine, const Vector3& translate);
+    //Particle MakeFireworkSpark(std::mt19937& randomEngine, const Vector3& center);
 
 private:
     // =========================================================
@@ -154,16 +168,11 @@ private:
     // =========================================================
     // GPU リソース
     // =========================================================
-    Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
-    ParticleForGPU* instanceData_ = nullptr;
-    uint32_t numInstance_ = 0;
 
     static const uint32_t kNumMaxInstance = 100;
 
-    std::list<Particle> particles;
     std::list<Shockwave> shokParticles;
 
-    D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
 
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
@@ -194,5 +203,5 @@ private:
     bool useBillboard_ = true;
 
     float kdeltaTime = 0.1f;
-    Emitter emitter {};
+
 };

@@ -7,7 +7,7 @@
 #include "Sprite.h"
 #include "SpriteManager.h"
 #include "TextureManager.h"
-
+#include "ParticleEmitter.h"
 #include "BaseScene.h"
 class GamePlayScene : public BaseScene {
 public:
@@ -29,4 +29,6 @@ private:
     Sprite* sprite_ = nullptr;
     std::vector<Sprite*> sprites_;
     Object3d* player2_;
+
+    ParticleEmitter emitter_;
 };

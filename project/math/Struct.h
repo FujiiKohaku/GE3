@@ -16,6 +16,12 @@ struct Matrix3x3 {
 struct Matrix4x4 {
     float m[4][4];
 };
+
+struct Transform {
+    Vector3 scale;
+    Vector3 rotate;
+    Vector3 translate;
+};
 // ===============================
 // Vector3 演算関数
 // ===============================
