@@ -66,9 +66,8 @@ void SphereObject::Initialize(
     lightData_->direction = MatrixMath::Normalize({ 0, -1, 0 });
     lightData_->intensity = 1.0f;
 
-     // テクスチャ読み込み
-    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-    textureSrvHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/uvChecker.png");
+     // テクスチャ読み込み(デフォルトテクスチャ)
+    SetTexture("resources/uvChecker.png");
 }
 
 // ================================
@@ -183,4 +182,13 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
             vertices[startIndex + 5] = vertD;
         }
     }
+}
+
+void SphereObject::SetTexture(const std::string& filePath)
+{
+    // すでに読み込まれていなければロード
+    TextureManager::GetInstance()->LoadTexture(filePath);
+
+    // GPU用SRVハンドルを取得して保持
+    textureSrvHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU(filePath);
 }
