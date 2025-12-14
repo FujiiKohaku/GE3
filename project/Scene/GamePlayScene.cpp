@@ -20,16 +20,17 @@ void GamePlayScene::Initialize()
     Transform t {};
     t.translate = { 0.0f, 0.0f, 0.0f };
 
-    emitter_.Init("circle", t, 10, 0.2f);
+    emitter_.Init("circle", t, 30, 0.9f);
 }
 
 void GamePlayScene::Update()
 {
     // ImGuiのBegin/Endは絶対に呼ばない！
+    emitter_.Update();
     ParticleManager::GetInstance()->Update();
     player2_->Update();
     sprite_->Update();
-    emitter_.Update();
+    
 }
 
 void GamePlayScene::Draw3D()
@@ -43,7 +44,8 @@ void GamePlayScene::Draw3D()
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-    sprite_->Draw();
+
+   // sprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()

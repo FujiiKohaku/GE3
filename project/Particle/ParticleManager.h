@@ -113,21 +113,16 @@ public:
     void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
     // パーティクルの発生
     void Emit(const std::string name, const Vector3& position, uint32_t count);
+    void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
     // UI
-    //void ImGui();
+    // void ImGui();
 
-    // Emit系
-    // std::list<Particle> Emit(const Emitter& emitter, std::mt19937& randomEngine);
-    /*std::list<Particle> EmitFire(const Emitter& emitter, std::mt19937& randomEngine);
-    std::list<Particle> EmitSmoke(const Emitter& emitter, std::mt19937& randomEngine);
-    std::list<Particle> EmitLightning(const Emitter& emitter, std::mt19937& randomEngine);
-    std::list<Particle> EmitFireworkSpark(const Emitter& emitter, std::mt19937& randomEngine);*/
-
-private:
+    private :
     // =========================================================
     // Singleton Safety
     // =========================================================
-    ParticleManager() = default;
+    ParticleManager()
+    = default;
     ~ParticleManager() = default;
 
     ParticleManager(const ParticleManager&) = delete;
@@ -139,16 +134,7 @@ private:
     // =========================================================
     void CreateRootSignature();
     void CreateGraphicsPipeline();
- /*   void CreateInstancingBuffer();*/
-   // void CreateSrvBuffer();
     void CreateBoardMesh();
-    //void UpdateTransforms();
-
-    //Particle MakeNewParticle(std::mt19937& randomEngine, const Vector3& translate);
-    //Particle MakeNewParticleFire(std::mt19937& randomEngine, const Vector3& translate);
-    //Particle MakeNewParticleSmoke(std::mt19937& randomEngine, const Vector3& translate);
-    //Particle MakeNewParticleLightning(std::mt19937& randomEngine, const Vector3& translate);
-    //Particle MakeFireworkSpark(std::mt19937& randomEngine, const Vector3& center);
 
 private:
     // =========================================================
@@ -163,7 +149,7 @@ private:
     // =========================================================
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
-    int currentBlendMode_ = kBlendModeNormal;
+    int currentBlendMode_ = kBlendModeAdd;
 
     // =========================================================
     // GPU リソース
@@ -203,5 +189,4 @@ private:
     bool useBillboard_ = true;
 
     float kdeltaTime = 0.1f;
-
 };
