@@ -1,26 +1,27 @@
 #pragma once
-#include "MatrixMath.h"
+#include "Struct.h"
+#include <cstdint>
 #include <string>
+
 class ParticleEmitter {
 public:
-    // --- コンストラクタ ---
-    ParticleEmitter(); // 既定コンストラクタ
-    ParticleEmitter(const std::string& groupName, const Vector3& position);
+    // ��ō���
+    ParticleEmitter();
 
-    // --- 基本関数 ---
-    void Initialize();
+    // Scene::Initialize �ŌĂԗp
+    void Init(
+        const std::string& groupName,
+        const Transform& transform,
+        uint32_t count,
+        float frequency);
+
     void Update();
-    void Emit(); // パーティクルを放出
-
-    // --- Setter ---
-    void SetGroupName(const std::string& name);
-    void SetPosition(const Vector3& pos);
-
-    // --- Getter ---
-    const std::string& GetGroupName() const { return groupName_; }
-    const Vector3& GetPosition() const { return position_; }
+    void Emit();
 
 private:
-    std::string groupName_; // どのパーティクルグループを使うか
-    Vector3 position_ { 0, 0, 0 }; // ★ 初期値を明示的に
+    std::string name_;
+    Transform transform_ {};
+    uint32_t count_ = 0;
+    float frequency_ = 0.0f;
+    float elapsedTime_ = 0.0f;
 };

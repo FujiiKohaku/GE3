@@ -1,4 +1,6 @@
 #include "GamePlayScene.h"
+#include "ParticleManager.h"
+
 #include <numbers>
 void GamePlayScene::Initialize()
 {
@@ -13,6 +15,12 @@ void GamePlayScene::Initialize()
     player2_->SetModel("fence.obj");
     player2_->SetTranslate({ 3.0f, 0.0f, 10.0f });
     player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
+
+    ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
+    Transform t {};
+    t.translate = { 0.0f, 0.0f, 0.0f };
+
+    emitter_.Init("circle", t, 10, 0.2f);
 }
 
 void GamePlayScene::Update()
@@ -21,6 +29,7 @@ void GamePlayScene::Update()
     ParticleManager::GetInstance()->Update();
     player2_->Update();
     sprite_->Update();
+    emitter_.Update();
 }
 
 void GamePlayScene::Draw3D()

@@ -46,7 +46,7 @@ void Game::Update()
     // --- ゲーム更新 ---
     Input::GetInstance()->Update();
     camera_->Update();
-  
+
     camera_->DebugUpdate();
 
     // エスケープで離脱
