@@ -36,7 +36,7 @@ void GamePlayScene::Update()
 void GamePlayScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
-  //  player2_->Draw();
+    player2_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }
@@ -45,7 +45,7 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
 
-   // sprite_->Draw();
+   sprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()
