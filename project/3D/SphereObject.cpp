@@ -6,10 +6,7 @@
 // ================================
 // 初期化
 // ================================
-void SphereObject::Initialize(
-    DirectXCommon* dxCommon,
-    int subdivision,
-    float radius)
+void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radius)
 {
     dxCommon_ = dxCommon;
 
@@ -48,8 +45,7 @@ void SphereObject::Initialize(
     // Material CB
     // ----------------
     materialResource_ = dxCommon_->CreateBufferResource(sizeof(Material));
-    materialResource_->Map(
-        0, nullptr, (void**)&materialData_);
+    materialResource_->Map(0, nullptr, (void**)&materialData_);
 
     materialData_->color = { 1, 1, 1, 1 };
     materialData_->enableLighting = true;
@@ -59,8 +55,7 @@ void SphereObject::Initialize(
     // Light CB
     // ----------------
     lightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
-    lightResource_->Map(
-        0, nullptr, (void**)&lightData_);
+    lightResource_->Map(0, nullptr, (void**)&lightData_);
 
     lightData_->color = { 1, 1, 1, 1 };
     lightData_->direction = MatrixMath::Normalize({ 0, -1, 0 });
@@ -110,8 +105,7 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
 
     for (int latIndex = 0; latIndex < kSubdivision; ++latIndex) {
 
-        float lat = -static_cast<float>(std::numbers::pi_v<float>) / 2.0f
-            + kLatEvery * latIndex;
+        float lat = -static_cast<float>(std::numbers::pi_v<float>) / 2.0f+ kLatEvery * latIndex;
 
         for (int lonIndex = 0; lonIndex < kSubdivision; ++lonIndex) {
 
