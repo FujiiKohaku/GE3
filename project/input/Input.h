@@ -13,17 +13,16 @@ public:
     // ================================
     // Singletonインスタンス取得
     // ================================
-    static Input* GetInstance()
-    {
-        static Input instance;
-        return &instance;
-    }
+    static Input* GetInstance();
 
     // ================================
     // 初期化
     // ================================
     bool Initialize(WinApp* winApp);
-
+    // ================================
+    // 終了
+    // ================================
+    void Finalize();
     // ================================
     // 毎フレーム入力更新
     // ================================
@@ -49,4 +48,6 @@ private:
     BYTE keys_[256] {};
 
     WinApp* winApp_ = nullptr;
+
+    static Input* instance;
 };
