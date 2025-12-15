@@ -30,7 +30,7 @@ void GamePlayScene::Initialize()
     sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
 
     // Material
-    sphere_->SetColor({ 0.2f, 0.8f, 1.0f, 1.0f });
+    sphere_->SetColor({ 1, 1, 1, 1 });
 }
 
 void GamePlayScene::Update()
@@ -55,7 +55,7 @@ void GamePlayScene::Draw3D()
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-
+  
     // sprite_->Draw();
 }
 
