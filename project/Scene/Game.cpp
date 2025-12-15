@@ -18,14 +18,14 @@ void Game::Initialize()
     // TextureManager::GetInstance()->LoadTexture("resources/circle.png")
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    camera_ = new Camera();
-    camera_->SetTranslate({ 0.0f, 0.0f, 2.0f });
-    Object3dManager::GetInstance()->SetDefaultCamera(camera_);
+   // camera_ = new Camera();
+    //camera_->SetTranslate({ 0.0f, 0.0f, 2.0f });
+    //Object3dManager::GetInstance()->SetDefaultCamera(camera_);
     modelCommon_.Initialize(DirectXCommon::GetInstance());
     // 入力関連
     Input::GetInstance()->Initialize(winApp_);
     // パーティクル関連
-    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
+    //ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
     ModelManager::GetInstance()->LoadModel("plane.obj");
     ModelManager::GetInstance()->LoadModel("axis.obj");
     ModelManager::GetInstance()->LoadModel("titleTex.obj");
@@ -45,9 +45,9 @@ void Game::Update()
 
     // --- ゲーム更新 ---
     Input::GetInstance()->Update();
-    camera_->Update();
+   // camera_->Update();
 
-    camera_->DebugUpdate();
+   // camera_->DebugUpdate();
 
     // エスケープで離脱
     if (Input::GetInstance()->IsKeyPressed(DIK_ESCAPE)) {
@@ -78,7 +78,7 @@ void Game::Finalize()
 {
     // シーンマネージャーも singleton
     SceneManager::GetInstance()->Finalize();
-    ParticleManager::GetInstance()->Finalize();
+   // ParticleManager::GetInstance()->Finalize();
     Object3dManager::GetInstance()->Finalize();
     SpriteManager::GetInstance()->Finalize();
     ModelManager::GetInstance()->Finalize();
