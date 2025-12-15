@@ -1,6 +1,18 @@
 #include "Input.h"
 #include <cassert>
 
+Input* Input::instance = nullptr;
+// ================================
+// Singletonインスタンス取得
+// ================================
+Input* Input::GetInstance()
+{
+    if (!instance) {
+        instance = new Input();
+    }
+    return instance;
+}
+
 bool Input::Initialize(WinApp* winApp)
 {
     HRESULT result;
@@ -43,4 +55,13 @@ void Input::Update()
 bool Input::IsKeyPressed(BYTE keyCode) const
 {
     return keys_[keyCode] & 0x80;
+}
+void Input::Finalize()
+{
+    // 明示的に解放
+    keyboard_.Reset();
+    directInput_.Reset();
+
+    delete instance;
+    instance = nullptr;
 }
