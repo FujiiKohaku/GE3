@@ -1,5 +1,6 @@
 #pragma once
 #include "BaseScene.h"
+#include "Camera.h"
 #include "ModelManager.h"
 #include "Object3d.h"
 #include "Object3dManager.h"
@@ -37,4 +38,6 @@ private:
     // メッシュ
     // ------------------------------
     SphereObject* sphere_ = nullptr;
+
+    Camera* camera_;
 };

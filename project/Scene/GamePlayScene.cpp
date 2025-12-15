@@ -4,6 +4,14 @@
 #include <numbers>
 void GamePlayScene::Initialize()
 {
+    camera_ = new Camera();
+    camera_->SetTranslate({ 0, 0, 2 });
+
+    Object3dManager::GetInstance()->SetDefaultCamera(camera_);
+
+    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
+
+    Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 
     sprite_ = new Sprite();
     sprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
@@ -40,7 +48,9 @@ void GamePlayScene::Update()
     ParticleManager::GetInstance()->Update();
     player2_->Update();
     sprite_->Update();
-    sphere_->Update(Object3dManager::GetInstance()->GetDefaultCamera());
+    sphere_->Update(camera_);
+    camera_->Update();
+    camera_->DebugUpdate();
 }
 
 void GamePlayScene::Draw3D()
@@ -55,7 +65,7 @@ void GamePlayScene::Draw3D()
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-  
+
     // sprite_->Draw();
 }
 
@@ -75,5 +85,6 @@ void GamePlayScene::Finalize()
     delete player2_;
     player2_ = nullptr;
 
+    ParticleManager::GetInstance()->Finalize();
     SoundManager::GetInstance()->SoundUnload(&bgm);
 }
