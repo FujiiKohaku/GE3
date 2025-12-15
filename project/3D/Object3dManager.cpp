@@ -1,9 +1,14 @@
 #include "Object3dManager.h"
 
+Object3dManager* Object3dManager::instance = nullptr;
+
 Object3dManager* Object3dManager::GetInstance()
 {
-    static Object3dManager instance;
-    return &instance;
+
+    if (instance == nullptr) {
+        instance = new Object3dManager();
+    }
+    return instance;
 }
 #pragma region 初期化処理
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
@@ -187,30 +192,6 @@ void Object3dManager::CreateGraphicsPipeline()
 #pragma endregion
 void Object3dManager::Finalize()
 {
-    // GPU待機（メモリ解放が安全に行われるように）
-    if (dxCommon_) {
-        dxCommon_->WaitForGPU();
-    }
-
-    // ----- Blob解放 -----
-    if (signatureBlob) {
-        signatureBlob->Release();
-        signatureBlob = nullptr;
-    }
-    if (errorBlob) {
-        errorBlob->Release();
-        errorBlob = nullptr;
-    }
-
-    // ----- GPUリソース解放 -----
-    rootSignature.Reset();
-    graphicsPipelineState.Reset();
-
-    for (int i = 0; i < kCountOfBlendMode; i++) {
-        pipelineStates[i].Reset();
-    }
-
-    // ----- ポインタ無効化 -----
-    dxCommon_ = nullptr;
-    defaultCamera_ = nullptr;
+    delete instance;
+    instance = nullptr;
 }
