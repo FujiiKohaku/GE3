@@ -585,27 +585,27 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_
     D3D12_HEAP_PROPERTIES uploadHeapProperties {};
     uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD; // Uploadheapを使う
     // 頂点リソースの設定02_03
-    D3D12_RESOURCE_DESC vertexResourceDesc {};
+    D3D12_RESOURCE_DESC bufferDesc {};
     // バッファリソース。テクスチャの場合はまた別の設定をする02_03
-    vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    vertexResourceDesc.Width = sizeInBytes; // リソースのサイズ　02_03
+    bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    bufferDesc.Width = sizeInBytes; // リソースのサイズ　02_03
     // バッファの場合はこれらは１にする決まり02_03
-    vertexResourceDesc.Height = 1;
-    vertexResourceDesc.DepthOrArraySize = 1;
-    vertexResourceDesc.MipLevels = 1;
-    vertexResourceDesc.SampleDesc.Count = 1;
+    bufferDesc.Height = 1;
+    bufferDesc.DepthOrArraySize = 1;
+    bufferDesc.MipLevels = 1;
+    bufferDesc.SampleDesc.Count = 1;
     // バッファの場合はこれにする決まり02_03
-    vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
     // 実際に頂点リソースを作る02_03
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> bufferResource = nullptr;
     HRESULT hr = device->CreateCommittedResource(
-        &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc,
+        &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-        IID_PPV_ARGS(&vertexResource));
+        IID_PPV_ARGS(&bufferResource));
     assert(SUCCEEDED(hr));
 
-    return vertexResource;
+    return bufferResource;
 }
 #pragma endregion
 
