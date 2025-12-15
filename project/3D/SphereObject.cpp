@@ -16,18 +16,17 @@ void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radi
     vertexCount_ = subdivision * subdivision * 6;
     vertices_.resize(vertexCount_);
 
-    // ※ この関数は一切崩していない
+    // 球体作成
     GenerateSphereVertices(vertices_.data(), subdivision, radius);
 
     // ----------------
     // VertexBuffer
     // ----------------
     vertexResource_ = dxCommon_->CreateBufferResource(sizeof(VertexData) * vertexCount_);
-
+    
     VertexData* vbData = nullptr;
     vertexResource_->Map(0, nullptr, (void**)&vbData);
-    memcpy(vbData, vertices_.data(),
-        sizeof(VertexData) * vertexCount_);
+    memcpy(vbData, vertices_.data(), sizeof(VertexData) * vertexCount_);
     vertexResource_->Unmap(0, nullptr);
 
     vertexBufferView_.BufferLocation = vertexResource_->GetGPUVirtualAddress();
@@ -38,8 +37,7 @@ void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radi
     // Transform CB
     // ----------------
     transformResource_ = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
-    transformResource_->Map(
-        0, nullptr, (void**)&transformData_);
+    transformResource_->Map( 0, nullptr, (void**)&transformData_);
 
     // ----------------
     // Material CB
@@ -48,7 +46,7 @@ void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radi
     materialResource_->Map(0, nullptr, (void**)&materialData_);
 
     materialData_->color = { 1, 1, 1, 1 };
-    materialData_->enableLighting = true;
+    materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
 
     // ----------------
