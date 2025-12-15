@@ -77,6 +77,7 @@ void Game::Draw()
 void Game::Finalize()
 {
     // シーンマネージャーも singleton
+    SceneManager::GetInstance()->Finalize();
     ParticleManager::GetInstance()->Finalize();
     Object3dManager::GetInstance()->Finalize();
     SpriteManager::GetInstance()->Finalize();

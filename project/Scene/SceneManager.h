@@ -19,6 +19,7 @@ public:
     // --------- 実行 ---------
     void Update();
     void Draw();
+    void Finalize();
 
 private:
     // --------- Singleton基本処理 ---------

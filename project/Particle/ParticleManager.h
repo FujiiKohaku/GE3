@@ -16,11 +16,8 @@ public:
     // =========================================================
     // Singleton Access
     // =========================================================
-    static ParticleManager* GetInstance()
-    {
-        static ParticleManager instance;
-        return &instance;
-    }
+    static ParticleManager* GetInstance();
+    void Finalize();
 
     // =========================================================
     // GPUに送る構造体
@@ -106,7 +103,7 @@ public:
     void Update();
     void PreDraw();
     void Draw();
-    void Finalize();
+
     // BlendMode の setter
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
     // パーティクルグループ作成
@@ -128,6 +125,7 @@ private:
 
     ParticleManager(const ParticleManager&) = delete;
     ParticleManager& operator=(const ParticleManager&) = delete;
+    static ParticleManager* instance;
 
 private:
     // =========================================================
