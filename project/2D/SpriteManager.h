@@ -36,6 +36,7 @@ private:
     ~SpriteManager() = default;
     SpriteManager(const SpriteManager&) = delete;
     SpriteManager& operator=(const SpriteManager&) = delete;
+    static SpriteManager* instance;
 
 private:
     //----------------------------------------------
