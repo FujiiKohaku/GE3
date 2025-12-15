@@ -2,29 +2,51 @@
 
 ModelManager* ModelManager::instance = nullptr;
 
+ModelManager* ModelManager::GetInstance()
+{
+    if (instance == nullptr) {
+        instance = new ModelManager();
+    }
+    return instance;
+}
+
+
+
+void ModelManager::Initialize(DirectXCommon* dxCommon)
+{
+    modelCommon_ = new ModelCommon();
+    modelCommon_->Initialize(dxCommon);
+}
+
+void ModelManager::Finalize()
+{
+    if (instance) {
+        instance->models.clear();
+
+        delete instance->modelCommon_;
+        instance->modelCommon_ = nullptr;
+
+        delete instance;
+        instance = nullptr;
+    }
+}
+
 void ModelManager::LoadModel(const std::string& filepath)
 {
-    // 読み込みモデルを検索
     if (models.contains(filepath)) {
-        // 読み込み済みなら早期リターン
         return;
     }
 
-    // モデルの製紙絵と読み込み初期化 
     std::unique_ptr<Model> model = std::make_unique<Model>();
     model->Initialize(modelCommon_, "resources", filepath);
 
-    // モデルをmapコンテナに登録
     models.insert(std::make_pair(filepath, std::move(model)));
 }
 
 Model* ModelManager::FindModel(const std::string& filePath)
 {
-    // 読み込み済みモデルを検索
     if (models.contains(filePath)) {
         return models[filePath].get();
     }
-
-    // 見つからなかった場合はnullptrを返す
     return nullptr;
 }
