@@ -2,6 +2,16 @@
 #include "ImGuiManager.h"
 #include <cassert>
 #include <numbers>
+
+ParticleManager* ParticleManager::instance = nullptr;
+
+ParticleManager* ParticleManager::GetInstance()
+{
+    if (!instance) {
+        instance = new ParticleManager();
+    }
+    return instance;
+}
 void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
     // エンジンやカメラを保存しておく
@@ -308,7 +318,7 @@ void ParticleManager::CreateBoardMesh()
     //  頂点バッファ作成
     // ===========================
     vertexResource = dxCommon_->CreateBufferResource(sizeof(vertices));
-
+    vertexResource->SetName(L"ParticleManager::VertexBuffer");
     VertexData* vbData = nullptr;
     vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vbData));
     memcpy(vbData, vertices, sizeof(vertices));
@@ -322,6 +332,7 @@ void ParticleManager::CreateBoardMesh()
     // マテリアルCB作成（Root[0]）
     // ===========================
     materialResource = dxCommon_->CreateBufferResource(sizeof(Material));
+    materialResource->SetName(L"ParticleManager::MaterialCB");
     Material* matCB = nullptr;
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&matCB));
 
@@ -341,11 +352,13 @@ void ParticleManager::CreateBoardMesh()
     // TransformCB（板ポリ用）
     // ===========================
     transformResource = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
+    transformResource->SetName(L"ParticleManager::TransformCB");
 
     // ===========================
     //  DirectionalLightCB作成（Root[3]）
     // ===========================
     lightResource = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
+    lightResource->SetName(L"ParticleManager::LightCB");
     DirectionalLight* lightCB = nullptr;
     lightResource->Map(0, nullptr, reinterpret_cast<void**>(&lightCB));
 
@@ -363,6 +376,7 @@ void ParticleManager::CreateBoardMesh()
     srvHandle = TextureManager::GetInstance()->GetSrvHandleGPU("resources/circle.png");
 
     indexResource = dxCommon_->CreateBufferResource(sizeof(indexList));
+    indexResource->SetName(L"ParticleManager::IndexBuffer");
 
     uint32_t* ibData = nullptr;
     indexResource->Map(0, nullptr, reinterpret_cast<void**>(&ibData));
@@ -419,6 +433,7 @@ void ParticleManager::Finalize()
 
         // GPUリソース解放
         group.instancingResource.Reset();
+        
     }
 
     // グループ自体をクリア
@@ -445,6 +460,8 @@ void ParticleManager::Finalize()
     dxCommon_ = nullptr;
     srvManager_ = nullptr;
     camera_ = nullptr;
+    delete instance;
+    instance = nullptr;
 }
 
 void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath)
@@ -460,6 +477,7 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
 
     // インスタンシングバッファ作成
     group.instancingResource = dxCommon_->CreateBufferResource(sizeof(ParticleForGPU) * kNumMaxInstance);
+    group.instancingResource->SetName((L"ParticleManager::InstancingBuffer_" + StringUtility::ConvertString(name)).c_str());
 
     group.instancingResource->Map(0, nullptr, reinterpret_cast<void**>(&group.instanceData));
 
@@ -537,8 +555,7 @@ void ParticleManager::EmitFire(const std::string& name, const Vector3& position,
     }
 }
 
-ParticleManager::Particle
-ParticleManager::MakeParticleDefault(const Vector3& pos)
+ParticleManager::Particle ParticleManager::MakeParticleDefault(const Vector3& pos)
 {
     Particle p {};
 

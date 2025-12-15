@@ -14,6 +14,20 @@ class SpriteManager;
 // ===============================================
 class Sprite {
 public:
+    Sprite()
+    {
+        static int a = 0;
+        a++;
+    }
+
+    ~Sprite()
+    {
+        static int b = 0;  
+        b++;
+
+        ULONG refCountTemp = vertexResource->Release();
+        refCount = refCountTemp;
+    }
     // ===============================
     // 初期化（必要情報を渡して準備）
     // ===============================
@@ -104,6 +118,7 @@ private:
     // GPUリソース（バッファ）
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource; // 頂点バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource; // インデックスバッファ
+    ULONG refCount = 0;
 
     // CPU側アクセス用ポインタ
     VertexData* vertexData = nullptr;

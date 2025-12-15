@@ -159,9 +159,12 @@ void Sprite::CreateVertexBuffer()
 {
     // 頂点リソース作成（4頂点分）
     vertexResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(VertexData) * 4);
+    vertexResource->SetName(L"Sprite::VertexBuffer");
+    refCount = vertexResource->AddRef();
 
     // インデックスリソース作成（6インデックス分）
     indexResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * 6);
+    indexResource->SetName(L"Sprite::IndexBuffer"); 
 
     // -------------------------------
     // 頂点バッファビュー設定
@@ -193,6 +196,7 @@ void Sprite::CreateMaterialBuffer()
 {
     // マテリアルリソース作成
     materialResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(Material));
+    materialResource->SetName(L"Sprite::MaterialCB");
 
     // 書き込み用アドレス取得
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
@@ -212,6 +216,7 @@ void Sprite::CreateTransformationMatrixBuffer()
 {
     // リソース作成
     transformationMatrixResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix));
+    transformationMatrixResource->SetName(L"Sprite::TransformCB");
 
     // 書き込み用アドレス取得
     transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixData));

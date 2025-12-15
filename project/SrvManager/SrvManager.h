@@ -4,7 +4,7 @@
 
 class SrvManager {
 public:
-    // Singleton: インスタンス取得
+    // Singleton
     static SrvManager* GetInstance();
 
     // 初期化
@@ -46,6 +46,6 @@ private:
 
     uint32_t descriptorSize = 0;
     uint32_t useIndex = 0;
+    // Singleton インスタンス
+    static SrvManager* instance;
 };
-
-

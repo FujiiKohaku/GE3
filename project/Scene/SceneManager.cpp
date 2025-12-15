@@ -46,3 +46,12 @@ void SceneManager::Draw()
     scene_->Draw2D();
     scene_->DrawImGui();
 }
+void SceneManager::Finalize()
+{
+    // シーン破棄
+    if (scene_) {
+        scene_->Finalize();
+        delete scene_;
+        scene_ = nullptr;
+    }
+}

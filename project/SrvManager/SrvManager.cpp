@@ -1,11 +1,13 @@
 #include "SrvManager.h"
-
+SrvManager* SrvManager::instance = nullptr;
 // 最大SRV数(最大テクスチャ枚数)//kMaxSRVCountは512です
 const uint32_t SrvManager::kMaxSRVCount = 512;
 SrvManager* SrvManager::GetInstance()
 {
-    static SrvManager instance;
-    return &instance;
+    if (!instance) {
+        instance = new SrvManager();
+    }
+    return instance;
 }
 void SrvManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -88,20 +90,16 @@ bool SrvManager::CanAllocate() const
 
 void SrvManager::Finalize()
 {
-    // GPU待機（安全のため）
     if (dxCommon_) {
         dxCommon_->WaitForGPU();
     }
 
-    // DescriptorHeap解放
-    if (descriptorHeap) {
-        descriptorHeap.Reset();
-    }
+    descriptorHeap.Reset();
 
-    // インデックス初期化
     useIndex = 0;
     descriptorSize = 0;
-
-    // 借り物を無効化
     dxCommon_ = nullptr;
+
+    delete instance;
+    instance = nullptr;
 }
