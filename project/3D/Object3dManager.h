@@ -2,12 +2,15 @@
 
 #include "Camera.h"
 #include "DirectXCommon.h"
-#include "BlendUtil.h"
+#include "blendutil.h"
 
 class Object3dManager {
 public:
+    static Object3dManager* instance;
+
     // Singleton インターフェース
     static Object3dManager* GetInstance();
+    static void Finalize();
 
     //=========================================
     // 初期化処理
@@ -30,7 +33,6 @@ public:
     {
         currentBlendMode = mode;
     }
-    void Finalize();
 
 private:
     // Singleton：外部から new できないようにする
