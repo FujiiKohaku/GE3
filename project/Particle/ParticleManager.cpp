@@ -2,7 +2,7 @@
 #include "ImGuiManager.h"
 #include <cassert>
 #include <numbers>
-
+#include "Struct.h"
 ParticleManager* ParticleManager::instance = nullptr;
 
 ParticleManager* ParticleManager::GetInstance()
@@ -37,7 +37,9 @@ void ParticleManager::Update()
 
     // ビルボード行列
     Matrix4x4 cameraMat = camera_->GetWorldMatrix();
-    cameraMat.m[3][0] = cameraMat.m[3][1] = cameraMat.m[3][2] = 0.0f;
+    cameraMat.m[3][0] = 0.0f; 
+    cameraMat.m[3][1] = 0.0f;
+    cameraMat.m[3][2] = 0.0f;
     Matrix4x4 billboardMatrix = cameraMat;
 
     // VP 行列
@@ -433,7 +435,6 @@ void ParticleManager::Finalize()
 
         // GPUリソース解放
         group.instancingResource.Reset();
-        
     }
 
     // グループ自体をクリア
