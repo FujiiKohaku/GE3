@@ -5,7 +5,8 @@
 void GamePlayScene::Initialize()
 {
     camera_ = new Camera();
-    camera_->SetTranslate({ 0, 0, 2 });
+    camera_->SetTranslate({ 0, 0, 0 });
+
 
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 
@@ -21,7 +22,7 @@ void GamePlayScene::Initialize()
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
     player2_->SetModel("fence.obj");
-    player2_->SetTranslate({ 3.0f, 0.0f, 10.0f });
+    player2_->SetTranslate({ 3.0f, 0.0f, 0.0f });
     player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
@@ -34,7 +35,7 @@ void GamePlayScene::Initialize()
     sphere_->Initialize(DirectXCommon::GetInstance(), 16, 1.0f);
 
     // Transform
-    sphere_->SetTranslate({ 0.0f, 1.0f, 5.0f });
+    sphere_->SetTranslate({ 0, 0, 0 }); // 消える？
     sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
 
     // Material
@@ -78,13 +79,19 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::Finalize()
 {
+    ParticleManager::GetInstance()->Finalize();
+
     delete sprite_;
     sprite_ = nullptr;
+
     delete sphere_;
     sphere_ = nullptr;
+
     delete player2_;
     player2_ = nullptr;
 
-    ParticleManager::GetInstance()->Finalize();
+    delete camera_;
+    camera_ = nullptr;
+
     SoundManager::GetInstance()->SoundUnload(&bgm);
 }
