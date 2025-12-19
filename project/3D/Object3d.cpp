@@ -105,7 +105,7 @@ void Object3d::Draw()
 // ===============================================
 // OBJファイルの読み込み
 // ===============================================
-Object3d::ModelData Object3d::LoadObjFile(const std::string& directoryPath, const std::string filename)
+ModelData Object3d::LoadObjFile(const std::string& directoryPath, const std::string filename)
 {
     // 1.中で必要となる変数の宣言
     ModelData modelData; // 構築するModelData
@@ -194,7 +194,7 @@ Object3d::ModelData Object3d::LoadObjFile(const std::string& directoryPath, cons
 // ===============================================
 // マテリアル（.mtl）ファイルの読み込み
 // ===============================================
-Object3d::MaterialData Object3d::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename)
+MaterialData Object3d::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename)
 {
 
     // 1.中で必要となる変数の宣言

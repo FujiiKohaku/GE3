@@ -7,53 +7,15 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
+
+#include "Struct.h"
 class Object3dManager;
 class Model;
 class Object3d {
 public:
-    // ===============================
-    // 構造体
-    // ===============================
-    struct Material {
-        Vector4 color;
-        int32_t enableLighting;
-        float padding[3];
-        Matrix4x4 uvTransform;
-    };
 
-    struct TransformationMatrix {
-        Matrix4x4 WVP;
-        Matrix4x4 World;
-    };
 
-    struct DirectionalLight {
-        Vector4 color;
-        Vector3 direction;
-        float intensity;
-    };
-
-    struct MaterialData {
-        std::string textureFilePath;
-        uint32_t textureIndex = 0;
-    };
-
-    // 頂点、マテリアル関連
-    struct VertexData {
-        Vector4 position;
-        Vector2 texcoord;
-        Vector3 normal;
-    };
-
-    struct ModelData {
-        std::vector<VertexData> vertices;
-        MaterialData material;
-    };
-    // 変換情報
-    struct Transform {
-        Vector3 scale;
-        Vector3 rotate;
-        Vector3 translate;
-    };
+  
 
     // ===============================
     // メンバ関数
@@ -78,7 +40,7 @@ public:
     const Vector3& GetRotate() const { return transform.rotate; }
     const Vector3& GetTranslate() const { return transform.translate; }
     DirectionalLight* GetLight() { return directionalLightData; }
-    Object3d::Material* GetMaterial() { return materialData_; }
+    Material* GetMaterial() { return materialData_; }
 
 private:
     // ===============================
