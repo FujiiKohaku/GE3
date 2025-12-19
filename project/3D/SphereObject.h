@@ -12,7 +12,6 @@
 // ================================
 
 class SphereObject {
-   
 
 public:
     // ----------------
@@ -26,7 +25,7 @@ public:
     // ----------------
     // 更新
     // ----------------
-    void Update(const Camera* camera);
+    void Update(Camera* camera);
 
     // ----------------
     // 描画
@@ -50,7 +49,7 @@ public:
         }
     }
 
-void SetEnableLighting(bool enable)
+    void SetEnableLighting(bool enable)
     {
         if (materialData_) {
             if (enable) {
@@ -60,7 +59,6 @@ void SetEnableLighting(bool enable)
             }
         }
     }
-
 
     // ----------------
     // Light 操作
@@ -80,6 +78,13 @@ void SetEnableLighting(bool enable)
     }
     // テクスチャ操作
     void SetTexture(const std::string& filePath);
+
+    void SetShininess(float shininess)
+    {
+        if (materialData_) {
+            materialData_->shininess = shininess;
+        }
+    }
 
 private:
     // ----------------
@@ -123,4 +128,6 @@ private:
 
     // テクスチャSRVハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandle_ {};
+
+    Camera* camera_ = nullptr;
 };

@@ -93,6 +93,7 @@ void Object3d::Draw()
 
     // ライト情報をセット
     commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
 
     // モデルが設定されていれば描画
     if (model_) {

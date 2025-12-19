@@ -1,11 +1,7 @@
 #include "object3d.hlsli"
-
-
 ConstantBuffer<Material> gMaterial : register(b0);
-
-
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
-
+ConstantBuffer<Camera> gCamera : register(b2);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
@@ -13,6 +9,7 @@ struct PixelShaderOutput
 {
     float32_t4 color : SV_Target0;
 };
+
 
 PixelShaderOutput main(VertexShaderOutput input)
 {
@@ -35,9 +32,18 @@ PixelShaderOutput main(VertexShaderOutput input)
         //half lambert
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
         float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
+        float32_t3 toEye = normalize(gCamera.worldPosition - input.worldPosition);
+        float32_t3 reflectDir = normalize(reflect(gDirectionalLight.direction, normalize(input.normal)));
+        float RdotE = dot(reflectDir, toEye);
+        float specularPow = pow(saturate(RdotE), gMaterial.shininess);
+       //ŠgŽU”½ŽË
+        float32_t3 diffuse =gMaterial.color.rgb * textureColor.rgb *gDirectionalLight.color.rgb * cos *gDirectionalLight.intensity;
+
+        //‹¾–Ê”½ŽË
+        float32_t3 specular =gDirectionalLight.color.rgb *gDirectionalLight.intensity *specularPow *float32_t3(1.0f, 1.0f, 1.0f);
+
         
-    
-        output.color.rgb = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity;    
+        output.color.rgb = diffuse + specular;
         output.color.a = gMaterial.color.a * textureColor.a;
         
         

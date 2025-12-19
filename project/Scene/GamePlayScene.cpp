@@ -5,6 +5,7 @@
 void GamePlayScene::Initialize()
 {
     camera_ = new Camera();
+    camera_->Initialize(); 
     camera_->SetTranslate({ 0, 0, 0 });
 
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
@@ -39,6 +40,7 @@ void GamePlayScene::Initialize()
 
     // Material
     sphere_->SetColor({ 1, 1, 1, 1 });
+    
 }
 
 void GamePlayScene::Update()
@@ -74,6 +76,9 @@ ImGui::Begin("Sphere Control");
 
     sphere_->SetTranslate(spherePos);
     sphere_->SetRotate(sphereRotate);
+    static float shininess = 32.0f;
+    ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
+    sphere_->SetShininess(shininess);
 }
 
 void GamePlayScene::Draw3D()

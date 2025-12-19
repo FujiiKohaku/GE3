@@ -47,7 +47,7 @@ void Object3dManager::CreateRootSignature()
     HRESULT hr;
 
     // ====== RootParameterの設定 ======
-    D3D12_ROOT_PARAMETER rootParameters[4] = {};
+    D3D12_ROOT_PARAMETER rootParameters[5] = {};
 
     // [0] Material（ピクセルシェーダ用）
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -75,6 +75,10 @@ void Object3dManager::CreateRootSignature()
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1;
+    // [4] Camera（視点情報）
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[4].Descriptor.ShaderRegister = 2; // b2
 
     // ====== Sampler設定 ======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
