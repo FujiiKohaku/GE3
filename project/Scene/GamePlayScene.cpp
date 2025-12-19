@@ -7,7 +7,6 @@ void GamePlayScene::Initialize()
     camera_ = new Camera();
     camera_->SetTranslate({ 0, 0, 0 });
 
-
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 
     ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
@@ -52,6 +51,29 @@ void GamePlayScene::Update()
     sphere_->Update(camera_);
     camera_->Update();
     camera_->DebugUpdate();
+
+ImGui::Begin("Sphere Control");
+
+    // ---- Lighting ----
+    ImGui::Checkbox("Enable Lighting", &sphereLighting);
+    ImGui::SliderFloat("Light Intensity", &lightIntensity, 0.0f, 5.0f);
+    ImGui::SliderFloat3("Light Direction", &lightDir.x, -1.0f, 1.0f);
+
+    ImGui::Separator();
+
+    // ---- Transform ----
+    ImGui::SliderFloat3("Position", &spherePos.x, -10.0f, 10.0f);
+    ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
+
+    ImGui::End();
+
+    // ---- Sphere 反映 ----
+    sphere_->SetEnableLighting(sphereLighting);
+    sphere_->SetLightIntensity(lightIntensity);
+    sphere_->SetLightDirection(lightDir);
+
+    sphere_->SetTranslate(spherePos);
+    sphere_->SetRotate(sphereRotate);
 }
 
 void GamePlayScene::Draw3D()

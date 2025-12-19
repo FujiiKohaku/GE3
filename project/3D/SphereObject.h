@@ -50,12 +50,17 @@ public:
         }
     }
 
-    void EnableLighting(bool enable)
+void SetEnableLighting(bool enable)
     {
         if (materialData_) {
-            materialData_->enableLighting = enable ? 1 : 0;
+            if (enable) {
+                materialData_->enableLighting = 1;
+            } else {
+                materialData_->enableLighting = 0;
+            }
         }
     }
+
 
     // ----------------
     // Light 操作
