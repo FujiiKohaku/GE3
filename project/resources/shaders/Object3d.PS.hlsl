@@ -27,26 +27,42 @@ PixelShaderOutput main(VertexShaderOutput input)
     
     if (gMaterial.enableLighting != 0)//Lightingする場合
     {
-        //float cos = saturate(dot(normalize(input.normal), -gDirectionalLight.direction));
-        //output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
-        //half lambert
-        float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
-        float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
-        float32_t3 toEye = normalize(gCamera.worldPosition - input.worldPosition);
-        float32_t3 reflectDir = normalize(reflect(gDirectionalLight.direction, normalize(input.normal)));
-        float RdotE = dot(reflectDir, toEye);
-        float specularPow = pow(saturate(RdotE), gMaterial.shininess);
-       //拡散反射
-        float32_t3 diffuse =gMaterial.color.rgb * textureColor.rgb *gDirectionalLight.color.rgb * cos *gDirectionalLight.intensity;
-
-        //鏡面反射
-        float32_t3 specular =gDirectionalLight.color.rgb *gDirectionalLight.intensity *specularPow *float32_t3(1.0f, 1.0f, 1.0f);
-
+       
         
+// 法線
+        float3 N = normalize(input.normal);
+
+// ライト方向（ライト→物体）
+        float3 L = normalize(-gDirectionalLight.direction);
+
+// 視線方向（物体→カメラ）
+        float3 V = normalize(gCamera.worldPosition - input.worldPosition);
+
+// Half Vector
+        float3 H = normalize(L + V);
+
+// 拡散反射
+        float NdotL = saturate(dot(N, L));
+        float3 diffuse =
+    gMaterial.color.rgb *
+    textureColor.rgb *
+    gDirectionalLight.color.rgb *
+    NdotL *
+    gDirectionalLight.intensity;
+
+// 鏡面反射（Blinn-Phong）
+        float NdotH = saturate(dot(N, H));
+        float specularPow = pow(NdotH, gMaterial.shininess);
+
+        float3 specular =
+    gDirectionalLight.color.rgb *
+    gDirectionalLight.intensity *
+    specularPow;
+
+// 合成
         output.color.rgb = diffuse + specular;
         output.color.a = gMaterial.color.a * textureColor.a;
-        
-        
+
     }
     else
     { //Lightingしない場合前回までと同じ計算
