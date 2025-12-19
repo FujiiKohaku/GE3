@@ -1,12 +1,12 @@
 #include "SphereObject.h"
 #include "MatrixMath.h"
+#include "TextureManager.h"
 #include <cassert>
 #include <numbers>
-#include "TextureManager.h"
 // ================================
 // 初期化
 // ================================
-void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radius)
+void SphereObject::Initialize(DirectXCommon* dxCommon, int subdivision, float radius)
 {
     dxCommon_ = dxCommon;
 
@@ -23,7 +23,7 @@ void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radi
     // VertexBuffer
     // ----------------
     vertexResource_ = dxCommon_->CreateBufferResource(sizeof(VertexData) * vertexCount_);
-    
+
     VertexData* vbData = nullptr;
     vertexResource_->Map(0, nullptr, (void**)&vbData);
     memcpy(vbData, vertices_.data(), sizeof(VertexData) * vertexCount_);
@@ -37,7 +37,7 @@ void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radi
     // Transform CB
     // ----------------
     transformResource_ = dxCommon_->CreateBufferResource(sizeof(TransformationMatrix));
-    transformResource_->Map( 0, nullptr, (void**)&transformData_);
+    transformResource_->Map(0, nullptr, (void**)&transformData_);
 
     // ----------------
     // Material CB
@@ -59,15 +59,17 @@ void SphereObject::Initialize(DirectXCommon* dxCommon,int subdivision,float radi
     lightData_->direction = MatrixMath::Normalize({ 0, -1, 0 });
     lightData_->intensity = 1.0f;
 
-     // テクスチャ読み込み(デフォルトテクスチャ)
+    // テクスチャ読み込み(デフォルトテクスチャ)
     SetTexture("resources/uvChecker.png");
 }
 
 // ================================
 // 更新（WVP計算）
 // ================================
-void SphereObject::Update(const Camera* camera)
+void SphereObject::Update(Camera* camera)
 {
+    camera_ = camera;
+
     Matrix4x4 world = MatrixMath::MakeAffineMatrix(
         transform_.scale,
         transform_.rotate,
@@ -87,11 +89,11 @@ void SphereObject::Draw(ID3D12GraphicsCommandList* cmd)
     // Object3d と同じ並び
     cmd->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootConstantBufferView(1, transformResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootConstantBufferView( 3, lightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootDescriptorTable(2, textureSrvHandle_);
+    cmd->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView_);
-    cmd->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+    cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(vertexCount_, 1, 0, 0);
 }
 void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision, float radius)
@@ -103,7 +105,7 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
 
     for (int latIndex = 0; latIndex < kSubdivision; ++latIndex) {
 
-        float lat = -static_cast<float>(std::numbers::pi_v<float>) / 2.0f+ kLatEvery * latIndex;
+        float lat = -static_cast<float>(std::numbers::pi_v<float>) / 2.0f + kLatEvery * latIndex;
 
         for (int lonIndex = 0; lonIndex < kSubdivision; ++lonIndex) {
 

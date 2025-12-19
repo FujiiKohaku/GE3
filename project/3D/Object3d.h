@@ -13,10 +13,6 @@ class Object3dManager;
 class Model;
 class Object3d {
 public:
-
-
-  
-
     // ===============================
     // メンバ関数
     // ===============================

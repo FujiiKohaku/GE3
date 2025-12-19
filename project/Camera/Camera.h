@@ -1,8 +1,8 @@
 #pragma once
-#include "MatrixMath.h"
-#include "MathStruct.h"
-#include "WinApp.h"
 #include "ImGuiManager.h"
+#include "MathStruct.h"
+#include "MatrixMath.h"
+#include "WinApp.h"
 
 
 class Camera {
@@ -11,7 +11,7 @@ public:
     Camera();
 
     void DebugUpdate();
-
+    void Initialize();
     // 更新
     void Update();
     // ===============================
@@ -44,8 +44,16 @@ public:
     float GetAspectRatio() const { return aspectRatio_; }
     float GetNearClip() const { return nearClip_; }
     float GetFarClip() const { return farClip_; }
+    D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress() const
+    {
+        return cameraResource_->GetGPUVirtualAddress();
+    }
 
 private:
+    struct CameraForGPU {
+        Vector3 worldPosition;
+    };
+
     Transform transform_;
     Matrix4x4 worldMatrix_;
     Matrix4x4 viewMatrix_;
@@ -56,4 +64,10 @@ private:
     float aspectRatio_ = static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight);
     float nearClip_ = 0.1f; // ニアクリップ距離
     float farClip_ = 100.0f; // ファークリップ距離
+
+    // GPU用
+    Microsoft::WRL::ComPtr<ID3D12Resource> cameraResource_;
+    CameraForGPU* cameraData_ = nullptr;
+
+
 };
