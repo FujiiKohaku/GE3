@@ -1,7 +1,7 @@
 #pragma once
 #include "Camera.h"
 #include "DirectXCommon.h"
-#include "struct.h"
+#include "Object3DStruct.h"
 #include <vector>
 #include <wrl.h>
 

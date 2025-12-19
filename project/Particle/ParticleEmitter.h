@@ -1,5 +1,5 @@
 #pragma once
-#include "Struct.h"
+#include "MathStruct.h"
 #include <cstdint>
 #include <string>
 

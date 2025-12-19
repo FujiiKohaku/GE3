@@ -1,14 +1,14 @@
 #pragma once
 #include "Camera.h"
 #include "DebugCamera.h"
-#include "Matrix4x4.h"
+#include "MatrixMath.h"
 #include "TextureManager.h"
 #include <d3d12.h>
 #include <string>
 #include <vector>
 #include <wrl.h>
 
-#include "Struct.h"
+#include "Object3DStruct.h"
 class Object3dManager;
 class Model;
 class Object3d {
