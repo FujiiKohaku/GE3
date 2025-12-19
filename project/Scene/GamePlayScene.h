@@ -40,4 +40,11 @@ private:
     SphereObject* sphere_ = nullptr;
 
     Camera* camera_;
+
+    bool sphereLighting = true;
+    Vector3 spherePos = { 0.0f, 0.0f, 0.0f };
+    Vector3 sphereRotate = { 0.0f, 0.0f, 0.0f }; // ラジアン想定
+
+    float lightIntensity = 1.0f;
+    Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
 };
