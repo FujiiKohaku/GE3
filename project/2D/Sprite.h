@@ -89,7 +89,7 @@ private:
     ULONG refCount = 0;
 
     // CPU側アクセス用ポインタ
-    VertexData* vertexData = nullptr;
+    SpriteVertexData* vertexData = nullptr;
     uint32_t* indexData = nullptr;
 
     // バッファビュー（使い方情報）
@@ -98,11 +98,11 @@ private:
 
     // 変換行列定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
-    TransformationMatrix* transformationMatrixData = nullptr;
+    SpriteTransform* transformationMatrixData = nullptr;
 
     // マテリアル定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
-    Material* materialData = nullptr;
+    SpriteMaterial* materialData = nullptr;
 
     // ===============================
     // テクスチャ関連

@@ -89,7 +89,9 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
 
-    // sprite_->Draw();
+     sprite_->Draw();
+
+
 }
 
 void GamePlayScene::DrawImGui()
