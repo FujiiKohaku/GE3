@@ -2,7 +2,7 @@
 #include "ImGuiManager.h"
 #include <cassert>
 #include <numbers>
-#include "Struct.h"
+#include "MathStruct.h"
 ParticleManager* ParticleManager::instance = nullptr;
 
 ParticleManager* ParticleManager::GetInstance()

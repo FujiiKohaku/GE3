@@ -152,6 +152,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="3D\CreateSphere.cpp" />
+    <ClCompile Include="math\MathStruct.cpp" />
+    <ClCompile Include="math\Object3DStruct.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />
     <ClCompile Include="Scene\BaseScene.cpp" />
     <ClCompile Include="blend\BlendUtil.cpp" />
@@ -198,15 +200,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="math\Matrix4x4.cpp">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
-      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
-    </ClCompile>
     <ClCompile Include="audio\SoundManager.cpp">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
-      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
-    </ClCompile>
-    <ClCompile Include="math\Struct.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
@@ -218,6 +212,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="3D\ModelCommon.cpp" />
     <ClCompile Include="3D\ModelManager.cpp" />
     <ClCompile Include="3D\SphereObject.cpp" />
+    <ClCompile Include="math\SpriteStruct.cpp" />
     <ClCompile Include="SrvManager\SrvManager.cpp" />
     <ClCompile Include="StringUtility\StringUtility.cpp" />
     <ClCompile Include="TextureManager\TextureManager.cpp" />
@@ -252,6 +247,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3D\CreateSphere.h" />
+    <ClInclude Include="math\MathStruct.h" />
+    <ClInclude Include="math\Object3DStruct.h" />
     <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Scene\BaseScene.h" />
     <ClInclude Include="blend\BlendUtil.h" />
@@ -275,9 +272,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Scene\Game.h" />
     <ClInclude Include="input\Input.h" />
     <ClInclude Include="Logger\Logger.h" />
-    <ClInclude Include="math\Matrix4x4.h" />
     <ClInclude Include="audio\SoundManager.h" />
-    <ClInclude Include="math\Struct.h" />
     <ClInclude Include="2D\Sprite.h" />
     <ClInclude Include="2D\SpriteManager.h" />
     <ClInclude Include="3D\Object3dManager.h" />
@@ -286,6 +281,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="3D\ModelCommon.h" />
     <ClInclude Include="3D\ModelManager.h" />
     <ClInclude Include="3D\SphereObject.h" />
+    <ClInclude Include="math\SpriteStruct.h" />
     <ClInclude Include="SrvManager\SrvManager.h" />
     <ClInclude Include="StringUtility\StringUtility.h" />
     <ClInclude Include="TextureManager\TextureManager.h" />

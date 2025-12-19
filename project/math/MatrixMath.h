@@ -1,6 +1,6 @@
 // MatrixMath.h
 #pragma once
-#include "Struct.h"
+#include "MathStruct.h"
 
 
 

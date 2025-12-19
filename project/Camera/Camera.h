@@ -1,6 +1,6 @@
 #pragma once
 #include "MatrixMath.h"
-#include "Struct.h"
+#include "MathStruct.h"
 #include "WinApp.h"
 #include "ImGuiManager.h"
 
