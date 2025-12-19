@@ -22,7 +22,7 @@ public:
 
     ~Sprite()
     {
-        static int b = 0;  
+        static int b = 0;
         b++;
 
         ULONG refCountTemp = vertexResource->Release();
@@ -60,38 +60,6 @@ public:
     void SetSize(const Vector2& s) { size = s; }
 
 private:
-    // ===============================
-    // GPU転送用データ構造
-    // ===============================
-
-    // 頂点データ
-    struct VertexData {
-        Vector4 position; // 位置
-        Vector2 texcoord; // UV座標
-        Vector3 normal; // 法線（使わないが整合性のため）
-    };
-
-    // マテリアルデータ（色情報など）
-    struct Material {
-        Vector4 color; // RGBAカラー
-        int32_t enableLighting; // ライティング有効フラグ（Spriteではfalse）
-        float padding[3]; // アラインメント調整
-        Matrix4x4 uvTransform; // UV変換行列
-    };
-
-    // 変換行列データ（GPU定数バッファ用）
-    struct TransformationMatrix {
-        Matrix4x4 WVP; // ワールド×ビュー×プロジェクション行列
-        Matrix4x4 World; // ワールド行列
-    };
-
-    // トランスフォーム情報（位置・回転・拡縮）
-    struct Transform {
-        Vector3 scale;
-        Vector3 rotate;
-        Vector3 translate;
-    };
-
     // ===============================
     // メンバ変数
     // ===============================
