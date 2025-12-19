@@ -49,34 +49,31 @@ void SpriteManager::CreateRootSignature()
     // ------------------------------
     // ルートパラメータ設定
     // ------------------------------
-    D3D12_ROOT_PARAMETER rootParameters[4] = {};
+    // ルートパラメータは 3 個で十分
+    D3D12_ROOT_PARAMETER rootParameters[3] = {};
 
-    // [0] マテリアル（色など）
+    // [0] Transform (VS) b0
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
-    // [1] Transform（行列：座標・拡大縮小・回転）
+    // [1] Material2D (PS) b1
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-    rootParameters[1].Descriptor.ShaderRegister = 0;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[1].Descriptor.ShaderRegister = 1;
 
-    // [2] テクスチャ（SRV: Shader Resource View）
-    D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
-    descriptorRange[0].BaseShaderRegister = 0;
-    descriptorRange[0].NumDescriptors = 1;
-    descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    // [2] Texture SRV (PS) t0
+    D3D12_DESCRIPTOR_RANGE descriptorRange {};
+    descriptorRange.BaseShaderRegister = 0;
+    descriptorRange.NumDescriptors = 1;
+    descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
-    rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+    rootParameters[2].DescriptorTable.pDescriptorRanges = &descriptorRange;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
 
-    // [3] ライト（照明情報）
-    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameters[3].Descriptor.ShaderRegister = 1;
 
     // ------------------------------
     // サンプラー設定（テクスチャの拡大縮小補間）
@@ -131,7 +128,7 @@ void SpriteManager::CreateGraphicsPipeline()
     // ------------------------------
     // 入力レイアウト（頂点構造）
     // ------------------------------
-    D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
+    D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
 
     // POSITION
     inputElementDescs[0].SemanticName = "POSITION";
@@ -148,10 +145,10 @@ void SpriteManager::CreateGraphicsPipeline()
     inputElementDescs[1].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
     // NORMAL
-    inputElementDescs[2].SemanticName = "NORMAL";
-    inputElementDescs[2].SemanticIndex = 0;
-    inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    //inputElementDescs[2].SemanticName = "NORMAL";
+    //inputElementDescs[2].SemanticIndex = 0;
+    //inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    //inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 
     // 登録
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
@@ -188,8 +185,8 @@ void SpriteManager::CreateGraphicsPipeline()
     // ------------------------------
     // シェーダーコンパイル
     // ------------------------------
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Sprite.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Sprite.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ------------------------------

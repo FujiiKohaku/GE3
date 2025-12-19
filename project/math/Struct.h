@@ -38,6 +38,17 @@ struct Material {
     Matrix4x4 uvTransform; // UV変換行列
 };
 
+struct SpriteMaterial {
+    Vector4 color;
+    Matrix4x4 uvTransform;
+};
+struct SpriteTransform {
+    Matrix4x4 WVP;
+};
+struct SpriteVertexData {
+    Vector4 position;
+    Vector2 texcoord;
+};
 // 変換行列データ（GPU定数バッファ用）
 struct TransformationMatrix {
     Matrix4x4 WVP; // ワールド×ビュー×プロジェクション行列
