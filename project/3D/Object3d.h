@@ -35,7 +35,7 @@ public:
     const Vector3& GetScale() const { return transform.scale; }
     const Vector3& GetRotate() const { return transform.rotate; }
     const Vector3& GetTranslate() const { return transform.translate; }
-    DirectionalLight* GetLight() { return directionalLightData; }
+   // DirectionalLight* GetLight() { return directionalLightData; }
     Material* GetMaterial() { return materialData_; }
 
 private:
@@ -54,7 +54,7 @@ private:
     /*   D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};*/
     /*   Material* materialData = nullptr;*/
     TransformationMatrix* transformationMatrixData = nullptr;
-    DirectionalLight* directionalLightData = nullptr;
+  //  DirectionalLight* directionalLightData = nullptr;
     Material* materialData_ = nullptr;
     // Transform
     Transform transform;

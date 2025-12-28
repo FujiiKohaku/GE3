@@ -1,5 +1,5 @@
 #pragma once
-#include "Struct.h"
+#include "Object3DStruct.h"
 #include <cstdint>
 #include <vector>
 
