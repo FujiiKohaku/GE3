@@ -56,36 +56,29 @@ void GamePlayScene::Update()
     camera_->Update();
     camera_->DebugUpdate();
 
-// ==================================
+    // ==================================
     // Lighting Panel（ライト操作パネル）
     // ==================================
     ImGui::Begin("Lighting Control");
 
     // ---- ライトの ON / OFF ----
-    // true = 光る / false = 光らない
     static bool lightEnabled = true;
     ImGui::Checkbox("Enable Light", &lightEnabled);
 
     // ---- ライトの色 ----
-    // 白 → 赤 → 青 など好きに変更できる
     static Vector4 lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     ImGui::ColorEdit3("Light Color", (float*)&lightColor);
 
     // ---- 明るさ（強さ） ----
-    // 0 = 真っ暗 / 5 くらいでかなり明るい
     static float lightIntensity = 1.0f;
     ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
     // ---- 光の向き ----
-    // どこから当てるか（矢印の方向）
-    // 上→下 = {0,-1,0}
     static Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
     ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
 
     // ---- 正規化 ----
-    // 方向ベクトルの長さを 1 にする（計算が安定する）
     Vector3 normalizedDir = Normalize(lightDir);
-
 
     float intensity = lightIntensity;
     if (!lightEnabled) {
@@ -97,7 +90,6 @@ void GamePlayScene::Update()
         normalizedDir,
         intensity);
 
-
     // ---- リセットボタン（向きだけ元に戻す）----
     if (ImGui::Button("Reset Direction")) {
         lightDir = { 0.0f, -1.0f, 0.0f };
@@ -106,7 +98,6 @@ void GamePlayScene::Update()
     ImGui::SameLine();
 
     // ---- ライトを完全初期化 ----
-    // 色・明るさ・方向・Enable を全部戻す
     if (ImGui::Button("Reset Light")) {
         lightEnabled = true;
         lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -117,7 +108,7 @@ void GamePlayScene::Update()
     ImGui::End();
 
     // ==================================
-    // Sphere Control（スフィア設定パネル）
+    // Sphere Control
     // ==================================
     ImGui::Begin("Sphere Control");
 
@@ -131,18 +122,18 @@ void GamePlayScene::Update()
     // ---- 回転 ----
     ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
 
+     ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
     // ---- テカり具合（鏡面反射の鋭さ） ----
-    // 小さい → ぼんやり / 大きい → ピカッ
     static float shininess = 32.0f;
     ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
 
     ImGui::End();
 
-
     // 反映
     sphere_->SetEnableLighting(sphereLighting);
     sphere_->SetTranslate(spherePos);
     sphere_->SetRotate(sphereRotate);
+    sphere_->SetScale(sphereScale);
     sphere_->SetShininess(shininess);
 }
 

@@ -209,4 +209,17 @@ Vector3 MatrixMath::Normalize(const Vector3& v)
         return { 0.0f, 0.0f, 0.0f };
     return { v.x / length, v.y / length, v.z / length };
 }
+Matrix4x4 MatrixMath::Transpose(const Matrix4x4& m)
+{
+    Matrix4x4 result {};
+
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            result.m[i][j] = m.m[j][i];
+        }
+    }
+
+    return result;
+}
+
 #pragma endregion
