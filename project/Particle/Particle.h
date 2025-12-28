@@ -1,5 +1,5 @@
 #pragma once
-#include "Struct.h" // Vector2, Vector3, Vector4, Matrix4x4 など
+#include"../math/SpriteStruct.h"
 #include "TextureManager.h" // テクスチャ管理
 #include <cstdint> // uint32_t など
 #include <d3d12.h> // D3D12関連型（ID3D12Resourceなど）
