@@ -63,7 +63,7 @@ public:
     // ----------------
     // Light 操作
     // ----------------
-    void SetLightDirection(const Vector3& dir)
+    /*void SetLightDirection(const Vector3& dir)
     {
         if (lightData_) {
             lightData_->direction = dir;
@@ -75,7 +75,7 @@ public:
         if (lightData_) {
             lightData_->intensity = intensity;
         }
-    }
+    }*/
     // テクスチャ操作
     void SetTexture(const std::string& filePath);
 
@@ -115,8 +115,8 @@ private:
 
     // Light
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource_;
-    DirectionalLight* lightData_ = nullptr;
+    // Microsoft::WRL::ComPtr<ID3D12Resource> lightResource_;
+    // DirectionalLight* lightData_ = nullptr;
 
     // Vertex
 

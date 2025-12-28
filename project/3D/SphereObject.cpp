@@ -52,12 +52,12 @@ void SphereObject::Initialize(DirectXCommon* dxCommon, int subdivision, float ra
     // ----------------
     // Light CB
     // ----------------
-    lightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
+    /*lightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
     lightResource_->Map(0, nullptr, (void**)&lightData_);
 
     lightData_->color = { 1, 1, 1, 1 };
     lightData_->direction = MatrixMath::Normalize({ 0, -1, 0 });
-    lightData_->intensity = 1.0f;
+    lightData_->intensity = 1.0f;*/
 
     // テクスチャ読み込み(デフォルトテクスチャ)
     SetTexture("resources/uvChecker.png");
@@ -89,7 +89,7 @@ void SphereObject::Draw(ID3D12GraphicsCommandList* cmd)
     // Object3d と同じ並び
     cmd->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootConstantBufferView(1, transformResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
+    //  cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootDescriptorTable(2, textureSrvHandle_);
     cmd->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView_);
