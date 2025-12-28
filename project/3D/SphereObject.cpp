@@ -79,6 +79,8 @@ void SphereObject::Update(Camera* camera)
 
     transformData_->World = world;
     transformData_->WVP = MatrixMath::Multiply(world, vp);
+    Matrix4x4 inv = MatrixMath::Inverse(world);
+    transformData_->WorldInverseTranspose = MatrixMath::Transpose(inv);
 }
 
 // ================================
