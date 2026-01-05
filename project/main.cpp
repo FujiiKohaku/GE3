@@ -1,9 +1,6 @@
 
 #include "ImGuiManager.h"
 #include "Scene/Game.h"
-
-
-
 // ======================= エントリーポイント =====================
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {

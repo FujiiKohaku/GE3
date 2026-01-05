@@ -6,7 +6,6 @@
 #include "imgui/imgui_impl_dx12.h"
 #include "imgui/imgui_impl_win32.h"
 #endif // USE_IMGUI
-
 #include "DirectXCommon.h"
 #include "SrvManager.h"
 #include "WinApp.h"
