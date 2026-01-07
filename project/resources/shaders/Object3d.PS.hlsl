@@ -2,8 +2,10 @@
 ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
+ConstantBuffer<PointLight> gPointLight : register(b3);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
+
 
 struct PixelShaderOutput
 {
@@ -43,21 +45,13 @@ PixelShaderOutput main(VertexShaderOutput input)
 
 // ägéUîΩéÀ
         float NdotL = saturate(dot(N, L));
-        float3 diffuse =
-    gMaterial.color.rgb *
-    textureColor.rgb *
-    gDirectionalLight.color.rgb *
-    NdotL *
-    gDirectionalLight.intensity;
+        float3 diffuse =gMaterial.color.rgb *textureColor.rgb *gDirectionalLight.color.rgb *NdotL *gDirectionalLight.intensity;
 
 // ãæñ îΩéÀÅiBlinn-PhongÅj
         float NdotH = saturate(dot(N, H));
         float specularPow = pow(NdotH, gMaterial.shininess);
 
-        float3 specular =
-    gDirectionalLight.color.rgb *
-    gDirectionalLight.intensity *
-    specularPow;
+        float3 specular =gDirectionalLight.color.rgb *gDirectionalLight.intensity *specularPow;
 
 // çáê¨
         output.color.rgb = diffuse + specular;
