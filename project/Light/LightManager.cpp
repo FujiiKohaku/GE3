@@ -45,7 +45,10 @@ void LightManager::Finalize()
         lightResource_->Unmap(0, nullptr);
         lightResource_.Reset(); // ComPtr を開放
     }
-
+    if (pointLightResource_) {
+        pointLightResource_->Unmap(0, nullptr);
+        pointLightResource_.Reset();
+    }
     delete instance;
     instance = nullptr;
 }

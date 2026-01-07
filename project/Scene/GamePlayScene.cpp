@@ -38,7 +38,7 @@ void GamePlayScene::Initialize()
     // Transform
     sphere_->SetTranslate({ 0, 0, 0 }); // 消える？
     sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
-
+    
     // Material
     sphere_->SetColor({ 1, 1, 1, 1 });
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
