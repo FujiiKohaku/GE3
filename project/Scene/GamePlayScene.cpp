@@ -22,9 +22,9 @@ void GamePlayScene::Initialize()
     bgm = SoundManager::GetInstance()->SoundLoadWave("Resources/BGM.wav");
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
-    player2_->SetModel("resources/terrain.obj");
+    player2_->SetModel("fence.obj");
     player2_->SetTranslate({ 0.0f, 0.0f, 0.0f });
-    /* player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });*/
+    player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
     player2_->SetEnableLighting(false);
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
     Transform t {};
