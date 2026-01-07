@@ -22,10 +22,10 @@ void GamePlayScene::Initialize()
     bgm = SoundManager::GetInstance()->SoundLoadWave("Resources/BGM.wav");
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
-    player2_->SetModel("terrain.obj");
+    player2_->SetModel("resources/terrain.obj");
     player2_->SetTranslate({ 0.0f, 0.0f, 0.0f });
-   /* player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });*/
-    
+    /* player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });*/
+    player2_->SetEnableLighting(false);
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
     Transform t {};
     t.translate = { 0.0f, 0.0f, 0.0f };
@@ -38,7 +38,7 @@ void GamePlayScene::Initialize()
     // Transform
     sphere_->SetTranslate({ 0, 0, 0 }); // 消える？
     sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
-    
+
     // Material
     sphere_->SetColor({ 1, 1, 1, 1 });
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
@@ -122,7 +122,7 @@ void GamePlayScene::Update()
     // ---- 回転 ----
     ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
 
-     ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
+    ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
     // ---- テカり具合（鏡面反射の鋭さ） ----
     static float shininess = 32.0f;
     ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
@@ -135,17 +135,15 @@ void GamePlayScene::Update()
     sphere_->SetRotate(sphereRotate);
     sphere_->SetScale(sphereScale);
     sphere_->SetShininess(shininess);
-
-   
 }
 
 void GamePlayScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
-    
+
     player2_->Draw();
-   // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }
@@ -154,7 +152,7 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
 
-    //sprite_->Draw();
+    // sprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()

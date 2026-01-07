@@ -37,6 +37,16 @@ public:
     const Vector3& GetTranslate() const { return transform.translate; }
    // DirectionalLight* GetLight() { return directionalLightData; }
     Material* GetMaterial() { return materialData_; }
+    void SetEnableLighting(bool enable)
+    {
+        if (materialData_) {
+            if (enable) {
+                materialData_->enableLighting = 1;
+            } else {
+                materialData_->enableLighting = 0;
+            }
+        }
+    }
 
 private:
     // ===============================
