@@ -6,7 +6,7 @@
 // ===============================================
 // モデル初期化処理
 // ===============================================
-void Model::Initialize(ModelCommon* modelCommon, const std::string& directorypath, const std::string& filename)
+void Model::Initialize(ModelCommon* modelCommon, const std::string& directorypath, const std::string& filename) 
 {
     // ===============================
     // 共通設定を受け取る
