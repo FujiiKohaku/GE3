@@ -1,4 +1,5 @@
 #include "LightManager.h"
+#include <numbers>
 LightManager* LightManager::instance = nullptr;
 
 LightManager* LightManager::GetInstance()
@@ -12,25 +13,33 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
 
+    // directional light default
     lightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
     lightResource_->Map(0, nullptr, reinterpret_cast<void**>(&lightData_));
     lightResource_->SetName(L"Object3d::DirectionalLightCB");
-    // デフォルト
     lightData_->color = { 1, 1, 1, 1 };
     lightData_->direction = Normalize({ 0, -1, 0 });
     lightData_->intensity = 1.0f;
 
-    // 点光源の初期化
+    // point light default
     pointLightResource_ = dxCommon_->CreateBufferResource(sizeof(PointLight));
-
-    pointLightResource_->Map(0, nullptr,reinterpret_cast<void**>(&pointLightData_));
-
+    pointLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&pointLightData_));
     pointLightData_->color = { 1, 1, 1, 1 };
     pointLightData_->position = { 0, 2, 0 };
     pointLightData_->intensity = 1.0f;
-
-    pointLightData_->radius = 10.0f; 
-    pointLightData_->decay = 1.0f; 
+    pointLightData_->radius = 10.0f;
+    pointLightData_->decay = 1.0f;
+    // spot light default
+    spotLightResource_ = dxCommon_->CreateBufferResource(sizeof(SpotLight));
+    spotLightResource_->Map(0, nullptr, (void**)&spotLightData_);
+    spotLightData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    spotLightData_->position = { 2.0f, 1.25f, 0.0f };
+    spotLightData_->distance = 7.0f;
+    spotLightData_->direction = Normalize({ -1.0f, -1.0f, 0.0f });
+    spotLightData_->intensity = 4.0f;
+    spotLightData_->decay = 2.0f;
+    spotLightData_->cosAngle = std::cos(std::numbers::pi_v<float> / 3.0f);
+    spotLightData_->cosFalloffStart = std::cos(std::numbers::pi_v<float> / 6.0f);
 }
 
 void LightManager::Update()
@@ -95,13 +104,52 @@ void LightManager::SetPointDecay(float decay)
     pointLightData_->decay = decay;
 }
 
+// SpotLight設定
+void LightManager::SetSpotLightColor(const Vector4& color)
+{
+    spotLightData_->color = color;
+}
 
+void LightManager::SetSpotLightPosition(const Vector3& pos)
+{
+    spotLightData_->position = pos;
+}
+
+void LightManager::SetSpotLightDirection(const Vector3& dir)
+{
+    spotLightData_->direction = Normalize(dir);
+}
+
+void LightManager::SetSpotLightIntensity(float intensity)
+{
+    spotLightData_->intensity = intensity;
+}
+
+void LightManager::SetSpotLightDistance(float distance)
+{
+    spotLightData_->distance = distance;
+}
+
+void LightManager::SetSpotLightDecay(float decay)
+{
+    spotLightData_->decay = decay;
+}
+
+void LightManager::SetSpotLightCosAngle(float cosAngle)
+{
+    spotLightData_->cosAngle = cosAngle;
+}
+
+void LightManager::SetSpotLightCosFalloffStart(float cosFalloffStart)
+{
+    spotLightData_->cosFalloffStart = cosFalloffStart;
+}
 
 void LightManager::Bind(ID3D12GraphicsCommandList* cmd)
 {
-    cmd->SetGraphicsRootConstantBufferView(
-        3, lightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
 
-    cmd->SetGraphicsRootConstantBufferView(
-        5, pointLightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(5, pointLightResource_->GetGPUVirtualAddress());
+
+    cmd->SetGraphicsRootConstantBufferView(6, spotLightResource_->GetGPUVirtualAddress());
 }

@@ -47,7 +47,7 @@ void Object3dManager::CreateRootSignature()
     HRESULT hr;
 
     // ====== RootParameterの設定 ======
-    D3D12_ROOT_PARAMETER rootParameters[6] = {};
+    D3D12_ROOT_PARAMETER rootParameters[7] = {};
 
     // [0] Material（ピクセルシェーダ用）
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -82,8 +82,11 @@ void Object3dManager::CreateRootSignature()
     // [5] PointLight
     rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameters[5].Descriptor.ShaderRegister = 3; //  ← b3
-
+    rootParameters[5].Descriptor.ShaderRegister = 3; //  b3
+    // [6] SpotLight
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[6].Descriptor.ShaderRegister = 4; //  b4
     // ====== Sampler設定 ======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
