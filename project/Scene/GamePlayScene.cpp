@@ -22,9 +22,9 @@ void GamePlayScene::Initialize()
     bgm = SoundManager::GetInstance()->SoundLoadWave("Resources/BGM.wav");
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
-    player2_->SetModel("fence.obj");
+    player2_->SetModel("terrain.obj");
     player2_->SetTranslate({ 3.0f, 0.0f, 0.0f });
-    player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
+    //player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
     Transform t {};
@@ -104,6 +104,31 @@ void GamePlayScene::Update()
         lightIntensity = 1.0f;
         lightDir = { 0.0f, -1.0f, 0.0f };
     }
+    ImGui::Separator();
+    ImGui::Text("Point Light Control");
+
+    static bool pointEnabled = true;
+    ImGui::Checkbox("Enable Point Light", &pointEnabled);
+
+    static Vector4 pointColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    ImGui::ColorEdit3("Point Color", (float*)&pointColor);
+
+    static Vector3 pointPos = { 0.0f, 2.0f, 0.0f };
+    ImGui::SliderFloat3("Point Position", &pointPos.x, -10.0f, 10.0f);
+
+    static float pointIntensity = 1.0f;
+    ImGui::SliderFloat("Point Intensity", &pointIntensity, 0.0f, 5.0f);
+
+    float pI = pointEnabled ? pointIntensity : 0.0f;
+    static float pointRadius = 10.0f;
+    static float pointDecay = 1.0f;
+
+    ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
+    ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
+
+    LightManager::GetInstance()->SetPointRadius(pointRadius);
+    LightManager::GetInstance()->SetPointDecay(pointDecay);
+    LightManager::GetInstance()->SetPointLight(pointColor,pointPos,pI);
 
     ImGui::End();
 

@@ -28,12 +28,7 @@ struct TransformationMatrix {
     Matrix4x4 World; // ワールド行列
     Matrix4x4 WorldInverseTranspose; 
 };
-// 平行光源データ
-struct DirectionalLight {
-    Vector4 color;
-    Vector3 direction;
-    float intensity;
-};
+
 
 // モデル全体データ（頂点配列＋マテリアル）
 struct ModelData {

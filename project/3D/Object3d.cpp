@@ -43,6 +43,8 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData_->enableLighting = true;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
+    materialData_->shininess = 32.0f;
+    
     // ================================
     // Transform初期値設定
     // ================================
