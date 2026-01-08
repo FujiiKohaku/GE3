@@ -22,6 +22,15 @@ public:
     void SetPointColor(const Vector4& color);
     void SetPointRadius(float radius);
     void SetPointDecay(float decay);
+    // SpotLight
+    void SetSpotLightColor(const Vector4& color);
+    void SetSpotLightPosition(const Vector3& pos);
+    void SetSpotLightDirection(const Vector3& dir);
+    void SetSpotLightIntensity(float intensity);
+    void SetSpotLightDistance(float distance);
+    void SetSpotLightDecay(float decay);
+    void SetSpotLightCosAngle(float cosAngle);
+    void SetSpotLightCosFalloffStart(float cosFalloffStart);
 
     // ================================
     // インスタンス取得
@@ -42,4 +51,8 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12Resource> pointLightResource_;
     PointLight* pointLightData_ = nullptr;
+
+     Microsoft::WRL::ComPtr<ID3D12Resource> spotLightResource_;
+    SpotLight* spotLightData_ = nullptr;
+
 };

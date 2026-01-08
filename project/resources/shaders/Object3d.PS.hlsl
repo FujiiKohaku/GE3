@@ -3,6 +3,7 @@ ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
 ConstantBuffer<PointLight> gPointLight : register(b3);
+ConstantBuffer<SpotLight> gSpotLight : register(b4);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
@@ -30,9 +31,10 @@ PixelShaderOutput main(VertexShaderOutput input)
     
     float32_t distance = length(gPointLight.position - input.worldPosition);
     
-    float32_t factor =pow(saturate(-distance / gPointLight.radius + 1.0), gPointLight.decay);
+    float32_t factor = pow(saturate(-distance / gPointLight.radius + 1.0), gPointLight.decay);
 
    
+    
 
     if (gMaterial.enableLighting != 0)//Lightingする場合
     {
@@ -42,37 +44,70 @@ PixelShaderOutput main(VertexShaderOutput input)
 // 法線
         float3 N = normalize(input.normal);
 
-// ライト方向（ライト→物体）
-        float3 L = normalize(-gDirectionalLight.direction);
-        // または点光源の場合
-        
-        float3 PL = normalize(input.worldPosition - gPointLight.position);
-        float3 pointColor = gPointLight.color.rgb * gPointLight.intensity*factor;
 // 視線方向（物体→カメラ）
         float3 V = normalize(gCamera.worldPosition - input.worldPosition);
 
-// Half Vector
-        float3 H = normalize(L + V);
+//
+// ---- Directional Light ----
+//
+        float3 Ld = normalize(-gDirectionalLight.direction);
 
-// 拡散反射
-        float NdotL = saturate(dot(N, L));
+// Diffuse
+        float NdotLd = saturate(dot(N, Ld));
+        float3 dirDiffuse = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity;
+
+// Specular (Blinn-Phong)
+        float3 Hd = normalize(Ld + V);
+        float NdotHd = saturate(dot(N, Hd));
+        float3 dirSpec = gDirectionalLight.color.rgb * gDirectionalLight.intensity * pow(NdotHd, gMaterial.shininess);
+
+
+//
+// ---- Point Light ----
+//
+        float3 Lp = normalize(input.worldPosition - gPointLight.position);
+
+// 距離減衰
+        float dist = length(gPointLight.position - input.worldPosition);
+        float decayF = pow(saturate(-dist / gPointLight.radius + 1.0), gPointLight.decay);
+        float3 pointColor = gPointLight.color.rgb * gPointLight.intensity * decayF;
+
+// Diffuse
+        float NdotLp = saturate(dot(N, Lp));
+        float3 pointDiffuse = gMaterial.color.rgb * textureColor.rgb * pointColor * NdotLp;
+
+// Specular
+        float3 Hp = normalize(Lp + V);
+        float NdotHp = saturate(dot(N, Hp));
+        float3 pointSpec = pointColor * pow(NdotHp, gMaterial.shininess);
+
+//
+// ---- Spot Light ----
+//
         
-        float NdotPL = saturate(dot(N, PL));
-        float3 pointDiffuse = gMaterial.color.rgb * textureColor.rgb * pointColor * NdotPL * factor;
-        float3 diffuse = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * NdotL * gDirectionalLight.intensity;
+        float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position);
+        float3 spotLightColor = gSpotLight.color.rgb * gSpotLight.intensity;
 
-// 鏡面反射（Blinn-Phong）
-        float NdotH = saturate(dot(N, H));
-        float specularPow = pow(NdotH, gMaterial.shininess);
-        float3 specular = gDirectionalLight.color.rgb * gDirectionalLight.intensity * specularPow;
-        float3 PH = normalize(PL + V);
+        float32_t cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
+        
+        float32_t falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0 - gSpotLight.cosAngle));
+    
 
-        float NdotPH = saturate(dot(N, PH));
-        float pointSpecPow = pow(NdotPH, gMaterial.shininess);
+        float distS = length(gSpotLight.position - input.worldPosition);
+        float attenuationFactor =pow(saturate(-distS / gSpotLight.distance + 1.0),gSpotLight.decay);
+        
+        spotLightColor *= attenuationFactor * falloffFactor;
 
-        float3 pointSpecular = pointColor * pointSpecPow * factor;
-// 合成
-        output.color.rgb = diffuse + specular + pointDiffuse + pointSpecular;
+        float NdotS = saturate(dot(N, spotLightDirectionOnSurface));
+        float3 spotDiffuse =gMaterial.color.rgb * textureColor.rgb *spotLightColor *NdotS;
+
+        float3 Hs = normalize(spotLightDirectionOnSurface + V);
+        float NdotHs = saturate(dot(N, Hs));
+        float3 spotSpec =spotLightColor *pow(NdotHs, gMaterial.shininess);
+
+// ---- 合成 ----
+//
+        output.color.rgb =dirDiffuse + dirSpec +pointDiffuse + pointSpec +spotDiffuse + spotSpec;
         output.color.a = gMaterial.color.a * textureColor.a;
 
     }

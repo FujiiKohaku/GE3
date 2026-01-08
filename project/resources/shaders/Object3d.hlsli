@@ -42,3 +42,16 @@ struct PointLight
     float radius; // ライトの届く最大距離
     float decay; // 減衰率
 };
+//スポットライト
+struct SpotLight
+{
+    float4 color;
+    float3 position;
+    float intensity;
+    float3 direction;
+    float distance;
+    float decay;
+    float cosAngle;
+    float cosFalloffStart;
+    float padding;
+};

@@ -24,7 +24,7 @@ void GamePlayScene::Initialize()
     player2_->Initialize(Object3dManager::GetInstance());
     player2_->SetModel("terrain.obj");
     player2_->SetTranslate({ 3.0f, 0.0f, 0.0f });
-    //player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
+    // player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
     Transform t {};
@@ -56,6 +56,7 @@ void GamePlayScene::Update()
     camera_->Update();
     camera_->DebugUpdate();
 
+#pragma region ImGuiによるライト操作パネル
     // ==================================
     // Lighting Panel（ライト操作パネル）
     // ==================================
@@ -128,7 +129,63 @@ void GamePlayScene::Update()
 
     LightManager::GetInstance()->SetPointRadius(pointRadius);
     LightManager::GetInstance()->SetPointDecay(pointDecay);
-    LightManager::GetInstance()->SetPointLight(pointColor,pointPos,pI);
+    LightManager::GetInstance()->SetPointLight(pointColor, pointPos, pI);
+    ImGui::Separator();
+    ImGui::Text("Spot Light Control");
+    // ================================
+    // Spot Light Control
+    // ================================
+
+    static bool spotEnabled = true;
+    ImGui::Checkbox("Enable Spot Light", &spotEnabled);
+
+    // 色
+    static Vector4 spotColor = { 1, 1, 1, 1 };
+    ImGui::ColorEdit3("Spot Color", (float*)&spotColor);
+
+    // 位置
+    static Vector3 spotPos = { 2.0f, 1.25f, 0.0f };
+    ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
+
+    // 方向
+    static Vector3 spotDir = { -1.0f, -1.0f, 0.0f };
+    ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
+    Vector3 normalizedSpotDir = Normalize(spotDir);
+
+    // 強さ
+    static float spotIntensity = 4.0f;
+    ImGui::SliderFloat("Spot Intensity", &spotIntensity, 0.0f, 10.0f);
+
+    // 距離・減衰
+    static float spotDistance = 7.0f;
+    static float spotDecay = 2.0f;
+    ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
+    ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
+
+    // 角度（度数で操作 → cos に変換）
+    static float spotAngleDeg = 60.0f;
+    static float spotFalloffStartDeg = 30.0f;
+
+    ImGui::SliderFloat("Spot Angle (deg)", &spotAngleDeg, 1.0f, 90.0f);
+    ImGui::SliderFloat("Falloff Start (deg)", &spotFalloffStartDeg, 1.0f, spotAngleDeg - 1.0f);
+
+    // cos に変換
+    float cosAngle = std::cos(spotAngleDeg * std::numbers::pi_v<float> / 180.0f);
+    float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
+
+    // OFF のとき
+    float sI = spotEnabled ? spotIntensity : 0.0f;
+
+    // LightManager に反映
+    auto* lm = LightManager::GetInstance();
+    lm->SetSpotLightColor(spotColor);
+    lm->SetSpotLightPosition(spotPos);
+    lm->SetSpotLightDirection(normalizedSpotDir);
+    lm->SetSpotLightIntensity(sI);
+    lm->SetSpotLightDistance(spotDistance);
+    lm->SetSpotLightDecay(spotDecay);
+    lm->SetSpotLightCosAngle(cosAngle);
+    lm->SetSpotLightCosFalloffStart(cosFalloffStart);
 
     ImGui::End();
 
@@ -147,7 +204,7 @@ void GamePlayScene::Update()
     // ---- 回転 ----
     ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
 
-     ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
+    ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
     // ---- テカり具合（鏡面反射の鋭さ） ----
     static float shininess = 32.0f;
     ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
@@ -160,6 +217,8 @@ void GamePlayScene::Update()
     sphere_->SetRotate(sphereRotate);
     sphere_->SetScale(sphereScale);
     sphere_->SetShininess(shininess);
+
+#pragma endregion
 }
 
 void GamePlayScene::Draw3D()
