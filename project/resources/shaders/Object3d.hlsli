@@ -34,3 +34,11 @@ struct Camera
 {
     float32_t3 worldPosition;
 };
+struct PointLight
+{
+    float32_t4 color;
+    float32_t3 position;
+    float intensity;
+    float radius; // ƒ‰ƒCƒg‚Ì“Í‚­Å‘å‹——£
+    float decay; // Œ¸Š—¦
+};

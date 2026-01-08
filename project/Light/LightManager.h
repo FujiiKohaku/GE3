@@ -1,6 +1,8 @@
 #pragma once
 #include "../DirectXCommon/DirectXCommon.h"
 #include "../math/Object3DStruct.h"
+
+#include "../math/Light.h"
 class LightManager {
 
 public:
@@ -13,6 +15,13 @@ public:
     void SetDirectional(const Vector4& color, const Vector3& dir, float intensity);
     void SetDirection(const Vector3& dir);
     void SetIntensity(float intensity);
+    void SetPointLight(const Vector4& color,const Vector3& pos,float intensity);
+
+    void SetPointPosition(const Vector3& pos);
+    void SetPointIntensity(float intensity);
+    void SetPointColor(const Vector4& color);
+    void SetPointRadius(float radius);
+    void SetPointDecay(float decay);
 
     // ================================
     // インスタンス取得
@@ -30,4 +39,7 @@ private:
     // GPU 定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> lightResource_;
     DirectionalLight* lightData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> pointLightResource_;
+    PointLight* pointLightData_ = nullptr;
 };

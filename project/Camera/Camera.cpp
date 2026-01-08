@@ -38,7 +38,7 @@ void Camera::DebugUpdate()
     ImGui::Begin("Settings");
 
     // 位置（移動）
-    ImGui::DragFloat3("CameraTranslate", &transform_.translate.x, 0.01f, -10.0f, 10.0f);
+    ImGui::DragFloat3("CameraTranslate", &transform_.translate.x, 0.01f, -50.0f, 50.0f);
 
     // 回転（角度）
     ImGui::SliderAngle("CameraRotateX", &transform_.rotate.x);
