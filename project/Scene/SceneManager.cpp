@@ -37,15 +37,31 @@ void SceneManager::Update()
     }
 }
 
-void SceneManager::Draw()
+void SceneManager::Draw2D()
 {
-    if (!scene_)
-        return; // 安全処理
-
-    scene_->Draw3D();
-    scene_->Draw2D();
-    scene_->DrawImGui();
+    // 実行中シーンの2D描画
+    if (scene_) {
+        scene_->Draw2D();
+    }
 }
+void SceneManager::Draw3D()
+{
+    // 実行中シーンの3D描画
+    if (scene_) {
+        scene_->Draw3D();
+    }
+}
+
+void SceneManager::DrawImGui()
+{
+    // 実行中シーンのImGui描画
+    if (scene_) {
+        scene_->DrawImGui();
+    }
+}
+
+
+
 void SceneManager::Finalize()
 {
     // シーン破棄
