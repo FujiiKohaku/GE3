@@ -37,6 +37,8 @@ void Game::Initialize()
     BaseScene* scene = new TitleScene();
     // シーンマネージャーに最初のシーンをセット
     SceneManager::GetInstance()->SetNextScene(scene);
+    // サウンド関連
+    SoundManager::GetInstance()->Initialize();
 }
 
 void Game::Update()
@@ -90,7 +92,7 @@ void Game::Finalize()
     SrvManager::GetInstance()->Finalize();
     // DirectXCommonはFinalizeしてもデバイス破棄処理だけ。deleteは不要
     DirectXCommon::GetInstance()->Finalize();
-
+    SoundManager::GetInstance()->Finalize();
     winApp_->Finalize();
     delete winApp_;
     delete camera_;
