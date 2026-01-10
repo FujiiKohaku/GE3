@@ -55,6 +55,7 @@
 #include "TitleScene.h"
 
 #include "BaseScene.h"
+#include "SoundManager.h"
 
 #include "SceneManager.h"
 // ======================= パーティクル関連 =========================
