@@ -3,6 +3,8 @@
 #include "ParticleManager.h"
 #include "SphereObject.h"
 #include <numbers>
+
+#include "SoundManager.h"
 void GamePlayScene::Initialize()
 {
     camera_ = new Camera();
@@ -18,8 +20,8 @@ void GamePlayScene::Initialize()
     sprite_ = new Sprite();
     sprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
     sprite_->SetPosition({ 100.0f, 100.0f });
-    // サウンド関連
-    bgm = SoundManager::GetInstance()->SoundLoadWave("Resources/BGM.wav");
+   
+ 
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
     player2_->SetModel("terrain.obj");
@@ -43,6 +45,10 @@ void GamePlayScene::Initialize()
     sphere_->SetColor({ 1, 1, 1, 1 });
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
+
+   bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
+
+    SoundManager::GetInstance()->SoundPlayWave(bgm);
 }
 
 void GamePlayScene::Update()
