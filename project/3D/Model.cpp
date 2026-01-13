@@ -16,7 +16,7 @@ void Model::Initialize(ModelCommon* modelCommon, const std::string& directorypat
     // ===============================
     // モデルデータ読み込み
     // ===============================
-    modelData_ = Object3d::LoadObjFile(directorypath, filename);
+    modelData_ = Object3d::LoadModeFile(directorypath, filename);
 
     // ===============================
     // 頂点バッファの生成
