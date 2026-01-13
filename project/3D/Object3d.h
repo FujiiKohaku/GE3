@@ -3,13 +3,13 @@
 #include "DebugCamera.h"
 #include "MatrixMath.h"
 #include "TextureManager.h"
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
 #include <d3d12.h>
 #include <string>
 #include <vector>
 #include <wrl.h>
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
 #include "Object3DStruct.h"
 class Object3dManager;
@@ -23,7 +23,7 @@ public:
     void Update();
     void Draw();
 
-    static ModelData LoadObjFile(const std::string& directoryPath, const std::string filename);
+    static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
     static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
     // setter
@@ -38,26 +38,29 @@ public:
     const Vector3& GetScale() const { return transform.scale; }
     const Vector3& GetRotate() const { return transform.rotate; }
     const Vector3& GetTranslate() const { return transform.translate; }
-   // DirectionalLight* GetLight() { return directionalLightData; }
+    // DirectionalLight* GetLight() { return directionalLightData; }
     Material* GetMaterial() { return materialData_; }
+   
 
 private:
+   
     // ===============================
     // メンバ変数
     // ===============================
-    Object3dManager* object3dManager_ = nullptr;
-
+    Object3dManager* object3dManager_
+        = nullptr;
+    static Node ReadNode(aiNode* node);
     Model* model_ = nullptr;
     // バッファ系
     /*  Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;*/
-     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource;
 
     /*   D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};*/
     /*   Material* materialData = nullptr;*/
     TransformationMatrix* transformationMatrixData = nullptr;
-  //  DirectionalLight* directionalLightData = nullptr;
+    //  DirectionalLight* directionalLightData = nullptr;
     Material* materialData_ = nullptr;
     // Transform
     Transform transform;

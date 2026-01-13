@@ -29,9 +29,15 @@ struct TransformationMatrix {
     Matrix4x4 WorldInverseTranspose; 
 };
 
+struct Node {
+    Matrix4x4 localMatrix;
+    std::string name;
+    std::vector<Node> children;
+};
 
 // モデル全体データ（頂点配列＋マテリアル）
 struct ModelData {
     std::vector<VertexData> vertices;
     MaterialData material;
+    Node rootNode;
 };

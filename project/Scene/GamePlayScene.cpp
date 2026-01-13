@@ -24,7 +24,7 @@ void GamePlayScene::Initialize()
  
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
-    player2_->SetModel("terrain.obj");
+    player2_->SetModel("arumatitle.gltf");
     player2_->SetTranslate({ 3.0f, 0.0f, 0.0f });
     // player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
