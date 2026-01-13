@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include "Object3DStruct.h"
 class Object3dManager;
