@@ -3,7 +3,7 @@
 #include <vector>
 
 struct NodeAnimation {
-    std::vector<KeyframeVector3> position;
+    std::vector<KeyframeVector3> translate;
     std::vector<KeyframeQuaternion> rotation;
     std::vector<KeyframeVector3> scale;
 };

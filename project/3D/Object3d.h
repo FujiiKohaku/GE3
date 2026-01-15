@@ -12,6 +12,7 @@
 #include <wrl.h>
 
 #include "Object3DStruct.h"
+#include"../Animation/PlayAnimation.h"
 class Object3dManager;
 class Model;
 class Object3d {
@@ -60,6 +61,7 @@ public:
             }
         }
     }
+    void SetAnimation(PlayAnimation* anim);
 
 private:
    
@@ -89,4 +91,5 @@ private:
     Camera* camera_ = nullptr;
     // モデル
     // ModelData modelData;
+    PlayAnimation* animation_ = nullptr;
 };

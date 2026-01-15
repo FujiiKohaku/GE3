@@ -1,5 +1,6 @@
 #include "MatrixMath.h"
 #include <cmath>
+
 #pragma region 行列関数
 // 単位行列の作成
 Matrix4x4 MatrixMath::MakeIdentity4x4()
@@ -101,6 +102,50 @@ Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Vector3& rota
     Matrix4x4 worldMatrix = Multiply(Multiply(scaleMatrix, rotateMatrix), translateMatrix);
     return worldMatrix;
 }
+
+Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale,const Quaternion& rotate,const Vector3& translate)
+{
+    // 念のため正規化
+    Quaternion q = ::Normalize(rotate);
+
+    float xx = q.x * q.x;
+    float yy = q.y * q.y;
+    float zz = q.z * q.z;
+    float xy = q.x * q.y;
+    float xz = q.x * q.z;
+    float yz = q.y * q.z;
+    float wx = q.w * q.x;
+    float wy = q.w * q.y;
+    float wz = q.w * q.z;
+
+    Matrix4x4 mat {};
+
+    // 回転 + スケール
+    mat.m[0][0] = (1.0f - 2.0f * (yy + zz)) * scale.x;
+    mat.m[0][1] = (2.0f * (xy + wz)) * scale.x;
+    mat.m[0][2] = (2.0f * (xz - wy)) * scale.x;
+    mat.m[0][3] = 0.0f;
+
+    mat.m[1][0] = (2.0f * (xy - wz)) * scale.y;
+    mat.m[1][1] = (1.0f - 2.0f * (xx + zz)) * scale.y;
+    mat.m[1][2] = (2.0f * (yz + wx)) * scale.y;
+    mat.m[1][3] = 0.0f;
+
+    mat.m[2][0] = (2.0f * (xz + wy)) * scale.z;
+    mat.m[2][1] = (2.0f * (yz - wx)) * scale.z;
+    mat.m[2][2] = (1.0f - 2.0f * (xx + yy)) * scale.z;
+    mat.m[2][3] = 0.0f;
+
+    // 平行移動
+    mat.m[3][0] = translate.x;
+    mat.m[3][1] = translate.y;
+    mat.m[3][2] = translate.z;
+    mat.m[3][3] = 1.0f;
+
+    return mat;
+}
+
+
 // 4x4 行列の逆行列を計算する関数
 Matrix4x4 MatrixMath::Inverse(Matrix4x4 m)
 {
@@ -201,14 +246,7 @@ Matrix4x4 MatrixMath::MakeViewportMatrix(float left, float top, float width, flo
 
     return m;
 }
-// 正規化関数
-Vector3 MatrixMath::Normalize(const Vector3& v)
-{
-    float length = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    if (length == 0.0f)
-        return { 0.0f, 0.0f, 0.0f };
-    return { v.x / length, v.y / length, v.z / length };
-}
+
 Matrix4x4 MatrixMath::Transpose(const Matrix4x4& m)
 {
     Matrix4x4 result {};
