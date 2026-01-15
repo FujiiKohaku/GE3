@@ -40,7 +40,26 @@ public:
     const Vector3& GetTranslate() const { return transform.translate; }
     // DirectionalLight* GetLight() { return directionalLightData; }
     Material* GetMaterial() { return materialData_; }
-   
+    // ----------------
+    // Material 操作
+    // ----------------
+    void SetColor(const Vector4& color)
+    {
+        if (materialData_) {
+            materialData_->color = color;
+        }
+    }
+
+    void SetEnableLighting(bool enable)
+    {
+        if (materialData_) {
+            if (enable) {
+                materialData_->enableLighting = 1;
+            } else {
+                materialData_->enableLighting = 0;
+            }
+        }
+    }
 
 private:
    
@@ -65,7 +84,7 @@ private:
     // Transform
     Transform transform;
     Transform cameraTransform;
-
+   
     // カメラ
     Camera* camera_ = nullptr;
     // モデル

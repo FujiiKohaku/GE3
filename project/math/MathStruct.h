@@ -21,6 +21,9 @@ struct Transform {
     Vector3 rotate;
     Vector3 translate;
 };
+struct Quaternion {
+    float x, y, z, w;
+};
 // ===============================
 // Vector3 演算関数
 // ===============================

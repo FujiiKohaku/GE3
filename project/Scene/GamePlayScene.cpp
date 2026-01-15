@@ -20,12 +20,12 @@ void GamePlayScene::Initialize()
     sprite_ = new Sprite();
     sprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
     sprite_->SetPosition({ 100.0f, 100.0f });
-   
- 
+
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
     player2_->SetModel("arumatitle.gltf");
     player2_->SetTranslate({ 3.0f, 0.0f, 0.0f });
+   
     // player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
@@ -46,7 +46,7 @@ void GamePlayScene::Initialize()
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
 
-   bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
+    bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
 
     SoundManager::GetInstance()->SoundPlayWave(bgm);
 }
