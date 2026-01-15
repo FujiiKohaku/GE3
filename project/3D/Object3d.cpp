@@ -120,11 +120,10 @@ void Object3d::Draw()
 // ===============================================
 // OBJファイルの読み込み
 // ===============================================
-ModelData Object3d::LoadModeFile(const std::string& directoryPath, const std::string filename)
+ModelData Object3d::LoadModeFile(const std::string& directoryPath,
+    const std::string filename)
 {
-    // 1.中で必要となる変数の宣言
-    ModelData modelData; // 構築するModelData
-    // ファイルから読んだ一行を格納するもの
+    ModelData modelData;
 
     Assimp::Importer importer;
     std::string filePath = directoryPath + "/" + filename;
@@ -133,57 +132,76 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath, const std::st
         filePath.c_str(),
         aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 
+    assert(scene);
     assert(scene->HasMeshes());
-    // 3.実際にファイルを読み、ModelDataを構築していく
+
+    // -------------------------
+    // Mesh -> MeshPrimitive
+    // -------------------------
     for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
         aiMesh* mesh = scene->mMeshes[meshIndex];
 
-        assert(mesh->HasNormals());
-        assert(mesh->HasTextureCoords(0));
+        MeshPrimitive primitive;
+        primitive.mode = PrimitiveMode::Triangles; // 今は固定でOK
 
-        for (uint32_t faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex) {
-            aiFace& face = mesh->mFaces[faceIndex];
-            assert(face.mNumIndices == 3); // 三角形のみサポート
-            for (uint32_t element = 0; element < face.mNumIndices; ++element) {
+        // ---- vertices ----
+        for (uint32_t v = 0; v < mesh->mNumVertices; ++v) {
+            VertexData vertex {};
 
-                uint32_t vertexIndex = face.mIndices[element];
+            aiVector3D pos = mesh->mVertices[v];
+            aiVector3D nrm = mesh->HasNormals()
+                ? mesh->mNormals[v]
+                : aiVector3D(0, 1, 0);
 
-                aiVector3D position = mesh->mVertices[vertexIndex];
-                aiVector3D normal = mesh->mNormals[vertexIndex];
-                aiVector3D texcoord = mesh->mTextureCoords[0][vertexIndex];
+            aiVector3D uv = mesh->HasTextureCoords(0)
+                ? mesh->mTextureCoords[0][v]
+                : aiVector3D(0, 0, 0);
 
-                VertexData vertex {};
+            // 右手 → 左手（X反転）
+            vertex.position = { -pos.x, pos.y, pos.z, 1.0f };
+            vertex.normal = { -nrm.x, nrm.y, nrm.z };
+            vertex.texcoord = { uv.x, uv.y };
 
-                vertex.position = { position.x, position.y, position.z, 1.0f };
-                vertex.normal = { normal.x, normal.y, normal.z };
-                vertex.texcoord = { texcoord.x, texcoord.y };
+            primitive.vertices.push_back(vertex);
+        }
 
-                // aiProcess_MakeLeftHanded は z を -1 で反転するが、
-                // 右手→左手変換をするので手動で対応
-                vertex.position.x *= -1.0f;
-                vertex.normal.x *= -1.0f;
-
-                modelData.vertices.push_back(vertex);
+        // ---- indices ----
+        if (mesh->HasFaces()) {
+            for (uint32_t f = 0; f < mesh->mNumFaces; ++f) {
+                aiFace& face = mesh->mFaces[f];
+                // Triangulate してるので 3 のはず
+                for (uint32_t i = 0; i < face.mNumIndices; ++i) {
+                    primitive.indices.push_back(face.mIndices[i]);
+                }
             }
         }
-    }
-    for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex) {
+        // indices が空なら drawArrays 扱いでOK
 
+        modelData.primitives.push_back(primitive);
+    }
+
+    // -------------------------
+    // Material（最小）
+    // -------------------------
+    for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex) {
         aiMaterial* material = scene->mMaterials[materialIndex];
 
-        if (material->GetTextureCount(aiTextureType_DIFFUSE) != 0) {
-
+        if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiString textureFilePath;
             material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
-
             modelData.material.textureFilePath = directoryPath + "/" + textureFilePath.C_Str();
+            break; // 1枚で十分
         }
     }
+
+    // -------------------------
+    // Node（既存の処理）
+    // -------------------------
     modelData.rootNode = ReadNode(scene->mRootNode);
 
-    // 4.ModelDataを返す
     return modelData;
 }
+
 #pragma endregion
 
 

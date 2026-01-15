@@ -2,6 +2,8 @@
 #include "MathStruct.h"
 #include <string>
 #include <vector>
+#include <wrl.h>
+#include "DirectXCommon.h"
 // 頂点データ
 struct VertexData {
     Vector4 position; // 位置
@@ -34,10 +36,28 @@ struct Node {
     std::string name;
     std::vector<Node> children;
 };
+enum class PrimitiveMode {
+    Points,
+    Lines,
+    Triangles,
+};
+
+struct MeshPrimitive {
+    std::vector<VertexData> vertices;
+    std::vector<uint32_t> indices;
+    PrimitiveMode mode;
+
+   Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
+    D3D12_VERTEX_BUFFER_VIEW vbView;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
+    D3D12_INDEX_BUFFER_VIEW ibView;
+};
 
 // モデル全体データ（頂点配列＋マテリアル）
 struct ModelData {
-    std::vector<VertexData> vertices;
+    std::vector<MeshPrimitive> primitives;
     MaterialData material;
     Node rootNode;
 };
+
