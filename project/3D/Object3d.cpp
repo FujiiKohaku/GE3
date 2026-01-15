@@ -62,9 +62,14 @@ void Object3d::Update()
     // ================================
 
     //  モデル自身のワールド行列（スケール・回転・移動）
-    Matrix4x4 worldMatrix = MatrixMath::Multiply(
-        model_->GetModelData().rootNode.localMatrix,
-        MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
+    Matrix4x4 localMatrix = model_->GetModelData().rootNode.localMatrix;
+
+    if (animation_) {
+        localMatrix = animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
+    }
+
+    Matrix4x4 worldMatrix = MatrixMath::Multiply(localMatrix,MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
+
 
 
     Matrix4x4 worldViewProjectionMatrix;
@@ -224,4 +229,8 @@ Node Object3d::ReadNode(aiNode* node)
     }
 
     return result;
+}
+void Object3d::SetAnimation(PlayAnimation* anim)
+{
+    animation_ = anim;
 }

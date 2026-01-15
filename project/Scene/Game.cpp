@@ -30,7 +30,7 @@ void Game::Initialize()
     ModelManager::GetInstance()->LoadModel("axis.obj");
     ModelManager::GetInstance()->LoadModel("titleTex.obj");
     ModelManager::GetInstance()->LoadModel("fence.obj");
-    ModelManager::GetInstance()->LoadModel("arumatitle.gltf");
+    ModelManager::GetInstance()->LoadModel("AnimatedCube.gltf");
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     TextureManager::GetInstance()->LoadTexture("resources/fence.png");
 
