@@ -181,37 +181,8 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath, const std::st
 }
 #pragma endregion
 
-#pragma region MTL読み込み処理
-//// ===============================================
-//// マテリアル（.mtl）ファイルの読み込み
-//// ===============================================
-// MaterialData Object3d::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename)
-//{
-//
-//     // 1.中で必要となる変数の宣言
-//     MaterialData materialData; // 構築するMaterialData
-//     // 2.ファイルを開く
-//     std::string line; // ファイルから読んだ１行を格納するもの
-//     std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
-//     assert(file.is_open()); // とりあえず開けなかったら止める
-//     // 3.実際にファイルを読み、MaterialDataを構築していく
-//     while (std::getline(file, line)) {
-//         std::string identifier;
-//         std::istringstream s(line);
-//         s >> identifier;
-//         // identifierに応じた処理
-//         if (identifier == "map_Kd") {
-//             std::string textureFilename;
-//             s >> textureFilename;
-//             // 連結してファイルパスにする
-//             materialData.textureFilePath = directoryPath + "/" + textureFilename;
-//         }
-//     }
-//     // 4.materialDataを返す
-//     return materialData;
-// }
 
-#pragma endregion
+
 
 void Object3d::SetModel(const std::string& filePath)
 {
