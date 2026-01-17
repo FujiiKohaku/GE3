@@ -10,7 +10,7 @@ ParticleEmitter::ParticleEmitter()
 
 void ParticleEmitter::Init(
     const std::string& groupName,
-    const Transform& transform,
+    const EulerTransform& transform,
     uint32_t count,
     float frequency)
 {

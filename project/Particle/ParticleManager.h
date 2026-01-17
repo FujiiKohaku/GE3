@@ -47,7 +47,7 @@ public:
     };
 
     struct Particle {
-        Transform transform;
+        EulerTransform transform;
         Vector3 velocity;
         Vector4 color;
         float lifeTime;
@@ -69,7 +69,7 @@ public:
     };
 
     struct Emitter {
-        Transform transform;
+        EulerTransform transform;
         uint32_t count;
         float frequency;
         float frequencyTime;
@@ -177,7 +177,7 @@ private:
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
     D3D12_INDEX_BUFFER_VIEW indexBufferView {};
 
-    Transform transformBoard_ = {
+    EulerTransform transformBoard_ = {
         { 1.0f, 1.0f, 1.0f },
         { 0.0f, 0.0f, 0.0f },
         { 0.0f, 0.0f, 0.0f }

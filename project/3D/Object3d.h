@@ -84,8 +84,8 @@ private:
     //  DirectionalLight* directionalLightData = nullptr;
     Material* materialData_ = nullptr;
     // Transform
-    Transform transform;
-    Transform cameraTransform;
+    EulerTransform transform;
+    EulerTransform cameraTransform;
    
     // カメラ
     Camera* camera_ = nullptr;

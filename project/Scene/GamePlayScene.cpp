@@ -39,7 +39,7 @@ void GamePlayScene::Initialize()
     // player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
-    Transform t {};
+    EulerTransform t {};
     t.translate = { 0.0f, 0.0f, 0.0f };
 
     emitter_.Init("circle", t, 30, 0.1f);

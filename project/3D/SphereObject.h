@@ -99,7 +99,7 @@ private:
 
     // Transform
 
-    Transform transform_ {
+    EulerTransform transform_ {
         { 1.0f, 1.0f, 1.0f },
         { 0.0f, 0.0f, 0.0f },
         { 0.0f, 0.0f, 0.0f }
