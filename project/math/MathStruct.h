@@ -18,13 +18,18 @@ struct Matrix4x4 {
     float m[4][4];
 };
 // トランスフォーム情報（位置・回転・拡縮）
-struct Transform {
+struct EulerTransform {
     Vector3 scale;
     Vector3 rotate;
     Vector3 translate;
 };
 struct Quaternion {
     float x, y, z, w;
+};
+struct QuaternionTransform {
+    Vector3 scale;
+    Quaternion rotate;
+    Vector3 translate;
 };
 // ===============================
 // Vector3 演算関数
