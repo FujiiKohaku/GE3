@@ -3,13 +3,13 @@
 #include "ParticleManager.h"
 #include "SphereObject.h"
 #include <numbers>
-
+#include"../Animation/AnimationLoder.h"
 #include "SoundManager.h"
 void GamePlayScene::Initialize()
 {
     camera_ = new Camera();
     camera_->Initialize();
-    camera_->SetTranslate({ 0, 0, 0 });
+    camera_->SetTranslate(Vector3 { 0.0f, 0.0f, -20.0f });
 
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 
@@ -20,12 +20,22 @@ void GamePlayScene::Initialize()
     sprite_ = new Sprite();
     sprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
     sprite_->SetPosition({ 100.0f, 100.0f });
-   
- 
+
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
-    player2_->SetModel("terrain.obj");
+    player2_->SetModel("AnimatedCube.gltf");
     player2_->SetTranslate({ 3.0f, 0.0f, 0.0f });
+   
+    playAnim_ = new PlayAnimation();
+    
+    // メンバ変数に直接ロード
+    animation_ = AnimationLoder::LoadAnimationFile("resources", "AnimatedCube.gltf");
+
+    // 再生器に渡す（寿命OK）
+    playAnim_->SetAnimation(&animation_);
+
+    // Object3d に紐づけ
+    player2_->SetAnimation(playAnim_);
     // player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
 
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
@@ -46,13 +56,14 @@ void GamePlayScene::Initialize()
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
 
-   bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
+    bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
 
     SoundManager::GetInstance()->SoundPlayWave(bgm);
 }
 
 void GamePlayScene::Update()
 {
+    playAnim_->Update(1.0f / 60.0f);
     // ImGuiのBegin/Endは絶対に呼ばない！
     emitter_.Update();
     ParticleManager::GetInstance()->Update();
@@ -61,6 +72,7 @@ void GamePlayScene::Update()
     sphere_->Update(camera_);
     camera_->Update();
     camera_->DebugUpdate();
+  
 
 #pragma region ImGuiによるライト操作パネル
     // ==================================

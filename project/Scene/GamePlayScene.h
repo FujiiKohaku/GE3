@@ -10,6 +10,7 @@
 #include "Sprite.h"
 #include "SpriteManager.h"
 #include "TextureManager.h"
+#include "../Animation/PlayAnimation.h"
 class SphereObject;
 class GamePlayScene : public BaseScene {
 public:
@@ -47,4 +48,11 @@ private:
     Vector3 sphereScale = { 1.0f, 1.0f, 1.0f };
     float lightIntensity = 1.0f;
     Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
+
+    // ------------------------------
+    /// その他
+    // ------------------------------
+    PlayAnimation* playAnim_;
+    Animation animation_; 
+
 };
