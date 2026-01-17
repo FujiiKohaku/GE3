@@ -216,28 +216,35 @@ Node Object3d::ReadNode(aiNode* node)
 {
     Node result;
 
-    aiMatrix4x4 aiLocal = node->mTransformation;
-    aiLocal.Transpose();
+    aiVector3D scale, translate;
+    aiQuaternion rotate;
 
-    result.localMatrix.m[0][0] = aiLocal[0][0];
-    result.localMatrix.m[0][1] = aiLocal[0][1];
-    result.localMatrix.m[0][2] = aiLocal[0][2];
-    result.localMatrix.m[0][3] = aiLocal[0][3];
+    node->mTransformation.Decompose(scale, rotate, translate);
 
-    result.localMatrix.m[1][0] = aiLocal[1][0];
-    result.localMatrix.m[1][1] = aiLocal[1][1];
-    result.localMatrix.m[1][2] = aiLocal[1][2];
-    result.localMatrix.m[1][3] = aiLocal[1][3];
+    // scale（
+    result.transform.scale = { scale.x, scale.y, scale.z };
 
-    result.localMatrix.m[2][0] = aiLocal[2][0];
-    result.localMatrix.m[2][1] = aiLocal[2][1];
-    result.localMatrix.m[2][2] = aiLocal[2][2];
-    result.localMatrix.m[2][3] = aiLocal[2][3];
+    // 回転：右手 → 左手
+    result.transform.rotate = {
+        rotate.x,
+        -rotate.y,
+        -rotate.z,
+        rotate.w
+    };
 
-    result.localMatrix.m[3][0] = aiLocal[3][0];
-    result.localMatrix.m[3][1] = aiLocal[3][1];
-    result.localMatrix.m[3][2] = aiLocal[3][2];
-    result.localMatrix.m[3][3] = aiLocal[3][3];
+    // 平行移動：X反転
+    result.transform.translate = {
+        -translate.x,
+        translate.y,
+        translate.z
+    };
+
+    // SRTから localMatrix を再構築
+    result.localMatrix = MatrixMath::MakeAffineMatrix(
+        result.transform.scale,
+        result.transform.rotate,
+        result.transform.translate
+    );
 
     result.name = node->mName.C_Str();
 
@@ -248,6 +255,7 @@ Node Object3d::ReadNode(aiNode* node)
 
     return result;
 }
+
 void Object3d::SetAnimation(PlayAnimation* anim)
 {
     animation_ = anim;
