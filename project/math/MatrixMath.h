@@ -1,7 +1,6 @@
 // MatrixMath.h
 #pragma once
 #include "MathStruct.h"
-#include "MathStruct.h"
 class MatrixMath {
 
 public:

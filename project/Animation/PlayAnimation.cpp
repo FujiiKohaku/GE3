@@ -4,6 +4,28 @@
 #include <cassert>
 #include <cmath>
 
+void PlayAnimation::ApplyAnimation(
+    Skeleton& skeleton,
+    const Animation& animation,
+    float animationTime)
+{
+    for (Joint& joint : skeleton.joints) {
+
+        auto it = animation.nodeAnimations.find(joint.name);
+        if (it == animation.nodeAnimations.end()) {
+            continue;
+        }
+
+        const NodeAnimation& nodeAnim = it->second;
+
+        joint.transform.translate = CalculateValue(nodeAnim.translate, animationTime);
+
+        joint.transform.rotate = CalculateValue(nodeAnim.rotation, animationTime);
+
+        joint.transform.scale = CalculateValue(nodeAnim.scale, animationTime);
+    }
+}
+
 void PlayAnimation::SetAnimation(const Animation* animation)
 {
     animation_ = animation;
@@ -12,14 +34,16 @@ void PlayAnimation::SetAnimation(const Animation* animation)
 
 void PlayAnimation::Update(float deltaTime)
 {
-    if (!animation_)
+    if (!animation_ || !skeleton_)
         return;
 
     animationTime_ += deltaTime;
-
     if (animationTime_ > animation_->duration) {
         animationTime_ = fmod(animationTime_, animation_->duration);
     }
+
+    ApplyAnimation(*skeleton_, *animation_, animationTime_);
+    skeleton_->UpdateSkeleton();
 }
 Vector3 PlayAnimation::CalculateValue(const std::vector<KeyframeVector3>& keyframes,float time)
 {
