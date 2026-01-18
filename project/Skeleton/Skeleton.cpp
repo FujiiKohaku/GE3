@@ -6,7 +6,7 @@ Skeleton Skeleton::CreateSkeleton(const Node& rootNode)
     Skeleton skeleton;
     skeleton.root = CreateJoint(rootNode, {}, skeleton.joints);
 
-    // 名前とindexのマッピングを行いアクセスしやすくする
+    // 名前と,indexのマッピングを行いアクセスしやすくする
     for (const Joint& joint : skeleton.joints) {
         skeleton.jointMap[joint.name] = joint.index;
     }
