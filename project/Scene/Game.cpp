@@ -30,7 +30,7 @@ void Game::Initialize()
     ModelManager::GetInstance()->LoadModel("axis.obj");
     ModelManager::GetInstance()->LoadModel("titleTex.obj");
     ModelManager::GetInstance()->LoadModel("fence.obj");
-    ModelManager::GetInstance()->LoadModel("AnimatedCube.gltf");
+    ModelManager::GetInstance()->LoadModel("walk.gltf");
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     TextureManager::GetInstance()->LoadTexture("resources/fence.png");
 
@@ -39,6 +39,9 @@ void Game::Initialize()
     SceneManager::GetInstance()->SetNextScene(scene);
     // サウンド関連
     SoundManager::GetInstance()->Initialize();
+
+
+ 
 }
 
 void Game::Update()

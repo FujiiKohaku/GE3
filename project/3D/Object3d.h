@@ -25,7 +25,7 @@ public:
     void Draw();
 
     static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
-    static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
+    //static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
     // setter
     void SetModel(Model* model) { model_ = model; }
@@ -62,6 +62,11 @@ public:
         }
     }
     void SetAnimation(PlayAnimation* anim);
+    const Node& GetRootNode() const;
+    const Matrix4x4& GetWorldMatrix() const
+    {
+        return worldMatrix_;
+    }
 
 private:
    
@@ -92,4 +97,7 @@ private:
     // モデル
     // ModelData modelData;
     PlayAnimation* animation_ = nullptr;
+
+    // World
+    Matrix4x4 worldMatrix_;
 };

@@ -11,7 +11,9 @@
 #include "SpriteManager.h"
 #include "TextureManager.h"
 #include "../Animation/PlayAnimation.h"
-class SphereObject;
+#include"../Skeleton/Skeleton.h"
+#include"../3D/SphereObject.h"
+
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -54,5 +56,7 @@ private:
     // ------------------------------
     PlayAnimation* playAnim_;
     Animation animation_; 
-
+    Skeleton skeleton_;
+    SphereObject* jointSphere_ = nullptr;
+    std::vector<SphereObject> jointSpheres_;
 };

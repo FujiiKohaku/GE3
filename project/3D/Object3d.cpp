@@ -61,24 +61,15 @@ void Object3d::Update()
     // 各種行列を作成
     // ================================
 
-    //  モデル自身のワールド行列（スケール・回転・移動）
-    Matrix4x4 localMatrix = model_->GetModelData().rootNode.localMatrix;
-
-    if (animation_) {
-        localMatrix = animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
-    }
-
-    Matrix4x4 worldMatrix = MatrixMath::Multiply(localMatrix,MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
-
-
+     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 
     Matrix4x4 worldViewProjectionMatrix;
 
     if (camera_) {
         const Matrix4x4& viewProjectionMatrix = camera_->GetViewProjectionMatrix();
-        worldViewProjectionMatrix = MatrixMath::Multiply(worldMatrix, viewProjectionMatrix);
+        worldViewProjectionMatrix = MatrixMath::Multiply(worldMatrix_, viewProjectionMatrix);
     } else {
-        worldViewProjectionMatrix = worldMatrix;
+        worldViewProjectionMatrix = worldMatrix_;
     }
 
     // ================================
@@ -87,8 +78,7 @@ void Object3d::Update()
     transformationMatrixData->WVP = worldViewProjectionMatrix;
 
     // ワールド行列も送る（ライティングなどで使用）
-    transformationMatrixData->World = worldMatrix;
-
+    transformationMatrixData->World = worldMatrix_;
 
     Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
     transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);
@@ -204,9 +194,6 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
 #pragma endregion
 
-
-
-
 void Object3d::SetModel(const std::string& filePath)
 {
     // モデルを検索してセットする
@@ -243,8 +230,7 @@ Node Object3d::ReadNode(aiNode* node)
     result.localMatrix = MatrixMath::MakeAffineMatrix(
         result.transform.scale,
         result.transform.rotate,
-        result.transform.translate
-    );
+        result.transform.translate);
 
     result.name = node->mName.C_Str();
 
@@ -254,6 +240,11 @@ Node Object3d::ReadNode(aiNode* node)
     }
 
     return result;
+}
+const Node& Object3d::GetRootNode() const
+{
+    assert(model_);
+    return model_->GetModelData().rootNode;
 }
 
 void Object3d::SetAnimation(PlayAnimation* anim)
