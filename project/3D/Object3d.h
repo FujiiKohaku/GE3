@@ -73,8 +73,7 @@ private:
     // ===============================
     // メンバ変数
     // ===============================
-    Object3dManager* object3dManager_
-        = nullptr;
+    Object3dManager* object3dManager_= nullptr;
     static Node ReadNode(aiNode* node);
     Model* model_ = nullptr;
     // バッファ系
