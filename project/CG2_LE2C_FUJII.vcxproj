@@ -160,6 +160,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="3D\Model.cpp" />
     <ClCompile Include="Animation\AnimationLoder.cpp" />
     <ClCompile Include="Animation\Animation.cpp" />
     <ClCompile Include="Animation\KeyFrame.cpp" />
@@ -223,7 +224,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="2D\SpriteManager.cpp" />
     <ClCompile Include="3D\Object3dManager.cpp" />
     <ClCompile Include="3D\Object3d.cpp" />
-    <ClCompile Include="3D\Model.cpp" />
     <ClCompile Include="3D\ModelCommon.cpp" />
     <ClCompile Include="3D\ModelManager.cpp" />
     <ClCompile Include="3D\SphereObject.cpp" />
@@ -263,6 +263,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="3D\Model.h" />
     <ClInclude Include="Animation\AnimationLoder.h" />
     <ClInclude Include="Animation\Animation.h" />
     <ClInclude Include="Animation\KeyFrame.h" />
@@ -300,7 +301,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="2D\SpriteManager.h" />
     <ClInclude Include="3D\Object3dManager.h" />
     <ClInclude Include="3D\Object3d.h" />
-    <ClInclude Include="3D\Model.h" />
     <ClInclude Include="3D\ModelCommon.h" />
     <ClInclude Include="3D\ModelManager.h" />
     <ClInclude Include="3D\SphereObject.h" />
