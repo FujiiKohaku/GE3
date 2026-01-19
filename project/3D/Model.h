@@ -3,9 +3,9 @@
 #include "ModelCommon.h"
 #include "Object3d.h"
 
+#include <span>
 #include <vector>
 #include <wrl.h>
-
 // ===============================================
 // モデルクラス：3Dモデルの描画を担当
 // ===============================================
@@ -60,4 +60,14 @@ private:
     // マテリアル用定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
     Material* materialData_ = nullptr; // 書き込み用ポインタ
+
+    // インフルエンス
+    Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource;
+    D3D12_VERTEX_BUFFER_VIEW influenceBufferView;
+    std::span<VertexInfluence> mappedInfluence;
+
+    // マトリックスパレット
+    Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource;
+    std::span<WellForGPU> mappedPalette;
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> paletteSrvHandle;
 };

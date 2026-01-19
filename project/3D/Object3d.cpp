@@ -61,7 +61,7 @@ void Object3d::Update()
     // 各種行列を作成
     // ================================
 
-     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+    worldMatrix_ = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 
     Matrix4x4 worldViewProjectionMatrix;
 
@@ -167,6 +167,22 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         }
         // indices が空なら drawArrays 扱いでOK
 
+        for (uint32_t boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
+            aiBone* bone = mesh->mBones[boneIndex];
+            std::string jointName = bone->mName.C_Str();
+            JointWeightData& jointWeightData = modelData.skinClusterData[jointName];
+
+            aiMatrix4x4 bindPoseMatrixAssimp = bone->mOffsetMatrix.Inverse();
+            aiVector3D scale, translate;
+            aiQuaternion rotate;
+            bindPoseMatrixAssimp.Decompose(scale, rotate, translate);
+            Matrix4x4 bindPoseMatrix = MatrixMath::MakeAffineMatrix({ scale.x, scale.y, scale.z }, { rotate.x, rotate.y, -rotate.z, rotate.w }, { -translate.x, translate.y, translate.z });
+            jointWeightData.inverseBindPoseMatrix = MatrixMath::Inverse(bindPoseMatrix);
+            for (uint32_t weightIndex = 0; weightIndex < bone->mNumWeights; ++weightIndex) {
+                jointWeightData.vertexWeights.push_back({ bone->mWeights[weightIndex].mWeight, bone->mWeights[weightIndex].mVertexId });
+
+            }
+        }
         modelData.primitives.push_back(primitive);
     }
 

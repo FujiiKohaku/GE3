@@ -1,6 +1,7 @@
 #pragma once
 #include "DirectXCommon.h"
 #include "MathStruct.h"
+#include <map>
 #include <string>
 #include <vector>
 #include <wrl.h>
@@ -54,11 +55,31 @@ struct MeshPrimitive {
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
     D3D12_INDEX_BUFFER_VIEW ibView;
 };
+struct VertexWeightData {
+    float weight;
+    uint32_t vertexIndex;
+};
+
+struct JointWeightData {
+    Matrix4x4 inverseBindPoseMatrix;
+    std::vector<VertexWeightData> vertexWeights;
+};
 
 // モデル全体データ（頂点配列＋マテリアル）
 struct ModelData {
+    std::map<std::string, JointWeightData> skinClusterData;
     std::vector<MeshPrimitive> primitives;
     std::vector<uint32_t> indices;
     MaterialData material;
     Node rootNode;
+};
+const uint32_t kNumMaxInfluence = 4;
+struct VertexInfluence {
+    std::array<float, kNumMaxInfluence> weights;
+    std::array<int32_t, kNumMaxInfluence> jointIndices;
+};
+struct WellForGPU {
+    Matrix4x4 skeletonSpaceMatrix; // 位置用
+    Matrix4x4 skeletonSpaceInverseTransposeMatrix;//法線用
+
 };
