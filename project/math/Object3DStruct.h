@@ -1,9 +1,9 @@
 #pragma once
+#include "DirectXCommon.h"
 #include "MathStruct.h"
 #include <string>
 #include <vector>
 #include <wrl.h>
-#include "DirectXCommon.h"
 // 頂点データ
 struct VertexData {
     Vector4 position; // 位置
@@ -19,8 +19,8 @@ struct MaterialData {
 struct Material {
     Vector4 color;
     int32_t enableLighting;
-    float padding[2]; 
-    float shininess; 
+    float padding[2];
+    float shininess;
     Matrix4x4 uvTransform;
 };
 
@@ -28,7 +28,7 @@ struct Material {
 struct TransformationMatrix {
     Matrix4x4 WVP; // ワールド×ビュー×プロジェクション行列
     Matrix4x4 World; // ワールド行列
-    Matrix4x4 WorldInverseTranspose; 
+    Matrix4x4 WorldInverseTranspose;
 };
 
 struct Node {
@@ -48,7 +48,7 @@ struct MeshPrimitive {
     std::vector<uint32_t> indices;
     PrimitiveMode mode;
 
-   Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
     D3D12_VERTEX_BUFFER_VIEW vbView;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
@@ -58,7 +58,7 @@ struct MeshPrimitive {
 // モデル全体データ（頂点配列＋マテリアル）
 struct ModelData {
     std::vector<MeshPrimitive> primitives;
+    std::vector<uint32_t> indices;
     MaterialData material;
     Node rootNode;
 };
-
