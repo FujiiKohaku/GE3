@@ -6,8 +6,6 @@
 
 class ModelManager {
 public:
-  
-
     // 追加：他Managerと揃える用
     void Initialize(DirectXCommon* dxCommon);
 
@@ -17,7 +15,8 @@ public:
     // 終了処理
     static void Finalize();
 
-    void LoadModel(const std::string& filepath);
+    Model* Load(const std::string& filepath);
+
     Model* FindModel(const std::string& filePath);
 
 private:
@@ -27,7 +26,6 @@ private:
     ~ModelManager() = default;
     ModelManager(const ModelManager&) = delete;
     ModelManager& operator=(const ModelManager&) = delete;
-
-    std::map<std::string, std::unique_ptr<Model>> models;
+    std::unordered_map<std::string, std::unique_ptr<Model>> models;
     ModelCommon* modelCommon_ = nullptr;
 };

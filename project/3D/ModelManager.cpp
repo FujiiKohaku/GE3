@@ -31,17 +31,21 @@ void ModelManager::Finalize()
     }
 }
 
-void ModelManager::LoadModel(const std::string& filepath)
+Model* ModelManager::Load(const std::string& filepath)
 {
-    if (models.contains(filepath)) {
-        return;
+    auto it = models.find(filepath);
+    if (it != models.end()) {
+        return it->second.get();
     }
 
-    std::unique_ptr<Model> model = std::make_unique<Model>();
+    auto model = std::make_unique<Model>();
     model->Initialize(modelCommon_, "resources", filepath);
 
-    models.insert(std::make_pair(filepath, std::move(model)));
+    Model* raw = model.get();
+    models.emplace(filepath, std::move(model));
+    return raw;
 }
+
 
 Model* ModelManager::FindModel(const std::string& filePath)
 {
