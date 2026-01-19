@@ -49,16 +49,7 @@ void SphereObject::Initialize(DirectXCommon* dxCommon, int subdivision, float ra
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
 
-    // ----------------
-    // Light CB
-    // ----------------
-    /*lightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));
-    lightResource_->Map(0, nullptr, (void**)&lightData_);
-
-    lightData_->color = { 1, 1, 1, 1 };
-    lightData_->direction = MatrixMath::Normalize({ 0, -1, 0 });
-    lightData_->intensity = 1.0f;*/
-
+  
     // テクスチャ読み込み(デフォルトテクスチャ)
     SetTexture("resources/uvChecker.png");
 }

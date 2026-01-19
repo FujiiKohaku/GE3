@@ -160,7 +160,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="3D\CreateSphere.cpp" />
     <ClCompile Include="Animation\AnimationLoder.cpp" />
     <ClCompile Include="Animation\Animation.cpp" />
     <ClCompile Include="Animation\KeyFrame.cpp" />
@@ -264,7 +263,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="3D\CreateSphere.h" />
     <ClInclude Include="Animation\AnimationLoder.h" />
     <ClInclude Include="Animation\Animation.h" />
     <ClInclude Include="Animation\KeyFrame.h" />
