@@ -11,8 +11,8 @@
 #include <vector>
 #include <wrl.h>
 
+#include "../Animation/PlayAnimation.h"
 #include "Object3DStruct.h"
-#include"../Animation/PlayAnimation.h"
 class Object3dManager;
 class Model;
 class Object3d {
@@ -25,7 +25,7 @@ public:
     void Draw();
 
     static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
-    //static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
+    // static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
     // setter
     void SetModel(Model* model) { model_ = model; }
@@ -69,11 +69,10 @@ public:
     }
 
 private:
-   
     // ===============================
     // メンバ変数
     // ===============================
-    Object3dManager* object3dManager_= nullptr;
+    Object3dManager* object3dManager_ = nullptr;
     static Node ReadNode(aiNode* node);
     Model* model_ = nullptr;
     // バッファ系
@@ -90,7 +89,7 @@ private:
     // Transform
     EulerTransform transform;
     EulerTransform cameraTransform;
-   
+
     // カメラ
     Camera* camera_ = nullptr;
     // モデル
@@ -99,4 +98,6 @@ private:
 
     // World
     Matrix4x4 worldMatrix_;
+
+    
 };

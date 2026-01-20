@@ -1,11 +1,13 @@
 #pragma once
+#include "../math/Object3DStruct.h"
 #include "DirectXCommon.h"
 #include "ModelCommon.h"
 #include "Object3d.h"
-
+#include <d3d12.h>
 #include <span>
 #include <vector>
 #include <wrl.h>
+#include"../3D/SkinCluster.h"
 // ===============================================
 // モデルクラス：3Dモデルの描画を担当
 // ===============================================
@@ -16,11 +18,6 @@ public:
     // ===============================
     void Initialize(ModelCommon* modelCommon, const std::string& directorypath, const std::string& filename); // 初期化（共通設定の受け取り）
     void Draw(); // 描画
-
-    // ===============================
-    // 構造体定義
-    // ===============================
-
     // ===============================
     // メンバ変数
     // ===============================
@@ -61,13 +58,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
     Material* materialData_ = nullptr; // 書き込み用ポインタ
 
-    // インフルエンス
-    Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource;
-    D3D12_VERTEX_BUFFER_VIEW influenceBufferView;
-    std::span<VertexInfluence> mappedInfluence;
 
-    // マトリックスパレット
-    Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource;
-    std::span<WellForGPU> mappedPalette;
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> paletteSrvHandle;
+
+public:
+    SkinCluster CreateSkinCluster(const Microsoft::WRL::ComPtr<ID3D12Device>& device, const Skeleton& skeleton, const ModelData& modelData, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize);
 };

@@ -3,7 +3,7 @@
 #include "NodeAnimation.h"
 #include <cassert>
 #include <cmath>
-
+#include"../3D/SkinCluster.h"
 void PlayAnimation::ApplyAnimation(
     Skeleton& skeleton,
     const Animation& animation,
@@ -44,6 +44,7 @@ void PlayAnimation::Update(float deltaTime)
 
     ApplyAnimation(*skeleton_, *animation_, animationTime_);
     skeleton_->UpdateSkeleton();
+    skinCluster_->Update(*skeleton_);
 }
 Vector3 PlayAnimation::CalculateValue(const std::vector<KeyframeVector3>& keyframes,float time)
 {

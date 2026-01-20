@@ -9,6 +9,7 @@
 
 #include"Animation.h"  
 #include"../Skeleton/Skeleton.h"
+#include"../3D/SkinCluster.h"
 class PlayAnimation {
 public:
     void SetAnimation(const Animation* animation);
@@ -23,4 +24,5 @@ private:
     const Animation* animation_ = nullptr;
     float animationTime_ = 0.0f;
     Skeleton* skeleton_ = nullptr;
+    SkinCluster* skinCluster_;
 };

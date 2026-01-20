@@ -50,7 +50,10 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     // ================================
     transform = { { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
     cameraTransform = { { 1.0f, 1.0f, 1.0f }, { 0.3f, 0.0f, 0.0f }, { 0.0f, 4.0f, -10.0f } };
-}
+
+
+    
+} 
 #pragma endregion
 
 #pragma region 更新処理
@@ -60,7 +63,7 @@ void Object3d::Update()
     // ================================
     // 各種行列を作成
     // ================================
-
+    
     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 
     Matrix4x4 worldViewProjectionMatrix;
