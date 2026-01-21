@@ -38,7 +38,9 @@ public:
     {
         return textureFilePath_;
     }
-
+    const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const {
+        return vertexBufferView_;
+    }
 private:
     std::string textureFilePath_;
     // ===============================

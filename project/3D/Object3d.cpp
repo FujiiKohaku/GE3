@@ -22,15 +22,6 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
     transformationMatrixData->World = MatrixMath::MakeIdentity4x4();
 
-    // ================================
-    // 平行光源データ初期化
-    // ================================
-    // directionalLightResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(DirectionalLight));
-    // directionalLightResource->SetName(L"Object3d::DirectionalLightCB");
-    // directionalLightResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
-    // directionalLightData->color = { 1, 1, 1, 1 };
-    // directionalLightData->direction = MatrixMath::Normalize({ 0, -1, 0 });
-    // directionalLightData->intensity = 1.0f;
     // マテリアルリソース作成
     materialResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(Material));
     materialResource->SetName(L"Object3d::MaterialCB");

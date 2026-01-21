@@ -18,7 +18,7 @@ public:
 	~SkinCluster() = default;
 
 	void Initialize();
-	void Update();
+
 
 
 	static constexpr uint32_t kNumMaxInfluence = 4;
