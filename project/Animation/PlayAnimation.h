@@ -18,6 +18,11 @@ public:
     Vector3 CalculateValue(const std::vector<KeyframeVector3>& keyframes, float time);
     Quaternion CalculateValue(const std::vector<KeyframeQuaternion>& keyframes, float time);
     void ApplyAnimation(Skeleton& skeleton,const Animation& animation,float animationTime);
+    const Skeleton* GetSkeleton() const
+    {
+        return skeleton_;
+    }
+
 
 private:
     const Animation* animation_ = nullptr;

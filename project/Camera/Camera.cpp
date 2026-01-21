@@ -23,6 +23,8 @@ void Camera::Initialize()
 
 void Camera::Update()
 {
+
+
     assert(cameraData_ && "Camera::Initialize() is not called");
     cameraData_->worldPosition = transform_.translate;
     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);

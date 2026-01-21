@@ -1,7 +1,10 @@
 #pragma once
+#include "../3D/SkinCluster.h"
+#include "../Animation/PlayAnimation.h"
 #include "Camera.h"
 #include "DebugCamera.h"
 #include "MatrixMath.h"
+#include "Object3DStruct.h"
 #include "TextureManager.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -10,99 +13,109 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
-#include"../3D/SkinCluster.h"
-#include "Object3DStruct.h"
-#include"../Animation/PlayAnimation.h"
-
+#include"Model.h"
 class SkinningObject3dManager;
 class Model;
 class SkinningObject3d {
 public:
-	// ===============================
-	// メンバ関数
-	// ===============================
-	void Initialize(SkinningObject3dManager* skinningObject3DManager);
-	void Update();
-	void Draw();
+    // ===============================
+    // メンバ関数
+    // ===============================
+    void Initialize(SkinningObject3dManager* skinningObject3DManager);
+    void Update();
+    void Draw();
 
-	static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
-	//static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
-	// setter
-	void SetModel(Model* model) { model_ = model; }
-	// === setter ===
-	void SetScale(const Vector3& scale) { transform.scale = scale; }
-	void SetRotate(const Vector3& rotate) { transform.rotate = rotate; }
-	void SetTranslate(const Vector3& translate) { transform.translate = translate; }
-	void SetModel(const std::string& filePath);
-	void SetCamera(Camera* camera) { camera_ = camera; }
-	// === getter ===
-	const Vector3& GetScale() const { return transform.scale; }
-	const Vector3& GetRotate() const { return transform.rotate; }
-	const Vector3& GetTranslate() const { return transform.translate; }
-	// DirectionalLight* GetLight() { return directionalLightData; }
-	Material* GetMaterial() { return materialData_; }
-	SkinCluster::SkinClusterData& GetSkinCluster() {
-		return skinClusterData_;
-	}
-	// ----------------
-	// Material 操作
-	// ----------------
-	void SetColor(const Vector4& color) {
-		if (materialData_) {
-			materialData_->color = color;
-		}
-	}
+    // setter
+    void SetModel(Model* model) { model_ = model; }
+    // === setter ===
+    void SetScale(const Vector3& scale) { transform.scale = scale; }
+    void SetRotate(const Vector3& rotate) { transform.rotate = rotate; }
+    void SetTranslate(const Vector3& translate) { transform.translate = translate; }
+ 
+    void SetCamera(Camera* camera) { camera_ = camera; }
+    // === getter ===
+    const Vector3& GetScale() const { return transform.scale; }
+    const Vector3& GetRotate() const { return transform.rotate; }
+    const Vector3& GetTranslate() const { return transform.translate; }
+    // DirectionalLight* GetLight() { return directionalLightData; }
+    Material* GetMaterial() { return materialData_; }
+    SkinCluster::SkinClusterData& GetSkinCluster()
+    {
+        return skinClusterData_;
+    }
+    void SetAnimation(PlayAnimation* animation)
+    {
+        playAnimation_ = animation;
+    }
 
-	void SetEnableLighting(bool enable) {
-		if (materialData_) {
-			if (enable) {
-				materialData_->enableLighting = 1;
-			}
-			else {
-				materialData_->enableLighting = 0;
-			}
-		}
-	}
-	void SetAnimation(PlayAnimation* anim);
-	const Node& GetRootNode() const;
-	const Matrix4x4& GetWorldMatrix() const {
-		return worldMatrix_;
-	}
+    PlayAnimation* GetAnimation() const
+    {
+        return playAnimation_;
+    }
+    const Node& GetRootNode() const
+    {
+        assert(model_);
+        return model_->GetModelData().rootNode;
+    }
+    // ----------------
+    // Material 操作
+    // ----------------
+    void SetColor(const Vector4& color)
+    {
+        if (materialData_) {
+            materialData_->color = color;
+        }
+    }
+
+    void SetEnableLighting(bool enable)
+    {
+        if (materialData_) {
+            if (enable) {
+                materialData_->enableLighting = 1;
+            } else {
+                materialData_->enableLighting = 0;
+            }
+        }
+    }
+  
+    const Matrix4x4& GetWorldMatrix() const
+    {
+        return worldMatrix_;
+    }
 
 private:
+    // ===============================
+    // メンバ変数
+    // ===============================
+    SkinningObject3dManager* skinningObject3dManager_ = nullptr;
+ 
+    Model* model_ = nullptr;
+    // バッファ系
+    /*  Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;*/
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource;
 
-	// ===============================
-	// メンバ変数
-	// ===============================
-	SkinningObject3dManager* skinningObject3dManager_ = nullptr;
-	static Node ReadNode(aiNode* node);
-	Model* model_ = nullptr;
-	// バッファ系
-	/*  Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;*/
-	Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
-	Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
-	Microsoft::WRL::ComPtr<ID3D12Resource> directionalLightResource;
+    /*   D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};*/
+    /*   Material* materialData = nullptr;*/
+    TransformationMatrix* transformationMatrixData = nullptr;
+    //  DirectionalLight* directionalLightData = nullptr;
+    Material* materialData_ = nullptr;
+    // Transform
+    EulerTransform transform;
+    EulerTransform cameraTransform;
 
-	/*   D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};*/
-	/*   Material* materialData = nullptr;*/
-	TransformationMatrix* transformationMatrixData = nullptr;
-	//  DirectionalLight* directionalLightData = nullptr;
-	Material* materialData_ = nullptr;
-	// Transform
-	EulerTransform transform;
-	EulerTransform cameraTransform;
+    // カメラ
+    Camera* camera_ = nullptr;
+    // モデル
+    // ModelData modelData;
+    PlayAnimation* animation_ = nullptr;
 
-	// カメラ
-	Camera* camera_ = nullptr;
-	// モデル
-	// ModelData modelData;
-	PlayAnimation* animation_ = nullptr;
+    // World
+    Matrix4x4 worldMatrix_;
 
-	// World
-	Matrix4x4 worldMatrix_;
-
-	SkinCluster skinCluster_;
-	SkinCluster::SkinClusterData skinClusterData_;
-	
+    SkinCluster skinCluster_;
+    SkinCluster::SkinClusterData skinClusterData_;
+    PlayAnimation* playAnimation_;
 };
