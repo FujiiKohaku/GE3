@@ -6,6 +6,7 @@
 #include <cassert>
 #include <fstream>
 #include <sstream>
+
 #pragma region 初期化処理
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
@@ -48,6 +49,9 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
 void Object3d::Update()
 {
+    
+
+
     // ================================
     // 各種行列を作成
     // ================================
