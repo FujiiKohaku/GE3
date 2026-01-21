@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
+#include<map>
 // 頂点データ
 struct VertexData {
 	Vector4 position; // 位置
