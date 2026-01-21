@@ -5,43 +5,56 @@
 #include "SoundManager.h"
 #include "SphereObject.h"
 #include <numbers>
-void GamePlayScene::Initialize()
-{
+void GamePlayScene::Initialize() {
+    // =================================================
+    // Camera
+    // =================================================
     camera_ = new Camera();
     camera_->Initialize();
-    camera_->SetTranslate(Vector3 { 0.0f, 0.0f, -20.0f });
+    camera_->SetTranslate({ 0.0f, 0.0f, -20.0f });
 
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 
-    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
+    // =================================================
+    // Managers
+    // =================================================
+    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(),SrvManager::GetInstance(),camera_);
 
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 
+    // =================================================
+    // Sprite（UI）
+    // =================================================
     sprite_ = new Sprite();
     sprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
     sprite_->SetPosition({ 100.0f, 100.0f });
 
+    // =================================================
+    // Object3d
+    // =================================================
     player2_ = new Object3d();
     player2_->Initialize(Object3dManager::GetInstance());
     player2_->SetModel("walk.gltf");
     player2_->SetTranslate({ 5.0f, 0.0f, 0.0f });
+    player2_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
 
+    // =================================================
+    // Animation
+    // =================================================
     playAnim_ = new PlayAnimation();
 
-    // メンバ変数に直接ロード
     animation_ = AnimationLoder::LoadAnimationFile("resources", "walk.gltf");
-
-    // 再生器に渡す（寿命OK）
     playAnim_->SetAnimation(&animation_);
 
-    // Object3d に紐づけ
     player2_->SetAnimation(playAnim_);
-    player2_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
-    // スケルトン作成
+
+    // =================================================
+    // Skeleton
+    // =================================================
     skeleton_ = Skeleton::CreateSkeleton(player2_->GetRootNode());
     playAnim_->SetSkeleton(&skeleton_);
-    jointSpheres_.resize(skeleton_.joints.size());
 
+    jointSpheres_.resize(skeleton_.joints.size());
     jointSpheres_.resize(skeleton_.joints.size());
 
     for (auto& sphere : jointSpheres_) {
@@ -49,30 +62,42 @@ void GamePlayScene::Initialize()
         sphere.SetColor({ 1, 0, 0, 1 });
     }
 
-    // player2_->SetRotate({ std::numbers::pi_v<float> / 2.0f, std::numbers::pi_v<float>, 0.0f });
-
+    // =================================================
+    // Particle
+    // =================================================
     ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
-    EulerTransform t {};
+
+    EulerTransform t{};
     t.translate = { 0.0f, 0.0f, 0.0f };
 
     emitter_.Init("circle", t, 30, 0.1f);
 
+    // =================================================
+    // Debug Sphere
+    // =================================================
     sphere_ = new SphereObject();
     sphere_->Initialize(DirectXCommon::GetInstance(), 16, 1.0f);
-
-    // Transform
-    sphere_->SetTranslate({ 0, 0, 0 }); // 消える？
+    sphere_->SetTranslate({ 0, 0, 0 });
     sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
-
-    // Material
     sphere_->SetColor({ 1, 1, 1, 1 });
+
+    // =================================================
+    // Light
+    // =================================================
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
+    LightManager::GetInstance()->SetDirectional(
+        { 1, 1, 1, 1 },
+        { 0, -1, 0 },
+        1.0f
+    );
 
+    // =================================================
+    // Sound
+    // =================================================
     bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
-
     SoundManager::GetInstance()->SoundPlayWave(bgm);
 }
+
 
 void GamePlayScene::Update()
 {
