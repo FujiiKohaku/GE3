@@ -230,6 +230,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="math\SpriteStruct.cpp" />
     <ClCompile Include="Skeleton\Joint.cpp" />
     <ClCompile Include="Skeleton\Skeleton.cpp" />
+    <ClCompile Include="3D\SkinCluster.cpp" />
     <ClCompile Include="SrvManager\SrvManager.cpp" />
     <ClCompile Include="StringUtility\StringUtility.cpp" />
     <ClCompile Include="TextureManager\TextureManager.cpp" />
@@ -307,6 +308,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="math\SpriteStruct.h" />
     <ClInclude Include="Skeleton\Joint.h" />
     <ClInclude Include="Skeleton\Skeleton.h" />
+    <ClInclude Include="3D\SkinCluster.h" />
     <ClInclude Include="SrvManager\SrvManager.h" />
     <ClInclude Include="StringUtility\StringUtility.h" />
     <ClInclude Include="TextureManager\TextureManager.h" />
