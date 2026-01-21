@@ -323,7 +323,7 @@ void GamePlayScene::Draw3D()
         sphere.Draw(DirectXCommon::GetInstance()->GetCommandList());
     }*/
     SkinningObject3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
+    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());//ここでもう一回バインドしないといけない
     animationPlayer_->Draw();
 
     ParticleManager::GetInstance()->PreDraw();
