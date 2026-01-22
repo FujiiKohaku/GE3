@@ -28,16 +28,35 @@ public:
 
     // setter
     void SetModel(Model* model) { model_ = model; }
-    // === setter ===
-    void SetScale(const Vector3& scale) { transform.scale = scale; }
-    void SetRotate(const Vector3& rotate) { transform.rotate = rotate; }
-    void SetTranslate(const Vector3& translate) { transform.translate = translate; }
- 
+   
+
     void SetCamera(Camera* camera) { camera_ = camera; }
+    // === setter ===
+    void SetScale(const Vector3& scale) {
+        baseTransform_.scale = scale;
+    }
+
+    void SetRotate(const Vector3& rotate) {
+        baseTransform_.rotate = rotate;
+    }
+
+    void SetTranslate(const Vector3& translate) {
+        baseTransform_.translate = translate;
+    }
+
     // === getter ===
-    const Vector3& GetScale() const { return transform.scale; }
-    const Vector3& GetRotate() const { return transform.rotate; }
-    const Vector3& GetTranslate() const { return transform.translate; }
+    const Vector3& GetScale() const {
+        return baseTransform_.scale;
+    }
+
+    const Vector3& GetRotate() const {
+        return baseTransform_.rotate;
+    }
+
+    const Vector3& GetTranslate() const {
+        return baseTransform_.translate;
+    }
+
     // DirectionalLight* GetLight() { return directionalLightData; }
     Material* GetMaterial() { return materialData_; }
     SkinCluster::SkinClusterData& GetSkinCluster()
@@ -103,9 +122,9 @@ private:
     //  DirectionalLight* directionalLightData = nullptr;
     Material* materialData_ = nullptr;
     // Transform
-    EulerTransform transform;
     EulerTransform cameraTransform;
-
+    EulerTransform baseTransform_;
+    EulerTransform animTransform_;
     // カメラ
     Camera* camera_ = nullptr;
     // モデル

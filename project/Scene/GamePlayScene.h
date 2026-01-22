@@ -39,18 +39,38 @@ private:
 	// ------------------------------
 	Object3d* player2_;
 	SphereObject* sphere_ = nullptr;
-	SkinningObject3d* animationPlayer_;
 	Object3d* terrain_;
 	Object3d* plane_;
 	//node00
 	Object3d* nodeObject00_;
+	Object3d* nodeObject01_;
+	Object3d* nodeObject02_;
+	Object3d* nodeObject03_;
+	Object3d* nodeObject04_;
+	Object3d* nodeObject05_;
+
+	//animationSkin
+	SkinningObject3d* animationSkin00_;
+	SkinningObject3d* animationSkin01_;
+	SkinningObject3d* animationSkin02_;
+	SkinningObject3d* animationSkin03_;
+	SkinningObject3d* animationSkin04_;
+	SkinningObject3d* animationSkin05_;
+	SkinningObject3d* animationSkin06_;
+	SkinningObject3d* animationSkin07_;
+	SkinningObject3d* animationSkin08_;
+	SkinningObject3d* animationSkin09_;
+	SkinningObject3d* animationSkin10_;
+	SkinningObject3d* animationSkin11_;
+	
+
 	// ------------------------------
 	// スプライト（UI / 2D）
 	// ------------------------------
 	Sprite* sprite_ = nullptr;
 	std::vector<Sprite*> sprites_;
 
-	
+
 
 	// ------------------------------
 	// サウンド
@@ -65,12 +85,26 @@ private:
 	// ------------------------------
 	// アニメーション / スケルトン
 	// ------------------------------
-	PlayAnimation* playAnim_;
-	Animation animation_;
-	Skeleton skeleton_;
-	//node00
+	//node
 	PlayAnimation nodePlayAnim00_;
 	Animation nodeAnimation00_;
+	PlayAnimation nodePlayAnim01_;
+	Animation nodeAnimation01_;
+	PlayAnimation nodePlayAnim02_;
+	Animation nodeAnimation02_;
+	PlayAnimation nodePlayAnim03_;
+	Animation nodeAnimation03_;
+	PlayAnimation nodePlayAnim04_;
+	Animation nodeAnimation04_;
+	PlayAnimation nodePlayAnim05_;
+	Animation nodeAnimation05_;
+	//skin
+	PlayAnimation* skinPlay00_;
+	Animation skinAnimation00_;
+	Skeleton animationSkinSkeleton00_;
+	PlayAnimation* skinPlay01_;
+	Animation skinAnimation01_;
+	Skeleton animationSkinSkeleton01_;
 	// ------------------------------
 	// ライト・描画パラメータ
 	// ------------------------------
