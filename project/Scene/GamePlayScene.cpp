@@ -25,8 +25,8 @@ void GamePlayScene::Initialize() {
 	// =================================================
 	animationPlayer_ = new SkinningObject3d();
 
-	ModelManager::GetInstance()->Load("Animation_Skin_00.gltf");
-	animationPlayer_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_00.gltf"));
+	ModelManager::GetInstance()->Load("Animation_Skin_02.gltf");
+	animationPlayer_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_02.gltf"));
 
 	// =================================================
 	// Skeleton（ここが先）
@@ -42,7 +42,7 @@ void GamePlayScene::Initialize() {
 	// Animation
 	// =================================================
 	playAnim_ = new PlayAnimation();
-	animation_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Skin_00.gltf");
+	animation_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Skin_02.gltf");
 
 	// デバッグ（Animation）
 	for (const auto& [name, nodeAnim] : animation_.nodeAnimations) {
@@ -115,7 +115,7 @@ void GamePlayScene::Update() {
 
 	sphere_->Update(camera_);
 	animationPlayer_->Update();
-	r += 0.01f;
+	r += 0.07f;
 	animationPlayer_->SetRotate({ 0.0f,r,0.0f });
 
 
