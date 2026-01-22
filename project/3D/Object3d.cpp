@@ -208,21 +208,40 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
         modelData.primitives.push_back(primitive);
     }
+    bool hasTexture = false;
 
-    // -------------------------
-    // Material（最小）
-    // -------------------------
     for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex) {
         aiMaterial* material = scene->mMaterials[materialIndex];
 
         if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiString textureFilePath;
             material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
-            modelData.material.textureFilePath = directoryPath + "/" + textureFilePath.C_Str();
-            break; // 1枚で十分
+
+            std::string tex = textureFilePath.C_Str();
+
+            // "*0" みたいな埋め込み表記はファイルじゃない
+            if (!tex.empty() && tex[0] != '*') {
+
+                std::filesystem::path fullPath = std::filesystem::path(directoryPath) / tex;
+
+                if (std::filesystem::exists(fullPath)) {
+                    modelData.material.textureFilePath = fullPath.string();
+                    hasTexture = true;
+                    break;
+                }
+            }
         }
     }
+   
 
+    // ここで分岐する
+    if (hasTexture) {
+        TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
+    }
+    else {
+        TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
+        modelData.material.textureFilePath = "resources/BaseColor_Cube.png";
+    }
     // -------------------------
     // Node（既存の処理）
     // -------------------------

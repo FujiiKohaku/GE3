@@ -30,7 +30,9 @@ void Game::Initialize() {
 	ModelManager::GetInstance()->Load("axis.obj");
 	ModelManager::GetInstance()->Load("titleTex.obj");
 	ModelManager::GetInstance()->Load("fence.obj");
-	ModelManager::GetInstance()->Load("AnimatedCube.gltf");
+
+
+
 	TextureManager::GetInstance()->LoadTexture("resources/white.png");
 	TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
 	TextureManager::GetInstance()->LoadTexture("resources/fence.png");
