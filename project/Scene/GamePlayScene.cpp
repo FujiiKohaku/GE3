@@ -19,8 +19,6 @@ void GamePlayScene::Initialize() {
 	// Managers
 	// =================================================
 	ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
-	//LoadTexture
-	TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
 	// =================================================
 	// SkinningObject3d
 	// =================================================
@@ -30,10 +28,8 @@ void GamePlayScene::Initialize() {
 	animationPlayer_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_01.gltf"));
 
 	//AnimationNode
-	ModelManager::GetInstance()->Load("Animation_Node_00.gltf");
-	animationNode00_ = new Object3d();
-	animationNode00_->Initialize(Object3dManager::GetInstance());
-	animationNode00_->SetModel("Animation_Node_00.gltf");
+
+
 	//==============
 	//OBJ
 	//==============
@@ -46,6 +42,10 @@ void GamePlayScene::Initialize() {
 	plane_->Initialize(Object3dManager::GetInstance());
 	ModelManager::GetInstance()->Load("plane.obj");
 	plane_->SetModel(ModelManager::GetInstance()->FindModel("plane.obj"));
+	//node00
+	nodeObject00_ = new Object3d();
+	nodeObject00_->Initialize(Object3dManager::GetInstance());
+	nodeObject00_->SetModel("AnimatedCube.gltf");
 	// =================================================
 	// Skeleton（ここが先）
 	// =================================================
@@ -61,13 +61,22 @@ void GamePlayScene::Initialize() {
 	// =================================================
 	playAnim_ = new PlayAnimation();
 	animation_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Skin_01.gltf");
-	animationNode00Animation_ = AnimationLoder::LoadAnimationFile("resource", "Animation_Node_00.gltf");
+
+
+
+	//node00
+	nodeAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "AnimatedCube.gltf");
+
+	nodePlayAnim00_.SetAnimation(&nodeAnimation00_);
+
+	nodeObject00_->SetAnimation(&nodePlayAnim00_);
+	nodeObject00_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+	nodeObject00_->SetScale({ 1.0f, 1.0f, 1.0f });
+
 	// デバッグ（Animation）
 	for (const auto& [name, nodeAnim] : animation_.nodeAnimations) {
 		OutputDebugStringA(name.c_str());
 	}
-	animationNode00Play_ = new PlayAnimation();
-	animationNode00Play_->SetAnimation(&animationNode00Animation_);
 	playAnim_->SetAnimation(&animation_);
 	playAnim_->SetSkeleton(&skeleton_);
 
@@ -120,7 +129,8 @@ void GamePlayScene::Initialize() {
 
 void GamePlayScene::Update() {
 	playAnim_->Update(1.0f / 60.0f);
-	animationNode00Play_->Update(1.0f / 60.0f);
+	nodePlayAnim00_.Update(1.0f / 60.0f);
+	nodeObject00_->Update();
 	// ImGuiのBegin/Endは絶対に呼ばない！
 	emitter_.Update();
 	ParticleManager::GetInstance()->Update();
@@ -347,10 +357,11 @@ void GamePlayScene::Draw3D() {
 	terrain_->Draw();
 
 	plane_->Draw();
-	animationNode00_->Draw();
+	nodeObject00_->Draw();
 	SkinningObject3dManager::GetInstance()->PreDraw();
 	LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());//ここでもう一回バインドしないといけない
 	animationPlayer_->Draw();
+
 	ParticleManager::GetInstance()->PreDraw();
 	ParticleManager::GetInstance()->Draw();
 }
@@ -391,5 +402,7 @@ void GamePlayScene::Finalize() {
 
 	delete plane_;
 	plane_ = nullptr;
+	delete nodeObject00_;
+	nodeObject00_ = nullptr;
 	SoundManager::GetInstance()->SoundUnload(&bgm);
 }
