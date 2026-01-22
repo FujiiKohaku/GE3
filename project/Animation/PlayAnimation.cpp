@@ -32,19 +32,23 @@ void PlayAnimation::SetAnimation(const Animation* animation)
     animationTime_ = 0.0f;
 }
 
-void PlayAnimation::Update(float deltaTime)
-{
-    if (!animation_ || !skeleton_)
+void PlayAnimation::Update(float deltaTime) {
+    if (!animation_) {
         return;
+    }
 
     animationTime_ += deltaTime;
     if (animationTime_ > animation_->duration) {
         animationTime_ = fmod(animationTime_, animation_->duration);
     }
 
-    ApplyAnimation(*skeleton_, *animation_, animationTime_);
-    skeleton_->UpdateSkeleton();
+    // スキニングがある場合のみ
+    if (skeleton_) {
+        ApplyAnimation(*skeleton_, *animation_, animationTime_);
+        skeleton_->UpdateSkeleton();
+    }
 }
+
 Vector3 PlayAnimation::CalculateValue(const std::vector<KeyframeVector3>& keyframes,float time)
 {
     //  NodeMisc 対応

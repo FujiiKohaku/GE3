@@ -42,12 +42,15 @@ private:
 	SkinningObject3d* animationPlayer_;
 	Object3d* terrain_;
 	Object3d* plane_;
-	Object3d* animationNode00_;
+	//node00
+	Object3d* nodeObject00_;
 	// ------------------------------
 	// スプライト（UI / 2D）
 	// ------------------------------
 	Sprite* sprite_ = nullptr;
 	std::vector<Sprite*> sprites_;
+
+	
 
 	// ------------------------------
 	// サウンド
@@ -65,8 +68,9 @@ private:
 	PlayAnimation* playAnim_;
 	Animation animation_;
 	Skeleton skeleton_;
-	Animation animationNode00Animation_;
-	PlayAnimation* animationNode00Play_;
+	//node00
+	PlayAnimation nodePlayAnim00_;
+	Animation nodeAnimation00_;
 	// ------------------------------
 	// ライト・描画パラメータ
 	// ------------------------------

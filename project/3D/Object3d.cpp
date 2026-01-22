@@ -47,38 +47,37 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
 #pragma region 更新処理
 
-void Object3d::Update()
-{
-    
+void Object3d::Update() {
+    Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
+    if (model_) {
+        localMatrix = model_->GetModelData().rootNode.localMatrix;
+    }
 
-    // ================================
-    // 各種行列を作成
-    // ================================
+    if (animation_ && model_) {
+        localMatrix =
+            animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
+    }
 
-     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+    worldMatrix_ =MatrixMath::Multiply(localMatrix,MatrixMath::MakeAffineMatrix(transform.scale,transform.rotate,transform.translate));
 
     Matrix4x4 worldViewProjectionMatrix;
 
     if (camera_) {
-        const Matrix4x4& viewProjectionMatrix = camera_->GetViewProjectionMatrix();
-        worldViewProjectionMatrix = MatrixMath::Multiply(worldMatrix_, viewProjectionMatrix);
-    } else {
+        worldViewProjectionMatrix =
+            MatrixMath::Multiply(worldMatrix_, camera_->GetViewProjectionMatrix());
+    }
+    else {
         worldViewProjectionMatrix = worldMatrix_;
     }
 
-    // ================================
-    // WVP行列を計算して転送
-    // ================================
     transformationMatrixData->WVP = worldViewProjectionMatrix;
-
-    // ワールド行列も送る（ライティングなどで使用）
     transformationMatrixData->World = worldMatrix_;
 
     Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
-    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);
+    transformationMatrixData->WorldInverseTranspose =
+        MatrixMath::Transpose(inv);
 }
-
 #pragma endregion
 
 #pragma region 描画処理
