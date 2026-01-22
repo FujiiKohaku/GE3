@@ -33,7 +33,6 @@ void Game::Initialize() {
 	TextureManager::GetInstance()->LoadTexture("resources/white.png");
 	TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
 	TextureManager::GetInstance()->LoadTexture("resources/fence.png");
-	TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
 	BaseScene* scene = new TitleScene();
 	// シーンマネージャーに最初のシーンをセット
 	SceneManager::GetInstance()->SetNextScene(scene);

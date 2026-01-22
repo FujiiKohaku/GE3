@@ -15,6 +15,7 @@
 #include"../3D/SphereObject.h"
 #include"../3D/SkinningObject3d.h"
 #include"../3D/SkinningObject3dManager.h"
+#include<numbers>
 class GamePlayScene : public BaseScene {
 public:
 	void Initialize() override;
@@ -29,36 +30,72 @@ public:
 
 private:
 	// ------------------------------
+	// カメラ
+	// ------------------------------
+	Camera* camera_;
+
+	// ------------------------------
+	// 3Dオブジェクト（描画主体）
+	// ------------------------------
+	Object3d* player2_;
+	SphereObject* sphere_ = nullptr;
+	SkinningObject3d* animationPlayer_;
+	Object3d* terrain_;
+	Object3d* plane_;
+	Object3d* animationNode00_;
+	// ------------------------------
+	// スプライト（UI / 2D）
+	// ------------------------------
+	Sprite* sprite_ = nullptr;
+	std::vector<Sprite*> sprites_;
+
+	// ------------------------------
 	// サウンド
 	// ------------------------------
 	SoundData bgm;
-	Sprite* sprite_ = nullptr;
-	std::vector<Sprite*> sprites_;
-	Object3d* player2_;
 
+	// ------------------------------
+	// パーティクル
+	// ------------------------------
 	ParticleEmitter emitter_;
 
 	// ------------------------------
-	// メッシュ
-	// ------------------------------
-	SphereObject* sphere_ = nullptr;
-
-	Camera* camera_;
-
-	bool sphereLighting = true;
-	Vector3 spherePos = { 0.0f, 0.0f, 0.0f };
-	Vector3 sphereRotate = { 0.0f, 0.0f, 0.0f }; // ラジアン想定
-	Vector3 sphereScale = { 1.0f, 1.0f, 1.0f };
-	float lightIntensity = 1.0f;
-	Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
-	SkinningObject3d* animationPlayer_;
-	// ------------------------------
-	/// その他
+	// アニメーション / スケルトン
 	// ------------------------------
 	PlayAnimation* playAnim_;
 	Animation animation_;
 	Skeleton skeleton_;
-	SphereObject* jointSphere_ = nullptr;
-	std::vector<SphereObject> jointSpheres_;
-	float r = 0;
+	Animation animationNode00Animation_;
+	PlayAnimation* animationNode00Play_;
+	// ------------------------------
+	// ライト・描画パラメータ
+	// ------------------------------
+	bool sphereLighting = true;
+	float lightIntensity = 1.0f;
+	Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
+
+	// ------------------------------
+	// スフィア Transform
+	// ------------------------------
+	Vector3 spherePos = { 0.0f, 0.0f, 0.0f };
+	Vector3 sphereRotate = { 0.0f, 0.0f, 0.0f };
+	Vector3 sphereScale = { 1.0f, 1.0f, 1.0f };
+
+	// ------------------------------
+	// Terrain Transform (ImGui用)
+	// ------------------------------
+	Vector3 terrainPos = { 0.0f, 0.0f, 0.0f };
+	Vector3 terrainRotate = { 0.0f, 0.0f, 0.0f };
+	Vector3 terrainScale = { 1.0f, 1.0f, 1.0f };
+	// ------------------------------
+	// Plane Transform (ImGui用)
+	// ------------------------------
+	Vector3 planePos = { 0.0f, 0.0f, 0.0f };
+	Vector3 planeRotate = { 0.0f, std::numbers::pi_v<float>, 0.0f };
+	Vector3 planeScale = { 1.0f, 1.0f, 1.0f };
+	// ------------------------------
+	// その他
+	// ------------------------------
+	float r = 0.0f;
+
 };
