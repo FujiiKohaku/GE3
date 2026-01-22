@@ -79,7 +79,7 @@ private:
     static const uint32_t kMaxSRVCount = 512; // 最大テクスチャ数（任意に設定可能）
 
     SrvManager* srvManager_ = nullptr; // SRVマネージャーの参照
-
+    uint32_t defaultTextureSrvIndex_ = 0;
     public:
     // 指定したテクスチャ情報を取得
     const TextureData* GetTextureData(const std::string& filePath) const

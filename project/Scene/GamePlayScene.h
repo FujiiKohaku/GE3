@@ -60,5 +60,5 @@ private:
 	Skeleton skeleton_;
 	SphereObject* jointSphere_ = nullptr;
 	std::vector<SphereObject> jointSpheres_;
-	
+	float r = 0;
 };

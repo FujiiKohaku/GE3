@@ -43,6 +43,11 @@ void TextureManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager)
 //=================================================================
 void TextureManager::LoadTexture(const std::string& filePath)
 {
+    // 空文字チェック（Animation_Skin 用）
+    if (filePath.empty()) {
+        return;
+    }
+
 
     //読み込み済みテクスチャを検索
     if (textureDatas.contains(filePath)) {
@@ -108,39 +113,45 @@ void TextureManager::LoadTexture(const std::string& filePath)
 //=================================================================
 // ファイルパスからテクスチャインデックスを取得
 //=================================================================
-uint32_t TextureManager::GetTextureIndexByFilePath(const std::string& filePath)
-{
-    // 指定ファイルが登録済みか確認
+uint32_t TextureManager::GetTextureIndexByFilePath(const std::string& filePath) {
+    if (filePath.empty()) {
+        return textureDatas.at("resources/white.png").srvIndex;
+    }
+
     if (textureDatas.contains(filePath)) {
         return textureDatas.at(filePath).srvIndex;
     }
 
-    assert(0 && "指定したテクスチャが読み込まれていません。");
-    return 0;
+    return textureDatas.at("resources/white.png").srvIndex;
 }
+ 
 
 //=================================================================
 // GPUハンドル取得
 //=================================================================
-D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(const std::string& filePath)
-{
+D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(const std::string& filePath) {
+    if (filePath.empty()) {
+        return textureDatas.at("resources/white.png").srvHandleGPU;
+    }
+
     if (textureDatas.contains(filePath)) {
         return textureDatas.at(filePath).srvHandleGPU;
     }
 
-    assert(0 && "指定したテクスチャが読み込まれていません。");
-    return D3D12_GPU_DESCRIPTOR_HANDLE {};
+    return textureDatas.at("resources/white.png").srvHandleGPU;
 }
 //=================================================================
 // メタデータ取得
 //=================================================================
-const DirectX::TexMetadata& TextureManager::GetMetaData(const std::string& filePath)
-{
+const DirectX::TexMetadata& TextureManager::GetMetaData(const std::string& filePath) {
+    if (filePath.empty()) {
+        return textureDatas.at("resources/white.png").metadata;
+    }
+
     if (textureDatas.contains(filePath)) {
         return textureDatas.at(filePath).metadata;
     }
 
-    assert(0 && "指定したテクスチャが読み込まれていません。");
-    static DirectX::TexMetadata dummy {}; 
-    return dummy;
+    return textureDatas.at("resources/white.png").metadata;
 }
+
