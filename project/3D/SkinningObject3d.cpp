@@ -51,10 +51,16 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // ================================
     // Transform 初期値
     // ================================
-    transform = {
-        { 1.0f, 1.0f, 1.0f },
-        { 0.0f, 0.0f, 0.0f },
-        { 0.0f, 0.0f, 0.0f }
+    baseTransform_ = {
+       {1.0f, 1.0f, 1.0f},
+       {0.0f, 0.0f, 0.0f},
+       {0.0f, 0.0f, 0.0f}
+    };
+
+    animTransform_ = {
+        {1.0f, 1.0f, 1.0f},
+        {0.0f, 0.0f, 0.0f},
+        {0.0f, 0.0f, 0.0f}
     };
 
     cameraTransform = {
@@ -86,7 +92,20 @@ void SkinningObject3d::Update()
     // 各種行列を作成
     // ================================
 
-    worldMatrix_ = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+    Matrix4x4 baseMatrix = MatrixMath::MakeAffineMatrix(
+        baseTransform_.scale,
+        baseTransform_.rotate,
+        baseTransform_.translate
+    );
+
+    Matrix4x4 animMatrix = MatrixMath::MakeAffineMatrix(
+        animTransform_.scale,
+        animTransform_.rotate,
+        animTransform_.translate
+    );
+
+    worldMatrix_ = MatrixMath::Multiply(animMatrix, baseMatrix);
+
 
     Matrix4x4 worldViewProjectionMatrix;
 
