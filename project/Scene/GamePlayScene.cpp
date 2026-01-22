@@ -23,8 +23,10 @@ void GamePlayScene::Initialize() {
 	// SkinningObject3d
 	// =================================================
 	animationPlayer_ = new SkinningObject3d();
-
+	TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
 	ModelManager::GetInstance()->Load("Animation_Skin_01.gltf");
+
+	ModelManager::GetInstance()->Load("Animation_Node_03.gltf");
 	animationPlayer_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_01.gltf"));
 
 	//AnimationNode
@@ -45,7 +47,7 @@ void GamePlayScene::Initialize() {
 	//node00
 	nodeObject00_ = new Object3d();
 	nodeObject00_->Initialize(Object3dManager::GetInstance());
-	nodeObject00_->SetModel("AnimatedCube.gltf");
+	nodeObject00_->SetModel("Animation_Node_03.gltf");
 	// =================================================
 	// Skeleton（ここが先）
 	// =================================================
@@ -65,7 +67,7 @@ void GamePlayScene::Initialize() {
 
 
 	//node00
-	nodeAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "AnimatedCube.gltf");
+	nodeAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Node_03.gltf");
 
 	nodePlayAnim00_.SetAnimation(&nodeAnimation00_);
 
@@ -131,6 +133,7 @@ void GamePlayScene::Update() {
 	playAnim_->Update(1.0f / 60.0f);
 	nodePlayAnim00_.Update(1.0f / 60.0f);
 	nodeObject00_->Update();
+	
 	// ImGuiのBegin/Endは絶対に呼ばない！
 	emitter_.Update();
 	ParticleManager::GetInstance()->Update();
@@ -140,7 +143,6 @@ void GamePlayScene::Update() {
 	animationPlayer_->Update();
 	r += 0.07f;
 	animationPlayer_->SetRotate({ 0.0f,r,0.0f });
-
 	terrain_->Update();
 	camera_->Update();
 	camera_->DebugUpdate();
@@ -353,14 +355,14 @@ void GamePlayScene::Draw3D() {
 	Object3dManager::GetInstance()->PreDraw();
 	LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
-	sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-	terrain_->Draw();
+	//sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+	//terrain_->Draw();
 
-	plane_->Draw();
+	//plane_->Draw();
 	nodeObject00_->Draw();
 	SkinningObject3dManager::GetInstance()->PreDraw();
 	LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());//ここでもう一回バインドしないといけない
-	animationPlayer_->Draw();
+	//animationPlayer_->Draw();
 
 	ParticleManager::GetInstance()->PreDraw();
 	ParticleManager::GetInstance()->Draw();

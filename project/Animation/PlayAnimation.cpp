@@ -93,23 +93,29 @@ Quaternion PlayAnimation::CalculateValue(const std::vector<KeyframeQuaternion>& 
 }
 
 
-Matrix4x4 PlayAnimation::GetLocalMatrix(const std::string& nodeName)
-{
+Matrix4x4 PlayAnimation::GetLocalMatrix(const std::string& nodeName) {
     assert(animation_);
 
     auto it = animation_->nodeAnimations.find(nodeName);
+
     if (it == animation_->nodeAnimations.end()) {
-        return MatrixMath::MakeIdentity4x4();// アニメが無いノード → identity
+        if (animation_->nodeAnimations.size() == 1) {
+            it = animation_->nodeAnimations.begin();
+        }
+        else {
+            return MatrixMath::MakeIdentity4x4();
+        }
     }
 
     const NodeAnimation& nodeAnim = it->second;
 
-    Vector3 translate = CalculateValue(nodeAnim.translate, animationTime_);
-    Quaternion rotate = CalculateValue(nodeAnim.rotation, animationTime_);
-    Vector3 scale = CalculateValue(nodeAnim.scale, animationTime_);
+    Vector3 t = CalculateValue(nodeAnim.translate, animationTime_);
+    Quaternion r = CalculateValue(nodeAnim.rotation, animationTime_);
+    Vector3 s = CalculateValue(nodeAnim.scale, animationTime_);
 
-    return MatrixMath::MakeAffineMatrix(scale, rotate, translate);
+    return MatrixMath::MakeAffineMatrix(s, r, t);
 }
+
 
 
 
