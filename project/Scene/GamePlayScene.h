@@ -63,6 +63,8 @@ private:
     SkinningObject3d* animationSkin10_;
     SkinningObject3d* animationSkin11_;
 
+
+    SkinningObject3d* skinningPlayer_;
     // ------------------------------
     // スプライト（UI / 2D）
     // ------------------------------
@@ -132,6 +134,9 @@ private:
     PlayAnimation* skinPlay11_;
     Animation skinAnimation11_;
     Skeleton animationSkinSkeleton11_;
+    PlayAnimation* skinningPlay_;
+    Animation skinningAnimation_;
+    Skeleton skinningSkeleton_;
     // ------------------------------
     // ライト・描画パラメータ
     // ------------------------------
