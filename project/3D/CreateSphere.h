@@ -2,7 +2,7 @@
 #include "Object3DStruct.h"
 #include <cstdint>
 #include <vector>
-
+//使わないかもしれない
 
 const int kSubdivision = 16; // 16分割
 int kNumVertices = kSubdivision * kSubdivision * 6; // 頂点数

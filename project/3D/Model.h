@@ -21,16 +21,6 @@ public:
     // 構造体定義
     // ===============================
 
-
-
-
-
-
-
-
-
-
-
     // ===============================
     // メンバ変数
     // ===============================
@@ -48,7 +38,9 @@ public:
     {
         return textureFilePath_;
     }
-
+    const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const {
+        return vertexBufferView_;
+    }
 private:
     std::string textureFilePath_;
     // ===============================
@@ -61,9 +53,13 @@ private:
     // 頂点バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_;
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView_ {}; // 頂点バッファビュー
- VertexData* vertexData_ = nullptr; // 頂点データ書き込み用
+    VertexData* vertexData_ = nullptr; // 頂点データ書き込み用
+
+    // indexバッファ
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
+    D3D12_VERTEX_BUFFER_VIEW indexBufferViewSprite;
 
     // マテリアル用定数バッファ
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
-   Material* materialData_ = nullptr; // 書き込み用ポインタ
+    Material* materialData_ = nullptr; // 書き込み用ポインタ
 };

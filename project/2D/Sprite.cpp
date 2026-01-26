@@ -2,6 +2,8 @@
 #include "MatrixMath.h"
 #include "SpriteManager.h"
 
+
+
 #pragma region 初期化処理
 // ================================
 // スプライトの初期化

@@ -1,7 +1,7 @@
 #define _USE_MATH_DEFINES
 #include "CreateSphere.h"
 #include <cmath>
-
+//使わないかもしれない
 void CreateSphere::GenerateSphereVertices(VertexData* vertices, int kSubdivision, float radius)
 {
     // 経度(360)

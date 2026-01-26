@@ -6,6 +6,7 @@
 #include <cassert>
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #pragma region 初期化処理
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
@@ -22,15 +23,6 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
     transformationMatrixData->World = MatrixMath::MakeIdentity4x4();
 
-    // ================================
-    // 平行光源データ初期化
-    // ================================
-    // directionalLightResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(DirectionalLight));
-    // directionalLightResource->SetName(L"Object3d::DirectionalLightCB");
-    // directionalLightResource->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
-    // directionalLightData->color = { 1, 1, 1, 1 };
-    // directionalLightData->direction = MatrixMath::Normalize({ 0, -1, 0 });
-    // directionalLightData->intensity = 1.0f;
     // マテリアルリソース作成
     materialResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(Material));
     materialResource->SetName(L"Object3d::MaterialCB");
@@ -44,7 +36,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->enableLighting = true;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
-    
+
     // ================================
     // Transform初期値設定
     // ================================
@@ -55,36 +47,37 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
 #pragma region 更新処理
 
-void Object3d::Update()
-{
-    // ================================
-    // 各種行列を作成
-    // ================================
+void Object3d::Update() {
+    Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
-    //  モデル自身のワールド行列（スケール・回転・移動）
-    Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+    if (model_) {
+        localMatrix = model_->GetModelData().rootNode.localMatrix;
+    }
+
+    if (animation_ && model_) {
+        localMatrix =
+            animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
+    }
+
+    worldMatrix_ =MatrixMath::Multiply(localMatrix,MatrixMath::MakeAffineMatrix(transform.scale,transform.rotate,transform.translate));
 
     Matrix4x4 worldViewProjectionMatrix;
 
     if (camera_) {
-        const Matrix4x4& viewProjectionMatrix = camera_->GetViewProjectionMatrix();
-        worldViewProjectionMatrix = MatrixMath::Multiply(worldMatrix, viewProjectionMatrix);
-    } else {
-        worldViewProjectionMatrix = worldMatrix;
+        worldViewProjectionMatrix =
+            MatrixMath::Multiply(worldMatrix_, camera_->GetViewProjectionMatrix());
+    }
+    else {
+        worldViewProjectionMatrix = worldMatrix_;
     }
 
-    // ================================
-    // WVP行列を計算して転送
-    // ================================
     transformationMatrixData->WVP = worldViewProjectionMatrix;
-
-    // ワールド行列も送る（ライティングなどで使用）
-    transformationMatrixData->World = worldMatrix;
+    transformationMatrixData->World = worldMatrix_;
 
     Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
-    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);
+    transformationMatrixData->WorldInverseTranspose =
+        MatrixMath::Transpose(inv);
 }
-
 #pragma endregion
 
 #pragma region 描画処理
@@ -111,119 +104,150 @@ void Object3d::Draw()
 // ===============================================
 // OBJファイルの読み込み
 // ===============================================
-ModelData Object3d::LoadObjFile(const std::string& directoryPath, const std::string filename)
+ModelData Object3d::LoadModeFile(const std::string& directoryPath,
+    const std::string filename)
 {
-    // 1.中で必要となる変数の宣言
-    ModelData modelData; // 構築するModelData
-    std::vector<Vector4> positions; // 位置
-    std::vector<Vector3> normals; // 法線
-    std::vector<Vector2> texcoords; // テクスチャ座標
-    std::string line; // ファイルから読んだ一行を格納するもの
+    ModelData modelData;
 
-    // 2.ファイルを開く
-    std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
-    assert(file.is_open()); // とりあえず開けなかったら止める
+    Assimp::Importer importer;
+    std::string filePath = directoryPath + "/" + filename;
 
-    // 3.実際にファイルを読み,ModelDataを構築していく
-    while (std::getline(file, line)) {
-        std::string identifiler;
-        std::istringstream s(line);
-        s >> identifiler; // 先頭の識別子を読む
+    std::filesystem::path p(filePath);
+    if (!std::filesystem::exists(p)) {
+        OutputDebugStringA("FILE NOT FOUND: ");
+        OutputDebugStringA(filePath.c_str());
+        OutputDebugStringA("\n");
+        assert(false);
+    }
+    char cwd[MAX_PATH];
+    GetCurrentDirectoryA(MAX_PATH, cwd);
+    OutputDebugStringA("CWD: ");
+    OutputDebugStringA(cwd);
+    OutputDebugStringA("\n");
 
-        // identifierに応じた処理
-        if (identifiler == "v") {
-            Vector4 position;
-            s >> position.x >> position.y >> position.z;
-            // 左手座標にする
-            position.x *= -1.0f;
+    const aiScene* scene = importer.ReadFile(
+        filePath.c_str(),
+        aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 
-            position.w = 1.0f;
-            positions.push_back(position);
-        } else if (identifiler == "vt") {
-            Vector2 texcoord;
-            s >> texcoord.x >> texcoord.y;
-            // 上下逆にする
+    assert(scene);
+    assert(scene->HasMeshes());
 
-            // texcoord.y *= -1.0f;
-            texcoord.y = 1.0f - texcoord.y;
-            // CG2_06_02_kusokusosjsusuawihoafwhgiuwhkgfau
-            texcoords.push_back(texcoord);
-        } else if (identifiler == "vn") {
-            Vector3 normal;
-            s >> normal.x >> normal.y >> normal.z;
-            // 左手座標にする
-            normal.x *= -1.0f;
+    // -------------------------
+    // Mesh -> MeshPrimitive
+    // -------------------------
+    for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
+        aiMesh* mesh = scene->mMeshes[meshIndex];
 
-            normals.push_back(normal);
-        } else if (identifiler == "f") {
-            VertexData triangle[3]; // 三つの頂点を保存
-            // 面は三角形限定。その他は未対応
-            for (int32_t faceVertex = 0; faceVertex < 3; ++faceVertex) {
-                std::string vertexDefinition;
-                s >> vertexDefinition;
-                // 頂点の要素へのIndexは「位置/UV/法線」で格納されているので、分解してえIndexを取得する
-                std::istringstream v(vertexDefinition);
-                uint32_t elementIndices[3];
-                for (int32_t element = 0; element < 3; ++element) {
-                    std::string index;
+        MeshPrimitive primitive;
+        primitive.mode = PrimitiveMode::Triangles; // 今は固定でOK
 
-                    std::getline(v, index, '/'); // 区切りでインデックスを読んでいく
-                    elementIndices[element] = std::stoi(index);
+        // ---- vertices ----
+        for (uint32_t v = 0; v < mesh->mNumVertices; ++v) {
+            VertexData vertex {};
+
+            aiVector3D pos = mesh->mVertices[v];
+            aiVector3D nrm = mesh->HasNormals()
+                ? mesh->mNormals[v]
+                : aiVector3D(0, 1, 0);
+
+            aiVector3D uv = mesh->HasTextureCoords(0)
+                ? mesh->mTextureCoords[0][v]
+                : aiVector3D(0, 0, 0);
+
+            // 右手 → 左手（X反転）
+            vertex.position = { -pos.x, pos.y, pos.z, 1.0f };
+            vertex.normal = { -nrm.x, nrm.y, nrm.z };
+            vertex.texcoord = { uv.x, uv.y };
+
+            primitive.vertices.push_back(vertex);
+        }
+
+        // ---- indices ----
+        if (mesh->HasFaces()) {
+            for (uint32_t f = 0; f < mesh->mNumFaces; ++f) {
+                aiFace& face = mesh->mFaces[f];
+                // Triangulate してるので 3 のはず
+                for (uint32_t i = 0; i < face.mNumIndices; ++i) {
+                    primitive.indices.push_back(face.mIndices[i]);
                 }
-                // 要素へのIndexから、実際の要素の値を取得して、頂点を構築する
-                Vector4 position = positions[elementIndices[0] - 1];
-                Vector2 texcoord = texcoords[elementIndices[1] - 1];
-                Vector3 normal = normals[elementIndices[2] - 1];
-                // X軸を反転して左手座標系に
-
-                triangle[faceVertex] = { position, texcoord, normal };
             }
-            // 逆順にして格納（2 → 1 → 0）
-            modelData.vertices.push_back(triangle[2]);
-            modelData.vertices.push_back(triangle[1]);
-            modelData.vertices.push_back(triangle[0]);
-            //?
-        } else if (identifiler == "mtllib") {
-            // materialTemplateLibraryファイルの名前を取得する
-            std::string materialFilename;
-            s >> materialFilename;
-            // 基本的にobjファイルと同一階層mtlは存在させるので、ディレクトリ名とファイル名を渡す。
-            modelData.material = LoadMaterialTemplateFile(directoryPath, materialFilename);
+        }
+        // indices が空なら drawArrays 扱いでOK
+
+
+        for (uint32_t boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
+            aiBone* bone = mesh->mBones[boneIndex];
+
+            std::string jointName = bone->mName.C_Str();
+            JointWeightData& jointWeightData =modelData.skinClusterData[jointName];
+
+            aiMatrix4x4 bindPoseMatrixAssimp = bone->mOffsetMatrix.Inverse();
+            aiVector3D scale, translate;
+            aiQuaternion rotate;
+            bindPoseMatrixAssimp.Decompose(scale, rotate, translate);
+
+            Matrix4x4 bindPoseMatrix =MatrixMath::MakeAffineMatrix(
+                { scale.x, scale.y, scale.z },
+                { rotate.x, -rotate.y, -rotate.z, rotate.w },
+                { -translate.x, translate.y, translate.z }
+            );
+
+            jointWeightData.inverseBindPoseMatrix =MatrixMath::Inverse(bindPoseMatrix);
+
+            for (uint32_t weightIndex = 0;
+                weightIndex < bone->mNumWeights;
+                ++weightIndex) {
+
+                jointWeightData.vertexWeights.push_back({
+                    bone->mWeights[weightIndex].mWeight,
+                    bone->mWeights[weightIndex].mVertexId
+                    });
+            }
+        }
+
+
+        modelData.primitives.push_back(primitive);
+    }
+    bool hasTexture = false;
+
+    for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex) {
+        aiMaterial* material = scene->mMaterials[materialIndex];
+
+        if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+            aiString textureFilePath;
+            material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
+
+            std::string tex = textureFilePath.C_Str();
+
+            // "*0" みたいな埋め込み表記はファイルじゃない
+            if (!tex.empty() && tex[0] != '*') {
+
+                std::filesystem::path fullPath = std::filesystem::path(directoryPath) / tex;
+
+                if (std::filesystem::exists(fullPath)) {
+                    modelData.material.textureFilePath = fullPath.string();
+                    hasTexture = true;
+                    break;
+                }
+            }
         }
     }
-    // 4.ModelDataを返す
+   
+
+    // ここで分岐する
+    if (hasTexture) {
+        TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
+    }
+    else {
+        TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
+        modelData.material.textureFilePath = "resources/BaseColor_Cube.png";
+    }
+    // -------------------------
+    // Node（既存の処理）
+    // -------------------------
+    modelData.rootNode = ReadNode(scene->mRootNode);
+
     return modelData;
-}
-#pragma endregion
-
-#pragma region MTL読み込み処理
-// ===============================================
-// マテリアル（.mtl）ファイルの読み込み
-// ===============================================
-MaterialData Object3d::LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename)
-{
-
-    // 1.中で必要となる変数の宣言
-    MaterialData materialData; // 構築するMaterialData
-    // 2.ファイルを開く
-    std::string line; // ファイルから読んだ１行を格納するもの
-    std::ifstream file(directoryPath + "/" + filename); // ファイルを開く
-    assert(file.is_open()); // とりあえず開けなかったら止める
-    // 3.実際にファイルを読み、MaterialDataを構築していく
-    while (std::getline(file, line)) {
-        std::string identifier;
-        std::istringstream s(line);
-        s >> identifier;
-        // identifierに応じた処理
-        if (identifier == "map_Kd") {
-            std::string textureFilename;
-            s >> textureFilename;
-            // 連結してファイルパスにする
-            materialData.textureFilePath = directoryPath + "/" + textureFilename;
-        }
-    }
-    // 4.materialDataを返す
-    return materialData;
 }
 
 #pragma endregion
@@ -232,4 +256,56 @@ void Object3d::SetModel(const std::string& filePath)
 {
     // モデルを検索してセットする
     model_ = ModelManager::GetInstance()->FindModel(filePath);
+}
+Node Object3d::ReadNode(aiNode* node)
+{
+    Node result;
+
+    aiVector3D scale, translate;
+    aiQuaternion rotate;
+
+    node->mTransformation.Decompose(scale, rotate, translate);
+
+    // scale（
+    result.transform.scale = { scale.x, scale.y, scale.z };
+
+    // 回転：右手 → 左手
+    result.transform.rotate = {
+        rotate.x,
+        -rotate.y,
+        -rotate.z,
+        rotate.w
+    };
+
+    // 平行移動：X反転
+    result.transform.translate = {
+        -translate.x,
+        translate.y,
+        translate.z
+    };
+
+    // SRTから localMatrix を再構築
+    result.localMatrix = MatrixMath::MakeAffineMatrix(
+        result.transform.scale,
+        result.transform.rotate,
+        result.transform.translate);
+
+    result.name = node->mName.C_Str();
+
+    result.children.resize(node->mNumChildren);
+    for (uint32_t i = 0; i < node->mNumChildren; ++i) {
+        result.children[i] = ReadNode(node->mChildren[i]);
+    }
+
+    return result;
+}
+const Node& Object3d::GetRootNode() const
+{
+    assert(model_);
+    return model_->GetModelData().rootNode;
+}
+
+void Object3d::SetAnimation(PlayAnimation* anim)
+{
+    animation_ = anim;
 }
