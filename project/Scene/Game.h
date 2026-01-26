@@ -56,7 +56,7 @@
 
 #include "BaseScene.h"
 #include "SoundManager.h"
-
+#include"../3D/SkinningObject3dManager.h"
 #include "SceneManager.h"
 // ======================= パーティクル関連 =========================
 #include "ParticleManager.h"

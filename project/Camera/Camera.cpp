@@ -1,7 +1,7 @@
 #include "Camera.h"
 #include "DirectXCommon.h"
 Camera::Camera()
-    : transform_({ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } })
+    : transform_({ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -20.0f } })
     , fovY_(0.45f)
     , aspectRatio_(static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight))
     , nearClip_(0.1f)
@@ -23,6 +23,8 @@ void Camera::Initialize()
 
 void Camera::Update()
 {
+
+
     assert(cameraData_ && "Camera::Initialize() is not called");
     cameraData_->worldPosition = transform_.translate;
     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);

@@ -1,5 +1,6 @@
 #include "LightManager.h"
 #include <numbers>
+#include "../math//MathStruct.h"
 LightManager* LightManager::instance = nullptr;
 
 LightManager* LightManager::GetInstance()
@@ -18,7 +19,7 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     lightResource_->Map(0, nullptr, reinterpret_cast<void**>(&lightData_));
     lightResource_->SetName(L"Object3d::DirectionalLightCB");
     lightData_->color = { 1, 1, 1, 1 };
-    lightData_->direction = Normalize({ 0, -1, 0 });
+    lightData_->direction = Normalize(Vector3 { 0.0f, -1.0f, 0.0f });
     lightData_->intensity = 1.0f;
 
     // point light default
@@ -35,7 +36,7 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     spotLightData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     spotLightData_->position = { 2.0f, 1.25f, 0.0f };
     spotLightData_->distance = 7.0f;
-    spotLightData_->direction = Normalize({ -1.0f, -1.0f, 0.0f });
+    spotLightData_->direction = Normalize(Vector3 { -1.0f, -1.0f, 0.0f });
     spotLightData_->intensity = 4.0f;
     spotLightData_->decay = 2.0f;
     spotLightData_->cosAngle = std::cos(std::numbers::pi_v<float> / 3.0f);

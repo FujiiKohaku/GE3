@@ -54,7 +54,7 @@ private:
         Vector3 worldPosition;
     };
 
-    Transform transform_;
+    EulerTransform transform_;
     Matrix4x4 worldMatrix_;
     Matrix4x4 viewMatrix_;
     Matrix4x4 projectionMatrix_;

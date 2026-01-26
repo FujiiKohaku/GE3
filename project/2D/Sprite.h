@@ -70,7 +70,7 @@ private:
     Vector2 size = { 640.0f, 360.0f };
 
     // トランスフォーム初期値
-    Transform transform {
+    EulerTransform transform {
         { 1.0f, 1.0f, 1.0f }, // 拡縮
         { 0.0f, 0.0f, 0.0f }, // 回転
         { 0.0f, 0.0f, 0.0f } // 平行移動
