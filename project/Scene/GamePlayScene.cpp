@@ -13,7 +13,7 @@ void GamePlayScene::Initialize()
     // =================================================
     camera_ = new Camera();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, 0.0f, -20.0f });
+    camera_->SetTranslate({ 0.0f, -2.0f, -20.0f });
     SkinningObject3dManager::GetInstance()->SetDefaultCamera(camera_);
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
     // =================================================
@@ -46,6 +46,8 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("Animation_Skin_09.gltf");
     ModelManager::GetInstance()->Load("Animation_Skin_10.gltf");
     ModelManager::GetInstance()->Load("Animation_Skin_11.gltf");
+    // skinningWalk
+    ModelManager::GetInstance()->Load("walk.gltf");
     //==============
     //  OBJ
     //==============
@@ -53,11 +55,13 @@ void GamePlayScene::Initialize()
     terrain_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("terrain.obj");
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
+    terrain_->SetTranslate({ 0.0f - 2.0f, 0.0f });
     // plane
     plane_ = new Object3d();
     plane_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("plane.obj");
     plane_->SetModel(ModelManager::GetInstance()->FindModel("plane.obj"));
+    plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
     // node00
     nodeObject00_ = new Object3d();
     nodeObject00_->Initialize(Object3dManager::GetInstance());
@@ -109,6 +113,10 @@ void GamePlayScene::Initialize()
     animationSkin10_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_10.gltf"));
     animationSkin11_ = new SkinningObject3d();
     animationSkin11_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_11.gltf"));
+
+    skinningPlayer_ = new SkinningObject3d();
+    skinningPlayer_->SetModel(ModelManager::GetInstance()->FindModel("walk.gltf"));
+
     //  =================================================
     //  Skeleton
     //  =================================================
@@ -219,13 +227,25 @@ void GamePlayScene::Initialize()
     animationSkinSkeleton11_ = Skeleton::CreateSkeleton(animationSkin11_->GetRootNode());
     // animation
     skinPlay11_ = new PlayAnimation();
-    skinAnimation11_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Skin_08.gltf");
+    skinAnimation11_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Skin_11.gltf");
     skinPlay11_->SetAnimation(&skinAnimation11_);
     skinPlay11_->SetSkeleton(&animationSkinSkeleton11_);
     animationSkin11_->SetAnimation(skinPlay11_);
     animationSkin11_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationSkin11_->Initialize(SkinningObject3dManager::GetInstance());
     animationSkin11_->SetTranslate({ 55.0f, -2.0f, 0.0f });
+
+    // skin
+    skinningSkeleton_ = Skeleton::CreateSkeleton(skinningPlayer_->GetRootNode());
+    // animation
+    skinningPlay_ = new PlayAnimation();
+    skinningAnimation_ = AnimationLoder::LoadAnimationFile("resources", "walk.gltf");
+    skinningPlay_->SetAnimation(&skinningAnimation_);
+    skinningPlay_->SetSkeleton(&skinningSkeleton_);
+    skinningPlayer_->SetAnimation(skinningPlay_);
+    skinningPlayer_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
+    skinningPlayer_->Initialize(SkinningObject3dManager::GetInstance());
+    skinningPlayer_->SetTranslate({ 0.0f, 3.0f, 0.0f });
     // node00
     nodeAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Animation_Node_00.gltf");
     nodePlayAnim00_.SetAnimation(&nodeAnimation00_);
@@ -367,6 +387,10 @@ void GamePlayScene::Update()
     animationSkin11_->SetRotate({ 0.0f, r, 0.0f });
     animationSkinSkeleton11_.UpdateSkeleton();
     animationSkin11_->Update();
+
+    skinningPlay_->Update(1.0f / 60.0f);
+    skinningSkeleton_.UpdateSkeleton();
+    skinningPlayer_->Update();
 
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
@@ -532,24 +556,8 @@ void GamePlayScene::Update()
     ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
 
     ImGui::End();
-    // ==================================
-    // Terrain Control
-    // ==================================
-    ImGui::Begin("Terrain Control");
 
-    // 位置
-    ImGui::SliderFloat3("Position", &terrainPos.x, -50.0f, 50.0f);
-
-    // 回転（ラジアン）
-    ImGui::SliderFloat3("Rotate", &terrainRotate.x, -3.14f, 3.14f);
-
-    // スケール
-    ImGui::SliderFloat3("Scale", &terrainScale.x, 0.1f, 10.0f);
-
-    ImGui::End();
-    // ==================================
-    // Terrain Control
-    // ==================================
+  
     ImGui::Begin("Plane Control");
 
     // 位置
@@ -583,16 +591,17 @@ void GamePlayScene::Draw3D()
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
-    // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-    // terrain_->Draw();
+    sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    terrain_->Draw();
 
-    // plane_->Draw();
+    plane_->Draw();
     nodeObject00_->Draw();
     nodeObject01_->Draw();
     nodeObject02_->Draw();
     nodeObject03_->Draw();
     nodeObject04_->Draw();
     nodeObject05_->Draw();
+
     //----------------------
     // スキニング
     //----------------------
@@ -608,6 +617,7 @@ void GamePlayScene::Draw3D()
     /* animationSkin09_->Draw();*/
     animationSkin10_->Draw();
     animationSkin11_->Draw();
+    skinningPlayer_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }
@@ -681,5 +691,7 @@ void GamePlayScene::Finalize()
     animationSkin10_ = nullptr;
     delete animationSkin11_;
     animationSkin11_ = nullptr;
+    delete skinningPlayer_;
+    skinningPlayer_ = nullptr;
     SoundManager::GetInstance()->SoundUnload(&bgm);
 }
