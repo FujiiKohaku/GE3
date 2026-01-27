@@ -26,8 +26,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 
     transformationMatrixResource->SetName(L"SkinningObject3d::TransformCB");
 
-    transformationMatrixResource->Map(
-        0, nullptr, reinterpret_cast<void**>(&transformationMatrixData));
+    transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixData));
 
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
     transformationMatrixData->World = MatrixMath::MakeIdentity4x4();
