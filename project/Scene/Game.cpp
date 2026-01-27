@@ -14,13 +14,9 @@ void Game::Initialize() {
 	TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
 	ImGuiManager::GetInstance()->Initialize(winApp_, DirectXCommon::GetInstance(), SrvManager::GetInstance());
 	SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-	// TextureManager::GetInstance()->LoadTexture("resources/circle.png")
 	ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
 	Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
 	SkinningObject3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-	// camera_ = new Camera();
-	// camera_->SetTranslate({ 0.0f, 0.0f, 2.0f });
-	// Object3dManager::GetInstance()->SetDefaultCamera(camera_);
 	modelCommon_.Initialize(DirectXCommon::GetInstance());
 	// 入力関連
 	Input::GetInstance()->Initialize(winApp_);

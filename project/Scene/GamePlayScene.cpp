@@ -338,7 +338,7 @@ void GamePlayScene::Draw3D()
     //terrain_->Draw();
 
    // plane_->Draw();
-   // nodeObject00_->Draw();
+    nodeObject00_->Draw();
 
 
     //----------------------
