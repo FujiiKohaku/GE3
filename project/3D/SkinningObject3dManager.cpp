@@ -130,7 +130,7 @@ void SkinningObject3dManager::CreateRootSignature()
 #pragma region グラフィックスパイプライン作成
 void SkinningObject3dManager::CreateGraphicsPipeline()
 {
-    HRESULT hr;
+    
 
     // ====== 入力レイアウト ======
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};

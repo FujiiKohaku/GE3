@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 
 #include "Camera.h"
@@ -10,17 +10,17 @@ class SkinningObject3dManager {
 public:
     static SkinningObject3dManager* instance;
 
-    // Singleton ƒCƒ“ƒ^[ƒtƒF[ƒX
+    // Singleton ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹
     static SkinningObject3dManager* GetInstance();
     static void Finalize();
 
     //=========================================
-    // ‰Šú‰»ˆ—
+    // åˆæœŸåŒ–å‡¦ç†
     //=========================================
     void Initialize(DirectXCommon* dxCommon);
 
     //=========================================
-    // ‹¤’Ê•`‰æ‘Oˆ—
+    // å…±é€šæç”»å‰å‡¦ç†
     //=========================================
     void PreDraw();
 
@@ -37,7 +37,7 @@ public:
     }
 
 private:
-    // SingletonFŠO•”‚©‚ç new ‚Å‚«‚È‚¢‚æ‚¤‚É‚·‚é
+    // Singletonï¼šå¤–éƒ¨ã‹ã‚‰ new ã§ããªã„ã‚ˆã†ã«ã™ã‚‹
     SkinningObject3dManager() = default;
     ~SkinningObject3dManager() = default;
 
