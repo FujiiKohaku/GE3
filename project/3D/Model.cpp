@@ -36,9 +36,7 @@ void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath
 
             uint32_t* idx = nullptr;
             primitive.indexResource->Map(0, nullptr, reinterpret_cast<void**>(&idx));
-            std::memcpy(idx,
-                primitive.indices.data(),
-                sizeof(uint32_t) * primitive.indices.size());
+            std::memcpy(idx,primitive.indices.data(),sizeof(uint32_t) * primitive.indices.size());
 
             primitive.ibView.BufferLocation = primitive.indexResource->GetGPUVirtualAddress();
             primitive.ibView.SizeInBytes = UINT(sizeof(uint32_t) * primitive.indices.size());
