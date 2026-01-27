@@ -595,7 +595,7 @@ void GamePlayScene::Draw3D()
     //terrain_->Draw();
 
     //plane_->Draw();
-    //nodeObject00_->Draw();
+    nodeObject00_->Draw();
     //nodeObject01_->Draw();
     //nodeObject02_->Draw();
     //nodeObject03_->Draw();
@@ -607,7 +607,7 @@ void GamePlayScene::Draw3D()
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
-    animationSkin00_->Draw();
+   /* animationSkin00_->Draw();*/
     //animationSkin01_->Draw();
     //animationSkin02_->Draw();
     //animationSkin05_->Draw();
