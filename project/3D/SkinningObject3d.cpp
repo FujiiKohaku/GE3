@@ -86,6 +86,12 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 
 void SkinningObject3d::Update()
 {
+    if (transformationMatrixData == nullptr) {
+        return;
+    }
+    if (camera_ == nullptr) {
+        return;
+    }
 
     // ================================
     // 各種行列を作成

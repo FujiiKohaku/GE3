@@ -28,6 +28,7 @@ void GamePlayScene::Initialize()
 
     // nodeLoad
     ModelManager::GetInstance()->Load("Drone/dolone.gltf");
+    ModelManager::GetInstance()->Load("AnimatedCube.gltf");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("walk.gltf");
@@ -48,18 +49,15 @@ void GamePlayScene::Initialize()
     // node00
     nodeObject00_ = new Object3d();
     nodeObject00_->Initialize(Object3dManager::GetInstance());
-    nodeObject00_->SetModel("AnimatedCube.gltf");
+    nodeObject00_->SetModel("Drone/dolone.gltf");
   
     // =================================================
     // animationSkin
     // =================================================
     animationSkin00_ = new SkinningObject3d();
-    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("Drone/dolone.gltf"));
+    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("walk.gltf"));
  
-
-    skinningPlayer_ = new SkinningObject3d();
-    skinningPlayer_->SetModel(ModelManager::GetInstance()->FindModel("walk.gltf"));
-    ;
+  
     //  =================================================
     //  Skeleton
     //  =================================================
@@ -67,7 +65,7 @@ void GamePlayScene::Initialize()
     animationSkinSkeleton00_ = Skeleton::CreateSkeleton(animationSkin00_->GetRootNode());
     // animation
     skinPlay00_ = new PlayAnimation();
-    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Drone/dolone.gltf");
+    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "walk.gltf");
     skinPlay00_->SetAnimation(&skinAnimation00_);
     skinPlay00_->SetSkeleton(&animationSkinSkeleton00_);
     animationSkin00_->SetAnimation(skinPlay00_);
@@ -78,7 +76,7 @@ void GamePlayScene::Initialize()
     nodeAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Drone/dolone.gltf");
     nodePlayAnim00_.SetAnimation(&nodeAnimation00_);
     nodeObject00_->SetAnimation(&nodePlayAnim00_);
-    nodeObject00_->SetTranslate({ 5.0f, 0.0f, 0.0f });
+    nodeObject00_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     nodeObject00_->SetScale({ 1.0f, 1.0f, 1.0f });
 
    
@@ -135,7 +133,7 @@ void GamePlayScene::Update()
     animationSkin00_->SetRotate({ 0.0f, r, 0.0f });
     animationSkinSkeleton00_.UpdateSkeleton();
     animationSkin00_->Update();
-    skinningPlayer_->Update();
+   
 
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
@@ -339,8 +337,8 @@ void GamePlayScene::Draw3D()
     //sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     //terrain_->Draw();
 
-    plane_->Draw();
-    nodeObject00_->Draw();
+   // plane_->Draw();
+   // nodeObject00_->Draw();
 
 
     //----------------------
