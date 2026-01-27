@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "../Skeleton/Skeleton.h"
 #include "../math/MatrixMath.h"
 #include "../math/MatrixMath.h"
@@ -8,7 +8,7 @@
 #include <vector>
 #include <wrl.h>
 struct SkinCluster {
-    // CPU‘¤
+    // CPUå´
     std::vector<Matrix4x4> inverseBindPoseMatrices;
 
     // Influence
@@ -21,6 +21,6 @@ struct SkinCluster {
     std::span<WellForGPU> mappedPalette;
     uint32_t paletteSrvIndex = 0;
     std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> paletteSrvHandle;
-    // –ˆƒtƒŒ[ƒ€XV
+    // æ¯ãƒ•ãƒ¬ãƒ¼ãƒ æ›´æ–°
     void Update(const Skeleton& skeleton);
 };

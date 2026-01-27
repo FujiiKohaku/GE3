@@ -1,4 +1,4 @@
-#include "SkinningObject3dManager.h"
+ï»¿#include "SkinningObject3dManager.h"
 
 SkinningObject3dManager* SkinningObject3dManager::instance = nullptr;
 
@@ -10,56 +10,56 @@ SkinningObject3dManager* SkinningObject3dManager::GetInstance()
     }
     return instance;
 }
-#pragma region ‰Šú‰»ˆ—
+#pragma region åˆæœŸåŒ–å‡¦ç†
 void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon)
 {
-    // DirectX‹¤’Ê•”•ª‚ğó‚¯æ‚èA•Û‘¶
+    // DirectXå…±é€šéƒ¨åˆ†ã‚’å—ã‘å–ã‚Šã€ä¿å­˜
     dxCommon_ = dxCommon;
 
-    // ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ‚ğì¬
+    // ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£ã‚’ä½œæˆ
     CreateRootSignature();
 
-    // ƒOƒ‰ƒtƒBƒbƒNƒXƒpƒCƒvƒ‰ƒCƒ“‚ğì¬
+    // ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ã‚¹ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ã‚’ä½œæˆ
     CreateGraphicsPipeline();
 }
 #pragma endregion
 
-#pragma region •`‰æ€”õˆ—
+#pragma region æç”»æº–å‚™å‡¦ç†
 void SkinningObject3dManager::PreDraw()
 {
     auto* commandList = dxCommon_->GetCommandList();
 
-    // ƒvƒŠƒ~ƒeƒBƒuŒ`óiOŠpŒ`ƒŠƒXƒgj
+    // ãƒ—ãƒªãƒŸãƒ†ã‚£ãƒ–å½¢çŠ¶ï¼ˆä¸‰è§’å½¢ãƒªã‚¹ãƒˆï¼‰
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // RootSignature İ’è
+    // RootSignature è¨­å®š
     commandList->SetGraphicsRootSignature(rootSignature.Get());
 
-    //  ƒuƒŒƒ“ƒhƒ‚[ƒh‚É‰‚¶‚½ PSO ‚ğ“K—p
+    //  ãƒ–ãƒ¬ãƒ³ãƒ‰ãƒ¢ãƒ¼ãƒ‰ã«å¿œã˜ãŸ PSO ã‚’é©ç”¨
     commandList->SetPipelineState(pipelineStates[currentBlendMode].Get());
 }
 
 #pragma endregion
 
-#pragma region ƒ‹[ƒgƒVƒOƒlƒ`ƒƒì¬
+#pragma region ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£ä½œæˆ
 void SkinningObject3dManager::CreateRootSignature()
 {
     HRESULT hr;
 
-    // ====== RootParameter‚Ìİ’è ======
+    // ====== RootParameterã®è¨­å®š ======
     D3D12_ROOT_PARAMETER rootParameters[7] = {};
 
-    // [0] MaterialiƒsƒNƒZƒ‹ƒVƒF[ƒ_—pj
+    // [0] Materialï¼ˆãƒ”ã‚¯ã‚»ãƒ«ã‚·ã‚§ãƒ¼ãƒ€ç”¨ï¼‰
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
-    // [1] Transformi’¸“_ƒVƒF[ƒ_—pj
+    // [1] Transformï¼ˆé ‚ç‚¹ã‚·ã‚§ãƒ¼ãƒ€ç”¨ï¼‰
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[1].Descriptor.ShaderRegister = 0;
 
-    // [2] TextureiSRV: ƒeƒNƒXƒ`ƒƒ—pj
+    // [2] Textureï¼ˆSRV: ãƒ†ã‚¯ã‚¹ãƒãƒ£ç”¨ï¼‰
     D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
     descriptorRange[0].BaseShaderRegister = 0;
     descriptorRange[0].NumDescriptors = 1;
@@ -71,11 +71,11 @@ void SkinningObject3dManager::CreateRootSignature()
     rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
 
-    // [3] DirectionalLightiƒ‰ƒCƒgî•ñj
+    // [3] DirectionalLightï¼ˆãƒ©ã‚¤ãƒˆæƒ…å ±ï¼‰
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1;
-    // [4] Camerai‹“_î•ñj
+    // [4] Cameraï¼ˆè¦–ç‚¹æƒ…å ±ï¼‰
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[4].Descriptor.ShaderRegister = 2; // b2
@@ -87,7 +87,7 @@ void SkinningObject3dManager::CreateRootSignature()
     rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[6].Descriptor.ShaderRegister = 4; //  b4
-    // ====== Samplerİ’è ======
+    // ====== Samplerè¨­å®š ======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -98,7 +98,7 @@ void SkinningObject3dManager::CreateRootSignature()
     staticSampler.ShaderRegister = 0;
     staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-    // ====== RootSignatureDescİ’è ======
+    // ====== RootSignatureDescè¨­å®š ======
     D3D12_ROOT_SIGNATURE_DESC desc = {};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     desc.pParameters = rootParameters;
@@ -106,7 +106,7 @@ void SkinningObject3dManager::CreateRootSignature()
     desc.pStaticSamplers = &staticSampler;
     desc.NumStaticSamplers = 1;
 
-    // ====== ƒVƒŠƒAƒ‰ƒCƒY & ì¬ ======
+    // ====== ã‚·ãƒªã‚¢ãƒ©ã‚¤ã‚º & ä½œæˆ ======
     hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
         &signatureBlob, &errorBlob);
 
@@ -117,7 +117,7 @@ void SkinningObject3dManager::CreateRootSignature()
         assert(false);
     }
 
-    // ÀÛ‚Éƒ‹[ƒgƒVƒOƒlƒ`ƒƒì¬
+    // å®Ÿéš›ã«ãƒ«ãƒ¼ãƒˆã‚·ã‚°ãƒãƒãƒ£ä½œæˆ
     hr = dxCommon_->GetDevice()->CreateRootSignature(
         0,
         signatureBlob->GetBufferPointer(),
@@ -127,12 +127,12 @@ void SkinningObject3dManager::CreateRootSignature()
 }
 #pragma endregion
 
-#pragma region ƒOƒ‰ƒtƒBƒbƒNƒXƒpƒCƒvƒ‰ƒCƒ“ì¬
+#pragma region ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ã‚¹ãƒ‘ã‚¤ãƒ—ãƒ©ã‚¤ãƒ³ä½œæˆ
 void SkinningObject3dManager::CreateGraphicsPipeline()
 {
     HRESULT hr;
 
-    // ====== “ü—ÍƒŒƒCƒAƒEƒg ======
+    // ====== å…¥åŠ›ãƒ¬ã‚¤ã‚¢ã‚¦ãƒˆ ======
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
 
     // POSITION
@@ -155,12 +155,12 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
-    // ====== ƒ‰ƒXƒ^ƒ‰ƒCƒUİ’è ======
+    // ====== ãƒ©ã‚¹ã‚¿ãƒ©ã‚¤ã‚¶è¨­å®š ======
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    // ====== ƒfƒvƒXƒXƒeƒ“ƒVƒ‹İ’è ======
+    // ====== ãƒ‡ãƒ—ã‚¹ã‚¹ãƒ†ãƒ³ã‚·ãƒ«è¨­å®š ======
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
@@ -168,12 +168,12 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
 
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-    // ====== ƒVƒF[ƒ_[‚ÌƒRƒ“ƒpƒCƒ‹ ======
+    // ====== ã‚·ã‚§ãƒ¼ãƒ€ãƒ¼ã®ã‚³ãƒ³ãƒ‘ã‚¤ãƒ« ======
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
-    // ====== PSOİ’è ======
+    // ====== PSOè¨­å®š ======
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
@@ -188,14 +188,14 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     baseDesc.SampleDesc.Count = 1;
     baseDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     baseDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    // ƒuƒŒƒ“ƒhİ’èi‚Æ‚è‚ ‚¦‚¸‚È‚µ‚Å‰Šú‰»j
+    // ãƒ–ãƒ¬ãƒ³ãƒ‰è¨­å®šï¼ˆã¨ã‚Šã‚ãˆãšãªã—ã§åˆæœŸåŒ–ï¼‰
     baseDesc.BlendState = CreateBlendDesc(kBlendModeNone);
-    // PSO‚ğ•Û‘¶‚·‚é”z—ñ
+    // PSOã‚’ä¿å­˜ã™ã‚‹é…åˆ—
     pipelineStates[kCountOfBlendMode];
 
     for (int i = 0; i < kCountOfBlendMode; i++) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc; // ‹¤’Êİ’èƒRƒs[
-        desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i)); // ƒuƒŒƒ“ƒh‚¾‚¯Ø‘Ö
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc; // å…±é€šè¨­å®šã‚³ãƒ”ãƒ¼
+        desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i)); // ãƒ–ãƒ¬ãƒ³ãƒ‰ã ã‘åˆ‡æ›¿
         dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineStates[i]));
     }
 }
