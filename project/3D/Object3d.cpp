@@ -55,8 +55,7 @@ void Object3d::Update() {
     }
 
     if (animation_ && model_) {
-        localMatrix =
-            animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
+        localMatrix =animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
     }
 
     worldMatrix_ =MatrixMath::Multiply(localMatrix,MatrixMath::MakeAffineMatrix(transform.scale,transform.rotate,transform.translate));
@@ -89,8 +88,6 @@ void Object3d::Draw()
     // Transform定数バッファをセット
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
 
-    // ライト情報をセット
-    // commandList->SetGraphicsRootConstantBufferView(3, directionalLightResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
 
     // モデルが設定されていれば描画

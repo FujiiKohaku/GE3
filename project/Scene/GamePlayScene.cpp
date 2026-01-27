@@ -27,14 +27,14 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
 
     // nodeLoad
-    ModelManager::GetInstance()->Load("Drone/dolone.gltf");
+    ModelManager::GetInstance()->Load("AnimatedCube.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_01.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_02.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_03.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_04.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_05.gltf");
     // animationskinLoad
-    ModelManager::GetInstance()->Load("Drone/dolone.gltf");
+    ModelManager::GetInstance()->Load("AnimatedCube.gltf");
     ModelManager::GetInstance()->Load("Animation_Skin_01.gltf");
     ModelManager::GetInstance()->Load("Animation_Skin_02.gltf");
     /*  ModelManager::GetInstance()->Load("Animation_Skin_03.gltf");*/
@@ -65,7 +65,7 @@ void GamePlayScene::Initialize()
     // node00
     nodeObject00_ = new Object3d();
     nodeObject00_->Initialize(Object3dManager::GetInstance());
-    nodeObject00_->SetModel("Drone/dolone.gltf");
+    nodeObject00_->SetModel("AnimatedCube.gltf");
     // node01
     nodeObject01_ = new Object3d();
     nodeObject01_->Initialize(Object3dManager::GetInstance());
@@ -90,7 +90,7 @@ void GamePlayScene::Initialize()
     // animationSkin
     // =================================================
     animationSkin00_ = new SkinningObject3d();
-    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("Drone/dolone.gltf"));
+    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("AnimatedCube.gltf"));
     animationSkin01_ = new SkinningObject3d();
     animationSkin01_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_01.gltf"));
     animationSkin02_ = new SkinningObject3d();
@@ -124,7 +124,7 @@ void GamePlayScene::Initialize()
     animationSkinSkeleton00_ = Skeleton::CreateSkeleton(animationSkin00_->GetRootNode());
     // animation
     skinPlay00_ = new PlayAnimation();
-    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Drone/dolone.gltf");
+    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "AnimatedCube.gltf");
     skinPlay00_->SetAnimation(&skinAnimation00_);
     skinPlay00_->SetSkeleton(&animationSkinSkeleton00_);
     animationSkin00_->SetAnimation(skinPlay00_);
