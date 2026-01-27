@@ -27,14 +27,14 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
 
     // nodeLoad
-    ModelManager::GetInstance()->Load("AnimatedCube.gltf");
+    ModelManager::GetInstance()->Load("Drone/dolone.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_01.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_02.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_03.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_04.gltf");
     ModelManager::GetInstance()->Load("Animation_Node_05.gltf");
     // animationskinLoad
-    ModelManager::GetInstance()->Load("AnimatedCube.gltf");
+    ModelManager::GetInstance()->Load("Drone/dolone.gltf");
     ModelManager::GetInstance()->Load("Animation_Skin_01.gltf");
     ModelManager::GetInstance()->Load("Animation_Skin_02.gltf");
     /*  ModelManager::GetInstance()->Load("Animation_Skin_03.gltf");*/
@@ -90,7 +90,7 @@ void GamePlayScene::Initialize()
     // animationSkin
     // =================================================
     animationSkin00_ = new SkinningObject3d();
-    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("AnimatedCube.gltf"));
+    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("Drone/dolone.gltf"));
     animationSkin01_ = new SkinningObject3d();
     animationSkin01_->SetModel(ModelManager::GetInstance()->FindModel("Animation_Skin_01.gltf"));
     animationSkin02_ = new SkinningObject3d();
@@ -124,7 +124,7 @@ void GamePlayScene::Initialize()
     animationSkinSkeleton00_ = Skeleton::CreateSkeleton(animationSkin00_->GetRootNode());
     // animation
     skinPlay00_ = new PlayAnimation();
-    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "AnimatedCube.gltf");
+    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Drone/dolone.gltf");
     skinPlay00_->SetAnimation(&skinAnimation00_);
     skinPlay00_->SetSkeleton(&animationSkinSkeleton00_);
     animationSkin00_->SetAnimation(skinPlay00_);
@@ -595,7 +595,7 @@ void GamePlayScene::Draw3D()
     //terrain_->Draw();
 
     //plane_->Draw();
-    nodeObject00_->Draw();
+   // nodeObject00_->Draw();
     //nodeObject01_->Draw();
     //nodeObject02_->Draw();
     //nodeObject03_->Draw();
@@ -607,7 +607,7 @@ void GamePlayScene::Draw3D()
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
-   /* animationSkin00_->Draw();*/
+    animationSkin00_->Draw();
     //animationSkin01_->Draw();
     //animationSkin02_->Draw();
     //animationSkin05_->Draw();
