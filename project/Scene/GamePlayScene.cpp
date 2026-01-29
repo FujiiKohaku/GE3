@@ -13,7 +13,8 @@ void GamePlayScene::Initialize()
     // =================================================
     camera_ = new Camera();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, -2.0f, -20.0f });
+    camera_->SetTranslate({ 0.0f, 10.0f, -20.0f });
+    camera_->SetRotate({ std::numbers::pi_v<float> / 6.0f, 0.0f, 0.0f });
     SkinningObject3dManager::GetInstance()->SetDefaultCamera(camera_);
     Object3dManager::GetInstance()->SetDefaultCamera(camera_);
     // =================================================
@@ -40,8 +41,7 @@ void GamePlayScene::Initialize()
     terrain_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("terrain.obj");
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
-    terrain_->SetTranslate({ 0.0f ,0.0f, 0.0f });
-
+    terrain_->SetTranslate({ 0.0f, 0.0f, 0.0f });
 
     // plane
     plane_ = new Object3d();
@@ -53,14 +53,13 @@ void GamePlayScene::Initialize()
     nodeObject00_ = new Object3d();
     nodeObject00_->Initialize(Object3dManager::GetInstance());
     nodeObject00_->SetModel("Drone/dolone.gltf");
-  
+
     // =================================================
     // animationSkin
     // =================================================
     animationSkin00_ = new SkinningObject3d();
     animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("walk.gltf"));
- 
-  
+
     //  =================================================
     //  Skeleton
     //  =================================================
@@ -82,7 +81,6 @@ void GamePlayScene::Initialize()
     nodeObject00_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     nodeObject00_->SetScale({ 1.0f, 1.0f, 1.0f });
 
-   
     // デバッグ（Animation）
     for (const auto& [name, nodeAnim] : skinAnimation00_.nodeAnimations) {
         OutputDebugStringA(name.c_str());
@@ -110,10 +108,7 @@ void GamePlayScene::Initialize()
     // Light
     // =================================================
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    LightManager::GetInstance()->SetDirectional(
-        { 1, 1, 1, 1 },
-        { 0, -1, 0 },
-        1.0f);
+    LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
 
     // =================================================
     // Sound
@@ -127,16 +122,15 @@ void GamePlayScene::Update()
 
     nodePlayAnim00_.Update(1.0f / 60.0f);
     nodeObject00_->Update();
-  
+
     // ImGuiのBegin/Endは絶対に呼ばない！
     // rotate
-   // r += 0.03f;
+    // r += 0.03f;
     // animationSkin
     skinPlay00_->Update(1.0f / 60.0f);
     animationSkin00_->SetRotate({ 0.0f, 0.0f, 0.0f });
     animationSkinSkeleton00_.UpdateSkeleton();
     animationSkin00_->Update();
-   
 
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
@@ -155,7 +149,7 @@ void GamePlayScene::Update()
     ImGui::Begin("Lighting Control");
 
     // ---- ライトの ON / OFF ----
-    static bool lightEnabled = true;
+    static bool lightEnabled = false;
     ImGui::Checkbox("Enable Light", &lightEnabled);
 
     // ---- ライトの色 ----
@@ -200,7 +194,7 @@ void GamePlayScene::Update()
     ImGui::Separator();
     ImGui::Text("Point Light Control");
 
-    static bool pointEnabled = true;
+    static bool pointEnabled = false;
     ImGui::Checkbox("Enable Point Light", &pointEnabled);
 
     static Vector4 pointColor = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -236,7 +230,7 @@ void GamePlayScene::Update()
     ImGui::ColorEdit3("Spot Color", (float*)&spotColor);
 
     // 位置
-    static Vector3 spotPos = { 2.0f, 1.25f, 0.0f };
+    static Vector3 spotPos = { 0.0f, 0.0f, 0.0f };
     ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
 
     // 方向
@@ -303,7 +297,6 @@ void GamePlayScene::Update()
 
     ImGui::End();
 
-  
     ImGui::Begin("Plane Control");
 
     // 位置
@@ -337,19 +330,18 @@ void GamePlayScene::Draw3D()
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
-    //sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-   terrain_->Draw();
+    // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    terrain_->Draw();
 
-   // plane_->Draw();
-  //  nodeObject00_->Draw();
+    // plane_->Draw();
+    //  nodeObject00_->Draw();
 
-
-    //---------------------- 
+    //----------------------
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
-   // animationSkin00_->Draw();
+    // animationSkin00_->Draw();
 
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
@@ -392,7 +384,6 @@ void GamePlayScene::Finalize()
     plane_ = nullptr;
     delete nodeObject00_;
     nodeObject00_ = nullptr;
- 
 
     delete animationSkin00_;
     animationSkin00_ = nullptr;
