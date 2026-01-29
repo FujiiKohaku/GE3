@@ -271,7 +271,7 @@ void GamePlayScene::Update()
     lm->SetSpotLightDistance(spotDistance);
     lm->SetSpotLightDecay(spotDecay);
     lm->SetSpotLightCosAngle(cosAngle);
-    lm->SetSpotLightCosFalloffStart(cosFalloffStart);
+ 
 
     ImGui::End();
 
