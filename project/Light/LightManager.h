@@ -30,7 +30,7 @@ public:
     void SetSpotLightDistance(float distance);
     void SetSpotLightDecay(float decay);
     void SetSpotLightCosAngle(float cosAngle);
-    void SetSpotLightCosFalloffStart(float cosFalloffStart);
+    
 
     // ================================
     // インスタンス取得

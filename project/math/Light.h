@@ -17,13 +17,12 @@ struct PointLight {
 
 // スポットライトデータ
 struct SpotLight {
-    Vector4 color; // 16
-    Vector3 position; // 12
-    float intensity; // 4  → 16
-    Vector3 direction; // 12
-    float distance; // 4  → 16
-    float decay; // 4
-    float cosAngle; // 4
-    float cosFalloffStart; // 4
-    float padding; // 4  → 16
+    Vector4 color;
+    Vector3 position;
+    float intensity;
+    Vector3 direction;
+    float distance;
+    float decay;
+    float cosAngle;
+    float padding[2];
 };

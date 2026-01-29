@@ -66,7 +66,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     resultColor += pointDiffuse + pointSpec;
 
-    // ==================================================
+// ==================================================
 // Spot Light
 // ==================================================
 
@@ -89,6 +89,8 @@ PixelShaderOutput main(VertexShaderOutput input)
     gSpotLight.intensity *
     attenuationS *
     falloffFactor;
+    float3 Nn = N;
+
 
 
     float NdotLs = abs(dot(N, Ls));
