@@ -344,7 +344,7 @@ void GamePlayScene::Draw3D()
     nodeObject00_->Draw();
 
 
-    //----------------------
+    //---------------------- 
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
