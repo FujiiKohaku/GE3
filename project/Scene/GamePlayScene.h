@@ -41,6 +41,7 @@ private:
     SphereObject* sphere_ = nullptr;
     Object3d* terrain_;
     Object3d* plane_;
+    Object3d* droneObj_;
     // node00
     Object3d* nodeObject00_;
 

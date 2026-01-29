@@ -27,6 +27,7 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
 
     // nodeLoad
+    ModelManager::GetInstance()->Load("dolone.obj");
     ModelManager::GetInstance()->Load("Drone/dolone.gltf");
     ModelManager::GetInstance()->Load("AnimatedCube.gltf");
     // animationskinLoad
@@ -37,9 +38,11 @@ void GamePlayScene::Initialize()
     //==============
     terrain_ = new Object3d();
     terrain_->Initialize(Object3dManager::GetInstance());
-    ModelManager::GetInstance()->Load("terrain.obj");
-    terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
-    terrain_->SetTranslate({ 0.0f - 2.0f, 0.0f });
+    ModelManager::GetInstance()->Load("dolone.obj");
+    terrain_->SetModel(ModelManager::GetInstance()->FindModel("dolone.obj"));
+    terrain_->SetTranslate({ 0.0f -0.0f, 0.0f });
+
+
     // plane
     plane_ = new Object3d();
     plane_->Initialize(Object3dManager::GetInstance());
@@ -127,10 +130,10 @@ void GamePlayScene::Update()
   
     // ImGuiのBegin/Endは絶対に呼ばない！
     // rotate
-    r += 0.03f;
+   // r += 0.03f;
     // animationSkin
     skinPlay00_->Update(1.0f / 60.0f);
-    animationSkin00_->SetRotate({ 0.0f, r, 0.0f });
+    animationSkin00_->SetRotate({ 0.0f, 0.0f, 0.0f });
     animationSkinSkeleton00_.UpdateSkeleton();
     animationSkin00_->Update();
    
@@ -335,7 +338,7 @@ void GamePlayScene::Draw3D()
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
     //sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-    //terrain_->Draw();
+   // terrain_->Draw();
 
    // plane_->Draw();
     nodeObject00_->Draw();
@@ -346,7 +349,7 @@ void GamePlayScene::Draw3D()
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
-    animationSkin00_->Draw();
+   // animationSkin00_->Draw();
 
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();

@@ -85,8 +85,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 #pragma region 更新処理
 
 void SkinningObject3d::Update()
-{
-    if (transformationMatrixData == nullptr) {
+{    if (transformationMatrixData == nullptr) {
         return;
     }
     if (camera_ == nullptr) {
