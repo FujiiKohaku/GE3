@@ -38,9 +38,9 @@ void GamePlayScene::Initialize()
     //==============
     terrain_ = new Object3d();
     terrain_->Initialize(Object3dManager::GetInstance());
-    ModelManager::GetInstance()->Load("dolone.obj");
-    terrain_->SetModel(ModelManager::GetInstance()->FindModel("dolone.obj"));
-    terrain_->SetTranslate({ 0.0f -0.0f, 0.0f });
+    ModelManager::GetInstance()->Load("terrain.obj");
+    terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
+    terrain_->SetTranslate({ 0.0f ,0.0f, 0.0f });
 
 
     // plane
@@ -338,10 +338,10 @@ void GamePlayScene::Draw3D()
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
     //sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-   // terrain_->Draw();
+   terrain_->Draw();
 
    // plane_->Draw();
-    nodeObject00_->Draw();
+  //  nodeObject00_->Draw();
 
 
     //---------------------- 
