@@ -85,24 +85,23 @@ PixelShaderOutput main(VertexShaderOutput input)
 // ---- Spot Light ----
 //
         
-        float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position); // ライト→面（cone用）
+        float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position);
+        float3 spotLightColor = gSpotLight.color.rgb * gSpotLight.intensity;
 
-        float3 surfaceToSpot = normalize(gSpotLight.position - input.worldPosition); // 面→ライト（Diffuse/Spec用）
-
-        float32_t cosAngle = dot(spotLightDirectionOnSurface, normalize(gSpotLight.direction));
-        float32_t falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0f - gSpotLight.cosAngle));
+        float32_t cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
+        
+        float32_t falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0 - gSpotLight.cosAngle));
+    
 
         float distS = length(gSpotLight.position - input.worldPosition);
-        float attenuationFactor = pow(saturate(-distS / gSpotLight.distance + 1.0f), gSpotLight.decay);
-
-        float3 spotLightColor = gSpotLight.color.rgb * gSpotLight.intensity;
+        float attenuationFactor = pow(saturate(-distS / gSpotLight.distance + 1.0), gSpotLight.decay);
+        
         spotLightColor *= attenuationFactor * falloffFactor;
 
-        //abs,saturateの違いでダイレクションがぶち壊れる
-        float NdotS = abs(dot(N, surfaceToSpot));
+        float NdotS = saturate(dot(N, spotLightDirectionOnSurface));
         float3 spotDiffuse = gMaterial.color.rgb * textureColor.rgb * spotLightColor * NdotS;
 
-        float3 Hs = normalize(surfaceToSpot + V);
+        float3 Hs = normalize(spotLightDirectionOnSurface + V);
         float NdotHs = saturate(dot(N, Hs));
         float3 spotSpec = spotLightColor * pow(NdotHs, gMaterial.shininess);
 
