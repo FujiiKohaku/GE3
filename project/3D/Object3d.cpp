@@ -4,9 +4,9 @@
 #include "ModelManager.h"
 #include "Object3dManager.h"
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
-#include <filesystem>
 #pragma region 初期化処理
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
@@ -47,7 +47,8 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
 #pragma region 更新処理
 
-void Object3d::Update() {
+void Object3d::Update()
+{
     Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
     if (model_) {
@@ -55,27 +56,27 @@ void Object3d::Update() {
     }
 
     if (animation_ && model_) {
-        localMatrix =animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
+        localMatrix = animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
     }
 
-    worldMatrix_ =MatrixMath::Multiply(localMatrix,MatrixMath::MakeAffineMatrix(transform.scale,transform.rotate,transform.translate));
+    worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
 
     Matrix4x4 worldViewProjectionMatrix;
 
     if (camera_) {
-        worldViewProjectionMatrix =
-            MatrixMath::Multiply(worldMatrix_, camera_->GetViewProjectionMatrix());
-    }
-    else {
+        worldViewProjectionMatrix = MatrixMath::Multiply(worldMatrix_, camera_->GetViewProjectionMatrix());
+    } else {
         worldViewProjectionMatrix = worldMatrix_;
     }
 
     transformationMatrixData->WVP = worldViewProjectionMatrix;
     transformationMatrixData->World = worldMatrix_;
 
-    Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
-    transformationMatrixData->WorldInverseTranspose =
-        MatrixMath::Transpose(inv);
+  /*  Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
+    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);*/
+
+       Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
+     transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
 }
 #pragma endregion
 
@@ -171,37 +172,32 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         }
         // indices が空なら drawArrays 扱いでOK
 
-
         for (uint32_t boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
             aiBone* bone = mesh->mBones[boneIndex];
 
             std::string jointName = bone->mName.C_Str();
-            JointWeightData& jointWeightData =modelData.skinClusterData[jointName];
+            JointWeightData& jointWeightData = modelData.skinClusterData[jointName];
 
             aiMatrix4x4 bindPoseMatrixAssimp = bone->mOffsetMatrix.Inverse();
             aiVector3D scale, translate;
             aiQuaternion rotate;
             bindPoseMatrixAssimp.Decompose(scale, rotate, translate);
 
-            Matrix4x4 bindPoseMatrix =MatrixMath::MakeAffineMatrix(
+            Matrix4x4 bindPoseMatrix = MatrixMath::MakeAffineMatrix(
                 { scale.x, scale.y, scale.z },
                 { rotate.x, -rotate.y, -rotate.z, rotate.w },
-                { -translate.x, translate.y, translate.z }
-            );
+                { -translate.x, translate.y, translate.z });
 
-            jointWeightData.inverseBindPoseMatrix =MatrixMath::Inverse(bindPoseMatrix);
+            jointWeightData.inverseBindPoseMatrix = MatrixMath::Inverse(bindPoseMatrix);
 
             for (uint32_t weightIndex = 0;
                 weightIndex < bone->mNumWeights;
                 ++weightIndex) {
 
-                jointWeightData.vertexWeights.push_back({
-                    bone->mWeights[weightIndex].mWeight,
-                    bone->mWeights[weightIndex].mVertexId
-                    });
+                jointWeightData.vertexWeights.push_back({ bone->mWeights[weightIndex].mWeight,
+                    bone->mWeights[weightIndex].mVertexId });
             }
         }
-
 
         modelData.primitives.push_back(primitive);
     }
@@ -229,13 +225,11 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
             }
         }
     }
-   
 
     // ここで分岐する
     if (hasTexture) {
         TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
-    }
-    else {
+    } else {
         TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
         modelData.material.textureFilePath = "resources/BaseColor_Cube.png";
     }
