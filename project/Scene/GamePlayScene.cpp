@@ -41,7 +41,7 @@ void GamePlayScene::Initialize()
     terrain_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("terrain.obj");
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
-    terrain_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    terrain_->SetTranslate({ 0.0f, 10.0f, 0.0f });
 
     // plane
     plane_ = new Object3d();

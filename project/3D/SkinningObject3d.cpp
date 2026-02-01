@@ -2,16 +2,15 @@
 #include "MatrixMath.h"
 #include "Model.h"
 #include "ModelManager.h"
+#include "SkinCluster.h"
 #include "SkinningObject3dManager.h"
+#include <cassert>
 #include <cassert>
 #include <fstream>
 #include <sstream>
-#include"SkinCluster.h"
-#include<cassert>
 #pragma region 初期化処理
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
-
 
     // Manager を保持
     skinningObject3dManager_ = skinningObject3DManager;
@@ -51,22 +50,22 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // Transform 初期値
     // ================================
     baseTransform_ = {
-       {1.0f, 1.0f, 1.0f},
-       {0.0f, 0.0f, 0.0f},
-       {0.0f, 0.0f, 0.0f}
+        { 1.0f, 1.0f, 1.0f },
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f }
     };
 
     animTransform_ = {
-        {1.0f, 1.0f, 1.0f},
-        {0.0f, 0.0f, 0.0f},
-        {0.0f, 0.0f, 0.0f}
+        { 1.0f, 1.0f, 1.0f },
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f }
     };
 
     cameraTransform = {
         { 1.0f, 1.0f, 1.0f },
         { 0.3f, 0.0f, 0.0f },
         { 0.0f, 4.0f, -10.0f }
-     };
+    };
 
     skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData(), SrvManager::GetInstance());
 
@@ -76,8 +75,6 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 
     assert(model_ && "SkinningObject3d::Initialize: model_ is null. Call SetModel() before Initialize().");
     assert(playAnimation_ && "SkinningObject3d::Initialize: playAnimation_ is null. Call SetAnimation() before Initialize().");
-
-  
 }
 
 #pragma endregion
@@ -85,7 +82,8 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 #pragma region 更新処理
 
 void SkinningObject3d::Update()
-{    if (transformationMatrixData == nullptr) {
+{
+    if (transformationMatrixData == nullptr) {
         return;
     }
     if (camera_ == nullptr) {
@@ -99,17 +97,14 @@ void SkinningObject3d::Update()
     Matrix4x4 baseMatrix = MatrixMath::MakeAffineMatrix(
         baseTransform_.scale,
         baseTransform_.rotate,
-        baseTransform_.translate
-    );
+        baseTransform_.translate);
 
     Matrix4x4 animMatrix = MatrixMath::MakeAffineMatrix(
         animTransform_.scale,
         animTransform_.rotate,
-        animTransform_.translate
-    );
+        animTransform_.translate);
 
     worldMatrix_ = MatrixMath::Multiply(animMatrix, baseMatrix);
-
 
     Matrix4x4 worldViewProjectionMatrix;
 
@@ -126,12 +121,15 @@ void SkinningObject3d::Update()
     transformationMatrixData->WVP = worldViewProjectionMatrix;
 
     // ワールド行列も送る（ライティングなどで使用）
+    // ワールド行列も送る（ライティングなどで使用）
     transformationMatrixData->World = worldMatrix_;
 
-    Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
-    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);
+    //  ここが重要：World の逆転置
+    Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
+    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
+
     if (playAnimation_) {
-        SkinCluster::UpdateSkinCluster(skinClusterData_,*playAnimation_->GetSkeleton());
+        SkinCluster::UpdateSkinCluster(skinClusterData_, *playAnimation_->GetSkeleton());
     }
 }
 
@@ -166,8 +164,4 @@ void SkinningObject3d::Draw()
     }
 }
 
-
 #pragma endregion
-
-
-
