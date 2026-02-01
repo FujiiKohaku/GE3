@@ -81,29 +81,33 @@ PixelShaderOutput main(VertexShaderOutput input)
         float NdotHp = saturate(dot(N, Hp));
         float3 pointSpec = pointColor * pow(NdotHp, gMaterial.shininess);
 
-//
-// ---- Spot Light ----
-//
-        
-        float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position);
-        float3 spotLightColor = gSpotLight.color.rgb * gSpotLight.intensity;
+        //spotLight
+        float3 spotLightDirectionOnSurface =
+    normalize(input.worldPosition - gSpotLight.position);
 
-        float32_t cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
-        
-        float32_t falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0 - gSpotLight.cosAngle));
-    
+        float3 spotLightColor =
+    gSpotLight.color.rgb * gSpotLight.intensity;
+
+        float32_t cosAngle =
+    dot(spotLightDirectionOnSurface, gSpotLight.direction);
+
+        float32_t falloffFactor =
+    saturate((cosAngle - gSpotLight.cosAngle) / (1.0 - gSpotLight.cosAngle));
 
         float distS = length(gSpotLight.position - input.worldPosition);
-        float attenuationFactor = pow(saturate(-distS / gSpotLight.distance + 1.0), gSpotLight.decay);
-        
+        float attenuationFactor =
+    pow(saturate(-distS / gSpotLight.distance + 1.0), gSpotLight.decay);
+
         spotLightColor *= attenuationFactor * falloffFactor;
 
-        float NdotS = saturate(dot(N, spotLightDirectionOnSurface));
-        float3 spotDiffuse = gMaterial.color.rgb * textureColor.rgb * spotLightColor * NdotS;
+        float NdotS = saturate(dot(N, -spotLightDirectionOnSurface));
+        float3 spotDiffuse =
+    gMaterial.color.rgb * textureColor.rgb * spotLightColor * NdotS;
 
-        float3 Hs = normalize(spotLightDirectionOnSurface + V);
+        float3 Hs = normalize(-spotLightDirectionOnSurface + V);
         float NdotHs = saturate(dot(N, Hs));
-        float3 spotSpec = spotLightColor * pow(NdotHs, gMaterial.shininess);
+        float3 spotSpec =
+    spotLightColor * pow(NdotHs, gMaterial.shininess);
 
 
 // ---- çáê¨ ----
