@@ -234,7 +234,7 @@ void GamePlayScene::Update()
     ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
 
     // 方向
-    static Vector3 spotDir = { -1.0f, -1.0f, 0.0f };
+    static Vector3 spotDir = { -1.0f, 0.0f, 0.0f };
     ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
     Vector3 normalizedSpotDir = Normalize(spotDir);
 
