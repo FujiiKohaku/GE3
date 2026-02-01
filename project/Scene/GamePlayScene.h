@@ -97,7 +97,7 @@ private:
     // ------------------------------
     // Terrain Transform (ImGui用)
     // ------------------------------
-    Vector3 terrainPos = { 0.0f, 0.0f, 0.0f };
+    Vector3 terrainPos = { 0.0f, 5.0f, 0.0f };
     Vector3 terrainRotate = { 0.0f, 0.0f, 0.0f };
     Vector3 terrainScale = { 1.0f, 1.0f, 1.0f };
     // ------------------------------
