@@ -191,6 +191,7 @@ void Object3dManager::CreateGraphicsPipeline()
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
+    //baseDescPSはFor文の中に移動しました
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
@@ -210,10 +211,7 @@ void Object3dManager::CreateGraphicsPipeline()
         {
             D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc;
 
-            desc.PS = {
-                pixelShaderBlob->GetBufferPointer(),
-                pixelShaderBlob->GetBufferSize()
-            };
+            desc.PS = {pixelShaderBlob->GetBufferPointer(),pixelShaderBlob->GetBufferSize()};
 
             desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i));
 
