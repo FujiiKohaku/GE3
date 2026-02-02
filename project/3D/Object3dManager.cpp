@@ -171,7 +171,8 @@ void Object3dManager::CreateGraphicsPipeline()
     // ====== シェーダーのコンパイル ======
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
-    assert(vertexShaderBlob && pixelShaderBlob);
+    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Glow.PS.hlsl", L"ps_6_0");//グロウ
+    assert(vertexShaderBlob && pixelShaderBlob && glowPixelShaderBlob);
 
     // ====== PSO設定 ======
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
