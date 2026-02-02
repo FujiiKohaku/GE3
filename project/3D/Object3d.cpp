@@ -72,11 +72,11 @@ void Object3d::Update()
     transformationMatrixData->WVP = worldViewProjectionMatrix;
     transformationMatrixData->World = worldMatrix_;
 
-  /*  Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
-    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);*/
+    /*  Matrix4x4 inv = MatrixMath::Inverse(worldViewProjectionMatrix);
+      transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(inv);*/
 
-       Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
-     transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
+    Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
+    transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
 }
 #pragma endregion
 
