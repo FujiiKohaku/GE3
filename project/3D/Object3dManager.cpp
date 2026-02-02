@@ -41,6 +41,23 @@ void Object3dManager::PreDraw()
 
 #pragma endregion
 
+#pragma region Setter
+void Object3dManager::SetNormalPSO()
+{
+    auto* commandList = dxCommon_->GetCommandList();
+
+    commandList->SetPipelineState(pipelineStates[currentBlendMode].Get());
+}
+
+void Object3dManager::SetGlowPSO()
+{
+    auto* commandList = dxCommon_->GetCommandList();
+
+    commandList->SetPipelineState(glowPipelineStates[currentBlendMode].Get());
+}
+
+#pragma endregion
+
 #pragma region ルートシグネチャ作成
 void Object3dManager::CreateRootSignature()
 {
@@ -118,11 +135,7 @@ void Object3dManager::CreateRootSignature()
     }
 
     // 実際にルートシグネチャ作成
-    hr = dxCommon_->GetDevice()->CreateRootSignature(
-        0,
-        signatureBlob->GetBufferPointer(),
-        signatureBlob->GetBufferSize(),
-        IID_PPV_ARGS(&rootSignature));
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
@@ -171,7 +184,7 @@ void Object3dManager::CreateGraphicsPipeline()
     // ====== シェーダーのコンパイル ======
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Glow.PS.hlsl", L"ps_6_0");//グロウ
+    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Glow.PS.hlsl", L"ps_6_0"); // グロウ
     assert(vertexShaderBlob && pixelShaderBlob && glowPixelShaderBlob);
 
     // ====== PSO設定 ======
@@ -179,7 +192,6 @@ void Object3dManager::CreateGraphicsPipeline()
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
-    baseDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
     baseDesc.NumRenderTargets = 1;
@@ -191,13 +203,33 @@ void Object3dManager::CreateGraphicsPipeline()
     baseDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     // ブレンド設定（とりあえずなしで初期化）
     baseDesc.BlendState = CreateBlendDesc(kBlendModeNone);
-    // PSOを保存する配列
-    pipelineStates[kCountOfBlendMode];
 
     for (int i = 0; i < kCountOfBlendMode; i++) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc; // 共通設定コピー
-        desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i)); // ブレンドだけ切替
-        dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineStates[i]));
+
+        // ===== 通常PSO =====
+        {
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc;
+
+            desc.PS = {
+                pixelShaderBlob->GetBufferPointer(),
+                pixelShaderBlob->GetBufferSize()
+            };
+
+            desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i));
+
+            dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineStates[i]));
+        }
+
+        // ===== Glow PSO =====
+        {
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC glowDesc = baseDesc;
+
+            glowDesc.PS = { glowPixelShaderBlob->GetBufferPointer(), glowPixelShaderBlob->GetBufferSize() };
+
+            glowDesc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i));
+
+            dxCommon_->GetDevice()->CreateGraphicsPipelineState(&glowDesc, IID_PPV_ARGS(&glowPipelineStates[i]));
+        }
     }
 }
 
