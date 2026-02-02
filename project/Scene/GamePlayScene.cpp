@@ -271,7 +271,6 @@ void GamePlayScene::Update()
     lm->SetSpotLightDistance(spotDistance);
     lm->SetSpotLightDecay(spotDecay);
     lm->SetSpotLightCosAngle(cosAngle);
- 
 
     ImGui::End();
 
@@ -331,6 +330,9 @@ void GamePlayScene::Draw3D()
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
     // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    Object3dManager::GetInstance()->SetGlowPSO();
+   // Object3dManager::GetInstance()->SetNormalPSO();
+    Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     terrain_->Draw();
 
     // plane_->Draw();

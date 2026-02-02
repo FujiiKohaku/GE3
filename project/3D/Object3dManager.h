@@ -33,6 +33,8 @@ public:
     {
         currentBlendMode = mode;
     }
+    void SetNormalPSO();
+    void SetGlowPSO();
 
 private:
     // Singleton：外部から new できないようにする
@@ -52,8 +54,14 @@ private:
 
     // RootSignature / PSO
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+    // Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+    // PSOを保存する配列
+
+    // 通常描画
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+
+    // Glow描画
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> glowPipelineStates[kCountOfBlendMode];
 
     ID3DBlob* signatureBlob = nullptr;
     ID3DBlob* errorBlob = nullptr;
