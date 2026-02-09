@@ -18,14 +18,20 @@ public:
     Model* Load(const std::string& filepath);
 
     Model* FindModel(const std::string& filePath);
-
-private:
-    static ModelManager* instance;
-
+    // Passkey
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class ModelManager;
+    };
+    explicit ModelManager(ConstructorKey);
     ModelManager() = default;
     ~ModelManager() = default;
     ModelManager(const ModelManager&) = delete;
+
+private:
+    static std::unique_ptr<ModelManager> instance_;
+
     ModelManager& operator=(const ModelManager&) = delete;
-    std::unordered_map<std::string, std::unique_ptr<Model>> models;
-    ModelCommon* modelCommon_ = nullptr;
+    std::unordered_map<std::string, std::unique_ptr<Model>> models_;
+    std::unique_ptr<ModelCommon> modelCommon_;
 };

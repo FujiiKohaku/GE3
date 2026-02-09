@@ -1,14 +1,14 @@
 #include "SpriteManager.h"
-SpriteManager* SpriteManager::instance = nullptr; // 知らないシングルトン
+std::unique_ptr<SpriteManager> SpriteManager::instance_ = nullptr;
 //==============================================
 // Singleton Instance
 //==============================================
 SpriteManager* SpriteManager::GetInstance()
 {
-    if (instance == nullptr) {
-        instance = new SpriteManager();
+    if (!instance_) {
+        instance_ = std::make_unique<SpriteManager>(ConstructorKey());
     }
-    return instance;
+    return instance_.get();
 }
 // ==============================
 // 初期化処理
@@ -37,6 +37,10 @@ void SpriteManager::PreDraw()
 
     // PSO（グラフィックスパイプライン）をセット
     dxCommon_->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
+}
+
+SpriteManager::SpriteManager(ConstructorKey)
+{
 }
 
 // ==============================
@@ -73,7 +77,6 @@ void SpriteManager::CreateRootSignature()
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[2].DescriptorTable.pDescriptorRanges = &descriptorRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
-
 
     // ------------------------------
     // サンプラー設定（テクスチャの拡大縮小補間）
@@ -145,10 +148,10 @@ void SpriteManager::CreateGraphicsPipeline()
     inputElementDescs[1].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
     // NORMAL
-    //inputElementDescs[2].SemanticName = "NORMAL";
-    //inputElementDescs[2].SemanticIndex = 0;
-    //inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
-    //inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+    // inputElementDescs[2].SemanticName = "NORMAL";
+    // inputElementDescs[2].SemanticIndex = 0;
+    // inputElementDescs[2].Format = DXGI_FORMAT_R32G32B32_FLOAT;
+    // inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 
     // 登録
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
@@ -214,15 +217,5 @@ void SpriteManager::CreateGraphicsPipeline()
 }
 void SpriteManager::Finalize()
 {
-    if (signatureBlob) {
-        signatureBlob->Release();
-        signatureBlob = nullptr;
-    }
-    if (errorBlob) {
-        errorBlob->Release();
-        errorBlob = nullptr;
-    }
-
-    delete instance;
-    instance = nullptr;
+    instance_.reset();
 }
