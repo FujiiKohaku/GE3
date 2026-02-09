@@ -16,6 +16,8 @@
 #include "SpriteManager.h"
 #include "TextureManager.h"
 #include <numbers>
+
+#include <memory>
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -32,31 +34,26 @@ private:
     // ------------------------------
     // カメラ
     // ------------------------------
-    Camera* camera_;
+    std::unique_ptr<Camera> camera_;
 
     // ------------------------------
     // 3Dオブジェクト（描画主体）
     // ------------------------------
-    Object3d* player2_;
-    SphereObject* sphere_ = nullptr;
-    Object3d* terrain_;
-    Object3d* plane_;
-    Object3d* droneObj_;
+    std::unique_ptr<Object3d> player2_;
+    std::unique_ptr<SphereObject> sphere_;
+    std::unique_ptr<Object3d> terrain_;
+    std::unique_ptr<Object3d> plane_;
+    std::unique_ptr<Object3d> droneObj_;
     // node00
-    Object3d* nodeObject00_;
+    std::unique_ptr<Object3d> nodeObject00_;
 
-
-    // animationSkin
-    SkinningObject3d* animationSkin00_;
-  
-
-
-    SkinningObject3d* skinningPlayer_;
+    std::unique_ptr<SkinningObject3d> animationSkin00_;
+    std::unique_ptr<SkinningObject3d> skinningPlayer_;
     // ------------------------------
     // スプライト（UI / 2D）
     // ------------------------------
-    Sprite* sprite_ = nullptr;
-    std::vector<Sprite*> sprites_;
+    std::unique_ptr<Sprite> sprite_;
+    std::vector<std::unique_ptr<Sprite>> sprites_;
 
     // ------------------------------
     // サウンド
@@ -74,12 +71,13 @@ private:
     // node
     PlayAnimation nodePlayAnim00_;
     Animation nodeAnimation00_;
-    
+
     // skin
-    PlayAnimation* skinPlay00_;
+    std::unique_ptr<PlayAnimation> skinPlay00_;
+
     Animation skinAnimation00_;
     Skeleton animationSkinSkeleton00_;
-    
+
     // ------------------------------
     // ライト・描画パラメータ
     // ------------------------------

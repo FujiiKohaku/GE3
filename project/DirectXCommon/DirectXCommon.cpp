@@ -8,22 +8,21 @@
 #include <format>
 #include <wrl.h>
 
-DirectXCommon* DirectXCommon::instance = nullptr; // 知らないシングルトン
-
+std::unique_ptr<DirectXCommon> DirectXCommon::instance_ = nullptr;
 // Singleton Instance
 DirectXCommon* DirectXCommon::GetInstance()
 {
-    if (instance == nullptr) {
-
-        instance = new DirectXCommon();
+    if (!instance_) {
+        instance_ = std::make_unique<DirectXCommon>(ConstructorKey {});
     }
-    return instance;
+    return instance_.get();
+}
+DirectXCommon::DirectXCommon(ConstructorKey)
+{
 }
 void DirectXCommon::Finalize()
 {
-    // GPU 完了待ち
-    delete instance;
-    instance = nullptr;
+    instance_.reset();
 }
 
 void DirectXCommon::Initialize(WinApp* winApp)
