@@ -12,7 +12,6 @@ public:
 private:
     static std::unique_ptr<SkinningObject3dManager> instance_;
     // Singleton インターフェース
-   
 
 public:
     class ConstructorKey {
@@ -45,8 +44,11 @@ public:
 private:
     // Singleton：外部から new できないようにする
     SkinningObject3dManager() = default;
+
+public:
     ~SkinningObject3dManager() = default;
 
+private:
     SkinningObject3dManager(const SkinningObject3dManager&) = delete;
     SkinningObject3dManager& operator=(const SkinningObject3dManager&) = delete;
 
