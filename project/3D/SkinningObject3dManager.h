@@ -42,10 +42,10 @@ public:
         currentBlendMode = mode;
     }
 
+    ~SkinningObject3dManager() = default;
 private:
     // Singleton：外部から new できないようにする
     SkinningObject3dManager() = default;
-    ~SkinningObject3dManager() = default;
 
     SkinningObject3dManager(const SkinningObject3dManager&) = delete;
     SkinningObject3dManager& operator=(const SkinningObject3dManager&) = delete;
