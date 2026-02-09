@@ -1,15 +1,19 @@
 #include "Object3dManager.h"
 
-Object3dManager* Object3dManager::instance = nullptr;
+std::unique_ptr<Object3dManager> Object3dManager::instance_ = nullptr;
 
+
+Object3dManager::Object3dManager(ConstructorKey)
+{
+}
 Object3dManager* Object3dManager::GetInstance()
 {
-
-    if (instance == nullptr) {
-        instance = new Object3dManager();
+    if (!instance_) {
+        instance_ = std::make_unique<Object3dManager>(ConstructorKey());
     }
-    return instance;
+    return instance_.get();
 }
+
 #pragma region 初期化処理
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -125,7 +129,7 @@ void Object3dManager::CreateRootSignature()
 
     // ====== シリアライズ & 作成 ======
     hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
-        &signatureBlob, &errorBlob);
+        signatureBlob.GetAddressOf(), errorBlob.GetAddressOf());
 
     if (FAILED(hr)) {
         if (errorBlob) {
@@ -234,6 +238,5 @@ void Object3dManager::CreateGraphicsPipeline()
 #pragma endregion
 void Object3dManager::Finalize()
 {
-    delete instance;
-    instance = nullptr;
+    instance_.reset();
 }

@@ -3,15 +3,23 @@
 #include "Camera.h"
 #include "DirectXCommon.h"
 #include "blendutil.h"
-
+#include <memory>
 class SkinningObject3dManager {
 public:
-    static SkinningObject3dManager* instance;
-
-    // Singleton インターフェース
     static SkinningObject3dManager* GetInstance();
     static void Finalize();
 
+private:
+    static std::unique_ptr<SkinningObject3dManager> instance_;
+    // Singleton インターフェース
+   
+
+public:
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class SkinningObject3dManager;
+    };
+    explicit SkinningObject3dManager(ConstructorKey);
     //=========================================
     // 初期化処理
     //=========================================
@@ -29,7 +37,8 @@ public:
 
     // setter
     void SetDefaultCamera(Camera* camera) { defaultCamera_ = camera; }
-    void SetBlendMode(BlendMode mode) {
+    void SetBlendMode(BlendMode mode)
+    {
         currentBlendMode = mode;
     }
 
@@ -51,11 +60,11 @@ private:
 
     // RootSignature / PSO
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
 
-    ID3DBlob* signatureBlob = nullptr;
-    ID3DBlob* errorBlob = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 
     int currentBlendMode = kBlendModeNormal;
 };

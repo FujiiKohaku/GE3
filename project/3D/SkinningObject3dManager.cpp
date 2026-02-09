@@ -1,13 +1,16 @@
 ﻿#include "SkinningObject3dManager.h"
 
-SkinningObject3dManager* SkinningObject3dManager::instance = nullptr;
+// cpp
+std::unique_ptr<SkinningObject3dManager> SkinningObject3dManager::instance_ = nullptr;
 
-SkinningObject3dManager* SkinningObject3dManager::GetInstance() {
+SkinningObject3dManager::SkinningObject3dManager(ConstructorKey) { }
 
-    if (instance == nullptr) {
-        instance = new SkinningObject3dManager();
+SkinningObject3dManager* SkinningObject3dManager::GetInstance()
+{
+    if (!instance_) {
+        instance_ = std::make_unique<SkinningObject3dManager>(ConstructorKey {});
     }
-    return instance;
+    return instance_.get();
 }
 #pragma region 初期化処理
 void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon) {
@@ -251,7 +254,7 @@ void SkinningObject3dManager::CreateGraphicsPipeline() {
 }
 
 #pragma endregion
-void SkinningObject3dManager::Finalize() {
-    delete instance;
-    instance = nullptr;
+void SkinningObject3dManager::Finalize()
+{
+    instance_.reset();
 }

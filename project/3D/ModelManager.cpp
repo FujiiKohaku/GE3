@@ -1,9 +1,7 @@
 #include "ModelManager.h"
 std::unique_ptr<ModelManager> ModelManager::instance_ = nullptr;
 
-ModelManager::ModelManager(ConstructorKey)
-{
-}
+
 ModelManager* ModelManager::GetInstance()
 {
     if (!instance_) {
