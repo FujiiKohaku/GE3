@@ -6,8 +6,6 @@
 
 class Object3dManager {
 public:
-    static Object3dManager* instance;
-
     // Singleton インターフェース
     static Object3dManager* GetInstance();
     static void Finalize();
@@ -37,12 +35,19 @@ public:
     void SetGlowPSO();
 
 private:
+    static std::unique_ptr<Object3dManager> instance_;
     // Singleton：外部から new できないようにする
     Object3dManager() = default;
-    ~Object3dManager() = default;
-
     Object3dManager(const Object3dManager&) = delete;
     Object3dManager& operator=(const Object3dManager&) = delete;
+
+public:
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class Object3dManager;
+    };
+    explicit Object3dManager(ConstructorKey);
+    ~Object3dManager() = default;
 
 private:
     void CreateRootSignature();
@@ -63,8 +68,8 @@ private:
     // Glow描画
     Microsoft::WRL::ComPtr<ID3D12PipelineState> glowPipelineStates[kCountOfBlendMode];
 
-    ID3DBlob* signatureBlob = nullptr;
-    ID3DBlob* errorBlob = nullptr;
+   Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 
     int currentBlendMode = kBlendModeNormal;
 };

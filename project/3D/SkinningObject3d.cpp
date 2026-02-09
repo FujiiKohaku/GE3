@@ -11,7 +11,8 @@
 #pragma region 初期化処理
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
-
+    assert(model_ && "Call SetModel() before Initialize()");
+    assert(playAnimation_ && "Call SetAnimation() before Initialize()");
     // Manager を保持
     skinningObject3dManager_ = skinningObject3DManager;
 

@@ -4,6 +4,7 @@
 #include "Camera.h"
 #include "DebugCamera.h"
 #include "MatrixMath.h"
+#include "Model.h"
 #include "Object3DStruct.h"
 #include "TextureManager.h"
 #include <assimp/Importer.hpp>
@@ -13,7 +14,6 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
-#include"Model.h"
 class SkinningObject3dManager;
 class Model;
 class SkinningObject3d {
@@ -25,35 +25,39 @@ public:
     void Update();
     void Draw();
 
-
     // setter
     void SetModel(Model* model) { model_ = model; }
-   
 
     void SetCamera(Camera* camera) { camera_ = camera; }
     // === setter ===
-    void SetScale(const Vector3& scale) {
+    void SetScale(const Vector3& scale)
+    {
         baseTransform_.scale = scale;
     }
 
-    void SetRotate(const Vector3& rotate) {
+    void SetRotate(const Vector3& rotate)
+    {
         baseTransform_.rotate = rotate;
     }
 
-    void SetTranslate(const Vector3& translate) {
+    void SetTranslate(const Vector3& translate)
+    {
         baseTransform_.translate = translate;
     }
 
     // === getter ===
-    const Vector3& GetScale() const {
+    const Vector3& GetScale() const
+    {
         return baseTransform_.scale;
     }
 
-    const Vector3& GetRotate() const {
+    const Vector3& GetRotate() const
+    {
         return baseTransform_.rotate;
     }
 
-    const Vector3& GetTranslate() const {
+    const Vector3& GetTranslate() const
+    {
         return baseTransform_.translate;
     }
 
@@ -97,7 +101,7 @@ public:
             }
         }
     }
-  
+
     const Matrix4x4& GetWorldMatrix() const
     {
         return worldMatrix_;
@@ -108,7 +112,7 @@ private:
     // メンバ変数
     // ===============================
     SkinningObject3dManager* skinningObject3dManager_ = nullptr;
- 
+
     Model* model_ = nullptr;
     // バッファ系
     /*  Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;*/
@@ -134,7 +138,7 @@ private:
     // World
     Matrix4x4 worldMatrix_;
 
-    SkinCluster skinCluster_;
+    // SkinCluster skinCluster_;
     SkinCluster::SkinClusterData skinClusterData_;
     PlayAnimation* playAnimation_;
 };
