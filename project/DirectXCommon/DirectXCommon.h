@@ -19,11 +19,18 @@ class DirectXCommon {
 public:
     // ===== Singleton =====
     static DirectXCommon* GetInstance();
-    // インスタンス
-    static DirectXCommon* instance;
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class DirectXCommon;
+    };
+    explicit DirectXCommon(ConstructorKey);
+
+private:
+    static std::unique_ptr<DirectXCommon> instance_;
+
+public:
     // DX初期化
     void Initialize(WinApp* winApp);
-
     // 描画前処理
     void PreDraw();
     // 描画後処理
@@ -45,18 +52,22 @@ public:
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, const DirectX::TexMetadata& metadata);
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages);
 
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(  D3D12_DESCRIPTOR_HEAP_TYPE heapType,  UINT numDescriptors,  bool shaderVisible);
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible);
 
-    static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle( const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap,  uint32_t descriptorSize,  uint32_t index);
+    static D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize, uint32_t index);
 
-    static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(  const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap,  uint32_t descriptorSize,  uint32_t index);
+    static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize, uint32_t index);
 
     void WaitForGPU();
 
 private:
     // ===== Singleton化の基本 =====
     DirectXCommon() = default;
+
+public:
     ~DirectXCommon() = default;
+
+private:
     DirectXCommon(const DirectXCommon&) = delete;
     DirectXCommon& operator=(const DirectXCommon&) = delete;
 

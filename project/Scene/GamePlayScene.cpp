@@ -11,16 +11,16 @@ void GamePlayScene::Initialize()
     // =================================================
     // Camera
     // =================================================
-    camera_ = new Camera();
+    camera_ = std::make_unique<Camera>();
     camera_->Initialize();
     camera_->SetTranslate({ 0.0f, 10.0f, -20.0f });
     camera_->SetRotate({ std::numbers::pi_v<float> / 6.0f, 0.0f, 0.0f });
-    SkinningObject3dManager::GetInstance()->SetDefaultCamera(camera_);
-    Object3dManager::GetInstance()->SetDefaultCamera(camera_);
+    SkinningObject3dManager::GetInstance()->SetDefaultCamera(camera_.get());
+    Object3dManager::GetInstance()->SetDefaultCamera(camera_.get());
     // =================================================
     // Managers
     // =================================================
-    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_);
+    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_.get());
     // =================================================
     // SkinningObject3d
     // =================================================
@@ -37,40 +37,39 @@ void GamePlayScene::Initialize()
     //==============
     //  OBJ
     //==============
-    terrain_ = new Object3d();
+    terrain_ = std::make_unique<Object3d>();
     terrain_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("terrain.obj");
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
-    terrain_->SetTranslate({ 0.0f, 10.0f, 0.0f });
+    terrain_->SetTranslate({ 0.0f, 0.0f, 0.0f });
 
     // plane
-    plane_ = new Object3d();
+    plane_ = std::make_unique<Object3d>();
     plane_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("plane.obj");
     plane_->SetModel(ModelManager::GetInstance()->FindModel("plane.obj"));
     plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
     // node00
-    nodeObject00_ = new Object3d();
+    nodeObject00_ = std::make_unique<Object3d>();
     nodeObject00_->Initialize(Object3dManager::GetInstance());
     nodeObject00_->SetModel("Drone/dolone.gltf");
 
     // =================================================
     // animationSkin
     // =================================================
-    animationSkin00_ = new SkinningObject3d();
+    animationSkin00_ = std::make_unique<SkinningObject3d>();
     animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("walk.gltf"));
-
     //  =================================================
     //  Skeleton
     //  =================================================
     // skin
     animationSkinSkeleton00_ = Skeleton::CreateSkeleton(animationSkin00_->GetRootNode());
     // animation
-    skinPlay00_ = new PlayAnimation();
+    skinPlay00_ = std::make_unique<PlayAnimation>();
     skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "walk.gltf");
     skinPlay00_->SetAnimation(&skinAnimation00_);
     skinPlay00_->SetSkeleton(&animationSkinSkeleton00_);
-    animationSkin00_->SetAnimation(skinPlay00_);
+    animationSkin00_->SetAnimation(skinPlay00_.get());
     animationSkin00_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationSkin00_->Initialize(SkinningObject3dManager::GetInstance());
     animationSkin00_->SetTranslate({ 5.0f, -2.0f, 0.0f });
@@ -98,7 +97,7 @@ void GamePlayScene::Initialize()
     // =================================================
     // Debug Sphere
     // =================================================
-    sphere_ = new SphereObject();
+    sphere_ = std::make_unique<SphereObject>();
     sphere_->Initialize(DirectXCommon::GetInstance(), 16, 1.0f);
     sphere_->SetTranslate({ 0, 0, 0 });
     sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
@@ -134,7 +133,7 @@ void GamePlayScene::Update()
 
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
-    sphere_->Update(camera_);
+    sphere_->Update(camera_.get());
 
     terrain_->Update();
     camera_->Update();
@@ -330,9 +329,9 @@ void GamePlayScene::Draw3D()
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
     // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-   // Object3dManager::GetInstance()->SetGlowPSO();
-   Object3dManager::GetInstance()->SetNormalPSO();
-   // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
+    // Object3dManager::GetInstance()->SetGlowPSO();
+    Object3dManager::GetInstance()->SetNormalPSO();
+    // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     terrain_->Draw();
 
     // plane_->Draw();
@@ -367,30 +366,6 @@ void GamePlayScene::Finalize()
 
     LightManager::GetInstance()->Finalize();
 
-    delete sprite_;
-    sprite_ = nullptr;
-
-    delete sphere_;
-    sphere_ = nullptr;
-
-    delete player2_;
-    player2_ = nullptr;
-
-    delete camera_;
-    camera_ = nullptr;
-
-    delete terrain_;
-    terrain_ = nullptr;
-
-    delete plane_;
-    plane_ = nullptr;
-    delete nodeObject00_;
-    nodeObject00_ = nullptr;
-
-    delete animationSkin00_;
-    animationSkin00_ = nullptr;
-
-    delete skinningPlayer_;
-    skinningPlayer_ = nullptr;
+   
     SoundManager::GetInstance()->SoundUnload(&bgm);
 }
