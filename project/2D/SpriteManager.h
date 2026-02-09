@@ -1,6 +1,6 @@
 #pragma once
 #include "DirectXCommon.h"
-
+#include <memory>
 // ===============================================
 // SpriteManager（Singleton版）
 // ===============================================
@@ -26,17 +26,28 @@ public:
     //==============================================
     DirectXCommon* GetDxCommon() const { return dxCommon_; }
     // 終了処理
-    void Finalize();
+    static void Finalize();
+
 
 private:
     //----------------------------------------------
     // Singleton化関連
     //----------------------------------------------
-    SpriteManager() = default;
-    ~SpriteManager() = default;
+    // デフォルトコンストラクタを削除
+    static std::unique_ptr<SpriteManager> instance_;
+   
     SpriteManager(const SpriteManager&) = delete;
     SpriteManager& operator=(const SpriteManager&) = delete;
-    static SpriteManager* instance;
+
+public:
+    // コンストラクタを渡すための鍵
+    // Passkey
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class SpriteManager;
+    };
+    explicit SpriteManager(ConstructorKey);
+    ~SpriteManager() = default;
 
 private:
     //----------------------------------------------
@@ -49,13 +60,10 @@ private:
     // DirectX共通クラス（借りるだけ）
     DirectXCommon* dxCommon_ = nullptr;
 
-    // ルートシグネチャ
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
-
-    // PSO
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
     // Blob
-    ID3DBlob* signatureBlob = nullptr;
-    ID3DBlob* errorBlob = nullptr;
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 };
