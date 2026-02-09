@@ -54,10 +54,10 @@
 
 #include "TitleScene.h"
 
+#include "../3D/SkinningObject3dManager.h"
 #include "BaseScene.h"
-#include "SoundManager.h"
-#include"../3D/SkinningObject3dManager.h"
 #include "SceneManager.h"
+#include "SoundManager.h"
 // ======================= パーティクル関連 =========================
 #include "ParticleManager.h"
 // ================================================================
@@ -73,25 +73,22 @@ public:
     void Draw();
     void Finalize();
 
-    WinApp* GetWinApp() const { return winApp_; }
+    WinApp* GetWinApp() const { return winApp_.get(); }
 
     bool IsEndRequest() const { return endRequest_; }
 
 private:
-    //Scene
+    // Scene
     SceneManager* sceneManager_ = nullptr;
 
-
     // App
-    WinApp* winApp_ = nullptr;
+    std::unique_ptr<WinApp> winApp_;
 
     ImGuiManager* imguiManager_ = nullptr;
 
     // ------------------------------
     // Core システム
     // ------------------------------
-   
-    Camera* camera_ = nullptr;
 
     // ------------------------------
     // グラフィック / モデル
