@@ -3,17 +3,15 @@
 #include "GamePlayScene.h"
 void TitleScene::Initialize()
 {
- 
 }
 
 void TitleScene::Update()
 {
-    // 例：Enterキーでゲーム画面へ
     if (Input::GetInstance()->IsKeyPressed(DIK_SPACE)) {
 
-        BaseScene* scene = new GamePlayScene();
+        
 
-        SceneManager::GetInstance()->SetNextScene(scene);
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
     }
 }
 

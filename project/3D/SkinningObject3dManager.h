@@ -46,8 +46,7 @@ private:
     // Singleton：外部から new できないようにする
     SkinningObject3dManager() = default;
 
-public:
-    ~SkinningObject3dManager() = default;
+
 
 private:
     SkinningObject3dManager(const SkinningObject3dManager&) = delete;
