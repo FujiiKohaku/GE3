@@ -1,38 +1,35 @@
 #pragma once
 #include "BaseScene.h"
+#include <memory>
 
 class SceneManager {
 public:
-    // --------- Singleton取得 ---------
     static SceneManager* GetInstance()
     {
         static SceneManager instance;
         return &instance;
     }
 
-    // --------- 次シーン予約 ---------
-    void SetNextScene(BaseScene* nextScene)
+    // unique_ptrで受け取る
+    void SetNextScene(std::unique_ptr<BaseScene> nextScene)
     {
-        nextScene_ = nextScene;
+        nextScene_ = std::move(nextScene);
     }
 
-    // --------- 実行 ---------
     void Update();
-    void Draw();
     void Finalize();
     void DrawImGui();
     void Draw2D();
     void Draw3D();
 
 private:
-    // --------- Singleton基本処理 ---------
     SceneManager() = default;
-    ~SceneManager();
+    ~SceneManager() = default;
 
     SceneManager(const SceneManager&) = delete;
     SceneManager& operator=(const SceneManager&) = delete;
 
 private:
-    BaseScene* scene_ = nullptr;
-    BaseScene* nextScene_ = nullptr;
+    std::unique_ptr<BaseScene> scene_;
+    std::unique_ptr<BaseScene> nextScene_;
 };

@@ -1,39 +1,31 @@
 #include "SceneManager.h"
 #include <cassert>
 
-SceneManager::~SceneManager()
-{
-    // 最後のシーンが残っていたら解放
-    if (scene_) {
-        scene_->Finalize();
-        delete scene_;
-        scene_ = nullptr;
-    }
-}
+
 
 void SceneManager::Update()
 {
-    // 次シーン指定がある場合
     if (nextScene_) {
 
-        // 現在シーンを終了＆破棄
         if (scene_) {
             scene_->Finalize();
-            delete scene_;
         }
 
-        // シーン切り替え
-        scene_ = nextScene_;
-        nextScene_ = nullptr;
+        scene_ = std::move(nextScene_);
 
-        // 新シーン初期化
-        assert(scene_ != nullptr);
         scene_->Initialize();
     }
 
-    // 実行中シーンの更新
     if (scene_) {
         scene_->Update();
+    }
+}
+
+void SceneManager::Finalize()
+{
+    if (scene_) {
+        scene_->Finalize();
+        scene_.reset();
     }
 }
 
@@ -60,14 +52,3 @@ void SceneManager::DrawImGui()
     }
 }
 
-
-
-void SceneManager::Finalize()
-{
-    // シーン破棄
-    if (scene_) {
-        scene_->Finalize();
-        delete scene_;
-        scene_ = nullptr;
-    }
-}
