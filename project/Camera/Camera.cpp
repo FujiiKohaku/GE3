@@ -37,17 +37,17 @@ void Camera::DebugUpdate()
 {
 #ifdef USE_IMGUI
 
-    ImGui::Begin("Settings");
+    //ImGui::Begin("Settings");
 
-    // 位置（移動）
-    ImGui::DragFloat3("CameraTranslate", &transform_.translate.x, 0.01f, -50.0f, 50.0f);
+    //// 位置（移動）
+    //ImGui::DragFloat3("CameraTranslate", &transform_.translate.x, 0.01f, -50.0f, 50.0f);
 
-    // 回転（角度）
-    ImGui::SliderAngle("CameraRotateX", &transform_.rotate.x);
-    ImGui::SliderAngle("CameraRotateY", &transform_.rotate.y);
-    ImGui::SliderAngle("CameraRotateZ", &transform_.rotate.z);
+    //// 回転（角度）
+    //ImGui::SliderAngle("CameraRotateX", &transform_.rotate.x);
+    //ImGui::SliderAngle("CameraRotateY", &transform_.rotate.y);
+    //ImGui::SliderAngle("CameraRotateZ", &transform_.rotate.z);
 
-    ImGui::End();
+    //ImGui::End();
 
 #endif
 }

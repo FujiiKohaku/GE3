@@ -142,183 +142,203 @@ void GamePlayScene::Update()
     plane_->Update();
 
 #pragma region ImGuiによるライト操作パネル
-    // ==================================
-    // Lighting Panel（ライト操作パネル）
-    // ==================================
-    ImGui::Begin("Lighting Control");
 
-    // ---- ライトの ON / OFF ----
-    static bool lightEnabled = false;
-    ImGui::Checkbox("Enable Light", &lightEnabled);
+    float spritePosX_ = 100.0f;
+    float spritePosY_ = 100.0f;
+      // ウィンドウサイズ固定（最初だけ適用）
+    ImGui::SetNextWindowSize(ImVec2(500.0f, 100.0f), ImGuiCond_Once);
 
-    // ---- ライトの色 ----
-    static Vector4 lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    ImGui::ColorEdit3("Light Color", (float*)&lightColor);
+    ImGui::Begin("Sprite Position");
 
-    // ---- 明るさ（強さ） ----
-    static float lightIntensity = 1.0f;
-    ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
+    // スライダー（範囲は適当に例。画面サイズに合わせて変えてOK）
+    ImGui::SliderFloat("X", &spritePosX_, 0.0f, 1280.0f, "%04.1f");
+    ImGui::SliderFloat("Y", &spritePosY_, 0.0f, 720.0f, "%04.1f");
 
-    // ---- 光の向き ----
-    static Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
-    ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
-
-    // ---- 正規化 ----
-    Vector3 normalizedDir = Normalize(lightDir);
-
-    float intensity = lightIntensity;
-    if (!lightEnabled) {
-        intensity = 0.0f; // OFF のときは光なし
-    }
-
-    LightManager::GetInstance()->SetDirectional(
-        { lightColor.x, lightColor.y, lightColor.z, 1.0f },
-        normalizedDir,
-        intensity);
-
-    // ---- リセットボタン（向きだけ元に戻す）----
-    if (ImGui::Button("Reset Direction")) {
-        lightDir = { 0.0f, -1.0f, 0.0f };
-    }
-
-    ImGui::SameLine();
-
-    // ---- ライトを完全初期化 ----
-    if (ImGui::Button("Reset Light")) {
-        lightEnabled = true;
-        lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-        lightIntensity = 1.0f;
-        lightDir = { 0.0f, -1.0f, 0.0f };
-    }
-    ImGui::Separator();
-    ImGui::Text("Point Light Control");
-
-    static bool pointEnabled = false;
-    ImGui::Checkbox("Enable Point Light", &pointEnabled);
-
-    static Vector4 pointColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-    ImGui::ColorEdit3("Point Color", (float*)&pointColor);
-
-    static Vector3 pointPos = { 0.0f, 2.0f, 0.0f };
-    ImGui::SliderFloat3("Point Position", &pointPos.x, -10.0f, 10.0f);
-
-    static float pointIntensity = 1.0f;
-    ImGui::SliderFloat("Point Intensity", &pointIntensity, 0.0f, 5.0f);
-
-    float pI = pointEnabled ? pointIntensity : 0.0f;
-    static float pointRadius = 10.0f;
-    static float pointDecay = 1.0f;
-
-    ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
-    ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
-
-    LightManager::GetInstance()->SetPointRadius(pointRadius);
-    LightManager::GetInstance()->SetPointDecay(pointDecay);
-    LightManager::GetInstance()->SetPointLight(pointColor, pointPos, pI);
-    ImGui::Separator();
-    ImGui::Text("Spot Light Control");
-    // ================================
-    // Spot Light Control
-    // ================================
-
-    static bool spotEnabled = true;
-    ImGui::Checkbox("Enable Spot Light", &spotEnabled);
-
-    // 色
-    static Vector4 spotColor = { 1, 1, 1, 1 };
-    ImGui::ColorEdit3("Spot Color", (float*)&spotColor);
-
-    // 位置
-    static Vector3 spotPos = { 0.0f, 0.0f, 0.0f };
-    ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
-
-    // 方向
-    static Vector3 spotDir = { -1.0f, 0.0f, 0.0f };
-    ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
-    Vector3 normalizedSpotDir = Normalize(spotDir);
-
-    // 強さ
-    static float spotIntensity = 4.0f;
-    ImGui::SliderFloat("Spot Intensity", &spotIntensity, 0.0f, 10.0f);
-
-    // 距離・減衰
-    static float spotDistance = 7.0f;
-    static float spotDecay = 2.0f;
-    ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
-    ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
-
-    // 角度（度数で操作 → cos に変換）
-    static float spotAngleDeg = 60.0f;
-    static float spotFalloffStartDeg = 30.0f;
-
-    ImGui::SliderFloat("Spot Angle (deg)", &spotAngleDeg, 1.0f, 90.0f);
-    ImGui::SliderFloat("Falloff Start (deg)", &spotFalloffStartDeg, 1.0f, spotAngleDeg - 1.0f);
-
-    // cos に変換
-    float cosAngle = std::cos(spotAngleDeg * std::numbers::pi_v<float> / 180.0f);
-    float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
-
-    // OFF のとき
-    float sI = spotEnabled ? spotIntensity : 0.0f;
-
-    // LightManager に反映
-    auto* lm = LightManager::GetInstance();
-    lm->SetSpotLightColor(spotColor);
-    lm->SetSpotLightPosition(spotPos);
-    lm->SetSpotLightDirection(normalizedSpotDir);
-    lm->SetSpotLightIntensity(sI);
-    lm->SetSpotLightDistance(spotDistance);
-    lm->SetSpotLightDecay(spotDecay);
-    lm->SetSpotLightCosAngle(cosAngle);
+    // 今の値を表示（整数4桁 + 小数1桁）
+    ImGui::Text("Pos : X=%04.1f  Y=%04.1f", spritePosX_, spritePosY_);
 
     ImGui::End();
 
+
+
+
     // ==================================
-    // Sphere Control
-    // ==================================
-    ImGui::Begin("Sphere Control");
+    //// Lighting Panel（ライト操作パネル）
+    //// ==================================
+    //ImGui::Begin("Lighting Control");
 
-    // ---- このオブジェクトだけ ライティングする？ ----
-    // OFF にすると「フラット表示」になる
-    ImGui::Checkbox("Enable Lighting", &sphereLighting);
+    //// ---- ライトの ON / OFF ----
+    //static bool lightEnabled = false;
+    //ImGui::Checkbox("Enable Light", &lightEnabled);
 
-    // ---- 位置 ----
-    ImGui::SliderFloat3("Position", &spherePos.x, -10.0f, 10.0f);
+    //// ---- ライトの色 ----
+    //static Vector4 lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    //ImGui::ColorEdit3("Light Color", (float*)&lightColor);
 
-    // ---- 回転 ----
-    ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
+    //// ---- 明るさ（強さ） ----
+    //static float lightIntensity = 1.0f;
+    //ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
-    ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
-    // ---- テカり具合（鏡面反射の鋭さ） ----
-    static float shininess = 32.0f;
-    ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
+    //// ---- 光の向き ----
+    //static Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
+    //ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
 
-    ImGui::End();
+    //// ---- 正規化 ----
+    //Vector3 normalizedDir = Normalize(lightDir);
 
-    ImGui::Begin("Plane Control");
+    //float intensity = lightIntensity;
+    //if (!lightEnabled) {
+    //    intensity = 0.0f; // OFF のときは光なし
+    //}
 
-    // 位置
-    ImGui::SliderFloat3("Position", &planePos.x, -50.0f, 50.0f);
+    //LightManager::GetInstance()->SetDirectional(
+    //    { lightColor.x, lightColor.y, lightColor.z, 1.0f },
+    //    normalizedDir,
+    //    intensity);
 
-    // 回転（ラジアン）
-    ImGui::SliderFloat3("Rotate", &planeRotate.x, -3.14f, 3.14f);
+    //// ---- リセットボタン（向きだけ元に戻す）----
+    //if (ImGui::Button("Reset Direction")) {
+    //    lightDir = { 0.0f, -1.0f, 0.0f };
+    //}
 
-    // スケール
-    ImGui::SliderFloat3("Scale", &planeScale.x, 0.1f, 10.0f);
+    //ImGui::SameLine();
 
-    ImGui::End();
-    // 反映
-    plane_->SetTranslate(planePos);
-    plane_->SetRotate(planeRotate);
-    plane_->SetScale(planeScale);
-    terrain_->SetTranslate(terrainPos);
-    terrain_->SetRotate(terrainRotate);
-    terrain_->SetScale(terrainScale);
-    sphere_->SetEnableLighting(sphereLighting);
-    sphere_->SetTranslate(spherePos);
-    sphere_->SetRotate(sphereRotate);
-    sphere_->SetScale(sphereScale);
-    sphere_->SetShininess(shininess);
+    //// ---- ライトを完全初期化 ----
+    //if (ImGui::Button("Reset Light")) {
+    //    lightEnabled = true;
+    //    lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    //    lightIntensity = 1.0f;
+    //    lightDir = { 0.0f, -1.0f, 0.0f };
+    //}
+    //ImGui::Separator();
+    //ImGui::Text("Point Light Control");
+
+    //static bool pointEnabled = false;
+    //ImGui::Checkbox("Enable Point Light", &pointEnabled);
+
+    //static Vector4 pointColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    //ImGui::ColorEdit3("Point Color", (float*)&pointColor);
+
+    //static Vector3 pointPos = { 0.0f, 2.0f, 0.0f };
+    //ImGui::SliderFloat3("Point Position", &pointPos.x, -10.0f, 10.0f);
+
+    //static float pointIntensity = 1.0f;
+    //ImGui::SliderFloat("Point Intensity", &pointIntensity, 0.0f, 5.0f);
+
+    //float pI = pointEnabled ? pointIntensity : 0.0f;
+    //static float pointRadius = 10.0f;
+    //static float pointDecay = 1.0f;
+
+    //ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
+    //ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
+
+    //LightManager::GetInstance()->SetPointRadius(pointRadius);
+    //LightManager::GetInstance()->SetPointDecay(pointDecay);
+    //LightManager::GetInstance()->SetPointLight(pointColor, pointPos, pI);
+    //ImGui::Separator();
+    //ImGui::Text("Spot Light Control");
+    //// ================================
+    //// Spot Light Control
+    //// ================================
+
+    //static bool spotEnabled = true;
+    //ImGui::Checkbox("Enable Spot Light", &spotEnabled);
+
+    //// 色
+    //static Vector4 spotColor = { 1, 1, 1, 1 };
+    //ImGui::ColorEdit3("Spot Color", (float*)&spotColor);
+
+    //// 位置
+    //static Vector3 spotPos = { 0.0f, 0.0f, 0.0f };
+    //ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
+
+    //// 方向
+    //static Vector3 spotDir = { -1.0f, 0.0f, 0.0f };
+    //ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
+    //Vector3 normalizedSpotDir = Normalize(spotDir);
+
+    //// 強さ
+    //static float spotIntensity = 4.0f;
+    //ImGui::SliderFloat("Spot Intensity", &spotIntensity, 0.0f, 10.0f);
+
+    //// 距離・減衰
+    //static float spotDistance = 7.0f;
+    //static float spotDecay = 2.0f;
+    //ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
+    //ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
+
+    //// 角度（度数で操作 → cos に変換）
+    //static float spotAngleDeg = 60.0f;
+    //static float spotFalloffStartDeg = 30.0f;
+
+    //ImGui::SliderFloat("Spot Angle (deg)", &spotAngleDeg, 1.0f, 90.0f);
+    //ImGui::SliderFloat("Falloff Start (deg)", &spotFalloffStartDeg, 1.0f, spotAngleDeg - 1.0f);
+
+    //// cos に変換
+    //float cosAngle = std::cos(spotAngleDeg * std::numbers::pi_v<float> / 180.0f);
+    //float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
+
+    //// OFF のとき
+    //float sI = spotEnabled ? spotIntensity : 0.0f;
+
+    //// LightManager に反映
+    //auto* lm = LightManager::GetInstance();
+    //lm->SetSpotLightColor(spotColor);
+    //lm->SetSpotLightPosition(spotPos);
+    //lm->SetSpotLightDirection(normalizedSpotDir);
+    //lm->SetSpotLightIntensity(sI);
+    //lm->SetSpotLightDistance(spotDistance);
+    //lm->SetSpotLightDecay(spotDecay);
+    //lm->SetSpotLightCosAngle(cosAngle);
+
+    //ImGui::End();
+
+    //// ==================================
+    //// Sphere Control
+    //// ==================================
+    //ImGui::Begin("Sphere Control");
+
+    //// ---- このオブジェクトだけ ライティングする？ ----
+    //// OFF にすると「フラット表示」になる
+    //ImGui::Checkbox("Enable Lighting", &sphereLighting);
+
+    //// ---- 位置 ----
+    //ImGui::SliderFloat3("Position", &spherePos.x, -10.0f, 10.0f);
+
+    //// ---- 回転 ----
+    //ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
+
+    //ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
+    //// ---- テカり具合（鏡面反射の鋭さ） ----
+    //static float shininess = 32.0f;
+    //ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
+
+    //ImGui::End();
+
+    //ImGui::Begin("Plane Control");
+
+    //// 位置
+    //ImGui::SliderFloat3("Position", &planePos.x, -50.0f, 50.0f);
+
+    //// 回転（ラジアン）
+    //ImGui::SliderFloat3("Rotate", &planeRotate.x, -3.14f, 3.14f);
+
+    //// スケール
+    //ImGui::SliderFloat3("Scale", &planeScale.x, 0.1f, 10.0f);
+
+    //ImGui::End();
+    //// 反映
+    //plane_->SetTranslate(planePos);
+    //plane_->SetRotate(planeRotate);
+    //plane_->SetScale(planeScale);
+    //terrain_->SetTranslate(terrainPos);
+    //terrain_->SetRotate(terrainRotate);
+    //terrain_->SetScale(terrainScale);
+    //sphere_->SetEnableLighting(sphereLighting);
+    //sphere_->SetTranslate(spherePos);
+    //sphere_->SetRotate(sphereRotate);
+    //sphere_->SetScale(sphereScale);
+    //sphere_->SetShininess(shininess);
 
 #pragma endregion
 }
