@@ -37,7 +37,7 @@ bool Input::Initialize(WinApp* winApp)
     assert(SUCCEEDED(result));
     // DISCL_FOREGROUND：ウィンドウが前面にあるときだけ入力を受け取る
     // DISCL_NONEXCLUSIVE：他のアプリと入力を共有する
-    //  DISCL_NOWINKEY Windowsキーを無効にする
+    // DISCL_NOWINKEY Windowsキーを無効にする
 
     return true;
 }
