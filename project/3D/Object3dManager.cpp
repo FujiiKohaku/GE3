@@ -147,7 +147,7 @@ void Object3dManager::CreateRootSignature()
 #pragma region グラフィックスパイプライン作成
 void Object3dManager::CreateGraphicsPipeline()
 {
-    HRESULT hr;
+   
 
     // ====== 入力レイアウト ======
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
