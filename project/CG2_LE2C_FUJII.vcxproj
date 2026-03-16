@@ -162,6 +162,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <ItemGroup>
     <ClCompile Include="3D\Model.cpp" />
     <ClCompile Include="3D\SkinningObject3d.cpp" />
+    <ClCompile Include="Animation\AnimationActor.cpp" />
     <ClCompile Include="Animation\AnimationLoder.cpp" />
     <ClCompile Include="Animation\Animation.cpp" />
     <ClCompile Include="Animation\KeyFrame.cpp" />
@@ -268,6 +269,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <ItemGroup>
     <ClInclude Include="3D\Model.h" />
     <ClInclude Include="3D\SkinningObject3d.h" />
+    <ClInclude Include="Animation\AnimationActor.h" />
     <ClInclude Include="Animation\AnimationLoder.h" />
     <ClInclude Include="Animation\Animation.h" />
     <ClInclude Include="Animation\KeyFrame.h" />
