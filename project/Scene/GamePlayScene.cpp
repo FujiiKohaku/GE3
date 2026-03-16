@@ -29,7 +29,7 @@ void GamePlayScene::Initialize()
 
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
-    ModelManager::GetInstance()->Load("Drone/dolone.gltf");
+    ModelManager::GetInstance()->Load("sneakWalk.gltf");
     ModelManager::GetInstance()->Load("AnimatedCube.gltf");
     // animationskinLoad
     // skinningWalk
@@ -49,41 +49,18 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("plane.obj");
     plane_->SetModel(ModelManager::GetInstance()->FindModel("plane.obj"));
     plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
-    // node00
-    nodeObject00_ = std::make_unique<Object3d>();
-    nodeObject00_->Initialize(Object3dManager::GetInstance());
-    nodeObject00_->SetModel("Drone/dolone.gltf");
+   
 
-    // =================================================
-    // animationSkin
-    // =================================================
-    animationSkin00_ = std::make_unique<SkinningObject3d>();
-    animationSkin00_->SetModel(ModelManager::GetInstance()->FindModel("walk.gltf"));
-    //  =================================================
-    //  Skeleton
-    //  =================================================
-    // skin
-    animationSkinSkeleton00_ = Skeleton::CreateSkeleton(animationSkin00_->GetRootNode());
-    // animation
-    skinPlay00_ = std::make_unique<PlayAnimation>();
-    skinAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "walk.gltf");
-    skinPlay00_->SetAnimation(&skinAnimation00_);
-    skinPlay00_->SetSkeleton(&animationSkinSkeleton00_);
-    animationSkin00_->SetAnimation(skinPlay00_.get());
-    animationSkin00_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
-    animationSkin00_->Initialize(SkinningObject3dManager::GetInstance());
-    animationSkin00_->SetTranslate({ 5.0f, -2.0f, 0.0f });
-    // node00
-    nodeAnimation00_ = AnimationLoder::LoadAnimationFile("resources", "Drone/dolone.gltf");
-    nodePlayAnim00_.SetAnimation(&nodeAnimation00_);
-    nodeObject00_->SetAnimation(&nodePlayAnim00_);
-    nodeObject00_->SetTranslate({ 0.0f, 0.0f, 0.0f });
-    nodeObject00_->SetScale({ 1.0f, 1.0f, 1.0f });
+   
+   
 
-    // デバッグ（Animation）
-    for (const auto& [name, nodeAnim] : skinAnimation00_.nodeAnimations) {
-        OutputDebugStringA(name.c_str());
-    }
+    animationActor_ = std::make_unique<AnimationActor>();
+    animationActor_->Initialize("sneakWalk.gltf");
+    animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
+    animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
+    animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
+
+    
 
     // =================================================
     // Particle
@@ -119,18 +96,8 @@ void GamePlayScene::Initialize()
 void GamePlayScene::Update()
 {
 
-    nodePlayAnim00_.Update(1.0f / 60.0f);
-    nodeObject00_->Update();
-
-    // ImGuiのBegin/Endは絶対に呼ばない！
-    // rotate
-    // r += 0.03f;
-    // animationSkin
-    skinPlay00_->Update(1.0f / 60.0f);
-    animationSkin00_->SetRotate({ 0.0f, 0.0f, 0.0f });
-    animationSkinSkeleton00_.UpdateSkeleton();
-    animationSkin00_->Update();
-
+  
+   
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
     sphere_->Update(camera_.get());
@@ -141,6 +108,7 @@ void GamePlayScene::Update()
 
     plane_->Update();
 
+    animationActor_->Update(1.0f / 60.0f);
 #pragma region ImGuiによるライト操作パネル
     // ==================================
     // Lighting Panel（ライト操作パネル）
@@ -334,16 +302,15 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     terrain_->Draw();
 
-    // plane_->Draw();
-    //  nodeObject00_->Draw();
+  
 
     //----------------------
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
-    // animationSkin00_->Draw();
-
+                                                                                        //animationSkin00_->Draw();
+    animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }
@@ -366,6 +333,5 @@ void GamePlayScene::Finalize()
 
     LightManager::GetInstance()->Finalize();
 
-   
     SoundManager::GetInstance()->SoundUnload(&bgm);
 }

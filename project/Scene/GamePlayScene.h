@@ -17,6 +17,8 @@
 #include "TextureManager.h"
 #include <numbers>
 
+#include"../Animation/AnimationActor.h"
+
 #include <memory>
 class GamePlayScene : public BaseScene {
 public:
@@ -44,11 +46,11 @@ private:
     std::unique_ptr<Object3d> terrain_;
     std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> droneObj_;
-    // node00
-    std::unique_ptr<Object3d> nodeObject00_;
+ 
 
-    std::unique_ptr<SkinningObject3d> animationSkin00_;
+ 
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
+    std::unique_ptr<AnimationActor> animationActor_;
     // ------------------------------
     // スプライト（UI / 2D）
     // ------------------------------
@@ -68,15 +70,11 @@ private:
     // ------------------------------
     // アニメーション / スケルトン
     // ------------------------------
-    // node
-    PlayAnimation nodePlayAnim00_;
-    Animation nodeAnimation00_;
+   
 
-    // skin
-    std::unique_ptr<PlayAnimation> skinPlay00_;
 
-    Animation skinAnimation00_;
-    Skeleton animationSkinSkeleton00_;
+
+ 
 
     // ------------------------------
     // ライト・描画パラメータ
