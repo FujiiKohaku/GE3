@@ -14,7 +14,7 @@ void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePat
     spriteManager_ = spriteManager;
 
     // 頂点バッファを作成
-    CreateVertexBuffer();
+    CreateVertexBuffer(); 
 
     // マテリアルバッファを作成（色やテクスチャ情報）
     CreateMaterialBuffer();
