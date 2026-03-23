@@ -26,7 +26,7 @@ void GamePlayScene::Initialize()
     // =================================================
 
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
-
+    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
     ModelManager::GetInstance()->Load("sneakWalk.gltf");
@@ -49,18 +49,12 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("plane.obj");
     plane_->SetModel(ModelManager::GetInstance()->FindModel("plane.obj"));
     plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
-   
-
-   
-   
 
     animationActor_ = std::make_unique<AnimationActor>();
     animationActor_->Initialize("sneakWalk.gltf");
     animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
     animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
-
-    
 
     // =================================================
     // Particle
@@ -91,13 +85,16 @@ void GamePlayScene::Initialize()
     // =================================================
     bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
     SoundManager::GetInstance()->SoundPlayWave(bgm);
+
+    testSprite_ = std::make_unique<Sprite>();
+    testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
 }
 
 void GamePlayScene::Update()
 {
 
-  
-   
+    testSprite_->Update();
+
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
     sphere_->Update(camera_.get());
@@ -302,14 +299,12 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     terrain_->Draw();
 
-  
-
     //----------------------
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
-                                                                                        //animationSkin00_->Draw();
+                                                                                       // animationSkin00_->Draw();
     animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
@@ -318,6 +313,7 @@ void GamePlayScene::Draw3D()
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
+    testSprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()

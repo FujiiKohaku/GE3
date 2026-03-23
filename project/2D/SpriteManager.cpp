@@ -113,12 +113,7 @@ void SpriteManager::CreateRootSignature()
         assert(false);
     }
 
-    hr = dxCommon_->GetDevice()->CreateRootSignature(
-        0,
-        signatureBlob->GetBufferPointer(),
-        signatureBlob->GetBufferSize(),
-        IID_PPV_ARGS(&rootSignature));
-    assert(SUCCEEDED(hr));
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0,signatureBlob->GetBufferPointer(),signatureBlob->GetBufferSize(),IID_PPV_ARGS(&rootSignature));assert(SUCCEEDED(hr));
 }
 
 // ==============================

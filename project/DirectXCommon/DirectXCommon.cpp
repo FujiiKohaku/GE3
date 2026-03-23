@@ -94,10 +94,10 @@ void DirectXCommon::InitializeDevice()
     // 初期化の根本的な部分でエラーが出た場合はプログラムが間違っているか、どうにもできない場合が多いのでassertにしておく
     assert(SUCCEEDED(hr));
 
-    IDXGIAdapter4* useAdapter = nullptr;
+    Microsoft::WRL::ComPtr<IDXGIAdapter4> useAdapter = nullptr;
 
     // よい順にアダプタを頼む
-    for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&useAdapter)) != DXGI_ERROR_NOT_FOUND; ++i) {
+    for (UINT i = 0;dxgiFactory->EnumAdapterByGpuPreference(i,DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,IID_PPV_ARGS(useAdapter.GetAddressOf()))!= DXGI_ERROR_NOT_FOUND;++i) {
 
         // アダプターの情報を取得する
         DXGI_ADAPTER_DESC3 adapterDesc {};
@@ -124,7 +124,7 @@ void DirectXCommon::InitializeDevice()
     // 高い順に生成できるか試していく
     for (size_t i = 0; i < _countof(featureLevels); ++i) {
         // 採用したアダプターでデバイスを生成
-        hr = D3D12CreateDevice(useAdapter, featureLevels[i], IID_PPV_ARGS(&device));
+        hr = D3D12CreateDevice(useAdapter.Get(), featureLevels[i], IID_PPV_ARGS(&device));
         // 指定した昨日レベルでデバイスは生成できたか確認
         if (SUCCEEDED(hr)) {
             // 生成できたのでログ出力を行ってループを抜ける

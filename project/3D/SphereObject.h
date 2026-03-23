@@ -38,7 +38,7 @@ public:
     void SetTranslate(const Vector3& t) { transform_.translate = t; }
     void SetRotate(const Vector3& r) { transform_.rotate = r; }
     void SetScale(const Vector3& s) { transform_.scale = s; }
-
+    ~SphereObject();
     // ----------------
     // Material 操作
     // ----------------

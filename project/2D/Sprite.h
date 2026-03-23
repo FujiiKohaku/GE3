@@ -20,14 +20,7 @@ public:
         a++;
     }
 
-    ~Sprite()
-    {
-        static int b = 0;
-        b++;
-
-        ULONG refCountTemp = vertexResource->Release();
-        refCount = refCountTemp;
-    }
+    ~Sprite();
     // ===============================
     // 初期化（必要情報を渡して準備）
     // ===============================
