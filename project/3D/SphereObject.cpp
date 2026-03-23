@@ -179,3 +179,13 @@ void SphereObject::SetTexture(const std::string& filePath)
     // GPU用SRVハンドルを取得して保持
     textureSrvHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU(filePath);
 }
+SphereObject::~SphereObject()
+{
+    if (transformResource_) {
+        transformResource_->Unmap(0, nullptr);
+    }
+
+    if (materialResource_) {
+        materialResource_->Unmap(0, nullptr);
+    }
+}

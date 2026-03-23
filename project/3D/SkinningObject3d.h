@@ -24,7 +24,7 @@ public:
     void Initialize(SkinningObject3dManager* skinningObject3DManager);
     void Update();
     void Draw();
-
+    ~SkinningObject3d();
     // setter
     void SetModel(Model* model) { model_ = model; }
 

@@ -23,7 +23,7 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
-
+    ~Object3d();
     static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
     //static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 

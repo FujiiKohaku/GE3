@@ -9,7 +9,7 @@ class Camera {
 public:
     // デフォルトコンストラクタ宣言
     Camera();
-
+    ~Camera();
     void DebugUpdate();
     void Initialize();
     // 更新

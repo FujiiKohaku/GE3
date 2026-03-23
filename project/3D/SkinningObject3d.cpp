@@ -164,5 +164,14 @@ void SkinningObject3d::Draw()
         model_->Draw();
     }
 }
+SkinningObject3d::~SkinningObject3d()
+{
+    if (transformationMatrixResource) {
+        transformationMatrixResource->Unmap(0, nullptr);
+    }
 
+    if (materialResource) {
+        materialResource->Unmap(0, nullptr);
+    }
+}
 #pragma endregion

@@ -300,3 +300,14 @@ void Object3d::SetAnimation(PlayAnimation* anim)
 {
     animation_ = anim;
 }
+
+Object3d::~Object3d()
+{
+    if (transformationMatrixResource) {
+        transformationMatrixResource->Unmap(0, nullptr);
+    }
+
+    if (materialResource) {
+        materialResource->Unmap(0, nullptr);
+    }
+}

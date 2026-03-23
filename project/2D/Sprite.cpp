@@ -2,8 +2,6 @@
 #include "MatrixMath.h"
 #include "SpriteManager.h"
 
-
-
 #pragma region 初期化処理
 // ================================
 // スプライトの初期化
@@ -14,7 +12,7 @@ void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePat
     spriteManager_ = spriteManager;
 
     // 頂点バッファを作成
-    CreateVertexBuffer(); 
+    CreateVertexBuffer();
 
     // マテリアルバッファを作成（色やテクスチャ情報）
     CreateMaterialBuffer();
@@ -22,15 +20,13 @@ void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePat
     // 変換行列バッファを作成（位置・回転・スケール）
     CreateTransformationMatrixBuffer();
 
-    
-
-     //  テクスチャを読み込み（TextureManagerに登録される）
+    //  テクスチャを読み込み（TextureManagerに登録される）
     TextureManager::GetInstance()->LoadTexture(textureFilePath);
 
     //  ファイルパスをメンバーに保持
     textureFilePath_ = textureFilePath;
 
-     AdjustTextureSize();
+    AdjustTextureSize();
 }
 #pragma endregion
 
@@ -72,18 +68,15 @@ void Sprite::Update()
     float tex_bottom = (textureLeftTop_.y + textureSize_.y) / metadata.height;
     vertexData[0].position = { left, bottom, 0.0f, 1.0f }; // 左下
     vertexData[0].texcoord = { tex_left, tex_bottom };
-    
+
     vertexData[1].position = { left, top, 0.0f, 1.0f }; // 左上
     vertexData[1].texcoord = { tex_left, tex_top };
-    
 
     vertexData[2].position = { right, bottom, 0.0f, 1.0f }; // 右下
     vertexData[2].texcoord = { tex_right, tex_bottom };
-   
 
     vertexData[3].position = { right, top, 0.0f, 1.0f }; // 右上
     vertexData[3].texcoord = { tex_right, tex_top };
-    
 
     // -------------------------------
     // インデックス（描画順）を設定
@@ -107,13 +100,12 @@ void Sprite::Update()
     // -------------------------------
     Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
     Matrix4x4 viewMatrix = MatrixMath::MakeIdentity4x4(); // カメラ無し
-    Matrix4x4 orthoSprite = MatrixMath::MakeOrthographicMatrix( 0.0f, 0.0f,float(WinApp::kClientWidth),float(WinApp::kClientHeight),0.0f, 100.0f); // スプライト用
+    Matrix4x4 orthoSprite = MatrixMath::MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f); // スプライト用
 
     // -------------------------------
     // GPUへ行列を転送
     // -------------------------------
     transformationMatrixData->WVP = MatrixMath::Multiply(worldMatrix, MatrixMath::Multiply(viewMatrix, orthoSprite));
-
 }
 #pragma endregion
 
@@ -135,7 +127,7 @@ void Sprite::Draw()
     commandList->SetGraphicsRootConstantBufferView(1, materialResource->GetGPUVirtualAddress());
 
     // [2] Texture SRV
-    commandList->SetGraphicsRootDescriptorTable(2,TextureManager::GetInstance()->GetSrvHandleGPU(textureFilePath_));
+    commandList->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(textureFilePath_));
 
     commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
@@ -151,11 +143,10 @@ void Sprite::CreateVertexBuffer()
     // 頂点リソース作成（4頂点分）
     vertexResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(SpriteVertexData) * 4);
     vertexResource->SetName(L"Sprite::VertexBuffer");
-    refCount = vertexResource->AddRef();
 
     // インデックスリソース作成（6インデックス分）
     indexResource = spriteManager_->GetDxCommon()->CreateBufferResource(sizeof(uint32_t) * 6);
-    indexResource->SetName(L"Sprite::IndexBuffer"); 
+    indexResource->SetName(L"Sprite::IndexBuffer");
 
     // -------------------------------
     // 頂点バッファビュー設定
@@ -209,13 +200,11 @@ void Sprite::CreateTransformationMatrixBuffer()
     transformationMatrixResource->SetName(L"Sprite::TransformCB");
 
     // 書き込み用アドレス取得
-    transformationMatrixResource->Map(
-        0, nullptr, reinterpret_cast<void**>(&transformationMatrixData));
+    transformationMatrixResource->Map(0, nullptr, reinterpret_cast<void**>(&transformationMatrixData));
 
     // 単位行列で初期化
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
 }
-
 
 #pragma endregion
 void Sprite::AdjustTextureSize()
@@ -233,4 +222,23 @@ void Sprite::AdjustTextureSize()
 
     // スプライト本体のサイズも同じにする
     size = textureSize_;
+}
+
+Sprite::~Sprite()
+{
+    if (vertexResource) {
+        vertexResource->Unmap(0, nullptr);
+    }
+
+    if (indexResource) {
+        indexResource->Unmap(0, nullptr);
+    }
+
+    if (transformationMatrixResource) {
+        transformationMatrixResource->Unmap(0, nullptr);
+    }
+
+    if (materialResource) {
+        materialResource->Unmap(0, nullptr);
+    }
 }

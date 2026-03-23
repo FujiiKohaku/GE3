@@ -51,3 +51,9 @@ void Camera::DebugUpdate()
 
 #endif
 }
+Camera::~Camera()
+{
+    if (cameraResource_) {
+        cameraResource_->Unmap(0, nullptr);
+    }
+}
