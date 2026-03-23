@@ -97,7 +97,7 @@ void DirectXCommon::InitializeDevice()
     Microsoft::WRL::ComPtr<IDXGIAdapter4> useAdapter = nullptr;
 
     // よい順にアダプタを頼む
-    for (UINT i = 0;dxgiFactory->EnumAdapterByGpuPreference(i,DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,IID_PPV_ARGS(useAdapter.GetAddressOf()))!= DXGI_ERROR_NOT_FOUND;++i) {
+    for (UINT i = 0; dxgiFactory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(useAdapter.GetAddressOf())) != DXGI_ERROR_NOT_FOUND; ++i) {
 
         // アダプターの情報を取得する
         DXGI_ADAPTER_DESC3 adapterDesc {};
@@ -191,6 +191,7 @@ void DirectXCommon::InitializeCommand()
     hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList));
     // コマンドリストの生成が上手くいかなかったので起動できない
     assert(SUCCEEDED(hr));
+  
 }
 #pragma endregion
 
@@ -457,7 +458,7 @@ void DirectXCommon::PreDraw()
     commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     // SRVのディスクリプタヒープをセットする
 
-    /*   ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
+    /* ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
        commandList->SetDescriptorHeaps(1, descriptorHeaps);*/
     // ビューポート領域の設定
     commandList->RSSetViewports(1, &viewport); // viewportを設定

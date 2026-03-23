@@ -1,15 +1,19 @@
 #include "LightManager.h"
 #include <numbers>
 #include "../math//MathStruct.h"
-LightManager* LightManager::instance = nullptr;
+
+
+
+std::unique_ptr<LightManager> LightManager::instance_ = nullptr;
 
 LightManager* LightManager::GetInstance()
 {
-    if (instance == nullptr) {
-        instance = new LightManager();
+    if (!instance_) {
+        instance_.reset(new LightManager());
     }
-    return instance;
+    return instance_.get();
 }
+
 void LightManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
@@ -50,16 +54,34 @@ void LightManager::Update()
 
 void LightManager::Finalize()
 {
-    // GPU バッファのマップ解除
     if (lightResource_) {
         lightResource_->Unmap(0, nullptr);
-        lightResource_.Reset(); // ComPtr を開放
+        lightResource_.Reset();
     }
 
-    delete instance;
-    instance = nullptr;
-}
+    if (pointLightResource_) {
+        pointLightResource_->Unmap(0, nullptr);
+        pointLightResource_.Reset();
+    }
 
+    if (spotLightResource_) {
+        spotLightResource_->Unmap(0, nullptr);
+        spotLightResource_.Reset();
+    }
+
+    lightData_ = nullptr;
+    pointLightData_ = nullptr;
+    spotLightData_ = nullptr;
+    dxCommon_ = nullptr;
+
+}
+void LightManager::Destroy()
+{
+    if (instance_) {
+        instance_->Finalize();
+        instance_.reset();
+    }
+}
 void LightManager::SetDirectional(const Vector4& color, const Vector3& dir, float intensity)
 {
     lightData_->color = color;

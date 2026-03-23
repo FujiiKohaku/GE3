@@ -15,7 +15,7 @@ public:
     void SetDirectional(const Vector4& color, const Vector3& dir, float intensity);
     void SetDirection(const Vector3& dir);
     void SetIntensity(float intensity);
-    void SetPointLight(const Vector4& color,const Vector3& pos,float intensity);
+    void SetPointLight(const Vector4& color, const Vector3& pos, float intensity);
 
     void SetPointPosition(const Vector3& pos);
     void SetPointIntensity(float intensity);
@@ -30,18 +30,19 @@ public:
     void SetSpotLightDistance(float distance);
     void SetSpotLightDecay(float decay);
     void SetSpotLightCosAngle(float cosAngle);
-    
 
     // ================================
     // インスタンス取得
     // ================================
     static LightManager* GetInstance();
     void Finalize();
+    static void Destroy();
 
+    ~LightManager() = default;
 private:
     LightManager() = default;
-    ~LightManager() = default;
-    static LightManager* instance;
+
+    static std::unique_ptr<LightManager> instance_;
 
     DirectXCommon* dxCommon_ = nullptr;
 
@@ -52,7 +53,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> pointLightResource_;
     PointLight* pointLightData_ = nullptr;
 
-     Microsoft::WRL::ComPtr<ID3D12Resource> spotLightResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> spotLightResource_;
     SpotLight* spotLightData_ = nullptr;
-
 };
