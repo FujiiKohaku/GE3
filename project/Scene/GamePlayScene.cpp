@@ -328,6 +328,6 @@ void GamePlayScene::Finalize()
     ParticleManager::GetInstance()->Finalize();
 
     LightManager::GetInstance()->Finalize();
-
+    LightManager::GetInstance()->Destroy();
     SoundManager::GetInstance()->SoundUnload(&bgm);
 }
