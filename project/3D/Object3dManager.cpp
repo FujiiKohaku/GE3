@@ -1,5 +1,5 @@
 #include "Object3dManager.h"
-
+// 実体をここで作成　staticだとクラス内で宣言しただけでは実体ができないから、ここで作る
 std::unique_ptr<Object3dManager> Object3dManager::instance_ = nullptr;
 
 
