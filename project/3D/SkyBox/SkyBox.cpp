@@ -3,7 +3,7 @@
 #include "DirectXCommon.h"
 #include "MatrixMath.h"
 #include <cassert>
-
+#include "TextureManager.h"
 void SkyBox::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
@@ -56,7 +56,9 @@ void SkyBox::Update(Camera* camera)
     assert(camera);
     camera_ = camera;
 
-    Matrix4x4 worldMatrix = MatrixMath::MakeIdentity4x4();
+    Vector3 cameraPosition = camera_->GetTranslate();
+
+    Matrix4x4 worldMatrix = MatrixMath::MakeTranslateMatrix(cameraPosition);
     Matrix4x4 viewProjectionMatrix = camera_->GetViewProjectionMatrix();
 
     transformData_->World = worldMatrix;
@@ -71,16 +73,17 @@ void SkyBox::Draw(ID3D12GraphicsCommandList* commandList)
     assert(commandList != nullptr);
 
     commandList->SetGraphicsRootConstantBufferView(0, transformResource_->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootDescriptorTable(1, textureSrvHandle_);
+    commandList->SetGraphicsRootDescriptorTable(1, TextureManager::GetInstance()->GetSrvHandleGPU(textureHandle_));
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
     commandList->IASetIndexBuffer(&indexBufferView_);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->DrawIndexedInstanced(static_cast<UINT>(indexData_.size()), 1, 0, 0, 0);
 }
 
-void SkyBox::SetTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandle)
+void SkyBox::SetTexture(const std::string& textureFilePath)
 {
-    textureSrvHandle_ = textureSrvHandle;
+    textureFilePath_ = textureFilePath;
+    textureHandle_ = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath_);
 }
 
 void SkyBox::CreateBox()

@@ -180,3 +180,7 @@ const DirectX::TexMetadata& TextureManager::GetMetaData(const std::string& fileP
 
     return textureDatas.at("resources/white.png").metadata;
 }
+D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(uint32_t textureHandle) const
+{
+    return srvManager_->GetGPUDescriptorHandle(textureHandle);
+}
