@@ -58,6 +58,7 @@
 #include "BaseScene.h"
 #include "SceneManager.h"
 #include "SoundManager.h"
+#include"../3D/SkyBox/SkyBoxManager.h"
 // ======================= パーティクル関連 =========================
 #include "ParticleManager.h"
 // ================================================================
