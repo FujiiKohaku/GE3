@@ -1,7 +1,7 @@
 #include "TextureManager.h"
 #include <format>
 
-TextureManager* TextureManager::instance = nullptr;
+std::unique_ptr<TextureManager> TextureManager::instance = nullptr;
 // ImGuiで0番を使用するため、1番から使用
 uint32_t TextureManager::kSRVIndexTop = 1;
 
@@ -10,10 +10,10 @@ uint32_t TextureManager::kSRVIndexTop = 1;
 //=================================================================
 TextureManager* TextureManager::GetInstance()
 {
-    if (instance == nullptr) {
-        instance = new TextureManager();
+    if (!instance) {
+        instance.reset(new TextureManager(ConstructorKey()));
     }
-    return instance;
+    return instance.get();
 }
 
 //=================================================================
@@ -21,10 +21,15 @@ TextureManager* TextureManager::GetInstance()
 //=================================================================
 void TextureManager::Finalize()
 {
-    if (instance) {
-        delete instance;
-        instance = nullptr;
+    if (!instance) {
+        return;
     }
+
+    textureDatas.clear();
+    dxCommon_ = nullptr;
+    srvManager_ = nullptr;
+
+    instance.reset();
 }
 
 //=================================================================

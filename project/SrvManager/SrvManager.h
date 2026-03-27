@@ -31,15 +31,19 @@ public:
     void Finalize();
     static const uint32_t kMaxSRVCount;
 
-private:
-    // Singleton化要素
-    SrvManager() = default;
+
+
+    class ConstructorKey {
+    private:
+        ConstructorKey() = default;
+        friend class SrvManager;
+    };
+    SrvManager(ConstructorKey) { }
     ~SrvManager() = default;
+private:
 
     SrvManager(const SrvManager&) = delete;
     SrvManager& operator=(const SrvManager&) = delete;
-
-private:
     DirectXCommon* dxCommon_ = nullptr;
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;
@@ -47,5 +51,6 @@ private:
     uint32_t descriptorSize = 0;
     uint32_t useIndex = 0;
     // Singleton インスタンス
-    static SrvManager* instance;
+    static std::unique_ptr<SrvManager> instance;
+    
 };

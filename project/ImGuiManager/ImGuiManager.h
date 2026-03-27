@@ -9,7 +9,6 @@
 #include "DirectXCommon.h"
 #include "SrvManager.h"
 #include "WinApp.h"
-
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <memory>
@@ -19,7 +18,6 @@ public:
     // ===== Singleton Access =====
     static ImGuiManager* GetInstance();
 
-    static ImGuiManager* instance;
     // ===== Main APIs =====
     void Initialize(WinApp* winApp, DirectXCommon* dxCommon, SrvManager* srvManager);
     void Update();
@@ -31,10 +29,17 @@ public:
 
 private:
     // ===== Singleton Only =====
-    ImGuiManager() = default;
-    ~ImGuiManager() = default;
+    static std::unique_ptr<ImGuiManager> instance_;
     ImGuiManager(const ImGuiManager&) = delete;
     ImGuiManager& operator=(const ImGuiManager&) = delete;
+
+public:
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class ImGuiManager;
+    };
+    explicit ImGuiManager(ConstructorKey);
+    ~ImGuiManager() = default;
 
 private:
     WinApp* winApp_ = nullptr;

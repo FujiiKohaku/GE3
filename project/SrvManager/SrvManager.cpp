@@ -1,13 +1,13 @@
 #include "SrvManager.h"
-SrvManager* SrvManager::instance = nullptr;
+std::unique_ptr<SrvManager> SrvManager::instance = nullptr;
 // 最大SRV数(最大テクスチャ枚数)//kMaxSRVCountは512です
 const uint32_t SrvManager::kMaxSRVCount = 512;
 SrvManager* SrvManager::GetInstance()
 {
     if (!instance) {
-        instance = new SrvManager();
+        instance = std::make_unique<SrvManager>(ConstructorKey());
     }
-    return instance;
+    return instance.get();
 }
 void SrvManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -90,6 +90,10 @@ bool SrvManager::CanAllocate() const
 
 void SrvManager::Finalize()
 {
+    if (instance == nullptr) {
+        return;
+    }
+
     if (dxCommon_) {
         dxCommon_->WaitForGPU();
     }
@@ -100,6 +104,5 @@ void SrvManager::Finalize()
     descriptorSize = 0;
     dxCommon_ = nullptr;
 
-    delete instance;
-    instance = nullptr;
+    instance.reset();
 }
