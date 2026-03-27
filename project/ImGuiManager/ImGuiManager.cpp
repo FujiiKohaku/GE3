@@ -1,26 +1,23 @@
 #include "ImGuiManager.h"
-ImGuiManager* ImGuiManager::instance = nullptr;
+std::unique_ptr<ImGuiManager> ImGuiManager::instance_;
 
 ImGuiManager* ImGuiManager::GetInstance()
 {
-    if (instance == nullptr) {
-        instance = new ImGuiManager();
+    if (!instance_) {
+        instance_ = std::make_unique<ImGuiManager>(ConstructorKey());
     }
-    return instance;
+    return instance_.get();
 }
 
 void ImGuiManager::Finalize()
 {
 #ifdef USE_IMGUI
-
-    // 後始末
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 #endif
 
-    delete instance;
-    instance = nullptr;
+    instance_.reset();
 }
 
 void ImGuiManager::Initialize([[maybe_unused]] WinApp* winApp, [[maybe_unused]] DirectXCommon* dxCommon, [[maybe_unused]] SrvManager* srvManager)
@@ -88,4 +85,8 @@ void ImGuiManager::Draw()
     // 描画コマンドを発行
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 #endif //  USE_IMGUI
+}
+
+ImGuiManager::ImGuiManager(ConstructorKey)
+{
 }

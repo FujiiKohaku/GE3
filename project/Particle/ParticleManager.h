@@ -6,6 +6,7 @@
 #include "blendutil.h"
 #include <d3d12.h>
 #include <list>
+#include <memory>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -13,15 +14,9 @@
 
 class ParticleManager {
 public:
-    // =========================================================
-    // Singleton Access
-    // =========================================================
     static ParticleManager* GetInstance();
-    void Finalize();
+    static void Finalize();
 
-    // =========================================================
-    // GPUに送る構造体
-    // =========================================================
     struct Material {
         Vector4 color;
         int32_t enableLighting;
@@ -82,7 +77,6 @@ public:
         Spark,
         FireWork
     };
-    ParticleType type = ParticleType::Normal;
 
     struct ParticleGroup {
         std::string texturePath;
@@ -93,89 +87,72 @@ public:
         uint32_t numInstance = 0;
     };
 
-    std::unordered_map<std::string, ParticleGroup> particleGroups_;
-
 public:
-    // =========================================================
-    // 基本操作
-    // =========================================================
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
     void Update();
     void PreDraw();
     void Draw();
 
-    // BlendMode の setter
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
-    // パーティクルグループ作成
+
     void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
-    // パーティクルの発生
     void Emit(const std::string& name, const Vector3& position, uint32_t count);
     void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
-    // UI
-    // void ImGui();
+
     Particle MakeParticleDefault(const Vector3& pos);
 
 private:
-    // =========================================================
-    // Singleton Safety
-    // =========================================================
-    ParticleManager()
-        = default;
-    ~ParticleManager() = default;
+    static std::unique_ptr<ParticleManager> instance_;
 
     ParticleManager(const ParticleManager&) = delete;
     ParticleManager& operator=(const ParticleManager&) = delete;
-    static ParticleManager* instance;
+
+public:
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class ParticleManager;
+    };
+
+    explicit ParticleManager(ConstructorKey);
+    ~ParticleManager() = default;
 
 private:
-    // =========================================================
-    // 内部処理
-    // =========================================================
     void CreateRootSignature();
     void CreateGraphicsPipeline();
     void CreateBoardMesh();
 
 private:
-    // =========================================================
-    // DirectX / 外部依存
-    // =========================================================
     DirectXCommon* dxCommon_ = nullptr;
     SrvManager* srvManager_ = nullptr;
     Camera* camera_ = nullptr;
 
-    // =========================================================
-    // RootSignature / PSO
-    // =========================================================
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates_[kCountOfBlendMode];
     int currentBlendMode_ = kBlendModeAdd;
-
-    // =========================================================
-    // GPU リソース
-    // =========================================================
 
     static const uint32_t kNumMaxInstance = 100;
 
-    std::list<Shockwave> shokParticles;
+    std::unordered_map<std::string, ParticleGroup> particleGroups_;
+    std::list<Shockwave> shockParticles_;
 
-    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle {};
+    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle_ {};
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
-    Microsoft::WRL::ComPtr<ID3D12Resource> transformResource;
-    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource_;
 
     Material materialData_ {};
     TransformationMatrix transformData_ {};
     DirectionalLight lightData_ {};
 
-    VertexData vertices[4];
-    uint32_t indexList[6] = { 0, 1, 2, 0, 2, 3 };
+    VertexData vertices_[4];
+    uint32_t indexList_[6] = { 0, 1, 2, 0, 2, 3 };
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource;
+    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_;
 
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
-    D3D12_INDEX_BUFFER_VIEW indexBufferView {};
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView_ {};
+    D3D12_INDEX_BUFFER_VIEW indexBufferView_ {};
 
     EulerTransform transformBoard_ = {
         { 1.0f, 1.0f, 1.0f },
@@ -183,9 +160,11 @@ private:
         { 0.0f, 0.0f, 0.0f }
     };
 
+    ParticleType type_ = ParticleType::Normal;
+
     std::random_device seedGenerator_;
     std::mt19937 randomEngine_;
     bool useBillboard_ = true;
 
-    float kdeltaTime = 0.1f;
+    float kDeltaTime_ = 0.1f;
 };
