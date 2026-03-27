@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <d3d12.h>
+#include <string>
 #include <wrl.h>
 
 class DirectXCommon;
@@ -26,7 +27,7 @@ public:
     void Draw(ID3D12GraphicsCommandList* commandList);
 
     void CreateBox();
-    void SetTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandle);
+    void SetTexture(const std::string& textureFilePath);
 
 private:
     DirectXCommon* dxCommon_ = nullptr;
@@ -43,5 +44,7 @@ private:
     D3D12_INDEX_BUFFER_VIEW indexBufferView_ {};
 
     TransformationMatrix* transformData_ = nullptr;
-    D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandle_ {};
+
+    std::string textureFilePath_;
+    uint32_t textureHandle_ = 0;
 };
