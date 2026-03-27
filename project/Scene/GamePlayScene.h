@@ -17,9 +17,12 @@
 #include "TextureManager.h"
 #include <numbers>
 
-#include"../Animation/AnimationActor.h"
+#include "../Animation/AnimationActor.h"
 
 #include <memory>
+
+#include "../3D/SkyBox/SkyBox.h"
+#include "../3D/SkyBox/SkyBoxManager.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -46,9 +49,7 @@ private:
     std::unique_ptr<Object3d> terrain_;
     std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> droneObj_;
- 
-
- 
+    std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
     // ------------------------------
@@ -69,11 +70,6 @@ private:
     // ------------------------------
     // アニメーション / スケルトン
     // ------------------------------
-   
-
-
-
- 
 
     // ------------------------------
     // ライト・描画パラメータ

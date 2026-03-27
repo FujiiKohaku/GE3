@@ -27,6 +27,10 @@ void GamePlayScene::Initialize()
 
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/rostock_laage_airport_4k.dds");
+
+
+    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
     ModelManager::GetInstance()->Load("sneakWalk.gltf");
@@ -88,13 +92,19 @@ void GamePlayScene::Initialize()
 
     testSprite_ = std::make_unique<Sprite>();
     testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
+
+    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
+
+    skyBox_ = std::make_unique<SkyBox>();
+    skyBox_->Initialize(DirectXCommon::GetInstance()); 
+  skyBox_->SetTextureHandle(srvHandle);
 }
 
 void GamePlayScene::Update()
 {
 
     testSprite_->Update();
-
+    skyBox_->Update(camera_.get());
     ParticleManager::GetInstance()->Update();
     emitter_.Update();
     sphere_->Update(camera_.get());
@@ -308,6 +318,11 @@ void GamePlayScene::Draw3D()
     animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
+
+    SkyBoxManager::GetInstance()->PreDraw();
+    skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+
+
 }
 
 void GamePlayScene::Draw2D()

@@ -18,6 +18,7 @@ void Game::Initialize()
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     SkinningObject3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    SkyBoxManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     modelCommon_.Initialize(DirectXCommon::GetInstance());
     // 入力関連
     Input::GetInstance()->Initialize(winApp_.get());
@@ -92,7 +93,7 @@ void Game::Finalize()
     Object3dManager::GetInstance()->Finalize();
     SpriteManager::GetInstance()->Finalize();
     ModelManager::GetInstance()->Finalize();
-
+    SkyBoxManager::GetInstance()->Finalize();
     // 4. リソース
     TextureManager::GetInstance()->Finalize();
     SrvManager::GetInstance()->Finalize();
