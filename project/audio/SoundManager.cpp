@@ -1,4 +1,17 @@
 #include "SoundManager.h"
+std::unique_ptr<SoundManager> SoundManager::instance_ = nullptr;
+
+SoundManager::SoundManager(ConstructorKey)
+{
+}
+
+SoundManager* SoundManager::GetInstance()
+{
+    if (!instance_) {
+        instance_ = std::make_unique<SoundManager>(ConstructorKey());
+    }
+    return instance_.get();
+}
 
 void SoundManager::Initialize()
 {
@@ -14,11 +27,7 @@ void SoundManager::Initialize()
     assert(SUCCEEDED(result));
 }
 
-void SoundManager::Finalize()
-{
-    xAudio2.Reset();
-    MFShutdown();
-}
+
 
 // チャンクヘッダ
 struct ChunkHeader {
@@ -66,13 +75,12 @@ SoundData SoundManager::SoundLoadFile(const std::string& filename)
     MFCreateMediaType(&pPCType);
     pPCType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
     pPCType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM);
-    result = reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM,nullptr,pPCType.Get());
+    result = reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, pPCType.Get());
 
     if (FAILED(result)) {
         OutputDebugStringA(("PCM set failed: " + filename + "\n").c_str());
         return SoundData {};
     }
-
 
     // 実際のWaveFormat取得
     Microsoft::WRL::ComPtr<IMFMediaType> pOutType;
@@ -84,7 +92,7 @@ SoundData SoundManager::SoundLoadFile(const std::string& filename)
     MFCreateWaveFormatExFromMFMediaType(pOutType.Get(), &waveFormat, nullptr);
 
     // コンテナに格納
-   
+
     soundData.wfex = *waveFormat;
     // 音声データの読み込み
     CoTaskMemFree(waveFormat);
@@ -114,14 +122,13 @@ SoundData SoundManager::SoundLoadFile(const std::string& filename)
             result = pSample->ConvertToContiguousBuffer(&pBuffer);
 
             BYTE* pData = nullptr;
-            DWORD maxLength = 0,currrentLength=0;
-            //バッファ読み込み用にロック
+            DWORD maxLength = 0, currrentLength = 0;
+            // バッファ読み込み用にロック
             pBuffer->Lock(&pData, &maxLength, &currrentLength);
-            //バッファの末尾にデータ追加
+            // バッファの末尾にデータ追加
             soundData.buffer.insert(soundData.buffer.end(), pData, pData + currrentLength);
             // バッファのロック解除
             pBuffer->Unlock();
-
         }
     }
     return soundData;
@@ -143,8 +150,8 @@ void SoundManager::SoundPlayWave(const SoundData& soundData)
     assert(SUCCEEDED(result));
 
     XAUDIO2_BUFFER buf {};
-    buf.pAudioData = soundData.buffer.data(); 
-    buf.AudioBytes = static_cast<UINT32>(soundData.buffer.size()); 
+    buf.pAudioData = soundData.buffer.data();
+    buf.AudioBytes = static_cast<UINT32>(soundData.buffer.size());
     buf.Flags = XAUDIO2_END_OF_STREAM;
 
     result = pSourceVoice->SubmitSourceBuffer(&buf);
@@ -152,4 +159,20 @@ void SoundManager::SoundPlayWave(const SoundData& soundData)
 
     result = pSourceVoice->Start();
     assert(SUCCEEDED(result));
+}
+void SoundManager::Finalize()
+{
+    if (!instance_) {
+        return;
+    }
+
+    if (instance_->masterVoice) {
+        instance_->masterVoice->DestroyVoice();
+        instance_->masterVoice = nullptr;
+    }
+
+    instance_->xAudio2.Reset();
+    MFShutdown();
+
+    instance_.reset();
 }

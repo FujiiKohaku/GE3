@@ -6,6 +6,7 @@ std::unique_ptr<SpriteManager> SpriteManager::instance_ = nullptr;
 SpriteManager* SpriteManager::GetInstance()
 {
     if (!instance_) {
+        // SpriteManagereの中だからConstructorKeyを生成できる
         instance_ = std::make_unique<SpriteManager>(ConstructorKey());
     }
     return instance_.get();

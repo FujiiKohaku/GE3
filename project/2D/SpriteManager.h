@@ -28,25 +28,22 @@ public:
     // 終了処理
     static void Finalize();
 
-
 private:
     //----------------------------------------------
     // Singleton化関連
     //----------------------------------------------
     // デフォルトコンストラクタを削除
     static std::unique_ptr<SpriteManager> instance_;
-   
-    SpriteManager(const SpriteManager&) = delete;
-    SpriteManager& operator=(const SpriteManager&) = delete;
 
 public:
     // コンストラクタを渡すための鍵
     // Passkey
     class ConstructorKey {
+        //デフォルトだとプライベート
         ConstructorKey() = default;
-        friend class SpriteManager;
+        friend class SpriteManager; // SpriteManagerだけがConstructorKeyを生成できるようにする
     };
-    explicit SpriteManager(ConstructorKey);
+    explicit SpriteManager(ConstructorKey);//変な呼び出されないように
     ~SpriteManager() = default;
 
 private:

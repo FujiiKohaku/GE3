@@ -1,17 +1,17 @@
 #pragma once
 
-#include <Windows.h> 
+#include <Windows.h>
 #include <cassert>
+#include <memory>
 #include <string>
 #include <vector>
-
 #include <wrl.h>
 #include <xaudio2.h>
 #pragma comment(lib, "xaudio2.lib")
 
 // ===== Media Foundation =====
 #include <mfapi.h>
-#include <mfidl.h> 
+#include <mfidl.h>
 #include <mfobjects.h>
 #include <mfreadwrite.h>
 
@@ -38,12 +38,21 @@ public:
     // ================================
     // Singleton
     // ================================
-    static SoundManager* GetInstance()
-    {
-        static SoundManager instance;
-        return &instance;
-    }
+    static SoundManager* GetInstance();
+    SoundManager(const SoundManager&) = delete; // コピーコンストラクタを削除
+    SoundManager& operator=(const SoundManager&) = delete; // コピー代入演算子を削除
 
+private:
+    static std::unique_ptr<SoundManager> instance_;
+
+public:
+    class ConstructorKey {
+        ConstructorKey() = default;
+        friend class SoundManager;
+    };
+
+    explicit SoundManager(ConstructorKey);
+    ~SoundManager() = default;
     // ================================
     // 基本操作
     // ================================
@@ -54,14 +63,6 @@ public:
     void SoundUnload(SoundData* soundData);
 
     void SoundPlayWave(const SoundData& soundData);
-
-private:
-    // シングルトン用
-    SoundManager() = default;
-    ~SoundManager() = default;
-
-    SoundManager(const SoundManager&) = delete;
-    SoundManager& operator=(const SoundManager&) = delete;
 
 private:
     Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
