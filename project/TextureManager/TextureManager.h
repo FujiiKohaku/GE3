@@ -45,12 +45,11 @@ public:
     }
 
     class ConstructorKey {
-    private:
         ConstructorKey() = default;
         friend class TextureManager;
     };
+    explicit TextureManager(ConstructorKey);
 
-    TextureManager(ConstructorKey) { }
     ~TextureManager() = default;
 
 private:

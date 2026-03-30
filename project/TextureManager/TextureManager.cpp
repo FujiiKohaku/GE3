@@ -11,7 +11,7 @@ uint32_t TextureManager::kSRVIndexTop = 1;
 TextureManager* TextureManager::GetInstance()
 {
     if (!instance) {
-        instance.reset(new TextureManager(ConstructorKey()));
+        instance = std::make_unique<TextureManager>(ConstructorKey());
     }
     return instance.get();
 }
@@ -179,6 +179,9 @@ const DirectX::TexMetadata& TextureManager::GetMetaData(const std::string& fileP
     }
 
     return textureDatas.at("resources/white.png").metadata;
+}
+TextureManager::TextureManager(ConstructorKey)
+{
 }
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(uint32_t textureHandle) const
 {
