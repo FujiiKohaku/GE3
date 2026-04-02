@@ -6,7 +6,7 @@ ConstantBuffer<PointLight> gPointLight : register(b3);
 ConstantBuffer<SpotLight> gSpotLight : register(b4);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
-
+TextureCube<float32_t4> gEnvironmentTexture : register(t1);
 
 struct PixelShaderOutput
 {
@@ -102,11 +102,15 @@ PixelShaderOutput main(VertexShaderOutput input)
         float3 Hs = normalize(-spotLightDirectionOnSurface + V);
         float NdotHs = saturate(dot(N, Hs));
         float3 spotSpec = spotLightColor * pow(NdotHs, gMaterial.shininess);
-
+        // 環境マッピング
+        float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+        float3 reflectedVector = reflect(cameraToPosition, normalize(input.normal));
+        float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
 
 // ---- 合成 ----
 //
         output.color.rgb = dirDiffuse + dirSpec + pointDiffuse + pointSpec + spotDiffuse + spotSpec;
+        output.color.rgb += environmentColor.rgb;
         output.color.a = gMaterial.color.a * textureColor.a;
 
     }

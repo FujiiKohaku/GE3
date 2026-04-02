@@ -67,6 +67,11 @@ public:
     {
         return worldMatrix_;
     }
+    void SetEnvironmentTextureFilePath(const std::string& filePath)
+    {
+        environmentTextureFilePath_ = filePath;
+        TextureManager::GetInstance()->LoadTexture(filePath);
+    }
 
 private:
    
@@ -99,4 +104,6 @@ private:
 
     // World
     Matrix4x4 worldMatrix_;
+    D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
+    std::string environmentTextureFilePath_;
 };

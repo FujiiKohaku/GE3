@@ -42,6 +42,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     // ================================
     transform = { { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
     cameraTransform = { { 1.0f, 1.0f, 1.0f }, { 0.3f, 0.0f, 0.0f }, { 0.0f, 4.0f, -10.0f } };
+    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
 }
 #pragma endregion
 
@@ -93,6 +94,8 @@ void Object3d::Draw()
 
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
+
+    commandList->SetGraphicsRootDescriptorTable(7, environmentTextureHandle_);
     // モデルが設定されていれば描画
     if (model_) {
         model_->Draw();

@@ -141,4 +141,5 @@ private:
     // SkinCluster skinCluster_;
     SkinCluster::SkinClusterData skinClusterData_;
     PlayAnimation* playAnimation_;
+    D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
 };

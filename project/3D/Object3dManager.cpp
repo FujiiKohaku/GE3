@@ -2,7 +2,6 @@
 // 実体をここで作成　staticだとクラス内で宣言しただけでは実体ができないから、ここで作る
 std::unique_ptr<Object3dManager> Object3dManager::instance_ = nullptr;
 
-
 Object3dManager::Object3dManager(ConstructorKey)
 {
 }
@@ -68,7 +67,7 @@ void Object3dManager::CreateRootSignature()
     HRESULT hr;
 
     // ====== RootParameterの設定 ======
-    D3D12_ROOT_PARAMETER rootParameters[7] = {};
+    D3D12_ROOT_PARAMETER rootParameters[8] = {};
 
     // [0] Material（ピクセルシェーダ用）
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -108,6 +107,16 @@ void Object3dManager::CreateRootSignature()
     rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[6].Descriptor.ShaderRegister = 4; //  b4
+    D3D12_DESCRIPTOR_RANGE descriptorRangeEnvironment[1] = {};
+    descriptorRangeEnvironment[0].BaseShaderRegister = 1;
+    descriptorRangeEnvironment[0].NumDescriptors = 1;
+    descriptorRangeEnvironment[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRangeEnvironment[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[7].DescriptorTable.pDescriptorRanges = descriptorRangeEnvironment;
+    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeEnvironment);
     // ====== Sampler設定 ======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -147,7 +156,6 @@ void Object3dManager::CreateRootSignature()
 #pragma region グラフィックスパイプライン作成
 void Object3dManager::CreateGraphicsPipeline()
 {
-   
 
     // ====== 入力レイアウト ======
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
@@ -195,7 +203,7 @@ void Object3dManager::CreateGraphicsPipeline()
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
-    //baseDescPSはFor文の中に移動しました
+    // baseDescPSはFor文の中に移動しました
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
@@ -215,7 +223,7 @@ void Object3dManager::CreateGraphicsPipeline()
         {
             D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc;
 
-            desc.PS = {pixelShaderBlob->GetBufferPointer(),pixelShaderBlob->GetBufferSize()};
+            desc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
 
             desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i));
 
