@@ -159,7 +159,9 @@ void SkinningObject3d::Draw()
 
     commandList->SetGraphicsRootConstantBufferView(
         4, camera_->GetGPUAddress());
-
+    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(
+        model_->GetModelData().material.textureFilePath);
+    commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
     if (model_) {
         model_->Draw();
     }

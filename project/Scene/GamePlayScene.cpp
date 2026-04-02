@@ -302,9 +302,9 @@ void GamePlayScene::Draw3D()
 
     // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     // Object3dManager::GetInstance()->SetGlowPSO();
-    Object3dManager::GetInstance()->SetNormalPSO();
+   // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-    terrain_->Draw();
+    //terrain_->Draw();
 
     //----------------------
     // スキニング

@@ -91,6 +91,8 @@ void Object3d::Draw()
 
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
 
+    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
+    commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
     // モデルが設定されていれば描画
     if (model_) {
         model_->Draw();
