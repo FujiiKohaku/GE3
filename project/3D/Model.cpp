@@ -65,8 +65,8 @@ void Model::Draw()
         commandList->IASetVertexBuffers(0, 1, &primitive.vbView);
 
         // texture
-        auto handle = TextureManager::GetInstance()->GetSrvHandleGPU(modelData_.material.textureFilePath);
-        commandList->SetGraphicsRootDescriptorTable(2, handle);
+       /* auto handle = TextureManager::GetInstance()->GetSrvHandleGPU(modelData_.material.textureFilePath);
+        commandList->SetGraphicsRootDescriptorTable(2, handle);*/
 
         // draw
         if (!primitive.indices.empty()) {
