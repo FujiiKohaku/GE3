@@ -45,7 +45,7 @@ void SkinningObject3dManager::PreDraw() {
 void SkinningObject3dManager::CreateRootSignature() {
     HRESULT hr;
 
-D3D12_ROOT_PARAMETER rootParameters[8] = {};
+D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     // [0] Material（PS : b0）
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -100,6 +100,17 @@ D3D12_ROOT_PARAMETER rootParameters[8] = {};
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[7].DescriptorTable.pDescriptorRanges = &matrixPaletteRange;
     rootParameters[7].DescriptorTable.NumDescriptorRanges = 1;
+    // [8] EnvironmentTexture（PS : t1）
+    D3D12_DESCRIPTOR_RANGE environmentTextureRange {};
+    environmentTextureRange.BaseShaderRegister = 1;
+    environmentTextureRange.NumDescriptors = 1;
+    environmentTextureRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    environmentTextureRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = &environmentTextureRange;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
     // ===============================
     // Sampler
     // ===============================
@@ -222,8 +233,8 @@ void SkinningObject3dManager::CreateGraphicsPipeline() {
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/SkinningObject3d.VS .hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/SkinningObject3d.VS .hlsl",L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl",L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ====== PSO設定 ======

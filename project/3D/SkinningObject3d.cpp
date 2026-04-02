@@ -69,7 +69,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     };
 
     skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData(), SrvManager::GetInstance());
-
+    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
     assert(camera_);
@@ -159,9 +159,9 @@ void SkinningObject3d::Draw()
 
     commandList->SetGraphicsRootConstantBufferView(
         4, camera_->GetGPUAddress());
-    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(
-        model_->GetModelData().material.textureFilePath);
+    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
+    commandList->SetGraphicsRootDescriptorTable(8, environmentTextureHandle_);
     if (model_) {
         model_->Draw();
     }
