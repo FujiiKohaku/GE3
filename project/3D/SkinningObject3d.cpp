@@ -151,9 +151,7 @@ void SkinningObject3d::Draw()
     commandList->SetGraphicsRootDescriptorTable(
         7, skinClusterData_.paletteSrvHandle.second);
 
-    D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {
-        model_->GetVertexBufferView(),
-        skinClusterData_.influenceBufferView
+    D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {model_->GetVertexBufferView(),skinClusterData_.influenceBufferView
     };
     commandList->IASetVertexBuffers(0, 2, vbvs);
 
