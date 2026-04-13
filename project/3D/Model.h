@@ -41,6 +41,8 @@ public:
     const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const {
         return vertexBufferView_;
     }
+    ID3D12Resource* GetVertexResource() const { return vertexResource_.Get(); }
+
 private:
     std::string textureFilePath_;
     // ===============================

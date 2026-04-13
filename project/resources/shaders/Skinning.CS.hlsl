@@ -78,6 +78,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
     outputVertex.position = skinnedPosition;
     outputVertex.texcoord = inputVertex.texcoord;
     outputVertex.normal = skinnedNormal;
-
     gOutputVertices[vertexIndex] = outputVertex;
 }

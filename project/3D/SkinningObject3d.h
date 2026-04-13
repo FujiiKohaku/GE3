@@ -153,4 +153,26 @@ private:
     SkinCluster::SkinClusterData skinClusterData_;
     PlayAnimation* playAnimation_;
     D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
+
+
+    // コンピュートシェーダー用のバッファとSRV/UAV
+    Microsoft::WRL::ComPtr<ID3D12Resource> inputVertexResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> influenceResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> skinnedVertexResource_;
+
+    D3D12_VERTEX_BUFFER_VIEW skinnedVertexBufferView_ {};
+
+    uint32_t inputVertexSrvIndex_ = 0;
+    uint32_t influenceSrvIndex_ = 0;
+    uint32_t paletteSrvIndex_ = 0;
+    uint32_t skinnedVertexUavIndex_ = 0;
+    struct SkinningInformation {
+        uint32_t numVertices;
+    };
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> skinningInformationResource_;
+    SkinningInformation* skinningInformationData_ = nullptr;
+     void CreateSkinningResources();
+    void DispatchSkinning();
 };
