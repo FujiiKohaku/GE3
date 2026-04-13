@@ -293,7 +293,33 @@ void GamePlayScene::Update()
     sphere_->SetShininess(shininess);
 
 #pragma endregion
+
+#pragma region ImGuiによる環境マッピング操作パネル
+    ImGui::Begin("Environment Mapping Control");
+
+    // --- AnimationActor ---
+    static bool envMapEnabled1 = true;
+    ImGui::Checkbox("Player EnvMap", &envMapEnabled1);
+
+    if (animationActor_) {
+        SkinningObject3d* obj = animationActor_->GetObject();
+        if (obj) {
+            obj->setEnableEnvironmentMap(envMapEnabled1);
+        }
+    }
+
+    // --- Terrain ---
+    static bool envMapEnabled2 = true;
+    ImGui::Checkbox("Terrain EnvMap", &envMapEnabled2);
+
+    Object3d* terrarian = terrain_.get();
+    if (terrarian) {
+        terrarian->setEnableEnvironmentMap(envMapEnabled2);
+    }
+
+    ImGui::End();
 }
+#pragma endregion
 
 void GamePlayScene::Draw3D()
 {
@@ -302,9 +328,9 @@ void GamePlayScene::Draw3D()
 
     // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     // Object3dManager::GetInstance()->SetGlowPSO();
-   // Object3dManager::GetInstance()->SetNormalPSO();
+    // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-     terrain_->Draw();
+    terrain_->Draw();
 
     //----------------------
     // スキニング

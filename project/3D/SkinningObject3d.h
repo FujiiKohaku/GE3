@@ -102,6 +102,17 @@ public:
         }
     }
 
+
+    void setEnableEnvironmentMap(bool enable)
+    {
+        if (materialData_) {
+            if (enable) {
+                materialData_->enableEnvironmentMap = 1;
+            } else {
+                materialData_->enableEnvironmentMap = 0;
+            }
+        }
+    }
     const Matrix4x4& GetWorldMatrix() const
     {
         return worldMatrix_;

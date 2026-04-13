@@ -46,7 +46,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->enableLighting = true;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
-
+    materialData_->enableEnvironmentMap = true;
     // ================================
     // Transform 初期値
     // ================================

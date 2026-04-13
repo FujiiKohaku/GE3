@@ -18,11 +18,12 @@ struct MaterialData {
 };
 // マテリアルデータ（色情報など）
 struct Material {
-	Vector4 color;
-	int32_t enableLighting;
-	float padding[2];
-	float shininess;
-	Matrix4x4 uvTransform;
+    Vector4 color;
+    int32_t enableLighting;
+    int32_t enableEnvironmentMap;
+    float shininess;
+    float padding;
+    Matrix4x4 uvTransform;
 };
 
 // 変換行列データ（GPU定数バッファ用）

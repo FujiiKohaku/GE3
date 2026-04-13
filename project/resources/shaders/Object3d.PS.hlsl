@@ -19,56 +19,25 @@ PixelShaderOutput main(VertexShaderOutput input)
     PixelShaderOutput output;
     output.color = gMaterial.color;
 
-    //これは不要同じスコープで二回宣言するとエラーになるからねー06_01
-    //float32_t4 textureColor = gTexture.Sample(gSampler, input.texcoord);
+    float4 transformedUV = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
+    float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
 
-    // UV座標を同次座標系に拡張して（x, y, 1.0）、アフィン変換を適用する
-    float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
-    // 変換後のUV座標を使ってテクスチャから色をサンプリングする
-    float32_t4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
-        
-    float32_t3 pointLightDirection = normalize(input.worldPosition - gPointLight.position);
-    
-    float32_t distance = length(gPointLight.position - input.worldPosition);
-    
-    float32_t factor = pow(saturate(-distance / gPointLight.radius + 1.0), gPointLight.decay);
-
-   
-    
-
-    if (gMaterial.enableLighting != 0)//Lightingする場合
+    if (gMaterial.enableLighting != 0)
     {
-       
-       
-       
-// 法線
         float3 N = normalize(input.normal);
-
-// 視線方向（物体→カメラ）
         float3 V = normalize(gCamera.worldPosition - input.worldPosition);
 
-//
-// ---- Directional Light ----
-//
         float3 Ld = normalize(-gDirectionalLight.direction);
-
-// Diffuse
         float NdotLd = saturate(dot(N, Ld));
         float3 dirDiffuse = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity;
 
-// Specular (Blinn-Phong)
         float3 Hd = normalize(Ld + V);
         float NdotHd = saturate(dot(N, Hd));
         float3 dirSpec = gDirectionalLight.color.rgb * gDirectionalLight.intensity * pow(NdotHd, gMaterial.shininess);
 
-//
-// ---- point Light ----
-//
-
         float3 Lp = normalize(gPointLight.position - input.worldPosition);
-
         float dist = length(gPointLight.position - input.worldPosition);
-        float decayF = pow(saturate(-dist / gPointLight.radius + 1.0), gPointLight.decay);
+        float decayF = pow(saturate(-dist / gPointLight.radius + 1.0f), gPointLight.decay);
         float3 pointColor = gPointLight.color.rgb * gPointLight.intensity * decayF;
 
         float NdotLp = saturate(dot(N, Lp));
@@ -78,21 +47,14 @@ PixelShaderOutput main(VertexShaderOutput input)
         float NdotHp = saturate(dot(N, Hp));
         float3 pointSpec = pointColor * pow(NdotHp, gMaterial.shininess);
 
-        
-//
-//--------spotLight----
-//
-        
         float3 spotLightDirectionOnSurface = normalize(input.worldPosition - gSpotLight.position);
-
         float3 spotLightColor = gSpotLight.color.rgb * gSpotLight.intensity;
 
-        float32_t cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
-
-        float32_t falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0 - gSpotLight.cosAngle));
+        float cosAngle = dot(spotLightDirectionOnSurface, gSpotLight.direction);
+        float falloffFactor = saturate((cosAngle - gSpotLight.cosAngle) / (1.0f - gSpotLight.cosAngle));
 
         float distS = length(gSpotLight.position - input.worldPosition);
-        float attenuationFactor = pow(saturate(-distS / gSpotLight.distance + 1.0), gSpotLight.decay);
+        float attenuationFactor = pow(saturate(-distS / gSpotLight.distance + 1.0f), gSpotLight.decay);
 
         spotLightColor *= attenuationFactor * falloffFactor;
 
@@ -102,23 +64,35 @@ PixelShaderOutput main(VertexShaderOutput input)
         float3 Hs = normalize(-spotLightDirectionOnSurface + V);
         float NdotHs = saturate(dot(N, Hs));
         float3 spotSpec = spotLightColor * pow(NdotHs, gMaterial.shininess);
-        // 環境マッピング
-        float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
-        float3 reflectedVector = reflect(cameraToPosition, normalize(input.normal));
-        float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
 
-// ---- 合成 ----
-//
         output.color.rgb = dirDiffuse + dirSpec + pointDiffuse + pointSpec + spotDiffuse + spotSpec;
-        output.color.rgb += environmentColor.rgb;
         output.color.a = gMaterial.color.a * textureColor.a;
 
+        if (gMaterial.enableEnvironmentMap != 0)
+        {
+            float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+            float3 reflectedVector = reflect(cameraToPosition, N);
+            float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
+
+            float reflectStrength = 0.2f;
+            output.color.rgb += environmentColor.rgb * reflectStrength;
+        }
     }
     else
-    { //Lightingしない場合前回までと同じ計算
+    {
         output.color = gMaterial.color * textureColor;
+
+        if (gMaterial.enableEnvironmentMap != 0)
+        {
+            float3 N = normalize(input.normal);
+            float3 cameraToPosition = normalize(input.worldPosition - gCamera.worldPosition);
+            float3 reflectedVector = reflect(cameraToPosition, N);
+            float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
+
+            float reflectStrength = 0.2f;
+            output.color.rgb += environmentColor.rgb * reflectStrength;
+        }
     }
-    
-    
+
     return output;
 }
