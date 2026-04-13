@@ -61,6 +61,17 @@ public:
             }
         }
     }
+
+    void setEnableEnvironmentMap(bool enable)
+    {
+        if (materialData_) {
+            if (enable) {
+                materialData_->enableEnvironmentMap = 1;
+            } else {
+                materialData_->enableEnvironmentMap = 0;
+            }
+        }
+    }
     void SetAnimation(PlayAnimation* anim);
     const Node& GetRootNode() const;
     const Matrix4x4& GetWorldMatrix() const
