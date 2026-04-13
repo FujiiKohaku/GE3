@@ -13,7 +13,8 @@ SkinningObject3dManager* SkinningObject3dManager::GetInstance()
     return instance_.get();
 }
 #pragma region 初期化処理
-void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon) {
+void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon)
+{
     // DirectX共通部分を受け取り、保存
     dxCommon_ = dxCommon;
 
@@ -22,11 +23,15 @@ void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon) {
 
     // グラフィックスパイプラインを作成
     CreateGraphicsPipeline();
+
+    CreateComputeRootSignature();
+    CreateComputePipeline();
 }
 #pragma endregion
 
 #pragma region 描画準備処理
-void SkinningObject3dManager::PreDraw() {
+void SkinningObject3dManager::PreDraw()
+{
     auto* commandList = dxCommon_->GetCommandList();
 
     // プリミティブ形状（三角形リスト）
@@ -42,10 +47,11 @@ void SkinningObject3dManager::PreDraw() {
 #pragma endregion
 
 #pragma region ルートシグネチャ作成
-void SkinningObject3dManager::CreateRootSignature() {
+void SkinningObject3dManager::CreateRootSignature()
+{
     HRESULT hr;
 
-D3D12_ROOT_PARAMETER rootParameters[9] = {};
+    D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     // [0] Material（PS : b0）
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -114,7 +120,7 @@ D3D12_ROOT_PARAMETER rootParameters[9] = {};
     // ===============================
     // Sampler
     // ===============================
-    D3D12_STATIC_SAMPLER_DESC staticSampler{};
+    D3D12_STATIC_SAMPLER_DESC staticSampler {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -127,9 +133,8 @@ D3D12_ROOT_PARAMETER rootParameters[9] = {};
     // ===============================
     // RootSignatureDesc
     // ===============================
-    D3D12_ROOT_SIGNATURE_DESC desc{};
-    desc.Flags =
-        D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    D3D12_ROOT_SIGNATURE_DESC desc {};
+    desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     desc.pParameters = rootParameters;
     desc.NumParameters = _countof(rootParameters);
     desc.pStaticSamplers = &staticSampler;
@@ -162,10 +167,11 @@ D3D12_ROOT_PARAMETER rootParameters[9] = {};
 #pragma endregion
 
 #pragma region グラフィックスパイプライン作成
-void SkinningObject3dManager::CreateGraphicsPipeline() {
+void SkinningObject3dManager::CreateGraphicsPipeline()
+{
     HRESULT hr;
 
-    std::array<D3D12_INPUT_ELEMENT_DESC, 5> inputElementDescs{};
+    std::array<D3D12_INPUT_ELEMENT_DESC, 5> inputElementDescs {};
 
     // ---------------------------------
     // Stream 0 : VertexData
@@ -208,24 +214,22 @@ void SkinningObject3dManager::CreateGraphicsPipeline() {
     inputElementDescs[4].SemanticName = "INDEX";
     inputElementDescs[4].SemanticIndex = 0;
     inputElementDescs[4].Format = DXGI_FORMAT_R32G32B32A32_SINT;
-    inputElementDescs[4].InputSlot = 1; // 
+    inputElementDescs[4].InputSlot = 1; //
     inputElementDescs[4].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
     inputElementDescs[4].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
     inputElementDescs[4].InstanceDataStepRate = 0;
 
-
-    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
+    D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
     inputLayoutDesc.pInputElementDescs = inputElementDescs.data();
     inputLayoutDesc.NumElements = static_cast<UINT>(inputElementDescs.size());
 
-
     // ====== ラスタライザ設定 ======
-    D3D12_RASTERIZER_DESC rasterizerDesc{};
+    D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
     // ====== デプスステンシル設定 ======
-    D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
+    D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
     depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
@@ -233,12 +237,12 @@ void SkinningObject3dManager::CreateGraphicsPipeline() {
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/SkinningObject3d.VS .hlsl",L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl",L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ====== PSO設定 ======
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc{};
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
@@ -263,8 +267,103 @@ void SkinningObject3dManager::CreateGraphicsPipeline() {
         dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineStates[i]));
     }
 }
-
 #pragma endregion
+void SkinningObject3dManager::CreateComputeRootSignature()
+{
+    HRESULT hr;
+
+   D3D12_ROOT_PARAMETER rootParameters[5] = {};
+
+    D3D12_DESCRIPTOR_RANGE inputVertexRange = {};
+    inputVertexRange.BaseShaderRegister = 0;
+    inputVertexRange.NumDescriptors = 1;
+    inputVertexRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    inputVertexRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &inputVertexRange;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    D3D12_DESCRIPTOR_RANGE influenceRange = {};
+    influenceRange.BaseShaderRegister = 1;
+    influenceRange.NumDescriptors = 1;
+    influenceRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    influenceRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = &influenceRange;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+
+    D3D12_DESCRIPTOR_RANGE paletteRange = {};
+    paletteRange.BaseShaderRegister = 2;
+    paletteRange.NumDescriptors = 1;
+    paletteRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    paletteRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = &paletteRange;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    D3D12_DESCRIPTOR_RANGE outputVertexRange = {};
+    outputVertexRange.BaseShaderRegister = 0;
+    outputVertexRange.NumDescriptors = 1;
+    outputVertexRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    outputVertexRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].DescriptorTable.pDescriptorRanges = &outputVertexRange;
+    rootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].Descriptor.ShaderRegister = 0;
+    D3D12_ROOT_SIGNATURE_DESC desc = {};
+    desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    desc.pParameters = rootParameters;
+    desc.NumParameters = _countof(rootParameters);
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+
+    hr = D3D12SerializeRootSignature(
+        &desc,
+        D3D_ROOT_SIGNATURE_VERSION_1,
+        &signatureBlob,
+        &errorBlob);
+
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            Logger::Log(reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+        }
+        assert(false);
+    }
+
+    hr = dxCommon_->GetDevice()->CreateRootSignature(
+        0,
+        signatureBlob->GetBufferPointer(),
+        signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&computeRootSignature_));
+    assert(SUCCEEDED(hr));
+}
+
+void SkinningObject3dManager::CreateComputePipeline()
+{
+    HRESULT hr;
+
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Skinning.CS.hlsl", L"cs_6_0");
+    assert(computeShaderBlob);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
+    desc.pRootSignature = computeRootSignature_.Get();
+    desc.CS.pShaderBytecode = computeShaderBlob->GetBufferPointer();
+    desc.CS.BytecodeLength = computeShaderBlob->GetBufferSize();
+
+    hr = dxCommon_->GetDevice()->CreateComputePipelineState(&desc,IID_PPV_ARGS(&computePipelineState_));assert(SUCCEEDED(hr));
+}
 void SkinningObject3dManager::Finalize()
 {
     instance_.reset();

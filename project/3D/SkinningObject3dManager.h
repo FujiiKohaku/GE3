@@ -40,7 +40,8 @@ public:
     {
         currentBlendMode = mode;
     }
-
+    ID3D12RootSignature* GetComputeRootSignature() const { return computeRootSignature_.Get(); }
+    ID3D12PipelineState* GetComputePipelineState() const { return computePipelineState_.Get(); }
     ~SkinningObject3dManager() = default;
 private:
     // Singleton：外部から new できないようにする
@@ -55,6 +56,14 @@ private:
 private:
     void CreateRootSignature();
     void CreateGraphicsPipeline();
+
+private:
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> computeRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> computePipelineState_;
+
+private:
+    void CreateComputeRootSignature();
+    void CreateComputePipeline();
 
 private:
     DirectXCommon* dxCommon_ = nullptr;

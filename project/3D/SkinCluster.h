@@ -17,7 +17,10 @@ public:
     SkinCluster() = default;
     ~SkinCluster() = default;
 
-    
+    struct Well {
+        Matrix4x4 skeletonSpaceMatrix;
+        Matrix4x4 skeletonSpaceInverseTransposeMatrix;
+    };
 
     static constexpr uint32_t kNumMaxInfluence = 4;
 
