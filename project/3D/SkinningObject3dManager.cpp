@@ -20,7 +20,6 @@ void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon)
 
     // ルートシグネチャを作成
     CreateRootSignature();
-
     // グラフィックスパイプラインを作成
     CreateGraphicsPipeline();
 
