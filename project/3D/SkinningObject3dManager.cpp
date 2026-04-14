@@ -364,6 +364,8 @@ void SkinningObject3dManager::CreateComputePipeline()
 
     hr = dxCommon_->GetDevice()->CreateComputePipelineState(&desc,IID_PPV_ARGS(&computePipelineState_));assert(SUCCEEDED(hr));
 }
+
+
 void SkinningObject3dManager::Finalize()
 {
     instance_.reset();
