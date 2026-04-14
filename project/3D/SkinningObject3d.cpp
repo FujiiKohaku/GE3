@@ -88,7 +88,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // すきんぐりんぐのリソースを作成
     CreateSkinningResources();
 
-    assert(model_->GetVertexResource() != nullptr);
+    //assert(model_->GetVertexResource() != nullptr);
 
     environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
     assert(skinningObject3dManager_);
@@ -166,21 +166,39 @@ void SkinningObject3d::Draw()
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
 
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
-
-    //  Skinning 専用（最後）
-    commandList->SetGraphicsRootDescriptorTable(7, skinClusterData_.paletteSrvHandle.second);
-
-    // D3D12_VERTEX_BUFFER_VIEW vbvs[2] = {model_->GetVertexBufferView(),skinClusterData_.influenceBufferView};
-    // commandList->IASetVertexBuffers(0, 2, vbvs);
-    commandList->IASetVertexBuffers(0, 1, &skinnedVertexBufferView_);
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
+    commandList->SetGraphicsRootDescriptorTable(7,SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
+
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
+
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
     commandList->SetGraphicsRootDescriptorTable(8, environmentTextureHandle_);
-    if (model_) {
-        model_->Draw();
+
+    uint32_t vertexOffset = 0;
+
+    const ModelData& modelData = model_->GetModelData();
+
+    for (const auto& primitive : modelData.primitives) {
+
+        D3D12_VERTEX_BUFFER_VIEW vbView = {};
+        vbView.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
+
+        vbView.SizeInBytes = static_cast<UINT>(sizeof(VertexData) * primitive.vertices.size());
+
+        vbView.StrideInBytes = sizeof(VertexData);
+
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->IASetVertexBuffers(0, 1, &vbView);
+
+        if (!primitive.indices.empty()) {
+            commandList->IASetIndexBuffer(&primitive.ibView);
+            commandList->DrawIndexedInstanced(static_cast<UINT>(primitive.indices.size()), 1, 0, 0, 0);
+        } else {
+            commandList->DrawInstanced(static_cast<UINT>(primitive.vertices.size()), 1, 0, 0);
+        }
+
+        vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
     }
 }
 SkinningObject3d::~SkinningObject3d()
@@ -201,31 +219,49 @@ void SkinningObject3d::CreateSkinningResources()
 
     ID3D12Device* device = skinningObject3dManager_->GetDxCommon()->GetDevice();
     assert(device);
+
     uint32_t vertexCount = 0;
     for (const auto& primitive : model_->GetModelData().primitives) {
         vertexCount += static_cast<uint32_t>(primitive.vertices.size());
     }
+
+    assert(vertexCount > 0);
+
     uint32_t bufferSize = sizeof(VertexData) * vertexCount;
 
-    // =====================================================
-    // 入力リソース
-    // ここは「新規作成」ではなく、既に持っているものを参照する
-    // =====================================================
-
-    // 元頂点バッファ
-
-    inputVertexResource_ = model_->GetVertexResource();
-
-    // Influence バッファ
-
     influenceResource_ = skinClusterData_.influenceResource;
-
-    // Palette バッファ
-
     paletteResource_ = skinClusterData_.paletteResource;
 
     // =====================================================
-    // Skinning結果を書き込む出力バッファを新規作成する
+    // 入力頂点バッファを自前で作る
+    // 全 primitive の頂点を1本にまとめる
+    // =====================================================
+    inputVertexResource_ = skinningObject3dManager_->GetDxCommon()->CreateBufferResource(bufferSize);
+    assert(inputVertexResource_);
+
+    inputVertexResource_->SetName(L"SkinningObject3d::InputVertexResource");
+
+    VertexData* mappedInputVertices = nullptr;
+    HRESULT hr = inputVertexResource_->Map(0, nullptr, reinterpret_cast<void**>(&mappedInputVertices));
+    assert(SUCCEEDED(hr));
+    assert(mappedInputVertices);
+
+    uint32_t copyOffset = 0;
+
+    for (const auto& primitive : model_->GetModelData().primitives) {
+        uint32_t primitiveVertexCount = static_cast<uint32_t>(primitive.vertices.size());
+
+        for (uint32_t vertexIndex = 0; vertexIndex < primitiveVertexCount; ++vertexIndex) {
+            mappedInputVertices[copyOffset + vertexIndex] = primitive.vertices[vertexIndex];
+        }
+
+        copyOffset += primitiveVertexCount;
+    }
+
+    assert(copyOffset == vertexCount);
+
+    // =====================================================
+    // Skinning結果を書き込む出力バッファ
     // =====================================================
     D3D12_HEAP_PROPERTIES heapProperties = {};
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -240,7 +276,7 @@ void SkinningObject3d::CreateSkinningResources()
     resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-    HRESULT hr = device->CreateCommittedResource(
+    hr = device->CreateCommittedResource(
         &heapProperties,
         D3D12_HEAP_FLAG_NONE,
         &resourceDesc,
@@ -260,13 +296,10 @@ void SkinningObject3d::CreateSkinningResources()
     skinnedVertexBufferView_.StrideInBytes = sizeof(VertexData);
 
     // =====================================================
-    // UAV インデックス確保
+    // UAV
     // =====================================================
     skinnedVertexUavIndex_ = SrvManager::GetInstance()->Allocate();
 
-    // =====================================================
-    // UAV 作成
-    // =====================================================
     D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
     uavDesc.Format = DXGI_FORMAT_UNKNOWN;
     uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -284,9 +317,9 @@ void SkinningObject3d::CreateSkinningResources()
         &uavDesc,
         uavHandle);
 
-    // =====================================
+    // =====================================================
     // input vertex SRV
-    // =====================================
+    // =====================================================
     inputVertexSrvIndex_ = SrvManager::GetInstance()->Allocate();
 
     D3D12_SHADER_RESOURCE_VIEW_DESC inputSrvDesc = {};
@@ -303,6 +336,9 @@ void SkinningObject3d::CreateSkinningResources()
         &inputSrvDesc,
         SrvManager::GetInstance()->GetCPUDescriptorHandle(inputVertexSrvIndex_));
 
+    // =====================================================
+    // influence SRV
+    // =====================================================
     influenceSrvIndex_ = SrvManager::GetInstance()->Allocate();
 
     D3D12_SHADER_RESOURCE_VIEW_DESC influenceSrvDesc = {};
@@ -314,8 +350,14 @@ void SkinningObject3d::CreateSkinningResources()
     influenceSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
     influenceSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-    device->CreateShaderResourceView(influenceResource_.Get(),&influenceSrvDesc,SrvManager::GetInstance()->GetCPUDescriptorHandle(influenceSrvIndex_));
+    device->CreateShaderResourceView(
+        influenceResource_.Get(),
+        &influenceSrvDesc,
+        SrvManager::GetInstance()->GetCPUDescriptorHandle(influenceSrvIndex_));
 
+    // =====================================================
+    // palette SRV
+    // =====================================================
     paletteSrvIndex_ = SrvManager::GetInstance()->Allocate();
 
     D3D12_SHADER_RESOURCE_VIEW_DESC paletteSrvDesc = {};
@@ -323,7 +365,7 @@ void SkinningObject3d::CreateSkinningResources()
     paletteSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
     paletteSrvDesc.Buffer.FirstElement = 0;
     paletteSrvDesc.Buffer.NumElements = static_cast<UINT>(playAnimation_->GetSkeleton()->joints.size());
-    paletteSrvDesc.Buffer.StructureByteStride = sizeof(SkinCluster::Well);
+    paletteSrvDesc.Buffer.StructureByteStride = sizeof(SkinCluster::WellForGPU);
     paletteSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
     paletteSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
@@ -365,8 +407,7 @@ void SkinningObject3d::DispatchSkinning()
     // =========================================
     commandList->SetPipelineState(skinningObject3dManager_->GetComputePipelineState());
     commandList->SetComputeRootSignature(skinningObject3dManager_->GetComputeRootSignature());
-    ID3D12DescriptorHeap* descriptorHeaps[] = {
-        SrvManager::GetInstance()->GetDescriptorHeap()
+    ID3D12DescriptorHeap* descriptorHeaps[] = {SrvManager::GetInstance()->GetDescriptorHeap()
     };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
     // =========================================
@@ -376,23 +417,15 @@ void SkinningObject3d::DispatchSkinning()
     // t2 : palette
     // u0 : output skinned vertex
     // =========================================
-    assert(paletteSrvIndex_ != 0);
 
-    commandList->SetComputeRootDescriptorTable(
-        0,
-        SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
 
-    commandList->SetComputeRootDescriptorTable(
-        1,
-        SrvManager::GetInstance()->GetGPUDescriptorHandle(inputVertexSrvIndex_));
+    commandList->SetComputeRootDescriptorTable(0,SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
 
-    commandList->SetComputeRootDescriptorTable(
-        2,
-        SrvManager::GetInstance()->GetGPUDescriptorHandle(influenceSrvIndex_));
+    commandList->SetComputeRootDescriptorTable(1,SrvManager::GetInstance()->GetGPUDescriptorHandle(inputVertexSrvIndex_));
 
-    commandList->SetComputeRootDescriptorTable(
-        3,
-        SrvManager::GetInstance()->GetGPUDescriptorHandle(skinnedVertexUavIndex_));
+    commandList->SetComputeRootDescriptorTable(2,SrvManager::GetInstance()->GetGPUDescriptorHandle(influenceSrvIndex_));
+
+    commandList->SetComputeRootDescriptorTable(3,SrvManager::GetInstance()->GetGPUDescriptorHandle(skinnedVertexUavIndex_));
 
     commandList->SetComputeRootConstantBufferView(4,skinningInformationResource_->GetGPUVirtualAddress());
     // =========================================

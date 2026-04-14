@@ -175,4 +175,5 @@ private:
     SkinningInformation* skinningInformationData_ = nullptr;
      void CreateSkinningResources();
     void DispatchSkinning();
+     std::vector<D3D12_VERTEX_BUFFER_VIEW> skinnedPrimitiveVertexBufferViews_;
 };
