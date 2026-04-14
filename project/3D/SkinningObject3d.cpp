@@ -88,6 +88,8 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // すきんぐりんぐのリソースを作成
     CreateSkinningResources();
 
+    assert(model_->GetVertexResource() != nullptr);
+
     environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
@@ -153,6 +155,7 @@ void SkinningObject3d::Update()
     }
     // スキニング
     DispatchSkinning();
+
 }
 
 #pragma endregion
@@ -311,10 +314,7 @@ void SkinningObject3d::CreateSkinningResources()
     influenceSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
     influenceSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-    device->CreateShaderResourceView(
-        influenceResource_.Get(),
-        &influenceSrvDesc,
-        SrvManager::GetInstance()->GetCPUDescriptorHandle(influenceSrvIndex_));
+    device->CreateShaderResourceView(influenceResource_.Get(),&influenceSrvDesc,SrvManager::GetInstance()->GetCPUDescriptorHandle(influenceSrvIndex_));
 
     paletteSrvIndex_ = SrvManager::GetInstance()->Allocate();
 
@@ -394,9 +394,7 @@ void SkinningObject3d::DispatchSkinning()
         3,
         SrvManager::GetInstance()->GetGPUDescriptorHandle(skinnedVertexUavIndex_));
 
-    commandList->SetComputeRootConstantBufferView(
-        4,
-        skinningInformationResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(4,skinningInformationResource_->GetGPUVirtualAddress());
     // =========================================
     // Dispatch
     // numthreads(1024,1,1) 前提
