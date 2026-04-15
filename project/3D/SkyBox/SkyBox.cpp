@@ -55,10 +55,15 @@ void SkyBox::Update(Camera* camera)
 {
     assert(camera);
     camera_ = camera;
+    assert(transformData_);
 
     Vector3 cameraPosition = camera_->GetTranslate();
 
-    Matrix4x4 worldMatrix = MatrixMath::MakeTranslateMatrix(cameraPosition);
+    Vector3 skyboxScale = { 100.0f, 100.0f, 100.0f };
+    Vector3 skyboxRotate = { 0.0f, 0.0f, 0.0f };
+
+    Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(skyboxScale,skyboxRotate,cameraPosition);
+
     Matrix4x4 viewProjectionMatrix = camera_->GetViewProjectionMatrix();
 
     transformData_->World = worldMatrix;

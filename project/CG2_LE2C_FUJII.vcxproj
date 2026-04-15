@@ -168,6 +168,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Animation\AnimationLoder.cpp" />
     <ClCompile Include="Animation\Animation.cpp" />
     <ClCompile Include="Animation\KeyFrame.cpp" />
+    <ClCompile Include="debugcamera\DebugCameraController.cpp" />
     <ClCompile Include="math\Light.cpp" />
     <ClCompile Include="Light\LightManager.cpp" />
     <ClCompile Include="math\MathStruct.cpp" />
@@ -277,6 +278,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Animation\AnimationLoder.h" />
     <ClInclude Include="Animation\Animation.h" />
     <ClInclude Include="Animation\KeyFrame.h" />
+    <ClInclude Include="debugcamera\DebugCameraController.h" />
     <ClInclude Include="math\Light.h" />
     <ClInclude Include="Light\LightManager.h" />
     <ClInclude Include="math\MathStruct.h" />

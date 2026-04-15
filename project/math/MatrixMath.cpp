@@ -89,8 +89,7 @@ Matrix4x4 MatrixMath::Multiply(const Matrix4x4& m1, const Matrix4x4& m2)
     return result;
 }
 // ワールドマトリックス、メイクアフィン
-Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Vector3& rotate,
-    const Vector3& translate)
+Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Vector3& rotate,const Vector3& translate)
 {
     Matrix4x4 scaleMatrix = Matrix4x4MakeScaleMatrix(scale);
     Matrix4x4 rotateX = MakeRotateXMatrix(rotate.x);

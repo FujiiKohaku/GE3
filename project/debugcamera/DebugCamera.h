@@ -218,7 +218,7 @@ public:
     }
 #pragma endregion
 
-    void Initialize(WinApp* winApp);
+    void Initialize();
 
     void Update();
 

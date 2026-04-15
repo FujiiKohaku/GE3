@@ -11,9 +11,9 @@ DebugCamera::DebugCamera()
     orthoGraphicMatrix = DebugCamera::MakeOrthographicMatrix(-160.0f, 160.0f, 200.0f, 300.0f, 0.0f, 1000.0f);
 }
 
-void DebugCamera::Initialize(WinApp* winApp)
+void DebugCamera::Initialize()
 {
-    winApp_ = winApp;
+    
 }
 void DebugCamera::Update()
 {

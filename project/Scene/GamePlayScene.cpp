@@ -15,6 +15,10 @@ void GamePlayScene::Initialize()
     camera_->Initialize();
     camera_->SetTranslate({ 0.0f, 10.0f, -20.0f });
     camera_->SetRotate({ std::numbers::pi_v<float> / 6.0f, 0.0f, 0.0f });
+
+    debugCameraController_ = std::make_unique<DebugCameraController>();
+    debugCameraController_->SetTargetCamera(camera_.get());
+
     SkinningObject3dManager::GetInstance()->SetDefaultCamera(camera_.get());
     Object3dManager::GetInstance()->SetDefaultCamera(camera_.get());
     // =================================================
@@ -109,6 +113,7 @@ void GamePlayScene::Update()
     terrain_->Update();
     camera_->Update();
     camera_->DebugUpdate();
+    debugCameraController_->Update();
 
     plane_->Update();
 
