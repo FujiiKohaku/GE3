@@ -6,6 +6,7 @@
 #include "../Skeleton/Skeleton.h"
 #include "BaseScene.h"
 #include "Camera.h"
+#include"../debugcamera/DebugCameraController.h"
 #include "ModelManager.h"
 #include "Object3d.h"
 #include "Object3dManager.h"
@@ -40,7 +41,7 @@ private:
     // カメラ
     // ------------------------------
     std::unique_ptr<Camera> camera_;
-
+    std::unique_ptr<DebugCameraController> debugCameraController_;
     // ------------------------------
     // 3Dオブジェクト（描画主体）
     // ------------------------------
