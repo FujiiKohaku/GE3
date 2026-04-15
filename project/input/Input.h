@@ -1,42 +1,47 @@
 #pragma once
-#define DIRECTINPUT_VERSION 0x0800
-
 #include "WinApp.h"
 #include <dinput.h>
 #include <memory>
 #include <wrl.h>
 
-#pragma comment(lib, "dinput8.lib")
-#pragma comment(lib, "dxguid.lib")
-
 class Input {
 public:
     static Input* GetInstance();
-    static void Finalize();
 
     bool Initialize(WinApp* winApp);
     void Update();
+    void Finalize();
+
     bool IsKeyPressed(BYTE keyCode) const;
 
-private:
-    static std::unique_ptr<Input> instance_;
-
-    Input(const Input&) = delete;
-    Input& operator=(const Input&) = delete;
+    bool IsMousePressed(int button) const;
+    LONG GetMouseDeltaX() const;
+    LONG GetMouseDeltaY() const;
+    LONG GetMouseWheel() const;
 
 public:
     class ConstructorKey {
+    private:
         ConstructorKey() = default;
         friend class Input;
     };
 
-    explicit Input(ConstructorKey);
+    Input(ConstructorKey) { }
     ~Input() = default;
 
 private:
-    Microsoft::WRL::ComPtr<IDirectInput8> directInput_ = nullptr;
-    Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard_;
-    BYTE keys_[256] {};
+    Input(const Input&) = delete;
+    Input& operator=(const Input&) = delete;
+
+private:
+    static std::unique_ptr<Input> instance_;
 
     WinApp* winApp_ = nullptr;
+
+    Microsoft::WRL::ComPtr<IDirectInput8> directInput_;
+    Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard_;
+    Microsoft::WRL::ComPtr<IDirectInputDevice8> mouse_;
+
+    BYTE keys_[256] = {};
+    DIMOUSESTATE2 mouseState_ = {};
 };

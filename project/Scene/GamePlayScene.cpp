@@ -112,7 +112,9 @@ void GamePlayScene::Update()
 
     terrain_->Update();
     camera_->Update();
-    camera_->DebugUpdate();
+    if (debugCameraController_->GetDebugMode()) {
+        camera_->DebugUpdate();
+    }
     debugCameraController_->Update();
 
     plane_->Update();

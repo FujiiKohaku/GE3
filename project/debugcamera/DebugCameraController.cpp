@@ -13,8 +13,22 @@ void DebugCameraController::Update()
         return;
     }
 
+    if (Input::GetInstance()->IsKeyPressed(DIK_F1)) {
+        if (!isToggleKeyPressed_) {
+            isDebugMode_ = !isDebugMode_;
+            isToggleKeyPressed_ = true;
+        }
+    } else {
+        isToggleKeyPressed_ = false;
+    }
+
+    if (!isDebugMode_) {
+        return;
+    }
+
     const float moveSpeed = 0.1f;
     const float rotateSpeed = 0.05f;
+    const float mouseSensitivity = 0.001f;
 
     Vector3 move;
     move.x = 0.0f;
@@ -25,11 +39,11 @@ void DebugCameraController::Update()
     Vector3 cameraRotate = targetCamera_->GetRotate();
 
     if (Input::GetInstance()->IsKeyPressed(DIK_W)) {
-        move.z -= moveSpeed;
+        move.z += moveSpeed;
     }
 
     if (Input::GetInstance()->IsKeyPressed(DIK_S)) {
-        move.z += moveSpeed;
+        move.z -= moveSpeed;
     }
 
     if (Input::GetInstance()->IsKeyPressed(DIK_A)) {
@@ -41,27 +55,41 @@ void DebugCameraController::Update()
     }
 
     if (Input::GetInstance()->IsKeyPressed(DIK_Q)) {
-        move.y += moveSpeed;
-    }
-
-    if (Input::GetInstance()->IsKeyPressed(DIK_E)) {
         move.y -= moveSpeed;
     }
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_LEFT)) {
-        cameraRotate.y -= rotateSpeed;
+    if (Input::GetInstance()->IsKeyPressed(DIK_E)) {
+        move.y += moveSpeed;
     }
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_RIGHT)) {
+    if (Input::GetInstance()->IsKeyPressed(DIK_LEFT)) {
         cameraRotate.y += rotateSpeed;
     }
 
+    if (Input::GetInstance()->IsKeyPressed(DIK_RIGHT)) {
+        cameraRotate.y -= rotateSpeed;
+    }
+
     if (Input::GetInstance()->IsKeyPressed(DIK_UP)) {
-        cameraRotate.x -= rotateSpeed;
+        cameraRotate.x += rotateSpeed;
     }
 
     if (Input::GetInstance()->IsKeyPressed(DIK_DOWN)) {
-        cameraRotate.x += rotateSpeed;
+        cameraRotate.x -= rotateSpeed;
+    }
+
+    // マウスドラッグで回転
+    if (!ImGui::GetIO().WantCaptureMouse && Input::GetInstance()->IsMousePressed(0)) {
+        cameraRotate.y += static_cast<float>(Input::GetInstance()->GetMouseDeltaX()) * mouseSensitivity;
+        cameraRotate.x -= static_cast<float>(Input::GetInstance()->GetMouseDeltaY()) * mouseSensitivity;
+    }
+
+    if (cameraRotate.x > 1.5f) {
+        cameraRotate.x = 1.5f;
+    }
+
+    if (cameraRotate.x < -1.5f) {
+        cameraRotate.x = -1.5f;
     }
 
     cameraTranslate.x += move.x * std::cos(cameraRotate.y) - move.z * std::sin(cameraRotate.y);
