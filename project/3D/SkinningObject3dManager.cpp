@@ -267,45 +267,50 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     }
 }
 #pragma endregion
+
 void SkinningObject3dManager::CreateComputeRootSignature()
 {
     HRESULT hr;
 
-   D3D12_ROOT_PARAMETER rootParameters[5] = {};
+D3D12_ROOT_PARAMETER rootParameters[5] = {};
 
+    // t0 : MatrixPalette
+    D3D12_DESCRIPTOR_RANGE matrixPaletteRange = {};
+    matrixPaletteRange.BaseShaderRegister = 0;
+    matrixPaletteRange.NumDescriptors = 1;
+    matrixPaletteRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    matrixPaletteRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &matrixPaletteRange;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    // t1 : InputVertices
     D3D12_DESCRIPTOR_RANGE inputVertexRange = {};
-    inputVertexRange.BaseShaderRegister = 0;
+    inputVertexRange.BaseShaderRegister = 1;
     inputVertexRange.NumDescriptors = 1;
     inputVertexRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     inputVertexRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    rootParameters[0].DescriptorTable.pDescriptorRanges = &inputVertexRange;
-    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = &inputVertexRange;
+    rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
 
+    // t2 : Influences
     D3D12_DESCRIPTOR_RANGE influenceRange = {};
-    influenceRange.BaseShaderRegister = 1;
+    influenceRange.BaseShaderRegister = 2;
     influenceRange.NumDescriptors = 1;
     influenceRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     influenceRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    rootParameters[1].DescriptorTable.pDescriptorRanges = &influenceRange;
-    rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
-
-    D3D12_DESCRIPTOR_RANGE paletteRange = {};
-    paletteRange.BaseShaderRegister = 2;
-    paletteRange.NumDescriptors = 1;
-    paletteRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    paletteRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
     rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    rootParameters[2].DescriptorTable.pDescriptorRanges = &paletteRange;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = &influenceRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
 
+    // u0 : OutputVertices
     D3D12_DESCRIPTOR_RANGE outputVertexRange = {};
     outputVertexRange.BaseShaderRegister = 0;
     outputVertexRange.NumDescriptors = 1;
@@ -317,9 +322,13 @@ void SkinningObject3dManager::CreateComputeRootSignature()
     rootParameters[3].DescriptorTable.pDescriptorRanges = &outputVertexRange;
     rootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
 
+    // b0 : SkinningInformation
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[4].Descriptor.ShaderRegister = 0;
+
+
+    ///////////////////////////
     D3D12_ROOT_SIGNATURE_DESC desc = {};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
     desc.pParameters = rootParameters;
@@ -363,6 +372,7 @@ void SkinningObject3dManager::CreateComputePipeline()
 
     hr = dxCommon_->GetDevice()->CreateComputePipelineState(&desc,IID_PPV_ARGS(&computePipelineState_));assert(SUCCEEDED(hr));
 }
+
 
 
 void SkinningObject3dManager::Finalize()
