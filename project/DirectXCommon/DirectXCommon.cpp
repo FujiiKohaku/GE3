@@ -177,8 +177,7 @@ void DirectXCommon::InitializeCommand()
 
     // コマンドキューを生成する
     D3D12_COMMAND_QUEUE_DESC commandQueueDesc {};
-    hr = device->CreateCommandQueue(&commandQueueDesc,
-        IID_PPV_ARGS(&commandQueue));
+    hr = device->CreateCommandQueue(&commandQueueDesc,IID_PPV_ARGS(&commandQueue));
     // コマンドキューの生成が上手くいかなかったので起動できない
     assert(SUCCEEDED(hr));
 
@@ -363,7 +362,7 @@ void DirectXCommon::InitializeDepthStencilView()
 void DirectXCommon::InitializeFence()
 {
     HRESULT hr;
-    fenceValue = 0;
+    fenceValue = 0; // 0からスタートする
     hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
     assert(SUCCEEDED(hr));
 
@@ -446,7 +445,7 @@ void DirectXCommon::PreDraw()
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT; // 遷移前(現在)のResourceState
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET; // 遷移後のResourceState
     commandList->ResourceBarrier(1, &barrier); // TransitionBarrierを張る
-    // 描画先のRTVとDSVを設定する
+
 
     // 描画先のRTVとDSVを設定する
     D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -489,7 +488,7 @@ void DirectXCommon::PostDraw()
     // GPUコマンドの実行
     // GPUにコマンドリストの実行を行わせる;
     ID3D12CommandList* commandLists[] = { commandList.Get() };
-    commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+    commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists); // GPUに命令を送る
     // GPU画面の交換を通知
     swapChain->Present(1, 0);
     assert(SUCCEEDED(hr));
@@ -503,7 +502,6 @@ void DirectXCommon::PostDraw()
         fence->SetEventOnCompletion(fenceValue, fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
     }
-
     // コマンドアロケータ―のリセット
     hr = commandAllocator->Reset();
     assert(SUCCEEDED(hr));

@@ -44,6 +44,7 @@ SpriteManager::SpriteManager(ConstructorKey)
 {
 }
 
+#pragma region ルートシグネチャ作成
 // ==============================
 // ルートシグネチャ作成
 // ==============================
@@ -99,14 +100,13 @@ void SpriteManager::CreateRootSignature()
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     desc.pParameters = rootParameters;
     desc.NumParameters = _countof(rootParameters);
-    desc.pStaticSamplers = &staticSampler;
+    desc.pStaticSamplers = &staticSampler; // 配列を渡すこともできる
     desc.NumStaticSamplers = 1;
 
     // ------------------------------
     // ルートシグネチャ生成
     // ------------------------------
-    hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
-        &signatureBlob, &errorBlob);
+    hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
     if (FAILED(hr)) {
         if (errorBlob) {
             Logger::Log(reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
@@ -114,9 +114,13 @@ void SpriteManager::CreateRootSignature()
         assert(false);
     }
 
-    hr = dxCommon_->GetDevice()->CreateRootSignature(0,signatureBlob->GetBufferPointer(),signatureBlob->GetBufferSize(),IID_PPV_ARGS(&rootSignature));assert(SUCCEEDED(hr));
+    hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
+    assert(SUCCEEDED(hr));
 }
+#pragma endregion
 
+
+#pragma region グラフィックスパイプライン作成
 // ==============================
 // グラフィックスパイプライン作成
 // ==============================
@@ -211,6 +215,9 @@ void SpriteManager::CreateGraphicsPipeline()
     hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&graphicsPipelineState));
     assert(SUCCEEDED(hr));
 }
+
+#pragma endregion
+
 void SpriteManager::Finalize()
 {
     instance_.reset();
