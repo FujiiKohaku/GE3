@@ -1,9 +1,12 @@
 #pragma once
+#include "BlendUtil.h"
 #include "Camera.h"
 #include "DirectXCommon.h"
+#include "ParticleMeshManager.h"
+#include "ParticleRenderManager.h"
+#include "ParticleEmitter.h"
 #include "SrvManager.h"
 #include "TextureManager.h"
-#include "blendutil.h"
 #include <d3d12.h>
 #include <list>
 #include <memory>
@@ -11,7 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <wrl.h>
-
+#include"ParticleData.h"
 class ParticleManager {
 public:
     static ParticleManager* GetInstance();
@@ -24,59 +27,9 @@ public:
         Matrix4x4 uvTransform;
     };
 
-    struct TransformationMatrix {
-        Matrix4x4 WVP;
-        Matrix4x4 World;
-    };
 
-    struct DirectionalLight {
-        Vector4 color;
-        Vector3 direction;
-        float intensity;
-    };
 
-    struct VertexData {
-        Vector4 position;
-        Vector2 texcoord;
-        Vector3 normal;
-    };
 
-    struct Particle {
-        EulerTransform transform;
-        Vector3 velocity;
-        Vector4 color;
-        float lifeTime;
-        float currentTime;
-    };
-
-    struct ParticleForGPU {
-        Matrix4x4 WVP;
-        Matrix4x4 World;
-        Vector4 color;
-    };
-
-    struct Shockwave {
-        Vector3 pos;
-        float lifeTime;
-        float currentTime;
-        float startScale;
-        float endScale;
-    };
-
-    struct Emitter {
-        EulerTransform transform;
-        uint32_t count;
-        float frequency;
-        float frequencyTime;
-    };
-
-    enum class ParticleType {
-        Normal,
-        Fire,
-        Smoke,
-        Spark,
-        FireWork
-    };
 
     struct ParticleGroup {
         std::string texturePath;
@@ -99,7 +52,7 @@ public:
     void Emit(const std::string& name, const Vector3& position, uint32_t count);
     void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
 
-    Particle MakeParticleDefault(const Vector3& pos);
+  
 
 private:
     static std::unique_ptr<ParticleManager> instance_;
@@ -117,54 +70,25 @@ public:
     ~ParticleManager() = default;
 
 private:
-    void CreateRootSignature();
-    void CreateGraphicsPipeline();
-    void CreateBoardMesh();
+    void CreateMaterialResource();
 
 private:
     DirectXCommon* dxCommon_ = nullptr;
     SrvManager* srvManager_ = nullptr;
     Camera* camera_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates_[kCountOfBlendMode];
-    int currentBlendMode_ = kBlendModeAdd;
-
-    static const uint32_t kNumMaxInstance = 100;
+    BlendMode currentBlendMode_ = kBlendModeAdd;
+    static const uint32_t kNumMaxInstance = 500;
 
     std::unordered_map<std::string, ParticleGroup> particleGroups_;
-    std::list<Shockwave> shockParticles_;
-
-    D3D12_GPU_DESCRIPTOR_HANDLE srvHandle_ {};
 
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> transformResource_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> lightResource_;
-
     Material materialData_ {};
-    TransformationMatrix transformData_ {};
-    DirectionalLight lightData_ {};
 
-    VertexData vertices_[4];
-    uint32_t indexList_[6] = { 0, 1, 2, 0, 2, 3 };
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_;
-
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView_ {};
-    D3D12_INDEX_BUFFER_VIEW indexBufferView_ {};
-
-    EulerTransform transformBoard_ = {
-        { 1.0f, 1.0f, 1.0f },
-        { 0.0f, 0.0f, 0.0f },
-        { 0.0f, 0.0f, 0.0f }
-    };
-
-    ParticleType type_ = ParticleType::Normal;
-
-    std::random_device seedGenerator_;
-    std::mt19937 randomEngine_;
     bool useBillboard_ = true;
+    float deltaTime = 1.0f / 60.0f;
 
-    float kDeltaTime_ = 0.1f;
+    std::unique_ptr<ParticleRenderManager> particleRenderManager_;
+    std::unique_ptr<ParticleMeshManager> particleMeshManager_;
+    std::unique_ptr<ParticleEmitter> particleEmitter_;
 };

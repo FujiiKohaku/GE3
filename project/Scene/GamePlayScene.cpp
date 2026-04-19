@@ -65,11 +65,14 @@ void GamePlayScene::Initialize()
     // =================================================
     // Particle
     // =================================================
-    ParticleManager::GetInstance()->CreateParticleGroup("circle", "resources/circle.png");
 
     EulerTransform t {};
     t.translate = { 0.0f, 0.0f, 0.0f };
-    emitter_.Init("circle", t, 30, 0.1f);
+    t.scale = { 100.0f, 100.0f, 100.0f };
+    Vector3 position { 0.0f, 1.0f, 0.0f };
+
+    ParticleManager::GetInstance()->CreateParticleGroup("smoke", "resources/circle.png");
+    
 
     // =================================================
     // Debug Sphere
@@ -106,8 +109,8 @@ void GamePlayScene::Update()
 
     testSprite_->Update();
     skyBox_->Update(camera_.get());
+    ParticleManager::GetInstance()->EmitFire("smoke", { 0.0f, 0.0f, 0.0f }, 20);
     ParticleManager::GetInstance()->Update();
-    emitter_.Update();
     sphere_->Update(camera_.get());
 
     terrain_->Update();
@@ -351,6 +354,8 @@ void GamePlayScene::Draw3D()
 
     SkyBoxManager::GetInstance()->PreDraw();
     skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    ParticleManager::GetInstance()->PreDraw();
+    ParticleManager::GetInstance()->Draw();
 }
 
 void GamePlayScene::Draw2D()
