@@ -175,6 +175,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="math\Object3DStruct.cpp" />
     <ClCompile Include="Animation\NodeAnimation.cpp" />
     <ClCompile Include="Animation\PlayAnimation.cpp" />
+    <ClCompile Include="Particle\ParticleData.cpp" />
+    <ClCompile Include="Particle\ParticleMeshManager.cpp" />
+    <ClCompile Include="Particle\ParticleRenderManager.cpp" />
     <ClCompile Include="Scene\SceneManager.cpp" />
     <ClCompile Include="Scene\BaseScene.cpp" />
     <ClCompile Include="blend\BlendUtil.cpp" />
@@ -208,7 +211,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="Scene\GamePlayScene.cpp" />
     <ClCompile Include="ImGuiManager\ImGuiManager.cpp" />
-    <ClCompile Include="Particle\Particle.cpp" />
     <ClCompile Include="Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Particle\ParticleManager.cpp" />
     <ClCompile Include="Scene\Game.cpp" />
@@ -285,6 +287,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="math\Object3DStruct.h" />
     <ClInclude Include="Animation\NodeAnimation.h" />
     <ClInclude Include="Animation\PlayAnimation.h" />
+    <ClInclude Include="Particle\ParticleData.h" />
+    <ClInclude Include="Particle\ParticleMeshManager.h" />
+    <ClInclude Include="Particle\ParticleRenderManager.h" />
     <ClInclude Include="Scene\SceneManager.h" />
     <ClInclude Include="Scene\BaseScene.h" />
     <ClInclude Include="blend\BlendUtil.h" />
@@ -302,7 +307,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
     <ClInclude Include="Scene\GamePlayScene.h" />
     <ClInclude Include="ImGuiManager\ImGuiManager.h" />
-    <ClInclude Include="Particle\Particle.h" />
     <ClInclude Include="Particle\ParticleEmitter.h" />
     <ClInclude Include="Particle\ParticleManager.h" />
     <ClInclude Include="Scene\Game.h" />
