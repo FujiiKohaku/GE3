@@ -83,7 +83,7 @@
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;Particle;ImGuiManager;$(ProjectsDir)externals\assimp\include;blend;Animation</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectsDir)externals\assimp\include;$(ProjectDir);$(ProjectDir)externals</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -160,34 +160,34 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="3D\Model.cpp" />
-    <ClCompile Include="3D\SkinningObject3d.cpp" />
-    <ClCompile Include="3D\SkyBox\SkyBox.cpp" />
-    <ClCompile Include="3D\SkyBox\SkyBoxManager.cpp" />
-    <ClCompile Include="Animation\AnimationActor.cpp" />
-    <ClCompile Include="Animation\AnimationLoder.cpp" />
-    <ClCompile Include="Animation\Animation.cpp" />
-    <ClCompile Include="Animation\KeyFrame.cpp" />
-    <ClCompile Include="debugcamera\DebugCameraController.cpp" />
-    <ClCompile Include="math\Light.cpp" />
-    <ClCompile Include="Light\LightManager.cpp" />
-    <ClCompile Include="math\MathStruct.cpp" />
-    <ClCompile Include="math\Object3DStruct.cpp" />
-    <ClCompile Include="Animation\NodeAnimation.cpp" />
-    <ClCompile Include="Animation\PlayAnimation.cpp" />
-    <ClCompile Include="Particle\ParticleData.cpp" />
-    <ClCompile Include="Particle\ParticleMeshManager.cpp" />
-    <ClCompile Include="Particle\ParticleRenderManager.cpp" />
-    <ClCompile Include="Scene\SceneManager.cpp" />
-    <ClCompile Include="Scene\BaseScene.cpp" />
-    <ClCompile Include="blend\BlendUtil.cpp" />
-    <ClCompile Include="Camera\Camera.cpp" />
-    <ClCompile Include="D3DResourceLeakChecker\D3DResourceLeakChecker.cpp" />
-    <ClCompile Include="debugcamera\DebugCamera.cpp">
+    <ClCompile Include="Engine\3D\Model.cpp" />
+    <ClCompile Include="Engine\3D\SkinningObject3d.cpp" />
+    <ClCompile Include="Engine\3D\SkyBox\SkyBox.cpp" />
+    <ClCompile Include="Engine\3D\SkyBox\SkyBoxManager.cpp" />
+    <ClCompile Include="Engine\Animation\AnimationActor.cpp" />
+    <ClCompile Include="Engine\Animation\AnimationLoder.cpp" />
+    <ClCompile Include="Engine\Animation\Animation.cpp" />
+    <ClCompile Include="Engine\Animation\KeyFrame.cpp" />
+    <ClCompile Include="Engine\debugcamera\DebugCameraController.cpp" />
+    <ClCompile Include="Engine\math\Light.cpp" />
+    <ClCompile Include="Engine\Light\LightManager.cpp" />
+    <ClCompile Include="Engine\math\MathStruct.cpp" />
+    <ClCompile Include="Engine\math\Object3DStruct.cpp" />
+    <ClCompile Include="Engine\Animation\NodeAnimation.cpp" />
+    <ClCompile Include="Engine\Animation\PlayAnimation.cpp" />
+    <ClCompile Include="Engine\Particle\ParticleData.cpp" />
+    <ClCompile Include="Engine\Particle\ParticleMeshManager.cpp" />
+    <ClCompile Include="Engine\Particle\ParticleRenderManager.cpp" />
+    <ClCompile Include="App\Scene\SceneManager.cpp" />
+    <ClCompile Include="App\Scene\BaseScene.cpp" />
+    <ClCompile Include="Engine\blend\BlendUtil.cpp" />
+    <ClCompile Include="Engine\Camera\Camera.cpp" />
+    <ClCompile Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.cpp" />
+    <ClCompile Include="Engine\debugcamera\DebugCamera.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="DirectXCommon\DirectXCommon.cpp" />
+    <ClCompile Include="Engine\DirectXCommon\DirectXCommon.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -209,49 +209,49 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="externals\imgui\imgui_widgets.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="Scene\GamePlayScene.cpp" />
-    <ClCompile Include="ImGuiManager\ImGuiManager.cpp" />
-    <ClCompile Include="Particle\ParticleEmitter.cpp" />
-    <ClCompile Include="Particle\ParticleManager.cpp" />
-    <ClCompile Include="Scene\Game.cpp" />
-    <ClCompile Include="input\Input.cpp">
+    <ClCompile Include="App\Scene\GamePlayScene.cpp" />
+    <ClCompile Include="Engine\ImGuiManager\ImGuiManager.cpp" />
+    <ClCompile Include="Engine\Particle\ParticleEmitter.cpp" />
+    <ClCompile Include="Engine\Particle\ParticleManager.cpp" />
+    <ClCompile Include="App\Scene\Game.cpp" />
+    <ClCompile Include="Engine\input\Input.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="Logger\Logger.cpp" />
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="Engine\Logger\Logger.cpp" />
+    <ClCompile Include="App\main.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="audio\SoundManager.cpp">
+    <ClCompile Include="Engine\audio\SoundManager.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="2D\Sprite.cpp" />
-    <ClCompile Include="2D\SpriteManager.cpp" />
-    <ClCompile Include="3D\Object3dManager.cpp" />
-    <ClCompile Include="3D\Object3d.cpp" />
-    <ClCompile Include="3D\ModelCommon.cpp" />
-    <ClCompile Include="3D\ModelManager.cpp" />
-    <ClCompile Include="3D\SphereObject.cpp" />
-    <ClCompile Include="math\SpriteStruct.cpp" />
-    <ClCompile Include="Skeleton\Joint.cpp" />
-    <ClCompile Include="Skeleton\Skeleton.cpp" />
-    <ClCompile Include="3D\SkinCluster.cpp" />
-    <ClCompile Include="3D\SkinningObject3dManager.cpp" />
-    <ClCompile Include="SrvManager\SrvManager.cpp" />
-    <ClCompile Include="StringUtility\StringUtility.cpp" />
-    <ClCompile Include="TextureManager\TextureManager.cpp" />
-    <ClCompile Include="Scene\TitleScene.cpp" />
-    <ClCompile Include="Winapp\Utility.cpp">
+    <ClCompile Include="Engine\2D\Sprite.cpp" />
+    <ClCompile Include="Engine\2D\SpriteManager.cpp" />
+    <ClCompile Include="Engine\3D\Object3dManager.cpp" />
+    <ClCompile Include="Engine\3D\Object3d.cpp" />
+    <ClCompile Include="Engine\3D\ModelCommon.cpp" />
+    <ClCompile Include="Engine\3D\ModelManager.cpp" />
+    <ClCompile Include="Engine\3D\SphereObject.cpp" />
+    <ClCompile Include="Engine\math\SpriteStruct.cpp" />
+    <ClCompile Include="Engine\Skeleton\Joint.cpp" />
+    <ClCompile Include="Engine\Skeleton\Skeleton.cpp" />
+    <ClCompile Include="Engine\3D\SkinCluster.cpp" />
+    <ClCompile Include="Engine\3D\SkinningObject3dManager.cpp" />
+    <ClCompile Include="Engine\SrvManager\SrvManager.cpp" />
+    <ClCompile Include="Engine\StringUtility\StringUtility.cpp" />
+    <ClCompile Include="Engine\TextureManager\TextureManager.cpp" />
+    <ClCompile Include="App\Scene\TitleScene.cpp" />
+    <ClCompile Include="Engine\Winapp\Utility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="math\MatrixMath.cpp">
+    <ClCompile Include="Engine\math\MatrixMath.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
-    <ClCompile Include="Winapp\WinApp.cpp" />
+    <ClCompile Include="Engine\Winapp\WinApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
@@ -272,31 +272,31 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="3D\Model.h" />
-    <ClInclude Include="3D\SkinningObject3d.h" />
-    <ClInclude Include="3D\SkyBox\SkyBox.h" />
-    <ClInclude Include="3D\SkyBox\SkyBoxManager.h" />
-    <ClInclude Include="Animation\AnimationActor.h" />
-    <ClInclude Include="Animation\AnimationLoder.h" />
-    <ClInclude Include="Animation\Animation.h" />
-    <ClInclude Include="Animation\KeyFrame.h" />
-    <ClInclude Include="debugcamera\DebugCameraController.h" />
-    <ClInclude Include="math\Light.h" />
-    <ClInclude Include="Light\LightManager.h" />
-    <ClInclude Include="math\MathStruct.h" />
-    <ClInclude Include="math\Object3DStruct.h" />
-    <ClInclude Include="Animation\NodeAnimation.h" />
-    <ClInclude Include="Animation\PlayAnimation.h" />
-    <ClInclude Include="Particle\ParticleData.h" />
-    <ClInclude Include="Particle\ParticleMeshManager.h" />
-    <ClInclude Include="Particle\ParticleRenderManager.h" />
-    <ClInclude Include="Scene\SceneManager.h" />
-    <ClInclude Include="Scene\BaseScene.h" />
-    <ClInclude Include="blend\BlendUtil.h" />
-    <ClInclude Include="Camera\Camera.h" />
-    <ClInclude Include="D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
-    <ClInclude Include="debugcamera\DebugCamera.h" />
-    <ClInclude Include="DirectXCommon\DirectXCommon.h" />
+    <ClInclude Include="Engine\3D\Model.h" />
+    <ClInclude Include="Engine\3D\SkinningObject3d.h" />
+    <ClInclude Include="Engine\3D\SkyBox\SkyBox.h" />
+    <ClInclude Include="Engine\3D\SkyBox\SkyBoxManager.h" />
+    <ClInclude Include="Engine\Animation\AnimationActor.h" />
+    <ClInclude Include="Engine\Animation\AnimationLoder.h" />
+    <ClInclude Include="Engine\Animation\Animation.h" />
+    <ClInclude Include="Engine\Animation\KeyFrame.h" />
+    <ClInclude Include="Engine\debugcamera\DebugCameraController.h" />
+    <ClInclude Include="Engine\math\Light.h" />
+    <ClInclude Include="Engine\Light\LightManager.h" />
+    <ClInclude Include="Engine\math\MathStruct.h" />
+    <ClInclude Include="Engine\math\Object3DStruct.h" />
+    <ClInclude Include="Engine\Animation\NodeAnimation.h" />
+    <ClInclude Include="Engine\Animation\PlayAnimation.h" />
+    <ClInclude Include="Engine\Particle\ParticleData.h" />
+    <ClInclude Include="Engine\Particle\ParticleMeshManager.h" />
+    <ClInclude Include="Engine\Particle\ParticleRenderManager.h" />
+    <ClInclude Include="App\Scene\SceneManager.h" />
+    <ClInclude Include="App\Scene\BaseScene.h" />
+    <ClInclude Include="Engine\blend\BlendUtil.h" />
+    <ClInclude Include="Engine\Camera\Camera.h" />
+    <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
+    <ClInclude Include="Engine\debugcamera\DebugCamera.h" />
+    <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />
     <ClInclude Include="externals\imgui\imgui_impl_dx12.h" />
@@ -305,33 +305,33 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_rectpack.h" />
     <ClInclude Include="externals\imgui\imstb_textedit.h" />
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
-    <ClInclude Include="Scene\GamePlayScene.h" />
-    <ClInclude Include="ImGuiManager\ImGuiManager.h" />
-    <ClInclude Include="Particle\ParticleEmitter.h" />
-    <ClInclude Include="Particle\ParticleManager.h" />
-    <ClInclude Include="Scene\Game.h" />
-    <ClInclude Include="input\Input.h" />
-    <ClInclude Include="Logger\Logger.h" />
-    <ClInclude Include="audio\SoundManager.h" />
-    <ClInclude Include="2D\Sprite.h" />
-    <ClInclude Include="2D\SpriteManager.h" />
-    <ClInclude Include="3D\Object3dManager.h" />
-    <ClInclude Include="3D\Object3d.h" />
-    <ClInclude Include="3D\ModelCommon.h" />
-    <ClInclude Include="3D\ModelManager.h" />
-    <ClInclude Include="3D\SphereObject.h" />
-    <ClInclude Include="math\SpriteStruct.h" />
-    <ClInclude Include="Skeleton\Joint.h" />
-    <ClInclude Include="Skeleton\Skeleton.h" />
-    <ClInclude Include="3D\SkinCluster.h" />
-    <ClInclude Include="3D\SkinningObject3dManager.h" />
-    <ClInclude Include="SrvManager\SrvManager.h" />
-    <ClInclude Include="StringUtility\StringUtility.h" />
-    <ClInclude Include="TextureManager\TextureManager.h" />
-    <ClInclude Include="Scene\TitleScene.h" />
-    <ClInclude Include="Winapp\Utility.h" />
-    <ClInclude Include="math\MatrixMath.h" />
-    <ClInclude Include="Winapp\WinApp.h" />
+    <ClInclude Include="App\Scene\GamePlayScene.h" />
+    <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
+    <ClInclude Include="Engine\Particle\ParticleEmitter.h" />
+    <ClInclude Include="Engine\Particle\ParticleManager.h" />
+    <ClInclude Include="App\Scene\Game.h" />
+    <ClInclude Include="Engine\input\Input.h" />
+    <ClInclude Include="Engine\Logger\Logger.h" />
+    <ClInclude Include="Engine\audio\SoundManager.h" />
+    <ClInclude Include="Engine\2D\Sprite.h" />
+    <ClInclude Include="Engine\2D\SpriteManager.h" />
+    <ClInclude Include="Engine\3D\Object3dManager.h" />
+    <ClInclude Include="Engine\3D\Object3d.h" />
+    <ClInclude Include="Engine\3D\ModelCommon.h" />
+    <ClInclude Include="Engine\3D\ModelManager.h" />
+    <ClInclude Include="Engine\3D\SphereObject.h" />
+    <ClInclude Include="Engine\math\SpriteStruct.h" />
+    <ClInclude Include="Engine\Skeleton\Joint.h" />
+    <ClInclude Include="Engine\Skeleton\Skeleton.h" />
+    <ClInclude Include="Engine\3D\SkinCluster.h" />
+    <ClInclude Include="Engine\3D\SkinningObject3dManager.h" />
+    <ClInclude Include="Engine\SrvManager\SrvManager.h" />
+    <ClInclude Include="Engine\StringUtility\StringUtility.h" />
+    <ClInclude Include="Engine\TextureManager\TextureManager.h" />
+    <ClInclude Include="App\Scene\TitleScene.h" />
+    <ClInclude Include="Engine\Winapp\Utility.h" />
+    <ClInclude Include="Engine\math\MatrixMath.h" />
+    <ClInclude Include="Engine\Winapp\WinApp.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />
