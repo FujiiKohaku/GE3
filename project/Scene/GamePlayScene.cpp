@@ -123,6 +123,7 @@ void GamePlayScene::Update()
     plane_->Update();
 
     animationActor_->Update(1.0f / 60.0f);
+
 #pragma region ImGuiによるライト操作パネル
     // ==================================
     // Lighting Panel（ライト操作パネル）
@@ -340,7 +341,7 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-    terrain_->Draw();
+   // terrain_->Draw();
 
     //----------------------
     // スキニング
@@ -348,20 +349,20 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-    animationActor_->Draw();
+   // animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 
     SkyBoxManager::GetInstance()->PreDraw();
     skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     ParticleManager::GetInstance()->PreDraw();
-    ParticleManager::GetInstance()->Draw();
+   // ParticleManager::GetInstance()->Draw();
 }
 
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-    testSprite_->Draw();
+   // testSprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()
