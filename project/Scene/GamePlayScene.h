@@ -45,7 +45,7 @@ private:
     // ------------------------------
     // 3Dオブジェクト（描画主体）
     // ------------------------------
-    std::unique_ptr<Object3d> player2_;
+
     std::unique_ptr<SphereObject> sphere_;
     std::unique_ptr<Object3d> terrain_;
     std::unique_ptr<Object3d> plane_;

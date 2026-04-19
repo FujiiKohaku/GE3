@@ -37,6 +37,7 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("dolone.obj");
     ModelManager::GetInstance()->Load("sneakWalk.gltf");
     ModelManager::GetInstance()->Load("AnimatedCube.gltf");
+    ModelManager::GetInstance()->Load("AirPlane.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("walk.gltf");
@@ -62,6 +63,7 @@ void GamePlayScene::Initialize()
     animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
     animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
 
+
     // =================================================
     // Particle
     // =================================================
@@ -72,7 +74,6 @@ void GamePlayScene::Initialize()
     Vector3 position { 0.0f, 1.0f, 0.0f };
 
     ParticleManager::GetInstance()->CreateParticleGroup("smoke", "resources/circle.png");
-    
 
     // =================================================
     // Debug Sphere
@@ -121,6 +122,7 @@ void GamePlayScene::Update()
     debugCameraController_->Update();
 
     plane_->Update();
+    // 自機
 
     animationActor_->Update(1.0f / 60.0f);
 
@@ -328,6 +330,10 @@ void GamePlayScene::Update()
         terrarian->setEnableEnvironmentMap(envMapEnabled2);
     }
 
+    Object3d* player_obj = player_.get();
+    if (player_obj) {
+        player_obj->setEnableEnvironmentMap(false);
+    }
     ImGui::End();
 }
 #pragma endregion
@@ -341,7 +347,7 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-   // terrain_->Draw();
+    // terrain_->Draw();
 
     //----------------------
     // スキニング
@@ -349,20 +355,20 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-   // animationActor_->Draw();
+    // animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
-    ParticleManager::GetInstance()->Draw();
+    //  ParticleManager::GetInstance()->Draw();
 
     SkyBoxManager::GetInstance()->PreDraw();
     skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     ParticleManager::GetInstance()->PreDraw();
-   // ParticleManager::GetInstance()->Draw();
+    // ParticleManager::GetInstance()->Draw();
 }
 
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-   // testSprite_->Draw();
+    // testSprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()
