@@ -31,7 +31,7 @@ void GamePlayScene::Initialize()
 
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/rostock_laage_airport_4k.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
 
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
@@ -102,7 +102,7 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
-    skyBox_->SetTexture("resources/rostock_laage_airport_4k.dds");
+    skyBox_->SetTexture("resources/skyBox.dds");
 }
 
 void GamePlayScene::Update()
