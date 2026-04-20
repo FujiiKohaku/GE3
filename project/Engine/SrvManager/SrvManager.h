@@ -1,0 +1,56 @@
+#pragma once
+#include "Engine/DirectXCommon/DirectXCommon.h"
+#include <wrl.h>
+
+class SrvManager {
+public:
+    // Singleton
+    static SrvManager* GetInstance();
+
+    // 初期化
+    void Initialize(DirectXCommon* dxCommon);
+
+    void PreDraw();
+
+    uint32_t Allocate();
+
+    D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index);
+    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index);
+
+    ID3D12DescriptorHeap* GetDescriptorHeap() const
+    {
+        return descriptorHeap.Get();
+    }
+
+    void CreateSRVforTexture2D(uint32_t srvIndex, ID3D12Resource* pResource, DXGI_FORMAT Format, UINT MipLevels);
+    void CreateSRVforStructuredBuffer(uint32_t srvIndex, ID3D12Resource* pResource, UINT numElements, UINT structureByteStride);
+
+    void SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_t srvIndex);
+
+    bool CanAllocate() const;
+    void Finalize();
+    static const uint32_t kMaxSRVCount;
+
+
+
+    class ConstructorKey {
+    private:
+        ConstructorKey() = default;
+        friend class SrvManager;
+    };
+    SrvManager(ConstructorKey) { }
+    ~SrvManager() = default;
+private:
+
+    SrvManager(const SrvManager&) = delete;
+    SrvManager& operator=(const SrvManager&) = delete;
+    DirectXCommon* dxCommon_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;
+
+    uint32_t descriptorSize = 0;
+    uint32_t useIndex = 0;
+    // Singleton インスタンス
+    static std::unique_ptr<SrvManager> instance;
+    
+};
