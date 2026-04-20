@@ -8,7 +8,7 @@ D3D12_BLEND_DESC CreateBlendDesc(BlendMode mode)
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
     switch (mode) {
     case kBlendModeNone:
-        blendDesc.RenderTarget[0].BlendEnable = FALSE;
+        blendDesc.RenderTarget[0].BlendEnable = FALSE; 
         break;
 
     case kBlendModeNormal: // 通常アルファ
