@@ -11,10 +11,10 @@ DebugCamera::DebugCamera()
     orthoGraphicMatrix = DebugCamera::MakeOrthographicMatrix(-160.0f, 160.0f, 200.0f, 300.0f, 0.0f, 1000.0f);
 }
 
-void DebugCamera::Initialize()
+void DebugCamera::Initialize()   
 {
     
-}
+} 
 void DebugCamera::Update()
 {
     const float moveSpeed = 0.1f;
