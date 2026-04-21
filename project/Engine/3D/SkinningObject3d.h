@@ -44,6 +44,7 @@ public:
     {
         baseTransform_.translate = translate;
     }
+ 
 
     // === getter ===
     const Vector3& GetScale() const
@@ -152,7 +153,7 @@ private:
     // SkinCluster skinCluster_;
     SkinCluster::SkinClusterData skinClusterData_;
     PlayAnimation* playAnimation_;
-    D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
+   // D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
 
 
     // コンピュートシェーダー用のバッファとSRV/UAV

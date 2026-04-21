@@ -90,8 +90,8 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 
     // assert(model_->GetVertexResource() != nullptr);　
 
-    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
-    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
+   // TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
+    //environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
     assert(camera_);
@@ -173,7 +173,7 @@ void SkinningObject3d::Draw()
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
 
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
-    commandList->SetGraphicsRootDescriptorTable(8, environmentTextureHandle_);
+    commandList->SetGraphicsRootDescriptorTable(8, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
 
     uint32_t vertexOffset = 0;
 
