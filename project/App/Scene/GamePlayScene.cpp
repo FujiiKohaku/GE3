@@ -104,6 +104,7 @@ void GamePlayScene::Initialize()
     skyBox_->SetTexture("resources/skyBox.dds");
     Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
     SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
+
     // =================================================
     // Playerクラス
     // =================================================
