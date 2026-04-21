@@ -90,7 +90,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
 
     //assert(model_->GetVertexResource() != nullptr);
 
-    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
+    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
     assert(camera_);

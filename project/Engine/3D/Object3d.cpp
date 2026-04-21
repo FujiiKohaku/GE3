@@ -85,7 +85,7 @@ void Object3d::Update()
 void Object3d::Draw()
 {
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
-
+    
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     // Transform定数バッファをセット
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());

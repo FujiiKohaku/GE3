@@ -467,7 +467,7 @@ void DirectXCommon::PreDraw()
 
 // 描画後処理
 void DirectXCommon::PostDraw()
-{
+ {
 
     // これから書き込むバックバッファの番号を取得
     UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
