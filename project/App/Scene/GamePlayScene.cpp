@@ -109,6 +109,7 @@ void GamePlayScene::Initialize()
     player_ = std::make_unique<Player>();
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
+    player_->SetDebugCameraController(debugCameraController_.get());
 }
 
 void GamePlayScene::Update()

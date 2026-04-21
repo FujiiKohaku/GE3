@@ -1,8 +1,8 @@
 #include "Player.h"
 #include "../../Engine/3D/Object3dManager.h"
 #include "../../Engine/Input/Input.h"
+#include "../../Engine/debugcamera/DebugCameraController.h"
 #include <cassert>
-
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -34,23 +34,28 @@ void Player::Update()
     if (input == nullptr) {
         return;
     }
-
-    if (input->IsKeyPressed(DIK_A)) {
-        transform_.translate.x -= moveSpeed_;
+    
+    if (debugCameraController_ != nullptr) {
+        isDebugMode = debugCameraController_->IsDebugMode();
     }
 
-    if (input->IsKeyPressed(DIK_D)) {
-        transform_.translate.x += moveSpeed_;
-    }
+    if (!isDebugMode) {
+        if (input->IsKeyPressed(DIK_A)) {
+            transform_.translate.x -= moveSpeed_;
+        }
 
-    if (input->IsKeyPressed(DIK_W)) {
-        transform_.translate.z += moveSpeed_;
-    }
+        if (input->IsKeyPressed(DIK_D)) {
+            transform_.translate.x += moveSpeed_;
+        }
 
-    if (input->IsKeyPressed(DIK_S)) {
-        transform_.translate.z -= moveSpeed_;
-    }
+        if (input->IsKeyPressed(DIK_W)) {
+            transform_.translate.z += moveSpeed_;
+        }
 
+        if (input->IsKeyPressed(DIK_S)) {
+            transform_.translate.z -= moveSpeed_;
+        }
+    }
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
@@ -73,4 +78,8 @@ void Player::SetCamera(Camera* camera)
     if (object_ != nullptr) {
         object_->SetCamera(camera_);
     }
+}
+void Player::SetDebugCameraController(DebugCameraController* debugCameraController)
+{
+    debugCameraController_ = debugCameraController;
 }
