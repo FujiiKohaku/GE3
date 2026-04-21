@@ -36,7 +36,7 @@ void Player::Update()
     }
     
     if (debugCameraController_ != nullptr) {
-        isDebugMode = debugCameraController_->IsDebugMode();
+        isDebugMode = debugCameraController_->GetDebugMode();
     }
 
     if (!isDebugMode) {
