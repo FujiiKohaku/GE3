@@ -362,7 +362,7 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-    // animationActor_->Draw();
+     animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     //  ParticleManager::GetInstance()->Draw();
 

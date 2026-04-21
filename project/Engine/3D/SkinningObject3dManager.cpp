@@ -31,15 +31,16 @@ void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon)
 #pragma region 描画準備処理
 void SkinningObject3dManager::PreDraw()
 {
-    auto* commandList = dxCommon_->GetCommandList();
+    ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
-    // プリミティブ形状（三角形リスト）
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    // RootSignature 設定
     commandList->SetGraphicsRootSignature(rootSignature.Get());
 
-    //  ブレンドモードに応じた PSO を適用
+    ID3D12DescriptorHeap* descriptorHeaps[] = {
+        SrvManager::GetInstance()->GetDescriptorHeap()
+    };
+    commandList->SetDescriptorHeaps(1, descriptorHeaps);
+
     commandList->SetPipelineState(pipelineStates[currentBlendMode].Get());
 }
 
