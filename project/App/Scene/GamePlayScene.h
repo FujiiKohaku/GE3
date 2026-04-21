@@ -31,6 +31,8 @@
 
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
+
+#include "../Game/Player.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -60,6 +62,10 @@ private:
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
+
+    // プレイヤークラス
+    std::unique_ptr<Player> player_;
+
     // ------------------------------
     // スプライト（UI / 2D）
     // ------------------------------

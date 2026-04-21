@@ -1,9 +1,9 @@
 #include "GamePlayScene.h"
+#include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/Light/LightManager.h"
-#include "Engine/particle/ParticleManager.h"
 #include "Engine/audio/SoundManager.h"
-#include "Engine/3D/SphereObject.h"
+#include "Engine/particle/ParticleManager.h"
 #include <numbers>
 
 void GamePlayScene::Initialize()
@@ -37,7 +37,7 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("dolone.obj");
     ModelManager::GetInstance()->Load("sneakWalk.gltf");
     ModelManager::GetInstance()->Load("AnimatedCube.gltf");
-    ModelManager::GetInstance()->Load("AirPlane.obj");
+    Model* playerModel = ModelManager::GetInstance()->Load("AirPlane.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("walk.gltf");
@@ -62,7 +62,6 @@ void GamePlayScene::Initialize()
     animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
     animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
-
 
     // =================================================
     // Particle
@@ -93,8 +92,8 @@ void GamePlayScene::Initialize()
     // =================================================
     // Sound
     // =================================================
-   // bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
-    //SoundManager::GetInstance()->SoundPlayWave(bgm);
+    // bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
+    // SoundManager::GetInstance()->SoundPlayWave(bgm);
 
     testSprite_ = std::make_unique<Sprite>();
     testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
@@ -103,10 +102,19 @@ void GamePlayScene::Initialize()
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
     skyBox_->SetTexture("resources/skyBox.dds");
+
+    // =================================================
+    // Playerクラス
+    // =================================================
+    player_ = std::make_unique<Player>();
+    player_->Initialize(playerModel);
+    player_->SetCamera(camera_.get());
 }
 
 void GamePlayScene::Update()
 {
+
+    player_->Update();
 
     testSprite_->Update();
     skyBox_->Update(camera_.get());
@@ -330,7 +338,6 @@ void GamePlayScene::Update()
         terrarian->setEnableEnvironmentMap(envMapEnabled2);
     }
 
-    
     ImGui::End();
 }
 #pragma endregion
@@ -345,6 +352,8 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     // terrain_->Draw();
+
+    player_->Draw();
 
     //----------------------
     // スキニング
@@ -377,8 +386,10 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::Finalize()
 {
+
+    
     ParticleManager::GetInstance()->Finalize();
 
     LightManager::GetInstance()->Finalize();
-   // SoundManager::GetInstance()->SoundUnload(&bgm);
+    // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
