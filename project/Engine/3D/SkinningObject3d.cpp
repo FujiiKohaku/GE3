@@ -88,7 +88,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // すきんぐりんぐのリソースを作成
     CreateSkinningResources();
 
-    //assert(model_->GetVertexResource() != nullptr);
+    //assert(model_->GetVertexResource() != nullptr);　
 
     environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
     assert(skinningObject3dManager_);
