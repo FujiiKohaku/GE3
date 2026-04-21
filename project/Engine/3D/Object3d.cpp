@@ -42,7 +42,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     // ================================
     transform = { { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
     cameraTransform = { { 1.0f, 1.0f, 1.0f }, { 0.3f, 0.0f, 0.0f }, { 0.0f, 4.0f, -10.0f } };
-    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds");
+    environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
 }
 #pragma endregion
 
