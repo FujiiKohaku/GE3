@@ -8,7 +8,6 @@ public:
 
     void SetDebugMode(bool isDebugMode) { isDebugMode_ = isDebugMode; }
     bool GetDebugMode() const { return isDebugMode_; }
-    bool IsDebugMode() const { return isDebugMode_; }
 
 private:
     Camera* targetCamera_ = nullptr;
