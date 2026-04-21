@@ -88,8 +88,9 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // すきんぐりんぐのリソースを作成
     CreateSkinningResources();
 
-    //assert(model_->GetVertexResource() != nullptr);　
+    // assert(model_->GetVertexResource() != nullptr);　
 
+    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
     environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
@@ -155,7 +156,6 @@ void SkinningObject3d::Update()
     }
     // スキニング
     DispatchSkinning();
-
 }
 
 #pragma endregion
@@ -168,7 +168,7 @@ void SkinningObject3d::Draw()
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
-    commandList->SetGraphicsRootDescriptorTable(7,SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
+    commandList->SetGraphicsRootDescriptorTable(7, SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
 
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
 
@@ -407,8 +407,7 @@ void SkinningObject3d::DispatchSkinning()
     // =========================================
     commandList->SetPipelineState(skinningObject3dManager_->GetComputePipelineState());
     commandList->SetComputeRootSignature(skinningObject3dManager_->GetComputeRootSignature());
-    ID3D12DescriptorHeap* descriptorHeaps[] = {SrvManager::GetInstance()->GetDescriptorHeap()
-    };
+    ID3D12DescriptorHeap* descriptorHeaps[] = { SrvManager::GetInstance()->GetDescriptorHeap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
     // =========================================
     // SRV / UAV セット
@@ -418,16 +417,15 @@ void SkinningObject3d::DispatchSkinning()
     // u0 : output skinned vertex
     // =========================================
 
+    commandList->SetComputeRootDescriptorTable(0, SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
 
-    commandList->SetComputeRootDescriptorTable(0,SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
+    commandList->SetComputeRootDescriptorTable(1, SrvManager::GetInstance()->GetGPUDescriptorHandle(inputVertexSrvIndex_));
 
-    commandList->SetComputeRootDescriptorTable(1,SrvManager::GetInstance()->GetGPUDescriptorHandle(inputVertexSrvIndex_));
+    commandList->SetComputeRootDescriptorTable(2, SrvManager::GetInstance()->GetGPUDescriptorHandle(influenceSrvIndex_));
 
-    commandList->SetComputeRootDescriptorTable(2,SrvManager::GetInstance()->GetGPUDescriptorHandle(influenceSrvIndex_));
+    commandList->SetComputeRootDescriptorTable(3, SrvManager::GetInstance()->GetGPUDescriptorHandle(skinnedVertexUavIndex_));
 
-    commandList->SetComputeRootDescriptorTable(3,SrvManager::GetInstance()->GetGPUDescriptorHandle(skinnedVertexUavIndex_));
-
-    commandList->SetComputeRootConstantBufferView(4,skinningInformationResource_->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(4, skinningInformationResource_->GetGPUVirtualAddress());
     // =========================================
     // Dispatch
     // numthreads(1024,1,1) 前提
