@@ -102,7 +102,8 @@ void GamePlayScene::Initialize()
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
     skyBox_->SetTexture("resources/skyBox.dds");
-
+    Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
+    SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
     // =================================================
     // Playerクラス
     // =================================================
@@ -110,6 +111,7 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
+    
 }
 
 void GamePlayScene::Update()

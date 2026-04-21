@@ -43,6 +43,17 @@ public:
     ID3D12RootSignature* GetComputeRootSignature() const { return computeRootSignature_.Get(); }
     ID3D12PipelineState* GetComputePipelineState() const { return computePipelineState_.Get(); }
     ~SkinningObject3dManager() = default;
+
+    void SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+    {
+        environmentHandle_ = handle;
+    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture() const
+    {
+        return environmentHandle_;
+    }
+
 private:
     // Singleton：外部から new できないようにする
     SkinningObject3dManager() = default;
@@ -76,6 +87,6 @@ private:
 
     Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-
+    D3D12_GPU_DESCRIPTOR_HANDLE environmentHandle_;
     int currentBlendMode = kBlendModeNormal;
 };

@@ -35,6 +35,7 @@ public:
     void SetTranslate(const Vector3& translate) { transform.translate = translate; }
     void SetModel(const std::string& filePath);
     void SetCamera(Camera* camera) { camera_ = camera; }
+
     // === getter ===
     const Vector3& GetScale() const { return transform.scale; }
     const Vector3& GetRotate() const { return transform.rotate; }
@@ -114,6 +115,6 @@ private:
 
     // World
     Matrix4x4 worldMatrix_;
-    D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
+  //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
 };

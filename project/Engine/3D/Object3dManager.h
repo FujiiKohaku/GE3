@@ -33,6 +33,15 @@ public:
     }
     void SetNormalPSO();
     void SetGlowPSO();
+    void SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+    {
+        environmentHandle_ = handle;
+    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture() const
+    {
+        return environmentHandle_;
+    }
 
 private:
     static std::unique_ptr<Object3dManager> instance_;
@@ -70,6 +79,6 @@ private:
 
    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-
+   D3D12_GPU_DESCRIPTOR_HANDLE environmentHandle_;
     int currentBlendMode = kBlendModeNormal;
 };
