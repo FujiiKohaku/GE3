@@ -348,6 +348,11 @@ void GamePlayScene::Update()
 
 void GamePlayScene::Draw3D()
 {
+    //skyBOx
+    SkyBoxManager::GetInstance()->PreDraw();
+    skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+
+
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
@@ -369,8 +374,7 @@ void GamePlayScene::Draw3D()
     ParticleManager::GetInstance()->PreDraw();
     //  ParticleManager::GetInstance()->Draw();
 
-    SkyBoxManager::GetInstance()->PreDraw();
-    skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+   
     ParticleManager::GetInstance()->PreDraw();
     // ParticleManager::GetInstance()->Draw();
 }

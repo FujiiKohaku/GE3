@@ -37,6 +37,12 @@ void Game::Initialize()
     // シーンマネージャーに最初のシーンをセット
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
 
+    offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
+    offscreenRenderer_->Initialize();
+    copyImageRenderer_ = std::make_unique<CopyImageRenderer>();
+    copyImageRenderer_->Initialize(DirectXCommon::GetInstance());
+
+
     // サウンド関連
     SoundManager::GetInstance()->Initialize();
 }
@@ -67,14 +73,16 @@ void Game::Update()
 
 void Game::Draw()
 {
-    // === フレーム開始 ===
     SrvManager::GetInstance()->PreDraw();
-    DirectXCommon::GetInstance()->PreDraw();
 
+    offscreenRenderer_->PreDraw();
     SceneManager::GetInstance()->Draw3D();
+    offscreenRenderer_->PostDraw();
+
+    DirectXCommon::GetInstance()->PreDraw();
+    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU());
     SceneManager::GetInstance()->Draw2D();
 
-    // === フレーム終了 ===
     ImGuiManager::GetInstance()->Draw();
     DirectXCommon::GetInstance()->PostDraw();
 }

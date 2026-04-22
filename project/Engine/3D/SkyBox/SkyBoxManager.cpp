@@ -151,7 +151,7 @@ void SkyBoxManager::CreateGraphicsPipeline()
 
     D3D12_RASTERIZER_DESC rasterizerDesc = {};
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-    rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+    rasterizerDesc.CullMode = D3D12_CULL_MODE_FRONT;
     rasterizerDesc.FrontCounterClockwise = FALSE;
     rasterizerDesc.DepthClipEnable = TRUE;
 
