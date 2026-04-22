@@ -299,7 +299,7 @@ void DirectXCommon::InitializeDescriptorHeaps()
     descriptorSizeRTV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     descriptorSizeDSV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     // RTV用のヒープ（Shaderからは使わないのでfalse）
-    rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+    rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 3, false);
 
     // DSV用のヒープ（Shaderからは使わないのでfalse）
     dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
@@ -703,4 +703,14 @@ void DirectXCommon::WaitForGPU()
         fence->SetEventOnCompletion(fenceValue, fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
     }
+}
+D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetRTVHandle(uint32_t index) const
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    handle.ptr += static_cast<SIZE_T>(descriptorSizeRTV) * index;
+    return handle;
+}
+D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetDSVHandle() const
+{
+    return dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 }

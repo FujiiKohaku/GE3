@@ -57,6 +57,9 @@
 
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
+#include "Engine/PostEffect/OffscreenRenderer.h"
+
+#include "Engine/PostEffect/CopyImageRenderer.h"
 // ================================================================
 // Game クラス
 // ================================================================
@@ -152,4 +155,6 @@ private:
     };
 
     bool endRequest_ = false;
+    std::unique_ptr<OffscreenRenderer> offscreenRenderer_;
+    std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
 };
