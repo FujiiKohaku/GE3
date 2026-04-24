@@ -73,7 +73,7 @@ void GamePlayScene::Initialize()
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
     ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
-    ParticleManager::GetInstance()->CreateParticleGroup("Ring", "resources/gradationLine.png", ParticleMeshManager::ParticleMeshType::Ring);
+    ParticleManager::GetInstance()->CreateParticleGroup("Ring", "resources/gradationLine.png", ParticleMeshManager::ParticleMeshType::Cylinder);
 
     // =================================================
     // Debug Sphere

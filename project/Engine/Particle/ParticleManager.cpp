@@ -250,6 +250,10 @@ void ParticleManager::CreateMaterialResource()
     materialData_.padding[1] = 0.0f;
     materialData_.padding[2] = 0.0f;
     materialData_.uvTransform = MatrixMath::MakeIdentity4x4();
+    materialData_.alphaReference = 0.1f;
+    materialData_.padding2[0] = 0.0f;
+    materialData_.padding2[1] = 0.0f;
+    materialData_.padding2[2] = 0.0f;
 
     *materialBufferData = materialData_;
 
