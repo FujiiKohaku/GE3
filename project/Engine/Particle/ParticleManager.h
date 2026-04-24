@@ -20,11 +20,13 @@ public:
     static ParticleManager* GetInstance();
     static void Finalize();
 
-    struct Material {
+ struct Material {
         Vector4 color;
         int32_t enableLighting;
         float padding[3];
         Matrix4x4 uvTransform;
+        float alphaReference;
+        float padding2[3];
     };
 
     struct ParticleGroup {
