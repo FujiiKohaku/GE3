@@ -74,8 +74,7 @@ PixelShaderOutput main(VertexShaderOutput input)
             float3 reflectedVector = reflect(cameraToPosition, N);
             float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
 
-            float reflectStrength = 0.2f;
-            output.color.rgb += environmentColor.rgb * reflectStrength;
+            output.color.rgb += environmentColor.rgb * gMaterial.environmentCoefficient;
         }
     }
     else
@@ -89,8 +88,8 @@ PixelShaderOutput main(VertexShaderOutput input)
             float3 reflectedVector = reflect(cameraToPosition, N);
             float4 environmentColor = gEnvironmentTexture.Sample(gSampler, reflectedVector);
 
-            float reflectStrength = 0.2f;
-            output.color.rgb += environmentColor.rgb * reflectStrength;
+            output.color.rgb += environmentColor.rgb * gMaterial.environmentCoefficient;
+          
         }
     }
 

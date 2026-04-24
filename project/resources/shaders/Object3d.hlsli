@@ -15,7 +15,7 @@ struct Material
     int enableLighting;
     int enableEnvironmentMap;
     float shininess;
-    float padding;
+    float environmentCoefficient;
     float4x4 uvTransform;
 };
 //05_03

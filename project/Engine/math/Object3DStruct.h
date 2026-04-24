@@ -22,7 +22,7 @@ struct Material {
     int32_t enableLighting;
     int32_t enableEnvironmentMap;
     float shininess;
-    float padding;
+    float environmentCoefficient;
     Matrix4x4 uvTransform;
 };
 
