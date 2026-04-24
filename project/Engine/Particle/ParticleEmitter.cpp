@@ -54,7 +54,41 @@ Particle ParticleEmitter::MakeParticleDefault(const Vector3& position)
 
     return particle;
 }
+Particle ParticleEmitter::MakeNewParticleAttack(const Vector3& position)
+{
+    Particle particle {};
 
+    std::uniform_real_distribution<float> randomOffset(-0.05f, 0.05f);
+    std::uniform_real_distribution<float> randomRotate(-3.14159f, 3.14159f);
+    std::uniform_real_distribution<float> randomScaleY(4.0f, 15.0f);
+    std::uniform_real_distribution<float> randomLife(0.15f, 0.3f);
+
+    particle.transform.translate = {
+        position.x + randomOffset(randomEngine_),
+        position.y + randomOffset(randomEngine_),
+        position.z + randomOffset(randomEngine_)
+    };
+
+    particle.transform.scale = {0.05f,randomScaleY(randomEngine_),1.0f
+    };
+
+    particle.transform.rotate = {0.0f,0.0f,randomRotate(randomEngine_)
+    };
+
+    particle.velocity = {0.0f,0.0f,0.0f
+    };
+
+    particle.color = {1.0f,
+        1.0f,
+        1.0f,
+        1.0f
+    };
+
+    particle.lifeTime = randomLife(randomEngine_);
+    particle.currentTime = 0.0f;
+
+    return particle;
+}
 Particle ParticleEmitter::MakeFireParticle(const Vector3& position)
 {
     Particle particle {};
