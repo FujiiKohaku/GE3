@@ -72,7 +72,8 @@ void GamePlayScene::Initialize()
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
 
-    ParticleManager::GetInstance()->CreateParticleGroup("smoke", "resources/circle.png");
+    ParticleManager::GetInstance()->CreateParticleGroup("Fire", "resources/circle.png");
+    ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png");
 
     // =================================================
     // Debug Sphere
@@ -112,7 +113,6 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
-    
 }
 
 void GamePlayScene::Update()
@@ -122,7 +122,11 @@ void GamePlayScene::Update()
 
     testSprite_->Update();
     skyBox_->Update(camera_.get());
-    ParticleManager::GetInstance()->EmitFire("smoke", { 0.0f, 0.0f, 0.0f }, 20);
+    //ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
+
+    if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
+        ParticleManager::GetInstance()->Emit("Default", { 0.0f, 0.0f, 0.0f }, 10);
+    }
     ParticleManager::GetInstance()->Update();
     sphere_->Update(camera_.get());
 
@@ -348,10 +352,9 @@ void GamePlayScene::Update()
 
 void GamePlayScene::Draw3D()
 {
-    //skyBOx
+    // skyBOx
     SkyBoxManager::GetInstance()->PreDraw();
     skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
-
 
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
@@ -370,13 +373,9 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-     animationActor_->Draw();
+    animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
-    //  ParticleManager::GetInstance()->Draw();
-
-   
-    ParticleManager::GetInstance()->PreDraw();
-    // ParticleManager::GetInstance()->Draw();
+    ParticleManager::GetInstance()->Draw();
 }
 
 void GamePlayScene::Draw2D()
@@ -395,7 +394,6 @@ void GamePlayScene::DrawImGui()
 void GamePlayScene::Finalize()
 {
 
-    
     ParticleManager::GetInstance()->Finalize();
 
     LightManager::GetInstance()->Finalize();

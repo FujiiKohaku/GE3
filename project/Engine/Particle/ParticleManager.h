@@ -29,8 +29,6 @@ public:
 
 
 
-
-
     struct ParticleGroup {
         std::string texturePath;
         std::list<Particle> particles;

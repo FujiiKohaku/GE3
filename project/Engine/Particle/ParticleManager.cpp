@@ -25,8 +25,6 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     srvManager_ = srvManager;
     camera_ = camera;
 
-   
-
     particleRenderManager_ = std::make_unique<ParticleRenderManager>();
     particleRenderManager_->Initialize(dxCommon_);
 
@@ -46,7 +44,6 @@ void ParticleManager::Update()
 
     Matrix4x4 billboardMatrix = cameraMatrix;
     Matrix4x4 viewProjectionMatrix = camera_->GetViewProjectionMatrix();
-
 
     for (auto& particleGroupPair : particleGroups_) {
         ParticleGroup& particleGroup = particleGroupPair.second;
@@ -70,8 +67,12 @@ void ParticleManager::Update()
             Matrix4x4 worldMatrix;
             if (useBillboard_) {
                 Matrix4x4 scaleMatrix = MatrixMath::Matrix4x4MakeScaleMatrix(particle.transform.scale);
+                Matrix4x4 rotateMatrix = MatrixMath::MakeRotateZMatrix(particle.transform.rotate.z);
                 Matrix4x4 translateMatrix = MatrixMath::MakeTranslateMatrix(particle.transform.translate);
-                worldMatrix = MatrixMath::Multiply(MatrixMath::Multiply(scaleMatrix, billboardMatrix), translateMatrix);
+
+                worldMatrix = MatrixMath::Multiply(scaleMatrix, rotateMatrix);
+                worldMatrix = MatrixMath::Multiply(worldMatrix, billboardMatrix);
+                worldMatrix = MatrixMath::Multiply(worldMatrix, translateMatrix);
             } else {
                 worldMatrix = MatrixMath::MakeAffineMatrix(
                     particle.transform.scale,
@@ -167,10 +168,9 @@ void ParticleManager::Emit(const std::string& name, const Vector3& position, uin
     for (uint32_t particleIndex = 0; particleIndex < count; particleIndex++) {
         if (particleGroup.particles.size() > 1000)
             return;
-        particleGroup.particles.push_back(particleEmitter_->MakeParticleDefault(position));
+        particleGroup.particles.push_back(particleEmitter_->MakeNewParticleAttack(position));
     }
 }
-
 
 void ParticleManager::EmitFire(const std::string& name, const Vector3& position, uint32_t count)
 {
