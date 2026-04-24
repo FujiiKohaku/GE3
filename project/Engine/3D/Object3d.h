@@ -84,6 +84,15 @@ public:
         environmentTextureFilePath_ = filePath;
         TextureManager::GetInstance()->LoadTexture(filePath);
     }
+    void SetEnableEnvironmentMap(bool enable)
+    {
+        materialData_->enableEnvironmentMap = enable;
+    }
+
+    void SetEnvironmentMapStrength(float strength)
+    {
+        materialData_->environmentCoefficient = strength;
+    }
 
 private:
     // ===============================

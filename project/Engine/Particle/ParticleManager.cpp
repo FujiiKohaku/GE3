@@ -104,13 +104,7 @@ void ParticleManager::Draw()
 {
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
-    const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView = particleMeshManager_->GetVertexBufferView();
-    const D3D12_INDEX_BUFFER_VIEW& indexBufferView = particleMeshManager_->GetIndexBufferView();
-
     commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
-
-    commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-    commandList->IASetIndexBuffer(&indexBufferView);
 
     for (auto& particleGroupPair : particleGroups_) {
         ParticleGroup& particleGroup = particleGroupPair.second;
@@ -119,18 +113,31 @@ void ParticleManager::Draw()
             continue;
         }
 
+        const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView = particleMeshManager_->GetVertexBufferView(particleGroup.meshType);
+
+        const D3D12_INDEX_BUFFER_VIEW& indexBufferView = particleMeshManager_->GetIndexBufferView(particleGroup.meshType);
+
+        uint32_t indexCount = particleMeshManager_->GetIndexCount(particleGroup.meshType);
+
+        commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+        commandList->IASetIndexBuffer(&indexBufferView);
+
         commandList->SetGraphicsRootDescriptorTable(1, particleGroup.instancingSrvHandleGPU);
         commandList->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup.texturePath));
-        commandList->DrawIndexedInstanced(6, particleGroup.numInstance, 0, 0, 0);
+
+        commandList->DrawIndexedInstanced(indexCount, particleGroup.numInstance, 0, 0, 0);
     }
 }
 
-void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath)
+void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath, ParticleMeshManager::ParticleMeshType meshType)
 {
     assert(particleGroups_.find(name) == particleGroups_.end());
 
     ParticleGroup particleGroup {};
     particleGroup.texturePath = textureFilePath;
+    particleGroup.meshType = meshType;
+
+  
 
     TextureManager::GetInstance()->LoadTexture(textureFilePath);
 
@@ -182,7 +189,18 @@ void ParticleManager::EmitFire(const std::string& name, const Vector3& position,
         particleGroup.particles.push_back(particleEmitter_->MakeFireParticle(position));
     }
 }
+void ParticleManager::EmitRing(const std::string& name, const Vector3& position, uint32_t count)
+{
+    ParticleGroup& particleGroup = particleGroups_.at(name);
 
+    for (uint32_t particleIndex = 0; particleIndex < count; particleIndex++) {
+        if (particleGroup.particles.size() > 1000) {
+            return;
+        }
+
+        particleGroup.particles.push_back(particleEmitter_->MakeRingParticle(position));
+    }
+}
 void ParticleManager::Finalize()
 {
     if (!instance_) {

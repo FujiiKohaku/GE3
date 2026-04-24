@@ -1,15 +1,15 @@
-#include "ParticleMeshManager.h"
+#include "ParticleBoardMesh.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include <cassert>
 #include <cstring>
 
-void ParticleMeshManager::Initialize(DirectXCommon* dxCommon)
+void ParticleBoardMesh::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
     CreateBoardMesh();
 }
 
-void ParticleMeshManager::CreateBoardMesh()
+void ParticleBoardMesh::CreateBoardMesh()
 {
     vertices_[0].position = { -0.5f, 0.5f, 0.0f, 1.0f };
     vertices_[0].texcoord = { 0.0f, 0.0f };
@@ -50,4 +50,6 @@ void ParticleMeshManager::CreateBoardMesh()
     indexBufferView_.BufferLocation = indexResource_->GetGPUVirtualAddress();
     indexBufferView_.Format = DXGI_FORMAT_R32_UINT;
     indexBufferView_.SizeInBytes = sizeof(indexList_);
+
+    indexCount_ = 6;
 }

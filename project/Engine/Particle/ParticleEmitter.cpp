@@ -6,6 +6,48 @@ void ParticleEmitter::Initialize()
 {
     randomEngine_ = std::mt19937(seedGenerator_());
 }
+Particle ParticleEmitter::MakeRingParticle(const Vector3& position)
+{
+    Particle particle {};
+
+    std::uniform_real_distribution<float> randomScale(0.8f, 1.2f);
+    std::uniform_real_distribution<float> randomLife(0.5f, 1.0f);
+
+    particle.transform.translate = position;
+
+    float scale = randomScale(randomEngine_);
+
+    particle.transform.scale = {
+        scale,
+        scale,
+        scale
+    };
+
+    particle.transform.rotate = {
+        0.0f,
+        0.0f,
+        0.0f
+    };
+
+    // 少し上に広がる感じ
+    particle.velocity = {
+        0.0f,
+        0.5f,
+        0.0f
+    };
+
+    particle.color = {
+        1.0f,
+        1.0f,
+        1.0f,
+        1.0f
+    };
+
+    particle.lifeTime = randomLife(randomEngine_);
+    particle.currentTime = 0.0f;
+
+    return particle;
+}
 
 Particle ParticleEmitter::MakeParticleDefault(const Vector3& position)
 {
@@ -69,20 +111,16 @@ Particle ParticleEmitter::MakeNewParticleAttack(const Vector3& position)
         position.z + randomOffset(randomEngine_)
     };
 
-    particle.transform.scale = {0.05f,randomScaleY(randomEngine_),1.0f
-    };
+    particle.transform.scale = { 0.05f, randomScaleY(randomEngine_), 1.0f };
 
-    particle.transform.rotate = {0.0f,0.0f,randomRotate(randomEngine_)
-    };
+    particle.transform.rotate = { 0.0f, 0.0f, randomRotate(randomEngine_) };
 
-    particle.velocity = {0.0f,0.0f,0.0f
-    };
+    particle.velocity = { 0.0f, 0.0f, 0.0f };
 
-    particle.color = {1.0f,
+    particle.color = { 1.0f,
         1.0f,
         1.0f,
-        1.0f
-    };
+        1.0f };
 
     particle.lifeTime = randomLife(randomEngine_);
     particle.currentTime = 0.0f;

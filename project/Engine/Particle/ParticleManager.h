@@ -1,12 +1,13 @@
 #pragma once
-#include "Engine/blend/BlendUtil.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
-#include "ParticleMeshManager.h"
-#include "ParticleRenderManager.h"
-#include "ParticleEmitter.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Engine/blend/BlendUtil.h"
+#include "MeshManager/ParticleMeshManager.h"
+#include "ParticleData.h"
+#include "ParticleEmitter.h"
+#include "ParticleRenderManager.h"
 #include <d3d12.h>
 #include <list>
 #include <memory>
@@ -14,7 +15,6 @@
 #include <string>
 #include <unordered_map>
 #include <wrl.h>
-#include"ParticleData.h"
 class ParticleManager {
 public:
     static ParticleManager* GetInstance();
@@ -27,8 +27,6 @@ public:
         Matrix4x4 uvTransform;
     };
 
-
-
     struct ParticleGroup {
         std::string texturePath;
         std::list<Particle> particles;
@@ -36,6 +34,8 @@ public:
         ParticleForGPU* instanceData = nullptr;
         D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU {};
         uint32_t numInstance = 0;
+
+        ParticleMeshManager::ParticleMeshType meshType = ParticleMeshManager::ParticleMeshType::Board;
     };
 
 public:
@@ -46,11 +46,10 @@ public:
 
     void SetBlendMode(BlendMode mode) { currentBlendMode_ = mode; }
 
-    void CreateParticleGroup(const std::string& name, const std::string& textureFilePath);
+    void CreateParticleGroup(const std::string& name, const std::string& textureFilePath, ParticleMeshManager::ParticleMeshType meshType);
     void Emit(const std::string& name, const Vector3& position, uint32_t count);
     void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
-
-  
+    void EmitRing(const std::string& name, const Vector3& position, uint32_t count);
 
 private:
     static std::unique_ptr<ParticleManager> instance_;
