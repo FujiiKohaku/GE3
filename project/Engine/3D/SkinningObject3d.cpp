@@ -50,6 +50,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
     materialData_->enableEnvironmentMap = true;
+    materialData_->environmentCoefficient = 0.5f;
     // =====================================================
     // SkinningInformation 用CB
     // =====================================================
