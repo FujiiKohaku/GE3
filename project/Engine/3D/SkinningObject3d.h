@@ -118,6 +118,15 @@ public:
     {
         return worldMatrix_;
     }
+    void SetEnableEnvironmentMap(bool enable)
+    {
+        materialData_->enableEnvironmentMap = enable;
+    }
+
+    void SetEnvironmentMapStrength(float strength)
+    {
+        materialData_->environmentCoefficient = strength;
+    }
 
 private:
     // ===============================

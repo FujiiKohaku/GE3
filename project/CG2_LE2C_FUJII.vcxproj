@@ -180,7 +180,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Animation\NodeAnimation.cpp" />
     <ClCompile Include="Engine\Animation\PlayAnimation.cpp" />
     <ClCompile Include="Engine\Particle\ParticleData.cpp" />
-    <ClCompile Include="Engine\Particle\ParticleMeshManager.cpp" />
+    <ClCompile Include="Engine\Particle\MeshManager\ParticleMeshManager.cpp" />
     <ClCompile Include="Engine\Particle\ParticleRenderManager.cpp" />
     <ClCompile Include="App\Scene\SceneManager.cpp" />
     <ClCompile Include="App\Scene\BaseScene.cpp" />
@@ -258,6 +258,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Winapp\WinApp.cpp" />
     <ClCompile Include="App\Game\Player.cpp" />
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp" />
+    <ClCompile Include="Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
+    <ClCompile Include="Engine\Particle\MeshManager\ParticleRingMesh.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
@@ -295,7 +299,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Animation\NodeAnimation.h" />
     <ClInclude Include="Engine\Animation\PlayAnimation.h" />
     <ClInclude Include="Engine\Particle\ParticleData.h" />
-    <ClInclude Include="Engine\Particle\ParticleMeshManager.h" />
+    <ClInclude Include="Engine\Particle\MeshManager\ParticleMeshManager.h" />
     <ClInclude Include="Engine\Particle\ParticleRenderManager.h" />
     <ClInclude Include="App\Scene\SceneManager.h" />
     <ClInclude Include="App\Scene\BaseScene.h" />
@@ -341,6 +345,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Winapp\WinApp.h" />
     <ClInclude Include="App\Game\Player.h" />
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h" />
+    <ClInclude Include="Engine\Particle\MeshManager\ParticleBoardMesh.h" />
+    <ClInclude Include="Engine\Particle\MeshManager\ParticleRingMesh.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />

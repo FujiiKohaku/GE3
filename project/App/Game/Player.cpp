@@ -59,6 +59,20 @@ void Player::Update()
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
+    // ===== ImGui =====
+    ImGui::Begin("Player EnvMap");
+
+    static bool enableEnvMap = true;
+    static float envStrength = 0.5f;
+
+    ImGui::Checkbox("Enable", &enableEnvMap);
+    ImGui::SliderFloat("Strength", &envStrength, 0.0f, 1.0f);
+
+    object_->SetEnableEnvironmentMap(enableEnvMap);
+    object_->SetEnvironmentMapStrength(envStrength);
+
+    ImGui::End();
+    // =================
     object_->Update();
 }
 

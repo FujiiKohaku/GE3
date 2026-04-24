@@ -9,6 +9,7 @@ public:
     Particle MakeParticleDefault(const Vector3& position);
     Particle MakeFireParticle(const Vector3& position);
     Particle MakeNewParticleAttack(const Vector3& position);
+    Particle MakeRingParticle(const Vector3& position);
 
 private:
     std::random_device seedGenerator_;

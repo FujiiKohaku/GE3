@@ -32,6 +32,7 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/rostock_laage_airport_4k.dds");
 
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
@@ -71,9 +72,8 @@ void GamePlayScene::Initialize()
     t.translate = { 0.0f, 0.0f, 0.0f };
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
-
-    ParticleManager::GetInstance()->CreateParticleGroup("Fire", "resources/circle.png");
-    ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png");
+    ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
+    ParticleManager::GetInstance()->CreateParticleGroup("Ring", "resources/gradationLine.png", ParticleMeshManager::ParticleMeshType::Ring);
 
     // =================================================
     // Debug Sphere
@@ -103,8 +103,8 @@ void GamePlayScene::Initialize()
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
     skyBox_->SetTexture("resources/skyBox.dds");
-    Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
-    SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
+    Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds"));
+    SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds"));
 
     // =================================================
     // Playerクラス
@@ -122,10 +122,13 @@ void GamePlayScene::Update()
 
     testSprite_->Update();
     skyBox_->Update(camera_.get());
-    //ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
-
+    // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
+    Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
     if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
-        ParticleManager::GetInstance()->Emit("Default", { 0.0f, 0.0f, 0.0f }, 10);
+        Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
+
+        ParticleManager::GetInstance()->EmitRing("Ring", effectPosition, 1);
+        ParticleManager::GetInstance()->Emit("Default", effectPosition, 3);
     }
     ParticleManager::GetInstance()->Update();
     sphere_->Update(camera_.get());
@@ -324,26 +327,22 @@ void GamePlayScene::Update()
 #pragma endregion
 
 #pragma region ImGuiによる環境マッピング操作パネル
+
     ImGui::Begin("Environment Mapping Control");
 
     // --- AnimationActor ---
-    static bool envMapEnabled1 = true;
-    ImGui::Checkbox("Player EnvMap", &envMapEnabled1);
+    static bool envMapEnabled = true;
+    static float envMapStrength = 0.3f;
+
+    ImGui::Checkbox("Player EnvMap", &envMapEnabled);
+    ImGui::SliderFloat("Player Env Strength", &envMapStrength, 0.0f, 1.0f);
 
     if (animationActor_) {
-        SkinningObject3d* obj = animationActor_->GetObject();
-        if (obj) {
-            obj->setEnableEnvironmentMap(envMapEnabled1);
+        SkinningObject3d* object = animationActor_->GetObject();
+        if (object) {
+            object->SetEnableEnvironmentMap(envMapEnabled);
+            object->SetEnvironmentMapStrength(envMapStrength);
         }
-    }
-
-    // --- Terrain ---
-    static bool envMapEnabled2 = true;
-    ImGui::Checkbox("Terrain EnvMap", &envMapEnabled2);
-
-    Object3d* terrarian = terrain_.get();
-    if (terrarian) {
-        terrarian->setEnableEnvironmentMap(envMapEnabled2);
     }
 
     ImGui::End();

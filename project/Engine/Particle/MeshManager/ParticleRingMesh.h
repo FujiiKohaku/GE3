@@ -1,28 +1,29 @@
 #pragma once
-#include"../math/Object3DStruct.h"
+#include "Engine/math/Object3DStruct.h"
+#include <cstdint>
 #include <d3d12.h>
+#include <vector>
 #include <wrl.h>
-
 
 class DirectXCommon;
 
-class ParticleMeshManager {
+class ParticleRingMesh {
 public:
-public:
-
     void Initialize(DirectXCommon* dxCommon);
 
     const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const { return vertexBufferView_; }
     const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return indexBufferView_; }
+    uint32_t GetIndexCount() const { return indexCount_; }
 
 private:
-    void CreateBoardMesh();
+    void CreateRingMesh();
 
 private:
     DirectXCommon* dxCommon_ = nullptr;
 
-    VertexData vertices_[4] = {};
-    uint32_t indexList_[6] = { 0, 1, 2, 0, 2, 3 };
+    std::vector<VertexData> vertices_;
+    std::vector<uint32_t> indices_;
+    uint32_t indexCount_ = 0;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource_;
     Microsoft::WRL::ComPtr<ID3D12Resource> indexResource_;
