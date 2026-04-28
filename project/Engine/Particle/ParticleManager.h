@@ -52,6 +52,7 @@ public:
     void Emit(const std::string& name, const Vector3& position, uint32_t count);
     void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
     void EmitRing(const std::string& name, const Vector3& position, uint32_t count);
+    void AddParticle(const std::string& name, const Particle& particle);
 
 private:
     static std::unique_ptr<ParticleManager> instance_;

@@ -6,6 +6,7 @@
 #include "Engine/particle/ParticleManager.h"
 #include <numbers>
 
+
 void GamePlayScene::Initialize()
 {
     // =================================================
@@ -72,9 +73,7 @@ void GamePlayScene::Initialize()
     t.translate = { 0.0f, 0.0f, 0.0f };
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
-    ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
-    ParticleManager::GetInstance()->CreateParticleGroup("Ring", "resources/gradationLine.png", ParticleMeshManager::ParticleMeshType::Cylinder);
-
+    particleSystem_.Initialize();
     // =================================================
     // Debug Sphere
     // =================================================
@@ -123,12 +122,13 @@ void GamePlayScene::Update()
     testSprite_->Update();
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
-    Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
+
+
     if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
         Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
 
-        ParticleManager::GetInstance()->EmitRing("Ring", effectPosition, 1);
-        ParticleManager::GetInstance()->Emit("Default", effectPosition, 3);
+        particleSystem_.Emit(ParticleEffectType::Ring, effectPosition, 1);
+        particleSystem_.Emit(ParticleEffectType::Attack, effectPosition, 3);
     }
     ParticleManager::GetInstance()->Update();
     sphere_->Update(camera_.get());

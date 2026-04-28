@@ -259,3 +259,13 @@ void ParticleManager::CreateMaterialResource()
 
     materialResource_->Unmap(0, nullptr);
 }
+void ParticleManager::AddParticle(const std::string& name, const Particle& particle)
+{
+    ParticleGroup& particleGroup = particleGroups_.at(name);
+
+    if (particleGroup.particles.size() > 1000) {
+        return;
+    }
+
+    particleGroup.particles.push_back(particle);
+}

@@ -31,7 +31,7 @@
 
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
-
+#include "Engine/Particle/ParticleSystem.h"
 #include "../Game/Player.h"
 class GamePlayScene : public BaseScene {
 public:
@@ -80,7 +80,7 @@ private:
     // パーティクル
     // ------------------------------
     ParticleEmitter emitter_;
-
+    ParticleSystem particleSystem_;
     // ------------------------------
     // アニメーション / スケルトン
     // ------------------------------
