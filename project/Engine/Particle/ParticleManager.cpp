@@ -30,10 +30,196 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
 
     particleMeshManager_ = std::make_unique<ParticleMeshManager>();
     particleMeshManager_->Initialize(dxCommon_);
+
     particleEmitter_ = std::make_unique<ParticleEmitter>();
     particleEmitter_->Initialize();
+
     CreateMaterialResource();
+    CreatePerViewResource();
+
+    InitializeGPUParticle();
 }
+void ParticleManager::InitializeGPUParticle()
+{
+    CreateGPUParticleResource();
+    CreateGPUParticleUAV();
+    CreateGPUParticleSRV();
+    CreateGPUParticleInitializeRootSignature();
+    CreateGPUParticleInitializePipeline();
+    DispatchInitializeGPUParticle();
+}
+
+
+
+#pragma region GPUパーティクル関連
+
+
+void ParticleManager::DispatchInitializeGPUParticle()
+{
+    ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
+
+    ID3D12DescriptorHeap* descriptorHeaps[] = {
+        srvManager_->GetDescriptorHeap()
+    };
+    commandList->SetDescriptorHeaps(1, descriptorHeaps);
+
+    commandList->SetComputeRootSignature(
+        gpuParticleInitializeRootSignature_.Get());
+
+    commandList->SetPipelineState(
+        gpuParticleInitializePipelineState_.Get());
+
+    commandList->SetComputeRootDescriptorTable(
+        0,
+        gpuParticleUavHandleGPU_);
+
+    commandList->Dispatch(1, 1, 1);
+}
+void ParticleManager::CreateGPUParticleResource()
+{
+    uint32_t bufferSize = sizeof(ParticleCS) * kMaxGPUParticle;
+
+    D3D12_RESOURCE_DESC resourceDesc {};
+    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDesc.Width = bufferSize;
+    resourceDesc.Height = 1;
+    resourceDesc.DepthOrArraySize = 1;
+    resourceDesc.MipLevels = 1;
+    resourceDesc.SampleDesc.Count = 1;
+    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+    D3D12_HEAP_PROPERTIES heapProperties {};
+    heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+    HRESULT hr = dxCommon_->GetDevice()->CreateCommittedResource(
+        &heapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &resourceDesc,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(&gpuParticleResource_));
+
+    assert(SUCCEEDED(hr));
+
+    gpuParticleResource_->SetName(L"ParticleManager::GPUParticleResource");
+}
+
+void ParticleManager::CreateGPUParticleUAV()
+{
+    gpuParticleUavIndex_ = srvManager_->Allocate();
+
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
+    uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+    uavDesc.Buffer.FirstElement = 0;
+    uavDesc.Buffer.NumElements = kMaxGPUParticle;
+    uavDesc.Buffer.StructureByteStride = sizeof(ParticleCS);
+
+    dxCommon_->GetDevice()->CreateUnorderedAccessView(
+        gpuParticleResource_.Get(),
+        nullptr,
+        &uavDesc,
+        srvManager_->GetCPUDescriptorHandle(gpuParticleUavIndex_));
+
+    gpuParticleUavHandleGPU_ = srvManager_->GetGPUDescriptorHandle(gpuParticleUavIndex_);
+}
+
+void ParticleManager::CreateGPUParticleSRV()
+{
+    gpuParticleSrvIndex_ = srvManager_->Allocate();
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
+    srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    srvDesc.Buffer.FirstElement = 0;
+    srvDesc.Buffer.NumElements = kMaxGPUParticle;
+    srvDesc.Buffer.StructureByteStride = sizeof(ParticleCS);
+
+    dxCommon_->GetDevice()->CreateShaderResourceView(
+        gpuParticleResource_.Get(),
+        &srvDesc,
+        srvManager_->GetCPUDescriptorHandle(gpuParticleSrvIndex_));
+
+    gpuParticleSrvHandleGPU_ = srvManager_->GetGPUDescriptorHandle(gpuParticleSrvIndex_);
+}
+void ParticleManager::CreateGPUParticleInitializeRootSignature()
+{
+    D3D12_DESCRIPTOR_RANGE uavRange {};
+    uavRange.BaseShaderRegister = 0;
+    uavRange.NumDescriptors = 1;
+    uavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[1] {};
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &uavRange;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
+    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    rootSignatureDesc.pParameters = rootParameters;
+    rootSignatureDesc.NumParameters = _countof(rootParameters);
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+
+    HRESULT hr = D3D12SerializeRootSignature(
+        &rootSignatureDesc,
+        D3D_ROOT_SIGNATURE_VERSION_1,
+        &signatureBlob,
+        &errorBlob);
+
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            Logger::Log(reinterpret_cast<char*>(errorBlob->GetBufferPointer()));
+        }
+        assert(false);
+    }
+
+    hr = dxCommon_->GetDevice()->CreateRootSignature(
+        0,
+        signatureBlob->GetBufferPointer(),
+        signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&gpuParticleInitializeRootSignature_));
+
+    assert(SUCCEEDED(hr));
+}
+
+
+
+void ParticleManager::CreatePerViewResource()
+{
+    perViewResource_ = dxCommon_->CreateBufferResource(sizeof(PerView));
+    perViewResource_->SetName(L"ParticleManager::PerViewCB");
+
+    perViewResource_->Map(0, nullptr, reinterpret_cast<void**>(&perViewData_));
+
+    perViewData_->viewProjection = MatrixMath::MakeIdentity4x4();
+    perViewData_->billboardMatrix = MatrixMath::MakeIdentity4x4();
+}
+void ParticleManager::CreateGPUParticleInitializePipeline()
+{
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(
+        L"resources/shaders/InitializeParticle.CS.hlsl",
+        L"cs_6_0");
+
+    assert(computeShaderBlob);
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC pipelineStateDesc {};
+    pipelineStateDesc.pRootSignature = gpuParticleInitializeRootSignature_.Get();
+    pipelineStateDesc.CS.pShaderBytecode = computeShaderBlob->GetBufferPointer();
+    pipelineStateDesc.CS.BytecodeLength = computeShaderBlob->GetBufferSize();
+
+    HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(
+        &pipelineStateDesc,
+        IID_PPV_ARGS(&gpuParticleInitializePipelineState_));
+
+    assert(SUCCEEDED(hr));
+}
+#pragma endregion 
 
 void ParticleManager::Update()
 {
@@ -44,7 +230,9 @@ void ParticleManager::Update()
 
     Matrix4x4 billboardMatrix = cameraMatrix;
     Matrix4x4 viewProjectionMatrix = camera_->GetViewProjectionMatrix();
-
+    
+    perViewData_->billboardMatrix = billboardMatrix;
+    perViewData_->viewProjection = viewProjectionMatrix;
     for (auto& particleGroupPair : particleGroups_) {
         ParticleGroup& particleGroup = particleGroupPair.second;
         particleGroup.numInstance = 0;
@@ -59,8 +247,8 @@ void ParticleManager::Update()
                 continue;
             }
 
-            particle.currentTime += deltaTime;
-            particle.transform.translate += particle.velocity * deltaTime;
+            particle.currentTime += deltaTime_;
+            particle.transform.translate += particle.velocity * deltaTime_;
 
             float alpha = 1.0f - (particle.currentTime / particle.lifeTime);
 
@@ -104,14 +292,16 @@ void ParticleManager::Draw()
 {
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        0,
+        materialResource_->GetGPUVirtualAddress());
+
+    commandList->SetGraphicsRootConstantBufferView(
+        3,
+        perViewResource_->GetGPUVirtualAddress());
 
     for (auto& particleGroupPair : particleGroups_) {
         ParticleGroup& particleGroup = particleGroupPair.second;
-
-        if (particleGroup.numInstance == 0) {
-            continue;
-        }
 
         const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView = particleMeshManager_->GetVertexBufferView(particleGroup.meshType);
 
@@ -122,13 +312,22 @@ void ParticleManager::Draw()
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
         commandList->IASetIndexBuffer(&indexBufferView);
 
-        commandList->SetGraphicsRootDescriptorTable(1, particleGroup.instancingSrvHandleGPU);
-        commandList->SetGraphicsRootDescriptorTable(2, TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup.texturePath));
+        commandList->SetGraphicsRootDescriptorTable(
+            1,
+            gpuParticleSrvHandleGPU_);
 
-        commandList->DrawIndexedInstanced(indexCount, particleGroup.numInstance, 0, 0, 0);
+        commandList->SetGraphicsRootDescriptorTable(
+            2,
+            TextureManager::GetInstance()->GetSrvHandleGPU(particleGroup.texturePath));
+
+        commandList->DrawIndexedInstanced(
+            indexCount,
+            kMaxGPUParticle,
+            0,
+            0,
+            0);
     }
 }
-
 void ParticleManager::CreateParticleGroup(const std::string& name, const std::string& textureFilePath, ParticleMeshManager::ParticleMeshType meshType)
 {
     assert(particleGroups_.find(name) == particleGroups_.end());
@@ -136,8 +335,6 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
     ParticleGroup particleGroup {};
     particleGroup.texturePath = textureFilePath;
     particleGroup.meshType = meshType;
-
-  
 
     TextureManager::GetInstance()->LoadTexture(textureFilePath);
 

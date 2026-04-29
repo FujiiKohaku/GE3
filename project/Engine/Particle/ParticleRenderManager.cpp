@@ -20,12 +20,12 @@ void ParticleRenderManager::PreDraw(int blendMode)
 #pragma region ルートシグネチャ作成
 void ParticleRenderManager::CreateRootSignature()
 {
-    D3D12_DESCRIPTOR_RANGE instancingRange {};
-    instancingRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    instancingRange.NumDescriptors = 1;
-    instancingRange.BaseShaderRegister = 0;
-    instancingRange.RegisterSpace = 0;
-    instancingRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    D3D12_DESCRIPTOR_RANGE particleRange {};
+    particleRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    particleRange.NumDescriptors = 1;
+    particleRange.BaseShaderRegister = 0;
+    particleRange.RegisterSpace = 0;
+    particleRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     D3D12_DESCRIPTOR_RANGE textureRange {};
     textureRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -34,21 +34,29 @@ void ParticleRenderManager::CreateRootSignature()
     textureRange.RegisterSpace = 0;
     textureRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[3] = {};
+    D3D12_ROOT_PARAMETER rootParameters[4] = {};
 
+    // [0] Material : PS b0
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
+    // [1] Particle : VS t0
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
-    rootParameters[1].DescriptorTable.pDescriptorRanges = &instancingRange;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = &particleRange;
 
+    // [2] Texture : PS t1
     rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
     rootParameters[2].DescriptorTable.pDescriptorRanges = &textureRange;
+
+    // [3] PerView : VS b0
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    rootParameters[3].Descriptor.ShaderRegister = 0;
 
     D3D12_STATIC_SAMPLER_DESC sampler {};
     sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -73,6 +81,7 @@ void ParticleRenderManager::CreateRootSignature()
         D3D_ROOT_SIGNATURE_VERSION_1,
         &signatureBlob,
         &errorBlob);
+
     if (FAILED(result)) {
         if (errorBlob) {
             OutputDebugStringA(static_cast<char*>(errorBlob->GetBufferPointer()));
@@ -85,6 +94,7 @@ void ParticleRenderManager::CreateRootSignature()
         signatureBlob->GetBufferPointer(),
         signatureBlob->GetBufferSize(),
         IID_PPV_ARGS(&rootSignature_));
+
     assert(SUCCEEDED(result));
 }
 #pragma endregion

@@ -1,4 +1,3 @@
-//03_00
 struct VertexShaderOutput
 {
     float32_t4 position : SV_POSITION;
@@ -6,17 +5,19 @@ struct VertexShaderOutput
     float32_t3 normal : NORMAL0;
     float32_t4 color : COLOR0;
 };
+
 struct VertexShaderInput
 {
     float32_t4 position : POSITION;
     float32_t2 texcoord : TEXCOORD0;
     float32_t3 normal : NORMAL0;
 };
+
 struct PixelShaderOutput
 {
     float32_t4 color : SV_Target0;
 };
-//05_03
+
 struct Material
 {
     float32_t4 color;
@@ -26,22 +27,19 @@ struct Material
     float32_t alphaReference;
     float32_t3 padding2;
 };
-//05_03
-struct TransformationMatrix
+
+struct ParticleCS
 {
-    float32_t4x4 WVP;
-    float32_t4x4 World;
-};
-struct DirectionalLight
-{
+    float32_t3 translate;
+    float32_t3 scale;
+    float32_t lifeTime;
+    float32_t3 velocity;
+    float32_t currentTime;
     float32_t4 color;
-    float32_t3 direction;
-    float intensity;
 };
-struct ParticleForGPU
+
+struct PerView
 {
-    float32_t4x4 WVP;
-    float32_t4x4 World;
-    float32_t4 color;
-    
+    float32_t4x4 viewProjection;
+    float32_t4x4 billboardMatrix;
 };
