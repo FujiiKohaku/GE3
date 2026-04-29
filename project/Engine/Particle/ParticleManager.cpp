@@ -202,9 +202,7 @@ void ParticleManager::CreatePerViewResource()
 }
 void ParticleManager::CreateGPUParticleInitializePipeline()
 {
-    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(
-        L"resources/shaders/InitializeParticle.CS.hlsl",
-        L"cs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/shaders/InitializeParticle.CS.hlsl",L"cs_6_0");
 
     assert(computeShaderBlob);
 
