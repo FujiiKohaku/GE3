@@ -108,7 +108,7 @@ private:
     static const uint32_t kNumMaxInstance = 500;
     float deltaTime_ = 1.0f / 60.0f;
     bool useBillboard_ = true;
-    bool useGPUParticle_ = false;
+    bool useGPUParticle_ = true;
 
 private:
     std::unordered_map<std::string, ParticleGroup> particleGroups_;
@@ -135,4 +135,21 @@ private:
     D3D12_GPU_DESCRIPTOR_HANDLE gpuParticleSrvHandleGPU_ {};
     Microsoft::WRL::ComPtr<ID3D12Resource> perViewResource_;
     PerView* perViewData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> emitterResource_;
+    EmitterSphere* emitterData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> emitParticleRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> emitParticlePipelineState_;
+    void CreateEmitterResource();
+    void UpdateEmitter();
+    void CreateEmitParticleRootSignature();
+    void CreateEmitParticlePipeline();
+    void DispatchEmitParticle();
+    Microsoft::WRL::ComPtr<ID3D12Resource> perFrameResource_;
+    PerFrame* perFrameData_ = nullptr;
+    float time_ = 0.0f;
+
+    void CreatePerFrameResource();
+    void UpdatePerFrame();
 };

@@ -21,11 +21,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     {
         gParticles[particleIndex] = (Particle) 0;
 
-        gParticles[particleIndex].translate = float32_t3(
-            (float32_t) (particleIndex % 32) * 0.3f,
-            0.0f,
-            (float32_t) (particleIndex / 32) * 0.3f
-        );
+        // 全部同じ位置（中央）
+        gParticles[particleIndex].translate = float32_t3(0.0f, 2.0f, 0.0f);
 
         gParticles[particleIndex].scale = float32_t3(0.2f, 0.2f, 0.2f);
         gParticles[particleIndex].color = float32_t4(1.0f, 1.0f, 1.0f, 1.0f);

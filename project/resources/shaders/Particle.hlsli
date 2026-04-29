@@ -43,3 +43,17 @@ struct PerView
     float32_t4x4 viewProjection;
     float32_t4x4 billboardMatrix;
 };
+struct EmitterSphere
+{
+    float32_t3 translate;
+    float radius;
+    uint32_t count;
+    float frequency;
+    float frequencyTime;
+    uint32_t emit;
+};
+struct PerFrame
+{
+    float32_t time;
+    float32_t deltaTime;
+};

@@ -8,7 +8,8 @@
 enum class ParticleEffectType {
     Ring,
     Attack,
-    Fire
+    Fire,
+    Normal
 };
 
 class ParticleSystem {
@@ -21,6 +22,7 @@ private:
     void EmitRing(const Vector3& position);
     void EmitAttack(const Vector3& position);
     void EmitFire(const Vector3& position);
+    void EmitNormal(const Vector3& position);
 
 private:
     ParticleEmitter emitter_;
