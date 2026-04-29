@@ -84,7 +84,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectsDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectsDir)externals\assimp\include;%(AdditionalIncludeDirectories);$(ProjectDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -112,7 +112,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>3;$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories);$(ProjectDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -144,7 +144,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <Optimization>Disabled</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;Particle;ImGuiManager;$(ProjectsDir)externals\assimp\include;blend;Animation;$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;Particle;ImGuiManager;$(ProjectsDir)externals\assimp\include;blend;Animation;$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;Particle;ImGuiManager;$(ProjectsDir)externals\assimp\include;blend;Animation;$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories);$(ProjectDir)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -163,6 +163,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\math\EngineStruct.cpp" />
     <ClCompile Include="Engine\PostEffect\CopyImageRenderer.cpp" />
     <ClCompile Include="Engine\3D\Model.cpp" />
     <ClCompile Include="Engine\3D\SkinningObject3d.cpp" />
@@ -264,6 +265,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="Engine\Particle\MeshManager\ParticleCylinderMesh.cpp" />
     <ClCompile Include="Engine\Particle\ParticleSystem.cpp" />
+    <ClCompile Include="Engine\math\GPUParticleStruct.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
@@ -284,6 +286,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\math\EngineStruct.h" />
     <ClInclude Include="Engine\PostEffect\CopyImageRenderer.h" />
     <ClInclude Include="Engine\3D\Model.h" />
     <ClInclude Include="Engine\3D\SkinningObject3d.h" />
@@ -353,6 +356,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClInclude>
     <ClInclude Include="Engine\Particle\MeshManager\ParticleCylinderMesh.h" />
     <ClInclude Include="Engine\Particle\ParticleSystem.h" />
+    <ClInclude Include="Engine\math\GPUParticleStruct.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />

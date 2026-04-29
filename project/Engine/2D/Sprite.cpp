@@ -1,5 +1,5 @@
 #include "Sprite.h"
-#include "Engine/math/MatrixMath.h"
+#include "Engine/math/EngineStruct.h"
 #include "SpriteManager.h"
 
 #pragma region 初期化処理
