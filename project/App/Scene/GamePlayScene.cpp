@@ -130,7 +130,7 @@ void GamePlayScene::Update()
 
         
      particleSystem_.Emit(ParticleEffectType::Normal, effectPosition, 1);
-        /*particleSystem_.Emit(ParticleEffectType::Ring, effectPosition, 1);
+         /*particleSystem_.Emit(ParticleEffectType::Ring, effectPosition, 1);
         particleSystem_.Emit(ParticleEffectType::Attack, effectPosition, 3);*/
     }
     ParticleManager::GetInstance()->Update();
