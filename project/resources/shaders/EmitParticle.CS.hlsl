@@ -4,7 +4,7 @@ ConstantBuffer<EmitterSphere> gEmitter : register(b0);
 RWStructuredBuffer<ParticleCS> gParticles : register(u0);
 RWStructuredBuffer<int32_t> gFreeCounter : register(u1);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
-
+static const int32_t kMaxGPUParticle = 1024;
 class RandomGenerator
 {
     float32_t3 seed;
