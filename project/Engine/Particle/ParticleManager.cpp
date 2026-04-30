@@ -44,7 +44,8 @@ void ParticleManager::InitializeGPUParticle()
     CreateGPUParticleResource();
     CreateGPUParticleUAV();
     CreateGPUParticleSRV();
-
+    // GPUパーティクルの初期化に必要なリソースを作成
+    CreateFreeCounterResource();
     CreateEmitterResource();
     CreatePerFrameResource();
 
@@ -54,6 +55,8 @@ void ParticleManager::InitializeGPUParticle()
 
     CreateEmitParticleRootSignature();
     CreateEmitParticlePipeline();
+    
+  
 }
 
 
@@ -275,22 +278,34 @@ void ParticleManager::DispatchEmitParticle()
         1,
         gpuParticleUavHandleGPU_);
 
-    // [2] PerFrame : b1
-    commandList->SetComputeRootConstantBufferView(
+    // [2] FreeCounter UAV : u1
+    commandList->SetComputeRootDescriptorTable(
         2,
+        freeCounterUavHandleGPU_);
+
+    // [3] PerFrame : b1
+    commandList->SetComputeRootConstantBufferView(
+        3,
         perFrameResource_->GetGPUVirtualAddress());
 
-    commandList->Dispatch(1, 1, 1);
+    uint32_t dispatchCount = (emitterData_->count + 255) / 256;
+    commandList->Dispatch(dispatchCount, 1, 1);
 }
 void ParticleManager::CreateEmitParticleRootSignature()
 {
-    D3D12_DESCRIPTOR_RANGE uavRange {};
-    uavRange.BaseShaderRegister = 0;
-    uavRange.NumDescriptors = 1;
-    uavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-    uavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    D3D12_DESCRIPTOR_RANGE particleUavRange {};
+    particleUavRange.BaseShaderRegister = 0;
+    particleUavRange.NumDescriptors = 1;
+    particleUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    particleUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[3] {};
+    D3D12_DESCRIPTOR_RANGE counterUavRange {};
+    counterUavRange.BaseShaderRegister = 1;
+    counterUavRange.NumDescriptors = 1;
+    counterUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    counterUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[4] {};
 
     // [0] EmitterSphere : b0
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -300,13 +315,19 @@ void ParticleManager::CreateEmitParticleRootSignature()
     // [1] Particle UAV : u0
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    rootParameters[1].DescriptorTable.pDescriptorRanges = &uavRange;
+    rootParameters[1].DescriptorTable.pDescriptorRanges = &particleUavRange;
     rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
 
-    // [2] PerFrame : b1
-    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    // [2] FreeCounter UAV : u1
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    rootParameters[2].Descriptor.ShaderRegister = 1;
+    rootParameters[2].DescriptorTable.pDescriptorRanges = &counterUavRange;
+    rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    // [3] PerFrame : b1
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].Descriptor.ShaderRegister = 1;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -376,7 +397,50 @@ void ParticleManager::UpdatePerFrame()
     perFrameData_->deltaTime = deltaTime_;
 }
 
+void ParticleManager::CreateFreeCounterResource()
+{
+    D3D12_RESOURCE_DESC resourceDesc {};
+    resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDesc.Width = sizeof(int32_t);
+    resourceDesc.Height = 1;
+    resourceDesc.DepthOrArraySize = 1;
+    resourceDesc.MipLevels = 1;
+    resourceDesc.SampleDesc.Count = 1;
+    resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
+    D3D12_HEAP_PROPERTIES heapProperties {};
+    heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+    HRESULT hr = dxCommon_->GetDevice()->CreateCommittedResource(
+        &heapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &resourceDesc,
+        D3D12_RESOURCE_STATE_COMMON,
+        nullptr,
+        IID_PPV_ARGS(&freeCounterResource_));
+
+    assert(SUCCEEDED(hr));
+
+    freeCounterResource_->SetName(L"ParticleManager::FreeCounter");
+
+    freeCounterUavIndex_ = srvManager_->Allocate();
+
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
+    uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+    uavDesc.Buffer.FirstElement = 0;
+    uavDesc.Buffer.NumElements = 1;
+    uavDesc.Buffer.StructureByteStride = sizeof(int32_t);
+
+    dxCommon_->GetDevice()->CreateUnorderedAccessView(
+        freeCounterResource_.Get(),
+        nullptr,
+        &uavDesc,
+        srvManager_->GetCPUDescriptorHandle(freeCounterUavIndex_));
+
+    freeCounterUavHandleGPU_ = srvManager_->GetGPUDescriptorHandle(freeCounterUavIndex_);
+}
 //=============================
 /// GPUパーティクル関連最後
 //=============================
