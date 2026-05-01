@@ -157,4 +157,10 @@ private:
 
     uint32_t freeCounterUavIndex_ = 0;
     D3D12_GPU_DESCRIPTOR_HANDLE freeCounterUavHandleGPU_ {};
+    void CreateUpdateParticleRootSignature();
+    void CreateUpdateParticlePipeline();
+    void DispatchUpdateParticle();
+
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> updateParticleRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> updateParticlePipelineState_;
 };
