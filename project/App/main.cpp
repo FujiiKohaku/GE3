@@ -1,10 +1,12 @@
-
 #include "Engine/ImGuiManager/ImGuiManager.h"
+#include "Engine/Logger/Logger.h"
 #include "Scene/Game.h"
-// ======================= エントリーポイント =====================
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-    // ここで作る → main の終わりで確実に実行される
+    Logger::Initialize();
+    Logger::Log("Application Start");
+
     D3DResourceLeakChecker leakChecker;
 
     Game game;
@@ -26,5 +28,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     }
 
     game.Finalize();
+
+    Logger::Log("Application End");
+    Logger::Finalize();
+
     return 0;
 }
