@@ -43,6 +43,7 @@ public:
     void Draw();
 
     void SetBlendMode(BlendMode mode);
+    void EmitOnceGPU(const Vector3& position, uint32_t count);
 
 public:
     void CreateParticleGroup(
@@ -160,7 +161,8 @@ private:
     void CreateUpdateParticleRootSignature();
     void CreateUpdateParticlePipeline();
     void DispatchUpdateParticle();
-
+    void SetEmitterPosition(const Vector3& position);
+  
     Microsoft::WRL::ComPtr<ID3D12RootSignature> updateParticleRootSignature_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> updateParticlePipelineState_;
 };

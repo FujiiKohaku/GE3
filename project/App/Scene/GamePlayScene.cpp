@@ -125,13 +125,9 @@ void GamePlayScene::Update()
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
 
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
+if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
         Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
-
-        
-     particleSystem_.Emit(ParticleEffectType::Normal, effectPosition, 1);
-         /*particleSystem_.Emit(ParticleEffectType::Ring, effectPosition, 1);
-        particleSystem_.Emit(ParticleEffectType::Attack, effectPosition, 3);*/
+        ParticleManager::GetInstance()->EmitOnceGPU(effectPosition, 80);
     }
     ParticleManager::GetInstance()->Update();
     sphere_->Update(camera_.get());

@@ -231,11 +231,11 @@ void ParticleManager::CreateEmitterResource()
 
     emitterResource_->Map(0, nullptr, reinterpret_cast<void**>(&emitterData_));
 
-    emitterData_->count = 10;
-    emitterData_->frequency = 0.5f;
+    emitterData_->count = 300;
+    emitterData_->frequency = 0.05f;
     emitterData_->frequencyTime = 0.0f;
     emitterData_->translate = { 0.0f, 0.0f, 0.0f };
-    emitterData_->radius = 1.0f;
+    emitterData_->radius = 2.0f;
     emitterData_->emit = 0;
 }
 
@@ -796,4 +796,18 @@ void ParticleManager::AddParticle(const std::string& name, const Particle& parti
     }
 
     particleGroup.particles.push_back(particle);
+}
+void ParticleManager::SetEmitterPosition(const Vector3& position)
+{
+    emitterData_->translate = position;
+}
+void ParticleManager::EmitOnceGPU(const Vector3& position, uint32_t count)
+{
+    if (!emitterData_) {
+        return;
+    }
+
+    emitterData_->translate = position;
+    emitterData_->count = count;
+    emitterData_->emit = 1;
 }
