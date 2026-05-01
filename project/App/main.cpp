@@ -10,16 +10,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     D3DResourceLeakChecker leakChecker;
 
     Game game;
+
+    Logger::Log("Game Initialize");
     game.Initialize();
 
     MSG msg {};
     while (msg.message != WM_QUIT) {
 
         if (game.GetWinApp()->ProcessMessage()) {
+            Logger::Log("Window Close");
             break;
         }
 
         if (game.IsEndRequest()) {
+            Logger::Log("Game End Request");
             break;
         }
 
@@ -27,6 +31,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         game.Draw();
     }
 
+    Logger::Log("Game Finalize");
     game.Finalize();
 
     Logger::Log("Application End");
