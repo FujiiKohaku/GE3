@@ -157,4 +157,6 @@ private:
     bool endRequest_ = false;
     std::unique_ptr<OffscreenRenderer> offscreenRenderer_;
     std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
+
+    bool isPostEffectEnabled_ = true;
 };

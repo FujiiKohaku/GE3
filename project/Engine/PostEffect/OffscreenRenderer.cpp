@@ -9,7 +9,7 @@ void OffscreenRenderer::Initialize()
     ID3D12Device* device = directXCommon->GetDevice();
 
     format_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    clearColor_ = { 1.0f, 0.0f, 0.0f, 1.0f };
+    clearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
 
     renderTextureResource_ = CreateRenderTextureResource(
         device,

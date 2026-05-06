@@ -6,8 +6,6 @@
 #include "Engine/particle/ParticleManager.h"
 #include <numbers>
 
-
-
 void GamePlayScene::Initialize()
 {
     // =================================================
@@ -120,12 +118,12 @@ void GamePlayScene::Update()
 
     player_->Update();
 
+
     testSprite_->Update();
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
 
-
-if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
+    if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
         Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
         ParticleManager::GetInstance()->EmitOnceGPU(effectPosition, 80);
     }
@@ -136,9 +134,20 @@ if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
     camera_->Update();
     if (debugCameraController_->GetDebugMode()) {
         camera_->DebugUpdate();
-    }
-    debugCameraController_->Update();
+    } else {
+        Vector3 playerPosition = player_->GetTranslate();
 
+        Vector3 cameraPosition;
+        cameraPosition.x = playerPosition.x;
+        cameraPosition.y = playerPosition.y + 8.0f;
+        cameraPosition.z = playerPosition.z - 18.0f;
+
+        camera_->SetTranslate(cameraPosition);
+        camera_->SetRotate({ std::numbers::pi_v<float> / 6.0f, 0.0f, 0.0f });
+    }
+
+   // camera_->Update();
+    debugCameraController_->Update();
     plane_->Update();
     // 自機
 
