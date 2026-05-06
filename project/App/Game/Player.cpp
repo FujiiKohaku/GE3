@@ -39,22 +39,72 @@ void Player::Update()
         isDebugMode = debugCameraController_->GetDebugMode();
     }
 
-    if (!isDebugMode) {
+  if (!isDebugMode) {
+        Vector3 inputDirection = { 0.0f, 0.0f, 0.0f };
+
         if (input->IsKeyPressed(DIK_A)) {
-            transform_.translate.x -= moveSpeed_;
+            inputDirection.x -= 1.0f;
         }
 
         if (input->IsKeyPressed(DIK_D)) {
-            transform_.translate.x += moveSpeed_;
+            inputDirection.x += 1.0f;
         }
 
         if (input->IsKeyPressed(DIK_W)) {
-            transform_.translate.z += moveSpeed_;
+            inputDirection.z += 1.0f;
         }
 
         if (input->IsKeyPressed(DIK_S)) {
-            transform_.translate.z -= moveSpeed_;
+            inputDirection.z -= 1.0f;
         }
+
+        velocity_.x += inputDirection.x * acceleration_;
+        velocity_.z += inputDirection.z * acceleration_;
+
+        if (velocity_.x > maxSpeed_) {
+            velocity_.x = maxSpeed_;
+        }
+
+        if (velocity_.x < -maxSpeed_) {
+            velocity_.x = -maxSpeed_;
+        }
+
+        if (velocity_.z > maxSpeed_) {
+            velocity_.z = maxSpeed_;
+        }
+
+        if (velocity_.z < -maxSpeed_) {
+            velocity_.z = -maxSpeed_;
+        }
+
+        velocity_.x *= deceleration_;
+        velocity_.z *= deceleration_;
+
+        transform_.translate.x += velocity_.x;
+        transform_.translate.z += velocity_.z;
+
+        if (transform_.translate.x > moveLimitX_) {
+            transform_.translate.x = moveLimitX_;
+            velocity_.x = 0.0f;
+        }
+
+        if (transform_.translate.x < -moveLimitX_) {
+            transform_.translate.x = -moveLimitX_;
+            velocity_.x = 0.0f;
+        }
+
+        if (transform_.translate.z > moveLimitZ_) {
+            transform_.translate.z = moveLimitZ_;
+            velocity_.z = 0.0f;
+        }
+
+        if (transform_.translate.z < -moveLimitZ_) {
+            transform_.translate.z = -moveLimitZ_;
+            velocity_.z = 0.0f;
+        }
+
+        transform_.rotate.z = -velocity_.x * tiltPower_;
+        transform_.rotate.x = velocity_.z * tiltPower_;
     }
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
@@ -82,4 +132,8 @@ void Player::SetCamera(Camera* camera)
 void Player::SetDebugCameraController(DebugCameraController* debugCameraController)
 {
     debugCameraController_ = debugCameraController;
+}
+const Vector3& Player::GetTranslate() const
+{
+    return transform_.translate;
 }

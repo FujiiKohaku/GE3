@@ -56,6 +56,10 @@ void Game::Initialize()
 
 void Game::Update()
 {
+    // posut effect on/off
+    if (Input::GetInstance()->IsKeyPressed(DIK_P)) {
+        isPostEffectEnabled_ = !isPostEffectEnabled_;
+    }
     ImGuiManager::GetInstance()->Begin();
 
     Input::GetInstance()->Update();
@@ -64,7 +68,6 @@ void Game::Update()
         Logger::Log("Escape Pressed");
         endRequest_ = true;
     }
-
     SceneManager::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
 
