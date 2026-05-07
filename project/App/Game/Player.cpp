@@ -133,7 +133,3 @@ void Player::SetDebugCameraController(DebugCameraController* debugCameraControll
 {
     debugCameraController_ = debugCameraController;
 }
-const Vector3& Player::GetTranslate() const
-{
-    return transform_.translate;
-}

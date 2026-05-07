@@ -13,7 +13,35 @@ public:
     void Draw();
     void SetCamera(Camera* camera);
     void SetDebugCameraController(DebugCameraController* debugCameraController);
-    const Vector3& GetTranslate() const;
+    const Vector3& GetTranslate() const
+    {
+        return transform_.translate;
+    }
+
+
+    const Vector3& GetRotate() const
+    {
+        return transform_.rotate;
+    }
+
+    const Vector3& GetScale() const
+    {
+        return transform_.scale;
+    }
+    void SetTranslate(const Vector3& translate)
+    {
+        transform_.translate = translate;
+    }
+
+    void SetRotate(const Vector3& rotate)
+    {
+        transform_.rotate = rotate;
+    }
+
+    void SetScale(const Vector3& scale)
+    {
+        transform_.scale = scale;
+    }
 
 private:
     std::unique_ptr<Object3d> object_;
