@@ -545,14 +545,33 @@ void ParticleManager::Update()
 
         ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
-        D3D12_RESOURCE_BARRIER barrier {};
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.UAV.pResource = gpuParticleResource_.Get();
+        D3D12_RESOURCE_BARRIER uavBarrier {};
+        uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
 
-        commandList->ResourceBarrier(1, &barrier);
+        uavBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+        uavBarrier.UAV.pResource = gpuParticleResource_.Get();
+
+        commandList->ResourceBarrier(1, &uavBarrier);
 
         DispatchUpdateParticle();
+
+        commandList->ResourceBarrier(1, &uavBarrier);
+
+        D3D12_RESOURCE_BARRIER transitionBarrier {};
+        transitionBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+
+        transitionBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+        transitionBarrier.Transition.pResource = gpuParticleResource_.Get();
+
+        transitionBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+        transitionBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+
+        transitionBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        commandList->ResourceBarrier(1, &transitionBarrier);
     }
     Matrix4x4 cameraMatrix = camera_->GetWorldMatrix();
     cameraMatrix.m[3][0] = 0.0f;

@@ -13,8 +13,8 @@ void GamePlayScene::Initialize()
     // =================================================
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, 10.0f, -20.0f });
-    camera_->SetRotate({ std::numbers::pi_v<float> / 6.0f, 0.0f, 0.0f });
+    camera_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
 
     debugCameraController_ = std::make_unique<DebugCameraController>();
     debugCameraController_->SetTargetCamera(camera_.get());
@@ -111,46 +111,51 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
+
+    player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
 }
 
 void GamePlayScene::Update()
 {
-
+    // プレイヤーの更新（入力処理や移動など）
     player_->Update();
-
 
     testSprite_->Update();
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
 
+    // キー入力でパーティクルを発生させる例
     if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
         Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
         ParticleManager::GetInstance()->EmitOnceGPU(effectPosition, 80);
     }
     ParticleManager::GetInstance()->Update();
+
     sphere_->Update(camera_.get());
 
     terrain_->Update();
     camera_->Update();
+
+    // デバッグカメラモードの切り替え
     if (debugCameraController_->GetDebugMode()) {
         camera_->DebugUpdate();
     } else {
+        // プレイヤーの位置にカメラを追従させる
         Vector3 playerPosition = player_->GetTranslate();
 
         Vector3 cameraPosition;
         cameraPosition.x = playerPosition.x;
-        cameraPosition.y = playerPosition.y + 8.0f;
-        cameraPosition.z = playerPosition.z - 18.0f;
+        cameraPosition.y = playerPosition.y;
+        cameraPosition.z = playerPosition.z - 20.0f;
 
         camera_->SetTranslate(cameraPosition);
-        camera_->SetRotate({ std::numbers::pi_v<float> / 6.0f, 0.0f, 0.0f });
     }
 
-   // camera_->Update();
+    // デバッグカメラの更新は、通常のカメラ更新の後に行う
     debugCameraController_->Update();
+    // その他のオブジェクトの更新
     plane_->Update();
-    // 自機
-
+    // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
 
 #pragma region ImGuiによるライト操作パネル
@@ -380,7 +385,7 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-    animationActor_->Draw();
+    // animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }
