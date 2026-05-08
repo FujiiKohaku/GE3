@@ -2,7 +2,8 @@
 
 ConstantBuffer<EmitterSphere> gEmitter : register(b0);
 RWStructuredBuffer<ParticleCS> gParticles : register(u0);
-RWStructuredBuffer<int32_t> gFreeCounter : register(u1);
+RWStructuredBuffer<int32_t> gFreeListIndex : register(u1);
+RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 
 static const int32_t kMaxGPUParticle = 1024;
@@ -38,10 +39,16 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         return;
     }
 
-    int32_t particleIndex = 0;
-    InterlockedAdd(gFreeCounter[0], 1, particleIndex);
+    int32_t freeListIndex;
+    InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
 
-    particleIndex = particleIndex % kMaxGPUParticle;
+    if (freeListIndex < 0 || freeListIndex >= kMaxGPUParticle)
+    {
+        InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
+        return;
+    }
+
+    uint32_t particleIndex = gFreeList[freeListIndex];
 
     RandomGenerator generator;
     generator.seed = ((float32_t3) DTid + gPerFrame.time) * 12.345f;
@@ -68,6 +75,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         randomDirection * speed;
 
     float scale = 0.2f + generator.Generate1d() * 0.8f;
+
     gParticles[particleIndex].scale =
         float32_t3(scale, scale, scale);
 
