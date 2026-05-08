@@ -15,7 +15,6 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 
-#include "Engine/Particle/ParticleEmitter.h"
 #include "Engine/Particle/ParticleManager.h"
 
 #include "Engine/audio/SoundManager.h"
@@ -31,7 +30,6 @@
 
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
-#include "Engine/Particle/ParticleSystem.h"
 #include "../Game/Player.h"
 class GamePlayScene : public BaseScene {
 public:
@@ -79,8 +77,8 @@ private:
     // ------------------------------
     // パーティクル
     // ------------------------------
-    ParticleEmitter emitter_;
-    ParticleSystem particleSystem_;
+    //ParticleEmitter emitter_;
+    //ParticleSystem particleSystem_;
     // ------------------------------
     // アニメーション / スケルトン
     // ------------------------------

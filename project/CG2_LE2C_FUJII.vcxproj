@@ -216,7 +216,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="App\Scene\GamePlayScene.cpp" />
     <ClCompile Include="Engine\ImGuiManager\ImGuiManager.cpp" />
-    <ClCompile Include="Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Engine\Particle\ParticleManager.cpp" />
     <ClCompile Include="App\Scene\Game.cpp" />
     <ClCompile Include="Engine\input\Input.cpp">
@@ -264,7 +263,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Engine\Particle\MeshManager\ParticleCylinderMesh.cpp" />
-    <ClCompile Include="Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Engine\math\GPUParticleStruct.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -323,7 +321,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="externals\imgui\imstb_truetype.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
-    <ClInclude Include="Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Engine\Particle\ParticleManager.h" />
     <ClInclude Include="App\Scene\Game.h" />
     <ClInclude Include="Engine\input\Input.h" />
@@ -355,7 +352,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Engine\Particle\MeshManager\ParticleCylinderMesh.h" />
-    <ClInclude Include="Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Engine\math\GPUParticleStruct.h" />
   </ItemGroup>
   <ItemGroup>

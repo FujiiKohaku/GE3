@@ -72,7 +72,7 @@ void GamePlayScene::Initialize()
     t.translate = { 0.0f, 0.0f, 0.0f };
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
-    particleSystem_.Initialize();
+    ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
     // =================================================
     // Debug Sphere
     // =================================================

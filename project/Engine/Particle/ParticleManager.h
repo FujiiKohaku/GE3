@@ -8,7 +8,6 @@
 
 #include "MeshManager/ParticleMeshManager.h"
 #include "ParticleData.h"
-#include "ParticleEmitter.h"
 #include "ParticleRenderManager.h"
 
 #include <d3d12.h>
@@ -121,7 +120,7 @@ private:
 private:
     std::unique_ptr<ParticleRenderManager> particleRenderManager_;
     std::unique_ptr<ParticleMeshManager> particleMeshManager_;
-    std::unique_ptr<ParticleEmitter> particleEmitter_;
+  //  std::unique_ptr<ParticleEmitter> particleEmitter_;
 
 private:
     static const uint32_t kMaxGPUParticle = 1024;

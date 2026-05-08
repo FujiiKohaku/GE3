@@ -5,6 +5,8 @@
 #include "Engine/blend/BlendUtil.h"
 class DirectXCommon;
 
+//クラス説明
+// このクラスは、パーティクルの描画に必要なルートシグネチャとパイプラインステートを管理するクラスです。パーティクルの描画前に適切なパイプラインステートを設定するための機能も提供します。
 class ParticleRenderManager {
 public:
     void Initialize(DirectXCommon* dxCommon);
