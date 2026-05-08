@@ -17,7 +17,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     MSG msg {};
     while (msg.message != WM_QUIT) {
 
-        if (game.GetWinApp()->ProcessMessage()) {
+        if (WinApp::GetInstance()->ProcessMessage()) {
             Logger::Log("Window Close");
             break;
         }
