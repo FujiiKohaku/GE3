@@ -113,6 +113,7 @@ void GamePlayScene::Initialize()
     player_->SetDebugCameraController(debugCameraController_.get());
 
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    
 }
 
 void GamePlayScene::Update()

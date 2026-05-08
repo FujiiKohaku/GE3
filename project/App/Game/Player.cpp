@@ -3,6 +3,8 @@
 #include "../../Engine/Input/Input.h"
 #include "../../Engine/debugcamera/DebugCameraController.h"
 #include <cassert>
+
+
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -22,6 +24,8 @@ void Player::Initialize(Model* model)
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
+
+    
 }
 
 void Player::Update()
@@ -31,15 +35,17 @@ void Player::Update()
     }
 
     Input* input = Input::GetInstance();
+
     if (input == nullptr) {
         return;
     }
-    
+
     if (debugCameraController_ != nullptr) {
         isDebugMode = debugCameraController_->GetDebugMode();
     }
 
-  if (!isDebugMode) {
+    if (!isDebugMode) {
+
         Vector3 inputDirection = { 0.0f, 0.0f, 0.0f };
 
         if (input->IsKeyPressed(DIK_A)) {
@@ -103,12 +109,34 @@ void Player::Update()
             velocity_.z = 0.0f;
         }
 
-        transform_.rotate.z = -velocity_.x * tiltPower_;
-        transform_.rotate.x = velocity_.z * tiltPower_;
+        POINT cursorPosition;
+        GetCursorPos(&cursorPosition);
+
+        ScreenToClient(WinApp::GetInstance()->GetHwnd(), &cursorPosition);
+
+        float screenCenterX = static_cast<float>(WinApp::GetInstance()->kClientWidth) * 0.5f;
+
+        float screenCenterY = static_cast<float>(WinApp::GetInstance()->kClientHeight) * 0.5f;
+
+        float offsetX = static_cast<float>(cursorPosition.x) - screenCenterX;
+
+        float offsetY = static_cast<float>(cursorPosition.y) - screenCenterY;
+
+        float mouseRotatePower = 0.0015f;
+
+        transform_.rotate.z = -offsetX * mouseRotatePower;
+
+        transform_.rotate.x = offsetY * mouseRotatePower;
+
+        transform_.rotate.z += -velocity_.x * tiltPower_;
+
+        transform_.rotate.x += velocity_.z * tiltPower_;
     }
+
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
+
     object_->Update();
 }
 

@@ -5,7 +5,36 @@
 #include <Windows.h>
 #include <cstdint>
 
+
+std::unique_ptr<WinApp> WinApp::instance_ = nullptr;
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+
+WinApp* WinApp::GetInstance()
+{
+    if (!instance_) {
+        instance_ = std::make_unique<WinApp>(ConstructorKey());
+    }
+
+    return instance_.get();
+}
+
+void WinApp::FinalizeInstance()
+{
+    if (!instance_) {
+        return;
+    }
+
+    instance_->Finalize();
+    instance_.reset();
+}
+
+
+
+
+
+
 //==================================================================
 //  ウィンドウプロシージャ
 //  Windowsからのメッセージを処理する

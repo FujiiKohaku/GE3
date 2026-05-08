@@ -8,17 +8,14 @@ void Game::Initialize()
     SetUnhandledExceptionFilter(Utility::ExportDump);
     std::filesystem::create_directory("logs");
 
-    winApp_ = std::make_unique<WinApp>();
-    winApp_->initialize();
+    WinApp::GetInstance()->initialize();
 
-    DirectXCommon::GetInstance()->Initialize(winApp_.get());
+    DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
     SrvManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
 
-    TextureManager::GetInstance()->Initialize(
-        DirectXCommon::GetInstance(),
-        SrvManager::GetInstance());
+    TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
 
-    ImGuiManager::GetInstance()->Initialize(winApp_.get(),DirectXCommon::GetInstance(),SrvManager::GetInstance());
+    ImGuiManager::GetInstance()->Initialize(WinApp::GetInstance(), DirectXCommon::GetInstance(), SrvManager::GetInstance());
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
@@ -27,7 +24,7 @@ void Game::Initialize()
 
     modelCommon_.Initialize(DirectXCommon::GetInstance());
 
-    Input::GetInstance()->Initialize(winApp_.get());
+    Input::GetInstance()->Initialize(WinApp::GetInstance());
 
     Logger::Log("Load Default Models");
     ModelManager::GetInstance()->Load("plane.obj");
@@ -56,18 +53,19 @@ void Game::Initialize()
 
 void Game::Update()
 {
-    // posut effect on/off
+    Input::GetInstance()->Update();
+
     if (Input::GetInstance()->IsKeyPressed(DIK_P)) {
         isPostEffectEnabled_ = !isPostEffectEnabled_;
     }
-    ImGuiManager::GetInstance()->Begin();
 
-    Input::GetInstance()->Update();
+    ImGuiManager::GetInstance()->Begin();
 
     if (Input::GetInstance()->IsKeyPressed(DIK_ESCAPE)) {
         Logger::Log("Escape Pressed");
         endRequest_ = true;
     }
+
     SceneManager::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
 
@@ -110,10 +108,7 @@ void Game::Finalize()
 
     DirectXCommon::GetInstance()->Finalize();
 
-    if (winApp_) {
-        winApp_->Finalize();
-        winApp_.reset();
-    }
+    WinApp::FinalizeInstance();
 
     Logger::Log("Game Finalize End");
 }

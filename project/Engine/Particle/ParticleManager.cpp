@@ -5,6 +5,7 @@
 #include <cmath>
 #include <numbers>
 
+
 std::unique_ptr<ParticleManager> ParticleManager::instance_ = nullptr;
 
 ParticleManager::ParticleManager(ConstructorKey)
@@ -25,6 +26,7 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     srvManager_ = srvManager;
     camera_ = camera;
 
+    // 描画に必要なリソースの初期化
     particleRenderManager_ = std::make_unique<ParticleRenderManager>();
     particleRenderManager_->Initialize(dxCommon_);
 

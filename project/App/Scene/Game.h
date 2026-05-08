@@ -73,7 +73,7 @@ public:
     void Draw();
     void Finalize();
 
-    WinApp* GetWinApp() const { return winApp_.get(); }
+    WinApp* GetWinApp() const { return WinApp::GetInstance(); }
 
     bool IsEndRequest() const { return endRequest_; }
 
@@ -82,7 +82,7 @@ private:
     SceneManager* sceneManager_ = nullptr;
 
     // App
-    std::unique_ptr<WinApp> winApp_;
+
 
     ImGuiManager* imguiManager_ = nullptr;
 

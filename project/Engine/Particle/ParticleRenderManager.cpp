@@ -2,6 +2,7 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include <cassert>
 
+#pragma region初期化
 void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
@@ -9,6 +10,9 @@ void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
     CreateRootSignature();
     CreateGraphicsPipeline();
 }
+#pragma endregion
+
+#pragma region 描画前処理
 void ParticleRenderManager::PreDraw(int blendMode)
 {
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
@@ -16,6 +20,9 @@ void ParticleRenderManager::PreDraw(int blendMode)
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
     commandList->SetPipelineState(pipelineStates_[blendMode].Get());
 }
+
+#pragma endregion
+
 
 #pragma region ルートシグネチャ作成
 void ParticleRenderManager::CreateRootSignature()

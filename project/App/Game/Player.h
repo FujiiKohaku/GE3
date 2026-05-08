@@ -4,6 +4,8 @@
 #include"../../Engine/math/MathStruct.h"
 #include <memory>
 #include"../../Engine/debugcamera/DebugCameraController.h"
+
+#include "../../Engine/Winapp/WinApp.h"
 class Camera;
 
 class Player {
@@ -43,6 +45,11 @@ public:
         transform_.scale = scale;
     }
 
+    void SetWinApp(WinApp* winApp)
+    {
+        winApp_ = winApp;
+    }
+
 private:
     std::unique_ptr<Object3d> object_;
     Camera* camera_ = nullptr;
@@ -60,4 +67,6 @@ private:
     float moveLimitZ_ = 5.0f;
 
     float tiltPower_ = 0.25f;
+
+    WinApp* winApp_ = nullptr;
 };
