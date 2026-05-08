@@ -1,54 +1,49 @@
 #pragma once
 #include <Windows.h>
 #include <cstdint>
+#include <memory>
 
-//==================================================================
-//  WinAppクラス
-//  Windowsアプリ全体のウィンドウ管理を行うクラス
-//==================================================================
 class WinApp {
+public:
+    static WinApp* GetInstance();
+
+    static void FinalizeInstance();
 
 public:
-    //==================================================================
-    //  初期化処理
-    //  ウィンドウの生成と表示を行う
-    //==================================================================
-    void initialize();
+    class ConstructorKey {
+    private:
+        ConstructorKey() = default;
+        friend class WinApp;
+    };
 
-    //==================================================================
-    //  終了処理
-    //  ウィンドウ破棄とCOM解放を行う
-    //==================================================================
+    explicit WinApp(ConstructorKey) { }
+    ~WinApp() = default;
+
+    WinApp(const WinApp&) = delete;
+    WinApp& operator=(const WinApp&) = delete;
+
+public:
+    void initialize();
     void Finalize();
 
-    //==================================================================
-    //  クライアント領域のサイズ（描画領域）
-    //==================================================================
-    static const int32_t kClientWidth = 1280; // 横幅
-    static const int32_t kClientHeight = 720; // 高さ
+    static const int32_t kClientWidth = 1280;
+    static const int32_t kClientHeight = 720;
 
-    //==================================================================
-    //  ウィンドウプロシージャ（静的関数）
-    //  Windowsからのメッセージを受け取る関数
-    //==================================================================
-    static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
+    static LRESULT CALLBACK WindowProc(
+        HWND hwnd,
+        UINT msg,
+        WPARAM wparam,
+        LPARAM lparam);
 
-    //==================================================================
-    //  Getter関数
-    //==================================================================
-    HWND GetHwnd() const { return hwnd_; } // ウィンドウハンドルを取得
-    HINSTANCE GetHinstance() const { return wc_.hInstance; } // インスタンスハンドルを取得
+    HWND GetHwnd() const { return hwnd_; }
+    HINSTANCE GetHinstance() const { return wc_.hInstance; }
 
-    //==================================================================
-    //  メッセージ処理
-    //  戻り値: true → アプリ終了要求あり
-    //==================================================================
     bool ProcessMessage();
 
 private:
-    //==================================================================
-    //  メンバ変数
-    //==================================================================
-    HWND hwnd_ = nullptr; // ウィンドウハンドル
-    WNDCLASS wc_ {}; // ウィンドウクラス情報
+    static std::unique_ptr<WinApp> instance_;
+
+private:
+    HWND hwnd_ = nullptr;
+    WNDCLASS wc_ {};
 };
