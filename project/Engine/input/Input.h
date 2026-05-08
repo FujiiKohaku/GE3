@@ -12,9 +12,12 @@ public:
     void Update();
     void Finalize();
 
-    bool IsKeyPressed(BYTE keyCode) const;
+    bool IsKeyPressed(BYTE keyCode) const; // 押されているか
 
-    bool IsMousePressed(int button) const;
+    bool IsMousePressed(int button) const; // 押されているか
+
+    bool IsKeyTrigger(BYTE keyCode) const; // 一回だけ押されたか
+    bool IsMouseTrigger(int button) const; // 一回だけ押されたか
     LONG GetMouseDeltaX() const;
     LONG GetMouseDeltaY() const;
     LONG GetMouseWheel() const;
@@ -42,6 +45,12 @@ private:
     Microsoft::WRL::ComPtr<IDirectInputDevice8> keyboard_;
     Microsoft::WRL::ComPtr<IDirectInputDevice8> mouse_;
 
+
+    BYTE preKeys_[256] = {};
+    DIMOUSESTATE2 preMouseState_ = {};
+
     BYTE keys_[256] = {};
     DIMOUSESTATE2 mouseState_ = {};
+
+
 };
