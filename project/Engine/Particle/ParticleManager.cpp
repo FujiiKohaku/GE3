@@ -31,9 +31,6 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     particleMeshManager_ = std::make_unique<ParticleMeshManager>();
     particleMeshManager_->Initialize(dxCommon_);
 
-    particleEmitter_ = std::make_unique<ParticleEmitter>();
-    particleEmitter_->Initialize();
-
     CreateMaterialResource();
     CreatePerViewResource();
 
@@ -845,39 +842,6 @@ void ParticleManager::CreateParticleGroup(const std::string& name, const std::st
     particleGroups_.emplace(name, std::move(particleGroup));
 }
 
-void ParticleManager::Emit(const std::string& name, const Vector3& position, uint32_t count)
-{
-    ParticleGroup& particleGroup = particleGroups_.at(name);
-
-    for (uint32_t particleIndex = 0; particleIndex < count; particleIndex++) {
-        if (particleGroup.particles.size() > 1000)
-            return;
-        particleGroup.particles.push_back(particleEmitter_->MakeNewParticleAttack(position));
-    }
-}
-
-void ParticleManager::EmitFire(const std::string& name, const Vector3& position, uint32_t count)
-{
-    ParticleGroup& particleGroup = particleGroups_.at(name);
-
-    for (uint32_t particleIndex = 0; particleIndex < count; particleIndex++) {
-        if (particleGroup.particles.size() > 1000)
-            return;
-        particleGroup.particles.push_back(particleEmitter_->MakeFireParticle(position));
-    }
-}
-void ParticleManager::EmitRing(const std::string& name, const Vector3& position, uint32_t count)
-{
-    ParticleGroup& particleGroup = particleGroups_.at(name);
-
-    for (uint32_t particleIndex = 0; particleIndex < count; particleIndex++) {
-        if (particleGroup.particles.size() > 1000) {
-            return;
-        }
-
-        particleGroup.particles.push_back(particleEmitter_->MakeRingParticle(position));
-    }
-}
 void ParticleManager::Finalize()
 {
     if (!instance_) {
@@ -903,7 +867,7 @@ void ParticleManager::Finalize()
 
     instance_->materialResource_.Reset();
 
-    instance_->particleEmitter_.reset();
+ 
     instance_->particleRenderManager_.reset();
     instance_->particleMeshManager_.reset();
 
