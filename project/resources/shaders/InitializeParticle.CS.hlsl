@@ -1,3 +1,4 @@
+#include "Particle.hlsli"
 struct Particle
 {
     float32_t3 translate;
@@ -10,23 +11,28 @@ struct Particle
 
 static const uint32_t kMaxParticles = 1024;
 
-RWStructuredBuffer<Particle> gParticles : register(u0);
 
-[numthreads(1024, 1, 1)]
+RWStructuredBuffer<ParticleCS> gParticles : register(u0);
+RWStructuredBuffer<int32_t> gFreeListIndex : register(u1);
+RWStructuredBuffer<uint32_t> gFreeList : register(u2);
+
+static const uint32_t kMaxGPUParticle = 1024;
+
+[numthreads(256, 1, 1)]
 void main(uint32_t3 DTid : SV_DispatchThreadID)
 {
     uint32_t particleIndex = DTid.x;
 
-    if (particleIndex < kMaxParticles)
+    if (particleIndex >= kMaxGPUParticle)
     {
-        gParticles[particleIndex] = (Particle) 0;
+        return;
+    }
 
-        // 全部同じ位置（中央）
-        gParticles[particleIndex].translate = float32_t3(0.0f, 2.0f, 0.0f);
+    gParticles[particleIndex] = (ParticleCS) 0;
+    gFreeList[particleIndex] = particleIndex;
 
-        gParticles[particleIndex].scale = float32_t3(0.2f, 0.2f, 0.2f);
-        gParticles[particleIndex].color = float32_t4(1.0f, 1.0f, 1.0f, 1.0f);
-        gParticles[particleIndex].lifeTime = 1.0f;
-        gParticles[particleIndex].currentTime = 0.0f;
+    if (particleIndex == 0)
+    {
+        gFreeListIndex[0] = kMaxGPUParticle - 1;
     }
 }

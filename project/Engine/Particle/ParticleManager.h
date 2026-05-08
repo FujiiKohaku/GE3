@@ -153,7 +153,19 @@ private:
 
     void CreatePerFrameResource();
     void UpdatePerFrame();
-    void CreateFreeCounterResource();
+    // FreeList
+    void CreateFreeListIndexResource();
+    void CreateFreeListResource();
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListIndexResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource_;
+
+    uint32_t freeListIndexUavIndex_ = 0;
+    uint32_t freeListUavIndex_ = 0;
+
+    D3D12_GPU_DESCRIPTOR_HANDLE freeListIndexUavHandleGPU_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE freeListUavHandleGPU_ {};
+
     Microsoft::WRL::ComPtr<ID3D12Resource> freeCounterResource_;
 
     uint32_t freeCounterUavIndex_ = 0;
