@@ -2,6 +2,8 @@
 #include <cassert>
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
+
+#include <cstring>
 std::unique_ptr<Input> Input::instance_ = nullptr;
 
 
@@ -60,6 +62,9 @@ bool Input::Initialize(WinApp* winApp)
 
 void Input::Update()
 {
+    memcpy(preKeys_, keys_, sizeof(keys_));
+    preMouseState_ = mouseState_;
+
     HRESULT result;
 
     result = keyboard_->Acquire();
@@ -96,7 +101,30 @@ bool Input::IsMousePressed(int button) const
 
     return (mouseState_.rgbButtons[button] & 0x80) != 0;
 }
+bool Input::IsKeyTrigger(BYTE keyCode) const
+{
+    bool isNowPressed = (keys_[keyCode] & 0x80) != 0;
 
+    bool wasPressed = (preKeys_[keyCode] & 0x80) != 0;
+
+    return isNowPressed && !wasPressed;
+}
+bool Input::IsMouseTrigger(int button) const
+{
+    if (button < 0) {
+        return false;
+    }
+
+    if (button >= 8) {
+        return false;
+    }
+
+    bool isNowPressed = (mouseState_.rgbButtons[button] & 0x80) != 0;
+
+    bool wasPressed = (preMouseState_.rgbButtons[button] & 0x80) != 0;
+
+    return isNowPressed && !wasPressed;
+}
 LONG Input::GetMouseDeltaX() const
 {
     return mouseState_.lX;
