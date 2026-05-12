@@ -102,7 +102,7 @@ void WinApp::initialize()
     // ウィンドウ生成
     hwnd_ = CreateWindow(
         wc_.lpszClassName, // クラス名
-        L"LE2B_21_フジイ_コハク", // タイトル
+        L"LE3B_21_フジイ_コハク", // タイトル
         WS_OVERLAPPEDWINDOW, // スタイル
         CW_USEDEFAULT, CW_USEDEFAULT, // 位置（自動）
         wrc.right - wrc.left, // 幅

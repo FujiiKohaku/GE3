@@ -73,14 +73,7 @@ void GamePlayScene::Initialize()
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
     ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
-    // =================================================
-    // Debug Sphere
-    // =================================================
-    sphere_ = std::make_unique<SphereObject>();
-    sphere_->Initialize(DirectXCommon::GetInstance(), 16, 1.0f);
-    sphere_->SetTranslate({ 0, 0, 0 });
-    sphere_->SetScale({ 1.5f, 1.5f, 1.5f });
-    sphere_->SetColor({ 1, 1, 1, 1 });
+
 
     // =================================================
     // Light
@@ -101,8 +94,6 @@ void GamePlayScene::Initialize()
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
     skyBox_->SetTexture("resources/skyBox.dds");
-    Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds"));
-    SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/rostock_laage_airport_4k.dds"));
 
     // =================================================
     // Playerクラス
@@ -111,7 +102,6 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
-
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     
 }
@@ -132,7 +122,6 @@ void GamePlayScene::Update()
     }
     ParticleManager::GetInstance()->Update();
 
-    sphere_->Update(camera_.get());
 
     terrain_->Update();
     camera_->Update();
@@ -332,36 +321,15 @@ void GamePlayScene::Update()
     terrain_->SetTranslate(terrainPos);
     terrain_->SetRotate(terrainRotate);
     terrain_->SetScale(terrainScale);
-    sphere_->SetEnableLighting(sphereLighting);
-    sphere_->SetTranslate(spherePos);
-    sphere_->SetRotate(sphereRotate);
-    sphere_->SetScale(sphereScale);
-    sphere_->SetShininess(shininess);
+ 
 
 #pragma endregion
 
-#pragma region ImGuiによる環境マッピング操作パネル
 
-    ImGui::Begin("Environment Mapping Control");
 
-    // --- AnimationActor ---
-    static bool envMapEnabled = true;
-    static float envMapStrength = 0.3f;
-
-    ImGui::Checkbox("Player EnvMap", &envMapEnabled);
-    ImGui::SliderFloat("Player Env Strength", &envMapStrength, 0.0f, 1.0f);
-
-    if (animationActor_) {
-        SkinningObject3d* object = animationActor_->GetObject();
-        if (object) {
-            object->SetEnableEnvironmentMap(envMapEnabled);
-            object->SetEnvironmentMapStrength(envMapStrength);
-        }
-    }
-
-    ImGui::End();
+   
 }
-#pragma endregion
+
 
 void GamePlayScene::Draw3D()
 {
@@ -372,7 +340,6 @@ void GamePlayScene::Draw3D()
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
-    // sphere_->Draw(DirectXCommon::GetInstance()->GetCommandList());
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
