@@ -3,6 +3,8 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Math/MatrixMath.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include"Engine/3D/Object3dManager.h"
+#include"Engine/3D/SkinningObject3dManager.h"
 #include <cassert>
 void SkyBox::Initialize(DirectXCommon* dxCommon)
 {
@@ -88,7 +90,15 @@ void SkyBox::Draw(ID3D12GraphicsCommandList* commandList)
 void SkyBox::SetTexture(const std::string& textureFilePath)
 {
     textureFilePath_ = textureFilePath;
+
     textureHandle_ = TextureManager::GetInstance()->GetTextureIndexByFilePath(textureFilePath_);
+
+    // ディスクリプタ―ハンドルで取得
+    D3D12_GPU_DESCRIPTOR_HANDLE environmentHandle = TextureManager::GetInstance()->GetSrvHandleGPU(textureHandle_);
+
+    Object3dManager::GetInstance()->SetEnvironmentTexture(environmentHandle);
+
+    SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(environmentHandle);
 }
 
 void SkyBox::CreateBox()

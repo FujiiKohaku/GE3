@@ -4,7 +4,6 @@
 #include "../../Engine/debugcamera/DebugCameraController.h"
 #include <cassert>
 
-
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -24,8 +23,6 @@ void Player::Initialize(Model* model)
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
-
-    
 }
 
 void Player::Update()
@@ -138,7 +135,27 @@ void Player::Update()
     object_->SetTranslate(transform_.translate);
 
     object_->Update();
+
+#pragma region ImGuiによる環境マッピング操作パネル
+    if (isDebugMode) {//debugModeの時だけ表示する
+        ImGui::Begin("Environment Mapping Control");
+
+        // --- AnimationActor ---
+        static bool envMapEnabled = true;
+        static float envMapStrength = 0.3f;
+
+        ImGui::Checkbox("Player EnvMap", &envMapEnabled);
+        ImGui::SliderFloat("Player Env Strength", &envMapStrength, 0.0f, 1.0f);
+
+        if (object_) {
+            object_->SetEnableEnvironmentMap(envMapEnabled);
+            object_->SetEnvironmentMapStrength(envMapStrength);
+        }
+
+        ImGui::End();
+    }
 }
+#pragma endregion
 
 void Player::Draw()
 {
