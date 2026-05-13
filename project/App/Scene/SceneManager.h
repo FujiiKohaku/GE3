@@ -2,6 +2,7 @@
 #include "BaseScene.h"
 #include <memory>
 
+#include "Engine/PostEffect/PostEffectType.h"
 class SceneManager {
 public:
     static SceneManager* GetInstance()
@@ -21,6 +22,9 @@ public:
     void DrawImGui();
     void Draw2D();
     void Draw3D();
+    // PostEffectTypeのセッターとゲッター
+    void SetPostEffectType(PostEffectType postEffectType);
+    PostEffectType GetPostEffectType() const;
 
 private:
     SceneManager() = default;
@@ -28,6 +32,7 @@ private:
 
     SceneManager(const SceneManager&) = delete;
     SceneManager& operator=(const SceneManager&) = delete;
+    PostEffectType postEffectType_ = PostEffectType::Copy;
 
 private:
     std::unique_ptr<BaseScene> scene_;

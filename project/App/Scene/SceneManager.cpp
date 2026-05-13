@@ -52,3 +52,12 @@ void SceneManager::DrawImGui()
     }
 }
 
+void SceneManager::SetPostEffectType(PostEffectType postEffectType)
+{
+    postEffectType_ = postEffectType;
+}
+
+PostEffectType SceneManager::GetPostEffectType() const
+{
+    return postEffectType_;
+}

@@ -1,0 +1,77 @@
+[2026-05-13 14:36:02] [Log] Application Start
+[2026-05-13 14:36:02] [Log] Game Initialize
+[2026-05-13 14:36:02] [Log] Game Initialize Start
+[2026-05-13 14:36:02] [Log] Use Adapater:NVIDIA GeForce RTX 4060 Laptop GPU
+
+[2026-05-13 14:36:02] [Log] FeatureLevel : 12.2
+
+[2026-05-13 14:36:02] [Log] Complete create D3D12Device!!!
+
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Sprite.VS.hlsl,profike:vs_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Sprite.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Sprite.PS.hlsl,profike:ps_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Sprite.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Object3d.VS.hlsl,profike:vs_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Object3d.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Object3d.PS.hlsl,profike:ps_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Object3d.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Glow.PS.hlsl,profike:ps_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Glow.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Object3d.VS.hlsl,profike:vs_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Object3d.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Object3d.PS.hlsl,profike:ps_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Object3d.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Skinning.CS.hlsl,profike:cs_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Skinning.CS.hlsl, profike:cs_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Skybox.VS.hlsl,profike:vs_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Skybox.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-13 14:36:02] [Log] Begin CompileShader,path:resources/shaders/Skybox.PS.hlsl,profike:ps_6_0
+
+[2026-05-13 14:36:02] [Log] Compile Succeeded, path:resources/shaders/Skybox.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-13 14:36:02] [Log] Load Default Models
+[2026-05-13 14:36:02] [Log] Texture Loaded: resources\uvChecker.png, SRV Index: 1
+[2026-05-13 14:36:02] [Log] srvIndex = 1
+[2026-05-13 14:36:02] [Log] Texture Loaded: resources\fence.png, SRV Index: 2
+[2026-05-13 14:36:02] [Log] srvIndex = 2
+[2026-05-13 14:36:02] [Log] Load Default Textures
+[2026-05-13 14:36:02] [Log] Texture Loaded: resources/white.png, SRV Index: 3
+[2026-05-13 14:36:02] [Log] srvIndex = 3
+[2026-05-13 14:36:02] [Log] Texture Loaded: resources/uvChecker.png, SRV Index: 4
+[2026-05-13 14:36:02] [Log] srvIndex = 4
+[2026-05-13 14:36:02] [Log] Texture Loaded: resources/fence.png, SRV Index: 5
+[2026-05-13 14:36:02] [Log] srvIndex = 5
+[2026-05-13 14:36:03] [Log] Texture Loaded: resources/BaseColor_Cube.png, SRV Index: 6
+[2026-05-13 14:36:03] [Log] srvIndex = 6
+[2026-05-13 14:36:03] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-13 14:36:03] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-13 14:36:03] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.PS.hlsl,profike:ps_6_0
+
+[2026-05-13 14:36:03] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-13 14:36:03] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-13 14:36:03] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-13 14:36:03] [Log] Begin CompileShader,path:resources/shaders/GrayScale.PS.hlsl,profike:ps_6_0
+

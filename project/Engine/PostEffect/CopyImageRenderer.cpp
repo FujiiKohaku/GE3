@@ -7,7 +7,9 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
     CreateRootSignature();
-    CreateGraphicsPipeline();
+    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/shaders/Fullscreen.PS.hlsl");
+
+    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/shaders/GrayScale.PS.hlsl");
 }
 
 void CopyImageRenderer::CreateRootSignature()
@@ -61,23 +63,23 @@ void CopyImageRenderer::CreateRootSignature()
     assert(SUCCEEDED(hr));
 }
 
-void CopyImageRenderer::CreateGraphicsPipeline()
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPipeline(const std::wstring& pixelShaderPath)
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/CopyImage.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Fullscreen.VS.hlsl", L"vs_6_0");
 
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/CopyImage.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(pixelShaderPath, L"ps_6_0");
 
-    // ====== ラスタライザ設定 ======
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+
     D3D12_BLEND_DESC blendDesc = {};
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     blendDesc.RenderTarget[0].BlendEnable = FALSE;
-    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc = {};
 
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc = {};
     pipelineStateDesc.pRootSignature = rootSignature_.Get();
 
     pipelineStateDesc.VS.pShaderBytecode = vertexShaderBlob->GetBufferPointer();
@@ -102,22 +104,34 @@ void CopyImageRenderer::CreateGraphicsPipeline()
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc = {};
     depthStencilDesc.DepthEnable = false;
     depthStencilDesc.StencilEnable = false;
+
     pipelineStateDesc.DepthStencilState = depthStencilDesc;
     pipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-    HRESULT hr = device->CreateGraphicsPipelineState(
-        &pipelineStateDesc,
-        IID_PPV_ARGS(&graphicsPipelineState_));
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
+
+    HRESULT hr = device->CreateGraphicsPipelineState(&pipelineStateDesc,IID_PPV_ARGS(&graphicsPipelineState));
+
     assert(SUCCEEDED(hr));
+
+    return graphicsPipelineState;
 }
+
+
 
 void CopyImageRenderer::Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle)
 {
     ID3D12GraphicsCommandList* commandList = DirectXCommon::GetInstance()->GetCommandList();
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
-    commandList->SetPipelineState(graphicsPipelineState_.Get());
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState = pipelineStates_[currentPostEffectType_];
+
+    commandList->SetPipelineState(pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
     commandList->DrawInstanced(3, 1, 0, 0);
+}
+void CopyImageRenderer::SetPostEffectType(PostEffectType postEffectType)
+{
+    currentPostEffectType_ = postEffectType;
 }
