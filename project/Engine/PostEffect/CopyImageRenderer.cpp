@@ -7,9 +7,11 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
     CreateRootSignature();
-    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/shaders/Fullscreen.PS.hlsl");
+    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/shaders/Fullscreen.PS.hlsl"); // Copy用のシェーダーは、単純にテクスチャを描画するだけのものを用意していると仮定しています。
 
-    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/shaders/GrayScale.PS.hlsl");
+    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/shaders/GrayScale.PS.hlsl"); // GrayScale用のシェーダーは、テクスチャをグレースケールで描画するものを用意していると仮定しています。
+
+    pipelineStates_[PostEffectType::Vignette] = CreateGraphicsPipeline(L"resources/shaders/Vignette.PS.hlsl"); // Vignette用のシェーダーは、テクスチャにビネット効果を適用して描画するものを用意していると仮定しています。
 }
 
 void CopyImageRenderer::CreateRootSignature()
