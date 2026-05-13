@@ -83,7 +83,7 @@ void Game::Draw()
     // ↑で描画したやつをテクスチャとして描画する
     DirectXCommon::GetInstance()->PreDraw();
     copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクトの種類を取得してセット
-    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU());
+    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(),offscreenRenderer_->GetDepthSrvHandleGPU());
     SceneManager::GetInstance()->Draw2D();
 
     ImGuiManager::GetInstance()->Draw();

@@ -61,6 +61,7 @@ public:
     void WaitForGPU();
     D3D12_CPU_DESCRIPTOR_HANDLE GetRTVHandle(uint32_t index) const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle() const;
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle(uint32_t index) const;
 
 private:
     // ===== Singleton化の基本 =====
