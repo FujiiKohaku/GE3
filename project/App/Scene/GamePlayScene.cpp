@@ -13,8 +13,6 @@
 void GamePlayScene::Initialize()
 {
 
-
-
     // =================================================
     // Camera
     // =================================================
@@ -56,8 +54,8 @@ void GamePlayScene::Initialize()
     terrain_->Initialize(Object3dManager::GetInstance());
     ModelManager::GetInstance()->Load("terrain.obj");
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
-    terrain_->SetTranslate({ 0.0f, 0.0f, 0.0f });
-
+    terrain_->SetEnvironmentMapStrength(0.0f);
+    terrain_->SetEnableLighting(false);
     // plane
     plane_ = std::make_unique<Object3d>();
     plane_->Initialize(Object3dManager::GetInstance());
@@ -80,7 +78,6 @@ void GamePlayScene::Initialize()
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
     ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
-
 
     // =================================================
     // Light
@@ -110,7 +107,8 @@ void GamePlayScene::Initialize()
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
-    
+
+
 }
 
 void GamePlayScene::Update()
@@ -137,6 +135,13 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_7)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     }
+
+    if (Input::GetInstance()->IsKeyTrigger(DIK_8)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::RadialBlur);
+    }
+     if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
+     }
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
 
@@ -150,7 +155,6 @@ void GamePlayScene::Update()
         ParticleManager::GetInstance()->EmitOnceGPU(effectPosition, 80);
     }
     ParticleManager::GetInstance()->Update();
-
 
     terrain_->Update();
     camera_->Update();
@@ -350,15 +354,9 @@ void GamePlayScene::Update()
     terrain_->SetTranslate(terrainPos);
     terrain_->SetRotate(terrainRotate);
     terrain_->SetScale(terrainScale);
- 
 
 #pragma endregion
-
-
-
-   
 }
-
 
 void GamePlayScene::Draw3D()
 {
@@ -372,7 +370,7 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-    // terrain_->Draw();
+     terrain_->Draw();
 
     player_->Draw();
 

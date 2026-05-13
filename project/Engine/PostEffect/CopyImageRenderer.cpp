@@ -1,6 +1,6 @@
 #include "CopyImageRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
-
+#include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
 
 void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
@@ -8,6 +8,9 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     dxCommon_ = dxCommon;
     CreateRootSignature();
     CreatePostEffectParameterResource();
+
+    maskTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/noise0.png"); // マスクテクスチャとして、"resources/noise.png"を使用していると仮定しています。適宜変更してください。
+
     pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/shaders/Fullscreen.PS.hlsl"); // Copy用のシェーダーは、単純にテクスチャを描画するだけのものを用意していると仮定しています。
 
     pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/shaders/GrayScale.PS.hlsl"); // GrayScale用のシェーダーは、テクスチャをグレースケールで描画するものを用意していると仮定しています。
@@ -20,6 +23,11 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/shaders/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline用のシェーダーは、テクスチャの輝度に基づいて輪郭を描画するものを用意していると仮定しています。
 
     pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/shaders/DepthBasedOutline.PS.hlsl");
+
+    pipelineStates_[PostEffectType::RadialBlur] = CreateGraphicsPipeline(L"resources/shaders/RadialBlur.PS.hlsl");
+
+    pipelineStates_[PostEffectType::Dissolve] = CreateGraphicsPipeline(L"resources/shaders/Dissolve.PS.hlsl");
+
 }
 
 void CopyImageRenderer::CreateRootSignature()
@@ -144,18 +152,32 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
     return graphicsPipelineState;
 }
 
-void CopyImageRenderer::Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle)
+void CopyImageRenderer::Draw(
+    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle)
 {
     ID3D12GraphicsCommandList* commandList = DirectXCommon::GetInstance()->GetCommandList();
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
+
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState = pipelineStates_[currentPostEffectType_];
 
     commandList->SetPipelineState(pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    D3D12_GPU_DESCRIPTOR_HANDLE secondTextureHandle = depthTextureHandle;
+
+    if (currentPostEffectType_ == PostEffectType::Dissolve) {
+        secondTextureHandle = maskTextureHandle_;
+    }
+
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
-    commandList->SetGraphicsRootDescriptorTable(1, depthTextureHandle);
-    commandList->SetGraphicsRootConstantBufferView(2, postEffectParameterResource_->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootDescriptorTable(1, secondTextureHandle);
+
+    commandList->SetGraphicsRootConstantBufferView(
+        2,
+        postEffectParameterResource_->GetGPUVirtualAddress());
+
     commandList->DrawInstanced(3, 1, 0, 0);
 }
 void CopyImageRenderer::SetPostEffectType(PostEffectType postEffectType)
@@ -172,4 +194,20 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->vignetteStrength = 1.0f;
     postEffectParameterData_->outlineScale = 1000.0f;
     postEffectParameterData_->time = 0.0f;
+    // radialBlurのパラメータの初期値も設定
+    postEffectParameterData_->radialBlurCenter = { 0.5f, 0.5f };
+    postEffectParameterData_->radialBlurSampleCount = 32;
+    postEffectParameterData_->radialBlurWidth = 0.08f;
+    // Dissolveエフェクトのパラメータの初期値も設定
+    postEffectParameterData_->dissolveThreshold = 0.5f;
+    postEffectParameterData_->dissolveEdgeWidth = 0.05f;
+    postEffectParameterData_->dissolveEdgeStrength = 2.0f;
+}
+CopyImageRenderer::PostEffectParameter&CopyImageRenderer::GetPostEffectParameter()
+{
+    return *postEffectParameterData_;
+}
+void CopyImageRenderer::SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+{
+    maskTextureHandle_ = handle;
 }
