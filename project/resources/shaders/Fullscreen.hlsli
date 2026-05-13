@@ -9,4 +9,11 @@ cbuffer PostEffectParameter : register(b0)
     float vignetteStrength;
     float outlineScale;
     float time;
+    float2 radialBlurCenter;
+    int radialBlurSampleCount;
+    float radialBlurWidth;
+    float dissolveThreshold;
+    float dissolveEdgeWidth;
+    float dissolveEdgeStrength;
+    float dissolvePadding;
 };

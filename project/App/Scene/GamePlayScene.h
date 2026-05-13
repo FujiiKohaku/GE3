@@ -31,6 +31,7 @@
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "../Game/Player.h"
+#include "Engine/postEffect/CopyImageRenderer.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -100,7 +101,7 @@ private:
     // ------------------------------
     // Terrain Transform (ImGui用)
     // ------------------------------
-    Vector3 terrainPos = { 0.0f, 5.0f, 0.0f };
+    Vector3 terrainPos = { 0.0f, -10.0f, 0.0f };
     Vector3 terrainRotate = { 0.0f, 0.0f, 0.0f };
     Vector3 terrainScale = { 1.0f, 1.0f, 1.0f };
     // ------------------------------
@@ -113,4 +114,6 @@ private:
     // その他
     // ------------------------------
     float r = 0.0f;
+
+
 };

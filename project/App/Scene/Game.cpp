@@ -37,7 +37,7 @@ void Game::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     TextureManager::GetInstance()->LoadTexture("resources/fence.png");
     TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
-
+    TextureManager::GetInstance()->LoadTexture("resources/noise0.png");
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
 
     offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
@@ -66,6 +66,13 @@ void Game::Update()
         endRequest_ = true;
     }
 
+    CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
+    postEffectParameter.dissolveThreshold += 0.005f;
+
+    if (postEffectParameter.dissolveThreshold > 1.0f) {
+        postEffectParameter.dissolveThreshold = 0.0f;
+    }
+
     SceneManager::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
 
@@ -84,6 +91,9 @@ void Game::Draw()
     DirectXCommon::GetInstance()->PreDraw();
     copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクトの種類を取得してセット
     copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(),offscreenRenderer_->GetDepthSrvHandleGPU());
+    CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
+
+
     SceneManager::GetInstance()->Draw2D();
 
     ImGuiManager::GetInstance()->Draw();

@@ -7,4 +7,6 @@ enum class PostEffectType {
     GaussianFilter,
     LuminanceBasedOutline,
     DepthOutline,
+    RadialBlur,
+    Dissolve,
 };
