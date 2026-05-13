@@ -13,7 +13,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     //とりあえず0.8乗で明るくしてみた
     vignette = saturate(pow(vignette, 0.8f));
     //係数として乗算
-    outputColor.rgb *= vignette;
+    outputColor.rgb *= lerp(1.0f, vignette, vignetteStrength);
     
     return outputColor;
 }

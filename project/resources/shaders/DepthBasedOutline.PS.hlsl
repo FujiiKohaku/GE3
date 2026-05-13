@@ -52,7 +52,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     }
 
     float weight = length(difference);
-    weight = saturate(weight * 1000.0f);
+    weight = saturate(weight * outlineScale);
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 
