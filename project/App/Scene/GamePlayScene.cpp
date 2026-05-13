@@ -6,8 +6,15 @@
 #include "Engine/particle/ParticleManager.h"
 #include <numbers>
 
+#include "SceneManager.h"
+
+#include "Engine/PostEffect/PostEffectType.h"
+
 void GamePlayScene::Initialize()
 {
+
+
+
     // =================================================
     // Camera
     // =================================================
@@ -108,6 +115,15 @@ void GamePlayScene::Initialize()
 
 void GamePlayScene::Update()
 {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
+    }
+
+    if (Input::GetInstance()->IsKeyTrigger(DIK_2)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
+    }
+
+
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
 
