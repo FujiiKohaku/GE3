@@ -7,6 +7,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
     CreateRootSignature();
+    CreatePostEffectParameterResource();
     pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/shaders/Fullscreen.PS.hlsl"); // Copy用のシェーダーは、単純にテクスチャを描画するだけのものを用意していると仮定しています。
 
     pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/shaders/GrayScale.PS.hlsl"); // GrayScale用のシェーダーは、テクスチャをグレースケールで描画するものを用意していると仮定しています。
@@ -18,8 +19,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/shaders/GaussianFilter.PS.hlsl"); // GaussianFilter用のシェーダーは、テクスチャにガウシアンフィルタを適用して描画するものを用意していると仮定しています。
     pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/shaders/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline用のシェーダーは、テクスチャの輝度に基づいて輪郭を描画するものを用意していると仮定しています。
 
-
-     pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/shaders/DepthBasedOutline.PS.hlsl");
+    pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/shaders/DepthBasedOutline.PS.hlsl");
 }
 
 void CopyImageRenderer::CreateRootSignature()
@@ -38,7 +38,7 @@ void CopyImageRenderer::CreateRootSignature()
     descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameter[2] = {};
+    D3D12_ROOT_PARAMETER rootParameter[3] = {};
 
     rootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -50,6 +50,9 @@ void CopyImageRenderer::CreateRootSignature()
     rootParameter[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
     rootParameter[1].DescriptorTable.NumDescriptorRanges = 1;
 
+    rootParameter[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameter[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameter[2].Descriptor.ShaderRegister = 0;
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -62,7 +65,7 @@ void CopyImageRenderer::CreateRootSignature()
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
     rootSignatureDesc.pParameters = rootParameter;
-    rootSignatureDesc.NumParameters = 2;
+    rootSignatureDesc.NumParameters = 3;
     rootSignatureDesc.pStaticSamplers = &staticSampler;
     rootSignatureDesc.NumStaticSamplers = 1;
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -152,9 +155,21 @@ void CopyImageRenderer::Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GP
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
     commandList->SetGraphicsRootDescriptorTable(1, depthTextureHandle);
+    commandList->SetGraphicsRootConstantBufferView(2, postEffectParameterResource_->GetGPUVirtualAddress());
     commandList->DrawInstanced(3, 1, 0, 0);
 }
 void CopyImageRenderer::SetPostEffectType(PostEffectType postEffectType)
 {
     currentPostEffectType_ = postEffectType;
+}
+void CopyImageRenderer::CreatePostEffectParameterResource()
+{
+    postEffectParameterResource_ = dxCommon_->CreateBufferResource(sizeof(PostEffectParameter));
+
+    postEffectParameterResource_->Map(0,nullptr,reinterpret_cast<void**>(&postEffectParameterData_));
+
+    postEffectParameterData_->grayScaleStrength = 1.0f;
+    postEffectParameterData_->vignetteStrength = 1.0f;
+    postEffectParameterData_->outlineScale = 1000.0f;
+    postEffectParameterData_->time = 0.0f;
 }

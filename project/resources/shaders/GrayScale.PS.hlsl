@@ -7,12 +7,17 @@ float4 main(VertexShaderOutput input) : SV_TARGET
 {
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 
-    float grayScale = dot(textureColor.rgb,float3(0.2125f, 0.7154f, 0.0721f));
+    float value =
+        textureColor.r * 0.2125f +
+        textureColor.g * 0.7154f +
+        textureColor.b * 0.0721f;
 
-    float4 outputColor;
+    float3 grayColor = float3(value, value, value);
 
-    outputColor.rgb = float3(grayScale, grayScale, grayScale);
-    outputColor.a = textureColor.a;
+    textureColor.rgb = lerp(
+        textureColor.rgb,
+        grayColor,
+        grayScaleStrength);
 
-    return outputColor;
+    return textureColor;
 }
