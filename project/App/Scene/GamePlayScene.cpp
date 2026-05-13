@@ -122,7 +122,9 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_2)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
     }
-
+    if (Input::GetInstance()->IsKeyTrigger(DIK_3)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Vignette);
+    }
 
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
