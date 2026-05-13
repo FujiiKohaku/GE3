@@ -14,15 +14,11 @@ public:
     void PostDraw();
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetDepthSrvHandleGPU() const;
 
 private:
     Microsoft::WRL::ComPtr<ID3D12Resource> resource_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(
-        Microsoft::WRL::ComPtr<ID3D12Device> device,
-        uint32_t width,
-        uint32_t height,
-        DXGI_FORMAT format,
-        const Vector4& clearColor);
+    Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device,uint32_t width,uint32_t height,DXGI_FORMAT format,const Vector4& clearColor);
     
     Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource_;
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_;
@@ -40,4 +36,17 @@ private:
 
     D3D12_VIEWPORT viewport_ = {};
     D3D12_RECT scissorRect_ = {};
+    // depth
+    void CreateRenderTexture();
+    void CreateDepthTexture();
+    void CreateDescriptorViews();
+    Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilResource_;
+
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle_ {};
+
+    uint32_t depthSrvIndex_ = 0;
+    D3D12_CPU_DESCRIPTOR_HANDLE depthSrvHandleCPU_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE depthSrvHandleGPU_ {};
+
+    D3D12_RESOURCE_STATES depthCurrentState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 };

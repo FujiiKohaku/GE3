@@ -302,7 +302,7 @@ void DirectXCommon::InitializeDescriptorHeaps()
     rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 3, false);
 
     // DSV用のヒープ（Shaderからは使わないのでfalse）
-    dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+    dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV,2,false);
 
     //// SRV用のヒープ（Shaderから使うのでtrue）
     // srvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxSRVCount, true);
@@ -713,4 +713,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetRTVHandle(uint32_t index) const
 D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetDSVHandle() const
 {
     return dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+}
+D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetDSVHandle(uint32_t index) const
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+    handle.ptr += static_cast<SIZE_T>(descriptorSizeDSV) * index;
+
+    return handle;
 }

@@ -125,7 +125,18 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_3)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Vignette);
     }
-
+    if (Input::GetInstance()->IsKeyTrigger(DIK_4)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::smoothing);
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_5)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GaussianFilter);
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_6)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_7)) {
+        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
+    }
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
 

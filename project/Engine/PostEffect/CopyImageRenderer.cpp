@@ -12,23 +12,43 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/shaders/GrayScale.PS.hlsl"); // GrayScale用のシェーダーは、テクスチャをグレースケールで描画するものを用意していると仮定しています。
 
     pipelineStates_[PostEffectType::Vignette] = CreateGraphicsPipeline(L"resources/shaders/Vignette.PS.hlsl"); // Vignette用のシェーダーは、テクスチャにビネット効果を適用して描画するものを用意していると仮定しています。
+
+    pipelineStates_[PostEffectType::smoothing] = CreateGraphicsPipeline(L"resources/shaders/BoxFilter.PS.hlsl"); // smoothing用のシェーダーは、テクスチャに単純なボックスフィルタを適用して描画するものを用意していると仮定しています。
+
+    pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/shaders/GaussianFilter.PS.hlsl"); // GaussianFilter用のシェーダーは、テクスチャにガウシアンフィルタを適用して描画するものを用意していると仮定しています。
+    pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/shaders/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline用のシェーダーは、テクスチャの輝度に基づいて輪郭を描画するものを用意していると仮定しています。
+
+
+     pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/shaders/DepthBasedOutline.PS.hlsl");
 }
 
 void CopyImageRenderer::CreateRootSignature()
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    D3D12_DESCRIPTOR_RANGE descriptorRange = {};
-    descriptorRange.BaseShaderRegister = 0;
-    descriptorRange.NumDescriptors = 1;
-    descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    descriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
 
-    D3D12_ROOT_PARAMETER rootParameter = {};
-    rootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameter.DescriptorTable.pDescriptorRanges = &descriptorRange;
-    rootParameter.DescriptorTable.NumDescriptorRanges = 1;
+    descriptorRange[0].BaseShaderRegister = 0;
+    descriptorRange[0].NumDescriptors = 1;
+    descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    descriptorRange[1].BaseShaderRegister = 1;
+    descriptorRange[1].NumDescriptors = 1;
+    descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameter[2] = {};
+
+    rootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameter[0].DescriptorTable.pDescriptorRanges = &descriptorRange[0];
+    rootParameter[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameter[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameter[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameter[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
+    rootParameter[1].DescriptorTable.NumDescriptorRanges = 1;
 
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -41,8 +61,8 @@ void CopyImageRenderer::CreateRootSignature()
     staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-    rootSignatureDesc.pParameters = &rootParameter;
-    rootSignatureDesc.NumParameters = 1;
+    rootSignatureDesc.pParameters = rootParameter;
+    rootSignatureDesc.NumParameters = 2;
     rootSignatureDesc.pStaticSamplers = &staticSampler;
     rootSignatureDesc.NumStaticSamplers = 1;
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -55,6 +75,7 @@ void CopyImageRenderer::CreateRootSignature()
         D3D_ROOT_SIGNATURE_VERSION_1,
         &signatureBlob,
         &errorBlob);
+
     assert(SUCCEEDED(hr));
 
     hr = device->CreateRootSignature(
@@ -62,6 +83,7 @@ void CopyImageRenderer::CreateRootSignature()
         signatureBlob->GetBufferPointer(),
         signatureBlob->GetBufferSize(),
         IID_PPV_ARGS(&rootSignature_));
+
     assert(SUCCEEDED(hr));
 }
 
@@ -112,16 +134,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
 
     Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
 
-    HRESULT hr = device->CreateGraphicsPipelineState(&pipelineStateDesc,IID_PPV_ARGS(&graphicsPipelineState));
+    HRESULT hr = device->CreateGraphicsPipelineState(&pipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 
     assert(SUCCEEDED(hr));
 
     return graphicsPipelineState;
 }
 
-
-
-void CopyImageRenderer::Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle)
+void CopyImageRenderer::Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle)
 {
     ID3D12GraphicsCommandList* commandList = DirectXCommon::GetInstance()->GetCommandList();
 
@@ -131,6 +151,7 @@ void CopyImageRenderer::Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle)
     commandList->SetPipelineState(pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
+    commandList->SetGraphicsRootDescriptorTable(1, depthTextureHandle);
     commandList->DrawInstanced(3, 1, 0, 0);
 }
 void CopyImageRenderer::SetPostEffectType(PostEffectType postEffectType)
