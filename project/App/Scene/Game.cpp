@@ -66,12 +66,7 @@ void Game::Update()
         endRequest_ = true;
     }
 
-    CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-    postEffectParameter.dissolveThreshold += 0.005f;
 
-    if (postEffectParameter.dissolveThreshold > 1.0f) {
-        postEffectParameter.dissolveThreshold = 0.0f;
-    }
 
     SceneManager::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
