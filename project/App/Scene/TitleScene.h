@@ -3,6 +3,8 @@
 
 #include "SceneManager.h"
 
+#include "Engine/3D/Object3d.h"
+#include "Engine/Camera/Camera.h"
 class TitleScene : public BaseScene {
 public:
     void Initialize() override;
@@ -16,5 +18,7 @@ public:
     void DrawImGui() override;
 
 private:
-  
+    std::unique_ptr<Camera> camera_;
+    std::unique_ptr<Object3d> titleObj_;
+
 };

@@ -38,6 +38,7 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
     TextureManager::GetInstance()->LoadTexture("resources/rostock_laage_airport_4k.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/aim.png"); // AiMスプライト
 
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
@@ -82,7 +83,7 @@ void GamePlayScene::Initialize()
     // =================================================
     // Light
     // =================================================
-    LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+   
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
 
     // =================================================
@@ -94,6 +95,12 @@ void GamePlayScene::Initialize()
     testSprite_ = std::make_unique<Sprite>();
     testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
 
+    aimSprite_ = std::make_unique<Sprite>();
+    aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/aim.png");
+    aimSprite_->SetSize({ 128.0f, 128.0f });
+    aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    aimSprite_->Update();
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
@@ -144,8 +151,17 @@ void GamePlayScene::Update()
      }
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
+     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
+    aimSprite_->SetPosition(player_->GetAimScreenPosition());
+    aimSprite_->Update();
+
+
+
+
+
 
     testSprite_->Update();
+
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
 
@@ -389,6 +405,7 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
+    aimSprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()
@@ -403,6 +420,6 @@ void GamePlayScene::Finalize()
 
     ParticleManager::GetInstance()->Finalize();
 
-    LightManager::GetInstance()->Finalize();
+   
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
