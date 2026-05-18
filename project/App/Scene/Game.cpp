@@ -4,7 +4,7 @@
 void Game::Initialize()
 {
     Logger::Log("Game Initialize Start");
-
+    ShowCursor(FALSE); // カーソル非表示
     SetUnhandledExceptionFilter(Utility::ExportDump);
     std::filesystem::create_directory("logs");
 
@@ -21,7 +21,7 @@ void Game::Initialize()
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     SkinningObject3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     SkyBoxManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-
+    LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     modelCommon_.Initialize(DirectXCommon::GetInstance());
 
     Input::GetInstance()->Initialize(WinApp::GetInstance());
@@ -59,13 +59,27 @@ void Game::Update()
         isPostEffectEnabled_ = !isPostEffectEnabled_;
     }
 
+ if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
+
+        isMouseCursorVisible_ = !isMouseCursorVisible_;
+
+        if (isMouseCursorVisible_) {
+
+            ShowCursor(TRUE);
+        } else {
+
+            ShowCursor(FALSE);
+        }
+    }
+
+
     ImGuiManager::GetInstance()->Begin();
 
     if (Input::GetInstance()->IsKeyPressed(DIK_ESCAPE)) {
         Logger::Log("Escape Pressed");
         endRequest_ = true;
     }
-
+    
 
 
     SceneManager::GetInstance()->Update();
@@ -107,7 +121,7 @@ void Game::Finalize()
     SpriteManager::GetInstance()->Finalize();
     ModelManager::GetInstance()->Finalize();
     SkyBoxManager::GetInstance()->Finalize();
-
+    LightManager::GetInstance()->Finalize();
     TextureManager::GetInstance()->Finalize();
     SrvManager::GetInstance()->Finalize();
 

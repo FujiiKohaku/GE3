@@ -39,6 +39,8 @@
 #include "Engine/3D/Model.h"
 #include "Engine/3D/ModelCommon.h"
 #include "Engine/3D/ModelManager.h"
+#include "Engine/Light/LightManager.h"
+
 #include "Engine/3D/Object3D.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Particle/ParticleManager.h"
@@ -159,4 +161,6 @@ private:
     std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
 
     bool isPostEffectEnabled_ = true;
+
+    bool isMouseCursorVisible_ = false;
 };

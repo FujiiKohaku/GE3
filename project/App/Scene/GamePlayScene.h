@@ -28,9 +28,9 @@
 
 #include <memory>
 
+#include "../Game/Player.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
-#include "../Game/Player.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
 class GamePlayScene : public BaseScene {
 public:
@@ -69,7 +69,7 @@ private:
     // スプライト（UI / 2D）
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
-
+    std::unique_ptr<Sprite> aimSprite_;
     // ------------------------------
     // サウンド
     // ------------------------------
@@ -78,8 +78,8 @@ private:
     // ------------------------------
     // パーティクル
     // ------------------------------
-    //ParticleEmitter emitter_;
-    //ParticleSystem particleSystem_;
+    // ParticleEmitter emitter_;
+    // ParticleSystem particleSystem_;
     // ------------------------------
     // アニメーション / スケルトン
     // ------------------------------
@@ -114,6 +114,4 @@ private:
     // その他
     // ------------------------------
     float r = 0.0f;
-
-
 };
