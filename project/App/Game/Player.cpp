@@ -32,8 +32,6 @@ void Player::Initialize(Model* model)
     aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight / 2.0f;
 }
 
-
-
 void Player::Update()
 {
     // オブジェクトが初期化されていない場合は更新処理を行わない
@@ -56,141 +54,31 @@ void Player::Update()
 
     if (!isDebugMode) { // デバックモードではない時はプレイヤーの移動処理を行う
 
-
         UpdateKeyboardAim(input);
         // ==============================
         // マウス移動量で照準を動かす
         // ==============================
-
-        HWND hwnd = WinApp::GetInstance()->GetHwnd();
-
-        RECT clientRect;
-        GetClientRect(hwnd, &clientRect);
-
-        POINT centerMousePosition;
-        centerMousePosition.x = (clientRect.right - clientRect.left) / 2;
-        centerMousePosition.y = (clientRect.bottom - clientRect.top) / 2;
-
-        // クライアント座標の中心をスクリーン座標に変換
-        POINT centerScreenPosition = centerMousePosition;
-        ClientToScreen(hwnd, &centerScreenPosition);
-
-        // 初回だけマウスを中心に置く
-        if (isFirstMouseUpdate_) {
-
-            SetCursorPos(centerScreenPosition.x, centerScreenPosition.y);
-
-            previousMousePosition_.x = static_cast<float>(centerMousePosition.x);
-            previousMousePosition_.y = static_cast<float>(centerMousePosition.y);
-
-            isFirstMouseUpdate_ = false;
-        }
-
-        // 現在のマウス座標を取得
-        POINT currentMousePosition;
-        GetCursorPos(&currentMousePosition);
-
-        ScreenToClient(hwnd, &currentMousePosition);
-
-        // 中心からどれだけ動いたか
-        float mouseMoveX = static_cast<float>(currentMousePosition.x - centerMousePosition.x);
-        float mouseMoveY = static_cast<float>(currentMousePosition.y - centerMousePosition.y);
-
-        bool isMouseAimInput = false;
-
-        if (mouseMoveX != 0.0f || mouseMoveY != 0.0f) {
-            isMouseAimInput = true;
-        }
-
-        // マウス感度
-        float mouseAimScreenSpeed = 1.0f;
-        float mouseAimWorldSpeed = 0.02f;
-
-        if (isMouseAimInput) {
-
-            // 照準スプライトを動かす
-            aimScreenPosition_.x += mouseMoveX * mouseAimScreenSpeed;
-            aimScreenPosition_.y += mouseMoveY * mouseAimScreenSpeed;
-
-            // ゲーム内照準も動かす
-            aimPosition_.x += mouseMoveX * mouseAimWorldSpeed;
-            aimPosition_.y += -mouseMoveY * mouseAimWorldSpeed;
-        }
-
-        // マウスを毎フレーム中央に戻す
-        SetCursorPos(centerScreenPosition.x, centerScreenPosition.y);
-
+        UpdateMouseAim();
         // ==============================
         // 照準位置制限
         // ==============================
-
-        if (aimPosition_.x > moveLimitX_) {
-            aimPosition_.x = moveLimitX_;
-        }
-
-        if (aimPosition_.x < -moveLimitX_) {
-            aimPosition_.x = -moveLimitX_;
-        }
-
-        if (aimPosition_.y > moveLimitY_) {
-            aimPosition_.y = moveLimitY_;
-        }
-
-        if (aimPosition_.y < -moveLimitY_) {
-            aimPosition_.y = -moveLimitY_;
-        }
-
+        ClampWorldAimPosition(); // 照準のワールド上の位置を制限する処理
         // ==============================
         // プレイヤーが照準に遅れて追従
         // ==============================
 
-        Vector3 difference;
-
-        difference.x = aimPosition_.x - transform_.translate.x;
-
-        difference.y = aimPosition_.y - transform_.translate.y;
-
-        difference.z = 0.0f;
-
-        transform_.translate.x += difference.x * aimFollowPower_;
-
-        transform_.translate.y += difference.y * aimFollowPower_;
+        FollowAimPosition(); // プレイヤーの位置を照準に追従させる処理
 
         // ==============================
         // 機体の傾き
         // ==============================
 
-        transform_.rotate.z = -difference.x * 0.08f;
-
-        transform_.rotate.x = difference.y * 0.08f;
-
-        transform_.rotate.z += -velocity_.x * tiltPower_;
-
-        transform_.rotate.x += velocity_.y * tiltPower_;
+        UpdateTilt(); // プレイヤーの傾きを更新する処理
 
         // ==============================
         // 移動制限
         // ==============================
-
-        if (transform_.translate.x > moveLimitX_) {
-
-            transform_.translate.x = moveLimitX_;
-        }
-
-        if (transform_.translate.x < -moveLimitX_) {
-
-            transform_.translate.x = -moveLimitX_;
-        }
-
-        if (transform_.translate.y > moveLimitY_) {
-
-            transform_.translate.y = moveLimitY_;
-        }
-
-        if (transform_.translate.y < -moveLimitY_) {
-
-            transform_.translate.y = -moveLimitY_;
-        }
+        ClampPlayerWorldPosition(); // プレイヤーのワールド上の位置を制限する処理
     }
 
     // 照準の画面上の位置を制限
@@ -229,13 +117,12 @@ void Player::SetDebugCameraController(DebugCameraController* debugCameraControll
     debugCameraController_ = debugCameraController;
 }
 
-
 // 照準の画面上の位置を制限する関数
 void Player::ClampAimScreenPosition()
 {
     float halfAimSize = 64.0f;
 
-    //左の制限64で固定
+    // 左の制限64で固定
     if (aimScreenPosition_.x < halfAimSize) {
         aimScreenPosition_.x = halfAimSize;
     }
@@ -256,6 +143,7 @@ void Player::ClampAimScreenPosition()
     }
 }
 
+// キーボードで照準を動かす関数
 void Player::UpdateKeyboardAim(Input* input)
 {
     // ==============================
@@ -337,7 +225,134 @@ void Player::UpdateKeyboardAim(Input* input)
         aimPosition_.x += velocity_.x;
         aimPosition_.y += velocity_.y;
     }
+}
 
+// マウスで照準を動かす関数
+void Player::UpdateMouseAim()
+{
+    HWND hwnd = WinApp::GetInstance()->GetHwnd();
 
+    RECT clientRect;
+    GetClientRect(hwnd, &clientRect);
 
+    POINT centerMousePosition;
+    centerMousePosition.x = (clientRect.right - clientRect.left) / 2;
+    centerMousePosition.y = (clientRect.bottom - clientRect.top) / 2;
+
+    // クライアント座標の中心をスクリーン座標に変換
+    POINT centerScreenPosition = centerMousePosition;
+    ClientToScreen(hwnd, &centerScreenPosition);
+
+    // 初回だけマウスを中心に置く
+    if (isFirstMouseUpdate_) {
+
+        SetCursorPos(centerScreenPosition.x, centerScreenPosition.y);
+
+        previousMousePosition_.x = static_cast<float>(centerMousePosition.x);
+        previousMousePosition_.y = static_cast<float>(centerMousePosition.y);
+
+        isFirstMouseUpdate_ = false;
+    }
+
+    // 現在のマウス座標を取得
+    POINT currentMousePosition;
+    GetCursorPos(&currentMousePosition);
+
+    ScreenToClient(hwnd, &currentMousePosition);
+
+    // 中心からどれだけ動いたか
+    float mouseMoveX = static_cast<float>(currentMousePosition.x - centerMousePosition.x);
+    float mouseMoveY = static_cast<float>(currentMousePosition.y - centerMousePosition.y);
+
+    bool isMouseAimInput = false;
+
+    if (mouseMoveX != 0.0f || mouseMoveY != 0.0f) {
+        isMouseAimInput = true;
+    }
+
+    // マウス感度
+    float mouseAimScreenSpeed = 1.0f;
+    float mouseAimWorldSpeed = 0.02f;
+
+    if (isMouseAimInput) {
+
+        // 照準スプライトを動かす
+        aimScreenPosition_.x += mouseMoveX * mouseAimScreenSpeed;
+        aimScreenPosition_.y += mouseMoveY * mouseAimScreenSpeed;
+
+        // ゲーム内照準も動かす
+        aimPosition_.x += mouseMoveX * mouseAimWorldSpeed;
+        aimPosition_.y += -mouseMoveY * mouseAimWorldSpeed;
+    }
+
+    // マウスを毎フレーム中央に戻す
+    SetCursorPos(centerScreenPosition.x, centerScreenPosition.y);
+}
+
+// 照準のワールド上の位置を制限する処理
+void Player::ClampWorldAimPosition()
+{
+    if (aimPosition_.x > moveLimitX_) {
+        aimPosition_.x = moveLimitX_;
+    }
+
+    if (aimPosition_.x < -moveLimitX_) {
+        aimPosition_.x = -moveLimitX_;
+    }
+
+    if (aimPosition_.y > moveLimitY_) {
+        aimPosition_.y = moveLimitY_;
+    }
+
+    if (aimPosition_.y < -moveLimitY_) {
+        aimPosition_.y = -moveLimitY_;
+    }
+}
+// プレイヤーの位置を照準に追従させる処理
+void Player::FollowAimPosition()
+{
+
+    difference_.x = aimPosition_.x - transform_.translate.x;
+
+    difference_.y = aimPosition_.y - transform_.translate.y;
+
+    difference_.z = 0.0f;
+    transform_.translate.x += difference_.x * aimFollowPower_;
+
+    transform_.translate.y += difference_.y * aimFollowPower_;
+}
+
+void Player::UpdateTilt()
+{
+    // 照準とプレイヤーの位置の差を元に傾きを計算
+    transform_.rotate.z = -difference_.x * aimTiltPower_;
+    transform_.rotate.x = difference_.y * aimTiltPower_;
+
+    // プレイヤーの速度に応じて傾きを追加
+    transform_.rotate.z += -velocity_.x * tiltPower_;
+    transform_.rotate.x += velocity_.y * tiltPower_;
+}
+
+void Player::ClampPlayerWorldPosition()
+{
+
+    if (transform_.translate.x > moveLimitX_) {
+
+        transform_.translate.x = moveLimitX_;
+    }
+
+    if (transform_.translate.x < -moveLimitX_) {
+
+        transform_.translate.x = -moveLimitX_;
+    }
+
+    if (transform_.translate.y > moveLimitY_) {
+
+        transform_.translate.y = moveLimitY_;
+    }
+
+    if (transform_.translate.y < -moveLimitY_) {
+
+        transform_.translate.y = -moveLimitY_;
+    }
 }

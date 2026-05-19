@@ -68,8 +68,8 @@ private:
     float deceleration_ = 0.85f; // 減速率（0.0f～1.0fの範囲で設定、1.0fは減速なし）
     float maxSpeed_ = 0.18f; // 最大速度
 
-    float moveLimitX_ = 8.0f; // X方向の移動制限
-    float moveLimitY_ = 5.0f; // Y方向の移動制限
+    float moveLimitX_ = 20.0f; // X方向の移動制限
+    float moveLimitY_ = 10.0f; // Y方向の移動制限
 
     float tiltPower_ = 0.25f;
 
@@ -83,8 +83,13 @@ private:
     float aimFollowPower_ = 0.08f;
 
     WinApp* winApp_ = nullptr;
-
-
+    Vector3 difference_;
+    float aimTiltPower_ = 0.08f;
     void ClampAimScreenPosition(); // 照準の画面上の位置を制限する関数
     void UpdateKeyboardAim(Input* input); // キーボードで照準を動かす処理
+    void UpdateMouseAim(); // マウスで照準を動かす処理
+    void ClampWorldAimPosition(); // 照準のワールド上の位置を制限する処理
+    void FollowAimPosition(); // プレイヤーの位置を照準に追従させる処理
+    void UpdateTilt(); // プレイヤーの傾きを更新する処理
+    void ClampPlayerWorldPosition(); // プレイヤーのワールド上の位置を制限する処理
 };
