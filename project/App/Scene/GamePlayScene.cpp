@@ -57,6 +57,7 @@ void GamePlayScene::Initialize()
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
     terrain_->SetEnvironmentMapStrength(0.0f);
     terrain_->SetEnableLighting(false);
+
     // plane
     plane_ = std::make_unique<Object3d>();
     plane_->Initialize(Object3dManager::GetInstance());
@@ -198,6 +199,11 @@ void GamePlayScene::Update()
     animationActor_->Update(1.0f / 60.0f);
 
 #pragma region ImGuiによるライト操作パネル
+#ifdef USE_IMGUI
+
+
+
+
     // ==================================
     // Lighting Panel（ライト操作パネル）
     // ==================================
@@ -364,13 +370,13 @@ void GamePlayScene::Update()
 
     ImGui::End();
     // 反映
+#endif // USE_IMGUI
     plane_->SetTranslate(planePos);
     plane_->SetRotate(planeRotate);
     plane_->SetScale(planeScale);
     terrain_->SetTranslate(terrainPos);
     terrain_->SetRotate(terrainRotate);
     terrain_->SetScale(terrainScale);
-
 #pragma endregion
 }
 

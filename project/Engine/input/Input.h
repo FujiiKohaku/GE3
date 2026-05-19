@@ -21,6 +21,7 @@ public:
     LONG GetMouseDeltaX() const;
     LONG GetMouseDeltaY() const;
     LONG GetMouseWheel() const;
+    void ResetMouseDelta();
 
 public:
     class ConstructorKey {

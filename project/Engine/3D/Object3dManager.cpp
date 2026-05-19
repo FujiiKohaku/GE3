@@ -24,6 +24,11 @@ void Object3dManager::Initialize(DirectXCommon* dxCommon)
 
     // グラフィックスパイプラインを作成
     CreateGraphicsPipeline();
+
+
+    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
+
+    defaultEnvironmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
 }
 #pragma endregion
 
@@ -58,6 +63,8 @@ void Object3dManager::SetGlowPSO()
 
     commandList->SetPipelineState(glowPipelineStates[currentBlendMode].Get());
 }
+
+
 
 #pragma endregion
 
@@ -247,4 +254,17 @@ void Object3dManager::CreateGraphicsPipeline()
 void Object3dManager::Finalize()
 {
     instance_.reset();
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE Object3dManager::GetEnvironmentTexture()
+{
+    if (environmentTextureHandle_.ptr != 0) {
+        return environmentTextureHandle_;
+    }
+
+    return defaultEnvironmentTextureHandle_;
+}
+void Object3dManager::SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+{
+    environmentTextureHandle_ = handle;
 }

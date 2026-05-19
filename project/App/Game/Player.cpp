@@ -24,6 +24,13 @@ void Player::Initialize(Model* model)
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
+
+
+    aimPosition_ = { 0.0f, 0.0f, 0.0f };
+    velocity_ = { 0.0f, 0.0f, 0.0f };
+
+    aimScreenPosition_.x = WinApp::GetInstance()->kClientWidth / 2.0f;
+    aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight / 2.0f;
 }
 
 void Player::Update()

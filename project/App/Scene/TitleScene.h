@@ -5,6 +5,8 @@
 
 #include "Engine/3D/Object3d.h"
 #include "Engine/Camera/Camera.h"
+
+#include "Engine/2D/Sprite.h"
 class TitleScene : public BaseScene {
 public:
     void Initialize() override;
@@ -20,5 +22,5 @@ public:
 private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Object3d> titleObj_;
-
+   // std::unique_ptr<Sprite> titleSprite_;
 };
