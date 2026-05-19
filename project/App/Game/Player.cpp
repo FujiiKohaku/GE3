@@ -79,10 +79,9 @@ void Player::Update()
         // 移動制限
         // ==============================
         ClampPlayerWorldPosition(); // プレイヤーのワールド上の位置を制限する処理
+        // 照準の画面上の位置を制限
+        ClampAimScreenPosition();
     }
-
-    // 照準の画面上の位置を制限
-    ClampAimScreenPosition();
 
     // オブジェクトのTransformを更新
     object_->SetScale(transform_.scale);
