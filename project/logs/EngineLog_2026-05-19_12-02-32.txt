@@ -1,0 +1,155 @@
+[2026-05-19 12:02:32] [Log] Application Start
+[2026-05-19 12:02:32] [Log] Game Initialize
+[2026-05-19 12:02:32] [Log] Game Initialize Start
+[2026-05-19 12:02:32] [Log] WinApp : 25ms
+[2026-05-19 12:02:32] [Log] Use Adapater:NVIDIA GeForce RTX 4060 Laptop GPU
+
+[2026-05-19 12:02:33] [Log] FeatureLevel : 12.2
+
+[2026-05-19 12:02:33] [Log] Complete create D3D12Device!!!
+
+[2026-05-19 12:02:34] [Log] DirectXCommon : 1858ms
+[2026-05-19 12:02:34] [Log] SrvManager : 0ms
+[2026-05-19 12:02:34] [Log] TextureManager : 0ms
+[2026-05-19 12:02:34] [Log] ImGuiManager : 0ms
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Sprite.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Sprite.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Sprite.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Sprite.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] SpriteManager : 16ms
+[2026-05-19 12:02:34] [Log] ModelManager : 0ms
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Object3d.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Object3d.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Object3d.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Object3d.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Glow.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Glow.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources/skyBox.dds, SRV Index: 1
+[2026-05-19 12:02:34] [Log] srvIndex = 1
+[2026-05-19 12:02:34] [Log] Object3dManager : 90ms
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Object3d.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Object3d.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Object3d.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Object3d.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Skinning.CS.hlsl,profike:cs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Skinning.CS.hlsl, profike:cs_6_0
+ 
+[2026-05-19 12:02:34] [Log] SkinningObject3dManager : 30ms
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Skybox.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Skybox.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Skybox.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Skybox.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] SkyBoxManager : 8ms
+[2026-05-19 12:02:34] [Log] LightManager : 1ms
+[2026-05-19 12:02:34] [Log] Load Default Models
+[2026-05-19 12:02:34] [Log] Load Default Textures
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources/white.png, SRV Index: 2
+[2026-05-19 12:02:34] [Log] srvIndex = 2
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources/uvChecker.png, SRV Index: 3
+[2026-05-19 12:02:34] [Log] srvIndex = 3
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources/fence.png, SRV Index: 4
+[2026-05-19 12:02:34] [Log] srvIndex = 4
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources/BaseColor_Cube.png, SRV Index: 5
+[2026-05-19 12:02:34] [Log] srvIndex = 5
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources/noise0.png, SRV Index: 6
+[2026-05-19 12:02:34] [Log] srvIndex = 6
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/GrayScale.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/GrayScale.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Vignette.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Vignette.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/BoxFilter.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/BoxFilter.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/GaussianFilter.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/GaussianFilter.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/LuminanceBasedOutline.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/LuminanceBasedOutline.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/DepthBasedOutline.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/DepthBasedOutline.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/RadialBlur.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/RadialBlur.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Fullscreen.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Fullscreen.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 12:02:34] [Log] Begin CompileShader,path:resources/shaders/Dissolve.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 12:02:34] [Log] Compile Succeeded, path:resources/shaders/Dissolve.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 12:02:34] [Log] Game Initialize End
+[2026-05-19 12:02:34] [Log] Texture Loaded: resources\uvChecker.png, SRV Index: 7
+[2026-05-19 12:02:34] [Log] srvIndex = 7
+[2026-05-19 12:02:36] [Log] Escape Pressed
+[2026-05-19 12:02:36] [Log] Game End Request
+[2026-05-19 12:02:36] [Log] Game Finalize
+[2026-05-19 12:02:36] [Log] Game Finalize Start
+[2026-05-19 12:02:36] [Log] Game Finalize End
+[2026-05-19 12:02:36] [Log] Application End

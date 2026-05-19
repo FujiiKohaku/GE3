@@ -89,8 +89,13 @@ void DirectXCommon::InitializeDevice()
     }
 #endif // _DEBUG
 
-    // DXGIファクトリーの生成
-    hr = CreateDXGIFactory(IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+   
+
+    #ifdef _DEBUG
+    hr = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+#else
+    hr = CreateDXGIFactory2(0, IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+#endif
     // 初期化の根本的な部分でエラーが出た場合はプログラムが間違っているか、どうにもできない場合が多いのでassertにしておく
     assert(SUCCEEDED(hr));
 
@@ -412,24 +417,6 @@ void DirectXCommon::InitializeDxcCompiler()
 }
 #pragma endregion
 
-#pragma region IMGUI初期化
-// void DirectXCommon::InitializeImGui()
-//{
-//     // バージョンチェック
-//     IMGUI_CHECKVERSION();
-//     // ImGuiのコンテキスト生成
-//     ImGui::CreateContext();
-//     // ImGuiのスタイル設定（好みで変更してよい）
-//     ImGui::StyleColorsClassic();
-//     // Win32用の初期化
-//     ImGui_ImplWin32_Init(winApp_->GetHwnd());
-//     // Direct12用の初期化
-//     ImGui_ImplDX12_Init(device.Get(), swapChainDesc.BufferCount, rtvDesc.Format,
-//         srvDescriptorHeap.Get(),
-//         srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-//         srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-// }
-#pragma endregion
 
 #pragma region 描画前処理・描画後処理
 // 描画前処理
@@ -526,18 +513,25 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring
     shaderSourceBuffer.Size = shaderSource->GetBufferSize();
     shaderSourceBuffer.Encoding = DXC_CP_UTF8; // UTF8の文字コードであることを通知
     // 2.Compileする
+#ifdef _DEBUG
     LPCWSTR arguments[] = {
-        filepath.c_str(), // コンパイル対象のhlslファイル名
-        L"-E",
-        L"main", // エントリーポイントの指定。基本的にmain以外にはしない
-        L"-T",
-        profile, // shaderProfileの設定
+        filepath.c_str(),
+        L"-E", L"main",
+        L"-T", profile,
         L"-Zi",
-        L"-Qembed_debug", // デバック用の設定を埋め込む
-        L"-Od", /// 最適化を外しておく
-        L"-Zpr" // メモリレイアウトは行優先
-
+        L"-Qembed_debug",
+        L"-Od",
+        L"-Zpr"
     };
+#else
+    LPCWSTR arguments[] = {
+        filepath.c_str(),
+        L"-E", L"main",
+        L"-T", profile,
+        L"-O3",
+        L"-Zpr"
+    };
+#endif
     // 実際にShaderをコンパイルする
     Microsoft::WRL::ComPtr<IDxcResult> shaderResult = nullptr;
     hr = dxcCompiler->Compile(
@@ -562,12 +556,10 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring
     // 4.Compile結果を受け取って返す02_00
     // コンパイル結果から実行用のバイナリ部分を取得02_00
     Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob = nullptr;
-    hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob),
-        nullptr);
+    hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob),nullptr);
     assert(SUCCEEDED(hr));
     // 成功したログを出す02_00
-    Logger::Log(StringUtility::ConvertString(std::format(L"Compile Succeeded, path:{}, profike:{}\n ",
-        filepath, profile)));
+    Logger::Log(StringUtility::ConvertString(std::format(L"Compile Succeeded, path:{}, profike:{}\n ",filepath, profile)));
 
     // 実行用のバイナリを返却02_00
     return shaderBlob;
@@ -623,11 +615,6 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(Micr
     // 2.利用するHeapの設定。非常に特殊な運用。02_04exで一般的なケース版がある
     D3D12_HEAP_PROPERTIES heapProperties {};
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT; // 細かい設定を行う//03_00EX
-
-    // 消していいらしい
-    //  heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK; //
-    //  WriteBaackポリシーでCPUアクセス可能
-    //  heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0; // プロセッサの近くに配置
 
     // 3.Resourceを生成する
     Microsoft::WRL::ComPtr<ID3D12Resource> resource = nullptr;
