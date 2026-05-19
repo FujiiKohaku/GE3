@@ -3,34 +3,61 @@
 
 void Game::Initialize()
 {
+    auto CheckTime = [](const char* name, std::chrono::steady_clock::time_point& prevTime) {
+        auto nowTime = std::chrono::steady_clock::now();
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - prevTime).count();
+
+        Logger::Log(std::string(name) + " : " + std::to_string(ms) + "ms");
+
+        prevTime = nowTime;
+    };
+    auto prevTime = std::chrono::steady_clock::now();
     Logger::Log("Game Initialize Start");
     ShowCursor(FALSE); // カーソル非表示
     SetUnhandledExceptionFilter(Utility::ExportDump);
     std::filesystem::create_directory("logs");
 
-    WinApp::GetInstance()->initialize();
+   WinApp::GetInstance()->initialize();
+    CheckTime("WinApp", prevTime);
 
     DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
+    CheckTime("DirectXCommon", prevTime);
+
     SrvManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("SrvManager", prevTime);
 
     TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
+    CheckTime("TextureManager", prevTime);
 
     ImGuiManager::GetInstance()->Initialize(WinApp::GetInstance(), DirectXCommon::GetInstance(), SrvManager::GetInstance());
+    CheckTime("ImGuiManager", prevTime);
+
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("SpriteManager", prevTime);
+
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("ModelManager", prevTime);
+
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("Object3dManager", prevTime);
+
     SkinningObject3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("SkinningObject3dManager", prevTime);
+
     SkyBoxManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("SkyBoxManager", prevTime);
+
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckTime("LightManager", prevTime);
     modelCommon_.Initialize(DirectXCommon::GetInstance());
 
     Input::GetInstance()->Initialize(WinApp::GetInstance());
 
     Logger::Log("Load Default Models");
-    ModelManager::GetInstance()->Load("plane.obj");
-    ModelManager::GetInstance()->Load("axis.obj");
-    ModelManager::GetInstance()->Load("titleTex.obj");
-    ModelManager::GetInstance()->Load("fence.obj");
+    //ModelManager::GetInstance()->Load("plane.obj");
+   // ModelManager::GetInstance()->Load("axis.obj");
+   // ModelManager::GetInstance()->Load("titleTex.obj");
+   // ModelManager::GetInstance()->Load("fence.obj");
 
     Logger::Log("Load Default Textures");
     TextureManager::GetInstance()->LoadTexture("resources/white.png");

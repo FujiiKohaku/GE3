@@ -1,0 +1,53 @@
+[2026-05-19 11:51:05] [Log] Application Start
+[2026-05-19 11:51:05] [Log] Game Initialize
+[2026-05-19 11:51:05] [Log] Game Initialize Start
+[2026-05-19 11:51:05] [Log] Use Adapater:NVIDIA GeForce RTX 4060 Laptop GPU
+
+[2026-05-19 11:51:06] [Log] FeatureLevel : 12.2
+
+[2026-05-19 11:51:06] [Log] Complete create D3D12Device!!!
+
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Sprite.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Sprite.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Sprite.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Sprite.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Object3d.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Object3d.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Object3d.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Object3d.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Glow.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Glow.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 11:51:06] [Log] Texture Loaded: resources/skyBox.dds, SRV Index: 1
+[2026-05-19 11:51:06] [Log] srvIndex = 1
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Object3d.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Object3d.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Object3d.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Object3d.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Skinning.CS.hlsl,profike:cs_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Skinning.CS.hlsl, profike:cs_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Skybox.VS.hlsl,profike:vs_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Skybox.VS.hlsl, profike:vs_6_0
+ 
+[2026-05-19 11:51:06] [Log] Begin CompileShader,path:resources/shaders/Skybox.PS.hlsl,profike:ps_6_0
+
+[2026-05-19 11:51:06] [Log] Compile Succeeded, path:resources/shaders/Skybox.PS.hlsl, profike:ps_6_0
+ 
+[2026-05-19 11:51:06] [Log] Load Default Models
+[2026-05-19 11:51:06] [Log] Load Default Textures
