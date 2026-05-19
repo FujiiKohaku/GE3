@@ -13,6 +13,8 @@
 void GamePlayScene::Initialize()
 {
 
+    //ポストエフェクト切り替え
+    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
     // Camera
     // =================================================
