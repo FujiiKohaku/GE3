@@ -83,4 +83,8 @@ private:
     float aimFollowPower_ = 0.08f;
 
     WinApp* winApp_ = nullptr;
+
+
+    void ClampAimScreenPosition(); // 照準の画面上の位置を制限する関数
+    void UpdateKeyboardAim(Input* input); // キーボードで照準を動かす処理
 };
