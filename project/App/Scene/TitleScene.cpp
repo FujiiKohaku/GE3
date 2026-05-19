@@ -29,7 +29,7 @@ void TitleScene::Initialize()
     // sprite
 
    
-
+     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
 
 }
 void TitleScene::Update()
