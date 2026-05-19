@@ -151,3 +151,8 @@ void Input::Finalize()
     instance_->directInput_.Reset();
     instance_.reset();
 }
+void Input::ResetMouseDelta()
+{
+    mouseState_.lX = 0;
+    mouseState_.lY = 0;
+}

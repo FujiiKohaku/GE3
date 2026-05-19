@@ -3,6 +3,7 @@
 #include "Engine/Camera/Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/blend/blendutil.h"
+#include "Engine/TextureManager/TextureManager.h"
 
 class Object3dManager {
 public:
@@ -33,15 +34,10 @@ public:
     }
     void SetNormalPSO();
     void SetGlowPSO();
-    void SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle)
-    {
-        environmentHandle_ = handle;
-    }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture() const
-    {
-        return environmentHandle_;
-    }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture();
+    void SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle);
 
 private:
     static std::unique_ptr<Object3dManager> instance_;
@@ -77,8 +73,12 @@ private:
     // Glow描画
     Microsoft::WRL::ComPtr<ID3D12PipelineState> glowPipelineStates[kCountOfBlendMode];
 
-   Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-   D3D12_GPU_DESCRIPTOR_HANDLE environmentHandle_;
+    D3D12_GPU_DESCRIPTOR_HANDLE environmentHandle_;
     int currentBlendMode = kBlendModeNormal;
+
+    // 環境マップ
+    D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE defaultEnvironmentTextureHandle_ = {};
 };

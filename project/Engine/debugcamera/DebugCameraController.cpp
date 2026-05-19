@@ -78,8 +78,18 @@ void DebugCameraController::Update()
         cameraRotate.x -= rotateSpeed;
     }
 
-    // マウスドラッグで回転
-    if (!ImGui::GetIO().WantCaptureMouse && Input::GetInstance()->IsMousePressed(0)) {
+    bool isUsingImGuiMouse = false;
+
+#ifdef USE_IMGUI
+    isUsingImGuiMouse = ImGui::GetIO().WantCaptureMouse;
+#endif
+
+    if (isUsingImGuiMouse) {
+        Input::GetInstance()->ResetMouseDelta();
+        return;
+    }
+
+    if (Input::GetInstance()->IsMousePressed(0)) {
         cameraRotate.y += static_cast<float>(Input::GetInstance()->GetMouseDeltaX()) * mouseSensitivity;
         cameraRotate.x -= static_cast<float>(Input::GetInstance()->GetMouseDeltaY()) * mouseSensitivity;
     }
