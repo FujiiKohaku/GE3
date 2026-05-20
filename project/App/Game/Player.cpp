@@ -265,6 +265,7 @@ void Player::ClampWorldAimPosition()
         transform_.translate.y = -moveLimitY_ + playerClampMarginY;
     }
 }
+
 // プレイヤーの位置を照準に追従させる処理
 void Player::FollowAimPosition()
 {

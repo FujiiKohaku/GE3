@@ -88,7 +88,7 @@ private:
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
     float aimFollowPower_ = 0.01f;
     float aimScreenFollowPower_ = 1.0f;
-    float mouseAimFollowPower_ = 0.08f;
+    float mouseAimFollowPower_ = 1.0f;
     void ResetParameters();
 
     float bulletSpawnOffsetY_ = 0.3f;
@@ -104,21 +104,20 @@ private:
     float tiltRollPower_ = 0.03f;
     float playerClampMarginX_ = 6.0f;
     float playerClampMarginY_ = 1.0f;
-  //  Vector2 previousMousePosition_ = { 0.0f, 0.0f };
+    //  Vector2 previousMousePosition_ = { 0.0f, 0.0f };
 
-  //  bool isFirstMouseUpdate_ = true;
+    //  bool isFirstMouseUpdate_ = true;
     // なめらか追従
-  //  float followSpeed = 0.5f;
+    //  float followSpeed = 0.5f;
 
-  //  float mouseFollowRate_ = 0.15f;
+    //  float mouseFollowRate_ = 0.15f;
     WinApp* winApp_ = nullptr;
-   // Vector3 difference_;
-   // float aimTiltPower_ = 0.08f;
+    // Vector3 difference_;
+    // float aimTiltPower_ = 0.08f;
     void FireBullet();
     void UpdateBullets();
     void RemoveDeadBullets();
     void ApplyTransform();
-
 
     void ClampAimScreenPosition(); // 照準の画面上の位置を制限する関数
     void UpdateKeyboardAim(Input* input); // キーボードで照準を動かす処理
