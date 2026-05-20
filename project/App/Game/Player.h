@@ -102,6 +102,8 @@ private:
     float tiltAimPowerX_ = 0.04f;
     float tiltAimPowerY_ = 0.04f;
     float tiltRollPower_ = 0.03f;
+    float playerClampMarginX_ = 6.0f;
+    float playerClampMarginY_ = 1.0f;
   //  Vector2 previousMousePosition_ = { 0.0f, 0.0f };
 
   //  bool isFirstMouseUpdate_ = true;
