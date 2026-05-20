@@ -247,20 +247,22 @@ void Player::UpdateMouseAim()
 // 照準のワールド上の位置を制限する処理
 void Player::ClampWorldAimPosition()
 {
-    if (aimPosition_.x > moveLimitX_) {
-        aimPosition_.x = moveLimitX_;
+    float playerClampMargin = 6.0f;
+    float playerClampMarginY = 1.0f;
+    if (transform_.translate.x > moveLimitX_ - playerClampMargin) {
+        transform_.translate.x = moveLimitX_ - playerClampMargin;
     }
 
-    if (aimPosition_.x < -moveLimitX_) {
-        aimPosition_.x = -moveLimitX_;
+    if (transform_.translate.x < -moveLimitX_ + playerClampMargin) {
+        transform_.translate.x = -moveLimitX_ + playerClampMargin;
     }
 
-    if (aimPosition_.y > moveLimitY_) {
-        aimPosition_.y = moveLimitY_;
+    if (transform_.translate.y > moveLimitY_ - playerClampMarginY) {
+        transform_.translate.y = moveLimitY_ - playerClampMarginY;
     }
 
-    if (aimPosition_.y < -moveLimitY_) {
-        aimPosition_.y = -moveLimitY_;
+    if (transform_.translate.y < -moveLimitY_ + playerClampMarginY) {
+        transform_.translate.y = -moveLimitY_ + playerClampMarginY;
     }
 }
 // プレイヤーの位置を照準に追従させる処理
@@ -294,25 +296,20 @@ void Player::UpdateTilt()
 
 void Player::ClampPlayerWorldPosition()
 {
-
-    if (transform_.translate.x > moveLimitX_) {
-
-        transform_.translate.x = moveLimitX_;
+    if (transform_.translate.x > moveLimitX_ - playerClampMarginX_) {
+        transform_.translate.x = moveLimitX_ - playerClampMarginX_;
     }
 
-    if (transform_.translate.x < -moveLimitX_) {
-
-        transform_.translate.x = -moveLimitX_;
+    if (transform_.translate.x < -moveLimitX_ + playerClampMarginX_) {
+        transform_.translate.x = -moveLimitX_ + playerClampMarginX_;
     }
 
-    if (transform_.translate.y > moveLimitY_) {
-
-        transform_.translate.y = moveLimitY_;
+    if (transform_.translate.y > moveLimitY_ - playerClampMarginY_) {
+        transform_.translate.y = moveLimitY_ - playerClampMarginY_;
     }
 
-    if (transform_.translate.y < -moveLimitY_) {
-
-        transform_.translate.y = -moveLimitY_;
+    if (transform_.translate.y < -moveLimitY_ + playerClampMarginY_) {
+        transform_.translate.y = -moveLimitY_ + playerClampMarginY_;
     }
 }
 // 弾を発射する関数
@@ -426,7 +423,43 @@ void Player::DrawImGui()
     ImGui::DragFloat("Tilt Roll Power", &tiltRollPower_, 0.001f, 0.0f, 1.0f);
     ImGui::DragFloat("Rotate Follow Power", &rotateFollowPower_, 0.001f, 0.0f, 1.0f);
     ImGui::Separator();
+    ImGui::Separator();
 
+ImGui::Text("Player Transform");
+
+ImGui::Text(
+    "Position : X %.2f Y %.2f Z %.2f",
+    transform_.translate.x,
+    transform_.translate.y,
+    transform_.translate.z
+);
+
+ImGui::Text(
+    "Rotate : X %.2f Y %.2f Z %.2f",
+    transform_.rotate.x,
+    transform_.rotate.y,
+    transform_.rotate.z
+);
+
+ImGui::Text(
+    "Velocity : X %.2f Y %.2f Z %.2f",
+    velocity_.x,
+    velocity_.y,
+    velocity_.z
+);
+
+ImGui::Text(
+    "Aim Position : X %.2f Y %.2f Z %.2f",
+    aimPosition_.x,
+    aimPosition_.y,
+    aimPosition_.z
+);
+
+ImGui::Text(
+    "Aim Screen : X %.2f Y %.2f",
+    aimScreenPosition_.x,
+    aimScreenPosition_.y
+);
     if (ImGui::Button("Reset Player Params")) {
         ResetParameters();
     }
