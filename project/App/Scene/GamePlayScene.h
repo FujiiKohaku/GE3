@@ -114,4 +114,6 @@ private:
     // その他
     // ------------------------------
     float r = 0.0f;
+
+    Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
 };
