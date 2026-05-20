@@ -20,9 +20,14 @@ void GamePlayScene::Initialize()
     // =================================================
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    camera_->SetTranslate({ 0.0f, 0.0f, -30.0f });
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
+    POINT centerMousePosition;
+    centerMousePosition.x = WinApp::GetInstance()->kClientWidth / 2;
+    centerMousePosition.y = WinApp::GetInstance()->kClientHeight / 2;
 
+    ClientToScreen(WinApp::GetInstance()->GetHwnd(), &centerMousePosition);
+    SetCursorPos(centerMousePosition.x, centerMousePosition.y);
     debugCameraController_ = std::make_unique<DebugCameraController>();
     debugCameraController_->SetTargetCamera(camera_.get());
 
@@ -186,11 +191,12 @@ void GamePlayScene::Update()
         Vector3 playerPosition = player_->GetTranslate();
 
         Vector3 cameraPosition;
-        cameraPosition.x = playerPosition.x;
-        cameraPosition.y = playerPosition.y;
-        cameraPosition.z = playerPosition.z - 20.0f;
+        cameraPosition.x = playerPosition.x * 0.35f;
+        cameraPosition.y = playerPosition.y * 0.35f;
+        cameraPosition.z = playerPosition.z - 30.0f;
 
         camera_->SetTranslate(cameraPosition);
+
     }
 
     // デバッグカメラの更新は、通常のカメラ更新の後に行う
@@ -204,7 +210,7 @@ void GamePlayScene::Update()
 #ifdef USE_IMGUI
 
 
-
+    player_->DrawImGui();
 
     // ==================================
     // Lighting Panel（ライト操作パネル）
@@ -337,45 +343,10 @@ void GamePlayScene::Update()
 
     ImGui::End();
 
-    // ==================================
-    // Sphere Control
-    // ==================================
-    ImGui::Begin("Sphere Control");
-
-    // ---- このオブジェクトだけ ライティングする？ ----
-    // OFF にすると「フラット表示」になる
-    ImGui::Checkbox("Enable Lighting", &sphereLighting);
-
-    // ---- 位置 ----
-    ImGui::SliderFloat3("Position", &spherePos.x, -10.0f, 10.0f);
-
-    // ---- 回転 ----
-    ImGui::SliderFloat3("Rotate", &sphereRotate.x, -3.14f, 3.14f);
-
-    ImGui::SliderFloat3("Scale", &sphereScale.x, 1.0f, 10.0f);
-    // ---- テカり具合（鏡面反射の鋭さ） ----
-    static float shininess = 32.0f;
-    ImGui::SliderFloat("Shininess", &shininess, 1.0f, 128.0f);
-
-    ImGui::End();
-
-    ImGui::Begin("Plane Control");
-
-    // 位置
-    ImGui::SliderFloat3("Position", &planePos.x, -50.0f, 50.0f);
-
-    // 回転（ラジアン）
-    ImGui::SliderFloat3("Rotate", &planeRotate.x, -3.14f, 3.14f);
-
-    // スケール
-    ImGui::SliderFloat3("Scale", &planeScale.x, 0.1f, 10.0f);
-
-    ImGui::End();
+  
     // 反映
 #endif // USE_IMGUI
-    plane_->SetTranslate(planePos);
-    plane_->SetRotate(planeRotate);
-    plane_->SetScale(planeScale);
+
     terrain_->SetTranslate(terrainPos);
     terrain_->SetRotate(terrainRotate);
     terrain_->SetScale(terrainScale);
