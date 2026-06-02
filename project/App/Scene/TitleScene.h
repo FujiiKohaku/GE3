@@ -23,4 +23,5 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<Object3d> titleObj_;
     std::unique_ptr<Sprite> titleSprite_;
+    std::unique_ptr<Sprite> creditSprite_;
 };

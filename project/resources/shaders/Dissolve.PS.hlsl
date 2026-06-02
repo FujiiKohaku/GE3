@@ -15,10 +15,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 
-    float edge = 1.0f - smoothstep(
-        dissolveThreshold,
-        dissolveThreshold + dissolveEdgeWidth,
-        mask);
+    float edge = 1.0f - smoothstep(dissolveThreshold,dissolveThreshold + dissolveEdgeWidth,mask);
 
     textureColor.rgb += edge * dissolveEdgeStrength * float3(1.0f, 0.4f, 0.0f);
 

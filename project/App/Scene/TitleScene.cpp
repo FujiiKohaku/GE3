@@ -26,12 +26,16 @@ void TitleScene::Initialize()
     titleObj_->SetEnvironmentMapStrength(false);
     //  titleObj_->SetCamera(camera_.get());
 
+    TextureManager::GetInstance()->LoadTexture("resources/Credit.png");
+    TextureManager::GetInstance()->LoadTexture("resources/exit.png");
     // sprite
     titleSprite_ = std::make_unique<Sprite>();
-    titleSprite_->Initialize(SpriteManager::GetInstance(), "resources/Guardian.png");
-   
-     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
+    titleSprite_->Initialize(SpriteManager::GetInstance(), "resources/Credit.png");
 
+    creditSprite_ = std::make_unique<Sprite>();
+    creditSprite_->Initialize(SpriteManager::GetInstance(), "resources/exit.png");
+    creditSprite_->SetPosition({ 210.0f, 0.0f });
+    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
 }
 void TitleScene::Update()
 {
@@ -42,7 +46,7 @@ void TitleScene::Update()
 
     titleObj_->Update();
     titleSprite_->Update();
-
+    creditSprite_->Update();
     if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
     }
@@ -77,8 +81,9 @@ void TitleScene::Update()
 void TitleScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-    
+
     titleSprite_->Draw();
+    creditSprite_->Draw();
 }
 
 void TitleScene::Draw3D()
