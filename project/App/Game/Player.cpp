@@ -393,8 +393,13 @@ void Player::ApplyTransform()
     object_->SetTranslate(transform_.translate);
 }
 
+
+
+#ifdef DEBUG
+
 void Player::DrawImGui()
 {
+
     ImGui::Begin("Player");
 
     ImGui::Text("Move");
@@ -466,7 +471,7 @@ ImGui::Text(
     }
     ImGui::End();
 }
-
+#endif // DEBUG
 void Player::ResetParameters()
 {
     acceleration_ = 0.02f;
