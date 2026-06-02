@@ -198,6 +198,7 @@ void GamePlayScene::Update()
         camera_->SetTranslate(cameraPosition);
 
     }
+    
 
     // デバッグカメラの更新は、通常のカメラ更新の後に行う
     debugCameraController_->Update();
