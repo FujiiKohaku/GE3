@@ -266,6 +266,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Particle\MeshManager\ParticleCylinderMesh.cpp" />
     <ClCompile Include="Engine\math\GPUParticleStruct.cpp" />
     <ClCompile Include="Engine\PostEffect\PostEffectType.cpp" />
+    <ClCompile Include="Engine\LevelEditor\LevelData.cpp" />
+    <ClCompile Include="Engine\LevelEditor\LevelDataLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
@@ -357,6 +359,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Particle\MeshManager\ParticleCylinderMesh.h" />
     <ClInclude Include="Engine\math\GPUParticleStruct.h" />
     <ClInclude Include="Engine\PostEffect\PostEffectType.h" />
+    <ClInclude Include="Engine\LevelEditor\LevelData.h" />
+    <ClInclude Include="Engine\LevelEditor\LevelDataLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="externals\imgui\LICENSE.txt" />

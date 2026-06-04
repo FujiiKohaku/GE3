@@ -27,7 +27,7 @@
 #include "Engine/Animation/AnimationActor.h"
 
 #include <memory>
-
+#include <vector>
 #include "../Game/Player.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -61,7 +61,7 @@ private:
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
-
+    std::vector<std::unique_ptr<Object3d>> levelObjects_;
     // プレイヤークラス
     std::unique_ptr<Player> player_;
 
