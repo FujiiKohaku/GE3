@@ -8,12 +8,16 @@
 
 #include "SceneManager.h"
 
+#include "../externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
+#include <fstream>
+
+#include "../../Engine/LevelEditor/LevelDataLoader.h"
 
 void GamePlayScene::Initialize()
 {
 
-    //ポストエフェクト切り替え
+    // ポストエフェクト切り替え
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
     // Camera
@@ -91,7 +95,7 @@ void GamePlayScene::Initialize()
     // =================================================
     // Light
     // =================================================
-   
+
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
 
     // =================================================
@@ -123,11 +127,36 @@ void GamePlayScene::Initialize()
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
 
+    LevelDataLoader levelDataLoader;
+    LevelData levelData = levelDataLoader.Load("resources/levels/stage01.json");
 
+    for (const LevelData::ObjectData& objectData : levelData.objects) {
+        if (objectData.type != "MESH") {
+            continue;
+        }
+
+        if (objectData.fileName.empty()) {
+            continue;
+        }
+
+        ModelManager::GetInstance()->Load(objectData.fileName);
+
+        std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
+        levelObject->Initialize(Object3dManager::GetInstance());
+        levelObject->SetModel(objectData.fileName);
+        levelObject->SetTranslate(objectData.translation);
+        levelObject->SetRotate(objectData.rotation);
+        levelObject->SetScale(objectData.scale);
+        levelObjects_.push_back(std::move(levelObject));
+    }
 }
 
 void GamePlayScene::Update()
 {
+
+    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        levelObject->Update();
+    }
     if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
     }
@@ -154,19 +183,14 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_8)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::RadialBlur);
     }
-     if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
-     }
+    }
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
-     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
+    // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
-
-
-
-
-
 
     testSprite_->Update();
 
@@ -196,9 +220,7 @@ void GamePlayScene::Update()
         cameraPosition.z = playerPosition.z - 30.0f;
 
         camera_->SetTranslate(cameraPosition);
-
     }
-    
 
     // デバッグカメラの更新は、通常のカメラ更新の後に行う
     debugCameraController_->Update();
@@ -209,7 +231,6 @@ void GamePlayScene::Update()
 
 #pragma region ImGuiによるライト操作パネル
 #ifdef USE_IMGUI
-
 
     player_->DrawImGui();
 
@@ -344,7 +365,6 @@ void GamePlayScene::Update()
 
     ImGui::End();
 
-  
     // 反映
 #endif // USE_IMGUI
 
@@ -366,8 +386,10 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-     terrain_->Draw();
-
+    terrain_->Draw();
+    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        levelObject->Draw();
+    }
     player_->Draw();
 
     //----------------------
@@ -400,6 +422,5 @@ void GamePlayScene::Finalize()
 
     ParticleManager::GetInstance()->Finalize();
 
-   
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
