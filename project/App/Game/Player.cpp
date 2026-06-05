@@ -5,6 +5,8 @@
 #include "../../Engine/debugcamera/DebugCameraController.h"
 #include <algorithm>
 #include <cassert>
+
+#include "../../externals/imgui/ImGuizmo.h"
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -395,7 +397,7 @@ void Player::ApplyTransform()
 
 
 
-#ifdef DEBUG
+#ifdef _DEBUG
 
 void Player::DrawImGui()
 {
@@ -469,6 +471,30 @@ ImGui::Text(
     if (ImGui::Button("Reset Player Params")) {
         ResetParameters();
     }
+    ImGui::Separator();
+    ImGui::Text("Gizmo");
+
+    Matrix4x4 playerWorldMatrix = MatrixMath::MakeAffineMatrix(
+        transform_.scale,
+        transform_.rotate,
+        transform_.translate);
+
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetDrawlist();
+
+    ImGuizmo::SetRect(
+        0.0f,
+        0.0f,
+        static_cast<float>(WinApp::kClientWidth),
+        static_cast<float>(WinApp::kClientHeight));
+    const Matrix4x4& viewMatrix = camera_->GetViewMatrix();
+    const Matrix4x4& projectionMatrix = camera_->GetProjectionMatrix();
+    ImGuizmo::Manipulate(
+        const_cast<float*>(&viewMatrix.m[0][0]),
+        const_cast<float*>(&projectionMatrix.m[0][0]),
+        ImGuizmo::TRANSLATE,
+        ImGuizmo::LOCAL,
+        &playerWorldMatrix.m[0][0]);
     ImGui::End();
 }
 #endif // DEBUG
