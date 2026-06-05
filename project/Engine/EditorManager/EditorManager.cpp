@@ -28,3 +28,8 @@ void EditorManager::DrawImGui()
 
 #endif
 }
+
+void EditorManager::SetSelectedObject(Object3d* object)
+{
+    selectedObject_ = object;
+}

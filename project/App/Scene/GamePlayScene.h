@@ -26,12 +26,14 @@
 
 #include "Engine/Animation/AnimationActor.h"
 
-#include <memory>
-#include <vector>
 #include "../Game/Player.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
+#include <memory>
+#include <vector>
+
+#include"../../Engine/EditorManager/EditorManager.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -45,6 +47,8 @@ public:
     void DrawImGui() override;
 
 private:
+    int test_ = 0;
+    std::unique_ptr<EditorManager> editorManager_;
     // ------------------------------
     // カメラ
     // ------------------------------

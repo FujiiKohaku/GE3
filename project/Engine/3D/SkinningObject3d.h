@@ -2,11 +2,11 @@
 #include "../3D/SkinCluster.h"
 #include "../Animation/PlayAnimation.h"
 #include "Engine/Camera/Camera.h"
+#include "Engine/TextureManager/TextureManager.h"
 #include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/math/MatrixMath.h"
-#include "Model.h"
 #include "Engine/math/Object3DStruct.h"
-#include "Engine/TextureManager/TextureManager.h"
+#include "Model.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -44,7 +44,6 @@ public:
     {
         baseTransform_.translate = translate;
     }
- 
 
     // === getter ===
     const Vector3& GetScale() const
@@ -103,7 +102,6 @@ public:
         }
     }
 
-
     void setEnableEnvironmentMap(bool enable)
     {
         if (materialData_) {
@@ -161,9 +159,8 @@ private:
 
     // SkinCluster skinCluster_;
     SkinCluster::SkinClusterData skinClusterData_;
-    PlayAnimation* playAnimation_;
-   // D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
-
+    PlayAnimation* playAnimation_ = nullptr;
+    // D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
 
     // コンピュートシェーダー用のバッファとSRV/UAV
     Microsoft::WRL::ComPtr<ID3D12Resource> inputVertexResource_;
@@ -183,7 +180,7 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12Resource> skinningInformationResource_;
     SkinningInformation* skinningInformationData_ = nullptr;
-     void CreateSkinningResources();
+    void CreateSkinningResources();
     void DispatchSkinning();
-     std::vector<D3D12_VERTEX_BUFFER_VIEW> skinnedPrimitiveVertexBufferViews_;
+    std::vector<D3D12_VERTEX_BUFFER_VIEW> skinnedPrimitiveVertexBufferViews_;
 };

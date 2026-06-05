@@ -17,6 +17,9 @@
 void GamePlayScene::Initialize()
 {
 
+    editorManager_ = std::make_unique<EditorManager>();
+    editorManager_->Initialize();
+
     // ポストエフェクト切り替え
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
@@ -77,7 +80,9 @@ void GamePlayScene::Initialize()
     plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
 
     animationActor_ = std::make_unique<AnimationActor>();
+    OutputDebugStringA("A\n");
     animationActor_->Initialize("sneakWalk.gltf");
+    OutputDebugStringA("B\n");
     animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
     animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
@@ -154,6 +159,8 @@ void GamePlayScene::Initialize()
 void GamePlayScene::Update()
 {
 
+    editorManager_->Update();
+
     for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
         levelObject->Update();
     }
@@ -192,7 +199,7 @@ void GamePlayScene::Update()
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
-    testSprite_->Update();
+   testSprite_->Update();
 
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
@@ -232,7 +239,7 @@ void GamePlayScene::Update()
 #pragma region ImGuiによるライト操作パネル
 #ifdef USE_IMGUI
 
-    player_->DrawImGui();
+   // player_->DrawImGui();
 
     // ==================================
     // Lighting Panel（ライト操作パネル）
@@ -398,7 +405,7 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-    // animationActor_->Draw();
+     animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }
@@ -406,14 +413,14 @@ void GamePlayScene::Draw3D()
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-    // testSprite_->Draw();
-    aimSprite_->Draw();
+     testSprite_->Draw();
+     aimSprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
-
+    editorManager_->DrawImGui();
 #endif
 }
 
