@@ -89,7 +89,7 @@ Matrix4x4 MatrixMath::Multiply(const Matrix4x4& m1, const Matrix4x4& m2)
     return result;
 }
 // ワールドマトリックス、メイクアフィン
-Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Vector3& rotate,const Vector3& translate)
+Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate)
 {
     Matrix4x4 scaleMatrix = Matrix4x4MakeScaleMatrix(scale);
     Matrix4x4 rotateX = MakeRotateXMatrix(rotate.x);
@@ -102,7 +102,7 @@ Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Vector3& rota
     return worldMatrix;
 }
 
-Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale,const Quaternion& rotate,const Vector3& translate)
+Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale, const Quaternion& rotate, const Vector3& translate)
 {
     // 念のため正規化
     Quaternion q = ::Normalize(rotate);
@@ -143,7 +143,6 @@ Matrix4x4 MatrixMath::MakeAffineMatrix(const Vector3& scale,const Quaternion& ro
 
     return mat;
 }
-
 
 // 4x4 行列の逆行列を計算する関数
 Matrix4x4 MatrixMath::Inverse(Matrix4x4 m)
@@ -258,5 +257,22 @@ Matrix4x4 MatrixMath::Transpose(const Matrix4x4& m)
 
     return result;
 }
+void MatrixMath::DecomposeMatrix(
+    const Matrix4x4& matrix,
+    Vector3& scale,
+    Vector3& translate)
+{
+    translate.x = matrix.m[3][0];
+    translate.y = matrix.m[3][1];
+    translate.z = matrix.m[3][2];
 
+    scale.x = std::sqrt(
+        matrix.m[0][0] * matrix.m[0][0] + matrix.m[0][1] * matrix.m[0][1] + matrix.m[0][2] * matrix.m[0][2]);
+
+    scale.y = std::sqrt(
+        matrix.m[1][0] * matrix.m[1][0] + matrix.m[1][1] * matrix.m[1][1] + matrix.m[1][2] * matrix.m[1][2]);
+
+    scale.z = std::sqrt(
+        matrix.m[2][0] * matrix.m[2][0] + matrix.m[2][1] * matrix.m[2][1] + matrix.m[2][2] * matrix.m[2][2]);
+}
 #pragma endregion
