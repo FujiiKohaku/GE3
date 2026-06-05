@@ -76,11 +76,27 @@ void EditorManager::DrawGizmo(Camera* camera)
         ImGuizmo::LOCAL,
         &worldMatrix.m[0][0]);
 
-    Vector3 translate;
-    Vector3 scale;
-    MatrixMath::DecomposeMatrix(worldMatrix, scale, translate);
+    ImGui::Begin("Debug");
 
-    selectedObject_->SetTranslate(translate);
+    ImGui::Text("IsOver : %d", ImGuizmo::IsOver());
+    ImGui::Text("IsUsing : %d", ImGuizmo::IsUsing());
+    ImGui::Text(
+        "Pos : %.2f %.2f %.2f",
+        worldMatrix.m[3][0],
+        worldMatrix.m[3][1],
+        worldMatrix.m[3][2]);
+    ImGui::End();
+
+    if (ImGuizmo::IsUsing()) {
+
+        Vector3 translate;
+
+        translate.x = worldMatrix.m[3][0];
+        translate.y = worldMatrix.m[3][1];
+        translate.z = worldMatrix.m[3][2];
+
+        selectedObject_->SetTranslate(translate);
+    }
 
 #endif
 }
