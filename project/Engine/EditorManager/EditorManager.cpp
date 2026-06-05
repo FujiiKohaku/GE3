@@ -45,7 +45,7 @@ void EditorManager::DrawImGui()
 void EditorManager::DrawGizmo(Camera* camera)
 {
 #ifdef USE_IMGUI
-
+    ImGuizmo::BeginFrame();
     if (selectedObject_ == nullptr) {
         return;
     }
