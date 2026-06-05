@@ -71,7 +71,7 @@ void GamePlayScene::Initialize()
     terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
     terrain_->SetEnvironmentMapStrength(0.0f);
     terrain_->SetEnableLighting(false);
-
+    terrain_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     // plane
     plane_ = std::make_unique<Object3d>();
     plane_->Initialize(Object3dManager::GetInstance());
@@ -109,8 +109,8 @@ void GamePlayScene::Initialize()
     // bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
     // SoundManager::GetInstance()->SoundPlayWave(bgm);
 
-    testSprite_ = std::make_unique<Sprite>();
-    testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");
+    /*testSprite_ = std::make_unique<Sprite>();
+    testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");*/
 
     aimSprite_ = std::make_unique<Sprite>();
     aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/aim.png");
@@ -154,6 +154,7 @@ void GamePlayScene::Initialize()
         levelObject->SetScale(objectData.scale);
         levelObjects_.push_back(std::move(levelObject));
     }
+    editorManager_->SetSelectedObject(terrain_.get());
 }
 
 void GamePlayScene::Update()
@@ -199,7 +200,7 @@ void GamePlayScene::Update()
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
-   testSprite_->Update();
+  /* testSprite_->Update();*/
 
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
@@ -375,7 +376,7 @@ void GamePlayScene::Update()
     // 反映
 #endif // USE_IMGUI
 
-    terrain_->SetTranslate(terrainPos);
+   // terrain_->SetTranslate(terrainPos);
     terrain_->SetRotate(terrainRotate);
     terrain_->SetScale(terrainScale);
 #pragma endregion
@@ -408,12 +409,13 @@ void GamePlayScene::Draw3D()
      animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
+   
 }
 
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
-     testSprite_->Draw();
+    // testSprite_->Draw();
      aimSprite_->Draw();
 }
 
@@ -421,6 +423,7 @@ void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
     editorManager_->DrawImGui();
+    editorManager_->DrawGizmo(camera_.get());
 #endif
 }
 
