@@ -135,29 +135,32 @@ void GamePlayScene::Initialize()
     /*LevelDataLoader levelDataLoader;
     LevelData levelData = levelDataLoader.Load("resources/levels/stage01.json");*/
 
-   /* for (const LevelData::ObjectData& objectData : levelData.objects) {
-        if (objectData.type != "MESH") {
-            continue;
-        }
+    /* for (const LevelData::ObjectData& objectData : levelData.objects) {
+         if (objectData.type != "MESH") {
+             continue;
+         }
 
-        if (objectData.fileName.empty()) {
-            continue;
-        }
+         if (objectData.fileName.empty()) {
+             continue;
+         }
 
-        ModelManager::GetInstance()->Load(objectData.fileName);
+         ModelManager::GetInstance()->Load(objectData.fileName);
 
-        std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
-        levelObject->Initialize(Object3dManager::GetInstance());
-        levelObject->SetModel(objectData.fileName);
-        levelObject->SetTranslate(objectData.translation);
-        levelObject->SetRotate(objectData.rotation);
-        levelObject->SetScale(objectData.scale);
-        levelObjects_.push_back(std::move(levelObject));
-    }*/
+         std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
+         levelObject->Initialize(Object3dManager::GetInstance());
+         levelObject->SetModel(objectData.fileName);
+         levelObject->SetTranslate(objectData.translation);
+         levelObject->SetRotate(objectData.rotation);
+         levelObject->SetScale(objectData.scale);
+         levelObjects_.push_back(std::move(levelObject));
+     }*/
 
     editorManager_->AddObject(terrain_.get());
     editorManager_->AddObject(plane_.get());
     editorManager_->SetSelectedObject(terrain_.get());
+
+    terrain_->SetName("Terrain");
+    plane_->SetName("Plane");
 }
 
 void GamePlayScene::Update()
@@ -165,9 +168,9 @@ void GamePlayScene::Update()
 
     editorManager_->Update(camera_.get());
 
-    //for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-    //    levelObject->Update();
-    //}
+    // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+    //     levelObject->Update();
+    // }
     if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
     }
@@ -203,7 +206,7 @@ void GamePlayScene::Update()
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
-  /* testSprite_->Update();*/
+    /* testSprite_->Update();*/
 
     skyBox_->Update(camera_.get());
     // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
@@ -244,7 +247,7 @@ void GamePlayScene::Update()
 #pragma region ImGuiによるライト操作パネル
 #ifdef USE_IMGUI
 
-   // player_->DrawImGui();
+    // player_->DrawImGui();
 
     // ==================================
     // Lighting Panel（ライト操作パネル）
@@ -380,9 +383,9 @@ void GamePlayScene::Update()
     // 反映
 #endif // USE_IMGUI
 
-   // terrain_->SetTranslate(terrainPos);
-   // terrain_->SetRotate(terrainRotate);
-    //terrain_->SetScale(terrainScale);
+    // terrain_->SetTranslate(terrainPos);
+    // terrain_->SetRotate(terrainRotate);
+    // terrain_->SetScale(terrainScale);
 #pragma endregion
 }
 
@@ -399,9 +402,9 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     terrain_->Draw();
-    //for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-    //    levelObject->Draw();
-    //}
+    // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+    //     levelObject->Draw();
+    // }
     player_->Draw();
     plane_->Draw();
     //----------------------
@@ -410,17 +413,16 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-     animationActor_->Draw();
+    animationActor_->Draw();
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
-   
 }
 
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
-     aimSprite_->Draw();
+    aimSprite_->Draw();
 }
 
 void GamePlayScene::DrawImGui()

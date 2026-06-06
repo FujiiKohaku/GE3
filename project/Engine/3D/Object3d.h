@@ -93,6 +93,15 @@ public:
     {
         materialData_->environmentCoefficient = strength;
     }
+    void SetName(const std::string& name)
+    {
+        name_ = name;
+    }
+
+    const std::string& GetName() const
+    {
+        return name_;
+    }
 
 private:
     // ===============================
@@ -124,6 +133,8 @@ private:
 
     // World
     Matrix4x4 worldMatrix_;
-  //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
+    //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
+
+    std::string name_;
 };
