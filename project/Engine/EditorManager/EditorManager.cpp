@@ -88,39 +88,106 @@ void EditorManager::DrawImGui()
 
     ImGui::Begin("Editor");
 
-    if (selectedObject_ == nullptr) {
+    // =====================================
+    // Hierarchy
+    // =====================================
 
-        ImGui::Text("No Selection");
+    if (ImGui::CollapsingHeader("Hierarchy", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-    } else {
+        for (Object3d* object : objects_) {
 
-        ImGui::Text("Object Selected");
+            bool isSelected = false;
 
-        Vector3 translate = selectedObject_->GetTranslate();
+            if (object == selectedObject_) {
+                isSelected = true;
+            }
 
-        if (ImGui::DragFloat3("Translate", &translate.x, 0.1f)) {
+            if (ImGui::Selectable(
+                    object->GetName().c_str(),
+                    isSelected)) {
 
-            selectedObject_->SetTranslate(translate);
+                selectedObject_ = object;
+            }
         }
     }
+
     ImGui::Separator();
-    ImGui::Text("Gizmo");
 
-    if (ImGui::Button("Move")) {
-        gizmoMode_ = GizmoMode::Translate;
+    // =====================================
+    // Inspector
+    // =====================================
+
+    if (ImGui::CollapsingHeader("Inspector", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+        if (selectedObject_ == nullptr) {
+
+            ImGui::Text("No Selection");
+
+        } else {
+
+            ImGui::Text(
+                "Selected : %s",
+                selectedObject_->GetName().c_str());
+
+            ImGui::Separator();
+
+            Vector3 translate = selectedObject_->GetTranslate();
+
+            if (ImGui::DragFloat3(
+                    "Position",
+                    &translate.x,
+                    0.1f)) {
+
+                selectedObject_->SetTranslate(translate);
+            }
+
+            Vector3 rotate = selectedObject_->GetRotate();
+
+            if (ImGui::DragFloat3(
+                    "Rotation",
+                    &rotate.x,
+                    0.01f)) {
+
+                selectedObject_->SetRotate(rotate);
+            }
+
+            Vector3 scale = selectedObject_->GetScale();
+
+            if (ImGui::DragFloat3(
+                    "Scale",
+                    &scale.x,
+                    0.01f)) {
+
+                selectedObject_->SetScale(scale);
+            }
+        }
     }
 
-    ImGui::SameLine();
+    ImGui::Separator();
 
-    if (ImGui::Button("Rotate")) {
-        gizmoMode_ = GizmoMode::Rotate;
+    // =====================================
+    // Gizmo
+    // =====================================
+
+    if (ImGui::CollapsingHeader("Gizmo", ImGuiTreeNodeFlags_DefaultOpen)) {
+
+        if (ImGui::Button("Move")) {
+            gizmoMode_ = GizmoMode::Translate;
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Rotate")) {
+            gizmoMode_ = GizmoMode::Rotate;
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Scale")) {
+            gizmoMode_ = GizmoMode::Scale;
+        }
     }
 
-    ImGui::SameLine();
-
-    if (ImGui::Button("Scale")) {
-        gizmoMode_ = GizmoMode::Scale;
-    }
     ImGui::End();
 
 #endif
@@ -167,17 +234,6 @@ void EditorManager::DrawGizmo(Camera* camera)
         ImGuizmo::LOCAL,
         &worldMatrix.m[0][0]);
 
-    ImGui::Begin("Debug");
-
-    ImGui::Text("IsOver : %d", ImGuizmo::IsOver());
-    ImGui::Text("IsUsing : %d", ImGuizmo::IsUsing());
-    ImGui::Text(
-        "Pos : %.2f %.2f %.2f",
-        worldMatrix.m[3][0],
-        worldMatrix.m[3][1],
-        worldMatrix.m[3][2]);
-    ImGui::End();
-
     if (ImGuizmo::IsUsing()) {
 
         float translation[3];
@@ -205,7 +261,7 @@ void EditorManager::DrawGizmo(Camera* camera)
         rotate.y = rotation[1] * degreeToRadian;
         rotate.z = rotation[2] * degreeToRadian;
 
-      //  selectedObject_->SetRotate(rotate);
+        //  selectedObject_->SetRotate(rotate);
     }
 
 #endif
