@@ -75,8 +75,8 @@ void GamePlayScene::Initialize()
     // plane
     plane_ = std::make_unique<Object3d>();
     plane_->Initialize(Object3dManager::GetInstance());
-    ModelManager::GetInstance()->Load("plane.obj");
-    plane_->SetModel(ModelManager::GetInstance()->FindModel("plane.obj"));
+    ModelManager::GetInstance()->Load("star.obj");
+    plane_->SetModel(ModelManager::GetInstance()->FindModel("star.obj"));
     plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
 
     animationActor_ = std::make_unique<AnimationActor>();
@@ -132,10 +132,10 @@ void GamePlayScene::Initialize()
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
 
-    LevelDataLoader levelDataLoader;
-    LevelData levelData = levelDataLoader.Load("resources/levels/stage01.json");
+    /*LevelDataLoader levelDataLoader;
+    LevelData levelData = levelDataLoader.Load("resources/levels/stage01.json");*/
 
-    for (const LevelData::ObjectData& objectData : levelData.objects) {
+   /* for (const LevelData::ObjectData& objectData : levelData.objects) {
         if (objectData.type != "MESH") {
             continue;
         }
@@ -153,18 +153,21 @@ void GamePlayScene::Initialize()
         levelObject->SetRotate(objectData.rotation);
         levelObject->SetScale(objectData.scale);
         levelObjects_.push_back(std::move(levelObject));
-    }
+    }*/
+
+    editorManager_->AddObject(terrain_.get());
+    editorManager_->AddObject(plane_.get());
     editorManager_->SetSelectedObject(terrain_.get());
 }
 
 void GamePlayScene::Update()
 {
 
-    editorManager_->Update();
+    editorManager_->Update(camera_.get());
 
-    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-        levelObject->Update();
-    }
+    //for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+    //    levelObject->Update();
+    //}
     if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
     }
@@ -213,6 +216,7 @@ void GamePlayScene::Update()
     ParticleManager::GetInstance()->Update();
 
     terrain_->Update();
+    plane_->Update();
     camera_->Update();
 
     // デバッグカメラモードの切り替え
@@ -377,8 +381,8 @@ void GamePlayScene::Update()
 #endif // USE_IMGUI
 
    // terrain_->SetTranslate(terrainPos);
-    terrain_->SetRotate(terrainRotate);
-    terrain_->SetScale(terrainScale);
+   // terrain_->SetRotate(terrainRotate);
+    //terrain_->SetScale(terrainScale);
 #pragma endregion
 }
 
@@ -395,11 +399,11 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     terrain_->Draw();
-    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-        levelObject->Draw();
-    }
+    //for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+    //    levelObject->Draw();
+    //}
     player_->Draw();
-
+    plane_->Draw();
     //----------------------
     // スキニング
     //----------------------
