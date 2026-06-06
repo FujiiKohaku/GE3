@@ -1,8 +1,14 @@
 #pragma once
 
+#include "GPUParticleStruct.h"
+#include "Light.h"
 #include "MathStruct.h"
 #include "MatrixMath.h"
-#include "Light.h"
-#include "SpriteStruct.h"
 #include "Object3DStruct.h"
-#include"GPUParticleStruct.h"
+#include "SpriteStruct.h"
+
+#include "Ray.h"
+
+#include "Collision.h"
+
+#include "Sphere.h"
