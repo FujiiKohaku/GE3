@@ -91,7 +91,7 @@ void EditorManager::DrawImGui()
     // =====================================
     // Hierarchy
     // =====================================
-
+    ImGui::Text("Object Count : %d", static_cast<int>(objects_.size()));
     if (ImGui::CollapsingHeader("Hierarchy", ImGuiTreeNodeFlags_DefaultOpen)) {
 
         for (Object3d* object : objects_) {

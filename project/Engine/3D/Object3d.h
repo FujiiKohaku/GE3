@@ -135,6 +135,5 @@ private:
     Matrix4x4 worldMatrix_;
     //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
-
-    std::string name_;
+    std::string name_ = "Object[nameNull]";
 };
