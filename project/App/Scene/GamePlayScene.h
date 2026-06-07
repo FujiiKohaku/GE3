@@ -33,7 +33,7 @@
 #include <memory>
 #include <vector>
 
-#include"../../Engine/EditorManager/EditorManager.h"
+#include "../../Engine/EditorManager/EditorManager.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -47,6 +47,9 @@ public:
     void DrawImGui() override;
 
 private:
+    // 3Dオブジェクトのコンテナ
+    std::vector<std::unique_ptr<Object3d>> sceneObjects_;
+
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
     // ------------------------------
@@ -59,8 +62,8 @@ private:
     // ------------------------------
 
     std::unique_ptr<SphereObject> sphere_;
-    std::unique_ptr<Object3d> terrain_;
-    std::unique_ptr<Object3d> plane_;
+    // std::unique_ptr<Object3d> terrain_;
+   // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
@@ -120,4 +123,6 @@ private:
     float r = 0.0f;
 
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
+
+    Object3d* CreateObject(const std::string& name, const std::string& modelName);
 };
