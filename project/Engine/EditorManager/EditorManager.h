@@ -2,8 +2,10 @@
 
 #include "Engine/Math/Ray.h"
 #include <vector>
+
+#include <string>
 #ifdef USE_IMGUI
-//#include "../../externals/imgui/ImGuizmo.h"
+// #include "../../externals/imgui/ImGuizmo.h"
 #endif
 class Object3d;
 class Camera;
@@ -20,6 +22,8 @@ public:
     void Initialize();
     void Update(Camera* camera);
     void DrawImGui();
+    void SaveJson(const std::string& filePath);
+    void LoadJson(const std::string& filePath);
 
     void SetSelectedObject(Object3d* object);
     void DrawGizmo(Camera* camera);

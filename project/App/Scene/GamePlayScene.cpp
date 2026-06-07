@@ -65,19 +65,9 @@ void GamePlayScene::Initialize()
     //==============
     //  OBJ
     //==============
-    terrain_ = std::make_unique<Object3d>();
-    terrain_->Initialize(Object3dManager::GetInstance());
-    ModelManager::GetInstance()->Load("terrain.obj");
-    terrain_->SetModel(ModelManager::GetInstance()->FindModel("terrain.obj"));
-    terrain_->SetEnvironmentMapStrength(0.0f);
-    terrain_->SetEnableLighting(false);
-    terrain_->SetTranslate({ 0.0f, 0.0f, 0.0f });
-    // plane
-    plane_ = std::make_unique<Object3d>();
-    plane_->Initialize(Object3dManager::GetInstance());
-    ModelManager::GetInstance()->Load("star.obj");
-    plane_->SetModel(ModelManager::GetInstance()->FindModel("star.obj"));
-    plane_->SetTranslate({ 0.0f, 2.0f, 0.0f });
+    Object3d* terrain_ = CreateObject("terrain", "terrain.obj");
+
+    Object3d* star = CreateObject("star", "star.obj");
 
     animationActor_ = std::make_unique<AnimationActor>();
     OutputDebugStringA("A\n");
@@ -154,13 +144,13 @@ void GamePlayScene::Initialize()
          levelObject->SetScale(objectData.scale);
          levelObjects_.push_back(std::move(levelObject));
      }*/
+    // editorManager_->SetSelectedObject(terrain_);
 
-    editorManager_->AddObject(terrain_.get());
-    editorManager_->AddObject(plane_.get());
-    editorManager_->SetSelectedObject(terrain_.get());
+   
 
-    terrain_->SetName("Terrain");
-    plane_->SetName("Plane");
+    for (const std::unique_ptr<Object3d>& object : sceneObjects_) {
+        editorManager_->AddObject(object.get());
+    }
 }
 
 void GamePlayScene::Update()
@@ -201,7 +191,8 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
     }
     // プレイヤーの更新（入力処理や移動など）
-    player_->Update();
+    //  player_->Update();
+
     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
@@ -218,8 +209,9 @@ void GamePlayScene::Update()
     }
     ParticleManager::GetInstance()->Update();
 
-    terrain_->Update();
-    plane_->Update();
+    for (std::unique_ptr<Object3d>& sceneObject : sceneObjects_) {
+        sceneObject->Update();
+    }
     camera_->Update();
 
     // デバッグカメラモードの切り替え
@@ -240,7 +232,7 @@ void GamePlayScene::Update()
     // デバッグカメラの更新は、通常のカメラ更新の後に行う
     debugCameraController_->Update();
     // その他のオブジェクトの更新
-    plane_->Update();
+    // plane_->Update();
     // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
 
@@ -401,12 +393,14 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
-    terrain_->Draw();
+    // terrain_->Draw();
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
     //     levelObject->Draw();
     // }
-    player_->Draw();
-    plane_->Draw();
+    // player_->Draw();
+    for (std::unique_ptr<Object3d>& sceneObject : sceneObjects_) {
+        sceneObject->Draw();
+    }
     //----------------------
     // スキニング
     //----------------------
@@ -439,4 +433,22 @@ void GamePlayScene::Finalize()
     ParticleManager::GetInstance()->Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
+}
+Object3d* GamePlayScene::CreateObject(const std::string& name, const std::string& modelName)
+{
+    std::unique_ptr<Object3d> object = std::make_unique<Object3d>();
+
+    object->Initialize(Object3dManager::GetInstance());
+
+    ModelManager::GetInstance()->Load(modelName);
+
+    object->SetModel(ModelManager::GetInstance()->FindModel(modelName));
+
+    object->SetName(name);
+
+    Object3d* createdObject = object.get();
+
+    sceneObjects_.push_back(std::move(object));
+
+    return createdObject;
 }

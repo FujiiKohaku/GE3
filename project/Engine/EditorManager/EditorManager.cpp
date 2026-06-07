@@ -9,6 +9,8 @@
 #endif
 #include "../Math/Collision.h"
 #include "../Math/Sphere.h"
+
+#include "../externals/json.hpp"
 void EditorManager::Initialize()
 {
 }
@@ -91,7 +93,7 @@ void EditorManager::DrawImGui()
     // =====================================
     // Hierarchy
     // =====================================
-    ImGui::Text("Object Count : %d", static_cast<int>(objects_.size()));
+
     if (ImGui::CollapsingHeader("Hierarchy", ImGuiTreeNodeFlags_DefaultOpen)) {
 
         for (Object3d* object : objects_) {
@@ -187,7 +189,12 @@ void EditorManager::DrawImGui()
             gizmoMode_ = GizmoMode::Scale;
         }
     }
-
+    if (ImGui::Button("Save")) {
+        SaveJson("Resources/Scene/TestScene.json");
+    }
+    if (ImGui::Button("Load")) {
+        LoadJson("Resources/Scene/TestScene.json");
+    }
     ImGui::End();
 
 #endif
@@ -218,6 +225,7 @@ void EditorManager::DrawGizmo(Camera* camera)
 
     const Matrix4x4& viewMatrix = camera->GetViewMatrix();
     const Matrix4x4& projectionMatrix = camera->GetProjectionMatrix();
+    // 操作モードに応じてImGuizmoの操作を切り替える
     ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
     if (gizmoMode_ == GizmoMode::Rotate) {
@@ -273,4 +281,71 @@ void EditorManager::SetSelectedObject(Object3d* object)
 void EditorManager::AddObject(Object3d* object)
 {
     objects_.push_back(object);
+}
+void EditorManager::SaveJson(const std::string& filePath)
+{
+    nlohmann::json root;
+
+    root["Objects"] = nlohmann::json::array();
+
+    for (Object3d* object : objects_) {
+
+        nlohmann::json objectData;
+
+        objectData["Name"] = object->GetName();
+
+        objectData["Translate"] = {
+            object->GetTranslate().x,
+            object->GetTranslate().y,
+            object->GetTranslate().z
+        };
+
+        objectData["Rotate"] = {
+            object->GetRotate().x,
+            object->GetRotate().y,
+            object->GetRotate().z
+        };
+
+        objectData["Scale"] = {
+            object->GetScale().x,
+            object->GetScale().y,
+            object->GetScale().z
+        };
+
+        root["Objects"].push_back(objectData);
+    }
+
+    std::ofstream file(filePath);
+
+    if (file.is_open()) {
+        file << root.dump(4);
+        file.close();
+    }
+}
+void EditorManager::LoadJson(const std::string& filePath)
+{
+    std::ifstream file(filePath);
+
+    if (!file.is_open()) {
+        return;
+    }
+
+    nlohmann::json root;
+    file >> root;
+
+    for (const auto& objectData : root["Objects"]) {
+
+        std::string objectName = objectData["Name"];
+
+        Vector3 translate;
+
+        translate.x = objectData["Translate"][0];
+
+        translate.y = objectData["Translate"][1];
+
+        translate.z = objectData["Translate"][2];
+
+        OutputDebugStringA(
+            (objectName + "\n").c_str());
+    }
 }
