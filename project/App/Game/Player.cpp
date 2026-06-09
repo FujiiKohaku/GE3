@@ -7,6 +7,8 @@
 #include <cassert>
 
 #include "../../externals/imgui/ImGuizmo.h"
+
+#include"../../Engine/EditorManager/EditorManager.h"
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -30,9 +32,6 @@ void Player::Initialize(Model* model)
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
 
-    aimPosition_ = { 0.0f, 0.0f, 0.0f };
-    velocity_ = { 0.0f, 0.0f, 0.0f };
-
     aimScreenPosition_.x = WinApp::GetInstance()->kClientWidth / 2.0f;
     aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight / 2.0f;
 }
@@ -49,30 +48,27 @@ void Player::Update()
         return;
     }
 
-    if (input->IsMousePressed(0)) {
-        FireBullet();
-    }
-
+    // デバッグカメラモードの取得
     if (debugCameraController_ != nullptr) {
         isDebugMode = debugCameraController_->GetDebugMode();
     }
 
+    // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
     if (!isDebugMode) {
-        UpdateKeyboardAim(input);
         UpdateMouseAim();
-
+        UpdateKeyboardMove(input);
         ClampAimScreenPosition();
-        ClampWorldAimPosition();
-
-        FollowAimPosition();
         ClampPlayerWorldPosition();
-
-        UpdateTilt();
     }
-
+    // マウスの左クリックで弾を発射
+    if (input->IsMousePressed(0)) {
+        FireBullet();
+    }
+    // transform反映
     ApplyTransform();
-
+    // 弾更新と死んだ弾の削除
     UpdateBullets();
+    // 死んだ弾の削除
     RemoveDeadBullets();
 
     object_->Update();
@@ -131,88 +127,6 @@ void Player::ClampAimScreenPosition()
     }
 }
 
-// キーボードで照準を動かす関数
-void Player::UpdateKeyboardAim(Input* input)
-{
-    // ==============================
-    // キーボードで照準を動かす
-    // ==============================
-
-    Vector3 inputDirection = { 0.0f, 0.0f, 0.0f };
-
-    bool isKeyboardAimInput = false;
-
-    // キー入力に応じて移動方向を設定
-    if (input->IsKeyPressed(DIK_A)) {
-        inputDirection.x -= 1.0f;
-        isKeyboardAimInput = true;
-    }
-
-    if (input->IsKeyPressed(DIK_D)) {
-        inputDirection.x += 1.0f;
-        isKeyboardAimInput = true;
-    }
-
-    if (input->IsKeyPressed(DIK_W)) {
-        inputDirection.y += 1.0f;
-        isKeyboardAimInput = true;
-    }
-
-    if (input->IsKeyPressed(DIK_S)) {
-        inputDirection.y -= 1.0f;
-        isKeyboardAimInput = true;
-    }
-    // キーボード入力がある時だけ照準を動かす
-    if (isKeyboardAimInput) {
-        aimPosition_.x += velocity_.x;
-        aimPosition_.y += velocity_.y;
-
-
-        aimScreenPosition_.x += inputDirection.x * keyboardAimScreenSpeed_;
-        aimScreenPosition_.y -= inputDirection.y * keyboardAimScreenSpeed_;
-    }
-    // 斜め移動の速度補正
-    float length = std::sqrt(
-        inputDirection.x * inputDirection.x + inputDirection.y * inputDirection.y);
-
-    // 正規化
-    if (length > 0.0f) {
-        inputDirection.x /= length;
-        inputDirection.y /= length;
-    }
-
-    // 加速度を考慮して速度を更新
-    velocity_.x += inputDirection.x * acceleration_;
-    velocity_.y += inputDirection.y * acceleration_;
-
-    // 最大速度を超えないように制限
-    if (velocity_.x > maxSpeed_) {
-        velocity_.x = maxSpeed_;
-    }
-
-    if (velocity_.x < -maxSpeed_) {
-        velocity_.x = -maxSpeed_;
-    }
-
-    if (velocity_.y > maxSpeed_) {
-        velocity_.y = maxSpeed_;
-    }
-
-    if (velocity_.y < -maxSpeed_) {
-        velocity_.y = -maxSpeed_;
-    }
-
-    // 減速処理
-    velocity_.x *= deceleration_;
-    velocity_.y *= deceleration_;
-
-    // キーボード入力がある時だけ照準を動かす
-    if (isKeyboardAimInput) {
-        aimPosition_.x += velocity_.x;
-        aimPosition_.y += velocity_.y;
-    }
-}
-
 // マウスで照準を動かす関数
 void Player::UpdateMouseAim()
 {
@@ -222,79 +136,8 @@ void Player::UpdateMouseAim()
     GetCursorPos(&mousePosition);
     ScreenToClient(hwnd, &mousePosition);
 
-
-
-   float screenCenterX = static_cast<float>(WinApp::GetInstance()->kClientWidth) * 0.5f;
-
-    float screenCenterY = static_cast<float>(WinApp::GetInstance()->kClientHeight) * 0.5f;
-
-    float targetScreenX = static_cast<float>(mousePosition.x);
-    float targetScreenY = static_cast<float>(mousePosition.y);
-
-  
-    aimScreenPosition_.x += (targetScreenX - aimScreenPosition_.x) * aimScreenFollowPower_;
-    aimScreenPosition_.y += (targetScreenY - aimScreenPosition_.y) * aimScreenFollowPower_;
-
-    float normalizedX = (aimScreenPosition_.x - screenCenterX) / screenCenterX;
-    float normalizedY = (aimScreenPosition_.y - screenCenterY) / screenCenterY;
-
-    float targetX = normalizedX * moveLimitX_;
-    float targetY = -normalizedY * moveLimitY_;
-
-
-    aimPosition_.x += (targetX - aimPosition_.x) * mouseAimFollowPower_;
-    aimPosition_.y += (targetY - aimPosition_.y) * mouseAimFollowPower_;
-}
-
-// 照準のワールド上の位置を制限する処理
-void Player::ClampWorldAimPosition()
-{
-    float playerClampMargin = 6.0f;
-    float playerClampMarginY = 1.0f;
-    if (transform_.translate.x > moveLimitX_ - playerClampMargin) {
-        transform_.translate.x = moveLimitX_ - playerClampMargin;
-    }
-
-    if (transform_.translate.x < -moveLimitX_ + playerClampMargin) {
-        transform_.translate.x = -moveLimitX_ + playerClampMargin;
-    }
-
-    if (transform_.translate.y > moveLimitY_ - playerClampMarginY) {
-        transform_.translate.y = moveLimitY_ - playerClampMarginY;
-    }
-
-    if (transform_.translate.y < -moveLimitY_ + playerClampMarginY) {
-        transform_.translate.y = -moveLimitY_ + playerClampMarginY;
-    }
-}
-
-// プレイヤーの位置を照準に追従させる処理
-void Player::FollowAimPosition()
-{
-    Vector3 difference;
-    difference.x = aimPosition_.x - transform_.translate.x;
-    difference.y = aimPosition_.y - transform_.translate.y;
-    difference.z = 0.0f;
-
-    transform_.translate.x += difference.x * aimFollowPower_;
-    transform_.translate.y += difference.y * aimFollowPower_;
-}
-
-void Player::UpdateTilt()
-{
-    float aimDirectionX = aimPosition_.x - transform_.translate.x;
-    float aimDirectionY = aimPosition_.y - transform_.translate.y;
-
-    Vector3 targetRotate;
-
-    targetRotate.y = aimDirectionX * tiltAimPowerX_;
-    targetRotate.x = -aimDirectionY * tiltAimPowerY_;
-    targetRotate.z = -aimDirectionX * tiltRollPower_;
-    targetRotate.z += -velocity_.x * tiltPower_;
-
-    transform_.rotate.x += (targetRotate.x - transform_.rotate.x) * rotateFollowPower_;
-    transform_.rotate.y += (targetRotate.y - transform_.rotate.y) * rotateFollowPower_;
-    transform_.rotate.z += (targetRotate.z - transform_.rotate.z) * rotateFollowPower_;
+    aimScreenPosition_.x = static_cast<float>(mousePosition.x);
+    aimScreenPosition_.y = static_cast<float>(mousePosition.y);
 }
 
 void Player::ClampPlayerWorldPosition()
@@ -322,41 +165,47 @@ void Player::FireBullet()
         return;
     }
 
+    if (camera_ == nullptr) {
+        return;
+    }
+
     std::unique_ptr<Bullet> bullet = std::make_unique<Bullet>();
 
     bullet->Initialize(bulletModel_);
     bullet->SetCamera(camera_);
 
     Vector3 bulletPosition = transform_.translate;
-    bulletPosition.y += 0.3f;
-    bulletPosition.z += 4.0f;
+    bulletPosition.y += bulletSpawnOffsetY_;
+    bulletPosition.z += 0.0f;
 
     bullet->SetTranslate(bulletPosition);
+
+    POINT mousePosition;
+    GetCursorPos(&mousePosition);
+    ScreenToClient(WinApp::GetInstance()->GetHwnd(), &mousePosition);
+
+    float mouseX = static_cast<float>(mousePosition.x);
+    float mouseY = static_cast<float>(mousePosition.y);
 
     float screenWidth = static_cast<float>(WinApp::GetInstance()->kClientWidth);
     float screenHeight = static_cast<float>(WinApp::GetInstance()->kClientHeight);
 
-    float screenCenterX = screenWidth * 0.5f;
-    float screenCenterY = screenHeight * 0.5f;
+    float ndcX = (2.0f * mouseX / screenWidth) - 1.0f;
+    float ndcY = 1.0f - (2.0f * mouseY / screenHeight);
 
-    float normalizedAimX = (aimScreenPosition_.x - screenCenterX) / screenCenterX;
-    float normalizedAimY = (aimScreenPosition_.y - screenCenterY) / screenCenterY;
+    Matrix4x4 inverseProjection = MatrixMath::Inverse(camera_->GetProjectionMatrix());
+    Matrix4x4 inverseView = MatrixMath::Inverse(camera_->GetViewMatrix());
 
+    Vector3 nearPoint = { ndcX, ndcY, 0.0f };
+    Vector3 farPoint = { ndcX, ndcY, 1.0f };
 
+    nearPoint = MatrixMath::Transform(nearPoint, inverseProjection);
+    farPoint = MatrixMath::Transform(farPoint, inverseProjection);
 
-    Vector3 bulletDirection;
-    bulletDirection.x = normalizedAimX * bulletAimPowerX_;
-    bulletDirection.y = -normalizedAimY * bulletAimPowerY_;
-    bulletDirection.z = 1.0f;
+    nearPoint = MatrixMath::Transform(nearPoint, inverseView);
+    farPoint = MatrixMath::Transform(farPoint, inverseView);
 
-    float length = std::sqrt(
-        bulletDirection.x * bulletDirection.x + bulletDirection.y * bulletDirection.y + bulletDirection.z * bulletDirection.z);
-
-    if (length > 0.0f) {
-        bulletDirection.x /= length;
-        bulletDirection.y /= length;
-        bulletDirection.z /= length;
-    }
+    Vector3 bulletDirection = Normalize(farPoint - nearPoint);
 
     Vector3 bulletVelocity;
     bulletVelocity.x = bulletDirection.x * bulletSpeed_;
@@ -367,7 +216,7 @@ void Player::FireBullet()
 
     bullets_.push_back(std::move(bullet));
 }
-//弾更新
+// 弾更新
 void Player::UpdateBullets()
 {
     for (std::unique_ptr<Bullet>& bullet : bullets_) {
@@ -387,7 +236,7 @@ void Player::RemoveDeadBullets()
     }
 }
 
-//transform反映
+// transform反映
 void Player::ApplyTransform()
 {
     object_->SetScale(transform_.scale);
@@ -395,114 +244,27 @@ void Player::ApplyTransform()
     object_->SetTranslate(transform_.translate);
 }
 
+void Player::UpdateKeyboardMove(Input* input)
+{
+    if (input->IsKeyPressed(DIK_A)) {
+        transform_.translate.x -= moveSpeed_;
+    }
 
+    if (input->IsKeyPressed(DIK_D)) {
+        transform_.translate.x += moveSpeed_;
+    }
 
+    if (input->IsKeyPressed(DIK_W)) {
+        transform_.translate.y += moveSpeed_;
+    }
+
+    if (input->IsKeyPressed(DIK_S)) {
+        transform_.translate.y -= moveSpeed_;
+    }
+}
 #ifdef _DEBUG
 
 void Player::DrawImGui()
 {
-
-    ImGui::Begin("Player");
-
-    ImGui::Text("Move");
-    ImGui::DragFloat("Acceleration", &acceleration_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Deceleration", &deceleration_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Max Speed", &maxSpeed_, 0.001f, 0.0f, 5.0f);
-
-    ImGui::Text("Aim");
-    ImGui::DragFloat("Move Limit X", &moveLimitX_, 0.1f, 0.0f, 100.0f);
-    ImGui::DragFloat("Move Limit Y", &moveLimitY_, 0.1f, 0.0f, 100.0f);
-    ImGui::DragFloat("Aim Follow Power", &aimFollowPower_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Aim Screen Follow Power", &aimScreenFollowPower_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Mouse Aim Follow Power", &mouseAimFollowPower_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Keyboard Aim Screen Speed", &keyboardAimScreenSpeed_, 0.1f, 0.0f, 100.0f);
-
-    ImGui::Text("Bullet");
-    ImGui::DragFloat("Bullet Spawn Offset Y", &bulletSpawnOffsetY_, 0.1f, -10.0f, 10.0f);
-    ImGui::DragFloat("Bullet Spawn Offset Z", &bulletSpawnOffsetZ_, 0.1f, -10.0f, 30.0f);
-    ImGui::DragFloat("Bullet Aim Power X", &bulletAimPowerX_, 0.01f, 0.0f, 5.0f);
-    ImGui::DragFloat("Bullet Aim Power Y", &bulletAimPowerY_, 0.01f, 0.0f, 5.0f);
-    ImGui::DragFloat("Bullet Speed", &bulletSpeed_, 0.1f, 0.0f, 20.0f);
-
-    ImGui::Text("Tilt");
-    ImGui::DragFloat("Tilt Power", &tiltPower_, 0.01f, 0.0f, 5.0f);
-    ImGui::DragFloat("Tilt Aim Power X", &tiltAimPowerX_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Tilt Aim Power Y", &tiltAimPowerY_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Tilt Roll Power", &tiltRollPower_, 0.001f, 0.0f, 1.0f);
-    ImGui::DragFloat("Rotate Follow Power", &rotateFollowPower_, 0.001f, 0.0f, 1.0f);
-    ImGui::Separator();
-    ImGui::Separator();
-
-ImGui::Text("Player Transform");
-
-ImGui::Text(
-    "Position : X %.2f Y %.2f Z %.2f",
-    transform_.translate.x,
-    transform_.translate.y,
-    transform_.translate.z
-);
-
-ImGui::Text(
-    "Rotate : X %.2f Y %.2f Z %.2f",
-    transform_.rotate.x,
-    transform_.rotate.y,
-    transform_.rotate.z
-);
-
-ImGui::Text(
-    "Velocity : X %.2f Y %.2f Z %.2f",
-    velocity_.x,
-    velocity_.y,
-    velocity_.z
-);
-
-ImGui::Text(
-    "Aim Position : X %.2f Y %.2f Z %.2f",
-    aimPosition_.x,
-    aimPosition_.y,
-    aimPosition_.z
-);
-
-ImGui::Text(
-    "Aim Screen : X %.2f Y %.2f",
-    aimScreenPosition_.x,
-    aimScreenPosition_.y
-);
-    if (ImGui::Button("Reset Player Params")) {
-        ResetParameters();
-    }
-    
-    ImGui::End();
 }
 #endif // DEBUG
-void Player::ResetParameters()
-{
-    acceleration_ = 0.02f;
-    deceleration_ = 0.85f;
-    maxSpeed_ = 0.18f;
-
-    moveLimitX_ = 22.0f;
-    moveLimitY_ = 9.0f;
-
-    tiltPower_ = 0.25f;
-
-    aimFollowPower_ = 0.01f;
-    aimScreenFollowPower_ = 1.0f;
-    mouseAimFollowPower_ = 0.08f;
-
-    keyboardAimScreenSpeed_ = 8.0f;
-
-    bulletSpawnOffsetY_ = 0.3f;
-    bulletSpawnOffsetZ_ = 4.0f;
-
-    bulletAimPowerX_ = 0.8f;
-    bulletAimPowerY_ = 0.4f;
-
-    bulletSpeed_ = 2.5f;
-
-    tiltAimPowerX_ = 0.04f;
-    tiltAimPowerY_ = 0.04f;
-    tiltRollPower_ = 0.03f;
-
-    rotateFollowPower_ = 0.003f;
-}
