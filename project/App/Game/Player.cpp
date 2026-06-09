@@ -8,7 +8,7 @@
 
 #include "../../externals/imgui/ImGuizmo.h"
 
-#include"../../Engine/EditorManager/EditorManager.h"
+#include "../../Engine/EditorManager/EditorManager.h"
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -60,7 +60,9 @@ void Player::Update()
         ClampAimScreenPosition();
         ClampPlayerWorldPosition();
     }
-    // マウスの左クリックで弾を発射
+    /*   if (input->IsMouseTrigger(0)) {
+           FireBullet();
+       }*/
     if (input->IsMousePressed(0)) {
         FireBullet();
     }
@@ -180,12 +182,8 @@ void Player::FireBullet()
 
     bullet->SetTranslate(bulletPosition);
 
-    POINT mousePosition;
-    GetCursorPos(&mousePosition);
-    ScreenToClient(WinApp::GetInstance()->GetHwnd(), &mousePosition);
-
-    float mouseX = static_cast<float>(mousePosition.x);
-    float mouseY = static_cast<float>(mousePosition.y);
+    float mouseX = aimScreenPosition_.x;
+    float mouseY = aimScreenPosition_.y;
 
     float screenWidth = static_cast<float>(WinApp::GetInstance()->kClientWidth);
     float screenHeight = static_cast<float>(WinApp::GetInstance()->kClientHeight);
@@ -205,7 +203,7 @@ void Player::FireBullet()
     nearPoint = MatrixMath::Transform(nearPoint, inverseView);
     farPoint = MatrixMath::Transform(farPoint, inverseView);
 
-    Vector3 bulletDirection = Normalize(farPoint - nearPoint);
+    Vector3 bulletDirection = Normalize(farPoint - bulletPosition);
 
     Vector3 bulletVelocity;
     bulletVelocity.x = bulletDirection.x * bulletSpeed_;
