@@ -11,6 +11,8 @@
 #include "../Math/Sphere.h"
 
 #include "../externals/json.hpp"
+
+#include "../../Engine/SceneObjectManager/SceneObjectManager.h"
 void EditorManager::Initialize()
 {
 }
@@ -23,15 +25,18 @@ void EditorManager::Update(Camera* camera)
 
         Ray ray = CreateMouseRay(camera);
 
-        for (Object3d* object : objects_) {
+        for (const std::unique_ptr<Object3d>& object :
+            sceneObjectManager_->GetObjects()) {
+
+            Object3d* currentObject = object.get();
 
             Sphere sphere;
-            sphere.center = object->GetTranslate();
+            sphere.center = currentObject->GetTranslate();
             sphere.radius = 1.0f;
 
             if (RaySphereIntersect(ray, sphere)) {
 
-                SetSelectedObject(object);
+                SetSelectedObject(currentObject);
                 break;
             }
         }
@@ -96,19 +101,19 @@ void EditorManager::DrawImGui()
 
     if (ImGui::CollapsingHeader("Hierarchy", ImGuiTreeNodeFlags_DefaultOpen)) {
 
-        for (Object3d* object : objects_) {
+        for (const std::unique_ptr<Object3d>& object : sceneObjectManager_->GetObjects()) {
+
+            Object3d* currentObject = object.get();
 
             bool isSelected = false;
 
-            if (object == selectedObject_) {
+            if (currentObject == selectedObject_) {
                 isSelected = true;
             }
 
-            if (ImGui::Selectable(
-                    object->GetName().c_str(),
-                    isSelected)) {
+            if (ImGui::Selectable(currentObject->GetName().c_str(), isSelected)) {
 
-                selectedObject_ = object;
+                selectedObject_ = currentObject;
             }
         }
     }
@@ -278,38 +283,38 @@ void EditorManager::SetSelectedObject(Object3d* object)
 {
     selectedObject_ = object;
 }
-void EditorManager::AddObject(Object3d* object)
-{
-    objects_.push_back(object);
-}
+
 void EditorManager::SaveJson(const std::string& filePath)
 {
     nlohmann::json root;
 
     root["Objects"] = nlohmann::json::array();
 
-    for (Object3d* object : objects_) {
+    for (const std::unique_ptr<Object3d>& object :
+        sceneObjectManager_->GetObjects()) {
+
+        Object3d* currentObject = object.get();
 
         nlohmann::json objectData;
 
-        objectData["Name"] = object->GetName();
+        objectData["Name"] = currentObject->GetName();
 
         objectData["Translate"] = {
-            object->GetTranslate().x,
-            object->GetTranslate().y,
-            object->GetTranslate().z
+            currentObject->GetTranslate().x,
+            currentObject->GetTranslate().y,
+            currentObject->GetTranslate().z
         };
 
         objectData["Rotate"] = {
-            object->GetRotate().x,
-            object->GetRotate().y,
-            object->GetRotate().z
+            currentObject->GetRotate().x,
+            currentObject->GetRotate().y,
+            currentObject->GetRotate().z
         };
 
         objectData["Scale"] = {
-            object->GetScale().x,
-            object->GetScale().y,
-            object->GetScale().z
+            currentObject->GetScale().x,
+            currentObject->GetScale().y,
+            currentObject->GetScale().z
         };
 
         root["Objects"].push_back(objectData);
@@ -345,7 +350,11 @@ void EditorManager::LoadJson(const std::string& filePath)
 
         translate.z = objectData["Translate"][2];
 
-        OutputDebugStringA(
-            (objectName + "\n").c_str());
+        OutputDebugStringA((objectName + "\n").c_str());
     }
+}
+void EditorManager::SetSceneObjectManager(
+    SceneObjectManager* sceneObjectManager)
+{
+    sceneObjectManager_ = sceneObjectManager;
 }
