@@ -19,6 +19,7 @@ void GamePlayScene::Initialize()
 
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
+    sceneObjectManager_ = std::make_unique<SceneObjectManager>();
 
     // ポストエフェクト切り替え
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
@@ -65,9 +66,13 @@ void GamePlayScene::Initialize()
     //==============
     //  OBJ
     //==============
-    Object3d* terrain_ = CreateObject("terrain", "terrain.obj");
+    Object3d* terrain_ = sceneObjectManager_->CreateObject(
+        "terrain",
+        "terrain.obj");
 
-    Object3d* star = CreateObject("star", "star.obj");
+    Object3d* star = sceneObjectManager_->CreateObject(
+        "star",
+        "star.obj");
 
     animationActor_ = std::make_unique<AnimationActor>();
     OutputDebugStringA("A\n");
@@ -146,11 +151,7 @@ void GamePlayScene::Initialize()
      }*/
     // editorManager_->SetSelectedObject(terrain_);
 
-   
-
-    for (const std::unique_ptr<Object3d>& object : sceneObjects_) {
-        editorManager_->AddObject(object.get());
-    }
+    editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 }
 
 void GamePlayScene::Update()
@@ -191,7 +192,7 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
     }
     // プレイヤーの更新（入力処理や移動など）
-    //  player_->Update();
+      player_->Update();
 
     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
@@ -209,9 +210,7 @@ void GamePlayScene::Update()
     }
     ParticleManager::GetInstance()->Update();
 
-    for (std::unique_ptr<Object3d>& sceneObject : sceneObjects_) {
-        sceneObject->Update();
-    }
+    sceneObjectManager_->Update();
     camera_->Update();
 
     // デバッグカメラモードの切り替え
@@ -397,10 +396,8 @@ void GamePlayScene::Draw3D()
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
     //     levelObject->Draw();
     // }
-    // player_->Draw();
-    for (std::unique_ptr<Object3d>& sceneObject : sceneObjects_) {
-        sceneObject->Draw();
-    }
+     player_->Draw();
+    sceneObjectManager_->Draw();
     //----------------------
     // スキニング
     //----------------------
@@ -433,22 +430,4 @@ void GamePlayScene::Finalize()
     ParticleManager::GetInstance()->Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
-}
-Object3d* GamePlayScene::CreateObject(const std::string& name, const std::string& modelName)
-{
-    std::unique_ptr<Object3d> object = std::make_unique<Object3d>();
-
-    object->Initialize(Object3dManager::GetInstance());
-
-    ModelManager::GetInstance()->Load(modelName);
-
-    object->SetModel(ModelManager::GetInstance()->FindModel(modelName));
-
-    object->SetName(name);
-
-    Object3d* createdObject = object.get();
-
-    sceneObjects_.push_back(std::move(object));
-
-    return createdObject;
 }

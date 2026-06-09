@@ -9,6 +9,7 @@
 #endif
 class Object3d;
 class Camera;
+class SceneObjectManager;
 enum class GizmoMode {
     Translate,
     Rotate,
@@ -28,13 +29,15 @@ public:
     void SetSelectedObject(Object3d* object);
     void DrawGizmo(Camera* camera);
 
-    void AddObject(Object3d* object);
+    //void AddObject(Object3d* object);
+    void SetSceneObjectManager(SceneObjectManager* sceneObjectManager);
 
 private:
     Ray CreateMouseRay(Camera* camera);
 
 private:
     GizmoMode gizmoMode_ = GizmoMode::Translate;
-    std::vector<Object3d*> objects_;
+   // std::vector<Object3d*> objects_;
     Object3d* selectedObject_ = nullptr;
+    SceneObjectManager* sceneObjectManager_ = nullptr;
 };
