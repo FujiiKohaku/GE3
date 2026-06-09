@@ -30,32 +30,32 @@
 #pragma comment(lib, "dxcompiler.lib")
 
 // ======================= 自作エンジン関連 =========================
-#include "Engine/Camera/Camera.h"
-#include "Engine/D3DResourceLeakChecker/D3DResourceLeakChecker.h"
-#include "Engine/debugcamera/DebugCamera.h"
-#include "Engine/DirectXCommon/DirectXCommon.h"
-#include "Engine/input/Input.h"
-#include "Engine/math/MatrixMath.h"
 #include "Engine/3D/Model.h"
 #include "Engine/3D/ModelCommon.h"
 #include "Engine/3D/ModelManager.h"
+#include "Engine/Camera/Camera.h"
+#include "Engine/D3DResourceLeakChecker/D3DResourceLeakChecker.h"
+#include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Light/LightManager.h"
+#include "Engine/debugcamera/DebugCamera.h"
+#include "Engine/input/Input.h"
+#include "Engine/math/MatrixMath.h"
 
+#include "Engine/2D/Sprite.h"
+#include "Engine/2D/SpriteManager.h"
 #include "Engine/3D/Object3D.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Particle/ParticleManager.h"
-#include "Engine/audio/SoundManager.h"
-#include "Engine/2D/Sprite.h"
-#include "Engine/2D/SpriteManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/Winapp/Utility.h"
 #include "Engine/Winapp/WinApp.h"
+#include "Engine/audio/SoundManager.h"
 
-#include "App/Scene/GamePlayScene.h"
-#include "App/Scene/TitleScene.h"
 #include "App/Scene/BaseScene.h"
+#include "App/Scene/GamePlayScene.h"
 #include "App/Scene/SceneManager.h"
+#include "App/Scene/TitleScene.h"
 
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -80,11 +80,12 @@ public:
     bool IsEndRequest() const { return endRequest_; }
 
 private:
+    void LockCursorToWindow();
+    void UnlockCursor();
     // Scene
     SceneManager* sceneManager_ = nullptr;
 
     // App
-
 
     ImGuiManager* imguiManager_ = nullptr;
 

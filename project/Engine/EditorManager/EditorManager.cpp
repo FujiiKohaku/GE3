@@ -21,18 +21,22 @@ void EditorManager::Update(Camera* camera)
 {
 #ifdef USE_IMGUI
 
+    // マウスクリックでオブジェクト選択
     if (ImGui::IsMouseClicked(0)) {
 
+        // カメラからマウス位置へのレイを作成
         Ray ray = CreateMouseRay(camera);
 
-        for (const std::unique_ptr<Object3d>& object :
-            sceneObjectManager_->GetObjects()) {
+        // 読み込まれたオブジェクトの中身をobjects_に入れる
+        for (const std::unique_ptr<Object3d>& object : sceneObjectManager_->GetObjects()) {
 
+            // objectはstd::unique_ptrなので、get()でObject3d*を取得 
             Object3d* currentObject = object.get();
 
+            
             Sphere sphere;
             sphere.center = currentObject->GetTranslate();
-            sphere.radius = 1.0f;
+            sphere.radius = 1.0f; // 球の半径は仮の値です。オブジェクトのサイズに応じて適切な値を設定してください。
 
             if (RaySphereIntersect(ray, sphere)) {
 
@@ -222,11 +226,7 @@ void EditorManager::DrawGizmo(Camera* camera)
 
     ImGuiIO& io = ImGui::GetIO();
 
-    ImGuizmo::SetRect(
-        0.0f,
-        0.0f,
-        io.DisplaySize.x,
-        io.DisplaySize.y);
+    ImGuizmo::SetRect(0.0f, 0.0f, io.DisplaySize.x, io.DisplaySize.y);
 
     const Matrix4x4& viewMatrix = camera->GetViewMatrix();
     const Matrix4x4& projectionMatrix = camera->GetProjectionMatrix();

@@ -17,7 +17,11 @@ void Game::Initialize()
     SetUnhandledExceptionFilter(Utility::ExportDump);
     std::filesystem::create_directory("logs");
 
-   WinApp::GetInstance()->initialize();
+    WinApp::GetInstance()->initialize();
+    // カーソルをウィンドウ内に固定       
+    ShowCursor(FALSE);
+    LockCursorToWindow();
+
     CheckTime("WinApp", prevTime);
 
     DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
@@ -54,10 +58,10 @@ void Game::Initialize()
     Input::GetInstance()->Initialize(WinApp::GetInstance());
 
     Logger::Log("Load Default Models");
-    //ModelManager::GetInstance()->Load("plane.obj");
-   // ModelManager::GetInstance()->Load("axis.obj");
-   // ModelManager::GetInstance()->Load("titleTex.obj");
-   // ModelManager::GetInstance()->Load("fence.obj");
+    // ModelManager::GetInstance()->Load("plane.obj");
+    // ModelManager::GetInstance()->Load("axis.obj");
+    // ModelManager::GetInstance()->Load("titleTex.obj");
+    // ModelManager::GetInstance()->Load("fence.obj");
 
     Logger::Log("Load Default Textures");
     TextureManager::GetInstance()->LoadTexture("resources/white.png");
@@ -86,19 +90,21 @@ void Game::Update()
         isPostEffectEnabled_ = !isPostEffectEnabled_;
     }
 
- if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
+if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
 
         isMouseCursorVisible_ = !isMouseCursorVisible_;
 
         if (isMouseCursorVisible_) {
 
             ShowCursor(TRUE);
+            UnlockCursor();
+
         } else {
 
             ShowCursor(FALSE);
+            LockCursorToWindow();
         }
     }
-
 
     ImGuiManager::GetInstance()->Begin();
 
@@ -106,8 +112,6 @@ void Game::Update()
         Logger::Log("Escape Pressed");
         endRequest_ = true;
     }
-    
-
 
     SceneManager::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
@@ -126,9 +130,8 @@ void Game::Draw()
     // ↑で描画したやつをテクスチャとして描画する
     DirectXCommon::GetInstance()->PreDraw();
     copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクトの種類を取得してセット
-    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(),offscreenRenderer_->GetDepthSrvHandleGPU());
+    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), offscreenRenderer_->GetDepthSrvHandleGPU());
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-
 
     SceneManager::GetInstance()->Draw2D();
 
@@ -139,7 +142,9 @@ void Game::Draw()
 void Game::Finalize()
 {
     Logger::Log("Game Finalize Start");
-
+    // カーソルのロックを解除して表示する
+    UnlockCursor();
+    ShowCursor(TRUE);
     SceneManager::GetInstance()->Finalize();
     ImGuiManager::GetInstance()->Finalize();
 
@@ -159,4 +164,36 @@ void Game::Finalize()
     WinApp::FinalizeInstance();
 
     Logger::Log("Game Finalize End");
+}
+
+void Game::LockCursorToWindow()
+{
+    HWND hwnd = WinApp::GetInstance()->GetHwnd();
+
+    RECT clientRect;
+    GetClientRect(hwnd, &clientRect);
+
+    POINT leftTop;
+    leftTop.x = clientRect.left;
+    leftTop.y = clientRect.top;
+
+    POINT rightBottom;
+    rightBottom.x = clientRect.right;
+    rightBottom.y = clientRect.bottom;
+
+    ClientToScreen(hwnd, &leftTop);
+    ClientToScreen(hwnd, &rightBottom);
+
+    RECT clipRect;
+    clipRect.left = leftTop.x;
+    clipRect.top = leftTop.y;
+    clipRect.right = rightBottom.x;
+    clipRect.bottom = rightBottom.y;
+
+    ClipCursor(&clipRect);
+}
+
+void Game::UnlockCursor()
+{
+    ClipCursor(nullptr);
 }
