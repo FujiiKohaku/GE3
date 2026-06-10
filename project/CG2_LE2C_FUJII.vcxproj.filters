@@ -49,6 +49,12 @@
     <Filter Include="3D">
       <UniqueIdentifier>{8f3c17a0-50ff-4cbe-819a-662485ffc2a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\UIAnimation">
+      <UniqueIdentifier>{ab3b9b4c-1227-4077-8f80-3d0b81713bb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\UIAnimation">
+      <UniqueIdentifier>{63cc7803-6511-402d-8f29-f052d2e5f05d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App\main.cpp">
@@ -242,6 +248,21 @@
     </ClCompile>
     <ClCompile Include="Engine\LevelEditor\LevelDataLoader.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\UIAnimation\UIAnimationClip.cpp">
+      <Filter>ソース ファイル\UIAnimation</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\UIAnimation\UIAnimationEditor.cpp">
+      <Filter>ソース ファイル\UIAnimation</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\UIAnimation\UIAnimationPlayer.cpp">
+      <Filter>ソース ファイル\UIAnimation</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\UIAnimation\UIAnimationTrack.cpp">
+      <Filter>ソース ファイル\UIAnimation</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\UIAnimation\UIKeyFrame.cpp">
+      <Filter>ソース ファイル\UIAnimation</Filter>
     </ClCompile>
     <ClCompile Include="externals\imgui\imgui.cpp">
       <Filter>ソース ファイル</Filter>
@@ -476,6 +497,21 @@
     </ClInclude>
     <ClInclude Include="Engine\LevelEditor\LevelDataLoader.h">
       <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\UIAnimation\UIAnimationClip.h">
+      <Filter>ヘッダー ファイル\UIAnimation</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\UIAnimation\UIAnimationEditor.h">
+      <Filter>ヘッダー ファイル\UIAnimation</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\UIAnimation\UIAnimationPlayer.h">
+      <Filter>ヘッダー ファイル\UIAnimation</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\UIAnimation\UIAnimationTrack.h">
+      <Filter>ヘッダー ファイル\UIAnimation</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\UIAnimation\UIKeyFrame.h">
+      <Filter>ヘッダー ファイル\UIAnimation</Filter>
     </ClInclude>
     <ClInclude Include="externals\imgui\imconfig.h">
       <Filter>ヘッダー ファイル</Filter>

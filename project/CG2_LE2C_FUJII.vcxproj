@@ -249,6 +249,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\PostEffect\PostEffectType.cpp" />
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp" />
     <ClCompile Include="Engine\LevelEditor\LevelDataLoader.cpp" />
+    <ClCompile Include="Engine\UIAnimation\UIAnimationClip.cpp" />
+    <ClCompile Include="Engine\UIAnimation\UIAnimationEditor.cpp" />
+    <ClCompile Include="Engine\UIAnimation\UIAnimationPlayer.cpp" />
+    <ClCompile Include="Engine\UIAnimation\UIAnimationTrack.cpp" />
+    <ClCompile Include="Engine\UIAnimation\UIKeyFrame.cpp" />
     <ClCompile Include="externals\imgui\imgui.cpp" />
     <ClCompile Include="externals\imgui\ImGuizmo.cpp" />
     <ClCompile Include="externals\imgui\imgui_demo.cpp" />
@@ -347,6 +352,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\PostEffect\PostEffectType.h" />
     <ClInclude Include="Engine\LevelEditor\LevelData.h" />
     <ClInclude Include="Engine\LevelEditor\LevelDataLoader.h" />
+    <ClInclude Include="Engine\UIAnimation\UIAnimationClip.h" />
+    <ClInclude Include="Engine\UIAnimation\UIAnimationEditor.h" />
+    <ClInclude Include="Engine\UIAnimation\UIAnimationPlayer.h" />
+    <ClInclude Include="Engine\UIAnimation\UIAnimationTrack.h" />
+    <ClInclude Include="Engine\UIAnimation\UIKeyFrame.h" />
     <ClInclude Include="externals\imgui\imconfig.h" />
     <ClInclude Include="externals\imgui\imgui.h" />
     <ClInclude Include="externals\imgui\ImGuizmo.h" />

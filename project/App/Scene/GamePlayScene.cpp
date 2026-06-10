@@ -113,6 +113,18 @@ void GamePlayScene::Initialize()
     aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
     aimSprite_->Update();
+
+    uiAnimationPreviewSprite_ = std::make_unique<Sprite>();
+    uiAnimationPreviewSprite_->Initialize(SpriteManager::GetInstance(), "resources/white.png");
+    uiAnimationPreviewSprite_->SetSize({ 96.0f, 96.0f });
+    uiAnimationPreviewSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    uiAnimationPreviewSprite_->SetPosition({ 220.0f, 240.0f });
+    uiAnimationPreviewSprite_->Update();
+
+    uiAnimationEditor_ = std::make_unique<UIAnimationEditor>();
+    uiAnimationEditor_->Initialize();
+    uiAnimationEditor_->SetPreviewSprite(uiAnimationPreviewSprite_.get());
+
     TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
@@ -197,6 +209,9 @@ void GamePlayScene::Update()
     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
+
+    uiAnimationEditor_->Update(1.0f / 60.0f);
+    uiAnimationPreviewSprite_->Update();
 
     /* testSprite_->Update();*/
 
@@ -303,7 +318,11 @@ void GamePlayScene::Update()
     static float pointIntensity = 1.0f;
     ImGui::SliderFloat("Point Intensity", &pointIntensity, 0.0f, 5.0f);
 
-    float pI = pointEnabled ? pointIntensity : 0.0f;
+    float pI = 0.0f;
+
+    if (pointEnabled) {
+        pI = pointIntensity;
+    }
     static float pointRadius = 10.0f;
     static float pointDecay = 1.0f;
 
@@ -357,10 +376,14 @@ void GamePlayScene::Update()
     float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
 
     // OFF のとき
-    float sI = spotEnabled ? spotIntensity : 0.0f;
+    float sI = 0.0f;
+
+    if (spotEnabled) {
+        sI = spotIntensity;
+    }
 
     // LightManager に反映
-    auto* lm = LightManager::GetInstance();
+    LightManager* lm = LightManager::GetInstance();
     lm->SetSpotLightColor(spotColor);
     lm->SetSpotLightPosition(spotPos);
     lm->SetSpotLightDirection(normalizedSpotDir);
@@ -413,6 +436,7 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
+    uiAnimationPreviewSprite_->Draw();
     aimSprite_->Draw();
 }
 
@@ -421,6 +445,7 @@ void GamePlayScene::DrawImGui()
 #ifdef USE_IMGUI
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());
+    uiAnimationEditor_->DrawImGui();
 #endif
 }
 

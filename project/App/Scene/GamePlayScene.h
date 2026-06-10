@@ -22,6 +22,7 @@
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Engine/UIAnimation/UIAnimationEditor.h"
 #include <numbers>
 
 #include "Engine/Animation/AnimationActor.h"
@@ -78,6 +79,8 @@ private:
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
+    std::unique_ptr<Sprite> uiAnimationPreviewSprite_;
+    std::unique_ptr<UIAnimationEditor> uiAnimationEditor_;
     // ------------------------------
     // サウンド
     // ------------------------------
