@@ -1,0 +1,156 @@
+{
+    "Length": 60,
+    "Name": "TitleOpen",
+    "Tracks": [
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 220.0
+                },
+                {
+                    "Frame": 22,
+                    "Value": 443.9330139160156
+                },
+                {
+                    "Frame": 31,
+                    "Value": 186.53500366210938
+                },
+                {
+                    "Frame": 60,
+                    "Value": 168.0
+                }
+            ],
+            "Property": "PositionX"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 240.0
+                },
+                {
+                    "Frame": 60,
+                    "Value": 240.0
+                }
+            ],
+            "Property": "PositionY"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 96.0
+                },
+                {
+                    "Frame": 44,
+                    "Interpolation": "EaseInOut",
+                    "Value": 40.06700134277344
+                },
+                {
+                    "Frame": 60,
+                    "Value": 160.0
+                }
+            ],
+            "Property": "ScaleX"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 96.0
+                },
+                {
+                    "Frame": 60,
+                    "Value": 160.0
+                }
+            ],
+            "Property": "ScaleY"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": -16.0
+                },
+                {
+                    "Frame": 1,
+                    "Value": -15.651000022888184
+                },
+                {
+                    "Frame": 47,
+                    "Value": 38.0
+                }
+            ],
+            "Property": "Rotation"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Interpolation": "EaseOut",
+                    "Value": 0.0
+                },
+                {
+                    "Frame": 25,
+                    "Interpolation": "EaseIn",
+                    "Value": 28.0
+                },
+                {
+                    "Frame": 60,
+                    "Value": 0.09313726425170898
+                }
+            ],
+            "Property": "ColorR"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 0.0
+                },
+                {
+                    "Frame": 1,
+                    "Interpolation": "EaseIn",
+                    "Value": 68.0
+                },
+                {
+                    "Frame": 55,
+                    "Interpolation": "EaseIn",
+                    "Value": -189.0
+                },
+                {
+                    "Frame": 60,
+                    "Value": 0.0
+                }
+            ],
+            "Property": "ColorG"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 0.0
+                },
+                {
+                    "Frame": 60,
+                    "Value": 0.08111956715583801
+                }
+            ],
+            "Property": "ColorB"
+        },
+        {
+            "Keys": [
+                {
+                    "Frame": 0,
+                    "Value": 1.0
+                },
+                {
+                    "Frame": 60,
+                    "Value": 1.0
+                }
+            ],
+            "Property": "ColorA"
+        }
+    ]
+}

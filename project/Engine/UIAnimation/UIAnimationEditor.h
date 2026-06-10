@@ -31,13 +31,21 @@ private:
     void DrawSelectedKeyFrame();
 
     void DrawTransport(UIAnimationClip* clip);
-    void DrawKeyFrameCreator(UIAnimationClip* clip);
-    void DrawTrackTable(UIAnimationClip* clip);
+    void DrawLivePropertyControls(UIAnimationClip* clip);
+    void DrawTimelineCanvas(UIAnimationClip* clip);
+    void DrawKeyFrameInspector(UIAnimationClip* clip);
 
     void SaveSelectedClip();
     void LoadSelectedClip();
     void UpdateNameFromBuffer(UIAnimationClip* clip);
     void SelectKeyFrame(UIAnimationProperty property, int keyFrameIndex);
+    void AddKeyFromPreview(UIAnimationClip* clip, UIAnimationProperty property);
+    void AddTransformKeysFromPreview(UIAnimationClip* clip);
+    float GetPreviewValue(UIAnimationProperty property) const;
+    void SetPreviewValue(UIAnimationProperty property, float value);
+    bool CanMoveKeyFrameToFrame(const UIAnimationTrack& track, int keyFrameIndex, int frame) const;
+    int GetFrameFromTimelinePosition(float mousePositionX, float timelineStartX, float timelineWidth, int length) const;
+    void ClampCurrentFrame(UIAnimationClip* clip);
 
 private:
     std::vector<UIAnimationClip> clips_;
@@ -45,8 +53,7 @@ private:
     UIAnimationProperty selectedProperty_ = UIAnimationProperty::PositionX;
     int selectedKeyFrameIndex_ = -1;
     int currentFrame_ = 0;
-    int newKeyFrame_ = 0;
-    float newKeyValue_ = 0.0f;
+    bool isAutoKeyEnabled_ = true;
 
     UIAnimationPlayer player_;
     Sprite* previewSprite_ = nullptr;
