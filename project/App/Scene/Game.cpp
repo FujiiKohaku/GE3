@@ -18,8 +18,7 @@ void Game::Initialize()
     std::filesystem::create_directory("logs");
 
     WinApp::GetInstance()->initialize();
-    // カーソルをウィンドウ内に固定       
-    ShowCursor(FALSE);
+
     LockCursorToWindow();
 
     CheckTime("WinApp", prevTime);
