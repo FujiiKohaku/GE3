@@ -60,12 +60,11 @@ void Player::Update()
         ClampAimScreenPosition();
         ClampPlayerWorldPosition();
     }
-    /*   if (input->IsMouseTrigger(0)) {
-           FireBullet();
-       }*/
-    if (input->IsMousePressed(0)) {
+    if (input->IsMouseTrigger(0)) {
         FireBullet();
     }
+
+    transform_.translate.z += 0.5f; 
     // transform反映
     ApplyTransform();
     // 弾更新と死んだ弾の削除
