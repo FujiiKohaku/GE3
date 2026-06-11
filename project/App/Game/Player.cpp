@@ -64,7 +64,7 @@ void Player::Update()
         FireBullet();
     }
 
-    transform_.translate.z += 0.5f; 
+    //transform_.translate.z += 0.5f; 
     // transform反映
     ApplyTransform();
     // 弾更新と死んだ弾の削除
