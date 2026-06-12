@@ -63,6 +63,7 @@ public:
 
     void DrawImGui();
 
+
 private:
     std::unique_ptr<Object3d> object_;
     std::vector<std::unique_ptr<Bullet>> bullets_;
