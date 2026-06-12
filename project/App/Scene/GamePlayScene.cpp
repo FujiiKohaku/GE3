@@ -13,7 +13,7 @@
 #include <fstream>
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
-
+#include "ClearScene.h"
 void GamePlayScene::Initialize()
 {
 
@@ -157,6 +157,15 @@ void GamePlayScene::Initialize()
 void GamePlayScene::Update()
 {
 
+    //プレイヤ０のZ座標の取得
+   float playerZ = player_->GetTranslate().z;
+
+   // プレイヤーのZ座標が1000.0fを超えたらクリアシーンに遷移
+    if (playerZ > 1000.0f) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    }
+
+    // エディターマネージャーの更新（カメラを渡す）
     editorManager_->Update(camera_.get());
 
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
@@ -191,17 +200,20 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
     }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    }
+
     // プレイヤーの更新（入力処理や移動など）
-      player_->Update();
+    player_->Update();
 
     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
-    /* testSprite_->Update();*/
+    
 
     skyBox_->Update(camera_.get());
-    // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
 
     // キー入力でパーティクルを発生させる例
     if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
@@ -396,7 +408,7 @@ void GamePlayScene::Draw3D()
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
     //     levelObject->Draw();
     // }
-     player_->Draw();
+    player_->Draw();
     sceneObjectManager_->Draw();
     //----------------------
     // スキニング
@@ -421,6 +433,7 @@ void GamePlayScene::DrawImGui()
 #ifdef USE_IMGUI
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());
+    player_->DrawImGui();
 #endif
 }
 
