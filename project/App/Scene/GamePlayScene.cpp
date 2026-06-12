@@ -14,7 +14,7 @@
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
 #include "ClearScene.h"
-#include"GameOverScene.h"
+#include "GameOverScene.h"
 void GamePlayScene::Initialize()
 {
 
@@ -158,10 +158,10 @@ void GamePlayScene::Initialize()
 void GamePlayScene::Update()
 {
 
-    //プレイヤ０のZ座標の取得
-   float playerZ = player_->GetTranslate().z;
+    // プレイヤ０のZ座標の取得
+    float playerZ = player_->GetTranslate().z;
 
-   // プレイヤーのZ座標が1000.0fを超えたらクリアシーンに遷移
+    // プレイヤーのZ座標が1000.0fを超えたらクリアシーンに遷移
     if (playerZ > 1000.0f) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
     }
@@ -204,15 +204,15 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
     }
-
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    }
     // プレイヤーの更新（入力処理や移動など）
     player_->Update();
 
     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
-
-    
 
     skyBox_->Update(camera_.get());
 
