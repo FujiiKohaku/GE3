@@ -52,7 +52,9 @@ void Player::Update()
     if (debugCameraController_ != nullptr) {
         isDebugMode = debugCameraController_->GetDebugMode();
     }
-
+    // plaerの移動速度
+ 
+    transform_.translate.z += velocity_.z;
     // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
     if (!isDebugMode) {
         UpdateMouseAim();
@@ -64,8 +66,8 @@ void Player::Update()
         FireBullet();
     }
 
-    //transform_.translate.z += 0.5f; 
-    // transform反映
+    // transform_.translate.z += 0.5f;
+    //  transform反映
     ApplyTransform();
     // 弾更新と死んだ弾の削除
     UpdateBullets();
@@ -159,6 +161,7 @@ void Player::ClampPlayerWorldPosition()
         transform_.translate.y = -moveLimitY_ + playerClampMarginY_;
     }
 }
+
 // 弾を発射する関数
 void Player::FireBullet()
 {
@@ -205,14 +208,15 @@ void Player::FireBullet()
     Vector3 bulletDirection = Normalize(farPoint - bulletPosition);
 
     Vector3 bulletVelocity;
-    bulletVelocity.x = bulletDirection.x * bulletSpeed_;
-    bulletVelocity.y = bulletDirection.y * bulletSpeed_;
-    bulletVelocity.z = bulletDirection.z * bulletSpeed_;
+    bulletVelocity.x = bulletDirection.x * bulletSpeed_+ velocity_.x;
+    bulletVelocity.y = bulletDirection.y * bulletSpeed_+velocity_.y;
+    bulletVelocity.z = bulletDirection.z * bulletSpeed_+velocity_.z;
 
     bullet->SetVelocity(bulletVelocity);
 
     bullets_.push_back(std::move(bullet));
 }
+
 // 弾更新
 void Player::UpdateBullets()
 {
@@ -263,5 +267,23 @@ void Player::UpdateKeyboardMove(Input* input)
 
 void Player::DrawImGui()
 {
+    ImGui::Begin("Player");
+
+    ImGui::Text("Position");
+
+    ImGui::Text("X : %.2f", transform_.translate.x);
+    ImGui::Text("Y : %.2f", transform_.translate.y);
+    ImGui::Text("Z : %.2f", transform_.translate.z);
+
+    ImGui::Separator();
+
+    ImGui::Text("Velocity");
+
+    ImGui::Text("X : %.2f", velocity_.x);
+    ImGui::Text("Y : %.2f", velocity_.y);
+    ImGui::Text("Z : %.2f", velocity_.z);
+
+    ImGui::End();
 }
-#endif // DEBUG
+
+#endif // _DEBUG
