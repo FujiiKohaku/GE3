@@ -20,15 +20,17 @@ public:
     virtual void Move();
     virtual void Attack();
 
+    virtual void OnHit();
+
     bool IsDead() const;
 
     Vector3 GetPosition() const;
+    void SetPosition(const Vector3& position);
+    void SetDead(bool isDead) { isDead_ = isDead; }
     std::vector<std::unique_ptr<EnemyBullet>>& GetBullets()
     {
         return enemyBullets_;
     }
-    void SetPosition(const Vector3& position);
-    void SetDead(bool isDead) { isDead_ = isDead; }
 
 protected:
     std::unique_ptr<Object3d> object_;
@@ -37,7 +39,7 @@ protected:
 
     bool isDead_ = false;
 
-    float hp_ = 1.0f;
+    int hp_ = 1;
 
     float moveSpeed_ = 0.1f;
 

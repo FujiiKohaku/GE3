@@ -457,6 +457,8 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::CheckCollision()
 {
+
+    // プレイヤー vs 敵の当たり判定
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
 
         Vector3 difference = enemy->GetPosition() - player_->GetTranslate();
@@ -471,6 +473,8 @@ void GamePlayScene::CheckCollision()
         }
     }
 
+
+    // プレイヤーの弾 vs 敵の当たり判定
     for (const std::unique_ptr<Bullet>& bullet : player_->GetBullets()) {
         for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
 
@@ -485,28 +489,10 @@ void GamePlayScene::CheckCollision()
 
             if (distance <= collisionRadius) {
                 OutputDebugStringA("PlayerBullet Hit Enemy\n");
-                enemy->SetDead(true); // 死亡フラグを立てる
+                enemy->OnHit();
             }
         }
     }
-    // 死んだ敵の中から「NormalEnemy」だけを選んで安全に削除する
-    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        // 1. まず死んでいるかチェック
-        if (enemy->IsDead()) {
-
-            // 2. ★ dynamic_cast を使って、中身が NormalEnemy かどうかを判定する
-            // rawポインタ（.get()）を取り出してキャストを試みます
-            if (dynamic_cast<NormalEnemy*>(enemy.get()) != nullptr) {
-
-                // NormalEnemy で、かつ死んでいるので【削除（true）】
-                return true;
-            }
-        }
-
-        // それ以外の敵（生存している敵や、NormalEnemy以外の敵）は【維持（false）】
-        return false;
-    });
-
 
     // --- 敵の弾 vs プレイヤーの当たり判定 ---
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
@@ -526,6 +512,19 @@ void GamePlayScene::CheckCollision()
                 SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
                 // ここにプレイヤーの被弾処理（HP減少など）や、弾の死亡フラグを立てる処理を書く
             }
+        }
+    }
+    // 死んだ敵をリストから削除する（後ろからループして安全に削除）
+    for (std::vector<std::unique_ptr<BaseEnemy>>::iterator enemyIterator = enemies_.begin();
+        enemyIterator != enemies_.end();) {
+
+        if ((*enemyIterator)->IsDead()) {
+
+            enemyIterator = enemies_.erase(enemyIterator);
+
+        } else {
+
+            ++enemyIterator;
         }
     }
 

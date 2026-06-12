@@ -49,7 +49,14 @@ void BaseEnemy::Draw()
         bullet->Draw();
     }
 }
+void BaseEnemy::OnHit()
+{
+    hp_--;
 
+    if (hp_ <= 0) {
+        isDead_ = true;             
+    }
+}
 void BaseEnemy::Move()
 {
 }
