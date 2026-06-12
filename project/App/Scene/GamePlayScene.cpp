@@ -14,6 +14,7 @@
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
 #include "ClearScene.h"
+#include"GameOverScene.h"
 void GamePlayScene::Initialize()
 {
 
@@ -201,7 +202,7 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
     }
     if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
     }
 
     // プレイヤーの更新（入力処理や移動など）
