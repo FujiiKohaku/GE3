@@ -36,6 +36,10 @@
 #include "../../Engine/EditorManager/EditorManager.h"
 
 #include "../../Engine/SceneObjectManager/SceneObjectManager.h"
+
+#include"../Game/BaseEnemy.h"
+
+#include "../Game/NormalEnemy.h"    
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -49,6 +53,7 @@ public:
     void DrawImGui() override;
 
 private:
+    void CheckCollision();
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
 
     int test_ = 0;
@@ -125,5 +130,6 @@ private:
 
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
 
-   
+    // 敵の管理
+    std::vector<std::unique_ptr<BaseEnemy>> enemies_;
 };

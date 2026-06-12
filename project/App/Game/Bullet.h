@@ -40,6 +40,10 @@ public:
     {
         isAlive_ = false;
     }
+    Vector3 GetPosition() const
+    {
+        return transform_.translate;
+    }
 
 private:
     std::unique_ptr<Object3d> object_;
