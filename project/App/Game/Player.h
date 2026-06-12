@@ -63,6 +63,7 @@ public:
 
     void DrawImGui();
 
+
 private:
     std::unique_ptr<Object3d> object_;
     std::vector<std::unique_ptr<Bullet>> bullets_;
@@ -78,7 +79,7 @@ private:
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
 
     float moveSpeed_ = 0.2f;
-
+    Vector3 velocity_ = {0.0, 0.0, 0.5};
     float moveLimitX_ = 22.0f;
     float moveLimitY_ = 9.0f;
     float playerClampMarginX_ = 6.0f;
