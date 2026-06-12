@@ -13,7 +13,9 @@
 #include <fstream>
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
-
+#include "../Game/Bullet.h"
+#include "ClearScene.h"
+#include "GameOverScene.h"
 void GamePlayScene::Initialize()
 {
 
@@ -60,19 +62,18 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("sneakWalk.gltf");
     ModelManager::GetInstance()->Load("AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("AirPlane.obj");
+
+    Model* enemyModel_ = ModelManager::GetInstance()->Load("star.obj");
+    Model* enemyBulletModel_ = ModelManager::GetInstance()->Load("star.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("walk.gltf");
     //==============
     //  OBJ
     //==============
-    Object3d* terrain_ = sceneObjectManager_->CreateObject(
-        "terrain",
-        "terrain.obj");
+    Object3d* terrain_ = sceneObjectManager_->CreateObject("terrain", "terrain.obj");
 
-    Object3d* star = sceneObjectManager_->CreateObject(
-        "star",
-        "star.obj");
+    Object3d* star = sceneObjectManager_->CreateObject("star", "star.obj");
 
     animationActor_ = std::make_unique<AnimationActor>();
     OutputDebugStringA("A\n");
@@ -152,11 +153,33 @@ void GamePlayScene::Initialize()
     // editorManager_->SetSelectedObject(terrain_);
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
+
+    for (uint32_t i = 0; i < 5; i++) {
+
+        std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+
+        enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+
+        enemy->SetPosition(Vector3 { 0.0f, 0.0f, 200.0f + i * 50.0f });
+
+        enemies_.push_back(std::move(enemy));
+    }
 }
 
 void GamePlayScene::Update()
 {
+    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        enemy->Update();
+    }
+    // プレイヤ０のZ座標の取得
+    float playerZ = player_->GetTranslate().z;
 
+    // プレイヤーのZ座標が1000.0fを超えたらクリアシーンに遷移
+    if (playerZ > 1000.0f) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    }
+
+    // エディターマネージャーの更新（カメラを渡す）
     editorManager_->Update(camera_.get());
 
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
@@ -191,17 +214,20 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
         SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
     }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    }
     // プレイヤーの更新（入力処理や移動など）
-      player_->Update();
+    player_->Update();
 
     // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
-    /* testSprite_->Update();*/
-
     skyBox_->Update(camera_.get());
-    // ParticleManager::GetInstance()->EmitFire("Fire", { 0.0f, 0.0f, 0.0f }, 20);
 
     // キー入力でパーティクルを発生させる例
     if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
@@ -234,7 +260,7 @@ void GamePlayScene::Update()
     // plane_->Update();
     // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
-
+    CheckCollision();
 #pragma region ImGuiによるライト操作パネル
 #ifdef USE_IMGUI
 
@@ -396,8 +422,12 @@ void GamePlayScene::Draw3D()
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
     //     levelObject->Draw();
     // }
-     player_->Draw();
+    player_->Draw();
     sceneObjectManager_->Draw();
+
+    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        enemy->Draw();
+    }
     //----------------------
     // スキニング
     //----------------------
@@ -421,7 +451,84 @@ void GamePlayScene::DrawImGui()
 #ifdef USE_IMGUI
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());
+    player_->DrawImGui();
 #endif
+}
+
+void GamePlayScene::CheckCollision()
+{
+    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+
+        Vector3 difference = enemy->GetPosition() - player_->GetTranslate();
+
+        float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+
+        float collisionRadius = 2.0f;
+
+        if (distance <= collisionRadius) {
+
+            OutputDebugStringA("Player Hit Enemy\n");
+        }
+    }
+
+    for (const std::unique_ptr<Bullet>& bullet : player_->GetBullets()) {
+        for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+
+            // ★追加：すでに死んでいる敵は計算をスキップする
+            if (enemy->IsDead()) {
+                continue;
+            }
+
+            Vector3 difference = enemy->GetPosition() - bullet->GetPosition();
+            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+            float collisionRadius = 2.0f;
+
+            if (distance <= collisionRadius) {
+                OutputDebugStringA("PlayerBullet Hit Enemy\n");
+                enemy->SetDead(true); // 死亡フラグを立てる
+            }
+        }
+    }
+    // 死んだ敵の中から「NormalEnemy」だけを選んで安全に削除する
+    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
+        // 1. まず死んでいるかチェック
+        if (enemy->IsDead()) {
+
+            // 2. ★ dynamic_cast を使って、中身が NormalEnemy かどうかを判定する
+            // rawポインタ（.get()）を取り出してキャストを試みます
+            if (dynamic_cast<NormalEnemy*>(enemy.get()) != nullptr) {
+
+                // NormalEnemy で、かつ死んでいるので【削除（true）】
+                return true;
+            }
+        }
+
+        // それ以外の敵（生存している敵や、NormalEnemy以外の敵）は【維持（false）】
+        return false;
+    });
+
+
+    // --- 敵の弾 vs プレイヤーの当たり判定 ---
+    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (enemy->IsDead()) {
+            continue;
+        }
+
+        for (const std::unique_ptr<EnemyBullet>& enemyBullet : enemy->GetBullets()) {
+
+            Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
+            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+            float collisionRadius = 1.5f;
+
+            if (distance <= collisionRadius) {
+                OutputDebugStringA("EnemyBullet Hit Player\n");
+
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+                // ここにプレイヤーの被弾処理（HP減少など）や、弾の死亡フラグを立てる処理を書く
+            }
+        }
+    }
+
 }
 
 void GamePlayScene::Finalize()

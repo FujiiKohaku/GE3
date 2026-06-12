@@ -164,6 +164,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App\Game\Bullet.cpp" />
+    <ClCompile Include="App\Scene\ClearScene.cpp" />
+    <ClCompile Include="App\Game\BaseEnemy.cpp" />
+    <ClCompile Include="App\Game\EnemyBullet.cpp" />
     <ClCompile Include="Engine\math\Collision.cpp" />
     <ClCompile Include="Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
@@ -260,6 +263,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\math\Ray.cpp" />
     <ClCompile Include="Engine\math\Sphere.cpp" />
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
+    <ClCompile Include="App\Scene\GameOverScene.cpp" />
+    <ClCompile Include="App\Game\NormalEnemy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\shaders\Object3d.PS.hlsl">
@@ -281,6 +286,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\Game\Bullet.h" />
+    <ClInclude Include="App\Scene\ClearScene.h" />
+    <ClInclude Include="App\Game\BaseEnemy.h" />
+    <ClInclude Include="App\Game\EnemyBullet.h" />
     <ClInclude Include="Engine\math\Collision.h" />
     <ClInclude Include="Engine\EditorManager\EditorManager.h" />
     <ClInclude Include="Engine\math\EngineStruct.h" />
@@ -359,6 +367,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\math\Ray.h" />
     <ClInclude Include="Engine\math\Sphere.h" />
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
+    <ClInclude Include="App\Scene\GameOverScene.h" />
+    <ClInclude Include="App\Game\NormalEnemy.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">
