@@ -285,7 +285,7 @@
     <ClCompile Include="App\Scene\ClearScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\GameOver.cpp">
+    <ClCompile Include="App\Scene\GameOverScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -528,7 +528,7 @@
     <ClInclude Include="App\Scene\ClearScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\GameOver.h">
+    <ClInclude Include="App\Scene\GameOverScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
