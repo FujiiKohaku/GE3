@@ -1,6 +1,6 @@
-#include "Engine/ImGuiManager/ImGuiManager.h"
-#include "Engine/Logger/Logger.h"
-#include "Scene/Game.h"
+#include "Engine/Editor/ImGui/ImGuiManager.h"
+#include "Engine/Utility/Logger/Logger.h"
+#include "App/Game/Game.h"
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {

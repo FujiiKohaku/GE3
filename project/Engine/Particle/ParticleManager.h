@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Engine/Camera/Camera.h"
-#include "Engine/DirectXCommon/DirectXCommon.h"
-#include "Engine/SrvManager/SrvManager.h"
-#include "Engine/TextureManager/TextureManager.h"
-#include "Engine/blend/BlendUtil.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
+#include "Engine/Resource/Srv/SrvManager.h"
+#include "Engine/Resource/Texture/TextureManager.h"
+#include "Engine/Renderer/Blend/BlendUtil.h"
 
-#include "MeshManager/ParticleMeshManager.h"
+#include "Engine/Particle/MeshManager/ParticleMeshManager.h"
 #include "ParticleData.h"
 #include "ParticleRenderManager.h"
 
@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include <wrl.h>
 
-#include"../math/EngineStruct.h"
+#include"Engine/Math/EngineStruct.h"
 class ParticleManager {
 public:
     static ParticleManager* GetInstance();

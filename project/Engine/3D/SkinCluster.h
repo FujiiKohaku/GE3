@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include "../DirectXCommon/DirectXCommon.h"
-#include "../Skeleton/Skeleton.h"
-#include "../math/MathStruct.h"
-#include "../math/MatrixMath.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
+#include "Engine/Skeleton/Skeleton.h"
+#include "Engine/Math/MathStruct.h"
+#include "Engine/Math/MatrixMath.h"
 #include <array> // std::array を使うなら（VertexInfluenceで使う想定）
 #include <cstdint> // uint32_t / int32_t を使うなら
 #include <d3d12.h>
@@ -11,7 +11,7 @@
 #include <utility> // std::pair
 #include <vector>
 #include <wrl.h>
-#include "Engine/SrvManager/SrvManager.h"
+#include "Engine/Resource/Srv/SrvManager.h"
 class SkinCluster {
 public:
     SkinCluster() = default;

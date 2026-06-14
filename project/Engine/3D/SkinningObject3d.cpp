@@ -1,5 +1,5 @@
 #include "SkinningObject3d.h"
-#include "Engine/math/MatrixMath.h"
+#include "Engine/Math/MatrixMath.h"
 #include "Model.h"
 #include "ModelManager.h"
 #include "SkinCluster.h"

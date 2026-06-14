@@ -1,6 +1,6 @@
 #include "TitleScene.h"
-#include "Engine/Light/LightManager.h"
-#include "Engine/input/Input.h"
+#include "Engine/Renderer/Light/LightManager.h"
+#include "Engine/Input/Input.h"
 #include "GamePlayScene.h"
 void TitleScene::Initialize()
 {

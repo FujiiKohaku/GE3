@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 #include "Engine/Camera/Camera.h"
-#include "Engine/DirectXCommon/DirectXCommon.h"
-#include "Engine/blend/blendutil.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
+#include "Engine/Renderer/Blend/BlendUtil.h"
 #include <memory>
 class SkinningObject3dManager {
 public:

@@ -1,5 +1,5 @@
 #pragma once
-#include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
 #include "ModelCommon.h"
 #include "Object3d.h"
 

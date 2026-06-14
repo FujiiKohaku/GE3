@@ -9,7 +9,7 @@
 #include "App/Scene/BaseScene.h"
 
 #include "Engine/Camera/Camera.h"
-#include "Engine/debugcamera/DebugCameraController.h"
+#include "Engine/Camera/Debug/DebugCameraController.h"
 
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3d.h"
@@ -17,29 +17,29 @@
 
 #include "Engine/Particle/ParticleManager.h"
 
-#include "Engine/audio/SoundManager.h"
+#include "Engine/Audio/SoundManager.h"
 
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/SpriteManager.h"
-#include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Resource/Texture/TextureManager.h"
 #include <numbers>
 
 #include "Engine/Animation/AnimationActor.h"
 
-#include "../Game/Player.h"
+#include "App/Player/Player.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
-#include "Engine/postEffect/CopyImageRenderer.h"
+#include "Engine/Renderer/PostEffect/CopyImageRenderer.h"
 #include <memory>
 #include <vector>
 
-#include "../../Engine/EditorManager/EditorManager.h"
+#include "Engine/Editor/EditorManager/EditorManager.h"
 
-#include "../../Engine/SceneObjectManager/SceneObjectManager.h"
+#include "Engine/Editor/SceneObject/SceneObjectManager.h"
 
-#include"../Game/BaseEnemy.h"
+#include"App/Enemy/BaseEnemy.h"
 
-#include "../Game/NormalEnemy.h"    
+#include "App/Enemy/NormalEnemy.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;

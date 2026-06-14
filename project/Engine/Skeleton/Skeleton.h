@@ -1,11 +1,11 @@
-﻿#pragma once
-#include "../math/MathStruct.h"
+#pragma once
+#include "Engine/Math/MathStruct.h"
 #include "Joint.h"
 #include <map>
 #include <string>
 #include <vector>
-#include"../Animation/NodeAnimation.h"
-#include "Engine/math/Object3DStruct.h"
+#include"Engine/Animation/NodeAnimation.h"
+#include "Engine/Math/Object3DStruct.h"
 
 struct Skeleton {
     int32_t root; // rootJointのインデックス

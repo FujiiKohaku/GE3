@@ -1,10 +1,10 @@
-﻿#pragma once
-#include "../math/MathStruct.h"
+#pragma once
+#include "Engine/Math/MathStruct.h"
 #include <string>
 #include <vector>
-#include "Engine/math/Object3DStruct.h"
+#include "Engine/Math/Object3DStruct.h"
 #include <optional>
-#include"../math/MatrixMath.h"
+#include"Engine/Math/MatrixMath.h"
 struct Joint {
     QuaternionTransform transform; // Transform情報
     Matrix4x4 localMatrix; // ローカル行列

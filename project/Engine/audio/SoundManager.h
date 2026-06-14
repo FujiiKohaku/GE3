@@ -19,7 +19,7 @@
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
 
-#include "Engine/StringUtility/StringUtility.h"
+#include "Engine/Utility/String/StringUtility.h"
 
 // --------------------------------------
 // WAVファイルデータ保持用

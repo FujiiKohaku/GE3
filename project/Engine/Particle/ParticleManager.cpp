@@ -1,6 +1,6 @@
 #include "ParticleManager.h"
-#include "Engine/ImGuiManager/ImGuiManager.h"
-#include "Engine/math/MathStruct.h"
+#include "Engine/Editor/ImGui/ImGuiManager.h"
+#include "Engine/Math/MathStruct.h"
 #include <cassert>
 #include <cmath>
 #include <numbers>

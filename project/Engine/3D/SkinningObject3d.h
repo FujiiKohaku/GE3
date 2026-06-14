@@ -1,11 +1,11 @@
 #pragma once
-#include "../3D/SkinCluster.h"
-#include "../Animation/PlayAnimation.h"
+#include "Engine/3D/SkinCluster.h"
+#include "Engine/Animation/PlayAnimation.h"
 #include "Engine/Camera/Camera.h"
-#include "Engine/TextureManager/TextureManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
-#include "Engine/math/MatrixMath.h"
-#include "Engine/math/Object3DStruct.h"
+#include "Engine/Resource/Texture/TextureManager.h"
+#include "Engine/Camera/Debug/DebugCamera.h"
+#include "Engine/Math/MatrixMath.h"
+#include "Engine/Math/Object3DStruct.h"
 #include "Model.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>

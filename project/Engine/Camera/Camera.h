@@ -1,8 +1,8 @@
 #pragma once
-#include "Engine/ImGuiManager/ImGuiManager.h"
+#include "Engine/Editor/ImGui/ImGuiManager.h"
 #include "Engine/Math/MathStruct.h"
 #include "Engine/Math/MatrixMath.h"
-#include "Engine/WinApp/WinApp.h"
+#include "Engine/Core/WinApp/WinApp.h"
 
 
 class Camera {

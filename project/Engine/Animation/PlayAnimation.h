@@ -1,14 +1,14 @@
-﻿#pragma once
+#pragma once
 #include <string>
 #include <vector>
 
 #include "KeyFrame.h" 
-#include "Engine/math/MathStruct.h"
-#include "Engine/math/MatrixMath.h"
+#include "Engine/Math/MathStruct.h"
+#include "Engine/Math/MatrixMath.h"
 #include "NodeAnimation.h" 
 
 #include"Animation.h"  
-#include"../Skeleton/Skeleton.h"
+#include"Engine/Skeleton/Skeleton.h"
 class PlayAnimation {
 public:
     void SetAnimation(const Animation* animation);

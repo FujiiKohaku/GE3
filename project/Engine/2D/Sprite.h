@@ -1,6 +1,6 @@
 #pragma once
-#include "Engine/math/SpriteStruct.h" // Vector2, Vector3, Vector4, Matrix4x4 など
-#include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Math/SpriteStruct.h" // Vector2, Vector3, Vector4, Matrix4x4 など
+#include "Engine/Resource/Texture/TextureManager.h"
 #include <cstdint> // uint32_t など
 #include <d3d12.h> // D3D12関連型（ID3D12Resourceなど）
 #include <string> // std::string

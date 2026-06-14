@@ -2,7 +2,7 @@
 #include "BaseScene.h"
 #include <memory>
 
-#include "Engine/PostEffect/PostEffectType.h"
+#include "Engine/Renderer/PostEffect/PostEffectType.h"
 class SceneManager {
 public:
     static SceneManager* GetInstance()

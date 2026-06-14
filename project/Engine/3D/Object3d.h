@@ -1,8 +1,8 @@
 #pragma once
 #include "Engine/Camera/Camera.h"
-#include "Engine/TextureManager/TextureManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
-#include "Engine/math/MatrixMath.h"
+#include "Engine/Resource/Texture/TextureManager.h"
+#include "Engine/Camera/Debug/DebugCamera.h"
+#include "Engine/Math/MatrixMath.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -11,8 +11,8 @@
 #include <vector>
 #include <wrl.h>
 
-#include "../Animation/PlayAnimation.h"
-#include "Engine/math/object3Dstruct.h"
+#include "Engine/Animation/PlayAnimation.h"
+#include "Engine/Math/object3Dstruct.h"
 class Object3dManager;
 class Model;
 class Object3d {

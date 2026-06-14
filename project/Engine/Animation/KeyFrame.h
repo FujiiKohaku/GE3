@@ -1,5 +1,5 @@
 #pragma once
-#include "Engine/math/MathStruct.h"
+#include "Engine/Math/MathStruct.h"
 
 template <typename T>
 struct Keyframe {

@@ -1,5 +1,5 @@
 #include "Camera.h"
-#include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
 Camera::Camera()
     : transform_({ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -20.0f } })
     , fovY_(0.45f)

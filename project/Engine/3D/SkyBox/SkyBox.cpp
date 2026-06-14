@@ -1,8 +1,8 @@
 #include "SkyBox.h"
 #include "Engine/Camera/Camera.h"
-#include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
 #include "Engine/Math/MatrixMath.h"
-#include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Resource/Texture/TextureManager.h"
 #include"Engine/3D/Object3dManager.h"
 #include"Engine/3D/SkinningObject3dManager.h"
 #include <cassert>

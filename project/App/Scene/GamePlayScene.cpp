@@ -1,19 +1,19 @@
 #include "GamePlayScene.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
-#include "Engine/Light/LightManager.h"
-#include "Engine/audio/SoundManager.h"
-#include "Engine/particle/ParticleManager.h"
+#include "Engine/Renderer/Light/LightManager.h"
+#include "Engine/Audio/SoundManager.h"
+#include "Engine/Particle/ParticleManager.h"
 #include <numbers>
 
 #include "SceneManager.h"
 
-#include "../externals/json.hpp"
-#include "Engine/PostEffect/PostEffectType.h"
+#include "externals/json.hpp"
+#include "Engine/Renderer/PostEffect/PostEffectType.h"
 #include <fstream>
 
-#include "../../Engine/LevelEditor/LevelDataLoader.h"
-#include "../Game/Bullet.h"
+#include "Engine/Editor/Level/LevelDataLoader.h"
+#include "App/Bullet/Bullet.h"
 #include "ClearScene.h"
 #include "GameOverScene.h"
 void GamePlayScene::Initialize()
@@ -71,17 +71,17 @@ void GamePlayScene::Initialize()
     //==============
     //  OBJ
     //==============
-    Object3d* terrain_ = sceneObjectManager_->CreateObject("terrain", "terrain.obj");
+    //Object3d* terrain_ = sceneObjectManager_->CreateObject("terrain", "terrain.obj");
 
-    Object3d* star = sceneObjectManager_->CreateObject("star", "star.obj");
+    //Object3d* star = sceneObjectManager_->CreateObject("star", "star.obj");
 
-    animationActor_ = std::make_unique<AnimationActor>();
+ /*   animationActor_ = std::make_unique<AnimationActor>();
     OutputDebugStringA("A\n");
     animationActor_->Initialize("sneakWalk.gltf");
     OutputDebugStringA("B\n");
     animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
-    animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
+    animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });*/
 
     // =================================================
     // Particle
@@ -152,6 +152,7 @@ void GamePlayScene::Initialize()
      }*/
     // editorManager_->SetSelectedObject(terrain_);
 
+    // シーンオブジェクトマネージャーとエディターマネージャーを関連付ける
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
     for (uint32_t i = 0; i < 5; i++) {
@@ -259,7 +260,7 @@ void GamePlayScene::Update()
     // その他のオブジェクトの更新
     // plane_->Update();
     // アニメーションアクターの更新
-    animationActor_->Update(1.0f / 60.0f);
+    /*animationActor_->Update(1.0f / 60.0f);*/
     CheckCollision();
 #pragma region ImGuiによるライト操作パネル
 #ifdef USE_IMGUI
@@ -434,7 +435,7 @@ void GamePlayScene::Draw3D()
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
                                                                                        // animationSkin00_->Draw();
-    animationActor_->Draw();
+    /*animationActor_->Draw();*/
     ParticleManager::GetInstance()->PreDraw();
     ParticleManager::GetInstance()->Draw();
 }

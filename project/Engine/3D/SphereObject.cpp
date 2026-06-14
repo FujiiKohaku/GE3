@@ -1,6 +1,6 @@
 #include "SphereObject.h"
-#include "Engine/math/MatrixMath.h"
-#include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Math/MatrixMath.h"
+#include "Engine/Resource/Texture/TextureManager.h"
 #include <cassert>
 #include <numbers>
 // ================================

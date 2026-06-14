@@ -2,7 +2,7 @@
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
-#include "Engine/blend/BlendUtil.h"
+#include "Engine/Renderer/Blend/BlendUtil.h"
 class DirectXCommon;
 
 //クラス説明

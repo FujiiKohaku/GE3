@@ -1,5 +1,5 @@
 #pragma once
-#include"../../math/Object3DStruct.h"
+#include"Engine/Math/Object3DStruct.h"
 #include <cstdint>
 #include <d3d12.h>
 #include <wrl.h>

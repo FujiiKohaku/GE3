@@ -4,7 +4,7 @@
 #include <d3d12.h>
 #include <vector>
 #include <wrl.h>
-#include "Engine/math/Object3DStruct.h"
+#include "Engine/Math/Object3DStruct.h"
 
 
 class DirectXCommon;

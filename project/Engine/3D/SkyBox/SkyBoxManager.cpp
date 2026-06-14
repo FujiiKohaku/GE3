@@ -1,5 +1,5 @@
 #include "SkyBoxManager.h"
-#include "Engine/StringUtility/StringUtility.h"
+#include "Engine/Utility/String/StringUtility.h"
 
 #include <cassert>
 

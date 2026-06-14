@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Engine/Camera/Camera.h"
-#include "Engine/DirectXCommon/DirectXCommon.h"
-#include "Engine/blend/blendutil.h"
-#include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Renderer/DirectXCommon/DirectXCommon.h"
+#include "Engine/Renderer/Blend/BlendUtil.h"
+#include "Engine/Resource/Texture/TextureManager.h"
 
 class Object3dManager {
 public:

@@ -10,7 +10,7 @@
 #include "Engine/3D/SkinningObject3d.h"
 #include "Engine/3D/SkinningObject3dManager.h"
 
-#include "../Skeleton/Skeleton.h"
+#include "Engine/Skeleton/Skeleton.h"
 
 class AnimationActor {
 public:
