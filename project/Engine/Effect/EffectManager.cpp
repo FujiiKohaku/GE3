@@ -125,9 +125,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
     ID3D12RootSignature* rootSignature,
     const std::string& shaderPath)
 {
-    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(
-        StringUtility::ConvertString(shaderPath),
-        L"cs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(StringUtility::ConvertString(shaderPath),L"cs_6_0");
 
     assert(computeShaderBlob);
 
@@ -176,15 +174,9 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
 {
     ActiveEffectResource resource {};
 
-    resource.particleResource = CreateUavBufferResource(
-        sizeof(ParticleCS) * kMaxGPUParticle,
-        L"EffectManager::ParticleBuffer");
-    resource.freeListIndexResource = CreateUavBufferResource(
-        sizeof(int32_t),
-        L"EffectManager::FreeListIndex");
-    resource.freeListResource = CreateUavBufferResource(
-        sizeof(uint32_t) * kMaxGPUParticle,
-        L"EffectManager::FreeList");
+    resource.particleResource = CreateUavBufferResource(sizeof(ParticleCS) * kMaxGPUParticle,L"EffectManager::ParticleBuffer");
+    resource.freeListIndexResource = CreateUavBufferResource(sizeof(int32_t),L"EffectManager::FreeListIndex");
+    resource.freeListResource = CreateUavBufferResource(sizeof(uint32_t) * kMaxGPUParticle,L"EffectManager::FreeList");
 
     resource.particleUavHandleGPU = CreateStructuredBufferUAV(
         resource.particleResource.Get(),
