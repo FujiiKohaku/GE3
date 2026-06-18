@@ -7,7 +7,7 @@
 #include <cassert>
 #include <fstream>
 #include <sstream>
-#pragma region 初期化処理
+#pragma region
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
     uint32_t vertexCount = 0;
@@ -19,7 +19,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // Manager を保持
     skinningObject3dManager_ = skinningObject3DManager;
 
-    // デフォルトカメラ取得
+    // チE��ォルトカメラ取征E
     camera_ = skinningObject3dManager_->GetDefaultCamera();
 
     // ================================
@@ -86,13 +86,13 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     };
 
     skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData(), SrvManager::GetInstance());
-    // すきんぐりんぐのリソースを作成
+    // すきんぐりんぐ�Eリソースを作�E
     CreateSkinningResources();
 
     // assert(model_->GetVertexResource() != nullptr);　
 
-   // TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
-    //environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
+   // TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
+    //environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/skybox.dds");
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
     assert(camera_);
@@ -100,10 +100,8 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     assert(model_ && "SkinningObject3d::Initialize: model_ is null. Call SetModel() before Initialize().");
     assert(playAnimation_ && "SkinningObject3d::Initialize: playAnimation_ is null. Call SetAnimation() before Initialize().");
 }
-
 #pragma endregion
-
-#pragma region 更新処理
+#pragma region
 
 void SkinningObject3d::Update()
 {
@@ -115,7 +113,7 @@ void SkinningObject3d::Update()
     }
 
     // ================================
-    // 各種行列を作成
+    // 吁E��行�Eを作�E
     // ================================
 
     Matrix4x4 baseMatrix = MatrixMath::MakeAffineMatrix(
@@ -140,15 +138,15 @@ void SkinningObject3d::Update()
     }
 
     // ================================
-    // WVP行列を計算して転送
+    // WVP行�Eを計算して転送E
     // ================================
     transformationMatrixData->WVP = worldViewProjectionMatrix;
 
-    // ワールド行列も送る（ライティングなどで使用）
-    // ワールド行列も送る（ライティングなどで使用）
+    // ワールド行�Eも送る�E�ライチE��ングなどで使用�E�E
+    // ワールド行�Eも送る�E�ライチE��ングなどで使用�E�E
     transformationMatrixData->World = worldMatrix_;
 
-    //  ここが重要：World の逆転置
+    //  ここが重要E��World の送E��置
     Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
     transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
 
@@ -158,10 +156,8 @@ void SkinningObject3d::Update()
     // スキニング
     DispatchSkinning();
 }
-
 #pragma endregion
-
-#pragma region 描画処理
+#pragma region
 void SkinningObject3d::Draw()
 {
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
@@ -234,8 +230,8 @@ void SkinningObject3d::CreateSkinningResources()
     paletteResource_ = skinClusterData_.paletteResource;
 
     // =====================================================
-    // 入力頂点バッファを自前で作る
-    // 全 primitive の頂点を1本にまとめる
+    // 入力頂点バッファを�E前で作る
+    // 全 primitive の頂点めE本にまとめる
     // =====================================================
     inputVertexResource_ = skinningObject3dManager_->GetDxCommon()->CreateBufferResource(bufferSize);
     assert(inputVertexResource_);
@@ -262,7 +258,7 @@ void SkinningObject3d::CreateSkinningResources()
     assert(copyOffset == vertexCount);
 
     // =====================================================
-    // Skinning結果を書き込む出力バッファ
+    // Skinning結果を書き込む出力バチE��ァ
     // =====================================================
     D3D12_HEAP_PROPERTIES heapProperties = {};
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -404,14 +400,14 @@ void SkinningObject3d::DispatchSkinning()
     commandList->ResourceBarrier(1, &barrierBefore);
 
     // =========================================
-    // Compute設定
+    // Compute設宁E
     // =========================================
     commandList->SetPipelineState(skinningObject3dManager_->GetComputePipelineState());
     commandList->SetComputeRootSignature(skinningObject3dManager_->GetComputeRootSignature());
     ID3D12DescriptorHeap* descriptorHeaps[] = { SrvManager::GetInstance()->GetDescriptorHeap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
     // =========================================
-    // SRV / UAV セット
+    // SRV / UAV セチE��
     // t0 : input vertex
     // t1 : influence
     // t2 : palette
@@ -447,7 +443,7 @@ void SkinningObject3d::DispatchSkinning()
     commandList->ResourceBarrier(1, &uavBarrier);
 
     // =========================================
-    // Drawで使える状態に戻す
+    // Drawで使える状態に戻ぁE
     // =========================================
     D3D12_RESOURCE_BARRIER barrierAfter = {};
     barrierAfter.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -459,5 +455,4 @@ void SkinningObject3d::DispatchSkinning()
 
     commandList->ResourceBarrier(1, &barrierAfter);
 }
-
 #pragma endregion

@@ -1,7 +1,6 @@
 #include "MatrixMath.h"
 #include <cmath>
-
-#pragma region 行列関数
+#pragma region
 // 単位行列の作成
 Matrix4x4 MatrixMath::MakeIdentity4x4()
 {
@@ -296,8 +295,4 @@ Vector3 MatrixMath::Transform(const Vector3& vector, const Matrix4x4& matrix)
 
     return result;
 }
-
-
-
-
 #pragma endregion

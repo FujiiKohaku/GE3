@@ -1,8 +1,7 @@
 #include "Sprite.h"
 #include "Engine/math/EngineStruct.h"
 #include "SpriteManager.h"
-
-#pragma region 初期化処理
+#pragma region
 // ================================
 // スプライトの初期化
 // ================================
@@ -29,8 +28,7 @@ void Sprite::Initialize(SpriteManager* spriteManager, std::string textureFilePat
     AdjustTextureSize();
 }
 #pragma endregion
-
-#pragma region 更新処理
+#pragma region
 // ================================
 // 毎フレーム更新処理
 // ================================
@@ -108,8 +106,7 @@ void Sprite::Update()
     transformationMatrixData->WVP = MatrixMath::Multiply(worldMatrix, MatrixMath::Multiply(viewMatrix, orthoSprite));
 }
 #pragma endregion
-
-#pragma region 描画処理
+#pragma region
 // ================================
 // スプライト描画
 // ================================
@@ -131,10 +128,8 @@ void Sprite::Draw()
 
     commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
-
 #pragma endregion
-
-#pragma region 頂点バッファの設定
+#pragma region
 // ================================
 // 頂点・インデックスバッファ作成
 // ================================
@@ -169,8 +164,7 @@ void Sprite::CreateVertexBuffer()
     indexResource->Map(0, nullptr, reinterpret_cast<void**>(&indexData));
 }
 #pragma endregion
-
-#pragma region マテリアルバッファの設定
+#pragma region
 // ================================
 // マテリアル定数バッファ作成
 // ================================
@@ -188,8 +182,7 @@ void Sprite::CreateMaterialBuffer()
     materialData->uvTransform = MatrixMath::MakeIdentity4x4();
 }
 #pragma endregion
-
-#pragma region 変換行列バッファの設定
+#pragma region
 // ================================
 // 変換行列定数バッファ作成
 // ================================
@@ -205,7 +198,6 @@ void Sprite::CreateTransformationMatrixBuffer()
     // 単位行列で初期化
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
 }
-
 #pragma endregion
 void Sprite::AdjustTextureSize()
 {

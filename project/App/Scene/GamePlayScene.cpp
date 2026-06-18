@@ -3,7 +3,7 @@
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/audio/SoundManager.h"
-#include "Engine/particle/ParticleManager.h"
+#include "Engine/Effect/EffectManager.h"
 #include <numbers>
 
 #include "SceneManager.h"
@@ -23,7 +23,7 @@ void GamePlayScene::Initialize()
     editorManager_->Initialize();
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
 
-    // ポストエフェクト切り替え
+    // ポストエフェクト�Eり替ぁE
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
     // Camera
@@ -46,16 +46,16 @@ void GamePlayScene::Initialize()
     // =================================================
     // Managers
     // =================================================
-    ParticleManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_.get());
+    EffectManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_.get());
     // =================================================
     // SkinningObject3d
     // =================================================
 
-    TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
-    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
-    TextureManager::GetInstance()->LoadTexture("resources/rostock_laage_airport_4k.dds");
-    TextureManager::GetInstance()->LoadTexture("resources/aim.png"); // AiMスプライト
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/rostock_laage_airport_4k.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png"); // AiMスプライチE
 
     // nodeLoad
     ModelManager::GetInstance()->Load("dolone.obj");
@@ -91,7 +91,7 @@ void GamePlayScene::Initialize()
     t.translate = { 0.0f, 0.0f, 0.0f };
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
-    ParticleManager::GetInstance()->CreateParticleGroup("Default", "resources/circle.png", ParticleMeshManager::ParticleMeshType::Board);
+    
 
     // =================================================
     // Light
@@ -102,22 +102,22 @@ void GamePlayScene::Initialize()
     // =================================================
     // Sound
     // =================================================
-    // bgm = SoundManager::GetInstance()->SoundLoadFile("Resources/BGM.wav");
+    // bgm = SoundManager::GetInstance()->SoundLoadFile("resources/Sounds/BGM.wav");
     // SoundManager::GetInstance()->SoundPlayWave(bgm);
 
     /*testSprite_ = std::make_unique<Sprite>();
-    testSprite_->Initialize(SpriteManager::GetInstance(), "resources/uvChecker.png");*/
+    testSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/uvChecker.png");*/
 
     aimSprite_ = std::make_unique<Sprite>();
-    aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/aim.png");
+    aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
     aimSprite_->SetSize({ 128.0f, 128.0f });
     aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
     aimSprite_->Update();
-    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
     skyBox_ = std::make_unique<SkyBox>();
     skyBox_->Initialize(DirectXCommon::GetInstance());
-    skyBox_->SetTexture("resources/skyBox.dds");
+    skyBox_->SetTexture("resources/Textures/skybox.dds");
 
     // =================================================
     // Playerクラス
@@ -129,7 +129,7 @@ void GamePlayScene::Initialize()
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
 
     /*LevelDataLoader levelDataLoader;
-    LevelData levelData = levelDataLoader.Load("resources/levels/stage01.json");*/
+    LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");*/
 
     /* for (const LevelData::ObjectData& objectData : levelData.objects) {
          if (objectData.type != "MESH") {
@@ -171,15 +171,15 @@ void GamePlayScene::Update()
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Update();
     }
-    // プレイヤ０のZ座標の取得
+    // プレイヤ�E��EZ座標�E取征E
     float playerZ = player_->GetTranslate().z;
 
-    // プレイヤーのZ座標が1000.0fを超えたらクリアシーンに遷移
+    // プレイヤーのZ座標が1000.0fを趁E��たらクリアシーンに遷移
     if (playerZ > 1000.0f) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
     }
 
-    // エディターマネージャーの更新（カメラを渡す）
+    // エチE��ターマネージャーの更新�E�カメラを渡す！E
     editorManager_->Update(camera_.get());
 
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
@@ -220,26 +220,26 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
     }
-    // プレイヤーの更新（入力処理や移動など）
+    // プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
 
-    // Aimスプライトの位置をプレイヤーのスクリーン座標に合わせる
+    // Aimスプライト�E位置を�Eレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
     skyBox_->Update(camera_.get());
 
-    // キー入力でパーティクルを発生させる例
-    if (Input::GetInstance()->IsKeyPressed(DIK_0)) {
-        Vector3 effectPosition = { 0.0f, 2.0f, 0.0f };
-        ParticleManager::GetInstance()->EmitOnceGPU(effectPosition, 80);
+    // キー入力でパーティクルを発生させる
+    if (Input::GetInstance()->IsKeyTrigger(DIK_0)) {
+        Vector3 effectPosition = player_->GetTranslate();   
+        EffectManager::GetInstance()->PlayEffect("Jet", effectPosition);
     }
-    ParticleManager::GetInstance()->Update();
+    EffectManager::GetInstance()->Update();
 
     sceneObjectManager_->Update();
     camera_->Update();
 
-    // デバッグカメラモードの切り替え
+    // チE��チE��カメラモード�E刁E��替ぁE
     if (debugCameraController_->GetDebugMode()) {
         camera_->DebugUpdate();
     } else {
@@ -254,36 +254,36 @@ void GamePlayScene::Update()
         camera_->SetTranslate(cameraPosition);
     }
 
-    // デバッグカメラの更新は、通常のカメラ更新の後に行う
+    // チE��チE��カメラの更新は、E��常のカメラ更新の後に行う
     debugCameraController_->Update();
-    // その他のオブジェクトの更新
+    // そ�E他�Eオブジェクト�E更新
     // plane_->Update();
     // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
     CheckCollision();
-#pragma region ImGuiによるライト操作パネル
+#pragma region
 #ifdef USE_IMGUI
 
     // player_->DrawImGui();
 
     // ==================================
-    // Lighting Panel（ライト操作パネル）
+    // Lighting Panel�E�ライト操作パネル�E�E
     // ==================================
     ImGui::Begin("Lighting Control");
 
-    // ---- ライトの ON / OFF ----
+    // ---- ライト�E ON / OFF ----
     static bool lightEnabled = false;
     ImGui::Checkbox("Enable Light", &lightEnabled);
 
-    // ---- ライトの色 ----
+    // ---- ライト�E色 ----
     static Vector4 lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     ImGui::ColorEdit3("Light Color", (float*)&lightColor);
 
-    // ---- 明るさ（強さ） ----
+    // ---- 明るさ（強さ！E----
     static float lightIntensity = 1.0f;
     ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
-    // ---- 光の向き ----
+    // ---- 光�E向き ----
     static Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
     ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
 
@@ -292,7 +292,7 @@ void GamePlayScene::Update()
 
     float intensity = lightIntensity;
     if (!lightEnabled) {
-        intensity = 0.0f; // OFF のときは光なし
+        intensity = 0.0f; // OFF のとき�E光なぁE
     }
 
     LightManager::GetInstance()->SetDirectional(
@@ -300,14 +300,14 @@ void GamePlayScene::Update()
         normalizedDir,
         intensity);
 
-    // ---- リセットボタン（向きだけ元に戻す）----
+    // ---- リセチE��ボタン�E�向きだけ�Eに戻す！E---
     if (ImGui::Button("Reset Direction")) {
         lightDir = { 0.0f, -1.0f, 0.0f };
     }
 
     ImGui::SameLine();
 
-    // ---- ライトを完全初期化 ----
+    // ---- ライトを完�E初期匁E----
     if (ImGui::Button("Reset Light")) {
         lightEnabled = true;
         lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -356,12 +356,12 @@ void GamePlayScene::Update()
     static Vector3 spotPos = { 0.0f, 0.0f, 0.0f };
     ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
 
-    // 方向
+    // 方吁E
     static Vector3 spotDir = { -1.0f, 0.0f, 0.0f };
     ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
     Vector3 normalizedSpotDir = Normalize(spotDir);
 
-    // 強さ
+    // 強ぁE
     static float spotIntensity = 4.0f;
     ImGui::SliderFloat("Spot Intensity", &spotIntensity, 0.0f, 10.0f);
 
@@ -371,7 +371,7 @@ void GamePlayScene::Update()
     ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
     ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
 
-    // 角度（度数で操作 → cos に変換）
+    // 角度�E�度数で操佁EↁEcos に変換�E�E
     static float spotAngleDeg = 60.0f;
     static float spotFalloffStartDeg = 30.0f;
 
@@ -382,7 +382,7 @@ void GamePlayScene::Update()
     float cosAngle = std::cos(spotAngleDeg * std::numbers::pi_v<float> / 180.0f);
     float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
 
-    // OFF のとき
+    // OFF のとぁE
     float sI = spotEnabled ? spotIntensity : 0.0f;
 
     // LightManager に反映
@@ -432,11 +432,11 @@ void GamePlayScene::Draw3D()
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしないといけない
+    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしなぁE��ぁE��なぁE
                                                                                        // animationSkin00_->Draw();
     animationActor_->Draw();
-    ParticleManager::GetInstance()->PreDraw();
-    ParticleManager::GetInstance()->Draw();
+    EffectManager::GetInstance()->PreDraw();
+    EffectManager::GetInstance()->Draw();
 }
 
 void GamePlayScene::Draw2D()
@@ -474,7 +474,7 @@ void GamePlayScene::CheckCollision()
     for (const std::unique_ptr<Bullet>& bullet : player_->GetBullets()) {
         for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
 
-            // ★追加：すでに死んでいる敵は計算をスキップする
+            // ☁E��加�E�すでに死んでぁE��敵は計算をスキチE�Eする
             if (enemy->IsDead()) {
                 continue;
             }
@@ -485,30 +485,30 @@ void GamePlayScene::CheckCollision()
 
             if (distance <= collisionRadius) {
                 OutputDebugStringA("PlayerBullet Hit Enemy\n");
-                enemy->SetDead(true); // 死亡フラグを立てる
+                enemy->SetDead(true); // 死亡フラグを立てめE
             }
         }
     }
-    // 死んだ敵の中から「NormalEnemy」だけを選んで安全に削除する
+    // 死んだ敵の中から「NormalEnemy」だけを選んで安�Eに削除する
     std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        // 1. まず死んでいるかチェック
+        // 1. まず死んでぁE��かチェチE��
         if (enemy->IsDead()) {
 
-            // 2. ★ dynamic_cast を使って、中身が NormalEnemy かどうかを判定する
-            // rawポインタ（.get()）を取り出してキャストを試みます
+            // 2. ☁Edynamic_cast を使って、中身ぁENormalEnemy かどぁE��を判定すめE
+            // rawポインタ�E�Eget()�E�を取り出してキャストを試みまぁE
             if (dynamic_cast<NormalEnemy*>(enemy.get()) != nullptr) {
 
-                // NormalEnemy で、かつ死んでいるので【削除（true）】
+                // NormalEnemy で、かつ死んでぁE��ので【削除�E�Erue�E�、E
                 return true;
             }
         }
 
-        // それ以外の敵（生存している敵や、NormalEnemy以外の敵）は【維持（false）】
+        // それ以外�E敵�E�生存してぁE��敵めE��NormalEnemy以外�E敵�E��E【維持E��Ealse�E�、E
         return false;
     });
 
 
-    // --- 敵の弾 vs プレイヤーの当たり判定 ---
+    // --- 敵の弾 vs プレイヤーの当たり判宁E---
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (enemy->IsDead()) {
             continue;
@@ -524,7 +524,7 @@ void GamePlayScene::CheckCollision()
                 OutputDebugStringA("EnemyBullet Hit Player\n");
 
                 SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-                // ここにプレイヤーの被弾処理（HP減少など）や、弾の死亡フラグを立てる処理を書く
+                // ここにプレイヤーの被弾処琁E��EP減少など�E�や、弾の死亡フラグを立てる�E琁E��書ぁE
             }
         }
     }
@@ -534,7 +534,7 @@ void GamePlayScene::CheckCollision()
 void GamePlayScene::Finalize()
 {
 
-    ParticleManager::GetInstance()->Finalize();
+    EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }

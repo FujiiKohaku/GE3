@@ -57,8 +57,7 @@ void DirectXCommon::Initialize(WinApp* winApp)
     // IMGUI初期化
     /* InitializeImGui();*/
 }
-
-#pragma region SRV特化関数
+#pragma region
 //// SRVの指定番号のCPUデスクリプタハンドルを取得する
 // D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetSRVCPUDescriptorHandle(uint32_t index)
 //{
@@ -70,8 +69,7 @@ void DirectXCommon::Initialize(WinApp* winApp)
 //     return GetGPUDescriptorHandle(srvDescriptorHeap, descriptorSizeSRV, index);
 // }
 #pragma endregion
-
-#pragma region デバイス初期化
+#pragma region
 
 // デバイス初期化関数
 void DirectXCommon::InitializeDevice()
@@ -174,8 +172,7 @@ void DirectXCommon::InitializeDevice()
 #endif // DEBUG
 }
 #pragma endregion
-
-#pragma region コマンド初期化
+#pragma region
 void DirectXCommon::InitializeCommand()
 {
     HRESULT hr;
@@ -198,8 +195,7 @@ void DirectXCommon::InitializeCommand()
   
 }
 #pragma endregion
-
-#pragma region スワップチェーン初期化
+#pragma region
 void DirectXCommon::InitializeSwapChain()
 {
     HRESULT hr;
@@ -218,8 +214,7 @@ void DirectXCommon::InitializeSwapChain()
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
-
-#pragma region 深度バッファ初期化
+#pragma region
 void DirectXCommon::InitializeDepthBuffer()
 {
     HRESULT hr;
@@ -257,8 +252,7 @@ void DirectXCommon::InitializeDepthBuffer()
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
-
-#pragma region ディスクリプタヒープ生成関数
+#pragma region
 // ディスクリプタヒープ生成関数
 Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DirectXCommon::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisivle)
 {
@@ -276,8 +270,7 @@ Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DirectXCommon::CreateDescriptorHeap
     return DescriptorHeap;
 }
 #pragma endregion
-
-#pragma region ディスクリプタハンドル取得関数
+#pragma region
 
 // 指定番号のCPUディスクリプタハンドルを取得する関数
 D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetCPUDescriptorHandle(const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize, uint32_t index)
@@ -293,10 +286,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE DirectXCommon::GetGPUDescriptorHandle(const Microsof
     handleGPU.ptr += (descriptorSize * index);
     return handleGPU;
 }
-
 #pragma endregion
-
-#pragma region ディスクリプタヒープ初期化
+#pragma region
 void DirectXCommon::InitializeDescriptorHeaps()
 {
 
@@ -312,10 +303,8 @@ void DirectXCommon::InitializeDescriptorHeaps()
     //// SRV用のヒープ（Shaderから使うのでtrue）
     // srvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxSRVCount, true);
 }
-
 #pragma endregion
-
-#pragma region RTV初期化
+#pragma region
 // RTVの初期化
 void DirectXCommon::InitializeRenderTargetView()
 {
@@ -346,10 +335,8 @@ void DirectXCommon::InitializeRenderTargetView()
         rtvStartHandle.ptr += descriptorSizeRTV;
     }
 }
-
 #pragma endregion
-
-#pragma region DSV初期化
+#pragma region
 // DSVの初期化
 void DirectXCommon::InitializeDepthStencilView()
 {
@@ -361,8 +348,7 @@ void DirectXCommon::InitializeDepthStencilView()
     device->CreateDepthStencilView(depthStencilResource.Get(), &dsvDesc, dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 }
 #pragma endregion
-
-#pragma region フェンス初期化
+#pragma region
 // フェンスの初期化
 void DirectXCommon::InitializeFence()
 {
@@ -376,8 +362,7 @@ void DirectXCommon::InitializeFence()
     assert(fenceEvent != nullptr);
 }
 #pragma endregion
-
-#pragma region ビューポート初期化
+#pragma region
 void DirectXCommon::InitializeViewport()
 {
     // クライアント領域のサイズと一緒にして画面全体に表示する
@@ -389,8 +374,7 @@ void DirectXCommon::InitializeViewport()
     viewport.MaxDepth = 1.0f;
 }
 #pragma endregion
-
-#pragma region シザー初期化
+#pragma region
 void DirectXCommon::InitializeScissorRect()
 {
     // 基本的にビューポートと同じ矩形が構成されるようにする
@@ -400,8 +384,7 @@ void DirectXCommon::InitializeScissorRect()
     scissorRect.bottom = WinApp::kClientHeight;
 }
 #pragma endregion
-
-#pragma region DXCコンパイラ初期化
+#pragma region
 void DirectXCommon::InitializeDxcCompiler()
 {
     HRESULT hr;
@@ -416,9 +399,7 @@ void DirectXCommon::InitializeDxcCompiler()
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
-
-
-#pragma region 描画前処理・描画後処理
+#pragma region
 // 描画前処理
 void DirectXCommon::PreDraw()
 {
@@ -497,8 +478,7 @@ void DirectXCommon::PostDraw()
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
-
-#pragma region シェーダーコンパイル関数
+#pragma region
 Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring& filepath, const wchar_t* profile)
 {
     // 1.hlslファイルを読み込む02_00
@@ -564,10 +544,8 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring
     // 実行用のバイナリを返却02_00
     return shaderBlob;
 }
-
 #pragma endregion
-
-#pragma region バッファリソース生成関数
+#pragma region
 // バッファリソース生成関数
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_t sizeInBytes)
 {
@@ -598,8 +576,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_
     return bufferResource;
 }
 #pragma endregion
-
-#pragma region テクスチャリソース生成関数
+#pragma region
 // テクスチャリソース生成関数
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, const DirectX::TexMetadata& metadata)
 {
@@ -628,10 +605,8 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(Micr
     assert(SUCCEEDED(hr));
     return resource;
 }
-
 #pragma endregion
-
-#pragma region テクスチャアップロード関数
+#pragma region
 // テクスチャアップロード関数
 [[nodiscard]]
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages)
@@ -655,7 +630,6 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsof
 
     return intermediate;
 }
-
 #pragma endregion
 
 // #pragma region テクスチャ読み込み関数

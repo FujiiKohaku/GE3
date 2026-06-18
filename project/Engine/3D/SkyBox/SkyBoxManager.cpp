@@ -118,9 +118,9 @@ void SkyBoxManager::CreateGraphicsPipeline()
 {
     HRESULT hr = S_OK;
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Skybox.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/SkyBox/Skybox.VS.hlsl", L"vs_6_0");
 
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Skybox.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/SkyBox/Skybox.PS.hlsl", L"ps_6_0");
 
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
     inputElementDescs[0].SemanticName = "POSITION";

@@ -1,5 +1,5 @@
 #include "Object3dManager.h"
-// 実体をここで作成　staticだとクラス内で宣言しただけでは実体ができないから、ここで作る
+// 実体をここで作�E　staticだとクラス冁E��宣言しただけでは実体ができなぁE��ら、ここで作る
 std::unique_ptr<Object3dManager> Object3dManager::instance_ = nullptr;
 
 Object3dManager::Object3dManager(ConstructorKey)
@@ -12,44 +12,40 @@ Object3dManager* Object3dManager::GetInstance()
     }
     return instance_.get();
 }
-
-#pragma region 初期化処理
+#pragma region
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
-    // DirectX共通部分を受け取り、保存
+    // DirectX共通部刁E��受け取り、保孁E
     dxCommon_ = dxCommon;
 
-    // ルートシグネチャを作成
+    // ルートシグネチャを作�E
     CreateRootSignature();
 
-    // グラフィックスパイプラインを作成
+    // グラフィチE��スパイプラインを作�E
     CreateGraphicsPipeline();
 
 
-    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
 
-    defaultEnvironmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds");
+    defaultEnvironmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/skybox.dds");
 }
 #pragma endregion
-
-#pragma region 描画準備処理
+#pragma region
 void Object3dManager::PreDraw()
 {
     auto* commandList = dxCommon_->GetCommandList();
 
-    // プリミティブ形状（三角形リスト）
+    // プリミティブ形状�E�三角形リスト！E
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // RootSignature 設定
+    // RootSignature 設宁E
     commandList->SetGraphicsRootSignature(rootSignature.Get());
 
-    //  ブレンドモードに応じた PSO を適用
+    //  ブレンドモードに応じぁEPSO を適用
     commandList->SetPipelineState(pipelineStates[currentBlendMode].Get());
 }
-
 #pragma endregion
-
-#pragma region Setter
+#pragma region
 void Object3dManager::SetNormalPSO()
 {
     auto* commandList = dxCommon_->GetCommandList();
@@ -63,30 +59,26 @@ void Object3dManager::SetGlowPSO()
 
     commandList->SetPipelineState(glowPipelineStates[currentBlendMode].Get());
 }
-
-
-
 #pragma endregion
-
-#pragma region ルートシグネチャ作成
+#pragma region
 void Object3dManager::CreateRootSignature()
 {
     HRESULT hr;
 
-    // ====== RootParameterの設定 ======
+    // ====== RootParameterの設宁E======
     D3D12_ROOT_PARAMETER rootParameters[8] = {};
 
-    // [0] Material（ピクセルシェーダ用）
+    // [0] Material�E�ピクセルシェーダ用�E�E
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
-    // [1] Transform（頂点シェーダ用）
+    // [1] Transform�E�頂点シェーダ用�E�E
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[1].Descriptor.ShaderRegister = 0;
 
-    // [2] Texture（SRV: テクスチャ用）
+    // [2] Texture�E�ERV: チE��スチャ用�E�E
     D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
     descriptorRange[0].BaseShaderRegister = 0;
     descriptorRange[0].NumDescriptors = 1;
@@ -98,11 +90,11 @@ void Object3dManager::CreateRootSignature()
     rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
 
-    // [3] DirectionalLight（ライト情報）
+    // [3] DirectionalLight�E�ライト情報�E�E
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1;
-    // [4] Camera（視点情報）
+    // [4] Camera�E�視点惁E���E�E
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[4].Descriptor.ShaderRegister = 2; // b2
@@ -124,7 +116,7 @@ void Object3dManager::CreateRootSignature()
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[7].DescriptorTable.pDescriptorRanges = descriptorRangeEnvironment;
     rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeEnvironment);
-    // ====== Sampler設定 ======
+    // ====== Sampler設宁E======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -135,7 +127,7 @@ void Object3dManager::CreateRootSignature()
     staticSampler.ShaderRegister = 0;
     staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-    // ====== RootSignatureDesc設定 ======
+    // ====== RootSignatureDesc設宁E======
     D3D12_ROOT_SIGNATURE_DESC desc = {};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     desc.pParameters = rootParameters;
@@ -143,7 +135,7 @@ void Object3dManager::CreateRootSignature()
     desc.pStaticSamplers = &staticSampler;
     desc.NumStaticSamplers = 1;
 
-    // ====== シリアライズ & 作成 ======
+    // ====== シリアライズ & 作�E ======
     hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
         signatureBlob.GetAddressOf(), errorBlob.GetAddressOf());
 
@@ -154,17 +146,16 @@ void Object3dManager::CreateRootSignature()
         assert(false);
     }
 
-    // 実際にルートシグネチャ作成
+    // 実際にルートシグネチャ作�E
     hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
-
-#pragma region グラフィックスパイプライン作成
+#pragma region
 void Object3dManager::CreateGraphicsPipeline()
 {
 
-    // ====== 入力レイアウト ======
+    // ====== 入力レイアウチE======
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
 
     // POSITION
@@ -187,12 +178,12 @@ void Object3dManager::CreateGraphicsPipeline()
     inputLayoutDesc.pInputElementDescs = inputElementDescs;
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
-    // ====== ラスタライザ設定 ======
+    // ====== ラスタライザ設宁E======
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    // ====== デプスステンシル設定 ======
+    // ====== チE�EススチE��シル設宁E======
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
@@ -201,16 +192,16 @@ void Object3dManager::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Glow.PS.hlsl", L"ps_6_0"); // グロウ
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Glow.PS.hlsl", L"ps_6_0"); // グロウ
     assert(vertexShaderBlob && pixelShaderBlob && glowPixelShaderBlob);
 
-    // ====== PSO設定 ======
+    // ====== PSO設宁E======
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
-    // baseDescPSはFor文の中に移動しました
+    // baseDescPSはFor斁E�E中に移動しました
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
@@ -221,7 +212,7 @@ void Object3dManager::CreateGraphicsPipeline()
     baseDesc.SampleDesc.Count = 1;
     baseDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     baseDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    // ブレンド設定（とりあえずなしで初期化）
+    // ブレンド設定（とりあえずなしで初期化！E
     baseDesc.BlendState = CreateBlendDesc(kBlendModeNone);
 
     for (int i = 0; i < kCountOfBlendMode; i++) {
@@ -249,7 +240,6 @@ void Object3dManager::CreateGraphicsPipeline()
         }
     }
 }
-
 #pragma endregion
 void Object3dManager::Finalize()
 {

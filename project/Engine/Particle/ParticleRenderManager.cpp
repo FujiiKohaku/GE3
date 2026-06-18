@@ -1,8 +1,7 @@
 #include "ParticleRenderManager.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include <cassert>
-
-#pragma region初期化
+#pragma region
 void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
@@ -11,8 +10,7 @@ void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
     CreateGraphicsPipeline();
 }
 #pragma endregion
-
-#pragma region 描画前処理
+#pragma region
 void ParticleRenderManager::PreDraw(int blendMode)
 {
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
@@ -20,11 +18,8 @@ void ParticleRenderManager::PreDraw(int blendMode)
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
     commandList->SetPipelineState(pipelineStates_[blendMode].Get());
 }
-
 #pragma endregion
-
-
-#pragma region ルートシグネチャ作成
+#pragma region
 void ParticleRenderManager::CreateRootSignature()
 {
     D3D12_DESCRIPTOR_RANGE particleRange {};
@@ -105,8 +100,7 @@ void ParticleRenderManager::CreateRootSignature()
     assert(SUCCEEDED(result));
 }
 #pragma endregion
-
-#pragma region PSO作成
+#pragma region
 void ParticleRenderManager::CreateGraphicsPipeline()
 {
     D3D12_INPUT_ELEMENT_DESC inputElementDescriptions[3] = {};
@@ -139,9 +133,9 @@ void ParticleRenderManager::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(
-        L"resources/shaders/Particle.VS.hlsl", L"vs_6_0");
+        L"resources/Shaders/Effects/Common/Particle.VS.hlsl", L"vs_6_0");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(
-        L"resources/shaders/Particle.PS.hlsl", L"ps_6_0");
+        L"resources/Shaders/Effects/Common/Particle.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc {};
