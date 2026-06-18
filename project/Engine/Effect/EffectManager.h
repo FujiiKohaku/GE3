@@ -100,6 +100,14 @@ public:
     const std::vector<ActiveEffect>& GetActiveEffects() const { return activeEffects_; }
 
 private:
+    enum class EmitterShape : int32_t {
+        Sphere,
+        Box,
+        Cone,
+        Cylinder,
+        Circle,
+    };
+
     struct Material {
         Vector4 color;
         int32_t enableLighting;
@@ -109,18 +117,40 @@ private:
         float padding2[3];
     };
 
+    struct EffectSettings {
+        Vector4 startColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        Vector4 endColor = { 1.0f, 1.0f, 1.0f, 0.0f };
+        Vector3 velocity = { 0.0f, 0.0f, 0.0f };
+        float lifeTime = 1.0f;
+        float startScale = 1.0f;
+        float endScale = 1.0f;
+        float startRotation = 0.0f;
+        float rotationSpeed = 0.0f;
+        int32_t emitterShape = static_cast<int32_t>(EmitterShape::Sphere);
+        int32_t enableGravity = 0;
+        int32_t enableDrag = 0;
+        int32_t enableNoise = 0;
+        int32_t enableAttraction = 0;
+        float gravity = -9.8f;
+        float drag = 0.95f;
+        float noiseStrength = 1.0f;
+        float attractionStrength = 1.0f;
+        float padding[3] = {};
+    };
+
     struct EffectRuntime {
         EffectData data;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> emitPipelineState;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> updatePipelineState;
         std::string texturePath = "resources/Particles/circle.png";
         ParticleMeshManager::ParticleMeshType meshType = ParticleMeshManager::ParticleMeshType::Board;
+        BlendMode blendMode = kBlendModeAdd;
         uint32_t emitCount = 128;
         float emitRadius = 0.2f;
         float emitFrequency = 0.05f;
         float duration = 1.5f;
-        float startScale = 1.0f;
-        float endScale = 1.0f;
+        bool defaultLoop = false;
+        EffectSettings settings;
     };
 
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
@@ -131,9 +161,11 @@ private:
         Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> emitterResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> perFrameResource;
+        Microsoft::WRL::ComPtr<ID3D12Resource> effectSettingsResource;
 
         EmitterSphere* emitterData = nullptr;
         PerFrame* perFrameData = nullptr;
+        EffectSettings* effectSettingsData = nullptr;
 
         uint32_t particleUavIndex = kInvalidDescriptorIndex;
         uint32_t particleSrvIndex = kInvalidDescriptorIndex;

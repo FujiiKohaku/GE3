@@ -5,6 +5,7 @@ RWStructuredBuffer<ParticleCS> gParticles : register(u0);
 RWStructuredBuffer<int32_t> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
+ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
 static const int32_t kMaxGPUParticle = 1024;
 
@@ -54,10 +55,15 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float scale = 0.35f + generator.Generate1d() * 0.65f;
     float gray = 0.35f + generator.Generate1d() * 0.25f;
 
-    gParticles[particleIndex].translate = gEmitter.translate + random * gEmitter.radius;
-    gParticles[particleIndex].velocity = direction * speed;
+    scale = max(gEffectSettings.startScale, 0.0f);
+
+    gParticles[particleIndex].translate =
+        gEmitter.translate + MakeEmitterOffset(gEffectSettings.emitterShape, random + 0.5f, gEmitter.radius);
+    gParticles[particleIndex].velocity = direction * speed + gEffectSettings.velocity;
     gParticles[particleIndex].scale = float32_t3(scale, scale, scale);
-    gParticles[particleIndex].lifeTime = 1.4f + generator.Generate1d() * 1.4f;
+    gParticles[particleIndex].lifeTime = max(gEffectSettings.lifeTime, 0.01f);
     gParticles[particleIndex].currentTime = 0.0f;
-    gParticles[particleIndex].color = float32_t4(gray, gray, gray, 0.8f);
+    gParticles[particleIndex].color = gEffectSettings.startColor;
+    gParticles[particleIndex].rotation = gEffectSettings.startRotation;
+    gParticles[particleIndex].rotationSpeed = gEffectSettings.rotationSpeed;
 }

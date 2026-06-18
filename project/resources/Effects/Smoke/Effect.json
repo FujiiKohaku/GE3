@@ -1,10 +1,35 @@
 {
-  "Texture": "smoke.png",
-  "MeshType": "Board",
-  "EmitCount": 18,
-  "EmitRadius": 0.45,
-  "EmitFrequency": 0.12,
-  "Duration": 2.8,
-  "StartScale": 0.35,
-  "EndScale": 1.0
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 18,
+    "Radius": 0.45,
+    "Frequency": 0.12
+  },
+  "Particle": {
+    "LifeTime": 2.2,
+    "StartScale": 0.35,
+    "EndScale": 1.0,
+    "StartRotation": 0.0,
+    "RotationSpeed": 0.5,
+    "Velocity": [0.0, 0.0, 0.0],
+    "StartColor": [0.45, 0.45, 0.45, 0.8],
+    "EndColor": [0.12, 0.12, 0.12, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": true,
+    "Gravity": 0.15,
+    "EnableDrag": true,
+    "Drag": 0.98,
+    "EnableNoise": true,
+    "NoiseStrength": 0.4,
+    "EnableAttraction": false,
+    "AttractionStrength": 1.0
+  },
+  "Render": {
+    "Texture": "smoke.png",
+    "MeshType": "Board",
+    "BlendMode": "Normal",
+    "Loop": false,
+    "Duration": 2.8
+  }
 }

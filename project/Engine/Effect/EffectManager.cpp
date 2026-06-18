@@ -44,6 +44,79 @@ ParticleMeshManager::ParticleMeshType ParseParticleMeshType(const std::string& m
 
     return ParticleMeshManager::ParticleMeshType::Board;
 }
+
+BlendMode ParseBlendMode(const std::string& blendMode)
+{
+    if (blendMode == "None") {
+        return kBlendModeNone;
+    }
+
+    if (blendMode == "Normal") {
+        return kBlendModeNormal;
+    }
+
+    if (blendMode == "Subtract") {
+        return kBlendModeSubtract;
+    }
+
+    if (blendMode == "Multiply") {
+        return kBlendModeMultiply;
+    }
+
+    if (blendMode == "Screen") {
+        return kBlendModeScreen;
+    }
+
+    return kBlendModeAdd;
+}
+
+int32_t ParseEmitterShape(const std::string& shape)
+{
+    if (shape == "Box") {
+        return 1;
+    }
+
+    if (shape == "Cone") {
+        return 2;
+    }
+
+    if (shape == "Cylinder") {
+        return 3;
+    }
+
+    if (shape == "Circle") {
+        return 4;
+    }
+
+    return 0;
+}
+
+Vector3 ReadVector3(const nlohmann::json& json, const Vector3& fallback)
+{
+    if (!json.is_array() || json.size() < 3) {
+        return fallback;
+    }
+
+    return {
+        json.at(0).get<float>(),
+        json.at(1).get<float>(),
+        json.at(2).get<float>(),
+    };
+}
+
+Vector4 ReadVector4(const nlohmann::json& json, const Vector4& fallback)
+{
+    if (!json.is_array() || json.size() < 4) {
+        return fallback;
+    }
+
+    return {
+        json.at(0).get<float>(),
+        json.at(1).get<float>(),
+        json.at(2).get<float>(),
+        json.at(3).get<float>(),
+    };
+}
 }
 
 EffectManager::EffectManager(ConstructorKey)
@@ -149,23 +222,63 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
 
     const std::filesystem::path effectDirectory(effectData.effectDirectory);
 
-    if (config.contains("Texture")) {
+    const nlohmann::json& emitter = config.contains("Emitter") ? config.at("Emitter") : config;
+    const nlohmann::json& particle = config.contains("Particle") ? config.at("Particle") : config;
+    const nlohmann::json& simulation = config.contains("Simulation") ? config.at("Simulation") : config;
+    const nlohmann::json& render = config.contains("Render") ? config.at("Render") : config;
+
+    if (emitter.contains("Shape")) {
+        runtime.settings.emitterShape = ParseEmitterShape(emitter.at("Shape").get<std::string>());
+    }
+
+    runtime.emitCount = emitter.value("Count", emitter.value("EmitCount", runtime.emitCount));
+    runtime.emitRadius = emitter.value("Radius", emitter.value("EmitRadius", runtime.emitRadius));
+    runtime.emitFrequency = emitter.value("Frequency", emitter.value("EmitFrequency", runtime.emitFrequency));
+
+    runtime.settings.lifeTime = particle.value("LifeTime", runtime.settings.lifeTime);
+    runtime.settings.startScale = particle.value("StartScale", runtime.settings.startScale);
+    runtime.settings.endScale = particle.value("EndScale", runtime.settings.endScale);
+    runtime.settings.startRotation = particle.value("StartRotation", runtime.settings.startRotation);
+    runtime.settings.rotationSpeed = particle.value("RotationSpeed", runtime.settings.rotationSpeed);
+
+    if (particle.contains("Velocity")) {
+        runtime.settings.velocity = ReadVector3(particle.at("Velocity"), runtime.settings.velocity);
+    }
+
+    if (particle.contains("StartColor")) {
+        runtime.settings.startColor = ReadVector4(particle.at("StartColor"), runtime.settings.startColor);
+    }
+
+    if (particle.contains("EndColor")) {
+        runtime.settings.endColor = ReadVector4(particle.at("EndColor"), runtime.settings.endColor);
+    }
+
+    runtime.settings.enableGravity = simulation.value("EnableGravity", false) ? 1 : 0;
+    runtime.settings.gravity = simulation.value("Gravity", runtime.settings.gravity);
+    runtime.settings.enableDrag = simulation.value("EnableDrag", false) ? 1 : 0;
+    runtime.settings.drag = simulation.value("Drag", runtime.settings.drag);
+    runtime.settings.enableNoise = simulation.value("EnableNoise", false) ? 1 : 0;
+    runtime.settings.noiseStrength = simulation.value("NoiseStrength", runtime.settings.noiseStrength);
+    runtime.settings.enableAttraction = simulation.value("EnableAttraction", false) ? 1 : 0;
+    runtime.settings.attractionStrength = simulation.value("AttractionStrength", runtime.settings.attractionStrength);
+
+    if (render.contains("Texture")) {
         runtime.texturePath = ResolveEffectAssetPath(
             effectDirectory,
-            config.at("Texture").get<std::string>())
+            render.at("Texture").get<std::string>())
                                   .generic_string();
     }
 
-    if (config.contains("MeshType")) {
-        runtime.meshType = ParseParticleMeshType(config.at("MeshType").get<std::string>());
+    if (render.contains("MeshType")) {
+        runtime.meshType = ParseParticleMeshType(render.at("MeshType").get<std::string>());
     }
 
-    runtime.emitCount = config.value("EmitCount", runtime.emitCount);
-    runtime.emitRadius = config.value("EmitRadius", runtime.emitRadius);
-    runtime.emitFrequency = config.value("EmitFrequency", runtime.emitFrequency);
-    runtime.duration = config.value("Duration", runtime.duration);
-    runtime.startScale = config.value("StartScale", runtime.startScale);
-    runtime.endScale = config.value("EndScale", runtime.endScale);
+    if (render.contains("BlendMode")) {
+        runtime.blendMode = ParseBlendMode(render.at("BlendMode").get<std::string>());
+    }
+
+    runtime.defaultLoop = render.value("Loop", runtime.defaultLoop);
+    runtime.duration = render.value("Duration", runtime.duration);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline(
@@ -244,7 +357,7 @@ EffectHandle EffectManager::StartEffect(
     if (!isLoop && activeEffect.duration < 0.0f) {
         activeEffect.duration = runtime.duration;
     }
-    activeEffect.isLoop = isLoop;
+    activeEffect.isLoop = isLoop || runtime.defaultLoop;
     activeEffect.isAlive = true;
 
     ActiveEffectResource resource = CreateActiveEffectResource(runtime, position);
@@ -330,6 +443,11 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     resource.perFrameResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.perFrameData));
     resource.perFrameData->time = 0.0f;
     resource.perFrameData->deltaTime = deltaTime_;
+
+    resource.effectSettingsResource = dxCommon_->CreateBufferResource(sizeof(EffectSettings));
+    resource.effectSettingsResource->SetName(L"EffectManager::EffectSettings");
+    resource.effectSettingsResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.effectSettingsData));
+    *resource.effectSettingsData = runtime.settings;
 
     return resource;
 }
@@ -532,7 +650,7 @@ void EffectManager::CreateEmitRootSignature()
     freeListUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     freeListUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[5] {};
+    D3D12_ROOT_PARAMETER rootParameters[6] {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[0].Descriptor.ShaderRegister = 0;
@@ -555,6 +673,10 @@ void EffectManager::CreateEmitRootSignature()
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[4].Descriptor.ShaderRegister = 1;
+
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[5].Descriptor.ShaderRegister = 2;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -598,7 +720,7 @@ void EffectManager::CreateUpdateRootSignature()
     freeListUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     freeListUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[4] {};
+    D3D12_ROOT_PARAMETER rootParameters[6] {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[0].DescriptorTable.pDescriptorRanges = &particleUavRange;
@@ -617,6 +739,14 @@ void EffectManager::CreateUpdateRootSignature()
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[3].Descriptor.ShaderRegister = 0;
+
+    rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[4].Descriptor.ShaderRegister = 1;
+
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[5].Descriptor.ShaderRegister = 2;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -676,6 +806,7 @@ void EffectManager::DispatchEmit(const EffectRuntime& runtime, ActiveEffectResou
     commandList->SetComputeRootDescriptorTable(2, resource.freeListIndexUavHandleGPU);
     commandList->SetComputeRootDescriptorTable(3, resource.freeListUavHandleGPU);
     commandList->SetComputeRootConstantBufferView(4, resource.perFrameResource->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(5, resource.effectSettingsResource->GetGPUVirtualAddress());
 
     const uint32_t dispatchCount = (resource.emitterData->count + 255) / 256;
     commandList->Dispatch(dispatchCount, 1, 1);
@@ -693,6 +824,8 @@ void EffectManager::DispatchUpdate(const EffectRuntime& runtime, ActiveEffectRes
     commandList->SetComputeRootDescriptorTable(1, resource.freeListIndexUavHandleGPU);
     commandList->SetComputeRootDescriptorTable(2, resource.freeListUavHandleGPU);
     commandList->SetComputeRootConstantBufferView(3, resource.perFrameResource->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(4, resource.effectSettingsResource->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(5, resource.emitterResource->GetGPUVirtualAddress());
     commandList->Dispatch((kMaxGPUParticle + 255) / 256, 1, 1);
 }
 
@@ -840,6 +973,11 @@ void EffectManager::UnmapActiveEffectResource(ActiveEffectResource& resource)
         resource.perFrameResource->Unmap(0, nullptr);
         resource.perFrameData = nullptr;
     }
+
+    if (resource.effectSettingsResource && resource.effectSettingsData) {
+        resource.effectSettingsResource->Unmap(0, nullptr);
+        resource.effectSettingsData = nullptr;
+    }
 }
 
 void EffectManager::ReleaseActiveEffectDescriptors(ActiveEffectResource& resource)
@@ -881,10 +1019,6 @@ void EffectManager::Draw()
 
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootConstantBufferView(3, perViewResource_->GetGPUVirtualAddress());
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
     for (size_t i = 0; i < activeEffects_.size(); ++i) {
         const ActiveEffect& activeEffect = activeEffects_[i];
         if (!activeEffect.isAlive) {
@@ -898,6 +1032,11 @@ void EffectManager::Draw()
 
         const EffectRuntime& runtime = runtimeIterator->second;
         const ActiveEffectResource& resource = activeResources_[i];
+
+        particleRenderManager_->PreDraw(runtime.blendMode);
+        commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootConstantBufferView(3, perViewResource_->GetGPUVirtualAddress());
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView =
             particleMeshManager_->GetVertexBufferView(runtime.meshType);
