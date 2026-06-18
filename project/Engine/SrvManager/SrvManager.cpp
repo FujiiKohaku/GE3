@@ -17,6 +17,8 @@ void SrvManager::Initialize(DirectXCommon* dxCommon)
     descriptorHeap = dxCommon_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxSRVCount, true);
     // デスクリプタ一個分のサイズを取得
     descriptorSize = dxCommon_->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    freeIndices_.clear();
+    allocatedFlags_.assign(kMaxSRVCount, false);
 }
 
 void SrvManager::PreDraw()
@@ -28,14 +30,36 @@ void SrvManager::PreDraw()
 
 uint32_t SrvManager::Allocate()
 {
+    if (!freeIndices_.empty()) {
+        const uint32_t index = freeIndices_.back();
+        freeIndices_.pop_back();
+        allocatedFlags_[index] = true;
+        return index;
+    }
+
     // 上限チェック
     assert(useIndex < kMaxSRVCount);
     // retrunする番号を一旦記録しておく
-    int index = useIndex;
+    uint32_t index = useIndex;
+    allocatedFlags_[index] = true;
     // 次回のために番号を１進める
     useIndex++;
     // 上で記録した番号を返す
     return index;
+}
+
+void SrvManager::Free(uint32_t index)
+{
+    if (index >= kMaxSRVCount) {
+        return;
+    }
+
+    assert(index < useIndex);
+    assert(index < allocatedFlags_.size());
+    assert(allocatedFlags_[index]);
+
+    allocatedFlags_[index] = false;
+    freeIndices_.push_back(index);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE SrvManager::GetCPUDescriptorHandle(uint32_t index)
@@ -83,9 +107,13 @@ void SrvManager::SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_
 {
     dxCommon_->GetCommandList()->SetGraphicsRootDescriptorTable(RootParameterIndex, GetGPUDescriptorHandle(srvIndex));
 }
-bool SrvManager::CanAllocate() const
+bool SrvManager::CanAllocate(uint32_t count) const
 {
-    return useIndex < kMaxSRVCount;
+    if (count <= freeIndices_.size()) {
+        return true;
+    }
+
+    return useIndex + (count - static_cast<uint32_t>(freeIndices_.size())) <= kMaxSRVCount;
 }
 
 void SrvManager::Finalize()
@@ -101,6 +129,8 @@ void SrvManager::Finalize()
     descriptorHeap.Reset();
 
     useIndex = 0;
+    freeIndices_.clear();
+    allocatedFlags_.clear();
     descriptorSize = 0;
     dxCommon_ = nullptr;
 

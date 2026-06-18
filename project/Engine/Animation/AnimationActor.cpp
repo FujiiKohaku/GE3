@@ -11,7 +11,7 @@ void AnimationActor::Initialize(const std::string& modelName)
     skeleton_ = Skeleton::CreateSkeleton(object_->GetRootNode());
 
     playAnimation_ = std::make_unique<PlayAnimation>();
-    animation_ = AnimationLoder::LoadAnimationFile("resources", modelName);
+    animation_ = AnimationLoder::LoadAnimationFile("resources/Models", modelName);
 
     playAnimation_->SetAnimation(&animation_);
     playAnimation_->SetSkeleton(&skeleton_);

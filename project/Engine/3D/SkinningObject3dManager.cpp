@@ -1,4 +1,4 @@
-﻿#include "SkinningObject3dManager.h"
+#include "SkinningObject3dManager.h"
 
 // cpp
 std::unique_ptr<SkinningObject3dManager> SkinningObject3dManager::instance_ = nullptr;
@@ -12,23 +12,22 @@ SkinningObject3dManager* SkinningObject3dManager::GetInstance()
     }
     return instance_.get();
 }
-#pragma region 初期化処理
+#pragma region
 void SkinningObject3dManager::Initialize(DirectXCommon* dxCommon)
 {
-    // DirectX共通部分を受け取り、保存
+    // DirectX���ʕ�����󂯎��A�ۑ�
     dxCommon_ = dxCommon;
 
-    // ルートシグネチャを作成
+    // ���[�g�V�O�l�`����쐬
     CreateRootSignature();
-    // グラフィックスパイプラインを作成
+    // �O���t�B�b�N�X�p�C�v���C����쐬
     CreateGraphicsPipeline();
 
     CreateComputeRootSignature();
     CreateComputePipeline();
 }
 #pragma endregion
-
-#pragma region 描画準備処理
+#pragma region
 void SkinningObject3dManager::PreDraw()
 {
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
@@ -43,27 +42,25 @@ void SkinningObject3dManager::PreDraw()
 
     commandList->SetPipelineState(pipelineStates[currentBlendMode].Get());
 }
-
 #pragma endregion
-
-#pragma region ルートシグネチャ作成
+#pragma region
 void SkinningObject3dManager::CreateRootSignature()
 {
     HRESULT hr;
 
     D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
-    // [0] Material（PS : b0）
+    // [0] Material�iPS : b0�j
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
-    // [1] Transform（VS : b0）
+    // [1] Transform�iVS : b0�j
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[1].Descriptor.ShaderRegister = 0;
 
-    // [2] Texture（PS : t0）
+    // [2] Texture�iPS : t0�j
     D3D12_DESCRIPTOR_RANGE textureRange {};
     textureRange.BaseShaderRegister = 0;
     textureRange.NumDescriptors = 1;
@@ -75,27 +72,27 @@ void SkinningObject3dManager::CreateRootSignature()
     rootParameters[2].DescriptorTable.pDescriptorRanges = &textureRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
 
-    // [3] DirectionalLight（PS : b1）
+    // [3] DirectionalLight�iPS : b1�j
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1;
 
-    // [4] Camera（PS : b2）
+    // [4] Camera�iPS : b2�j
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[4].Descriptor.ShaderRegister = 2;
 
-    // [5] PointLight（PS : b3）
+    // [5] PointLight�iPS : b3�j
     rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[5].Descriptor.ShaderRegister = 3;
 
-    // [6] SpotLight（PS : b4）
+    // [6] SpotLight�iPS : b4�j
     rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[6].Descriptor.ShaderRegister = 4;
 
-    // [7] MatrixPalette（VS : t0）
+    // [7] MatrixPalette�iVS : t0�j
     D3D12_DESCRIPTOR_RANGE matrixPaletteRange {};
     matrixPaletteRange.BaseShaderRegister = 0;
     matrixPaletteRange.NumDescriptors = 1;
@@ -106,7 +103,7 @@ void SkinningObject3dManager::CreateRootSignature()
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[7].DescriptorTable.pDescriptorRanges = &matrixPaletteRange;
     rootParameters[7].DescriptorTable.NumDescriptorRanges = 1;
-    // [8] EnvironmentTexture（PS : t1）
+    // [8] EnvironmentTexture�iPS : t1�j
     D3D12_DESCRIPTOR_RANGE environmentTextureRange {};
     environmentTextureRange.BaseShaderRegister = 1;
     environmentTextureRange.NumDescriptors = 1;
@@ -163,10 +160,8 @@ void SkinningObject3dManager::CreateRootSignature()
         IID_PPV_ARGS(&rootSignature));
     assert(SUCCEEDED(hr));
 }
-
 #pragma endregion
-
-#pragma region グラフィックスパイプライン作成
+#pragma region
 void SkinningObject3dManager::CreateGraphicsPipeline()
 {
     HRESULT hr;
@@ -223,12 +218,12 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     inputLayoutDesc.pInputElementDescs = inputElementDescs.data();
     inputLayoutDesc.NumElements = static_cast<UINT>(inputElementDescs.size());
 
-    // ====== ラスタライザ設定 ======
+    // ====== ���X�^���C�U�ݒ� ======
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    // ====== デプスステンシル設定 ======
+    // ====== �f�v�X�X�e���V���ݒ� ======
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
@@ -236,12 +231,12 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
 
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-    // ====== シェーダーのコンパイル ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Object3d.PS.hlsl", L"ps_6_0");
+    // ====== �V�F�[�_�[�̃R���p�C�� ======
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
-    // ====== PSO設定 ======
+    // ====== PSO�ݒ� ======
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
@@ -256,14 +251,14 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     baseDesc.SampleDesc.Count = 1;
     baseDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     baseDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    // ブレンド設定（とりあえずなしで初期化）
+    // �u�����h�ݒ�i�Ƃ肠�����Ȃ��ŏ������j
     baseDesc.BlendState = CreateBlendDesc(kBlendModeNone);
-    // PSOを保存する配列
+    // PSO��ۑ�����z��
     pipelineStates[kCountOfBlendMode];
 
     for (int i = 0; i < kCountOfBlendMode; i++) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc; // 共通設定コピー
-        desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i)); // ブレンドだけ切替
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC desc = baseDesc; // ���ʐݒ�R�s�[
+        desc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i)); // �u�����h�����ؑ�
         dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pipelineStates[i]));
     }
 }
@@ -363,7 +358,7 @@ void SkinningObject3dManager::CreateComputePipeline()
 {
     HRESULT hr;
 
-    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Skinning.CS.hlsl", L"cs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Skinning.CS.hlsl", L"cs_6_0");
     assert(computeShaderBlob);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};

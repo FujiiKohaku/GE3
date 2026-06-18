@@ -26,7 +26,7 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
     srvManager_ = srvManager;
     camera_ = camera;
 
-    // 描画に必要なリソースの初期化
+    // 描画に忁E��なリソースの初期匁E
     particleRenderManager_ = std::make_unique<ParticleRenderManager>();
     particleRenderManager_->Initialize(dxCommon_);
 
@@ -43,7 +43,7 @@ void ParticleManager::InitializeGPUParticle()
     CreateGPUParticleResource();
     CreateGPUParticleUAV();
     CreateGPUParticleSRV();
-    // GPUパーティクルの初期化に必要なリソースを作成
+    // GPUパ�EチE��クルの初期化に忁E��なリソースを作�E
     CreateFreeListIndexResource();
     CreateFreeListResource();
     CreateEmitterResource();
@@ -59,8 +59,7 @@ void ParticleManager::InitializeGPUParticle()
     CreateUpdateParticleRootSignature();
     CreateUpdateParticlePipeline();
 }
-
-#pragma region GPUパーティクル関連
+#pragma region
 
 void ParticleManager::DispatchInitializeGPUParticle()
 {
@@ -243,7 +242,7 @@ void ParticleManager::CreatePerViewResource()
 }
 void ParticleManager::CreateGPUParticleInitializePipeline()
 {
-    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/shaders/InitializeParticle.CS.hlsl", L"cs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Effects/Common/InitializeParticle.CS.hlsl", L"cs_6_0");
 
     assert(computeShaderBlob);
 
@@ -407,7 +406,7 @@ void ParticleManager::CreateEmitParticleRootSignature()
 void ParticleManager::CreateEmitParticlePipeline()
 {
     Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(
-        L"resources/shaders/EmitParticle.CS.hlsl",
+        L"resources/Shaders/Effects/Explosion/Emit.CS.hlsl",
         L"cs_6_0");
 
     assert(computeShaderBlob);
@@ -608,7 +607,7 @@ void ParticleManager::CreateUpdateParticleRootSignature()
 void ParticleManager::CreateUpdateParticlePipeline()
 {
     Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(
-        L"resources/shaders/UpdateParticle.CS.hlsl",
+        L"resources/Shaders/Effects/Explosion/Update.CS.hlsl",
         L"cs_6_0");
 
     assert(computeShaderBlob);
@@ -659,7 +658,7 @@ void ParticleManager::DispatchUpdateParticle()
     uint32_t dispatchCount = (kMaxGPUParticle + 255) / 256;
     commandList->Dispatch(dispatchCount, 1, 1);
 } //=============================
-/// GPUパーティクル関連最後
+/// GPUパ�EチE��クル関連最征E
 //=============================
 #pragma endregion
 

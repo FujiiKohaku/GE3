@@ -63,11 +63,11 @@ void Game::Initialize()
     // ModelManager::GetInstance()->Load("fence.obj");
 
     Logger::Log("Load Default Textures");
-    TextureManager::GetInstance()->LoadTexture("resources/white.png");
-    TextureManager::GetInstance()->LoadTexture("resources/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/fence.png");
-    TextureManager::GetInstance()->LoadTexture("resources/BaseColor_Cube.png");
-    TextureManager::GetInstance()->LoadTexture("resources/noise0.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/fence.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
 
     offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
@@ -126,9 +126,9 @@ void Game::Draw()
     SceneManager::GetInstance()->Draw3D();
     offscreenRenderer_->PostDraw();
 
-    // ↑で描画したやつをテクスチャとして描画する
+    // ↑で描画しためE��をテクスチャとして描画する
     DirectXCommon::GetInstance()->PreDraw();
-    copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクトの種類を取得してセット
+    copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクト�E種類を取得してセチE��
     copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), offscreenRenderer_->GetDepthSrvHandleGPU());
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
 
@@ -141,7 +141,7 @@ void Game::Draw()
 void Game::Finalize()
 {
     Logger::Log("Game Finalize Start");
-    // カーソルのロックを解除して表示する
+    // カーソルのロチE��を解除して表示する
     UnlockCursor();
     ShowCursor(TRUE);
     SceneManager::GetInstance()->Finalize();

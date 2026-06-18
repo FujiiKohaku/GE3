@@ -14,9 +14,9 @@ void TitleScene::Initialize()
     ModelManager::GetInstance()->Load("axis.obj");
 
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
-    TextureManager::GetInstance()->LoadTexture("resources/skyBox.dds");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
 
-    Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/skyBox.dds"));
+    Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/skybox.dds"));
     titleObj_ = std::make_unique<Object3d>();
     titleObj_->Initialize(Object3dManager::GetInstance());
     titleObj_->SetModel(ModelManager::GetInstance()->FindModel("axis.obj"));
@@ -26,14 +26,14 @@ void TitleScene::Initialize()
     titleObj_->SetEnvironmentMapStrength(false);
     //  titleObj_->SetCamera(camera_.get());
 
-    TextureManager::GetInstance()->LoadTexture("resources/Credit.png");
-    TextureManager::GetInstance()->LoadTexture("resources/exit.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/Credit.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/exit.png");
     // sprite
     titleSprite_ = std::make_unique<Sprite>();
-    titleSprite_->Initialize(SpriteManager::GetInstance(), "resources/Credit.png");
+    titleSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/Credit.png");
 
     creditSprite_ = std::make_unique<Sprite>();
-    creditSprite_->Initialize(SpriteManager::GetInstance(), "resources/exit.png");
+    creditSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/exit.png");
     creditSprite_->SetPosition({ 210.0f, 0.0f });
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
 }

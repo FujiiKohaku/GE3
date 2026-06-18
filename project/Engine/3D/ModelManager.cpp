@@ -29,7 +29,7 @@ Model* ModelManager::Load(const std::string& filepath)
     }
 
     auto model = std::make_unique<Model>();
-    model->Initialize(modelCommon_.get(), "resources", filepath);
+    model->Initialize(modelCommon_.get(), "resources/Models", filepath);
 
     Model* raw = model.get();
     models_.emplace(filepath, std::move(model));

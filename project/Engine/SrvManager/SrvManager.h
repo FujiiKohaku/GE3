@@ -1,5 +1,6 @@
 #pragma once
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include <vector>
 #include <wrl.h>
 
 class SrvManager {
@@ -13,6 +14,7 @@ public:
     void PreDraw();
 
     uint32_t Allocate();
+    void Free(uint32_t index);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index);
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index);
@@ -27,7 +29,7 @@ public:
 
     void SetGraphicsRootDescriptorTable(UINT RootParameterIndex, uint32_t srvIndex);
 
-    bool CanAllocate() const;
+    bool CanAllocate(uint32_t count = 1) const;
     void Finalize();
     static const uint32_t kMaxSRVCount;
 
@@ -50,6 +52,8 @@ private:
 
     uint32_t descriptorSize = 0;
     uint32_t useIndex = 0;
+    std::vector<uint32_t> freeIndices_;
+    std::vector<bool> allocatedFlags_;
     // Singleton インスタンス
     static std::unique_ptr<SrvManager> instance;
     

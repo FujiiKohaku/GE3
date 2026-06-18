@@ -12,50 +12,49 @@ SpriteManager* SpriteManager::GetInstance()
     return instance_.get();
 }
 // ==============================
-// 初期化処理
+// 初期化�E琁E
 // ==============================
 void SpriteManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
 
-    // ルートシグネチャ作成（シェーダーとのデータ受け渡し設定）
+    // ルートシグネチャ作�E�E�シェーダーとのチE�Eタ受け渡し設定！E
     CreateRootSignature();
 
-    // グラフィックスパイプライン作成（描画の設定まとめ）
+    // グラフィチE��スパイプライン作�E�E�描画の設定まとめE��E
     CreateGraphicsPipeline();
 }
 
 // ==============================
-// 描画準備処理
+// 描画準備処琁E
 // ==============================
 void SpriteManager::PreDraw()
 {
     // 三角形リストとして描画
     dxCommon_->GetCommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // ルートシグネチャをセット
+    // ルートシグネチャをセチE��
     dxCommon_->GetCommandList()->SetGraphicsRootSignature(rootSignature.Get());
 
-    // PSO（グラフィックスパイプライン）をセット
+    // PSO�E�グラフィチE��スパイプライン�E�をセチE��
     dxCommon_->GetCommandList()->SetPipelineState(graphicsPipelineState.Get());
 }
 
 SpriteManager::SpriteManager(ConstructorKey)
 {
 }
-
-#pragma region ルートシグネチャ作成
+#pragma region
 // ==============================
-// ルートシグネチャ作成
+// ルートシグネチャ作�E
 // ==============================
 void SpriteManager::CreateRootSignature()
 {
     HRESULT hr;
 
     // ------------------------------
-    // ルートパラメータ設定
+    // ルートパラメータ設宁E
     // ------------------------------
-    // ルートパラメータは 3 個で十分
+    // ルートパラメータは 3 個で十�E
     D3D12_ROOT_PARAMETER rootParameters[3] = {};
 
     // [0] Transform (VS) b0
@@ -81,7 +80,7 @@ void SpriteManager::CreateRootSignature()
     rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
 
     // ------------------------------
-    // サンプラー設定（テクスチャの拡大縮小補間）
+    // サンプラー設定（テクスチャの拡大縮小補間�E�E
     // ------------------------------
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -94,17 +93,17 @@ void SpriteManager::CreateRootSignature()
     staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
     // ------------------------------
-    // ルートシグネチャ全体の設定
+    // ルートシグネチャ全体�E設宁E
     // ------------------------------
     D3D12_ROOT_SIGNATURE_DESC desc = {};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     desc.pParameters = rootParameters;
     desc.NumParameters = _countof(rootParameters);
-    desc.pStaticSamplers = &staticSampler; // 配列を渡すこともできる
+    desc.pStaticSamplers = &staticSampler; // 配�Eを渡すこともできる
     desc.NumStaticSamplers = 1;
 
     // ------------------------------
-    // ルートシグネチャ生成
+    // ルートシグネチャ生�E
     // ------------------------------
     hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
     if (FAILED(hr)) {
@@ -118,18 +117,16 @@ void SpriteManager::CreateRootSignature()
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
-
-
-#pragma region グラフィックスパイプライン作成
+#pragma region
 // ==============================
-// グラフィックスパイプライン作成
+// グラフィチE��スパイプライン作�E
 // ==============================
 void SpriteManager::CreateGraphicsPipeline()
 {
     HRESULT hr;
 
     // ------------------------------
-    // 入力レイアウト（頂点構造）
+    // 入力レイアウト（頂点構造�E�E
     // ------------------------------
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
 
@@ -137,7 +134,7 @@ void SpriteManager::CreateGraphicsPipeline()
     inputElementDescs[0].SemanticName = "POSITION";
     inputElementDescs[0].SemanticIndex = 0;
     inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    inputElementDescs[0].AlignedByteOffset = 0; // 最初の要素は 0
+    inputElementDescs[0].AlignedByteOffset = 0; // 最初�E要素は 0
     inputElementDescs[0].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 
     // TEXCOORD
@@ -159,7 +156,7 @@ void SpriteManager::CreateGraphicsPipeline()
     inputLayoutDesc.NumElements = _countof(inputElementDescs);
 
     // ------------------------------
-    // ブレンド設定（透明度の扱い）
+    // ブレンド設定（透�E度の扱ぁE��E
     // ------------------------------
     D3D12_BLEND_DESC blendDesc {};
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
@@ -172,14 +169,14 @@ void SpriteManager::CreateGraphicsPipeline()
     blendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 
     // ------------------------------
-    // ラスタライザ設定（面の塗り方やカリング）
+    // ラスタライザ設定（面の塗り方めE��リング�E�E
     // ------------------------------
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // 両面描画
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID; // 塗りつぶし描画
 
     // ------------------------------
-    // 深度ステンシル（Zバッファ）無効
+    // 深度スチE��シル�E�Eバッファ�E�無効
     // ------------------------------
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = FALSE;
@@ -188,12 +185,12 @@ void SpriteManager::CreateGraphicsPipeline()
     // ------------------------------
     // シェーダーコンパイル
     // ------------------------------
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Sprite.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/shaders/Sprite.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Sprite/Sprite.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Sprite/Sprite.PS.hlsl", L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ------------------------------
-    // PSO（パイプラインステートオブジェクト）設定
+    // PSO�E�パイプラインスチE�Eトオブジェクト）設宁E
     // ------------------------------
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc {};
     desc.pRootSignature = rootSignature.Get();
@@ -210,12 +207,11 @@ void SpriteManager::CreateGraphicsPipeline()
     desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
     // ------------------------------
-    // PSO作成
+    // PSO作�E
     // ------------------------------
     hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&graphicsPipelineState));
     assert(SUCCEEDED(hr));
 }
-
 #pragma endregion
 
 void SpriteManager::Finalize()
