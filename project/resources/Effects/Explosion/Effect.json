@@ -1,0 +1,10 @@
+{
+  "Texture": "explosion.png",
+  "MeshType": "Board",
+  "EmitCount": 220,
+  "EmitRadius": 0.2,
+  "EmitFrequency": 0.05,
+  "Duration": 1.4,
+  "StartScale": 1.0,
+  "EndScale": 3.0
+}

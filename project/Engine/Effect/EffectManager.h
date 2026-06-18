@@ -23,6 +23,8 @@ using EffectPositionProvider = std::function<Vector3()>;
 
 struct EffectData {
     std::string effectName;
+    std::string effectDirectory;
+    std::string jsonPath;
     std::string emitShaderPath;
     std::string updateShaderPath;
 };
@@ -117,6 +119,8 @@ private:
         float emitRadius = 0.2f;
         float emitFrequency = 0.05f;
         float duration = 1.5f;
+        float startScale = 1.0f;
+        float endScale = 1.0f;
     };
 
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
@@ -152,6 +156,7 @@ private:
 private:
     void RegisterDefaultEffects();
     EffectRuntime CreateEffectRuntime(const EffectData& effectData);
+    void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateComputePipeline(
         ID3D12RootSignature* rootSignature,
         const std::string& shaderPath);

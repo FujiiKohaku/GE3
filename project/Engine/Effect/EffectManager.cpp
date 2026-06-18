@@ -3,15 +3,47 @@
 #include "Engine/StringUtility/StringUtility.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/math/MatrixMath.h"
+#include "externals/json.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <filesystem>
+#include <fstream>
 
 std::unique_ptr<EffectManager> EffectManager::instance_ = nullptr;
 
 namespace {
-constexpr const char* kEffectShaderRoot = "resources/Shaders/Effects";
+constexpr const char* kEffectRoot = "resources/Effects";
+
+std::filesystem::path ResolveEffectAssetPath(
+    const std::filesystem::path& effectDirectory,
+    const std::string& assetPath)
+{
+    std::filesystem::path path(assetPath);
+    if (path.empty() || path.is_absolute()) {
+        return path;
+    }
+
+    const std::string genericPath = path.generic_string();
+    if (genericPath.starts_with("resources/")) {
+        return path;
+    }
+
+    return effectDirectory / path;
+}
+
+ParticleMeshManager::ParticleMeshType ParseParticleMeshType(const std::string& meshType)
+{
+    if (meshType == "Ring") {
+        return ParticleMeshManager::ParticleMeshType::Ring;
+    }
+
+    if (meshType == "Cylinder") {
+        return ParticleMeshManager::ParticleMeshType::Cylinder;
+    }
+
+    return ParticleMeshManager::ParticleMeshType::Board;
+}
 }
 
 EffectManager::EffectManager(ConstructorKey)
@@ -51,30 +83,31 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
 
 void EffectManager::RegisterDefaultEffects()
 {
-    const std::filesystem::path shaderRoot(kEffectShaderRoot);
-    if (!std::filesystem::exists(shaderRoot)) {
+    const std::filesystem::path effectRoot(kEffectRoot);
+    if (!std::filesystem::exists(effectRoot)) {
         return;
     }
 
-    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(shaderRoot)) {
+    for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(effectRoot)) {
         if (!entry.is_directory()) {
             continue;
         }
 
         const std::filesystem::path effectDirectory = entry.path();
         const std::string effectName = effectDirectory.filename().string();
-        if (effectName == "Common") {
-            continue;
-        }
-
+        const std::filesystem::path jsonPath = effectDirectory / "Effect.json";
         const std::filesystem::path emitShaderPath = effectDirectory / "Emit.CS.hlsl";
         const std::filesystem::path updateShaderPath = effectDirectory / "Update.CS.hlsl";
-        if (!std::filesystem::is_regular_file(emitShaderPath) || !std::filesystem::is_regular_file(updateShaderPath)) {
+        if (!std::filesystem::is_regular_file(jsonPath) ||
+            !std::filesystem::is_regular_file(emitShaderPath) ||
+            !std::filesystem::is_regular_file(updateShaderPath)) {
             continue;
         }
 
         RegisterEffect({
             effectName,
+            effectDirectory.generic_string(),
+            jsonPath.generic_string(),
             emitShaderPath.generic_string(),
             updateShaderPath.generic_string(),
         });
@@ -91,28 +124,48 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
 {
     EffectRuntime runtime {};
     runtime.data = effectData;
+    ApplyEffectConfig(effectData, runtime);
     runtime.emitPipelineState = CreateComputePipeline(emitRootSignature_.Get(), effectData.emitShaderPath);
     runtime.updatePipelineState = CreateComputePipeline(updateRootSignature_.Get(), effectData.updateShaderPath);
 
-    if (effectData.effectName == "Explosion") {
-        runtime.emitCount = 220;
-        runtime.emitRadius = 0.2f;
-        runtime.emitFrequency = 0.05f;
-        runtime.duration = 1.4f;
-    } else if (effectData.effectName == "Jet") {
-        runtime.emitCount = 32;
-        runtime.emitRadius = 0.05f;
-        runtime.emitFrequency = 0.025f;
-        runtime.duration = 0.7f;
-    } else if (effectData.effectName == "Smoke") {
-        runtime.emitCount = 18;
-        runtime.emitRadius = 0.45f;
-        runtime.emitFrequency = 0.12f;
-        runtime.duration = 2.8f;
-    }
-
     TextureManager::GetInstance()->LoadTexture(runtime.texturePath);
     return runtime;
+}
+
+void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime)
+{
+    if (effectData.jsonPath.empty()) {
+        return;
+    }
+
+    std::ifstream file(effectData.jsonPath);
+    if (!file.is_open()) {
+        assert(false);
+        return;
+    }
+
+    nlohmann::json config;
+    file >> config;
+
+    const std::filesystem::path effectDirectory(effectData.effectDirectory);
+
+    if (config.contains("Texture")) {
+        runtime.texturePath = ResolveEffectAssetPath(
+            effectDirectory,
+            config.at("Texture").get<std::string>())
+                                  .generic_string();
+    }
+
+    if (config.contains("MeshType")) {
+        runtime.meshType = ParseParticleMeshType(config.at("MeshType").get<std::string>());
+    }
+
+    runtime.emitCount = config.value("EmitCount", runtime.emitCount);
+    runtime.emitRadius = config.value("EmitRadius", runtime.emitRadius);
+    runtime.emitFrequency = config.value("EmitFrequency", runtime.emitFrequency);
+    runtime.duration = config.value("Duration", runtime.duration);
+    runtime.startScale = config.value("StartScale", runtime.startScale);
+    runtime.endScale = config.value("EndScale", runtime.endScale);
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline(
