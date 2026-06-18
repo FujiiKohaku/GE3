@@ -8,6 +8,9 @@ struct ParticleCS {
     Vector3 velocity;
     float currentTime;
     Vector4 color;
+    float rotation;
+    float rotationSpeed;
+    Vector2 padding;
 };
 
 struct PerView {

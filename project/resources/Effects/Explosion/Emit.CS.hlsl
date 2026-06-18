@@ -5,6 +5,7 @@ RWStructuredBuffer<ParticleCS> gParticles : register(u0);
 RWStructuredBuffer<int32_t> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
+ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
 static const int32_t kMaxGPUParticle = 1024;
 
@@ -53,8 +54,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     RandomGenerator generator;
     generator.seed = ((float32_t3) DTid + gPerFrame.time) * 12.345f;
 
-    float32_t3 randomDirection = generator.Generate3d();
-    randomDirection = (randomDirection - 0.5f) * 2.0f;
+    float32_t3 random = generator.Generate3d();
+    float32_t3 randomDirection = (random - 0.5f) * 2.0f;
 
     float length = sqrt(
         randomDirection.x * randomDirection.x +
@@ -69,27 +70,21 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float speed = 5.0f + generator.Generate1d() * 8.0f;
 
     gParticles[particleIndex].translate =
-        gEmitter.translate + randomDirection * 0.2f;
+        gEmitter.translate + MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius);
 
     gParticles[particleIndex].velocity =
-        randomDirection * speed;
+        randomDirection * speed + gEffectSettings.velocity;
 
-    float scale = 0.2f + generator.Generate1d() * 0.8f;
+    float scale = max(gEffectSettings.startScale, 0.0f);
 
     gParticles[particleIndex].scale =
         float32_t3(scale, scale, scale);
 
     gParticles[particleIndex].lifeTime =
-        0.4f + generator.Generate1d() * 0.5f;
+        max(gEffectSettings.lifeTime, 0.01f);
 
     gParticles[particleIndex].currentTime = 0.0f;
-
-    float colorRandom = generator.Generate1d();
-
-    gParticles[particleIndex].color = float32_t4(
-        1.0f,
-        0.2f + colorRandom * 0.6f,
-        0.0f,
-        1.0f
-    );
+    gParticles[particleIndex].color = gEffectSettings.startColor;
+    gParticles[particleIndex].rotation = gEffectSettings.startRotation;
+    gParticles[particleIndex].rotationSpeed = gEffectSettings.rotationSpeed;
 }

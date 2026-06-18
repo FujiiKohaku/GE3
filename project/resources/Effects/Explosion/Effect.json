@@ -1,10 +1,35 @@
 {
-  "Texture": "explosion.png",
-  "MeshType": "Board",
-  "EmitCount": 220,
-  "EmitRadius": 0.2,
-  "EmitFrequency": 0.05,
-  "Duration": 1.4,
-  "StartScale": 1.0,
-  "EndScale": 3.0
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 220,
+    "Radius": 0.2,
+    "Frequency": 0.05
+  },
+  "Particle": {
+    "LifeTime": 0.75,
+    "StartScale": 0.2,
+    "EndScale": 3.0,
+    "StartRotation": 0.0,
+    "RotationSpeed": 5.0,
+    "Velocity": [0.0, 0.0, 0.0],
+    "StartColor": [1.0, 0.55, 0.05, 1.0],
+    "EndColor": [0.15, 0.03, 0.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": -9.8,
+    "EnableDrag": false,
+    "Drag": 0.95,
+    "EnableNoise": false,
+    "NoiseStrength": 1.0,
+    "EnableAttraction": false,
+    "AttractionStrength": 1.0
+  },
+  "Render": {
+    "Texture": "explosion.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "Loop": false,
+    "Duration": 1.4
+  }
 }
