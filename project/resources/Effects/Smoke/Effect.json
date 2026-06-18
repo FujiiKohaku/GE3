@@ -1,0 +1,10 @@
+{
+  "Texture": "smoke.png",
+  "MeshType": "Board",
+  "EmitCount": 18,
+  "EmitRadius": 0.45,
+  "EmitFrequency": 0.12,
+  "Duration": 2.8,
+  "StartScale": 0.35,
+  "EndScale": 1.0
+}

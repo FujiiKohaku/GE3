@@ -1,0 +1,10 @@
+{
+  "Texture": "jet.png",
+  "MeshType": "Board",
+  "EmitCount": 32,
+  "EmitRadius": 0.05,
+  "EmitFrequency": 0.025,
+  "Duration": 0.7,
+  "StartScale": 0.08,
+  "EndScale": 0.24
+}
