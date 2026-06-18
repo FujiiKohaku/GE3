@@ -171,6 +171,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
     <ClCompile Include="Engine\Effect\EffectManager.cpp" />
+    <ClCompile Include="Engine\Particle\ParticleManager.cpp" />
     <ClCompile Include="Engine\PostEffect\CopyImageRenderer.cpp" />
     <ClCompile Include="Engine\3D\Model.cpp" />
     <ClCompile Include="Engine\3D\SkinningObject3d.cpp" />
@@ -202,7 +203,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\DirectXCommon\DirectXCommon.cpp" />
     <ClCompile Include="App\Scene\GamePlayScene.cpp" />
     <ClCompile Include="Engine\ImGuiManager\ImGuiManager.cpp" />
-    <ClCompile Include="Engine\Particle\ParticleManager.cpp" />
     <ClCompile Include="App\Scene\Game.cpp" />
     <ClCompile Include="Engine\input\Input.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
@@ -294,6 +294,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\EditorManager\EditorManager.h" />
     <ClInclude Include="Engine\math\EngineStruct.h" />
     <ClInclude Include="Engine\Effect\EffectManager.h" />
+    <ClInclude Include="Engine\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\PostEffect\CopyImageRenderer.h" />
     <ClInclude Include="Engine\3D\Model.h" />
     <ClInclude Include="Engine\3D\SkinningObject3d.h" />
@@ -322,7 +323,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
-    <ClInclude Include="Engine\Particle\ParticleManager.h" />
     <ClInclude Include="App\Scene\Game.h" />
     <ClInclude Include="Engine\input\Input.h" />
     <ClInclude Include="Engine\Logger\Logger.h" />

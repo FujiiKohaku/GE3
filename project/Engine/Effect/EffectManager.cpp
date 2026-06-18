@@ -12,11 +12,6 @@ std::unique_ptr<EffectManager> EffectManager::instance_ = nullptr;
 
 namespace {
 constexpr const char* kEffectShaderRoot = "resources/Shaders/Effects";
-
-bool IsDefaultLoopEffect(const std::string& effectName)
-{
-    return effectName == "Jet" || effectName == "Smoke";
-}
 }
 
 EffectManager::EffectManager(ConstructorKey)
@@ -82,7 +77,6 @@ void EffectManager::RegisterDefaultEffects()
             effectName,
             emitShaderPath.generic_string(),
             updateShaderPath.generic_string(),
-            IsDefaultLoopEffect(effectName),
         });
     }
 }
@@ -109,12 +103,12 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
         runtime.emitCount = 32;
         runtime.emitRadius = 0.05f;
         runtime.emitFrequency = 0.025f;
-        runtime.duration = 0.0f;
+        runtime.duration = 0.7f;
     } else if (effectData.effectName == "Smoke") {
         runtime.emitCount = 18;
         runtime.emitRadius = 0.45f;
         runtime.emitFrequency = 0.12f;
-        runtime.duration = 0.0f;
+        runtime.duration = 2.8f;
     }
 
     TextureManager::GetInstance()->LoadTexture(runtime.texturePath);
@@ -143,22 +137,61 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
     return pipelineState;
 }
 
-void EffectManager::PlayEffect(const std::string& effectName, const Vector3& position)
+EffectHandle EffectManager::PlayEffect(const std::string& effectName, const Vector3& position)
+{
+    return StartEffect(effectName, position, false, -1.0f, nullptr);
+}
+
+EffectHandle EffectManager::PlayLoopEffect(const std::string& effectName, const Vector3& position, float duration)
+{
+    return StartEffect(effectName, position, true, duration, nullptr);
+}
+
+EffectHandle EffectManager::AttachEffect(
+    const std::string& effectName,
+    EffectPositionProvider positionProvider,
+    float duration)
+{
+    if (!positionProvider) {
+        return kInvalidEffectHandle;
+    }
+
+    const Vector3 initialPosition = positionProvider();
+    return StartEffect(effectName, initialPosition, true, duration, std::move(positionProvider));
+}
+
+EffectHandle EffectManager::StartEffect(
+    const std::string& effectName,
+    const Vector3& position,
+    bool isLoop,
+    float duration,
+    EffectPositionProvider positionProvider)
 {
     auto runtimeIterator = effects_.find(effectName);
     if (runtimeIterator == effects_.end()) {
-        return;
+        return kInvalidEffectHandle;
     }
 
     const EffectRuntime& runtime = runtimeIterator->second;
     if (!srvManager_->CanAllocate(4)) {
-        return;
+        return kInvalidEffectHandle;
+    }
+
+    const EffectHandle handle = AllocateEffectHandle();
+    if (handle == kInvalidEffectHandle) {
+        return kInvalidEffectHandle;
     }
 
     ActiveEffect activeEffect {};
+    activeEffect.handle = handle;
     activeEffect.effectName = effectName;
     activeEffect.position = position;
-    activeEffect.isLoop = runtime.data.isLoop;
+    activeEffect.positionProvider = std::move(positionProvider);
+    activeEffect.duration = duration;
+    if (!isLoop && activeEffect.duration < 0.0f) {
+        activeEffect.duration = runtime.duration;
+    }
+    activeEffect.isLoop = isLoop;
     activeEffect.isAlive = true;
 
     ActiveEffectResource resource = CreateActiveEffectResource(runtime, position);
@@ -166,6 +199,35 @@ void EffectManager::PlayEffect(const std::string& effectName, const Vector3& pos
 
     activeEffects_.push_back(std::move(activeEffect));
     activeResources_.push_back(std::move(resource));
+
+    return handle;
+}
+
+bool EffectManager::SetEffectPosition(EffectHandle handle, const Vector3& position)
+{
+    const size_t index = FindActiveEffectIndex(handle);
+    if (index == static_cast<size_t>(-1)) {
+        return false;
+    }
+
+    activeEffects_[index].position = position;
+    return true;
+}
+
+bool EffectManager::StopEffect(EffectHandle handle)
+{
+    const size_t index = FindActiveEffectIndex(handle);
+    if (index == static_cast<size_t>(-1)) {
+        return false;
+    }
+
+    activeEffects_[index].isAlive = false;
+    return true;
+}
+
+bool EffectManager::IsEffectAlive(EffectHandle handle) const
+{
+    return FindActiveEffectIndex(handle) != static_cast<size_t>(-1);
 }
 
 EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
@@ -593,6 +655,38 @@ void EffectManager::Update()
     RemoveDeadEffects();
 }
 
+EffectHandle EffectManager::AllocateEffectHandle()
+{
+    for (uint32_t attempt = 0; attempt < kInvalidEffectHandle - 1; ++attempt) {
+        const EffectHandle handle = nextEffectHandle_;
+        nextEffectHandle_++;
+        if (nextEffectHandle_ == kInvalidEffectHandle) {
+            nextEffectHandle_ = 1;
+        }
+
+        if (FindActiveEffectIndex(handle) == static_cast<size_t>(-1)) {
+            return handle;
+        }
+    }
+
+    return kInvalidEffectHandle;
+}
+
+size_t EffectManager::FindActiveEffectIndex(EffectHandle handle) const
+{
+    if (handle == kInvalidEffectHandle) {
+        return static_cast<size_t>(-1);
+    }
+
+    for (size_t i = 0; i < activeEffects_.size(); ++i) {
+        if (activeEffects_[i].handle == handle && activeEffects_[i].isAlive) {
+            return i;
+        }
+    }
+
+    return static_cast<size_t>(-1);
+}
+
 void EffectManager::UpdateActiveEffect(size_t index)
 {
     ActiveEffect& activeEffect = activeEffects_[index];
@@ -605,6 +699,10 @@ void EffectManager::UpdateActiveEffect(size_t index)
     }
 
     const EffectRuntime& runtime = runtimeIterator->second;
+
+    if (activeEffect.positionProvider) {
+        activeEffect.position = activeEffect.positionProvider();
+    }
 
     resource.age += deltaTime_;
     resource.perFrameData->time = resource.age;
@@ -642,7 +740,7 @@ void EffectManager::UpdateActiveEffect(size_t index)
 
     TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-    if (!activeEffect.isLoop && runtime.duration <= resource.age) {
+    if (activeEffect.duration >= 0.0f && activeEffect.duration <= resource.age) {
         activeEffect.isAlive = false;
     }
 }

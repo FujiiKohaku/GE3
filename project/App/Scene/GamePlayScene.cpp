@@ -1,9 +1,9 @@
 #include "GamePlayScene.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
+#include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/audio/SoundManager.h"
-#include "Engine/Effect/EffectManager.h"
 #include <numbers>
 
 #include "SceneManager.h"
@@ -16,6 +16,7 @@
 #include "../Game/Bullet.h"
 #include "ClearScene.h"
 #include "GameOverScene.h"
+
 void GamePlayScene::Initialize()
 {
 
@@ -23,7 +24,7 @@ void GamePlayScene::Initialize()
     editorManager_->Initialize();
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
 
-    // ポストエフェクト�Eり替ぁE
+    /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
     // Camera
@@ -87,11 +88,10 @@ void GamePlayScene::Initialize()
     // Particle
     // =================================================
 
-    EulerTransform t {};
+    EulerTransform t { };
     t.translate = { 0.0f, 0.0f, 0.0f };
     t.scale = { 100.0f, 100.0f, 100.0f };
     Vector3 position { 0.0f, 1.0f, 0.0f };
-    
 
     // =================================================
     // Light
@@ -127,6 +127,7 @@ void GamePlayScene::Initialize()
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
 
     /*LevelDataLoader levelDataLoader;
     LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");*/
@@ -229,11 +230,8 @@ void GamePlayScene::Update()
 
     skyBox_->Update(camera_.get());
 
-    // キー入力でパーティクルを発生させる
-    if (Input::GetInstance()->IsKeyTrigger(DIK_0)) {
-        Vector3 effectPosition = player_->GetTranslate();   
-        EffectManager::GetInstance()->PlayEffect("Jet", effectPosition);
-    }
+    // パーティクルを発生させる
+
     EffectManager::GetInstance()->Update();
 
     sceneObjectManager_->Update();
@@ -507,7 +505,6 @@ void GamePlayScene::CheckCollision()
         return false;
     });
 
-
     // --- 敵の弾 vs プレイヤーの当たり判宁E---
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (enemy->IsDead()) {
@@ -528,12 +525,13 @@ void GamePlayScene::CheckCollision()
             }
         }
     }
-
 }
 
 void GamePlayScene::Finalize()
 {
 
+    EffectManager::GetInstance()->StopEffect(playerJetHandle_);
+    playerJetHandle_ = kInvalidEffectHandle;
     EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);

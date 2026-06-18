@@ -10,22 +10,29 @@
 #include "Engine/math/EngineStruct.h"
 
 #include <d3d12.h>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <wrl.h>
 
+using EffectHandle = uint32_t;
+inline constexpr EffectHandle kInvalidEffectHandle = 0xffffffffu;
+using EffectPositionProvider = std::function<Vector3()>;
+
 struct EffectData {
     std::string effectName;
     std::string emitShaderPath;
     std::string updateShaderPath;
-    bool isLoop = false;
 };
 
 struct ActiveEffect {
+    EffectHandle handle = kInvalidEffectHandle;
     std::string effectName;
     Vector3 position;
+    EffectPositionProvider positionProvider;
+    float duration = -1.0f;
     bool isLoop = false;
     bool isAlive = false;
 };
@@ -50,7 +57,37 @@ public:
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
 
     void RegisterEffect(const EffectData& effectData);
-    void PlayEffect(const std::string& effectName, const Vector3& position);
+    EffectHandle PlayEffect(const std::string& effectName, const Vector3& position);
+    EffectHandle PlayLoopEffect(const std::string& effectName, const Vector3& position, float duration = -1.0f);
+    EffectHandle AttachEffect(
+        const std::string& effectName,
+        EffectPositionProvider positionProvider,
+        float duration = -1.0f);
+
+    template <class Target>
+    EffectHandle AttachEffect(const std::string& effectName, Target* target, float duration = -1.0f)
+    {
+        if (!target) {
+            return kInvalidEffectHandle;
+        }
+
+        return AttachEffect(
+            effectName,
+            [target]() {
+                return target->GetTranslate();
+            },
+            duration);
+    }
+
+    template <class Target>
+    EffectHandle AttachEffect(const std::string& effectName, const std::unique_ptr<Target>& target, float duration = -1.0f)
+    {
+        return AttachEffect(effectName, target.get(), duration);
+    }
+
+    bool SetEffectPosition(EffectHandle handle, const Vector3& position);
+    bool StopEffect(EffectHandle handle);
+    bool IsEffectAlive(EffectHandle handle) const;
 
     void Update();
     void PreDraw();
@@ -119,6 +156,12 @@ private:
         ID3D12RootSignature* rootSignature,
         const std::string& shaderPath);
 
+    EffectHandle StartEffect(
+        const std::string& effectName,
+        const Vector3& position,
+        bool isLoop,
+        float duration,
+        EffectPositionProvider positionProvider);
     ActiveEffectResource CreateActiveEffectResource(const EffectRuntime& runtime, const Vector3& position);
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateUavBufferResource(size_t sizeInBytes, const wchar_t* name);
     D3D12_GPU_DESCRIPTOR_HANDLE CreateStructuredBufferUAV(
@@ -145,6 +188,8 @@ private:
     void DispatchEmit(const EffectRuntime& runtime, ActiveEffectResource& resource);
     void DispatchUpdate(const EffectRuntime& runtime, ActiveEffectResource& resource);
 
+    EffectHandle AllocateEffectHandle();
+    size_t FindActiveEffectIndex(EffectHandle handle) const;
     void UpdateActiveEffect(size_t index);
     void RemoveDeadEffects();
     void UnmapActiveEffectResource(ActiveEffectResource& resource);
@@ -185,6 +230,7 @@ private:
     std::vector<ActiveEffect> activeEffects_;
     std::vector<ActiveEffectResource> activeResources_;
     std::vector<ActiveEffectResource> retiredResources_;
+    EffectHandle nextEffectHandle_ = 1;
 
     static constexpr uint32_t kMaxGPUParticle = 1024;
 };
