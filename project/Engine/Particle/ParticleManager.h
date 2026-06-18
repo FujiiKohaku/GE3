@@ -2,13 +2,12 @@
 
 #include "Engine/Camera/Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Particle/MeshManager/ParticleMeshManager.h"
+#include "Engine/Particle/ParticleData.h"
+#include "Engine/Particle/ParticleRenderManager.h"
 #include "Engine/SrvManager/SrvManager.h"
-#include "Engine/TextureManager/TextureManager.h"
 #include "Engine/blend/BlendUtil.h"
-
-#include "MeshManager/ParticleMeshManager.h"
-#include "ParticleData.h"
-#include "ParticleRenderManager.h"
+#include "Engine/math/GPUParticleStruct.h"
 
 #include <d3d12.h>
 #include <list>
@@ -17,7 +16,6 @@
 #include <unordered_map>
 #include <wrl.h>
 
-#include"../math/EngineStruct.h"
 class ParticleManager {
 public:
     static ParticleManager* GetInstance();
@@ -42,7 +40,6 @@ public:
     void Draw();
 
     void SetBlendMode(BlendMode mode);
-    void EmitOnceGPU(const Vector3& position, uint32_t count);
 
 public:
     void CreateParticleGroup(
@@ -56,6 +53,9 @@ public:
     void AddParticle(const std::string& name, const Particle& particle);
 
 private:
+    static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
+    static constexpr uint32_t kNumMaxInstance = 500;
+
     struct Material {
         Vector4 color;
         int32_t enableLighting;
@@ -72,6 +72,7 @@ private:
         Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource;
         ParticleForGPU* instanceData = nullptr;
         D3D12_GPU_DESCRIPTOR_HANDLE instancingSrvHandleGPU {};
+        uint32_t instancingSrvIndex = kInvalidDescriptorIndex;
 
         uint32_t numInstance = 0;
 
@@ -80,19 +81,8 @@ private:
 
 private:
     void CreateMaterialResource();
-
-private:
-    void InitializeCPUParticle();
-
-private:
-    void InitializeGPUParticle();
-    void CreateGPUParticleResource();
-    void CreateGPUParticleUAV();
-    void CreateGPUParticleSRV();
-    void CreateGPUParticleInitializeRootSignature();
-    void CreateGPUParticleInitializePipeline();
-    void DispatchInitializeGPUParticle();
     void CreatePerViewResource();
+    void UpdatePerView();
 
 private:
     static std::unique_ptr<ParticleManager> instance_;
@@ -102,78 +92,18 @@ private:
     SrvManager* srvManager_ = nullptr;
     Camera* camera_ = nullptr;
 
-private:
     BlendMode currentBlendMode_ = kBlendModeAdd;
-
-    static const uint32_t kNumMaxInstance = 500;
     float deltaTime_ = 1.0f / 60.0f;
     bool useBillboard_ = true;
-    bool useGPUParticle_ = true;
 
-private:
     std::unordered_map<std::string, ParticleGroup> particleGroups_;
 
-private:
     Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
     Material materialData_ {};
 
-private:
-    std::unique_ptr<ParticleRenderManager> particleRenderManager_;
-    std::unique_ptr<ParticleMeshManager> particleMeshManager_;
-  //  std::unique_ptr<ParticleEmitter> particleEmitter_;
-
-private:
-    static const uint32_t kMaxGPUParticle = 1024;
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> gpuParticleResource_;
-
-    uint32_t gpuParticleUavIndex_ = 0;
-    uint32_t gpuParticleSrvIndex_ = 0;
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> gpuParticleInitializeRootSignature_;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> gpuParticleInitializePipelineState_;
-    D3D12_GPU_DESCRIPTOR_HANDLE gpuParticleUavHandleGPU_ {};
-    D3D12_GPU_DESCRIPTOR_HANDLE gpuParticleSrvHandleGPU_ {};
     Microsoft::WRL::ComPtr<ID3D12Resource> perViewResource_;
     PerView* perViewData_ = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12Resource> emitterResource_;
-    EmitterSphere* emitterData_ = nullptr;
-
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> emitParticleRootSignature_;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> emitParticlePipelineState_;
-    void CreateEmitterResource();
-    void UpdateEmitter();
-    void CreateEmitParticleRootSignature();
-    void CreateEmitParticlePipeline();
-    void DispatchEmitParticle();
-    Microsoft::WRL::ComPtr<ID3D12Resource> perFrameResource_;
-    PerFrame* perFrameData_ = nullptr;
-    float time_ = 0.0f;
-
-    void CreatePerFrameResource();
-    void UpdatePerFrame();
-    // FreeList
-    void CreateFreeListIndexResource();
-    void CreateFreeListResource();
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> freeListIndexResource_;
-    Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource_;
-
-    uint32_t freeListIndexUavIndex_ = 0;
-    uint32_t freeListUavIndex_ = 0;
-
-    D3D12_GPU_DESCRIPTOR_HANDLE freeListIndexUavHandleGPU_ {};
-    D3D12_GPU_DESCRIPTOR_HANDLE freeListUavHandleGPU_ {};
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> freeCounterResource_;
-
-    uint32_t freeCounterUavIndex_ = 0;
-    D3D12_GPU_DESCRIPTOR_HANDLE freeCounterUavHandleGPU_ {};
-    void CreateUpdateParticleRootSignature();
-    void CreateUpdateParticlePipeline();
-    void DispatchUpdateParticle();
-    void SetEmitterPosition(const Vector3& position);
-  
-    Microsoft::WRL::ComPtr<ID3D12RootSignature> updateParticleRootSignature_;
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> updateParticlePipelineState_;
+    std::unique_ptr<ParticleRenderManager> particleRenderManager_;
+    std::unique_ptr<ParticleMeshManager> particleMeshManager_;
 };
