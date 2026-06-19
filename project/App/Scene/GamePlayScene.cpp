@@ -175,10 +175,7 @@ void GamePlayScene::Update()
     // プレイヤ�E��EZ座標�E取征E
     float playerZ = player_->GetTranslate().z;
 
-    // プレイヤーのZ座標が1000.0fを趁E��たらクリアシーンに遷移
-    if (playerZ > 1000.0f) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
-    }
+
 
     // エチE��ターマネージャーの更新�E�カメラを渡す！E
     editorManager_->Update(camera_.get());

@@ -30,39 +30,110 @@ class RandomGenerator
 [numthreads(256, 1, 1)]
 void main(uint32_t3 DTid : SV_DispatchThreadID)
 {
-    if (gEmitter.emit == 0 || DTid.x >= gEmitter.count)
+    if (gEmitter.emit == 0)
+    {
+        return;
+    }
+
+    if (DTid.x >= gEmitter.count)
     {
         return;
     }
 
     int32_t freeListIndex;
-    InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
 
-    if (freeListIndex < 0 || freeListIndex >= kMaxGPUParticle)
+    InterlockedAdd(
+        gFreeListIndex[0],
+        -1,
+        freeListIndex);
+
+    if (freeListIndex < 0 ||
+        freeListIndex >= kMaxGPUParticle)
     {
-        InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
+        InterlockedAdd(
+            gFreeListIndex[0],
+            1,
+            freeListIndex);
+
         return;
     }
 
-    uint32_t particleIndex = gFreeList[freeListIndex];
+    uint32_t particleIndex =
+        gFreeList[freeListIndex];
 
     RandomGenerator generator;
-    generator.seed = ((float32_t3) DTid + gPerFrame.time) * 19.739f;
 
-    float32_t3 random = generator.Generate3d() - 0.5f;
-    float32_t3 direction = normalize(float32_t3(random.x * 0.35f, random.y * 0.35f, -1.0f));
-    float speed = 12.0f + generator.Generate1d() * 10.0f;
-    float scale = 0.08f + generator.Generate1d() * 0.16f;
+    generator.seed =
+        ((float32_t3) DTid + gPerFrame.time) *
+        19.739f;
 
-    scale = max(gEffectSettings.startScale, 0.0f);
+    float32_t3 random =
+        generator.Generate3d() - 0.5f;
+
+    float spread = 0.03f;
+
+    float32_t3 direction =
+        normalize(
+            float32_t3(
+                random.x * spread,
+                random.y * spread,
+                -1.0f));
+
+    float velocityLength =
+        length(gEffectSettings.velocity);
+
+    if (velocityLength <= 0.01f)
+    {
+        velocityLength = 40.0f;
+    }
+
+    float scale =
+        max(
+            gEffectSettings.startScale,
+            0.02f);
+
+    float randomScale =
+        0.8f +
+        generator.Generate1d() * 0.4f;
+
+    scale *= randomScale;
+
+    float lifeTime =
+        max(
+            gEffectSettings.lifeTime,
+            0.05f);
+
+    float randomLife =
+        0.8f +
+        generator.Generate1d() * 0.4f;
+
+    lifeTime *= randomLife;
 
     gParticles[particleIndex].translate =
-        gEmitter.translate + MakeEmitterOffset(gEffectSettings.emitterShape, random + 0.5f, gEmitter.radius);
-    gParticles[particleIndex].velocity = direction * speed + gEffectSettings.velocity;
-    gParticles[particleIndex].scale = float32_t3(scale, scale, scale);
-    gParticles[particleIndex].lifeTime = max(gEffectSettings.lifeTime, 0.01f);
-    gParticles[particleIndex].currentTime = 0.0f;
-    gParticles[particleIndex].color = gEffectSettings.startColor;
-    gParticles[particleIndex].rotation = gEffectSettings.startRotation;
-    gParticles[particleIndex].rotationSpeed = gEffectSettings.rotationSpeed;
+        gEmitter.translate;
+
+    gParticles[particleIndex].velocity =
+        direction * velocityLength +
+        gEffectSettings.velocity;
+
+    gParticles[particleIndex].scale =
+        float32_t3(
+            scale,
+            scale,
+            scale);
+
+    gParticles[particleIndex].lifeTime =
+        lifeTime;
+
+    gParticles[particleIndex].currentTime =
+        0.0f;
+
+    gParticles[particleIndex].color =
+        gEffectSettings.startColor;
+
+    gParticles[particleIndex].rotation =
+        gEffectSettings.startRotation;
+
+    gParticles[particleIndex].rotationSpeed =
+        gEffectSettings.rotationSpeed;
 }
