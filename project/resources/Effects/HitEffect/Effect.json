@@ -1,0 +1,46 @@
+{
+  "Emitter": {
+    "Shape": "Cone",
+    "Count": 32,
+    "Radius": 0.01,
+    "Frequency": 0.001
+  },
+
+  "Particle": {
+    "LifeTime": 0.05,
+
+    "StartScale": 0.25,
+    "EndScale": 6.0,
+
+    "StartRotation": 0.0,
+    "RotationSpeed": 20.0,
+
+    "Velocity": [0.0, 0.0, 0.0],
+
+    "StartColor": [1.0, 0.95, 0.8, 1.0],
+    "EndColor": [1.0, 0.4, 0.1, 0.0]
+  },
+
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+
+    "EnableDrag": false,
+    "Drag": 1.0,
+
+    "EnableNoise": false,
+    "NoiseStrength": 0.0,
+
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+
+  "Render": {
+    "Texture": "shotBullet.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+
+    "Loop": false,
+    "Duration": 0.1
+  }
+}
