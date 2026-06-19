@@ -183,41 +183,41 @@ void GamePlayScene::Update()
     // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
     //     levelObject->Update();
     // }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
-    }
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
+    //}
 
-    if (Input::GetInstance()->IsKeyTrigger(DIK_2)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_3)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Vignette);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_4)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::smoothing);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_5)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GaussianFilter);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_6)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_7)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-    }
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_2)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_3)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Vignette);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_4)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::smoothing);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_5)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GaussianFilter);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_6)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_7)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
+    //}
 
-    if (Input::GetInstance()->IsKeyTrigger(DIK_8)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::RadialBlur);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
-        SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-    }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
-    }
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_8)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::RadialBlur);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
+    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
+    //    SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+    //}
+    //if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
+    //    SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    //}
     // プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
 
