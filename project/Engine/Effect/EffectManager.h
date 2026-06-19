@@ -187,6 +187,7 @@ private:
 
 private:
     void RegisterDefaultEffects();
+    void WarmUpEffects();
     EffectRuntime CreateEffectRuntime(const EffectData& effectData);
     void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateComputePipeline(

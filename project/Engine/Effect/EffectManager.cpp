@@ -152,6 +152,7 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
     CreateUpdateRootSignature();
 
     RegisterDefaultEffects();
+    WarmUpEffects();
 }
 
 void EffectManager::RegisterDefaultEffects()
@@ -191,6 +192,30 @@ void EffectManager::RegisterEffect(const EffectData& effectData)
 {
     assert(!effectData.effectName.empty());
     effects_[effectData.effectName] = CreateEffectRuntime(effectData);
+}
+
+void EffectManager::WarmUpEffects()
+{
+    if (effects_.empty()) {
+        return;
+    }
+
+    const Vector3 warmUpPosition = { 0.0f, -10000.0f, 0.0f };
+    const float warmUpDuration = deltaTime_ * 3.0f;
+
+    for (const std::pair<const std::string, EffectRuntime>& effect : effects_) {
+        const EffectHandle handle = StartEffect(effect.first, warmUpPosition, false, warmUpDuration, nullptr);
+        if (handle == kInvalidEffectHandle) {
+            continue;
+        }
+
+        const size_t activeEffectIndex = FindActiveEffectIndex(handle);
+        if (activeEffectIndex == static_cast<size_t>(-1)) {
+            continue;
+        }
+
+        UpdateActiveEffect(activeEffectIndex);
+    }
 }
 
 EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData& effectData)

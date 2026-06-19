@@ -130,7 +130,14 @@ private:
 
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
+    Vector3 cameraOffset_ = {
+        0.0f,
+        5.0f,
+        -30.0f
+    };
 
+    float followX_ = 0.35f;
+    float followY_ = 0.35f;
     // 謨ｵ縺ｮ邂｡逅・
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
 };

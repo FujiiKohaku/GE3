@@ -31,7 +31,7 @@ void GamePlayScene::Initialize()
     // =================================================
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, 0.0f, -30.0f });
+    camera_->SetTranslate({ 0.0f, 5.0f, -30.0f });
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     POINT centerMousePosition;
     centerMousePosition.x = WinApp::GetInstance()->kClientWidth / 2;
@@ -165,6 +165,8 @@ void GamePlayScene::Initialize()
 
         enemies_.push_back(std::move(enemy));
     }
+
+   
 }
 
 void GamePlayScene::Update()
@@ -174,8 +176,6 @@ void GamePlayScene::Update()
     }
     // プレイヤ�E��EZ座標�E取征E
     float playerZ = player_->GetTranslate().z;
-
-
 
     // エチE��ターマネージャーの更新�E�カメラを渡す！E
     editorManager_->Update(camera_.get());
@@ -235,16 +235,16 @@ void GamePlayScene::Update()
     camera_->Update();
 
     // チE��チE��カメラモード�E刁E��替ぁE
-    if (debugCameraController_->GetDebugMode()) {
-        camera_->DebugUpdate();
-    } else {
+    if (!debugCameraController_->GetDebugMode()) {
         // プレイヤーの位置にカメラを追従させる
         Vector3 playerPosition = player_->GetTranslate();
 
         Vector3 cameraPosition;
-        cameraPosition.x = playerPosition.x * 0.35f;
-        cameraPosition.y = playerPosition.y * 0.35f;
-        cameraPosition.z = playerPosition.z - 30.0f;
+        cameraPosition.x = playerPosition.x * followX_ + cameraOffset_.x;
+
+        cameraPosition.y = playerPosition.y * followY_ + cameraOffset_.y;
+
+        cameraPosition.z = playerPosition.z + cameraOffset_.z;
 
         camera_->SetTranslate(cameraPosition);
     }
@@ -444,6 +444,7 @@ void GamePlayScene::Draw2D()
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
+    camera_->DrawImGui();
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());
     player_->DrawImGui();

@@ -99,5 +99,5 @@ private:
     void UpdateKeyboardMove(Input* input);
     void UpdateMouseAim();
     void ClampAimScreenPosition();
-    void ClampPlayerWorldPosition();
+    void ClampPlayerScreenPosition();
 };

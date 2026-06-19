@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "../../Engine/3D/ModelManager.h"
 #include "../../Engine/3D/Object3dManager.h"
+#include "../../Engine/Effect/EffectManager.h"
 #include "../../Engine/Input/Input.h"
 #include "../../Engine/debugcamera/DebugCameraController.h"
 #include <algorithm>
@@ -60,7 +61,7 @@ void Player::Update()
         UpdateMouseAim();
         UpdateKeyboardMove(input);
         ClampAimScreenPosition();
-        ClampPlayerWorldPosition();
+        ClampPlayerScreenPosition();
     }
     if (input->IsMouseTrigger(0)) {
         FireBullet();
@@ -143,22 +144,34 @@ void Player::UpdateMouseAim()
     aimScreenPosition_.y = static_cast<float>(mousePosition.y);
 }
 
-void Player::ClampPlayerWorldPosition()
+void Player::ClampPlayerScreenPosition()
 {
-    if (transform_.translate.x > moveLimitX_ - playerClampMarginX_) {
-        transform_.translate.x = moveLimitX_ - playerClampMarginX_;
+    if (camera_ == nullptr) {
+        return;
     }
 
-    if (transform_.translate.x < -moveLimitX_ + playerClampMarginX_) {
-        transform_.translate.x = -moveLimitX_ + playerClampMarginX_;
+    Vector2 screenPosition = camera_->WorldToScreen(transform_.translate);
+
+    float leftLimit = 100.0f;
+    float rightLimit = WinApp::GetInstance()->kClientWidth - 100.0f;
+
+    float topLimit = 100.0f;
+    float bottomLimit = WinApp::GetInstance()->kClientHeight - 100.0f;
+
+    if (screenPosition.x < leftLimit) {
+        transform_.translate.x += moveSpeed_;
     }
 
-    if (transform_.translate.y > moveLimitY_ - playerClampMarginY_) {
-        transform_.translate.y = moveLimitY_ - playerClampMarginY_;
+    if (screenPosition.x > rightLimit) {
+        transform_.translate.x -= moveSpeed_;
     }
 
-    if (transform_.translate.y < -moveLimitY_ + playerClampMarginY_) {
-        transform_.translate.y = -moveLimitY_ + playerClampMarginY_;
+    if (screenPosition.y < topLimit) {
+        transform_.translate.y -= moveSpeed_;
+    }
+
+    if (screenPosition.y > bottomLimit) {
+        transform_.translate.y += moveSpeed_;
     }
 }
 
@@ -181,6 +194,11 @@ void Player::FireBullet()
     Vector3 bulletPosition = transform_.translate;
     bulletPosition.y += bulletSpawnOffsetY_;
     bulletPosition.z += 0.0f;
+
+    Vector3 muzzleEffectPosition = transform_.translate;
+    muzzleEffectPosition.y += bulletSpawnOffsetY_;
+    muzzleEffectPosition.z += 6.0f;
+    EffectManager::GetInstance()->PlayEffect("shotBullet", muzzleEffectPosition);
 
     bullet->SetTranslate(bulletPosition);
 
@@ -282,7 +300,29 @@ void Player::DrawImGui()
     ImGui::Text("X : %.2f", velocity_.x);
     ImGui::Text("Y : %.2f", velocity_.y);
     ImGui::Text("Z : %.2f", velocity_.z);
+    ImGui::Separator();
 
+    ImGui::Text("Move Limit");
+
+    ImGui::DragFloat(
+        "MoveLimitX",
+        &moveLimitX_,
+        0.1f);
+
+    ImGui::DragFloat(
+        "MoveLimitY",
+        &moveLimitY_,
+        0.1f);
+
+    ImGui::DragFloat(
+        "ClampMarginX",
+        &playerClampMarginX_,
+        0.1f);
+
+    ImGui::DragFloat(
+        "ClampMarginY",
+        &playerClampMarginY_,
+        0.1f);
     ImGui::End();
 }
 
