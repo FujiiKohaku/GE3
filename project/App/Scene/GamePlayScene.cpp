@@ -31,7 +31,7 @@ void GamePlayScene::Initialize()
     // =================================================
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, 5.0f, -30.0f });
+    camera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     POINT centerMousePosition;
     centerMousePosition.x = WinApp::GetInstance()->kClientWidth / 2;
@@ -480,6 +480,8 @@ void GamePlayScene::CheckCollision()
             float collisionRadius = 2.0f;
 
             if (distance <= collisionRadius) {
+                Vector3 enemyPosition = enemy->GetPosition();
+                EffectManager::GetInstance()->PlayEffect("HitEffect", enemyPosition);
                 OutputDebugStringA("PlayerBullet Hit Enemy\n");
                 enemy->SetDead(true); // 死亡フラグを立てめE
             }

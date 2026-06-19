@@ -24,48 +24,27 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         return;
     }
 
-    if (gEffectSettings.enableGravity != 0)
+    float speed =
+        length(gParticles[particleIndex].velocity);
+
+    bool isCenterFlash = false;
+
+    if (speed < 0.01f)
     {
-        gParticles[particleIndex].velocity.y +=
-            gEffectSettings.gravity *
-            gPerFrame.deltaTime;
+        isCenterFlash = true;
     }
 
-    if (gEffectSettings.enableDrag != 0)
+    if (!isCenterFlash)
     {
+        float drag =
+            max(
+                gEffectSettings.drag,
+                0.01f);
+
         gParticles[particleIndex].velocity *=
             pow(
-                max(gEffectSettings.drag, 0.0f),
+                drag,
                 gPerFrame.deltaTime * 60.0f);
-    }
-
-    if (gEffectSettings.enableNoise != 0)
-    {
-        gParticles[particleIndex].velocity +=
-            MakeNoise(
-                particleIndex,
-                gPerFrame.time) *
-            gEffectSettings.noiseStrength *
-            gPerFrame.deltaTime;
-    }
-
-    if (gEffectSettings.enableAttraction != 0)
-    {
-        float32_t3 toEmitter =
-            gEmitter.translate -
-            gParticles[particleIndex].translate;
-
-        float distanceToEmitter =
-            length(toEmitter);
-
-        if (distanceToEmitter > 0.0001f)
-        {
-            gParticles[particleIndex].velocity +=
-                toEmitter /
-                distanceToEmitter *
-                gEffectSettings.attractionStrength *
-                gPerFrame.deltaTime;
-        }
     }
 
     gParticles[particleIndex].translate +=
@@ -84,59 +63,88 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             gParticles[particleIndex].currentTime /
             gParticles[particleIndex].lifeTime);
 
-    float scale =
-        lerp(
-            gEffectSettings.startScale,
-            gEffectSettings.endScale,
-            lifeRate);
+    float inverseLifeRate =
+        1.0f -
+        lifeRate;
 
-    gParticles[particleIndex].scale =
-        float32_t3(
-            scale,
-            scale,
-            scale);
-
-    float4 currentColor;
-
-    float4 coreColor =
+    float4 whiteColor =
     {
         1.0f,
         1.0f,
-        1.0f,
+        0.9f,
         1.0f
     };
 
-    float4 flameColor =
+    float4 yellowColor =
     {
-        0.2f,
+        1.0f,
         0.8f,
-        1.0f,
+        0.2f,
         1.0f
     };
 
-    float4 smokeColor =
+    float4 orangeColor =
     {
         1.0f,
-        0.4f,
-        0.1f,
+        0.3f,
+        0.0f,
         0.0f
     };
 
-    if (lifeRate < 0.3f)
+    float4 currentColor =
+        whiteColor;
+
+    if (lifeRate < 0.28f)
     {
         currentColor =
             lerp(
-                coreColor,
-                flameColor,
-                lifeRate / 0.3f);
+                whiteColor,
+                yellowColor,
+                lifeRate / 0.28f);
     }
     else
     {
         currentColor =
             lerp(
-                flameColor,
-                smokeColor,
-                (lifeRate - 0.3f) / 0.7f);
+                yellowColor,
+                orangeColor,
+                (lifeRate - 0.28f) / 0.72f);
+    }
+
+    if (isCenterFlash)
+    {
+        float flashScale =
+            lerp(
+                3.6f,
+                0.2f,
+                lifeRate);
+
+        gParticles[particleIndex].scale =
+            float32_t3(
+                flashScale,
+                flashScale,
+                flashScale);
+
+        currentColor.a =
+            inverseLifeRate *
+            inverseLifeRate;
+    }
+    else
+    {
+        float sparkScale =
+            lerp(
+                gEffectSettings.startScale,
+                gEffectSettings.endScale,
+                lifeRate);
+
+        gParticles[particleIndex].scale =
+            float32_t3(
+                sparkScale,
+                sparkScale,
+                sparkScale);
+
+        currentColor.a =
+            inverseLifeRate;
     }
 
     gParticles[particleIndex].color =

@@ -198,7 +198,7 @@ void Player::FireBullet()
     Vector3 muzzleEffectPosition = transform_.translate;
     muzzleEffectPosition.y += bulletSpawnOffsetY_;
     muzzleEffectPosition.z += 6.0f;
-    EffectManager::GetInstance()->PlayEffect("shotBullet", muzzleEffectPosition);
+    EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzleEffectPosition);
 
     bullet->SetTranslate(bulletPosition);
 

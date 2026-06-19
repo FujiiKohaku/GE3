@@ -8,6 +8,7 @@ ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
 static const int32_t kMaxGPUParticle = 1024;
+static const float kPi = 3.14159265f;
 
 class RandomGenerator
 {
@@ -64,57 +65,76 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     RandomGenerator generator;
 
     generator.seed =
-        ((float32_t3) DTid + gPerFrame.time) *
-        19.739f;
+        (float32_t3(DTid.x, DTid.x * 17.0f, gPerFrame.time + 0.37f)) *
+        23.417f;
 
     float32_t3 random =
-        generator.Generate3d() - 0.5f;
+        generator.Generate3d();
 
-    float spread = 0.03f;
+    bool isCenterFlash = false;
 
-    float32_t3 direction =
-        normalize(
-            float32_t3(
-                random.x * spread,
-                random.y * spread,
-                -1.0f));
-
-    float velocityLength =
-        length(gEffectSettings.velocity);
-
-    if (velocityLength <= 0.01f)
+    if (DTid.x == 0)
     {
-        velocityLength = 40.0f;
+        isCenterFlash = true;
     }
 
+    float32_t3 velocity =
+        float32_t3(0.0f, 0.0f, 0.0f);
+
     float scale =
-        max(
-            gEffectSettings.startScale,
-            0.02f);
-
-    float randomScale =
-        0.8f +
-        generator.Generate1d() * 0.4f;
-
-    scale *= randomScale;
+        gEffectSettings.startScale;
 
     float lifeTime =
-        max(
-            gEffectSettings.lifeTime,
-            0.05f);
+        0.18f + random.x * 0.10f;
 
-    float randomLife =
-        0.8f +
-        generator.Generate1d() * 0.4f;
+    float rotationSpeed =
+        gEffectSettings.rotationSpeed *
+        (0.6f + generator.Generate1d() * 0.8f);
 
-    lifeTime *= randomLife;
+    if (isCenterFlash)
+    {
+        scale = 3.2f;
+        lifeTime = 0.055f;
+        rotationSpeed = 0.0f;
+    }
+    else
+    {
+        float angle =
+            random.x *
+            kPi *
+            2.0f;
+
+        float elevation =
+            (random.y - 0.5f) *
+            0.65f;
+
+        float speed =
+            22.0f +
+            random.z *
+            26.0f;
+
+        float32_t3 direction =
+            normalize(
+                float32_t3(
+                    cos(angle),
+                    sin(angle),
+                    elevation));
+
+        velocity =
+            direction *
+            speed;
+
+        scale =
+            0.55f +
+            generator.Generate1d() *
+            0.75f;
+    }
 
     gParticles[particleIndex].translate =
         gEmitter.translate;
 
     gParticles[particleIndex].velocity =
-        direction * velocityLength +
-        gEffectSettings.velocity;
+        velocity;
 
     gParticles[particleIndex].scale =
         float32_t3(
@@ -132,8 +152,11 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         gEffectSettings.startColor;
 
     gParticles[particleIndex].rotation =
-        gEffectSettings.startRotation;
+        gEffectSettings.startRotation +
+        random.x *
+        kPi *
+        2.0f;
 
     gParticles[particleIndex].rotationSpeed =
-        gEffectSettings.rotationSpeed;
+        rotationSpeed;
 }
