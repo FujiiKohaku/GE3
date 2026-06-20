@@ -72,3 +72,12 @@ void BaseEnemy::SetPosition(const Vector3& position)
 {
     transform_.translate = position;
 }
+
+void BaseEnemy::ApplyDamage(float damage)
+{
+    hp_ -= damage;
+
+    if (hp_ <= 0.0f) {
+        isDead_ = true;
+    }
+}

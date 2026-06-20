@@ -8,11 +8,13 @@ class Camera;
 
 class Bullet {
 public:
-    void Initialize(Model* model);
+    virtual ~Bullet() = default;
 
-    void Update();
+    virtual void Initialize(Model* model);
 
-    void Draw();
+    virtual void Update();
+
+    virtual void Draw();
 
     void SetCamera(Camera* camera);
 
@@ -36,7 +38,7 @@ public:
         return isAlive_;
     }
 
-    void SetDead()
+    virtual void SetDead()
     {
         isAlive_ = false;
     }
@@ -45,7 +47,26 @@ public:
         return transform_.translate;
     }
 
-private:
+    virtual const char* GetHitEffectName() const
+    {
+        return "HitEffect";
+    }
+
+    virtual int GetDamage() const
+    {
+        return damage_;
+    }
+
+    virtual bool IsDestroyedOnHit() const
+    {
+        return false;
+    }
+
+    virtual void OnFired()
+    {
+    }
+
+protected:
     std::unique_ptr<Object3d> object_;
 
     EulerTransform transform_;
@@ -59,4 +80,6 @@ private:
     float lifeTime_ = 0.0f;
 
     float maxLifeTime_ = 3.0f;
+
+    int damage_ = 1;
 };

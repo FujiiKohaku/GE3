@@ -10,6 +10,7 @@
 
 #include "../externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
+#include <string_view>
 #include <fstream>
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
@@ -174,6 +175,7 @@ void GamePlayScene::Update()
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Update();
     }
+
     // プレイヤ�E��EZ座標�E取征E
     float playerZ = player_->GetTranslate().z;
 
@@ -481,9 +483,20 @@ void GamePlayScene::CheckCollision()
 
             if (distance <= collisionRadius) {
                 Vector3 enemyPosition = enemy->GetPosition();
-                EffectManager::GetInstance()->PlayEffect("HitEffect", enemyPosition);
+                const char* hitEffectName = bullet->GetHitEffectName();
+                EffectManager::GetInstance()->PlayEffect(hitEffectName, enemyPosition);
+                if (std::string_view(hitEffectName) == "MissileExplosion") {
+                    EffectManager::GetInstance()->PlayEffect("MissileExplosionRing", enemyPosition);
+                    EffectManager::GetInstance()->PlayEffect("MissileExplosionFlame", enemyPosition);
+                    EffectManager::GetInstance()->PlayEffect("MissileExplosionFlash", enemyPosition);
+                }
                 OutputDebugStringA("PlayerBullet Hit Enemy\n");
-                enemy->SetDead(true); // 死亡フラグを立てめE
+                enemy->ApplyDamage(static_cast<float>(bullet->GetDamage()));
+
+                if (bullet->IsDestroyedOnHit()) {
+                    bullet->SetDead();
+                    break;
+                }
             }
         }
     }

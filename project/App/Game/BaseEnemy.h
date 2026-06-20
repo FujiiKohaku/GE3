@@ -29,6 +29,7 @@ public:
     }
     void SetPosition(const Vector3& position);
     void SetDead(bool isDead) { isDead_ = isDead; }
+    void ApplyDamage(float damage);
 
 protected:
     std::unique_ptr<Object3d> object_;

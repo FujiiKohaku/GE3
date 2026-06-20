@@ -65,6 +65,12 @@ public:
 
 
 private:
+    enum WeaponType {
+        kWeaponNormalBullet = 0,
+        kWeaponMissileBullet,
+        kWeaponCount
+    };
+
     std::unique_ptr<Object3d> object_;
     std::vector<std::unique_ptr<Bullet>> bullets_;
 
@@ -90,8 +96,12 @@ private:
     float bulletAimPowerX_ = 0.8f;
     float bulletAimPowerY_ = 0.4f;
     float bulletSpeed_ = 2.5f;
+    int currentWeapon_ = kWeaponNormalBullet;
 
     void FireBullet();
+    std::unique_ptr<Bullet> CreateBullet(float& shotSpeed);
+    void UpdateWeaponSwitch(Input* input);
+    const char* GetCurrentWeaponName() const;
     void UpdateBullets();
     void RemoveDeadBullets();
     void ApplyTransform();

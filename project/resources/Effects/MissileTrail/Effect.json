@@ -1,0 +1,46 @@
+{
+  "Emitter": {
+    "Shape": "Cone",
+    "Count": 96,
+    "Radius": 0.04,
+    "Frequency": 0.01
+  },
+
+  "Particle": {
+    "LifeTime": 0.35,
+
+    "StartScale": 0.45,
+    "EndScale": 1.8,
+
+    "StartRotation": 0.0,
+    "RotationSpeed": 0.0,
+
+    "Velocity": [0.0, 0.0, -18.0],
+
+    "StartColor": [0.75, 0.95, 1.0, 0.95],
+    "EndColor": [0.10, 0.45, 1.0, 0.0]
+  },
+
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+
+    "EnableDrag": true,
+    "Drag": 0.92,
+
+    "EnableNoise": false,
+    "NoiseStrength": 0.0,
+
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+
+  "Render": {
+    "Texture": "resources/Effects/Jet/jet.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+
+    "Loop": true,
+    "Duration": -1.0
+  }
+}

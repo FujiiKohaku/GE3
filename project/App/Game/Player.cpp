@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "MissileBullet.h"
 #include "../../Engine/3D/ModelManager.h"
 #include "../../Engine/3D/Object3dManager.h"
 #include "../../Engine/Effect/EffectManager.h"
@@ -56,6 +57,7 @@ void Player::Update()
     // plaerの移動速度
  
     transform_.translate.z += velocity_.z;
+    UpdateWeaponSwitch(input);
     // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
     if (!isDebugMode) {
         UpdateMouseAim();
@@ -186,7 +188,8 @@ void Player::FireBullet()
         return;
     }
 
-    std::unique_ptr<Bullet> bullet = std::make_unique<Bullet>();
+    float shotSpeed = bulletSpeed_;
+    std::unique_ptr<Bullet> bullet = CreateBullet(shotSpeed);
 
     bullet->Initialize(bulletModel_);
     bullet->SetCamera(camera_);
@@ -226,13 +229,52 @@ void Player::FireBullet()
     Vector3 bulletDirection = Normalize(farPoint - bulletPosition);
 
     Vector3 bulletVelocity;
-    bulletVelocity.x = bulletDirection.x * bulletSpeed_+ velocity_.x;
-    bulletVelocity.y = bulletDirection.y * bulletSpeed_+velocity_.y;
-    bulletVelocity.z = bulletDirection.z * bulletSpeed_+velocity_.z;
+    bulletVelocity.x = bulletDirection.x * shotSpeed + velocity_.x;
+    bulletVelocity.y = bulletDirection.y * shotSpeed + velocity_.y;
+    bulletVelocity.z = bulletDirection.z * shotSpeed + velocity_.z;
 
     bullet->SetVelocity(bulletVelocity);
+    bullet->OnFired();
 
     bullets_.push_back(std::move(bullet));
+}
+
+std::unique_ptr<Bullet> Player::CreateBullet(float& shotSpeed)
+{
+    switch (currentWeapon_) {
+    case kWeaponMissileBullet:
+    {
+        std::unique_ptr<MissileBullet> missile = std::make_unique<MissileBullet>();
+        shotSpeed = missile->GetSpeed() / 60.0f;
+        return missile;
+    }
+    case kWeaponNormalBullet:
+    default:
+        shotSpeed = bulletSpeed_;
+        return std::make_unique<Bullet>();
+    }
+}
+
+void Player::UpdateWeaponSwitch(Input* input)
+{
+    if (input->GetMouseWheel() > 0) {
+        currentWeapon_ = (currentWeapon_ + 1) % kWeaponCount;
+    }
+
+    if (input->GetMouseWheel() < 0) {
+        currentWeapon_ = (currentWeapon_ + kWeaponCount - 1) % kWeaponCount;
+    }
+}
+
+const char* Player::GetCurrentWeaponName() const
+{
+    switch (currentWeapon_) {
+    case kWeaponMissileBullet:
+        return "MissileBullet";
+    case kWeaponNormalBullet:
+    default:
+        return "NormalBullet";
+    }
 }
 
 // 弾更新
@@ -300,6 +342,10 @@ void Player::DrawImGui()
     ImGui::Text("X : %.2f", velocity_.x);
     ImGui::Text("Y : %.2f", velocity_.y);
     ImGui::Text("Z : %.2f", velocity_.z);
+    ImGui::Separator();
+
+    ImGui::Text("Weapon No : %d", currentWeapon_);
+    ImGui::Text("Weapon Name : %s", GetCurrentWeaponName());
     ImGui::Separator();
 
     ImGui::Text("Move Limit");
