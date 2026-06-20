@@ -58,6 +58,9 @@ void Player::Update()
  
     transform_.translate.z += velocity_.z;
     UpdateWeaponSwitch(input);
+    if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
+        ++missileFireCooldownFrames_;
+    }
     // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
     if (!isDebugMode) {
         UpdateMouseAim();
@@ -186,6 +189,13 @@ void Player::FireBullet()
 
     if (camera_ == nullptr) {
         return;
+    }
+
+    if (currentWeapon_ == kWeaponMissileBullet) {
+        if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
+            return;
+        }
+        missileFireCooldownFrames_ = 0;
     }
 
     float shotSpeed = bulletSpeed_;

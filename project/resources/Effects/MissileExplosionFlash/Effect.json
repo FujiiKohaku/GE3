@@ -1,15 +1,15 @@
 {
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 96,
-    "Radius": 0.04,
+    "Count": 10,
+    "Radius": 0.08,
     "Frequency": 0.001
   },
 
   "Particle": {
     "LifeTime": 0.18,
 
-    "StartScale": 2.2,
+    "StartScale": 3.4,
     "EndScale": 0.1,
 
     "StartRotation": 0.0,
@@ -18,7 +18,7 @@
     "Velocity": [0.0, 0.0, 0.0],
 
     "StartColor": [1.0, 1.0, 1.0, 1.0],
-    "EndColor": [0.2, 0.8, 1.0, 0.0]
+    "EndColor": [1.0, 0.28, 0.0, 0.0]
   },
 
   "Simulation": {
@@ -36,7 +36,7 @@
   },
 
   "Render": {
-    "Texture": "resources/Effects/Explosion/explosion.png",
+    "Texture": "resources/Effects/MissileExplosion/missileExplosion.png",
     "MeshType": "Board",
     "BlendMode": "Add",
 

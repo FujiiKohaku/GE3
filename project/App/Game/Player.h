@@ -97,6 +97,8 @@ private:
     float bulletAimPowerY_ = 0.4f;
     float bulletSpeed_ = 2.5f;
     int currentWeapon_ = kWeaponNormalBullet;
+    static constexpr int kMissileFireIntervalFrames = 120;
+    int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
     void FireBullet();
     std::unique_ptr<Bullet> CreateBullet(float& shotSpeed);
