@@ -1,24 +1,24 @@
 {
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 64,
-    "Radius": 0.18,
+    "Count": 2,
+    "Radius": 0.02,
     "Frequency": 0.001
   },
 
   "Particle": {
-    "LifeTime": 0.85,
+    "LifeTime": 0.32,
 
-    "StartScale": 1.2,
-    "EndScale": 9.0,
+    "StartScale": 0.6,
+    "EndScale": 12.0,
 
     "StartRotation": 0.0,
-    "RotationSpeed": 6.0,
+    "RotationSpeed": 0.0,
 
     "Velocity": [0.0, 0.0, 0.0],
 
-    "StartColor": [1.0, 0.42, 0.06, 0.45],
-    "EndColor": [0.5, 0.06, 0.0, 0.0]
+    "StartColor": [1.0, 0.72, 0.32, 0.42],
+    "EndColor": [1.0, 0.36, 0.08, 0.0]
   },
 
   "Simulation": {
@@ -36,11 +36,11 @@
   },
 
   "Render": {
-    "Texture": "resources/Effects/MissileExplosion/missileExplosion.png",
+    "Texture": "resources/Effects/Explosion/explosion.png",
     "MeshType": "Ring",
     "BlendMode": "Add",
 
     "Loop": false,
-    "Duration": 1.15
+    "Duration": 0.42
   }
 }

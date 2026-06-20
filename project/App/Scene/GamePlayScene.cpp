@@ -489,6 +489,7 @@ void GamePlayScene::CheckCollision()
                     EffectManager::GetInstance()->PlayEffect("MissileExplosionRing", enemyPosition);
                     EffectManager::GetInstance()->PlayEffect("MissileExplosionFlame", enemyPosition);
                     EffectManager::GetInstance()->PlayEffect("MissileExplosionFlash", enemyPosition);
+                    EffectManager::GetInstance()->PlayEffect("Smoke", enemyPosition);
                 }
                 OutputDebugStringA("PlayerBullet Hit Enemy\n");
                 enemy->ApplyDamage(static_cast<float>(bullet->GetDamage()));
