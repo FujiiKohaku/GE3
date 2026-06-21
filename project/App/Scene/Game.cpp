@@ -129,8 +129,11 @@ void Game::Draw()
     // 竊代〒謠冗判縺励◆繧・▽繧偵ユ繧ｯ繧ｹ繝√Ε縺ｨ縺励※謠冗判縺吶ｋ
     DirectXCommon::GetInstance()->PreDraw();
     copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // 繧ｷ繝ｼ繝ｳ繝槭ロ繝ｼ繧ｸ繝｣繝ｼ縺九ｉ繝昴せ繝医お繝輔ぉ繧ｯ繝医・遞ｮ鬘槭ｒ蜿門ｾ励＠縺ｦ繧ｻ繝・ヨ
-    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), offscreenRenderer_->GetDepthSrvHandleGPU());
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
+    const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
+    postEffectParameter.radialBlurSampleCount = isBoosting ? 48 : 32;
+    postEffectParameter.radialBlurWidth = isBoosting ? 0.25f : 0.05f;
+    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), offscreenRenderer_->GetDepthSrvHandleGPU());
 
     SceneManager::GetInstance()->Draw2D();
 

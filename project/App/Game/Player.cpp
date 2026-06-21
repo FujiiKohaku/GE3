@@ -56,6 +56,9 @@ void Player::Update()
     }
     // plaerの移動速度
  
+    isBoosting_ = input->IsKeyPressed(DIK_LSHIFT);
+    velocity_.z = isBoosting_ ? boostMaxSpeed_ : normalMaxSpeed_;
+    moveSpeed_ = isBoosting_ ? boostAcceleration_ : normalAcceleration_;
     transform_.translate.z += velocity_.z;
     UpdateWeaponSwitch(input);
     if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {

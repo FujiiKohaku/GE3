@@ -129,6 +129,7 @@ void GamePlayScene::Initialize()
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
+    wasPlayerBoosting_ = false;
 
     /*LevelDataLoader levelDataLoader;
     LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");*/
@@ -220,6 +221,13 @@ void GamePlayScene::Update()
     // }
     //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
+    const bool isPlayerBoosting = player_->IsBoosting();
+    if (isPlayerBoosting != wasPlayerBoosting_) {
+        EffectManager::GetInstance()->StopEffect(playerJetHandle_);
+        playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(isPlayerBoosting ? "JetBoost" : "Jet", player_);
+        wasPlayerBoosting_ = isPlayerBoosting;
+    }
+    SceneManager::GetInstance()->SetPostEffectType(isPlayerBoosting ? PostEffectType::RadialBlur : PostEffectType::DepthOutline);
 
     // Aimスプライト�E位置を�Eレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());

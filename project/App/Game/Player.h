@@ -61,6 +61,11 @@ public:
         return bullets_;
     }
 
+    bool IsBoosting() const
+    {
+        return isBoosting_;
+    }
+
     void DrawImGui();
 
 
@@ -81,11 +86,16 @@ private:
     EulerTransform transform_;
 
     bool isDebugMode = false;
+    bool isBoosting_ = false;
 
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
 
-    float moveSpeed_ = 0.2f;
-    Vector3 velocity_ = {0.0, 0.0, 0.5};
+    float normalMaxSpeed_ = 0.5f;
+    float boostMaxSpeed_ = 1.0f;
+    float normalAcceleration_ = 0.2f;
+    float boostAcceleration_ = 0.35f;
+    float moveSpeed_ = normalAcceleration_;
+    Vector3 velocity_ = {0.0f, 0.0f, 0.5f};
     float moveLimitX_ = 22.0f;
     float moveLimitY_ = 9.0f;
     float playerClampMarginX_ = 6.0f;

@@ -130,6 +130,7 @@ private:
 
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
+    bool wasPlayerBoosting_ = false;
     Vector3 cameraOffset_ = {
         0.0f,
         5.0f,
