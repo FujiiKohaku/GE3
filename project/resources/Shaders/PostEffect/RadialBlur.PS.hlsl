@@ -8,21 +8,44 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float2 direction =
         input.texcoord - radialBlurCenter;
 
-    float3 outputColor = float3(0.0f, 0.0f, 0.0f);
+    float distanceFromCenter =
+        length(direction);
 
-    for (int sampleIndex = 0;
+    float blurStrength =
+        smoothstep(
+            0.20f,
+            1.0f,
+            distanceFromCenter);
+
+    blurStrength =
+        pow(
+            blurStrength,
+            2.0f);
+
+    float3 outputColor =
+        float3(0.0f, 0.0f, 0.0f);
+
+    for (
+        int sampleIndex = 0;
         sampleIndex < radialBlurSampleCount;
         sampleIndex++)
     {
         float percent =
             (float) sampleIndex /
-            (float) radialBlurSampleCount;
+            (float) (radialBlurSampleCount - 1);
+
+        float sampleWeight =
+            1.0f +
+            percent * 2.0f;
 
         float2 texcoord =
             input.texcoord -
             direction *
             radialBlurWidth *
-            percent;
+            blurStrength *
+            percent *
+            sampleWeight *
+            2.0f;
 
         outputColor +=
             gTexture.Sample(
@@ -33,5 +56,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     outputColor /=
         (float) radialBlurSampleCount;
 
-    return float4(outputColor, 1.0f);
+    return float4(
+        outputColor,
+        1.0f);
 }

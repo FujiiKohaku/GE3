@@ -34,6 +34,8 @@ void GamePlayScene::Initialize()
     camera_->Initialize();
     camera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
+    normalFovY_ = camera_->GetFovY();
+    currentFovY_ = normalFovY_;
     POINT centerMousePosition;
     centerMousePosition.x = WinApp::GetInstance()->kClientWidth / 2;
     centerMousePosition.y = WinApp::GetInstance()->kClientHeight / 2;
@@ -225,8 +227,24 @@ void GamePlayScene::Update()
     if (isPlayerBoosting != wasPlayerBoosting_) {
         EffectManager::GetInstance()->StopEffect(playerJetHandle_);
         playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(isPlayerBoosting ? "JetBoost" : "Jet", player_);
+        if (isPlayerBoosting) {
+            boostLineHandle_ = EffectManager::GetInstance()->AttachEffect(
+                "BoostLine",
+                [this]() {
+                    Vector3 position = player_->GetTranslate();
+                    position.y += 0.2f;
+                    position.z += 2.4f;
+                    return position;
+                });
+        } else {
+            EffectManager::GetInstance()->StopEffect(boostLineHandle_);
+            boostLineHandle_ = kInvalidEffectHandle;
+        }
         wasPlayerBoosting_ = isPlayerBoosting;
     }
+    const float targetFovY = isPlayerBoosting ? boostFovY_ : normalFovY_;
+    currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
+    camera_->SetFovY(currentFovY_);
     SceneManager::GetInstance()->SetPostEffectType(isPlayerBoosting ? PostEffectType::RadialBlur : PostEffectType::DepthOutline);
 
     // Aimスプライト�E位置を�Eレイヤーのスクリーン座標に合わせる
@@ -552,6 +570,8 @@ void GamePlayScene::Finalize()
 
     EffectManager::GetInstance()->StopEffect(playerJetHandle_);
     playerJetHandle_ = kInvalidEffectHandle;
+    EffectManager::GetInstance()->StopEffect(boostLineHandle_);
+    boostLineHandle_ = kInvalidEffectHandle;
     EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);

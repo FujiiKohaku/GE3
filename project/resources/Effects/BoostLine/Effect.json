@@ -1,24 +1,24 @@
 {
   "Emitter": {
-    "Shape": "Cone",
-    "Count": 896,
-    "Radius": 0.07,
-    "Frequency": 0.001
+    "Shape": "Sphere",
+    "Count": 3,
+    "Radius": 0.18,
+    "Frequency": 0.08
   },
 
   "Particle": {
-    "LifeTime": 0.38,
+    "LifeTime": 0.46,
 
-    "StartScale": 0.55,
-    "EndScale": 2.25,
+    "StartScale": 3.2,
+    "EndScale": 4.8,
 
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
 
-    "Velocity": [ 0.0, 0.0, -7.5 ],
+    "Velocity": [ 0.0, 0.0, -1.6 ],
 
-    "StartColor": [ 1.0, 0.35, 0.95, 1.0 ],
-    "EndColor": [ 0.25, 0.05, 0.9, 0.0 ]
+    "StartColor": [ 0.86, 0.94, 1.0, 0.20 ],
+    "EndColor": [ 0.55, 0.82, 1.0, 0.0 ]
   },
 
   "Simulation": {
@@ -26,7 +26,7 @@
     "Gravity": 0.0,
 
     "EnableDrag": true,
-    "Drag": 0.94,
+    "Drag": 0.99,
 
     "EnableNoise": false,
     "NoiseStrength": 0.0,
@@ -36,7 +36,7 @@
   },
 
   "Render": {
-    "Texture": "resources/Effects/Jet/jet.png",
+    "Texture": "speedCone.png",
     "MeshType": "Board",
     "BlendMode": "Add",
 

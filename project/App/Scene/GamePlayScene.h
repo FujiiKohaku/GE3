@@ -130,7 +130,12 @@ private:
 
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
+    EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
+    float normalFovY_ = 0.45f;
+    float boostFovY_ = 0.75f;
+    float currentFovY_ = 0.45f;
+    float fovLerpRate_ = 0.1f;
     Vector3 cameraOffset_ = {
         0.0f,
         5.0f,
