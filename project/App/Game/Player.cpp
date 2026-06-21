@@ -1,5 +1,4 @@
 #include "Player.h"
-#include "ChargeBeamBullet.h"
 #include "MissileBullet.h"
 #include "../../Engine/3D/ModelManager.h"
 #include "../../Engine/3D/Object3dManager.h"
@@ -80,18 +79,8 @@ void Player::Update()
         ClampAimScreenPosition();
         ClampPlayerScreenPosition();
     }
-    if (currentWeapon_ == kWeaponChargeBeam) {
-        UpdateChargeBeam(input);
-    } else {
-        if (isChargeBeamCharging_) {
-            StopChargeBeam();
-        }
-
-        wasChargeBeamButtonPressed_ = input->IsMousePressed(0);
-
-        if (input->IsMouseTrigger(0)) {
-            FireBullet();
-        }
+    if (input->IsMouseTrigger(0)) {
+        FireBullet();
     }
 
     // transform_.translate.z += 0.5f;
@@ -221,10 +210,6 @@ void Player::ClampPlayerScreenPosition()
 // 弾を発射する関数
 void Player::FireBullet()
 {
-    if (currentWeapon_ == kWeaponChargeBeam) {
-        return;
-    }
-
     if (bulletModel_ == nullptr) {
         return;
     }
@@ -291,136 +276,6 @@ void Player::FireBullet()
     bullets_.push_back(std::move(bullet));
 }
 
-void Player::UpdateChargeBeam(Input* input)
-{
-    bool isMousePressed = input->IsMousePressed(0);
-
-    if (input->IsMouseTrigger(0)) {
-        StartChargeBeam();
-    }
-
-    if (isChargeBeamCharging_ && isMousePressed) {
-        ++chargeBeamChargeFrames_;
-
-        Vector3 chargeEffectPosition = GetChargeEffectPosition();
-        if (chargeLoopHandle_ != kInvalidEffectHandle) {
-            EffectManager::GetInstance()->SetEffectPosition(chargeLoopHandle_, chargeEffectPosition);
-        }
-
-        if (chargeBeamChargeFrames_ >= kChargeBeamLevel3Frames && !chargeBeamReadyPlayed_) {
-            EffectManager::GetInstance()->PlayEffect("ChargeReady", chargeEffectPosition);
-            chargeBeamReadyPlayed_ = true;
-        }
-    }
-
-    if (isChargeBeamCharging_ && !isMousePressed && wasChargeBeamButtonPressed_) {
-        FireChargeBeam();
-        StopChargeBeam();
-    }
-
-    wasChargeBeamButtonPressed_ = isMousePressed;
-}
-
-void Player::StartChargeBeam()
-{
-    isChargeBeamCharging_ = true;
-    chargeBeamReadyPlayed_ = false;
-    chargeBeamChargeFrames_ = 0;
-
-    Vector3 chargeEffectPosition = GetChargeEffectPosition();
-    EffectManager::GetInstance()->PlayEffect("ChargeStart", chargeEffectPosition);
-    chargeLoopHandle_ = EffectManager::GetInstance()->PlayLoopEffect("ChargeLoop", chargeEffectPosition);
-}
-
-void Player::FireChargeBeam()
-{
-    if (bulletModel_ == nullptr) {
-        return;
-    }
-
-    if (camera_ == nullptr) {
-        return;
-    }
-
-    int chargeLevel = GetChargeBeamLevel();
-
-    std::unique_ptr<ChargeBeamBullet> chargeBeam = std::make_unique<ChargeBeamBullet>();
-    chargeBeam->Initialize(bulletModel_);
-    chargeBeam->SetCamera(camera_);
-
-    Vector3 beamPosition = transform_.translate;
-    beamPosition.y += bulletSpawnOffsetY_;
-    beamPosition.z += 4.0f;
-
-    chargeBeam->Configure(chargeLevel, beamPosition);
-    bullets_.push_back(std::move(chargeBeam));
-
-    EffectManager::GetInstance()->PlayEffect("BeamFire", beamPosition);
-
-    if (chargeLevel >= 2) {
-        Vector3 beamMiddlePosition = beamPosition;
-        beamMiddlePosition.z += 45.0f;
-        EffectManager::GetInstance()->PlayEffect("BeamFire", beamMiddlePosition);
-    }
-
-    if (chargeLevel >= 3) {
-        Vector3 beamFarPosition = beamPosition;
-        beamFarPosition.z += 90.0f;
-        EffectManager::GetInstance()->PlayEffect("BeamFire", beamFarPosition);
-        EffectManager::GetInstance()->PlayEffect("ChargeReady", beamPosition);
-    }
-}
-
-void Player::StopChargeBeam()
-{
-    if (chargeLoopHandle_ != kInvalidEffectHandle) {
-        EffectManager::GetInstance()->StopEffect(chargeLoopHandle_);
-        chargeLoopHandle_ = kInvalidEffectHandle;
-    }
-
-    isChargeBeamCharging_ = false;
-    chargeBeamReadyPlayed_ = false;
-    chargeBeamChargeFrames_ = 0;
-}
-
-int Player::GetChargeBeamLevel() const
-{
-    if (chargeBeamChargeFrames_ >= kChargeBeamLevel3Frames) {
-        return 3;
-    }
-
-    if (chargeBeamChargeFrames_ >= kChargeBeamLevel2Frames) {
-        return 2;
-    }
-
-    return 1;
-}
-
-float Player::GetChargeBeamRate() const
-{
-    float chargeRate =
-        static_cast<float>(chargeBeamChargeFrames_) /
-        static_cast<float>(kChargeBeamLevel3Frames);
-
-    if (chargeRate > 1.0f) {
-        chargeRate = 1.0f;
-    }
-
-    if (chargeRate < 0.0f) {
-        chargeRate = 0.0f;
-    }
-
-    return chargeRate;
-}
-
-Vector3 Player::GetChargeEffectPosition() const
-{
-    Vector3 chargeEffectPosition = transform_.translate;
-    chargeEffectPosition.y += bulletSpawnOffsetY_;
-    chargeEffectPosition.z += 3.2f;
-    return chargeEffectPosition;
-}
-
 std::unique_ptr<Bullet> Player::CreateBullet(float& shotSpeed)
 {
     switch (currentWeapon_) {
@@ -430,9 +285,6 @@ std::unique_ptr<Bullet> Player::CreateBullet(float& shotSpeed)
         shotSpeed = missile->GetSpeed() / 60.0f;
         return missile;
     }
-    case kWeaponChargeBeam:
-        shotSpeed = 0.0f;
-        return std::make_unique<Bullet>();
     case kWeaponNormalBullet:
     default:
         shotSpeed = bulletSpeed_;
@@ -454,8 +306,6 @@ void Player::UpdateWeaponSwitch(Input* input)
 const char* Player::GetCurrentWeaponName() const
 {
     switch (currentWeapon_) {
-    case kWeaponChargeBeam:
-        return "ChargeBeam";
     case kWeaponMissileBullet:
         return "MissileBullet";
     case kWeaponNormalBullet:
@@ -533,8 +383,6 @@ void Player::DrawImGui()
 
     ImGui::Text("Weapon No : %d", currentWeapon_);
     ImGui::Text("Weapon Name : %s", GetCurrentWeaponName());
-    ImGui::Text("Charge Level : %d", GetChargeBeamLevel());
-    ImGui::ProgressBar(GetChargeBeamRate(), ImVec2(160.0f, 0.0f), "Charge");
     ImGui::Separator();
 
     ImGui::Text("HP : %d / %d", currentHp_, maxHp_);

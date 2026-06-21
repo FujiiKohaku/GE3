@@ -62,21 +62,6 @@ public:
         return false;
     }
 
-    virtual bool IsChargeBeam() const
-    {
-        return false;
-    }
-
-    virtual Vector3 GetAABBMin() const
-    {
-        return transform_.translate;
-    }
-
-    virtual Vector3 GetAABBMax() const
-    {
-        return transform_.translate;
-    }
-
     virtual void OnFired()
     {
     }

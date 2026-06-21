@@ -538,63 +538,6 @@ void GamePlayScene::CheckCollision()
     }
 
     for (const std::unique_ptr<Bullet>& bullet : player_->GetBullets()) {
-        if (bullet->IsChargeBeam()) {
-            Vector3 beamMin = bullet->GetAABBMin();
-            Vector3 beamMax = bullet->GetAABBMax();
-            float enemySphereRadius = 4.0f;
-            float enemySphereRadiusSquared = enemySphereRadius * enemySphereRadius;
-
-            for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-                if (enemy->IsDead()) {
-                    continue;
-                }
-
-                Vector3 enemyPosition = enemy->GetPosition();
-
-                float closestX = enemyPosition.x;
-                if (closestX < beamMin.x) {
-                    closestX = beamMin.x;
-                }
-                if (closestX > beamMax.x) {
-                    closestX = beamMax.x;
-                }
-
-                float closestY = enemyPosition.y;
-                if (closestY < beamMin.y) {
-                    closestY = beamMin.y;
-                }
-                if (closestY > beamMax.y) {
-                    closestY = beamMax.y;
-                }
-
-                float closestZ = enemyPosition.z;
-                if (closestZ < beamMin.z) {
-                    closestZ = beamMin.z;
-                }
-                if (closestZ > beamMax.z) {
-                    closestZ = beamMax.z;
-                }
-
-                float differenceX = enemyPosition.x - closestX;
-                float differenceY = enemyPosition.y - closestY;
-                float differenceZ = enemyPosition.z - closestZ;
-                float distanceSquared =
-                    differenceX * differenceX +
-                    differenceY * differenceY +
-                    differenceZ * differenceZ;
-
-                if (distanceSquared <= enemySphereRadiusSquared) {
-                    Vector3 enemyPositionForEffect = enemy->GetPosition();
-                    EffectManager::GetInstance()->PlayEffect(bullet->GetHitEffectName(), enemyPositionForEffect);
-                    OutputDebugStringA("ChargeBeam Hit Enemy\n");
-                    enemy->ApplyDamage(static_cast<float>(bullet->GetDamage()));
-                }
-            }
-
-            bullet->SetDead();
-            continue;
-        }
-
         for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
 
             // ☁E��加�E�すでに死んでぁE��敵は計算をスキチE�Eする
