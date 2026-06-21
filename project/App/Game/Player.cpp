@@ -8,7 +8,9 @@
 #include <algorithm>
 #include <cassert>
 
+#ifdef _DEBUG
 #include "../../externals/imgui/ImGuizmo.h"
+#endif
 
 #include "../../Engine/EditorManager/EditorManager.h"
 void Player::Initialize(Model* model)
