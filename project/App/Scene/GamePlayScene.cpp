@@ -159,13 +159,38 @@ void GamePlayScene::Initialize()
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
-    for (uint32_t i = 0; i < 5; i++) {
+    const Vector3 enemyPositions[] = {
+        { -14.0f, -3.0f, 120.0f },
+        { 10.0f, 5.0f, 160.0f },
+        { 18.0f, -6.0f, 210.0f },
+        { -7.0f, 7.0f, 260.0f },
+        { 14.0f, 0.0f, 310.0f },
+        { -18.0f, 4.0f, 360.0f },
+        { 4.0f, -7.0f, 410.0f },
+        { 17.0f, 6.0f, 460.0f },
+        { -12.0f, 1.0f, 510.0f },
+        { 7.0f, -5.0f, 560.0f },
+        { -20.0f, -2.0f, 610.0f },
+        { 13.0f, 7.0f, 660.0f },
+        { -5.0f, 4.0f, 710.0f },
+        { 20.0f, -4.0f, 760.0f },
+        { -15.0f, 6.0f, 810.0f },
+        { 9.0f, 0.0f, 860.0f },
+        { -2.0f, -7.0f, 900.0f },
+        { 16.0f, 3.0f, 940.0f },
+        { -10.0f, -4.0f, 980.0f },
+        { 5.0f, 6.0f, 1000.0f },
+        { -19.0f, 0.0f, 450.0f },
+        { 19.0f, -1.0f, 720.0f },
+    };
+
+    for (const Vector3& enemyPosition : enemyPositions) {
 
         std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
 
         enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
 
-        enemy->SetPosition(Vector3 { 0.0f, 0.0f, 200.0f + i * 50.0f });
+        enemy->SetPosition(enemyPosition);
 
         enemies_.push_back(std::move(enemy));
     }
@@ -224,28 +249,47 @@ void GamePlayScene::Update()
     //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
     const bool isPlayerBoosting = player_->IsBoosting();
+
+    Vector3 boostLinePosition = player_->GetTranslate();
+    boostLinePosition.y += 0.2f;
+    boostLinePosition.z += 2.4f;
+
     if (isPlayerBoosting != wasPlayerBoosting_) {
         EffectManager::GetInstance()->StopEffect(playerJetHandle_);
-        playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(isPlayerBoosting ? "JetBoost" : "Jet", player_);
+
+        const char* jetEffectName = "Jet";
         if (isPlayerBoosting) {
-            boostLineHandle_ = EffectManager::GetInstance()->AttachEffect(
-                "BoostLine",
-                [this]() {
-                    Vector3 position = player_->GetTranslate();
-                    position.y += 0.2f;
-                    position.z += 2.4f;
-                    return position;
-                });
+            jetEffectName = "JetBoost";
+        }
+        playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(jetEffectName, player_);
+
+        if (isPlayerBoosting) {
+            boostLineHandle_ = EffectManager::GetInstance()->AttachEffect("BoostLine", player_);
+            EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
         } else {
             EffectManager::GetInstance()->StopEffect(boostLineHandle_);
             boostLineHandle_ = kInvalidEffectHandle;
         }
         wasPlayerBoosting_ = isPlayerBoosting;
     }
-    const float targetFovY = isPlayerBoosting ? boostFovY_ : normalFovY_;
+
+    if (isPlayerBoosting && boostLineHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
+    }
+
+    float targetFovY = normalFovY_;
+    if (isPlayerBoosting) {
+        targetFovY = boostFovY_;
+    }
+
     currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
     camera_->SetFovY(currentFovY_);
-    SceneManager::GetInstance()->SetPostEffectType(isPlayerBoosting ? PostEffectType::RadialBlur : PostEffectType::DepthOutline);
+
+    PostEffectType postEffectType = PostEffectType::DepthOutline;
+    if (isPlayerBoosting) {
+        postEffectType = PostEffectType::RadialBlur;
+    }
+    SceneManager::GetInstance()->SetPostEffectType(postEffectType);
 
     // Aimスプライト�E位置を�Eレイヤーのスクリーン座標に合わせる
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
@@ -503,7 +547,7 @@ void GamePlayScene::CheckCollision()
 
             Vector3 difference = enemy->GetPosition() - bullet->GetPosition();
             float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
-            float collisionRadius = 2.0f;
+            float collisionRadius = 4.0f;
 
             if (distance <= collisionRadius) {
                 Vector3 enemyPosition = enemy->GetPosition();
@@ -550,6 +594,9 @@ void GamePlayScene::CheckCollision()
         }
 
         for (const std::unique_ptr<EnemyBullet>& enemyBullet : enemy->GetBullets()) {
+            if (!enemyBullet->IsAlive()) {
+                continue;
+            }
 
             Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
             float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
@@ -558,7 +605,14 @@ void GamePlayScene::CheckCollision()
             if (distance <= collisionRadius) {
                 OutputDebugStringA("EnemyBullet Hit Player\n");
 
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+                if (player_->ApplyDamage(1)) {
+                    EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
+
+                    if (player_->IsDead()) {
+                        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+                    }
+                }
+                enemyBullet->SetDead();
                 // ここにプレイヤーの被弾処琁E��EP減少など�E�や、弾の死亡フラグを立てる�E琁E��書ぁE
             }
         }

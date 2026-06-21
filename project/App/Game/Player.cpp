@@ -50,6 +50,10 @@ void Player::Update()
         return;
     }
 
+    if (invincibleTimer_ > 0) {
+        --invincibleTimer_;
+    }
+
     // デバッグカメラモードの取得
     if (debugCameraController_ != nullptr) {
         isDebugMode = debugCameraController_->GetDebugMode();
@@ -96,7 +100,9 @@ void Player::Draw()
 
         bullet->Draw();
     }
-    object_->Draw();
+    if (invincibleTimer_ <= 0 || (invincibleTimer_ / 4) % 2 == 0) {
+        object_->Draw();
+    }
 }
 
 void Player::SetCamera(Camera* camera)
@@ -111,6 +117,20 @@ void Player::SetCamera(Camera* camera)
 void Player::SetDebugCameraController(DebugCameraController* debugCameraController)
 {
     debugCameraController_ = debugCameraController;
+}
+
+bool Player::ApplyDamage(int damage)
+{
+    if (damage <= 0 || invincibleTimer_ > 0 || currentHp_ <= 0) {
+        return false;
+    }
+
+    currentHp_ -= damage;
+    if (currentHp_ < 0) {
+        currentHp_ = 0;
+    }
+    invincibleTimer_ = kInvincibleFrames;
+    return true;
 }
 
 // 照準の画面上の位置を制限する関数
@@ -359,6 +379,10 @@ void Player::DrawImGui()
 
     ImGui::Text("Weapon No : %d", currentWeapon_);
     ImGui::Text("Weapon Name : %s", GetCurrentWeaponName());
+    ImGui::Separator();
+
+    ImGui::Text("HP : %d / %d", currentHp_, maxHp_);
+    ImGui::Text("Invincible : %d", invincibleTimer_);
     ImGui::Separator();
 
     ImGui::Text("Move Limit");

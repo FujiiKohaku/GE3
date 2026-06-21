@@ -21,6 +21,7 @@ public:
     Vector3 GetPosition() const;
 
     bool IsAlive() const;
+    void SetDead() { isAlive_ = false; }
 
 private:
     std::unique_ptr<Object3d> object_;

@@ -66,6 +66,20 @@ public:
         return isBoosting_;
     }
 
+    bool ApplyDamage(int damage);
+    bool IsDead() const
+    {
+        return currentHp_ <= 0;
+    }
+    int GetCurrentHp() const
+    {
+        return currentHp_;
+    }
+    int GetMaxHp() const
+    {
+        return maxHp_;
+    }
+
     void DrawImGui();
 
 
@@ -87,6 +101,10 @@ private:
 
     bool isDebugMode = false;
     bool isBoosting_ = false;
+    int maxHp_ = 5;
+    int currentHp_ = maxHp_;
+    int invincibleTimer_ = 0;
+    static constexpr int kInvincibleFrames = 60;
 
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
 

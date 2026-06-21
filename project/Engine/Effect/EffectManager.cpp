@@ -401,6 +401,7 @@ bool EffectManager::SetEffectPosition(EffectHandle handle, const Vector3& positi
         return false;
     }
 
+    activeEffects_[index].positionProvider = nullptr;
     activeEffects_[index].position = position;
     return true;
 }
