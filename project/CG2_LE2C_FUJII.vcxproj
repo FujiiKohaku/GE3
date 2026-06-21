@@ -164,6 +164,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App\Game\Bullet.cpp" />
+    <ClCompile Include="App\Game\ChargeBeamBullet.cpp" />
     <ClCompile Include="App\Game\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
     <ClCompile Include="App\Game\BaseEnemy.cpp" />
@@ -288,6 +289,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\Game\Bullet.h" />
+    <ClInclude Include="App\Game\ChargeBeamBullet.h" />
     <ClInclude Include="App\Game\MissileBullet.h" />
     <ClInclude Include="App\Scene\ClearScene.h" />
     <ClInclude Include="App\Game\BaseEnemy.h" />

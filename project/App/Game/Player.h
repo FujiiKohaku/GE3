@@ -4,6 +4,7 @@
 #include "../../Engine/Winapp/WinApp.h"
 #include "../../Engine/debugcamera/DebugCameraController.h"
 #include "../../Engine/math/MathStruct.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -87,6 +88,7 @@ private:
     enum WeaponType {
         kWeaponNormalBullet = 0,
         kWeaponMissileBullet,
+        kWeaponChargeBeam,
         kWeaponCount
     };
 
@@ -127,6 +129,14 @@ private:
     int currentWeapon_ = kWeaponNormalBullet;
     static constexpr int kMissileFireIntervalFrames = 120;
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
+    static constexpr int kChargeBeamLevel1Frames = 18;
+    static constexpr int kChargeBeamLevel2Frames = 60;
+    static constexpr int kChargeBeamLevel3Frames = 120;
+    bool isChargeBeamCharging_ = false;
+    bool wasChargeBeamButtonPressed_ = false;
+    bool chargeBeamReadyPlayed_ = false;
+    int chargeBeamChargeFrames_ = 0;
+    uint32_t chargeLoopHandle_ = 0xffffffffu;
 
     void FireBullet();
     std::unique_ptr<Bullet> CreateBullet(float& shotSpeed);
@@ -135,6 +145,13 @@ private:
     void UpdateBullets();
     void RemoveDeadBullets();
     void ApplyTransform();
+    void UpdateChargeBeam(Input* input);
+    void StartChargeBeam();
+    void FireChargeBeam();
+    void StopChargeBeam();
+    int GetChargeBeamLevel() const;
+    float GetChargeBeamRate() const;
+    Vector3 GetChargeEffectPosition() const;
 
     void UpdateKeyboardMove(Input* input);
     void UpdateMouseAim();

@@ -1,0 +1,46 @@
+{
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 18,
+    "Radius": 5.0,
+    "Frequency": 0.025
+  },
+
+  "Particle": {
+    "LifeTime": 0.65,
+
+    "StartScale": 0.28,
+    "EndScale": 0.08,
+
+    "StartRotation": 0.0,
+    "RotationSpeed": 14.0,
+
+    "Velocity": [ 0.0, 0.0, 0.0 ],
+
+    "StartColor": [ 0.55, 0.35, 1.0, 0.8 ],
+    "EndColor": [ 0.95, 1.0, 1.0, 0.0 ]
+  },
+
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+
+    "EnableDrag": false,
+    "Drag": 1.0,
+
+    "EnableNoise": true,
+    "NoiseStrength": 0.8,
+
+    "EnableAttraction": true,
+    "AttractionStrength": 18.0
+  },
+
+  "Render": {
+    "Texture": "resources/Effects/HitEffect/shotBullet.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+
+    "Loop": true,
+    "Duration": -1.0
+  }
+}
