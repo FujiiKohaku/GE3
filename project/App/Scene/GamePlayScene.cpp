@@ -463,6 +463,27 @@ void GamePlayScene::Update()
     ImGui::End();
 
     // 反映
+#else
+    LightManager::GetInstance()->SetDirectional(
+        { 1.0f, 1.0f, 1.0f, 1.0f },
+        { 0.0f, -1.0f, 0.0f },
+        0.0f);
+
+    LightManager::GetInstance()->SetPointRadius(10.0f);
+    LightManager::GetInstance()->SetPointDecay(1.0f);
+    LightManager::GetInstance()->SetPointLight(
+        { 1.0f, 1.0f, 1.0f, 1.0f },
+        { 0.0f, 2.0f, 0.0f },
+        0.0f);
+
+    LightManager* lightManager = LightManager::GetInstance();
+    lightManager->SetSpotLightColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    lightManager->SetSpotLightPosition({ 0.0f, 0.0f, 0.0f });
+    lightManager->SetSpotLightDirection({ -1.0f, 0.0f, 0.0f });
+    lightManager->SetSpotLightIntensity(4.0f);
+    lightManager->SetSpotLightDistance(7.0f);
+    lightManager->SetSpotLightDecay(2.0f);
+    lightManager->SetSpotLightCosAngle(0.5f);
 #endif // USE_IMGUI
 
     // terrain_->SetTranslate(terrainPos);
