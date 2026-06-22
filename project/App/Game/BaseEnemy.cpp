@@ -26,8 +26,7 @@ void BaseEnemy::Update()
 
     Attack();
 
-    for (std::unique_ptr<EnemyBullet>& bullet :
-        enemyBullets_) {
+    for (std::unique_ptr<EnemyBullet>& bullet :enemyBullets_) {
 
         bullet->Update();
     }

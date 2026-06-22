@@ -168,6 +168,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Scene\ClearScene.cpp" />
     <ClCompile Include="App\Game\BaseEnemy.cpp" />
     <ClCompile Include="App\Game\EnemyBullet.cpp" />
+    <ClCompile Include="App\Game\BaseBullet.cpp" />
     <ClCompile Include="Engine\math\Collision.cpp" />
     <ClCompile Include="Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
@@ -292,6 +293,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Scene\ClearScene.h" />
     <ClInclude Include="App\Game\BaseEnemy.h" />
     <ClInclude Include="App\Game\EnemyBullet.h" />
+    <ClInclude Include="App\Game\BaseBullet.h" />
     <ClInclude Include="Engine\math\Collision.h" />
     <ClInclude Include="Engine\EditorManager\EditorManager.h" />
     <ClInclude Include="Engine\math\EngineStruct.h" />

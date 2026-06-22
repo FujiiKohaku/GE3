@@ -58,12 +58,9 @@ void NormalEnemy::FireBullet()
 
     velocity.z = direction.z * bulletSpeed_;
 
-    bullet->SetTranslate(
-        transform_.translate);
+    bullet->SetTranslate(transform_.translate);
 
-    bullet->SetVelocity(
-        velocity);
+    bullet->SetVelocity(velocity);
 
-    enemyBullets_.push_back(
-        std::move(bullet));
+    enemyBullets_.push_back(std::move(bullet));
 }
