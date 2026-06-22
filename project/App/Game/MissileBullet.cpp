@@ -35,11 +35,7 @@ void MissileBullet::OnFired()
     UpdateTrailPosition();
 
     std::shared_ptr<Vector3> trailPosition = trailPosition_;
-    trailEffectHandle_ = EffectManager::GetInstance()->AttachEffect(
-        "MissileTrail",
-        [trailPosition]() {
-            return *trailPosition;
-        });
+    trailEffectHandle_ = EffectManager::GetInstance()->AttachEffect("MissileTrail",[trailPosition]() {return *trailPosition;});
 }
 
 void MissileBullet::UpdateTrailPosition()

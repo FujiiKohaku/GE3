@@ -13,7 +13,7 @@ void Game::Initialize()
     };
     auto prevTime = std::chrono::steady_clock::now();
     Logger::Log("Game Initialize Start");
-    ShowCursor(FALSE); // 繧ｫ繝ｼ繧ｽ繝ｫ髱櫁｡ｨ遉ｺ
+    ShowCursor(FALSE); // カーソルを消す
     SetUnhandledExceptionFilter(Utility::ExportDump);
     std::filesystem::create_directory("logs");
 
@@ -126,9 +126,9 @@ void Game::Draw()
     SceneManager::GetInstance()->Draw3D();
     offscreenRenderer_->PostDraw();
 
-    // 竊代〒謠冗判縺励◆繧・▽繧偵ユ繧ｯ繧ｹ繝√Ε縺ｨ縺励※謠冗判縺吶ｋ
+   // ポストエフェクトをかける
     DirectXCommon::GetInstance()->PreDraw();
-    copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // 繧ｷ繝ｼ繝ｳ繝槭ロ繝ｼ繧ｸ繝｣繝ｼ縺九ｉ繝昴せ繝医お繝輔ぉ繧ｯ繝医・遞ｮ鬘槭ｒ蜿門ｾ励＠縺ｦ繧ｻ繝・ヨ
+    copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクトの種類を取得してセットする
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
     postEffectParameter.radialBlurSampleCount = isBoosting ? 48 : 32;
@@ -144,8 +144,8 @@ void Game::Draw()
 void Game::Finalize()
 {
     Logger::Log("Game Finalize Start");
-    // 繧ｫ繝ｼ繧ｽ繝ｫ縺ｮ繝ｭ繝・け繧定ｧ｣髯､縺励※陦ｨ遉ｺ縺吶ｋ
-    UnlockCursor();
+   
+    UnlockCursor(); // カーソルをウィンドウに固定解除
     ShowCursor(TRUE);
     SceneManager::GetInstance()->Finalize();
     ImGuiManager::GetInstance()->Finalize();

@@ -12,13 +12,13 @@ SpriteManager* SpriteManager::GetInstance()
     return instance_.get();
 }
 // ==============================
-// 初期化�E琁E
+// 初期化処理
 // ==============================
 void SpriteManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
 
-    // ルートシグネチャ作�E�E�シェーダーとのチE�Eタ受け渡し設定！E
+   
     CreateRootSignature();
 
     // グラフィチE��スパイプライン作�E�E�描画の設定まとめE��E

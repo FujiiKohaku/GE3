@@ -37,9 +37,9 @@
 
 #include "../../Engine/SceneObjectManager/SceneObjectManager.h"
 
-#include"../Game/BaseEnemy.h"
+#include "../Game/BaseEnemy.h"
 
-#include "../Game/NormalEnemy.h"    
+#include "../Game/NormalEnemy.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -59,12 +59,12 @@ private:
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
     // ------------------------------
-    // 繧ｫ繝｡繝ｩ
+    // カメラ / デバッグカメラコントローラー
     // ------------------------------
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<DebugCameraController> debugCameraController_;
     // ------------------------------
-    // 3D繧ｪ繝悶ず繧ｧ繧ｯ繝茨ｼ域緒逕ｻ荳ｻ菴難ｼ・
+    // 3dオブジェクト
     // ------------------------------
 
     std::unique_ptr<SphereObject> sphere_;
@@ -75,56 +75,47 @@ private:
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
-    // 繝励Ξ繧､繝､繝ｼ繧ｯ繝ｩ繧ｹ
+    // player
     std::unique_ptr<Player> player_;
 
     // ------------------------------
-    // 繧ｹ繝励Λ繧､繝茨ｼ・I / 2D・・
+    // 2dオブジェクト
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
     // ------------------------------
-    // 繧ｵ繧ｦ繝ｳ繝・
+    // BGM / SE
     // ------------------------------
     SoundData bgm;
 
     // ------------------------------
-    // 繝代・繝・ぅ繧ｯ繝ｫ
-    // ------------------------------
-    // ParticleEmitter emitter_;
-    // ParticleSystem particleSystem_;
-    // ------------------------------
-    // 繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ / 繧ｹ繧ｱ繝ｫ繝医Φ
-    // ------------------------------
-
-    // ------------------------------
-    // 繝ｩ繧､繝医・謠冗判繝代Λ繝｡繝ｼ繧ｿ
+    // Light
     // ------------------------------
     bool sphereLighting = true;
     float lightIntensity = 1.0f;
     Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
 
     // ------------------------------
-    // 繧ｹ繝輔ぅ繧｢ Transform
+    // transform
     // ------------------------------
     Vector3 spherePos = { 0.0f, 0.0f, 0.0f };
     Vector3 sphereRotate = { 0.0f, 0.0f, 0.0f };
     Vector3 sphereScale = { 1.0f, 1.0f, 1.0f };
 
     // ------------------------------
-    // Terrain Transform (ImGui逕ｨ)
+    // Terrain Transform
     // ------------------------------
     Vector3 terrainPos = { 0.0f, -10.0f, 0.0f };
     Vector3 terrainRotate = { 0.0f, 0.0f, 0.0f };
     Vector3 terrainScale = { 1.0f, 1.0f, 1.0f };
     // ------------------------------
-    // Plane Transform (ImGui逕ｨ)
+    // Plane Transform
     // ------------------------------
     Vector3 planePos = { 0.0f, 0.0f, 0.0f };
     Vector3 planeRotate = { 0.0f, std::numbers::pi_v<float>, 0.0f };
     Vector3 planeScale = { 1.0f, 1.0f, 1.0f };
     // ------------------------------
-    // 縺昴・莉・
+    // playerTransform
     // ------------------------------
     float r = 0.0f;
 
@@ -144,6 +135,6 @@ private:
 
     float followX_ = 0.35f;
     float followY_ = 0.35f;
-    // 謨ｵ縺ｮ邂｡逅・
+    // エネミー配列
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
 };

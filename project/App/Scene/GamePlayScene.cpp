@@ -291,7 +291,7 @@ void GamePlayScene::Update()
     }
     SceneManager::GetInstance()->SetPostEffectType(postEffectType);
 
-    // Aimスプライト�E位置を�Eレイヤーのスクリーン座標に合わせる
+    // AiMスプライチEの位置を更新する
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
@@ -304,7 +304,7 @@ void GamePlayScene::Update()
     sceneObjectManager_->Update();
     camera_->Update();
 
-    // チE��チE��カメラモード�E刁E��替ぁE
+    // デバッグカメラが有効でないときのみ、プレイヤーの位置にカメラを追従させる
     if (!debugCameraController_->GetDebugMode()) {
         // プレイヤーの位置にカメラを追従させる
         Vector3 playerPosition = player_->GetTranslate();
@@ -319,10 +319,9 @@ void GamePlayScene::Update()
         camera_->SetTranslate(cameraPosition);
     }
 
-    // チE��チE��カメラの更新は、E��常のカメラ更新の後に行う
+    // デバッグカメラの更新
     debugCameraController_->Update();
-    // そ�E他�Eオブジェクト�E更新
-    // plane_->Update();
+
     // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
     CheckCollision();
@@ -560,8 +559,7 @@ void GamePlayScene::CheckCollision()
 
     for (const std::unique_ptr<Bullet>& bullet : player_->GetBullets()) {
         for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-
-            // ☁E��加�E�すでに死んでぁE��敵は計算をスキチE�Eする
+            // 死んでいる敵は当たり判定をスキップする
             if (enemy->IsDead()) {
                 continue;
             }
@@ -575,7 +573,7 @@ void GamePlayScene::CheckCollision()
                 const char* hitEffectName = bullet->GetHitEffectName();
                 EffectManager::GetInstance()->PlayEffect(hitEffectName, enemyPosition);
                 if (std::string_view(hitEffectName) == "MissileExplosion") {
-                    //ミサイルエフェクト 
+                    // ミサイルエフェクト
                     EffectManager::GetInstance()->PlayEffect("MissileExplosionRing", enemyPosition);
                     EffectManager::GetInstance()->PlayEffect("MissileExplosionFlame", enemyPosition);
                     EffectManager::GetInstance()->PlayEffect("MissileExplosionFlash", enemyPosition);
@@ -592,23 +590,23 @@ void GamePlayScene::CheckCollision()
     }
     // 死んだ敵の中から「NormalEnemy」だけを選んで安�Eに削除する
     std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        // 1. まず死んでぁE��かチェチE��
+        // 1. 敵が死んでいるかをチェックする
         if (enemy->IsDead()) {
 
-            // 2. ☁Edynamic_cast を使って、中身ぁENormalEnemy かどぁE��を判定すめE
-            // rawポインタ�E�Eget()�E�を取り出してキャストを試みまぁE
+            // 2. 敵が死んでいる場合、さらにそれが NormalEnemy かどうかをチェックする
+            // dynamic_cast を使って、enemy が NormalEnemy に安全にキャストできるかを確認する
             if (dynamic_cast<NormalEnemy*>(enemy.get()) != nullptr) {
 
-                // NormalEnemy で、かつ死んでぁE��ので【削除�E�Erue�E�、E
+                // 3. 敵が NormalEnemy であれば、true を返して削除する
                 return true;
             }
         }
 
-        // それ以外�E敵�E�生存してぁE��敵めE��NormalEnemy以外�E敵�E��E【維持E��Ealse�E�、E
+        // 4. 敵が死んでいない、または NormalEnemy でない場合は、false を返して削除しない
         return false;
     });
 
-    // --- 敵の弾 vs プレイヤーの当たり判宁E---
+    // 敵の弾とプレイヤーの当たり判定
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (enemy->IsDead()) {
             continue;
@@ -634,7 +632,7 @@ void GamePlayScene::CheckCollision()
                     }
                 }
                 enemyBullet->SetDead();
-                // ここにプレイヤーの被弾処琁E��EP減少など�E�や、弾の死亡フラグを立てる�E琁E��書ぁE
+                // 1発の弾で複数回ダメージを受けないように、当たったらすぐに弾を無効化する
             }
         }
     }
