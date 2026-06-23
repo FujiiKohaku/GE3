@@ -557,34 +557,32 @@ void GamePlayScene::CheckCollision()
         }
     }
 
-    for (const std::unique_ptr<Bullet>& bullet : player_->GetBullets()) {
+    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+
         for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-            // 死んでいる敵は当たり判定をスキップする
+
             if (enemy->IsDead()) {
                 continue;
             }
 
             Vector3 difference = enemy->GetPosition() - bullet->GetPosition();
-            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+
+            float distance = sqrtf(
+                difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+
             float collisionRadius = 4.0f;
 
             if (distance <= collisionRadius) {
-                Vector3 enemyPosition = enemy->GetPosition();
-                const char* hitEffectName = bullet->GetHitEffectName();
-                EffectManager::GetInstance()->PlayEffect(hitEffectName, enemyPosition);
-                if (std::string_view(hitEffectName) == "MissileExplosion") {
-                    // ミサイルエフェクト
-                    EffectManager::GetInstance()->PlayEffect("MissileExplosionRing", enemyPosition);
-                    EffectManager::GetInstance()->PlayEffect("MissileExplosionFlame", enemyPosition);
-                    EffectManager::GetInstance()->PlayEffect("MissileExplosionFlash", enemyPosition);
-                }
+
                 OutputDebugStringA("PlayerBullet Hit Enemy\n");
+
+                bullet->OnHitEnemy(enemy->GetPosition());
+
                 enemy->ApplyDamage(static_cast<float>(bullet->GetDamage()));
 
-                if (bullet->IsDestroyedOnHit()) {
-                    bullet->SetDead();
-                    break;
-                }
+                bullet->SetDead();
+
+                break;
             }
         }
     }

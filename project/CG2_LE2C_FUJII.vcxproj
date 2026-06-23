@@ -268,6 +268,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
     <ClCompile Include="App\Game\NormalEnemy.cpp" />
+    <ClCompile Include="App\Game\PlayerBullet.cpp" />
+    <ClCompile Include="App\Game\NormalBullet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\Shaders\Object3D\Object3d.PS.hlsl">
@@ -375,6 +377,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
     <ClInclude Include="App\Scene\GameOverScene.h" />
     <ClInclude Include="App\Game\NormalEnemy.h" />
+    <ClInclude Include="App\Game\PlayerBullet.h" />
+    <ClInclude Include="App\Game\NormalBullet.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">

@@ -1,5 +1,7 @@
 #include "Player.h"
 #include "MissileBullet.h"
+
+#include"NormalBullet.h"
 #include "../../Engine/3D/ModelManager.h"
 #include "../../Engine/3D/Object3dManager.h"
 #include "../../Engine/Effect/EffectManager.h"
@@ -102,7 +104,7 @@ void Player::Draw()
     if (object_ == nullptr) {
         return;
     }
-    for (std::unique_ptr<Bullet>& bullet : bullets_) {
+    for (std::unique_ptr<PlayerBullet>& bullet : bullets_) {
 
         bullet->Draw();
     }
@@ -228,7 +230,7 @@ void Player::FireBullet()
     }
 
     float shotSpeed = bulletSpeed_;
-    std::unique_ptr<Bullet> bullet = CreateBullet(shotSpeed);
+    std::unique_ptr<PlayerBullet> bullet = CreateBullet(shotSpeed);
 
     bullet->Initialize(bulletModel_);
     bullet->SetCamera(camera_);
@@ -273,24 +275,29 @@ void Player::FireBullet()
     bulletVelocity.z = bulletDirection.z * shotSpeed + velocity_.z;
 
     bullet->SetVelocity(bulletVelocity);
-    bullet->OnFired();
+    
 
     bullets_.push_back(std::move(bullet));
 }
 
-std::unique_ptr<Bullet> Player::CreateBullet(float& shotSpeed)
+std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)
 {
     switch (currentWeapon_) {
-    case kWeaponMissileBullet:
-    {
-        std::unique_ptr<MissileBullet> missile = std::make_unique<MissileBullet>();
-        shotSpeed = missile->GetSpeed() / 60.0f;
-        return missile;
+
+    case kWeaponMissileBullet: {
+        std::unique_ptr<MissileBullet> missileBullet = std::make_unique<MissileBullet>();
+
+        shotSpeed = missileBullet->GetSpeed() / 60.0f;
+
+        return missileBullet;
     }
+
     case kWeaponNormalBullet:
-    default:
+    default: {
         shotSpeed = bulletSpeed_;
-        return std::make_unique<Bullet>();
+
+        return std::make_unique<NormalBullet>();
+    }
     }
 }
 
@@ -319,7 +326,7 @@ const char* Player::GetCurrentWeaponName() const
 // 弾更新
 void Player::UpdateBullets()
 {
-    for (std::unique_ptr<Bullet>& bullet : bullets_) {
+    for (std::unique_ptr<PlayerBullet>& bullet : bullets_) {
         bullet->Update();
     }
 }

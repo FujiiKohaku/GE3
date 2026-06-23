@@ -11,10 +11,10 @@ public:
     virtual ~BaseBullet() = default;
 
     // 初期化関数
-    void Initialize(Model* model);
+    virtual void Initialize(Model* model);
 
     // 更新関数
-    void Update();
+    virtual void Update();
     // 描画関数
     void Draw();
     bool IsAlive() const
@@ -38,6 +38,11 @@ public:
         return collisionRadius_;
     }
     void SetCamera(Camera* camera);
+    void SetTranslate(const Vector3& translate)
+    {
+        transform_.translate = translate;
+    }
+    virtual void SetDead();
 
 private:
     std::unique_ptr<Object3d> object_;
@@ -50,7 +55,6 @@ protected:
     Vector3 velocity_;
     // 移動処理
     virtual void Move();
-    virtual void SetDead();
     bool isAlive_ = true;
     float lifeTime_ = 0.0f;
     float maxLifeTime_ = 5.0f; // 最大寿命時間（秒）

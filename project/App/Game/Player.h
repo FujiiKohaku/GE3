@@ -7,7 +7,9 @@
 #include <memory>
 #include <vector>
 
-#include "Bullet.h"
+//#include "Bullet.h"
+
+#include "PlayerBullet.h"
 
 class Camera;
 class Input;
@@ -56,7 +58,7 @@ public:
         transform_.scale = scale;
     }
 
-    const std::vector<std::unique_ptr<Bullet>>& GetBullets() const
+    const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const
     {
         return bullets_;
     }
@@ -91,7 +93,7 @@ private:
     };
 
     std::unique_ptr<Object3d> object_;
-    std::vector<std::unique_ptr<Bullet>> bullets_;
+    std::vector<std::unique_ptr<PlayerBullet>> bullets_;
 
     Model* bulletModel_ = nullptr;
     Camera* camera_ = nullptr;
@@ -129,7 +131,7 @@ private:
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
     void FireBullet();
-    std::unique_ptr<Bullet> CreateBullet(float& shotSpeed);
+    std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
     void UpdateWeaponSwitch(Input* input);
     const char* GetCurrentWeaponName() const;
     void UpdateBullets();
