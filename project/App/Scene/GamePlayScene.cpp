@@ -34,7 +34,8 @@ void GamePlayScene::Initialize()
     rail_->AddPoint({ 10.0f, -5.0f, 200.0f });
     rail_->AddPoint({ -20.0f, 3.0f, 250.0f });
     rail_->AddPoint({ 0.0f, 0.0f, 300.0f });
-
+    rail_->AddPoint({ 0.0f, 5.0f, 750.0f });
+    rail_->AddPoint({ 0.0f, 10.0f, 2000.0f });
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
@@ -261,21 +262,21 @@ void GamePlayScene::Update()
     //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
 
-    railProgress_ += railSpeed_;
-    if (railProgress_ > 1.0f) {
-        railProgress_ = 1.0f;
+    railDistance_ += railSpeed_;
+    if (railDistance_ > rail_->GetTotalLength()) {
+        railDistance_ = rail_->GetTotalLength();
     }
 
-    Vector3 currentPosition = rail_->GetPosition(railProgress_);
-    Vector3 nextPosition = rail_->GetPosition(railProgress_ + 0.001f);
+    Vector3 currentPosition = rail_->GetPositionByDistance(railDistance_);
+    Vector3 nextPosition = rail_->GetPositionByDistance(railDistance_ + 5.0f);
     Vector3 forward = Normalize(nextPosition - currentPosition);
     if (forward.x == 0.0f && forward.y == 0.0f && forward.z == 0.0f) {
-        float previousProgress = railProgress_ - 0.001f;
-        if (previousProgress < 0.0f) {
-            previousProgress = 0.0f;
+        float previousDistance = railDistance_ - 5.0f;
+        if (previousDistance < 0.0f) {
+            previousDistance = 0.0f;
         }
 
-        Vector3 previousPosition = rail_->GetPosition(previousProgress);
+        Vector3 previousPosition = rail_->GetPositionByDistance(previousDistance);
         forward = Normalize(currentPosition - previousPosition);
     }
 
@@ -359,8 +360,8 @@ void GamePlayScene::Update()
         Vector3 cameraPosition = currentPosition - forward * 35.0f;
         cameraPosition.y += 6.0f;
 
-        float lookAheadDistance = 0.1f;
-        Vector3 lookAheadPosition = rail_->GetPosition(railProgress_ + lookAheadDistance);
+        float lookAheadDistance = 30.0f;
+        Vector3 lookAheadPosition = rail_->GetPositionByDistance(railDistance_ + lookAheadDistance);
 
         camera_->LookAt(cameraPosition, lookAheadPosition);
     }

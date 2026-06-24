@@ -27,5 +27,5 @@ private:
 
     int32_t fireInterval_ = 60;
 
-    float bulletSpeed_ = 0.3f;
+    float bulletSpeed_ = 0.8f;
 };

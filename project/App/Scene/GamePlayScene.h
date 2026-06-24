@@ -60,8 +60,8 @@ private:
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
     std::unique_ptr<Rail> rail_;
-    float railProgress_ = 0.0f;
-    float railSpeed_ = 0.001f;
+    float railDistance_ = 0.0f;
+    float railSpeed_ = 0.5f;
     // ------------------------------
     // カメラ / デバッグカメラコントローラー
     // ------------------------------
