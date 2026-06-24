@@ -1,5 +1,6 @@
 #include "Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include <cmath>
 Camera::Camera()
     : transform_({ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -20.0f } })
     , fovY_(0.45f)
@@ -31,6 +32,22 @@ void Camera::Update()
 void Camera::DebugUpdate()
 {
     DrawImGui();
+}
+
+void Camera::LookAt(const Vector3& eye, const Vector3& target)
+{
+    transform_.translate = eye;
+
+    Vector3 forward = Normalize(target - eye);
+    if (forward.x == 0.0f && forward.y == 0.0f && forward.z == 0.0f) {
+        return;
+    }
+
+    float horizontalLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+
+    transform_.rotate.x = -std::atan2(forward.y, horizontalLength);
+    transform_.rotate.y = -std::atan2(forward.x, forward.z);
+    transform_.rotate.z = 0.0f;
 }
 
 void Camera::DrawImGui()

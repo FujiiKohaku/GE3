@@ -35,6 +35,7 @@
 #include "Engine/3D/ModelManager.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/D3DResourceLeakChecker/D3DResourceLeakChecker.h"
+#include "Engine/Debug/DebugRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/debugcamera/DebugCamera.h"

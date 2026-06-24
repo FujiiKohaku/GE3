@@ -185,6 +185,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\debugcamera\DebugCameraController.cpp" />
     <ClCompile Include="Engine\math\Light.cpp" />
     <ClCompile Include="Engine\Light\LightManager.cpp" />
+    <ClCompile Include="Engine\Debug\DebugRenderer.cpp" />
+    <ClCompile Include="Engine\Rail\Rail.cpp" />
     <ClCompile Include="Engine\math\MathStruct.cpp" />
     <ClCompile Include="Engine\math\Object3DStruct.cpp" />
     <ClCompile Include="Engine\Animation\NodeAnimation.cpp" />
@@ -311,6 +313,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\debugcamera\DebugCameraController.h" />
     <ClInclude Include="Engine\math\Light.h" />
     <ClInclude Include="Engine\Light\LightManager.h" />
+    <ClInclude Include="Engine\Debug\DebugRenderer.h" />
+    <ClInclude Include="Engine\Rail\Rail.h" />
     <ClInclude Include="Engine\math\MathStruct.h" />
     <ClInclude Include="Engine\math\Object3DStruct.h" />
     <ClInclude Include="Engine\Animation\NodeAnimation.h" />
@@ -384,6 +388,21 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="resources\Shaders\Debug\DebugLine.GS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\Debug\DebugLine.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\Debug\DebugLine.VS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
     <None Include="resources\Shaders\Object3D\Object3d.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

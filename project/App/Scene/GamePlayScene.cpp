@@ -17,13 +17,23 @@
 
 #include "ClearScene.h"
 #include "GameOverScene.h"
-
+#include "Engine/Debug/DebugRenderer.h"
+#include <cmath>
 void GamePlayScene::Initialize()
 {
 
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
+    rail_ = std::make_unique<Rail>();
+    rail_->Initialize();
+    rail_->AddPoint({ 0.0f, 0.0f, 0.0f });
+    rail_->AddPoint({ 0.0f, 5.0f, 50.0f });
+    rail_->AddPoint({ 20.0f, 8.0f, 100.0f });
+    rail_->AddPoint({ 40.0f, 0.0f, 150.0f });
+    rail_->AddPoint({ 10.0f, -5.0f, 200.0f });
+    rail_->AddPoint({ -20.0f, 3.0f, 250.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 300.0f });
 
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
@@ -198,6 +208,8 @@ void GamePlayScene::Initialize()
 
 void GamePlayScene::Update()
 {
+    rail_->Update();
+
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Update();
     }
@@ -248,6 +260,44 @@ void GamePlayScene::Update()
     // }
     //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
+
+    railProgress_ += railSpeed_;
+    if (railProgress_ > 1.0f) {
+        railProgress_ = 1.0f;
+    }
+
+    Vector3 currentPosition = rail_->GetPosition(railProgress_);
+    Vector3 nextPosition = rail_->GetPosition(railProgress_ + 0.001f);
+    Vector3 forward = Normalize(nextPosition - currentPosition);
+    if (forward.x == 0.0f && forward.y == 0.0f && forward.z == 0.0f) {
+        float previousProgress = railProgress_ - 0.001f;
+        if (previousProgress < 0.0f) {
+            previousProgress = 0.0f;
+        }
+
+        Vector3 previousPosition = rail_->GetPosition(previousProgress);
+        forward = Normalize(currentPosition - previousPosition);
+    }
+
+    if (forward.x != 0.0f || forward.y != 0.0f || forward.z != 0.0f) {
+        float horizontalLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+
+        Vector3 playerRotate {};
+        playerRotate.x = -std::atan2(forward.y, horizontalLength);
+        playerRotate.y = -std::atan2(forward.x, forward.z);
+        playerRotate.z = 0.0f;
+
+        player_->SetRotate(playerRotate);
+    }
+
+    player_->SetTranslate(currentPosition);
+
+    DebugRenderer::GetInstance()->AddLine(
+        currentPosition,
+        currentPosition + forward * 20.0f,
+        { 0.0f, 1.0f, 0.0f, 1.0f },
+        3.0f);
+
     const bool isPlayerBoosting = player_->IsBoosting();
 
     Vector3 boostLinePosition = player_->GetTranslate();
@@ -302,25 +352,22 @@ void GamePlayScene::Update()
     EffectManager::GetInstance()->Update();
 
     sceneObjectManager_->Update();
-    camera_->Update();
 
-    // デバッグカメラが有効でないときのみ、プレイヤーの位置にカメラを追従させる
+    // デバッグカメラが有効でないときのみ、レール位置を基準にカメラを追従させる
     if (!debugCameraController_->GetDebugMode()) {
-        // プレイヤーの位置にカメラを追従させる
-        Vector3 playerPosition = player_->GetTranslate();
+        // 今回は注視点や回転を触らず、位置だけをレールから少し後ろへずらす。
+        Vector3 cameraPosition = currentPosition - forward * 35.0f;
+        cameraPosition.y += 6.0f;
 
-        Vector3 cameraPosition;
-        cameraPosition.x = playerPosition.x * followX_ + cameraOffset_.x;
+        float lookAheadDistance = 0.1f;
+        Vector3 lookAheadPosition = rail_->GetPosition(railProgress_ + lookAheadDistance);
 
-        cameraPosition.y = playerPosition.y * followY_ + cameraOffset_.y;
-
-        cameraPosition.z = playerPosition.z + cameraOffset_.z;
-
-        camera_->SetTranslate(cameraPosition);
+        camera_->LookAt(cameraPosition, lookAheadPosition);
     }
 
     // デバッグカメラの更新
     debugCameraController_->Update();
+    camera_->Update();
 
     // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
@@ -513,6 +560,9 @@ void GamePlayScene::Draw3D()
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
+
+    rail_->DrawDebug();
+
     //----------------------
     // スキニング
     //----------------------

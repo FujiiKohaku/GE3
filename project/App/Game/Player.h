@@ -46,6 +46,10 @@ public:
     void SetTranslate(const Vector3& translate)
     {
         transform_.translate = translate;
+        if (object_ != nullptr) {
+            ApplyTransform();
+            object_->Update();
+        }
     }
 
     void SetRotate(const Vector3& rotate)

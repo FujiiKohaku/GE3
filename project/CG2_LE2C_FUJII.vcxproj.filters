@@ -49,6 +49,12 @@
     <Filter Include="3D">
       <UniqueIdentifier>{8f3c17a0-50ff-4cbe-819a-662485ffc2a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Debug">
+      <UniqueIdentifier>{fcb1a365-fc01-40ad-833f-517db871dc2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Rail">
+      <UniqueIdentifier>{2bfb0e7d-4e0e-4d6e-bff5-985f4f9e6044}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App\main.cpp">
@@ -146,6 +152,12 @@
     </ClCompile>
     <ClCompile Include="Engine\Light\LightManager.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Debug\DebugRenderer.cpp">
+      <Filter>Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Rail\Rail.cpp">
+      <Filter>Rail</Filter>
     </ClCompile>
     <ClCompile Include="Engine\math\Light.cpp">
       <Filter>ソース ファイル</Filter>
@@ -408,6 +420,12 @@
     <ClInclude Include="Engine\Light\LightManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Debug\DebugRenderer.h">
+      <Filter>Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Rail\Rail.h">
+      <Filter>Rail</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\math\Light.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -575,6 +593,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="resources\Shaders\Debug\DebugLine.GS.hlsl" />
+    <None Include="resources\Shaders\Debug\DebugLine.PS.hlsl" />
+    <None Include="resources\Shaders\Debug\DebugLine.VS.hlsl" />
     <None Include="resources\Shaders\Object3D\Object3d.hlsli" />
   </ItemGroup>
 </Project>

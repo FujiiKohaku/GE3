@@ -16,6 +16,7 @@
 #include "Engine/3D/Object3dManager.h"
 
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/Rail/Rail.h"
 
 #include "Engine/audio/SoundManager.h"
 
@@ -58,6 +59,9 @@ private:
 
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
+    std::unique_ptr<Rail> rail_;
+    float railProgress_ = 0.0f;
+    float railSpeed_ = 0.001f;
     // ------------------------------
     // カメラ / デバッグカメラコントローラー
     // ------------------------------

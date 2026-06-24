@@ -24,6 +24,7 @@ public:
     void SetAspectRatio(float aspectRatio) { aspectRatio_ = aspectRatio; }
     void SetNearClip(float nearClip) { nearClip_ = nearClip; }
     void SetFarClip(float farClip) { farClip_ = farClip; }
+    void LookAt(const Vector3& eye, const Vector3& target);
     Vector2 WorldToScreen (const Vector3& worldPosition) const;
     // ===============================
     // getter（外部から値を取得）

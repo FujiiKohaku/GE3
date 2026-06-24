@@ -52,6 +52,10 @@ void Game::Initialize()
 
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     CheckTime("LightManager", prevTime);
+
+    DebugRenderer::GetInstance()->Initialize();
+    CheckTime("DebugRenderer", prevTime);
+
     modelCommon_.Initialize(DirectXCommon::GetInstance());
 
     Input::GetInstance()->Initialize(WinApp::GetInstance());
@@ -113,6 +117,7 @@ if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
     }
 
     SceneManager::GetInstance()->Update();
+    DebugRenderer::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
 
     ImGuiManager::GetInstance()->End();
@@ -124,6 +129,7 @@ void Game::Draw()
 
     offscreenRenderer_->PreDraw();
     SceneManager::GetInstance()->Draw3D();
+    DebugRenderer::GetInstance()->Draw();
     offscreenRenderer_->PostDraw();
 
    // ポストエフェクトをかける
@@ -151,6 +157,7 @@ void Game::Finalize()
     ImGuiManager::GetInstance()->Finalize();
 
     SkinningObject3dManager::GetInstance()->Finalize();
+    DebugRenderer::GetInstance()->Finalize();
     Object3dManager::GetInstance()->Finalize();
     SpriteManager::GetInstance()->Finalize();
     ModelManager::GetInstance()->Finalize();
