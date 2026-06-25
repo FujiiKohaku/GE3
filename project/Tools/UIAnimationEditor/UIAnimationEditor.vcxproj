@@ -128,7 +128,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AIAnimationWindow.cpp" />
+    <ClCompile Include="AnimationBuilder.cpp" />
+    <ClCompile Include="AnimationCommandParser.cpp" />
     <ClCompile Include="AnimationData.cpp" />
+    <ClCompile Include="AnimationPreview.cpp" />
+    <ClCompile Include="AnimationSerializer.cpp" />
+    <ClCompile Include="GeminiClient.cpp" />
     <ClCompile Include="StandaloneD3D12.cpp" />
     <ClCompile Include="TextureLoader.cpp" />
     <ClCompile Include="UIAnimationEditorApp.cpp" />
@@ -141,7 +147,14 @@
     <ClCompile Include="..\..\externals\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AIAnimationWindow.h" />
+    <ClInclude Include="AnimationBuilder.h" />
+    <ClInclude Include="AnimationCommandParser.h" />
     <ClInclude Include="AnimationData.h" />
+    <ClInclude Include="AnimationPreview.h" />
+    <ClInclude Include="AnimationSerializer.h" />
+    <ClInclude Include="GeminiClient.h" />
+    <ClInclude Include="IAIClient.h" />
     <ClInclude Include="StandaloneD3D12.h" />
     <ClInclude Include="TextureLoader.h" />
     <ClInclude Include="UIAnimationEditorApp.h" />

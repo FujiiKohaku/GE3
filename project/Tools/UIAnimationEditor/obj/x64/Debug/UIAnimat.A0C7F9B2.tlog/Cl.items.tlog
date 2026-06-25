@@ -1,0 +1,17 @@
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\AIAnimationWindow.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\AIAnimationWindow.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\AnimationBuilder.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\AnimationBuilder.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\AnimationCommandParser.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\AnimationCommandParser.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\AnimationData.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\AnimationData.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\AnimationPreview.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\AnimationPreview.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\AnimationSerializer.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\AnimationSerializer.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\GeminiClient.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\GeminiClient.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\StandaloneD3D12.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\StandaloneD3D12.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\TextureLoader.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\TextureLoader.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\UIAnimationEditorApp.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\UIAnimationEditorApp.obj
+C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\main.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\main.obj
+C:\Projects\KohakuEngine\project\externals\imgui\imgui.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\imgui.obj
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_draw.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\imgui_draw.obj
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_dx12.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\imgui_impl_dx12.obj
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_win32.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\imgui_impl_win32.obj
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_tables.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\imgui_tables.obj
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_widgets.cpp;C:\Projects\KohakuEngine\project\Tools\UIAnimationEditor\obj\x64\Debug\imgui_widgets.obj

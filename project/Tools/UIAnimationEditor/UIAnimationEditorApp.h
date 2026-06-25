@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AIAnimationWindow.h"
 #include "AnimationData.h"
 #include "StandaloneD3D12.h"
 #include <string>
@@ -76,6 +77,7 @@ private:
     UIEditorAnimationClip clip_;
     UIEditorObjectState previewState_;
     UIEditorTextureResource texture_;
+    AIAnimationWindow aiAnimationWindow_;
 
     std::string projectFilePath_;
     std::string exportFolderPath_;

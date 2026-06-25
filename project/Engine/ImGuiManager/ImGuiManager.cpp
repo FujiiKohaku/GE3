@@ -1,4 +1,62 @@
 #include "ImGuiManager.h"
+
+#ifdef USE_IMGUI
+#include "Engine/Logger/Logger.h"
+#include <filesystem>
+#include <string>
+
+namespace {
+constexpr float kImGuiFontSize = 19.0f;
+const char* kNotoSansJpFontPaths[] = {
+    "Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "project/Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../../../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../../project/Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+};
+
+void LogNotoSansJpMissing()
+{
+    std::string message = "Noto Sans JP font was not found. Searched paths:";
+
+    for (const char* fontPath : kNotoSansJpFontPaths) {
+        message += " ";
+        message += fontPath;
+    }
+
+    Logger::Error(message);
+}
+
+void RegisterNotoSansJpFont(ImGuiIO& io)
+{
+    for (const char* fontPath : kNotoSansJpFontPaths) {
+        if (!std::filesystem::exists(fontPath)) {
+            continue;
+        }
+
+        ImFont* font = io.Fonts->AddFontFromFileTTF(
+            fontPath,
+            kImGuiFontSize,
+            nullptr,
+            io.Fonts->GetGlyphRangesJapanese());
+
+        if (font != nullptr) {
+            io.FontDefault = font;
+            Logger::Log(std::string("Loaded ImGui font: ") + fontPath);
+            return;
+        }
+
+        Logger::Error(std::string("Failed to load ImGui font file: ") + fontPath);
+        return;
+    }
+
+    LogNotoSansJpMissing();
+}
+}
+#endif
+
 std::unique_ptr<ImGuiManager> ImGuiManager::instance_;
 
 ImGuiManager* ImGuiManager::GetInstance()
@@ -34,12 +92,15 @@ void ImGuiManager::Initialize([[maybe_unused]] WinApp* winApp, [[maybe_unused]] 
 
     // ImGuiコンテキスト生成
     ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
 
     // Win32側の初期化
     ImGui_ImplWin32_Init(winApp_->GetHwnd());
 
     // スタイル（好きなやつ）
     ImGui::StyleColorsClassic();
+
+    RegisterNotoSansJpFont(io);
 
     // DirectX12側の初期化
     ImGui_ImplDX12_Init(

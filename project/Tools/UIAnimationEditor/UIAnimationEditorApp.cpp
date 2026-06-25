@@ -456,6 +456,17 @@ void UIAnimationEditorApp::DrawInspectorPanel()
         ClampCurrentFrame();
     }
 
+    if (aiAnimationWindow_.Draw(&clip_, &statusMessage_)) {
+        currentFrame_ = 0;
+        playbackFrame_ = 0.0f;
+        selectedFrame_ = -1;
+        isPlaying_ = false;
+        RefreshNameBuffer();
+        EvaluatePreviewFromTimeline();
+    }
+
+    ImGui::Separator();
+
     if (ImGui::DragFloat2("Position", &previewState_.position.x, 1.0f)) {
         if (isAutoKeyEnabled_) {
             AddKeyForProperty(UIEditorProperty::PositionX, currentFrame_, previewState_.position.x);

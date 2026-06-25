@@ -5,13 +5,72 @@
 #include "externals/imgui/imgui_impl_win32.h"
 #include <Windows.h>
 #include <chrono>
+#include <filesystem>
 #include <shellapi.h>
+#include <string>
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 static UIAnimationEditorApp* g_editorApp = nullptr;
 static UIEditorD3D12* g_d3d12 = nullptr;
 static bool g_isWindowMinimized = false;
+
+namespace {
+constexpr float kImGuiFontSize = 19.0f;
+const char* kNotoSansJpFontPaths[] = {
+    "Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "project/Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../../../Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+    "../../../project/Noto_Sans_JP/static/NotoSansJP-Regular.ttf",
+};
+
+void LogEditorMessage(const std::string& message)
+{
+    std::string line = message + "\n";
+    OutputDebugStringA(line.c_str());
+}
+
+void LogNotoSansJpMissing()
+{
+    std::string message = "Noto Sans JP font was not found. Searched paths:";
+
+    for (const char* fontPath : kNotoSansJpFontPaths) {
+        message += " ";
+        message += fontPath;
+    }
+
+    LogEditorMessage(message);
+}
+
+void RegisterNotoSansJpFont(ImGuiIO& io)
+{
+    for (const char* fontPath : kNotoSansJpFontPaths) {
+        if (!std::filesystem::exists(fontPath)) {
+            continue;
+        }
+
+        ImFont* font = io.Fonts->AddFontFromFileTTF(
+            fontPath,
+            kImGuiFontSize,
+            nullptr,
+            io.Fonts->GetGlyphRangesJapanese());
+
+        if (font != nullptr) {
+            io.FontDefault = font;
+            LogEditorMessage(std::string("Loaded ImGui font: ") + fontPath);
+            return;
+        }
+
+        LogEditorMessage(std::string("Failed to load ImGui font file: ") + fontPath);
+        return;
+    }
+
+    LogNotoSansJpMissing();
+}
+}
 
 LRESULT CALLBACK UIAnimationEditorWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -112,6 +171,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui::StyleColorsDark();
+    RegisterNotoSansJpFont(io);
 
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX12_Init(

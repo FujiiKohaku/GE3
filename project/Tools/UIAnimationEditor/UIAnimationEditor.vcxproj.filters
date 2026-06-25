@@ -14,7 +14,25 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AIAnimationWindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationBuilder.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationCommandParser.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="AnimationData.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationPreview.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimationSerializer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="GeminiClient.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="StandaloneD3D12.cpp">
@@ -49,7 +67,28 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AIAnimationWindow.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationBuilder.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationCommandParser.h">
+      <Filter>Header</Filter>
+    </ClInclude>
     <ClInclude Include="AnimationData.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationPreview.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationSerializer.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="GeminiClient.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="IAIClient.h">
       <Filter>Header</Filter>
     </ClInclude>
     <ClInclude Include="StandaloneD3D12.h">
