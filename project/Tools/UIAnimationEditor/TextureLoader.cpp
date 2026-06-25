@@ -5,11 +5,7 @@
 
 #pragma comment(lib, "windowscodecs.lib")
 
-bool UIEditorTextureLoader::LoadPngRGBA(
-    const std::wstring& filePath,
-    std::vector<unsigned char>* pixels,
-    int* width,
-    int* height)
+bool UIEditorTextureLoader::LoadPngRGBA(const std::wstring& filePath,std::vector<unsigned char>* pixels,int* width,int* height)
 {
     if (pixels == nullptr) {
         return false;
@@ -22,23 +18,14 @@ bool UIEditorTextureLoader::LoadPngRGBA(
     }
 
     Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
-    HRESULT result = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        nullptr,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&factory));
+    HRESULT result = CoCreateInstance(CLSID_WICImagingFactory,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(&factory));
 
     if (FAILED(result)) {
         return false;
     }
 
     Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
-    result = factory->CreateDecoderFromFilename(
-        filePath.c_str(),
-        nullptr,
-        GENERIC_READ,
-        WICDecodeMetadataCacheOnLoad,
-        &decoder);
+    result = factory->CreateDecoderFromFilename(filePath.c_str(),nullptr,GENERIC_READ,WICDecodeMetadataCacheOnLoad,&decoder);
 
     if (FAILED(result)) {
         return false;
@@ -58,13 +45,7 @@ bool UIEditorTextureLoader::LoadPngRGBA(
         return false;
     }
 
-    result = converter->Initialize(
-        frameDecode.Get(),
-        GUID_WICPixelFormat32bppRGBA,
-        WICBitmapDitherTypeNone,
-        nullptr,
-        0.0f,
-        WICBitmapPaletteTypeCustom);
+    result = converter->Initialize(frameDecode.Get(),GUID_WICPixelFormat32bppRGBA,WICBitmapDitherTypeNone,nullptr,0.0f,WICBitmapPaletteTypeCustom);
 
     if (FAILED(result)) {
         return false;
