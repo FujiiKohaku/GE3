@@ -7,11 +7,11 @@
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
-UIEditorD3D12::UIEditorD3D12()
+UIEditorD3D12::UIEditorD3D12() // コンストラクタ
 {
 }
 
-UIEditorD3D12::~UIEditorD3D12()
+UIEditorD3D12::~UIEditorD3D12() // デストラクタ
 {
     Shutdown();
 }
@@ -43,9 +43,9 @@ bool UIEditorD3D12::Initialize(HWND hwnd, int width, int height)
     Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 
     for (UINT adapterIndex = 0;
-         dxgiFactory_->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter)) != DXGI_ERROR_NOT_FOUND;
-         ++adapterIndex) {
-        DXGI_ADAPTER_DESC3 adapterDescription = {};
+        dxgiFactory_->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter)) != DXGI_ERROR_NOT_FOUND;
+        ++adapterIndex) {
+        DXGI_ADAPTER_DESC3 adapterDescription = { };
         adapter->GetDesc3(&adapterDescription);
 
         if ((adapterDescription.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0) {
@@ -65,7 +65,7 @@ bool UIEditorD3D12::Initialize(HWND hwnd, int width, int height)
         return false;
     }
 
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+    D3D12_COMMAND_QUEUE_DESC queueDesc = { };
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
     result = device_->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&commandQueue_));
@@ -74,7 +74,7 @@ bool UIEditorD3D12::Initialize(HWND hwnd, int width, int height)
         return false;
     }
 
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { };
     swapChainDesc.BufferCount = kFrameCount;
     swapChainDesc.Width = static_cast<UINT>(width_);
     swapChainDesc.Height = static_cast<UINT>(height_);
@@ -93,7 +93,7 @@ bool UIEditorD3D12::Initialize(HWND hwnd, int width, int height)
     swapChain.As(&swapChain_);
     currentBackBufferIndex_ = static_cast<int>(swapChain_->GetCurrentBackBufferIndex());
 
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = { };
     rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtvHeapDesc.NumDescriptors = kFrameCount;
 
@@ -103,7 +103,7 @@ bool UIEditorD3D12::Initialize(HWND hwnd, int width, int height)
         return false;
     }
 
-    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = { };
     srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     srvHeapDesc.NumDescriptors = kSrvDescriptorCount;
     srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -261,7 +261,7 @@ void UIEditorD3D12::BeginFrame()
     commandAllocators_[currentBackBufferIndex_]->Reset();
     commandList_->Reset(commandAllocators_[currentBackBufferIndex_].Get(), nullptr);
 
-    D3D12_VIEWPORT viewport = {};
+    D3D12_VIEWPORT viewport = { };
     viewport.TopLeftX = 0.0f;
     viewport.TopLeftY = 0.0f;
     viewport.Width = static_cast<float>(width_);
@@ -269,7 +269,7 @@ void UIEditorD3D12::BeginFrame()
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
 
-    D3D12_RECT scissorRect = {};
+    D3D12_RECT scissorRect = { };
     scissorRect.left = 0;
     scissorRect.top = 0;
     scissorRect.right = static_cast<LONG>(width_);
@@ -278,7 +278,7 @@ void UIEditorD3D12::BeginFrame()
     commandList_->RSSetViewports(1, &viewport);
     commandList_->RSSetScissorRects(1, &scissorRect);
 
-    D3D12_RESOURCE_BARRIER barrier = {};
+    D3D12_RESOURCE_BARRIER barrier = { };
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = backBuffers_[currentBackBufferIndex_].Get();
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
@@ -299,7 +299,7 @@ void UIEditorD3D12::EndFrame()
     commandList_->SetDescriptorHeaps(1, descriptorHeaps);
     ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList_.Get());
 
-    D3D12_RESOURCE_BARRIER barrier = {};
+    D3D12_RESOURCE_BARRIER barrier = { };
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = backBuffers_[currentBackBufferIndex_].Get();
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -316,18 +316,21 @@ void UIEditorD3D12::EndFrame()
     WaitForGpu();
 }
 
-void UIEditorD3D12::WaitForGpu()
+// GPUが追いつくまでCPUを待たせることで安全
+void UIEditorD3D12::WaitForGpu() // CPUはGPUよりも早く進むことがあるので、GPUの処理が終わるまで待つ関数
 {
     if (commandQueue_ == nullptr || fence_ == nullptr || fenceEvent_ == nullptr) {
         return;
     }
 
-    fenceValue_++;
-    commandQueue_->Signal(fence_.Get(), fenceValue_);
+    fenceValue_++; // フェンスの値をインクリメントして、GPUが値を超えたか確認する。 fenceValue_はCPU側の値で、GPU側の値はfence_->GetCompletedValue()で取得できる。
 
-    if (fence_->GetCompletedValue() < fenceValue_) {
-        fence_->SetEventOnCompletion(fenceValue_, fenceEvent_);
-        WaitForSingleObject(fenceEvent_, INFINITE);
+    commandQueue_->Signal(fence_.Get(), fenceValue_); // fenceValue_をGPUに送信して、GPUがfenceValue_に到達したら、fence_->GetCompletedValue()がfenceValue_と同じ値になる。
+
+    if (fence_->GetCompletedValue() < fenceValue_) { // ここでCPU側のfenceValue_とGPU側のfenceValue_を比較して、GPUがまだ処理中か確認する。
+
+        fence_->SetEventOnCompletion(fenceValue_, fenceEvent_); // GPUがfenceValue_に到達したら、fenceEvent_をセットするように設定する。
+        WaitForSingleObject(fenceEvent_, INFINITE); // GPUがfenceValue_に到達するまで待つ。
     }
 }
 
@@ -382,7 +385,7 @@ bool UIEditorD3D12::CreateTextureFromRGBA(
         return false;
     }
 
-    D3D12_RESOURCE_DESC textureDesc = {};
+    D3D12_RESOURCE_DESC textureDesc = { };
     textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     textureDesc.Alignment = 0;
     textureDesc.Width = static_cast<UINT64>(width);
@@ -424,7 +427,7 @@ bool UIEditorD3D12::CreateTextureFromRGBA(
         return false;
     }
 
-    D3D12_SUBRESOURCE_DATA subresourceData = {};
+    D3D12_SUBRESOURCE_DATA subresourceData = { };
     subresourceData.pData = pixels;
     subresourceData.RowPitch = static_cast<LONG_PTR>(width * 4);
     subresourceData.SlicePitch = static_cast<LONG_PTR>(width * height * 4);
@@ -434,7 +437,7 @@ bool UIEditorD3D12::CreateTextureFromRGBA(
 
     UpdateSubresources(uploadCommandList_.Get(), textureResource->texture.Get(), textureResource->uploadBuffer.Get(), 0, 0, 1, &subresourceData);
 
-    D3D12_RESOURCE_BARRIER barrier = {};
+    D3D12_RESOURCE_BARRIER barrier = { };
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = textureResource->texture.Get();
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -454,7 +457,7 @@ bool UIEditorD3D12::CreateTextureFromRGBA(
         return false;
     }
 
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = { };
     srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

@@ -9,11 +9,12 @@
 #include <shellapi.h>
 #include <string>
 
+// ImGuiの入力処理関数を宣言
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-static UIAnimationEditorApp* g_editorApp = nullptr;
-static UIEditorD3D12* g_d3d12 = nullptr;
-static bool g_isWindowMinimized = false;
+static UIAnimationEditorApp* g_editorApp = nullptr; // グローバル変数としてUIAnimationEditorAppのインスタンスを保持(司令塔の役割)
+static UIEditorD3D12* g_d3d12 = nullptr; // グローバル変数としてUIEditorD3D12のインスタンスを保持
+static bool g_isWindowMinimized = false; // グローバル変数としてウィンドウが最小化されているかどうかを保持
 
 namespace {
 constexpr float kImGuiFontSize = 19.0f;
@@ -80,7 +81,7 @@ LRESULT CALLBACK UIAnimationEditorWndProc(HWND hwnd, UINT message, WPARAM wParam
 
     if (message == WM_DROPFILES) {
         HDROP dropHandle = reinterpret_cast<HDROP>(wParam);
-        wchar_t filePath[MAX_PATH] = {};
+        wchar_t filePath[MAX_PATH] = { };
 
         if (DragQueryFileW(dropHandle, 0, filePath, MAX_PATH) > 0) {
             if (g_editorApp != nullptr) {
@@ -123,7 +124,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
 
     const wchar_t* className = L"UIAnimationEditorWindow";
 
-    WNDCLASSEXW windowClass = {};
+    WNDCLASSEXW windowClass = { };
     windowClass.cbSize = sizeof(windowClass);
     windowClass.style = CS_CLASSDC;
     windowClass.lpfnWndProc = UIAnimationEditorWndProc;
@@ -154,7 +155,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
     }
 
     UIEditorD3D12 d3d12;
-    RECT clientRect = {};
+    RECT clientRect = { };
     GetClientRect(hwnd, &clientRect);
     int clientWidth = clientRect.right - clientRect.left;
     int clientHeight = clientRect.bottom - clientRect.top;
@@ -191,7 +192,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int showCommand)
     UpdateWindow(hwnd);
 
     bool isRunning = true;
-    MSG message = {};
+    MSG message = { };
     std::chrono::steady_clock::time_point previousTime = std::chrono::steady_clock::now();
 
     while (isRunning) {
