@@ -259,15 +259,19 @@ void GamePlayScene::Update()
     // if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
     //     SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
     // }
+    float nextRailDistance = railDistance_ + railSpeed_;
+    if (nextRailDistance > rail_->GetTotalLength()) {
+        nextRailDistance = rail_->GetTotalLength();
+    }
+
+    Vector3 currentPosition = rail_->GetPositionByDistance(nextRailDistance);
+    player_->SetRailBasePosition(currentPosition);
+
     //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
 
-    railDistance_ += railSpeed_;
-    if (railDistance_ > rail_->GetTotalLength()) {
-        railDistance_ = rail_->GetTotalLength();
-    }
+    railDistance_ = nextRailDistance;
 
-    Vector3 currentPosition = rail_->GetPositionByDistance(railDistance_);
     Vector3 nextPosition = rail_->GetPositionByDistance(railDistance_ + 5.0f);
     Vector3 forward = Normalize(nextPosition - currentPosition);
     if (forward.x == 0.0f && forward.y == 0.0f && forward.z == 0.0f) {
@@ -291,7 +295,7 @@ void GamePlayScene::Update()
         player_->SetRotate(playerRotate);
     }
 
-    player_->SetTranslate(currentPosition);
+    player_->SetTranslate(currentPosition + player_->GetRailOffset());
 
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,

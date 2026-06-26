@@ -32,6 +32,8 @@ void Player::Initialize(Model* model)
     transform_.scale = { 1.0f, 1.0f, 1.0f };
     transform_.rotate = { 0.0f, 0.0f, 0.0f };
     transform_.translate = { 0.0f, -2.0f, 0.0f };
+    railBasePosition_ = transform_.translate;
+    railOffset_ = { 0.0f, 0.0f, 0.0f };
     aimScreenPosition_.x = WinApp::GetInstance()->kClientWidth / 2.0f;
     aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight / 2.0f;
     object_->SetScale(transform_.scale);
@@ -71,7 +73,6 @@ void Player::Update()
         velocity_.z = boostMaxSpeed_;
         moveSpeed_ = boostAcceleration_;
     }
-    transform_.translate.z += velocity_.z;
     UpdateWeaponSwitch(input);
     if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
         ++missileFireCooldownFrames_;
@@ -81,8 +82,10 @@ void Player::Update()
         UpdateMouseAim();
         UpdateKeyboardMove(input);
         ClampAimScreenPosition();
-        ClampPlayerScreenPosition();
     }
+
+    transform_.translate = railBasePosition_ + railOffset_;
+
     if (input->IsMouseTrigger(0)) {
         FireBullet();
     }
@@ -180,35 +183,38 @@ void Player::UpdateMouseAim()
     aimScreenPosition_.y = static_cast<float>(mousePosition.y);
 }
 
-void Player::ClampPlayerScreenPosition()
+bool Player::CanApplyRailOffset(const Vector3& railOffset) const
 {
     if (camera_ == nullptr) {
-        return;
+        return true;
     }
 
-    Vector2 screenPosition = camera_->WorldToScreen(transform_.translate);
+    Vector3 playerPosition = railBasePosition_ + railOffset;
+    Vector2 screenPosition = camera_->WorldToScreen(playerPosition);
 
-    float leftLimit = 100.0f;
-    float rightLimit = WinApp::GetInstance()->kClientWidth - 100.0f;
+    float leftLimit = playerClampMarginX_;
+    float rightLimit = static_cast<float>(WinApp::GetInstance()->kClientWidth) - playerClampMarginX_;
 
-    float topLimit = 100.0f;
-    float bottomLimit = WinApp::GetInstance()->kClientHeight - 100.0f;
+    float topLimit = playerClampMarginY_;
+    float bottomLimit = static_cast<float>(WinApp::GetInstance()->kClientHeight) - playerClampMarginY_;
 
     if (screenPosition.x < leftLimit) {
-        transform_.translate.x += moveSpeed_;
+        return false;
     }
 
     if (screenPosition.x > rightLimit) {
-        transform_.translate.x -= moveSpeed_;
+        return false;
     }
 
     if (screenPosition.y < topLimit) {
-        transform_.translate.y -= moveSpeed_;
+        return false;
     }
 
     if (screenPosition.y > bottomLimit) {
-        transform_.translate.y += moveSpeed_;
+        return false;
     }
+
+    return true;
 }
 
 // 弾を発射する関数
@@ -353,20 +359,28 @@ void Player::ApplyTransform()
 
 void Player::UpdateKeyboardMove(Input* input)
 {
+    Vector3 nextRailOffset = railOffset_;
+
     if (input->IsKeyPressed(DIK_A)) {
-        transform_.translate.x -= moveSpeed_;
+        nextRailOffset.x -= moveSpeed_;
     }
 
     if (input->IsKeyPressed(DIK_D)) {
-        transform_.translate.x += moveSpeed_;
+        nextRailOffset.x += moveSpeed_;
     }
 
     if (input->IsKeyPressed(DIK_W)) {
-        transform_.translate.y += moveSpeed_;
+        nextRailOffset.y += moveSpeed_;
     }
 
     if (input->IsKeyPressed(DIK_S)) {
-        transform_.translate.y -= moveSpeed_;
+        nextRailOffset.y -= moveSpeed_;
+    }
+
+    nextRailOffset.z = 0.0f;
+
+    if (CanApplyRailOffset(nextRailOffset)) {
+        railOffset_ = nextRailOffset;
     }
 }
 #ifdef _DEBUG
@@ -380,6 +394,14 @@ void Player::DrawImGui()
     ImGui::Text("X : %.2f", transform_.translate.x);
     ImGui::Text("Y : %.2f", transform_.translate.y);
     ImGui::Text("Z : %.2f", transform_.translate.z);
+
+    ImGui::Separator();
+
+    ImGui::Text("Rail Offset");
+
+    ImGui::Text("X : %.2f", railOffset_.x);
+    ImGui::Text("Y : %.2f", railOffset_.y);
+    ImGui::Text("Z : %.2f", railOffset_.z);
 
     ImGui::Separator();
 
@@ -398,25 +420,15 @@ void Player::DrawImGui()
     ImGui::Text("Invincible : %d", invincibleTimer_);
     ImGui::Separator();
 
-    ImGui::Text("Move Limit");
+    ImGui::Text("Screen Clamp Margin");
 
     ImGui::DragFloat(
-        "MoveLimitX",
-        &moveLimitX_,
-        0.1f);
-
-    ImGui::DragFloat(
-        "MoveLimitY",
-        &moveLimitY_,
-        0.1f);
-
-    ImGui::DragFloat(
-        "ClampMarginX",
+        "ScreenMarginX",
         &playerClampMarginX_,
         0.1f);
 
     ImGui::DragFloat(
-        "ClampMarginY",
+        "ScreenMarginY",
         &playerClampMarginY_,
         0.1f);
     ImGui::End();

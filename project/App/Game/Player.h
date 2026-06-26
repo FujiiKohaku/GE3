@@ -43,6 +43,11 @@ public:
         return aimScreenPosition_;
     }
 
+    const Vector3& GetRailOffset() const
+    {
+        return railOffset_;
+    }
+
     void SetTranslate(const Vector3& translate)
     {
         transform_.translate = translate;
@@ -60,6 +65,11 @@ public:
     void SetScale(const Vector3& scale)
     {
         transform_.scale = scale;
+    }
+
+    void SetRailBasePosition(const Vector3& railBasePosition)
+    {
+        railBasePosition_ = railBasePosition;
     }
 
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const
@@ -119,11 +129,11 @@ private:
     float normalAcceleration_ = 0.2f;
     float boostAcceleration_ = 0.35f;
     float moveSpeed_ = normalAcceleration_;
-    Vector3 velocity_ = {0.0f, 0.0f, 0.5f};
-    float moveLimitX_ = 22.0f;
-    float moveLimitY_ = 9.0f;
-    float playerClampMarginX_ = 6.0f;
-    float playerClampMarginY_ = 1.0f;
+    Vector3 velocity_ = { 0.0f, 0.0f, 0.5f };
+    Vector3 railBasePosition_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
+    float playerClampMarginX_ = 100.0f;
+    float playerClampMarginY_ = 100.0f;
 
     float bulletSpawnOffsetY_ = 0.3f;
     float bulletSpawnOffsetZ_ = 4.0f;
@@ -145,5 +155,5 @@ private:
     void UpdateKeyboardMove(Input* input);
     void UpdateMouseAim();
     void ClampAimScreenPosition();
-    void ClampPlayerScreenPosition();
+    bool CanApplyRailOffset(const Vector3& railOffset) const;
 };
