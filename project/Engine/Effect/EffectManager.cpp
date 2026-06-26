@@ -13,7 +13,7 @@
 std::unique_ptr<EffectManager> EffectManager::instance_ = nullptr;
 
 namespace {
-constexpr const char* kEffectRoot = "resources/Effects";　
+constexpr const char* kEffectRoot = "resources/Effects";
 
 std::filesystem::path ResolveEffectAssetPath(
     const std::filesystem::path& effectDirectory,
