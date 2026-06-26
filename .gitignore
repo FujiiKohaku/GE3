@@ -315,6 +315,7 @@ MigrationBackup/
 .ionide/
 DirectXGame/DirectXGame.exe
 project/imgui.ini
+project/Tools/UIAnimationEditor/ai_settings.json
 # DirectXTex build output
 **/DirectXTex/Bin/
 
