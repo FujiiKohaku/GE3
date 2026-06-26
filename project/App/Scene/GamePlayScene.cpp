@@ -18,7 +18,30 @@
 #include "ClearScene.h"
 #include "GameOverScene.h"
 #include "Engine/Debug/DebugRenderer.h"
+#include "Engine/Input/Input.h"
 #include <cmath>
+
+namespace {
+float LengthSquared(const Vector3& value)
+{
+    return value.x * value.x + value.y * value.y + value.z * value.z;
+}
+
+bool IsZeroVector(const Vector3& value)
+{
+    return LengthSquared(value) < 0.000001f;
+}
+
+Vector3 Cross(const Vector3& a, const Vector3& b)
+{
+    Vector3 result {};
+    result.x = a.y * b.z - a.z * b.y;
+    result.y = a.z * b.x - a.x * b.z;
+    result.z = a.x * b.y - a.y * b.x;
+    return result;
+}
+}
+
 void GamePlayScene::Initialize()
 {
 
@@ -207,6 +230,58 @@ void GamePlayScene::Initialize()
     }
 }
 
+Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railPosition) const
+{
+    if (rail_ == nullptr) {
+        return { 0.0f, 0.0f, 1.0f };
+    }
+
+    Vector3 nextPosition = rail_->GetPositionByDistance(distance + railDirectionSampleDistance_);
+    Vector3 forward = Normalize(nextPosition - railPosition);
+
+    if (IsZeroVector(forward)) {
+        float previousDistance = distance - railDirectionSampleDistance_;
+        if (previousDistance < 0.0f) {
+            previousDistance = 0.0f;
+        }
+
+        Vector3 previousPosition = rail_->GetPositionByDistance(previousDistance);
+        forward = Normalize(railPosition - previousPosition);
+    }
+
+    if (IsZeroVector(forward)) {
+        forward = { 0.0f, 0.0f, 1.0f };
+    }
+
+    return forward;
+}
+
+void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const
+{
+    Vector3 normalizedForward = Normalize(forward);
+    if (IsZeroVector(normalizedForward)) {
+        normalizedForward = { 0.0f, 0.0f, 1.0f };
+    }
+
+    Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
+    right = Normalize(Cross(referenceUp, normalizedForward));
+
+    if (IsZeroVector(right)) {
+        Vector3 referenceForward = { 0.0f, 0.0f, 1.0f };
+        right = Normalize(Cross(normalizedForward, referenceForward));
+    }
+
+    if (IsZeroVector(right)) {
+        right = { 1.0f, 0.0f, 0.0f };
+    }
+
+    up = Normalize(Cross(normalizedForward, right));
+
+    if (IsZeroVector(up)) {
+        up = referenceUp;
+    }
+}
+
 void GamePlayScene::Update()
 {
     rail_->Update();
@@ -265,24 +340,42 @@ void GamePlayScene::Update()
     }
 
     Vector3 currentPosition = rail_->GetPositionByDistance(nextRailDistance);
-    player_->SetRailBasePosition(currentPosition);
+    Vector3 forward = CalculateRailForward(nextRailDistance, currentPosition);
+
+    Vector3 railRight {};
+    Vector3 railUp {};
+    CalculateRailBasis(forward, railRight, railUp);
+
+    bool isBoostingForCamera = false;
+    Input* input = Input::GetInstance();
+    if (input != nullptr) {
+        isBoostingForCamera = input->IsKeyPressed(DIK_LSHIFT);
+    }
+
+    float targetFovY = normalFovY_;
+    if (isBoostingForCamera) {
+        targetFovY = boostFovY_;
+    }
+
+    currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
+    camera_->SetFovY(currentFovY_);
+
+    if (!debugCameraController_->GetDebugMode()) {
+        Vector3 cameraPosition = currentPosition - forward * 35.0f;
+        cameraPosition.y += 6.0f;
+
+        Vector3 lookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+
+        camera_->LookAt(cameraPosition, lookAheadPosition);
+        camera_->Update();
+    }
+
+    player_->SetRailFrame(currentPosition, railRight, railUp);
 
     //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
     player_->Update();
 
     railDistance_ = nextRailDistance;
-
-    Vector3 nextPosition = rail_->GetPositionByDistance(railDistance_ + 5.0f);
-    Vector3 forward = Normalize(nextPosition - currentPosition);
-    if (forward.x == 0.0f && forward.y == 0.0f && forward.z == 0.0f) {
-        float previousDistance = railDistance_ - 5.0f;
-        if (previousDistance < 0.0f) {
-            previousDistance = 0.0f;
-        }
-
-        Vector3 previousPosition = rail_->GetPositionByDistance(previousDistance);
-        forward = Normalize(currentPosition - previousPosition);
-    }
 
     if (forward.x != 0.0f || forward.y != 0.0f || forward.z != 0.0f) {
         float horizontalLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
@@ -295,7 +388,11 @@ void GamePlayScene::Update()
         player_->SetRotate(playerRotate);
     }
 
-    player_->SetTranslate(currentPosition + player_->GetRailOffset());
+    Vector3 railOffset = player_->GetRailOffset();
+    Vector3 playerPosition = currentPosition;
+    playerPosition += railRight * railOffset.x;
+    playerPosition += railUp * railOffset.y;
+    player_->SetTranslate(playerPosition);
 
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,
@@ -332,14 +429,6 @@ void GamePlayScene::Update()
         EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
     }
 
-    float targetFovY = normalFovY_;
-    if (isPlayerBoosting) {
-        targetFovY = boostFovY_;
-    }
-
-    currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
-    camera_->SetFovY(currentFovY_);
-
     PostEffectType postEffectType = PostEffectType::DepthOutline;
     if (isPlayerBoosting) {
         postEffectType = PostEffectType::RadialBlur;
@@ -364,8 +453,7 @@ void GamePlayScene::Update()
         Vector3 cameraPosition = currentPosition - forward * 35.0f;
         cameraPosition.y += 6.0f;
 
-        float lookAheadDistance = 30.0f;
-        Vector3 lookAheadPosition = rail_->GetPositionByDistance(railDistance_ + lookAheadDistance);
+        Vector3 lookAheadPosition = rail_->GetPositionByDistance(railDistance_ + cameraLookAheadDistance_);
 
         camera_->LookAt(cameraPosition, lookAheadPosition);
     }

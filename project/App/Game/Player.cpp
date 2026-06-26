@@ -9,6 +9,7 @@
 #include "../../Engine/debugcamera/DebugCameraController.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 #ifdef _DEBUG
 #include "../../externals/imgui/ImGuizmo.h"
@@ -84,7 +85,7 @@ void Player::Update()
         ClampAimScreenPosition();
     }
 
-    transform_.translate = railBasePosition_ + railOffset_;
+    transform_.translate = CalculateRailWorldPosition(railOffset_);
 
     if (input->IsMouseTrigger(0)) {
         FireBullet();
@@ -183,14 +184,31 @@ void Player::UpdateMouseAim()
     aimScreenPosition_.y = static_cast<float>(mousePosition.y);
 }
 
-bool Player::CanApplyRailOffset(const Vector3& railOffset) const
+Vector2 Player::CalculateScreenCorrection(const Vector3& railOffset) const
 {
+    Vector2 correction {};
+    correction.x = 0.0f;
+    correction.y = 0.0f;
+
     if (camera_ == nullptr) {
-        return true;
+        return correction;
     }
 
-    Vector3 playerPosition = railBasePosition_ + railOffset;
+    Vector3 playerPosition = CalculateRailWorldPosition(railOffset);
     Vector2 screenPosition = camera_->WorldToScreen(playerPosition);
+
+    float minX = screenPosition.x;
+    float maxX = screenPosition.x;
+    float minY = screenPosition.y;
+    float maxY = screenPosition.y;
+
+    Vector3 rightExtent = railRight_ * playerBoundsHalfWidth_;
+    Vector3 upExtent = railUp_ * playerBoundsHalfHeight_;
+
+    UpdateScreenBounds(playerPosition + rightExtent + upExtent, minX, maxX, minY, maxY);
+    UpdateScreenBounds(playerPosition + rightExtent - upExtent, minX, maxX, minY, maxY);
+    UpdateScreenBounds(playerPosition - rightExtent + upExtent, minX, maxX, minY, maxY);
+    UpdateScreenBounds(playerPosition - rightExtent - upExtent, minX, maxX, minY, maxY);
 
     float leftLimit = playerClampMarginX_;
     float rightLimit = static_cast<float>(WinApp::GetInstance()->kClientWidth) - playerClampMarginX_;
@@ -198,23 +216,19 @@ bool Player::CanApplyRailOffset(const Vector3& railOffset) const
     float topLimit = playerClampMarginY_;
     float bottomLimit = static_cast<float>(WinApp::GetInstance()->kClientHeight) - playerClampMarginY_;
 
-    if (screenPosition.x < leftLimit) {
-        return false;
+    if (minX < leftLimit) {
+        correction.x = leftLimit - minX;
+    } else if (maxX > rightLimit) {
+        correction.x = rightLimit - maxX;
     }
 
-    if (screenPosition.x > rightLimit) {
-        return false;
+    if (minY < topLimit) {
+        correction.y = topLimit - minY;
+    } else if (maxY > bottomLimit) {
+        correction.y = bottomLimit - maxY;
     }
 
-    if (screenPosition.y < topLimit) {
-        return false;
-    }
-
-    if (screenPosition.y > bottomLimit) {
-        return false;
-    }
-
-    return true;
+    return correction;
 }
 
 // 弾を発射する関数
@@ -378,9 +392,104 @@ void Player::UpdateKeyboardMove(Input* input)
     }
 
     nextRailOffset.z = 0.0f;
+    railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
+}
 
-    if (CanApplyRailOffset(nextRailOffset)) {
-        railOffset_ = nextRailOffset;
+Vector3 Player::CalculateRailWorldPosition(const Vector3& railOffset) const
+{
+    Vector3 position = railBasePosition_;
+    position += railRight_ * railOffset.x;
+    position += railUp_ * railOffset.y;
+    return position;
+}
+
+Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
+{
+    Vector3 correctedRailOffset = railOffset;
+    correctedRailOffset.z = 0.0f;
+
+    if (camera_ == nullptr) {
+        return correctedRailOffset;
+    }
+
+    const int correctionCount = 3;
+    for (int correctionIndex = 0; correctionIndex < correctionCount; ++correctionIndex) {
+        Vector2 screenCorrection = CalculateScreenCorrection(correctedRailOffset);
+
+        if (std::fabs(screenCorrection.x) < 0.01f && std::fabs(screenCorrection.y) < 0.01f) {
+            break;
+        }
+
+        Vector2 baseScreen = camera_->WorldToScreen(CalculateRailWorldPosition(correctedRailOffset));
+
+        Vector3 rightOffset = correctedRailOffset;
+        rightOffset.x += 1.0f;
+        Vector2 rightScreen = camera_->WorldToScreen(CalculateRailWorldPosition(rightOffset));
+
+        Vector3 upOffset = correctedRailOffset;
+        upOffset.y += 1.0f;
+        Vector2 upScreen = camera_->WorldToScreen(CalculateRailWorldPosition(upOffset));
+
+        float rightScreenX = rightScreen.x - baseScreen.x;
+        float rightScreenY = rightScreen.y - baseScreen.y;
+        float upScreenX = upScreen.x - baseScreen.x;
+        float upScreenY = upScreen.y - baseScreen.y;
+
+        float determinant = rightScreenX * upScreenY - rightScreenY * upScreenX;
+
+        if (std::fabs(determinant) > 0.0001f) {
+            float offsetX = (screenCorrection.x * upScreenY - screenCorrection.y * upScreenX) / determinant;
+            float offsetY = (rightScreenX * screenCorrection.y - rightScreenY * screenCorrection.x) / determinant;
+
+            correctedRailOffset.x += offsetX;
+            correctedRailOffset.y += offsetY;
+        } else {
+            float rightLengthSquared = rightScreenX * rightScreenX + rightScreenY * rightScreenY;
+            if (rightLengthSquared > 0.0001f) {
+                float offsetX = (screenCorrection.x * rightScreenX + screenCorrection.y * rightScreenY) / rightLengthSquared;
+                correctedRailOffset.x += offsetX;
+            }
+
+            float upLengthSquared = upScreenX * upScreenX + upScreenY * upScreenY;
+            if (upLengthSquared > 0.0001f) {
+                float offsetY = (screenCorrection.x * upScreenX + screenCorrection.y * upScreenY) / upLengthSquared;
+                correctedRailOffset.y += offsetY;
+            }
+        }
+
+        correctedRailOffset.z = 0.0f;
+    }
+
+    return correctedRailOffset;
+}
+
+void Player::UpdateScreenBounds(
+    const Vector3& worldPosition,
+    float& minX,
+    float& maxX,
+    float& minY,
+    float& maxY) const
+{
+    if (camera_ == nullptr) {
+        return;
+    }
+
+    Vector2 screenPosition = camera_->WorldToScreen(worldPosition);
+
+    if (screenPosition.x < minX) {
+        minX = screenPosition.x;
+    }
+
+    if (screenPosition.x > maxX) {
+        maxX = screenPosition.x;
+    }
+
+    if (screenPosition.y < minY) {
+        minY = screenPosition.y;
+    }
+
+    if (screenPosition.y > maxY) {
+        maxY = screenPosition.y;
     }
 }
 #ifdef _DEBUG
@@ -402,6 +511,13 @@ void Player::DrawImGui()
     ImGui::Text("X : %.2f", railOffset_.x);
     ImGui::Text("Y : %.2f", railOffset_.y);
     ImGui::Text("Z : %.2f", railOffset_.z);
+
+    ImGui::Separator();
+
+    ImGui::Text("Rail Frame");
+
+    ImGui::Text("Right X : %.2f Y : %.2f Z : %.2f", railRight_.x, railRight_.y, railRight_.z);
+    ImGui::Text("Up    X : %.2f Y : %.2f Z : %.2f", railUp_.x, railUp_.y, railUp_.z);
 
     ImGui::Separator();
 
@@ -430,6 +546,16 @@ void Player::DrawImGui()
     ImGui::DragFloat(
         "ScreenMarginY",
         &playerClampMarginY_,
+        0.1f);
+
+    ImGui::DragFloat(
+        "BoundsHalfWidth",
+        &playerBoundsHalfWidth_,
+        0.1f);
+
+    ImGui::DragFloat(
+        "BoundsHalfHeight",
+        &playerBoundsHalfHeight_,
         0.1f);
     ImGui::End();
 }

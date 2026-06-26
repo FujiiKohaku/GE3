@@ -55,6 +55,8 @@ public:
 
 private:
     void CheckCollision();
+    Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
+    void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
 
     int test_ = 0;
@@ -62,6 +64,8 @@ private:
     std::unique_ptr<Rail> rail_;
     float railDistance_ = 0.0f;
     float railSpeed_ = 0.5f;
+    float railDirectionSampleDistance_ = 5.0f;
+    float cameraLookAheadDistance_ = 30.0f;
     // ------------------------------
     // カメラ / デバッグカメラコントローラー
     // ------------------------------

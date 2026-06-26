@@ -67,9 +67,14 @@ public:
         transform_.scale = scale;
     }
 
-    void SetRailBasePosition(const Vector3& railBasePosition)
+    void SetRailFrame(
+        const Vector3& railBasePosition,
+        const Vector3& railRight,
+        const Vector3& railUp)
     {
         railBasePosition_ = railBasePosition;
+        railRight_ = railRight;
+        railUp_ = railUp;
     }
 
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const
@@ -131,9 +136,13 @@ private:
     float moveSpeed_ = normalAcceleration_;
     Vector3 velocity_ = { 0.0f, 0.0f, 0.5f };
     Vector3 railBasePosition_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 railRight_ = { 1.0f, 0.0f, 0.0f };
+    Vector3 railUp_ = { 0.0f, 1.0f, 0.0f };
     Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
     float playerClampMarginX_ = 100.0f;
     float playerClampMarginY_ = 100.0f;
+    float playerBoundsHalfWidth_ = 1.5f;
+    float playerBoundsHalfHeight_ = 1.0f;
 
     float bulletSpawnOffsetY_ = 0.3f;
     float bulletSpawnOffsetZ_ = 4.0f;
@@ -155,5 +164,8 @@ private:
     void UpdateKeyboardMove(Input* input);
     void UpdateMouseAim();
     void ClampAimScreenPosition();
-    bool CanApplyRailOffset(const Vector3& railOffset) const;
+    Vector3 CalculateRailWorldPosition(const Vector3& railOffset) const;
+    Vector2 CalculateScreenCorrection(const Vector3& railOffset) const;
+    Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
+    void UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const;
 };
