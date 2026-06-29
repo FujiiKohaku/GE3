@@ -164,8 +164,6 @@ void SkinningObject3dManager::CreateRootSignature()
 #pragma region
 void SkinningObject3dManager::CreateGraphicsPipeline()
 {
-    HRESULT hr;
-
     std::array<D3D12_INPUT_ELEMENT_DESC, 5> inputElementDescs {};
 
     // ---------------------------------

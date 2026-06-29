@@ -131,6 +131,8 @@ private:
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
+    bool isRandomPostEffect_ = false;
+    bool hasRandomPostEffectToggle_ = false;
     float normalFovY_ = 0.45f;
     float boostFovY_ = 0.75f;
     float currentFovY_ = 0.45f;

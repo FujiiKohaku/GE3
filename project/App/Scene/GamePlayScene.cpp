@@ -350,6 +350,11 @@ void GamePlayScene::Update()
     Input* input = Input::GetInstance();
     if (input != nullptr) {
         isBoostingForCamera = input->IsKeyPressed(DIK_LSHIFT);
+
+        if (input->IsKeyTrigger(DIK_L)) {
+            isRandomPostEffect_ = !isRandomPostEffect_;
+            hasRandomPostEffectToggle_ = true;
+        }
     }
 
     float targetFovY = normalFovY_;
@@ -433,7 +438,16 @@ void GamePlayScene::Update()
     if (isPlayerBoosting) {
         postEffectType = PostEffectType::RadialBlur;
     }
-    SceneManager::GetInstance()->SetPostEffectType(postEffectType);
+
+    if (hasRandomPostEffectToggle_) {
+        if (isRandomPostEffect_) {
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
+        } else {
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
+        }
+    } else {
+        SceneManager::GetInstance()->SetPostEffectType(postEffectType);
+    }
 
     // AiMスプライチEの位置を更新する
     aimSprite_->SetPosition(player_->GetAimScreenPosition());

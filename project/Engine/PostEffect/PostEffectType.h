@@ -9,4 +9,5 @@ enum class PostEffectType {
     DepthOutline,
     RadialBlur,
     Dissolve,
+    Random,
 };

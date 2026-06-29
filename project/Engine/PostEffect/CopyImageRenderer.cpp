@@ -28,6 +28,8 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 
     pipelineStates_[PostEffectType::Dissolve] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Dissolve.PS.hlsl");
 
+    pipelineStates_[PostEffectType::Random] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Random.PS.hlsl");
+
 }
 
 void CopyImageRenderer::CreateRootSignature()
