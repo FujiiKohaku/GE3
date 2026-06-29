@@ -774,12 +774,14 @@ void GamePlayScene::CheckCollision()
 
             Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
             float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
-            float collisionRadius = 1.5f;
+            float collisionRadius = enemyBullet->GetCollisionRadius();
 
             if (distance <= collisionRadius) {
                 OutputDebugStringA("EnemyBullet Hit Player\n");
 
-                if (player_->ApplyDamage(1)) {
+                enemyBullet->OnHitPlayer(player_->GetTranslate());
+
+                if (player_->ApplyDamage(enemyBullet->GetDamage())) {
                     EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
 
                     if (player_->IsDead()) {

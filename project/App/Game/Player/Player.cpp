@@ -1,21 +1,21 @@
-#include "Player.h"
-#include "MissileBullet.h"
+#include "App/Game/Player/Player.h"
+#include "App/Game/Player/Bullet/MissileBullet.h"
 
-#include"NormalBullet.h"
-#include "../../Engine/3D/ModelManager.h"
-#include "../../Engine/3D/Object3dManager.h"
-#include "../../Engine/Effect/EffectManager.h"
-#include "../../Engine/Input/Input.h"
-#include "../../Engine/debugcamera/DebugCameraController.h"
+#include "App/Game/Player/Bullet/NormalBullet.h"
+#include "Engine/3D/ModelManager.h"
+#include "Engine/3D/Object3dManager.h"
+#include "Engine/Effect/EffectManager.h"
+#include "Engine/Input/Input.h"
+#include "Engine/debugcamera/DebugCameraController.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 
 #ifdef _DEBUG
-#include "../../externals/imgui/ImGuizmo.h"
+#include "externals/imgui/ImGuizmo.h"
 #endif
 
-#include "../../Engine/EditorManager/EditorManager.h"
+#include "Engine/EditorManager/EditorManager.h"
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);

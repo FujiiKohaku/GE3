@@ -1,5 +1,5 @@
-#include "NormalBullet.h"
-#include "../../Engine/Effect/EffectManager.h"
+#include "App/Game/Player/Bullet/NormalBullet.h"
+#include "Engine/Effect/EffectManager.h"
 void NormalBullet::Initialize(Model* model)
 {
     // ここでは、BaseBulletのInitialize関数を呼び出して、モデルの設定やオブジェクトの初期化を行います。

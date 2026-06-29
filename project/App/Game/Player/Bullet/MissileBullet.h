@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../Engine/Effect/EffectManager.h"
-#include "PlayerBullet.h"
+#include "Engine/Effect/EffectManager.h"
+#include "App/Game/Player/Bullet/PlayerBullet.h"
 
 #include <memory>
 

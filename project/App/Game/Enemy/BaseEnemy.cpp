@@ -1,6 +1,6 @@
-#include "BaseEnemy.h"
+#include "App/Game/Enemy/BaseEnemy.h"
 
-#include "../../Engine/3D/Object3dManager.h"
+#include "Engine/3D/Object3dManager.h"
 
 void BaseEnemy::Initialize(Model* model)
 {
@@ -25,6 +25,8 @@ void BaseEnemy::Update()
     Move();
 
     Attack();
+
+    UpdateAnimation();
 
     for (std::unique_ptr<EnemyBullet>& bullet :enemyBullets_) {
 
@@ -72,11 +74,38 @@ void BaseEnemy::SetPosition(const Vector3& position)
     transform_.translate = position;
 }
 
+void BaseEnemy::SetDead(bool isDead)
+{
+    if (isDead_ == isDead) {
+        return;
+    }
+
+    isDead_ = isDead;
+
+    if (isDead_) {
+        OnDeath();
+    }
+}
+
 void BaseEnemy::ApplyDamage(float damage)
 {
     hp_ -= damage;
 
+    OnDamage(damage);
+
     if (hp_ <= 0.0f) {
-        isDead_ = true;
+        SetDead(true);
     }
+}
+
+void BaseEnemy::UpdateAnimation()
+{
+}
+
+void BaseEnemy::OnDamage(float)
+{
+}
+
+void BaseEnemy::OnDeath()
+{
 }

@@ -1,8 +1,8 @@
 #pragma once
-#include "../../Engine/3D/Model.h"
-#include "../../Engine/3D/Object3d.h"
+#include "Engine/3D/Model.h"
+#include "Engine/3D/Object3d.h"
 
-#include "../../Engine/math/MathStruct.h"
+#include "Engine/math/MathStruct.h"
 #include <memory>
 class BaseBullet {
 
@@ -16,7 +16,7 @@ public:
     // 更新関数
     virtual void Update();
     // 描画関数
-    void Draw();
+    virtual void Draw();
     bool IsAlive() const
     {
         return isAlive_;

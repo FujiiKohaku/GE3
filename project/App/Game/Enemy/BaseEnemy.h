@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../../Engine/3D/Object3d.h"
+#include "Engine/3D/Object3d.h"
 #include <memory>
+#include <vector>
 
-#include "../../Engine/math/EngineStruct.h"
+#include "Engine/math/EngineStruct.h"
 
-#include "EnemyBullet.h"
+#include "App/Game/Enemy/Bullet/EnemyBullet.h"
 class Camera;
 class Model;
 
@@ -28,10 +29,14 @@ public:
         return enemyBullets_;
     }
     void SetPosition(const Vector3& position);
-    void SetDead(bool isDead) { isDead_ = isDead; }
+    void SetDead(bool isDead);
     void ApplyDamage(float damage);
 
 protected:
+    virtual void UpdateAnimation();
+    virtual void OnDamage(float damage);
+    virtual void OnDeath();
+
     std::unique_ptr<Object3d> object_;
 
     EulerTransform transform_;

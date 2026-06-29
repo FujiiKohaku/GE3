@@ -1,6 +1,6 @@
 #pragma once
 
-#include "BaseEnemy.h"
+#include "App/Game/Enemy/BaseEnemy.h"
 
 class Player;
 class Model;

@@ -216,7 +216,7 @@
     <ClCompile Include="Engine\Particle\ParticleData.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player.cpp">
+    <ClCompile Include="App\Game\Player\Player.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp">
@@ -246,7 +246,7 @@
     <ClCompile Include="Engine\PostEffect\PostEffectType.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\MissileBullet.cpp">
+    <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp">
@@ -300,25 +300,28 @@
     <ClCompile Include="App\Scene\GameOverScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\BaseEnemy.cpp">
+    <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\EnemyBullet.cpp">
+    <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\NormalEnemy.cpp">
+    <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Particle\ParticleManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\BaseBullet.cpp">
+    <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\PlayerBullet.cpp">
+    <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\NormalBullet.cpp">
+    <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -483,7 +486,7 @@
     <ClInclude Include="Engine\Particle\ParticleData.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player.h">
+    <ClInclude Include="App\Game\Player\Player.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h">
@@ -513,7 +516,7 @@
     <ClInclude Include="Engine\PostEffect\PostEffectType.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\MissileBullet.h">
+    <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\LevelEditor\LevelData.h">
@@ -570,25 +573,28 @@
     <ClInclude Include="App\Scene\GameOverScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\BaseEnemy.h">
+    <ClInclude Include="App\Game\Enemy\BaseEnemy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\EnemyBullet.h">
+    <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\NormalEnemy.h">
+    <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Particle\ParticleManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\BaseBullet.h">
+    <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\PlayerBullet.h">
+    <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\NormalBullet.h">
+    <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

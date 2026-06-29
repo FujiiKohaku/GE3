@@ -27,20 +27,20 @@
 
 #include "Engine/Animation/AnimationActor.h"
 
-#include "../Game/Player.h"
+#include "App/Game/Player/Player.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
 #include <memory>
 #include <vector>
 
-#include "../../Engine/EditorManager/EditorManager.h"
+#include "Engine/EditorManager/EditorManager.h"
 
-#include "../../Engine/SceneObjectManager/SceneObjectManager.h"
+#include "Engine/SceneObjectManager/SceneObjectManager.h"
 
-#include "../Game/BaseEnemy.h"
+#include "App/Game/Enemy/BaseEnemy.h"
 
-#include "../Game/NormalEnemy.h"
+#include "App/Game/Enemy/Types/NormalEnemy.h"
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;

@@ -1,6 +1,8 @@
-#include "NormalEnemy.h"
+#include "App/Game/Enemy/Types/NormalEnemy.h"
 
-#include "../Game/Player.h"
+#include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
+
+#include "App/Game/Player/Player.h"
 
 void NormalEnemy::Initialize(
     Model* model,
@@ -41,7 +43,7 @@ void NormalEnemy::FireBullet()
         return;
     }
 
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<EnemyBullet>();
+    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
 
     bullet->Initialize(bulletModel_);
 

@@ -1,5 +1,5 @@
-#include "BaseBullet.h"
-#include "../../Engine/3D/Object3dManager.h"
+#include "App/Game/Common/Bullet/BaseBullet.h"
+#include "Engine/3D/Object3dManager.h"
 #include <cassert>
 void BaseBullet::Initialize(Model* model)
 {

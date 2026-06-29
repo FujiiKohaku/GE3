@@ -1,15 +1,15 @@
 #pragma once
-#include "../../Engine/3D/Model.h"
-#include "../../Engine/3D/Object3d.h"
-#include "../../Engine/Winapp/WinApp.h"
-#include "../../Engine/debugcamera/DebugCameraController.h"
-#include "../../Engine/math/MathStruct.h"
+#include "Engine/3D/Model.h"
+#include "Engine/3D/Object3d.h"
+#include "Engine/Winapp/WinApp.h"
+#include "Engine/debugcamera/DebugCameraController.h"
+#include "Engine/math/MathStruct.h"
 #include <memory>
 #include <vector>
 
 //#include "Bullet.h"
 
-#include "PlayerBullet.h"
+#include "App/Game/Player/Bullet/PlayerBullet.h"
 
 class Camera;
 class Input;

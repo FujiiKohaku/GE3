@@ -163,11 +163,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="App\Game\MissileBullet.cpp" />
+    <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
-    <ClCompile Include="App\Game\BaseEnemy.cpp" />
-    <ClCompile Include="App\Game\EnemyBullet.cpp" />
-    <ClCompile Include="App\Game\BaseBullet.cpp" />
+    <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp" />
+    <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp" />
     <ClCompile Include="Engine\math\Collision.cpp" />
     <ClCompile Include="Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
@@ -245,7 +246,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
     <ClCompile Include="Engine\Winapp\WinApp.cpp" />
-    <ClCompile Include="App\Game\Player.cpp" />
+    <ClCompile Include="App\Game\Player\Player.cpp" />
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleRingMesh.cpp">
@@ -268,9 +269,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\math\Sphere.cpp" />
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
-    <ClCompile Include="App\Game\NormalEnemy.cpp" />
-    <ClCompile Include="App\Game\PlayerBullet.cpp" />
-    <ClCompile Include="App\Game\NormalBullet.cpp" />
+    <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
+    <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
+    <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\Shaders\Object3D\Object3d.PS.hlsl">
@@ -291,11 +292,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App\Game\MissileBullet.h" />
+    <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h" />
     <ClInclude Include="App\Scene\ClearScene.h" />
-    <ClInclude Include="App\Game\BaseEnemy.h" />
-    <ClInclude Include="App\Game\EnemyBullet.h" />
-    <ClInclude Include="App\Game\BaseBullet.h" />
+    <ClInclude Include="App\Game\Enemy\BaseEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h" />
+    <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h" />
     <ClInclude Include="Engine\math\Collision.h" />
     <ClInclude Include="Engine\EditorManager\EditorManager.h" />
     <ClInclude Include="Engine\math\EngineStruct.h" />
@@ -354,7 +356,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Winapp\Utility.h" />
     <ClInclude Include="Engine\math\MatrixMath.h" />
     <ClInclude Include="Engine\Winapp\WinApp.h" />
-    <ClInclude Include="App\Game\Player.h" />
+    <ClInclude Include="App\Game\Player\Player.h" />
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleBoardMesh.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleRingMesh.h">
@@ -378,9 +380,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\math\Sphere.h" />
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
     <ClInclude Include="App\Scene\GameOverScene.h" />
-    <ClInclude Include="App\Game\NormalEnemy.h" />
-    <ClInclude Include="App\Game\PlayerBullet.h" />
-    <ClInclude Include="App\Game\NormalBullet.h" />
+    <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h" />
+    <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
+    <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">

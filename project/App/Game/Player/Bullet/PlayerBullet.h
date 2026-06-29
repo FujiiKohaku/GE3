@@ -1,5 +1,5 @@
 #pragma once
-#include "BaseBullet.h"
+#include "App/Game/Common/Bullet/BaseBullet.h"
 class PlayerBullet : public BaseBullet {
 public:
     virtual ~PlayerBullet() = default;
