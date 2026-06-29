@@ -68,7 +68,7 @@ private:
     float fovY_ = 0.45f; // 垂直方向の視野角
     float aspectRatio_ = static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight);
     float nearClip_ = 0.1f; // ニアクリップ距離
-    float farClip_ = 100.0f; // ファークリップ距離
+    float farClip_ = 1000.0f; // ファークリップ距離
 
     // GPU用
     Microsoft::WRL::ComPtr<ID3D12Resource> cameraResource_;

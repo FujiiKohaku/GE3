@@ -80,6 +80,9 @@ void Game::Initialize()
     copyImageRenderer_ = std::make_unique<CopyImageRenderer>();
     copyImageRenderer_->Initialize(DirectXCommon::GetInstance());
 
+    fog_ = std::make_unique<Fog>();
+    fog_->Initialize(DirectXCommon::GetInstance());
+
     SoundManager::GetInstance()->Initialize();
 
     Logger::Log("Game Initialize End");
@@ -119,6 +122,16 @@ if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
     SceneManager::GetInstance()->Update();
     DebugRenderer::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
+    Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
+    if (defaultCamera != nullptr) {
+        fog_->SetCameraInfo(
+            defaultCamera->GetNearClip(),
+            defaultCamera->GetFarClip(),
+            defaultCamera->GetFovY(),
+            defaultCamera->GetAspectRatio());
+    }
+    fog_->Update();
+    fog_->DrawImGui();
 
     ImGuiManager::GetInstance()->End();
 }
@@ -127,9 +140,11 @@ void Game::Draw()
 {
     SrvManager::GetInstance()->PreDraw();
 
-    offscreenRenderer_->PreDraw();
+    fog_->PreDrawDepth();
+    offscreenRenderer_->PreDraw(fog_->GetDepthDSVHandle());
     SceneManager::GetInstance()->Draw3D();
     DebugRenderer::GetInstance()->Draw();
+    fog_->PostDrawDepth();
     offscreenRenderer_->PostDraw();
 
    // ポストエフェクトをかける
@@ -139,7 +154,8 @@ void Game::Draw()
     const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
     postEffectParameter.radialBlurSampleCount = isBoosting ? 48 : 32;
     postEffectParameter.radialBlurWidth = isBoosting ? 0.25f : 0.05f;
-    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), offscreenRenderer_->GetDepthSrvHandleGPU());
+    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), fog_->GetDepthSRVHandle());
+    fog_->Apply(offscreenRenderer_->GetSrvHandleGPU());
 
     SceneManager::GetInstance()->Draw2D();
 

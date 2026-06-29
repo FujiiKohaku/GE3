@@ -11,6 +11,7 @@ class OffscreenRenderer {
 public:
     void Initialize();
     void PreDraw();
+    void PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
     void PostDraw();
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;

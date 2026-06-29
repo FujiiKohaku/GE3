@@ -63,6 +63,7 @@
 #include "Engine/PostEffect/OffscreenRenderer.h"
 
 #include "Engine/PostEffect/CopyImageRenderer.h"
+#include "Engine/PostEffect/Fog/Fog.h"
 // ================================================================
 // Game クラス
 // ================================================================
@@ -161,6 +162,7 @@ private:
     bool endRequest_ = false;
     std::unique_ptr<OffscreenRenderer> offscreenRenderer_;
     std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
+    std::unique_ptr<Fog> fog_;
 
     bool isPostEffectEnabled_ = true;
 

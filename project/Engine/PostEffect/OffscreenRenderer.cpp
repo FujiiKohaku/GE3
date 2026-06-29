@@ -70,6 +70,38 @@ void OffscreenRenderer::PreDraw()
     commandList->ClearDepthStencilView(dsvHandle_, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 }
 
+void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
+{
+    DirectXCommon* directXCommon = DirectXCommon::GetInstance();
+    ID3D12GraphicsCommandList* commandList = directXCommon->GetCommandList();
+    if (currentState_ != D3D12_RESOURCE_STATE_RENDER_TARGET) {
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier.Transition.pResource = renderTextureResource_.Get();
+        barrier.Transition.StateBefore = currentState_;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        commandList->ResourceBarrier(1, &barrier);
+
+        currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    }
+
+    commandList->RSSetViewports(1, &viewport_);
+    commandList->RSSetScissorRects(1, &scissorRect_);
+    commandList->OMSetRenderTargets(1, &rtvHandle_, false, &dsvHandle);
+
+    float clearColor[] = {
+        clearColor_.x,
+        clearColor_.y,
+        clearColor_.z,
+        clearColor_.w
+    };
+
+    commandList->ClearRenderTargetView(rtvHandle_, clearColor, 0, nullptr);
+}
+
 void OffscreenRenderer::PostDraw()
 {
     DirectXCommon* directXCommon = DirectXCommon::GetInstance();

@@ -298,7 +298,7 @@ void DirectXCommon::InitializeDescriptorHeaps()
     rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 3, false);
 
     // DSV用のヒープ（Shaderからは使わないのでfalse）
-    dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV,2,false);
+    dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV,3,false);
 
     //// SRV用のヒープ（Shaderから使うのでtrue）
     // srvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, kMaxSRVCount, true);
