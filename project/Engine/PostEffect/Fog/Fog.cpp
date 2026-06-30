@@ -371,8 +371,8 @@ void Fog::CreateConstantBuffer()
     constantBuffer_->Map(0, nullptr, reinterpret_cast<void**>(&fogData_));
 
     fogData_->isEnabled = 1;
-    fogData_->startDistance = 120.0f;
-    fogData_->endDistance = 180.0f;
+    fogData_->startDistance = 200.0f;
+    fogData_->endDistance = 300.0f;
     fogData_->curve = 1.2f;
     fogData_->color = { 0.65f, 0.75f, 0.85f };
     fogData_->maxFog = 1.0f;
