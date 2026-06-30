@@ -132,6 +132,7 @@ void ParticleManager::Draw()
 
     commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(3, perViewResource_->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(4, fogConstantBufferView_);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     for (auto& particleGroupPair : particleGroups_) {
@@ -160,6 +161,11 @@ void ParticleManager::Draw()
 void ParticleManager::SetBlendMode(BlendMode mode)
 {
     currentBlendMode_ = mode;
+}
+
+void ParticleManager::SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView)
+{
+    fogConstantBufferView_ = fogConstantBufferView;
 }
 
 void ParticleManager::CreateParticleGroup(
@@ -319,6 +325,8 @@ void ParticleManager::CreatePerViewResource()
 
     perViewData_->viewProjection = MatrixMath::MakeIdentity4x4();
     perViewData_->billboardMatrix = MatrixMath::MakeIdentity4x4();
+    perViewData_->cameraPosition = { 0.0f, 0.0f, 0.0f };
+    perViewData_->padding = 0.0f;
 }
 
 void ParticleManager::UpdatePerView()
@@ -328,6 +336,12 @@ void ParticleManager::UpdatePerView()
     }
 
     Matrix4x4 cameraMatrix = camera_->GetWorldMatrix();
+    perViewData_->cameraPosition = {
+        cameraMatrix.m[3][0],
+        cameraMatrix.m[3][1],
+        cameraMatrix.m[3][2],
+    };
+
     cameraMatrix.m[3][0] = 0.0f;
     cameraMatrix.m[3][1] = 0.0f;
     cameraMatrix.m[3][2] = 0.0f;
@@ -373,6 +387,7 @@ void ParticleManager::Finalize()
     instance_->dxCommon_ = nullptr;
     instance_->srvManager_ = nullptr;
     instance_->camera_ = nullptr;
+    instance_->fogConstantBufferView_ = 0;
 
     instance_.reset();
 }

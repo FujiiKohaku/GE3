@@ -65,6 +65,10 @@ void TitleScene::Draw3D()
     titleObj_->Draw();
 }
 
+void TitleScene::DrawParticle()
+{
+}
+
 void TitleScene::DrawImGui()
 {
 }

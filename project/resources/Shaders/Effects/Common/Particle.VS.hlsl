@@ -23,11 +23,14 @@ VertexShaderOutput main(VertexShaderInput input, uint32_t instanceId : SV_Instan
     worldMatrix[3].xyz = particle.translate;
 
     float32_t4x4 wvpMatrix = mul(worldMatrix, gPerView.viewProjection);
+    float32_t4 worldPosition = mul(input.position, worldMatrix);
 
     output.position = mul(input.position, wvpMatrix);
     output.texcoord = input.texcoord;
     output.normal = input.normal;
     output.color = particle.color;
+    output.worldPosition = worldPosition.xyz;
+    output.viewDistance = length(worldPosition.xyz - gPerView.cameraPosition);
 
     return output;
 }

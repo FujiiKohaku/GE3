@@ -96,6 +96,7 @@ public:
     void Draw();
 
     void SetBlendMode(BlendMode blendMode);
+    void SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView);
 
     const std::vector<ActiveEffect>& GetActiveEffects() const { return activeEffects_; }
 
@@ -249,6 +250,7 @@ private:
 
     BlendMode currentBlendMode_ = kBlendModeAdd;
     float deltaTime_ = 1.0f / 60.0f;
+    D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView_ = 0;
 
     std::unique_ptr<ParticleRenderManager> particleRenderManager_;
     std::unique_ptr<ParticleMeshManager> particleMeshManager_;

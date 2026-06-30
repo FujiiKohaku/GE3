@@ -35,6 +35,7 @@ public:
     void PreDraw();
     // 描画後処理
     void PostDraw();
+    void SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
     static void Finalize();
     // Getter達
     ID3D12Device* GetDevice() const { return device.Get(); }

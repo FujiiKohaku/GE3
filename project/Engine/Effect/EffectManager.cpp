@@ -589,6 +589,8 @@ void EffectManager::CreatePerViewResource()
 
     perViewData_->viewProjection = MatrixMath::MakeIdentity4x4();
     perViewData_->billboardMatrix = MatrixMath::MakeIdentity4x4();
+    perViewData_->cameraPosition = { 0.0f, 0.0f, 0.0f };
+    perViewData_->padding = 0.0f;
 }
 
 void EffectManager::CreateInitializeRootSignature()
@@ -964,6 +966,12 @@ void EffectManager::UpdatePerView()
     }
 
     Matrix4x4 cameraMatrix = camera_->GetWorldMatrix();
+    perViewData_->cameraPosition = {
+        cameraMatrix.m[3][0],
+        cameraMatrix.m[3][1],
+        cameraMatrix.m[3][2],
+    };
+
     cameraMatrix.m[3][0] = 0.0f;
     cameraMatrix.m[3][1] = 0.0f;
     cameraMatrix.m[3][2] = 0.0f;
@@ -1062,6 +1070,7 @@ void EffectManager::Draw()
         particleRenderManager_->PreDraw(runtime.blendMode);
         commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
         commandList->SetGraphicsRootConstantBufferView(3, perViewResource_->GetGPUVirtualAddress());
+        commandList->SetGraphicsRootConstantBufferView(4, fogConstantBufferView_);
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView =
@@ -1085,6 +1094,11 @@ void EffectManager::Draw()
 void EffectManager::SetBlendMode(BlendMode blendMode)
 {
     currentBlendMode_ = blendMode;
+}
+
+void EffectManager::SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView)
+{
+    fogConstantBufferView_ = fogConstantBufferView;
 }
 
 void EffectManager::TransitionResource(
@@ -1158,6 +1172,7 @@ void EffectManager::Finalize()
     instance_->dxCommon_ = nullptr;
     instance_->srvManager_ = nullptr;
     instance_->camera_ = nullptr;
+    instance_->fogConstantBufferView_ = 0;
 
     instance_.reset();
 }

@@ -40,6 +40,7 @@ public:
     void Draw();
 
     void SetBlendMode(BlendMode mode);
+    void SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView);
 
 public:
     void CreateParticleGroup(
@@ -95,6 +96,7 @@ private:
     BlendMode currentBlendMode_ = kBlendModeAdd;
     float deltaTime_ = 1.0f / 60.0f;
     bool useBillboard_ = true;
+    D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView_ = 0;
 
     std::unordered_map<std::string, ParticleGroup> particleGroups_;
 

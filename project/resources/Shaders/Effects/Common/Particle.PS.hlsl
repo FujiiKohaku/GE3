@@ -1,6 +1,8 @@
 #include "../../Common/Particle.hlsli"
+#include "../../Common/Fog.hlsli"
 
 ConstantBuffer<Material> gMaterial : register(b0);
+ConstantBuffer<FogData> gFog : register(b1);
 SamplerState gSampler : register(s0);
 Texture2D<float32_t4> gTexture : register(t1);
 
@@ -10,7 +12,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     float32_t2 texcoord = input.texcoord;
 
-    // V•ûŒü‚ğ”½“]
+    // Væ–¹å‘ã‚’åè»¢
     texcoord.y = 1.0f - texcoord.y;
 
     float32_t4 uv = mul(float32_t4(texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
@@ -23,6 +25,8 @@ PixelShaderOutput main(VertexShaderOutput input)
     {
         discard;
     }
+
+    output.color = ApplyFog(output.color, gFog, input.worldPosition, input.viewDistance);
 
     return output;
 }

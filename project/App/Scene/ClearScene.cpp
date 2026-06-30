@@ -54,6 +54,10 @@ void ClearScene::Draw3D()
     // titleObj_->Draw();
 }
 
+void ClearScene::DrawParticle()
+{
+}
+
 void ClearScene::DrawImGui()
 {
 }

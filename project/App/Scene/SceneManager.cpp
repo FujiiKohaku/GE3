@@ -44,6 +44,13 @@ void SceneManager::Draw3D()
     }
 }
 
+void SceneManager::DrawParticle()
+{
+    if (scene_) {
+        scene_->DrawParticle();
+    }
+}
+
 void SceneManager::DrawImGui()
 {
     // 実行中シーンのImGui描画

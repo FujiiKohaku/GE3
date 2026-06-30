@@ -477,6 +477,15 @@ void DirectXCommon::PostDraw()
     hr = commandList->Reset(commandAllocator.Get(), nullptr);
     assert(SUCCEEDED(hr));
 }
+
+void DirectXCommon::SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
+{
+    UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
+    commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
+    commandList->RSSetViewports(1, &viewport);
+    commandList->RSSetScissorRects(1, &scissorRect);
+}
 #pragma endregion
 #pragma region
 Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring& filepath, const wchar_t* profile)
@@ -671,6 +680,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetRTVHandle(uint32_t index) const
     handle.ptr += static_cast<SIZE_T>(descriptorSizeRTV) * index;
     return handle;
 }
+
 D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetDSVHandle() const
 {
     return dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();

@@ -54,6 +54,10 @@ void GameOverScene::Draw3D()
     // titleObj_->Draw();
 }
 
+void GameOverScene::DrawParticle()
+{
+}
+
 void GameOverScene::DrawImGui()
 {
 }

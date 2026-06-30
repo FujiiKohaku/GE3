@@ -16,4 +16,6 @@ struct ParticleCS {
 struct PerView {
     Matrix4x4 viewProjection;
     Matrix4x4 billboardMatrix;
+    Vector3 cameraPosition;
+    float padding;
 };

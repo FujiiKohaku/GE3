@@ -240,7 +240,10 @@
     <ClCompile Include="Engine\Effect\EffectManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\PostEffect\Fog\Fog.cpp">
+    <ClCompile Include="Engine\Fog\FogManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Fog\FogRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\math\GPUParticleStruct.cpp">
@@ -513,7 +516,13 @@
     <ClInclude Include="Engine\Effect\EffectManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\PostEffect\Fog\Fog.h">
+    <ClInclude Include="Engine\Fog\FogData.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Fog\FogManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Fog\FogRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\math\GPUParticleStruct.h">
@@ -608,8 +617,9 @@
     <None Include="resources\Shaders\Debug\DebugLine.GS.hlsl" />
     <None Include="resources\Shaders\Debug\DebugLine.PS.hlsl" />
     <None Include="resources\Shaders\Debug\DebugLine.VS.hlsl" />
-    <None Include="resources\Shaders\Fog.PS.hlsl" />
-    <None Include="resources\Shaders\Fog.VS.hlsl" />
+    <None Include="resources\Shaders\Common\Fog.hlsli" />
+    <None Include="resources\Shaders\Fog\DistanceFog.PS.hlsl" />
+    <None Include="resources\Shaders\Fog\Fog.VS.hlsl" />
     <None Include="resources\Shaders\Object3D\Object3d.hlsli" />
   </ItemGroup>
 </Project>

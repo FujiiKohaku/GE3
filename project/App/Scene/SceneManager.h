@@ -22,6 +22,7 @@ public:
     void DrawImGui();
     void Draw2D();
     void Draw3D();
+    void DrawParticle();
     // PostEffectTypeのセッターとゲッター
     void SetPostEffectType(PostEffectType postEffectType);
     PostEffectType GetPostEffectType() const;

@@ -13,6 +13,7 @@ public:
 
     virtual void Draw2D() = 0;
     virtual void Draw3D() = 0;
+    virtual void DrawParticle() = 0;
     virtual void DrawImGui() = 0;
 
     // 仮想デストラクタ（必須）

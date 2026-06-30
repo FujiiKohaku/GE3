@@ -4,6 +4,8 @@ struct VertexShaderOutput
     float32_t2 texcoord : TEXCOORD0;
     float32_t3 normal : NORMAL0;
     float32_t4 color : COLOR0;
+    float32_t3 worldPosition : WORLDPOSITION0;
+    float32_t viewDistance : TEXCOORD1;
 };
 
 struct VertexShaderInput
@@ -45,6 +47,8 @@ struct PerView
 {
     float32_t4x4 viewProjection;
     float32_t4x4 billboardMatrix;
+    float32_t3 cameraPosition;
+    float32_t padding;
 };
 struct EmitterSphere
 {
