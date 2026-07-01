@@ -55,6 +55,9 @@
     <Filter Include="Rail">
       <UniqueIdentifier>{2bfb0e7d-4e0e-4d6e-bff5-985f4f9e6044}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Renderer">
+      <UniqueIdentifier>{31A1888E-8B1B-4DAF-8F0D-79A38E5F6A7B}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App\main.cpp">
@@ -245,6 +248,9 @@
     </ClCompile>
     <ClCompile Include="Engine\Fog\FogRenderer.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Renderer\Renderer.cpp">
+      <Filter>Renderer</Filter>
     </ClCompile>
     <ClCompile Include="Engine\math\GPUParticleStruct.cpp">
       <Filter>ソース ファイル</Filter>
@@ -524,6 +530,9 @@
     </ClInclude>
     <ClInclude Include="Engine\Fog\FogRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Renderer\Renderer.h">
+      <Filter>Renderer</Filter>
     </ClInclude>
     <ClInclude Include="Engine\math\GPUParticleStruct.h">
       <Filter>ヘッダー ファイル</Filter>

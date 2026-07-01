@@ -1,17 +1,19 @@
 ﻿#include "Game.h"
-#include <numbers>
-#include "Engine/Effect/EffectManager.h"
+
+namespace {
+void CheckInitializeTime(const char* name, std::chrono::steady_clock::time_point& prevTime)
+{
+    auto nowTime = std::chrono::steady_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - prevTime).count();
+
+    Logger::Log(std::string(name) + " : " + std::to_string(ms) + "ms");
+
+    prevTime = nowTime;
+}
+}
 
 void Game::Initialize()
 {
-    auto CheckTime = [](const char* name, std::chrono::steady_clock::time_point& prevTime) {
-        auto nowTime = std::chrono::steady_clock::now();
-        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - prevTime).count();
-
-        Logger::Log(std::string(name) + " : " + std::to_string(ms) + "ms");
-
-        prevTime = nowTime;
-    };
     auto prevTime = std::chrono::steady_clock::now();
     Logger::Log("Game Initialize Start");
     ShowCursor(FALSE); // カーソルを消す
@@ -22,40 +24,40 @@ void Game::Initialize()
 
     LockCursorToWindow();
 
-    CheckTime("WinApp", prevTime);
+    CheckInitializeTime("WinApp", prevTime);
 
     DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
-    CheckTime("DirectXCommon", prevTime);
+    CheckInitializeTime("DirectXCommon", prevTime);
 
     SrvManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("SrvManager", prevTime);
+    CheckInitializeTime("SrvManager", prevTime);
 
     TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
-    CheckTime("TextureManager", prevTime);
+    CheckInitializeTime("TextureManager", prevTime);
 
     ImGuiManager::GetInstance()->Initialize(WinApp::GetInstance(), DirectXCommon::GetInstance(), SrvManager::GetInstance());
-    CheckTime("ImGuiManager", prevTime);
+    CheckInitializeTime("ImGuiManager", prevTime);
 
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("SpriteManager", prevTime);
+    CheckInitializeTime("SpriteManager", prevTime);
 
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("ModelManager", prevTime);
+    CheckInitializeTime("ModelManager", prevTime);
 
     Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("Object3dManager", prevTime);
+    CheckInitializeTime("Object3dManager", prevTime);
 
     SkinningObject3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("SkinningObject3dManager", prevTime);
+    CheckInitializeTime("SkinningObject3dManager", prevTime);
 
     SkyBoxManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("SkyBoxManager", prevTime);
+    CheckInitializeTime("SkyBoxManager", prevTime);
 
     LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckTime("LightManager", prevTime);
+    CheckInitializeTime("LightManager", prevTime);
 
     DebugRenderer::GetInstance()->Initialize();
-    CheckTime("DebugRenderer", prevTime);
+    CheckInitializeTime("DebugRenderer", prevTime);
 
     modelCommon_.Initialize(DirectXCommon::GetInstance());
 
@@ -75,17 +77,8 @@ void Game::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
 
-    offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
-    offscreenRenderer_->Initialize();
-
-    copyImageRenderer_ = std::make_unique<CopyImageRenderer>();
-    copyImageRenderer_->Initialize(DirectXCommon::GetInstance());
-
-    fogManager_ = std::make_unique<FogManager>();
-    fogManager_->Initialize(DirectXCommon::GetInstance());
-
-    fogRenderer_ = std::make_unique<FogRenderer>();
-    fogRenderer_->Initialize(DirectXCommon::GetInstance());
+    renderer_ = std::make_unique<Renderer>();
+    renderer_->Initialize();
 
     SoundManager::GetInstance()->Initialize();
 
@@ -96,11 +89,7 @@ void Game::Update()
 {
     Input::GetInstance()->Update();
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_P)) {
-        isPostEffectEnabled_ = !isPostEffectEnabled_;
-    }
-
-if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
 
         isMouseCursorVisible_ = !isMouseCursorVisible_;
 
@@ -126,51 +115,15 @@ if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
     SceneManager::GetInstance()->Update();
     DebugRenderer::GetInstance()->Update();
     SceneManager::GetInstance()->DrawImGui();
-    Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
-    if (defaultCamera != nullptr) {
-        fogManager_->SetCameraInfo(
-            defaultCamera->GetNearClip(),
-            defaultCamera->GetFarClip(),
-            defaultCamera->GetFovY(),
-            defaultCamera->GetAspectRatio());
-    }
-    fogManager_->Update();
-    fogManager_->DrawImGui();
+    renderer_->Update();
+    renderer_->DrawImGui();
 
     ImGuiManager::GetInstance()->End();
 }
 
 void Game::Draw()
 {
-    SrvManager::GetInstance()->PreDraw();
-    D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = fogManager_->GetConstantBufferView();
-    EffectManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
-    ParticleManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
-
-    fogRenderer_->PreDrawDepth();
-    offscreenRenderer_->PreDraw(fogRenderer_->GetDepthDSVHandle());
-    SceneManager::GetInstance()->Draw3D();
-    DebugRenderer::GetInstance()->Draw();
-    fogRenderer_->PostDrawDepth();
-    offscreenRenderer_->PostDraw();
-
-   // ポストエフェクトをかける
-    DirectXCommon::GetInstance()->PreDraw();
-    copyImageRenderer_->SetPostEffectType(SceneManager::GetInstance()->GetPostEffectType()); // シーンマネージャーからポストエフェクトの種類を取得してセットする
-    CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-    const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
-    postEffectParameter.radialBlurSampleCount = isBoosting ? 48 : 32;
-    postEffectParameter.radialBlurWidth = isBoosting ? 0.25f : 0.05f;
-    copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), fogRenderer_->GetDepthSRVHandle());
-    fogRenderer_->Apply(offscreenRenderer_->GetSrvHandleGPU(), fogConstantBufferView);
-    fogRenderer_->PrepareDepthForParticleDraw();
-    DirectXCommon::GetInstance()->SetBackBufferRenderTarget(fogRenderer_->GetDepthDSVHandle());
-    SceneManager::GetInstance()->DrawParticle();
-
-    SceneManager::GetInstance()->Draw2D();
-
-    ImGuiManager::GetInstance()->Draw();
-    DirectXCommon::GetInstance()->PostDraw();
+    renderer_->Draw(SceneManager::GetInstance());
 }
 
 void Game::Finalize()
@@ -181,6 +134,7 @@ void Game::Finalize()
     ShowCursor(TRUE);
     SceneManager::GetInstance()->Finalize();
     ImGuiManager::GetInstance()->Finalize();
+    renderer_.reset();
 
     SkinningObject3dManager::GetInstance()->Finalize();
     DebugRenderer::GetInstance()->Finalize();

@@ -176,6 +176,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Particle\ParticleManager.cpp" />
     <ClCompile Include="Engine\Fog\FogManager.cpp" />
     <ClCompile Include="Engine\Fog\FogRenderer.cpp" />
+    <ClCompile Include="Engine\Renderer\Renderer.cpp" />
     <ClCompile Include="Engine\PostEffect\CopyImageRenderer.cpp" />
     <ClCompile Include="Engine\3D\Model.cpp" />
     <ClCompile Include="Engine\3D\SkinningObject3d.cpp" />
@@ -308,6 +309,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Fog\FogData.h" />
     <ClInclude Include="Engine\Fog\FogManager.h" />
     <ClInclude Include="Engine\Fog\FogRenderer.h" />
+    <ClInclude Include="Engine\Renderer\Renderer.h" />
     <ClInclude Include="Engine\PostEffect\CopyImageRenderer.h" />
     <ClInclude Include="Engine\3D\Model.h" />
     <ClInclude Include="Engine\3D\SkinningObject3d.h" />
