@@ -163,7 +163,6 @@ void Game::Draw()
     postEffectParameter.radialBlurWidth = isBoosting ? 0.25f : 0.05f;
     copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), fogRenderer_->GetDepthSRVHandle());
     fogRenderer_->Apply(offscreenRenderer_->GetSrvHandleGPU(), fogConstantBufferView);
-
     fogRenderer_->PrepareDepthForParticleDraw();
     DirectXCommon::GetInstance()->SetBackBufferRenderTarget(fogRenderer_->GetDepthDSVHandle());
     SceneManager::GetInstance()->DrawParticle();
