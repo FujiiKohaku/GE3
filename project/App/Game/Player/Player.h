@@ -7,7 +7,6 @@
 #include <memory>
 #include <vector>
 
-//#include "Bullet.h"
 
 #include "App/Game/Player/Bullet/PlayerBullet.h"
 
@@ -103,6 +102,7 @@ public:
     }
 
     void DrawImGui();
+    void FireBullet();
 
 
 private:
@@ -152,14 +152,12 @@ private:
     static constexpr int kMissileFireIntervalFrames = 120;
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
-    void FireBullet();
     Vector3 CalculateMuzzlePosition() const;
     void CreateAimRay(Ray& aimRay) const;
-    Vector3 CreateBaseAimPoint(const Ray& aimRay) const;
+    Vector3 CreateConvergencePoint(const Ray& aimRay) const;
     Vector3 ResolveAimPoint(
         const Ray& aimRay,
-        const Vector3& muzzlePosition,
-        const Vector3& baseAimPoint) const;
+        const Vector3& muzzlePosition) const;
     float CalculateAimAssistRate(
         const Vector3& initialBulletDirection,
         const Vector3& hitDirection) const;

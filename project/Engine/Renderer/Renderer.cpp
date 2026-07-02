@@ -63,6 +63,14 @@ void Renderer::Draw(SceneManager* sceneManager)
     // SRV heap setup
     SrvManager::GetInstance()->PreDraw();
 
+    Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
+    if (defaultCamera != nullptr) {
+        EffectManager::GetInstance()->SetCamera(defaultCamera);
+        ParticleManager::GetInstance()->SetCamera(defaultCamera);
+        EffectManager::GetInstance()->UpdatePerView();
+        ParticleManager::GetInstance()->UpdatePerView();
+    }
+
     D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = fogManager_->GetConstantBufferView();
     EffectManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
     ParticleManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);

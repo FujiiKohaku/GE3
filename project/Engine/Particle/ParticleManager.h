@@ -52,6 +52,8 @@ public:
     void EmitFire(const std::string& name, const Vector3& position, uint32_t count);
     void EmitRing(const std::string& name, const Vector3& position, uint32_t count);
     void AddParticle(const std::string& name, const Particle& particle);
+    void SetCamera(Camera* camera);
+    void UpdatePerView();
 
 private:
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
@@ -83,7 +85,6 @@ private:
 private:
     void CreateMaterialResource();
     void CreatePerViewResource();
-    void UpdatePerView();
 
 private:
     static std::unique_ptr<ParticleManager> instance_;

@@ -860,7 +860,6 @@ void EffectManager::DispatchUpdate(const EffectRuntime& runtime, ActiveEffectRes
 void EffectManager::Update()
 {
     ReleaseRetiredResources();
-    UpdatePerView();
 
     for (size_t i = 0; i < activeEffects_.size(); ++i) {
         UpdateActiveEffect(i);
@@ -1099,6 +1098,11 @@ void EffectManager::SetBlendMode(BlendMode blendMode)
 void EffectManager::SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView)
 {
     fogConstantBufferView_ = fogConstantBufferView;
+}
+
+void EffectManager::SetCamera(Camera* camera)
+{
+    camera_ = camera;
 }
 
 void EffectManager::TransitionResource(

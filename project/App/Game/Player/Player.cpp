@@ -20,7 +20,7 @@
 #include "Engine/EditorManager/EditorManager.h"
 
 namespace {
-constexpr float kAimPointDistance = 10000.0f;
+constexpr float kAimConvergenceDistance = 220.0f;
 constexpr float kAimAssistFullAngleDegrees = 2.5f;
 constexpr float kAimAssistMaxAngleDegrees = 6.0f;
 constexpr float kAimAssistMaxRate = 0.40f;
@@ -50,7 +50,7 @@ void Player::Initialize(Model* model)
     if (camera_ != nullptr) {
         object_->SetCamera(camera_);
     }
-    ModelManager::GetInstance()->Load("star.obj"); //
+    ModelManager::GetInstance()->Load("star.obj");
     bulletModel_ = ModelManager::GetInstance()->Load("star.obj");
 
     transform_.scale = { 1.0f, 1.0f, 1.0f };
@@ -110,11 +110,6 @@ void Player::Update()
 
     transform_.translate = CalculateRailWorldPosition(railOffset_);
 
-    if (input->IsMouseTrigger(0)) {
-        FireBullet();
-    }
-
-    // transform_.translate.z += 0.5f;
     //  transform反映
     ApplyTransform();
     // 弾更新と死んだ弾の削除
@@ -286,8 +281,7 @@ void Player::FireBullet()
     Ray aimRay {};
     CreateAimRay(aimRay);
 
-    Vector3 baseAimPoint = CreateBaseAimPoint(aimRay);
-    Vector3 aimPoint = ResolveAimPoint(aimRay, muzzlePosition, baseAimPoint);
+    Vector3 aimPoint = ResolveAimPoint(aimRay, muzzlePosition);
 
     Vector3 bulletDirection = Normalize(aimPoint - muzzlePosition);
 
@@ -298,14 +292,17 @@ void Player::FireBullet()
 
     bullet->SetVelocity(bulletVelocity);
 
+    // 描画前にワールド行列を最新座標に同期する
+    bullet->Update();
+
     bullets_.push_back(std::move(bullet));
 }
 
 Vector3 Player::CalculateMuzzlePosition() const
 {
-    Vector3 muzzlePosition = transform_.translate;
-    muzzlePosition.y += bulletSpawnOffsetY_;
-    muzzlePosition.z += bulletSpawnOffsetZ_;
+    Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
+    Vector3 localMuzzle = { 0.0f, bulletSpawnOffsetY_, bulletSpawnOffsetZ_ };
+    Vector3 muzzlePosition = MatrixMath::Transform(localMuzzle, worldMatrix);
 
     return muzzlePosition;
 }
@@ -337,34 +334,33 @@ void Player::CreateAimRay(Ray& aimRay) const
     aimRay.direction = Normalize(farPoint - nearPoint);
 }
 
-Vector3 Player::CreateBaseAimPoint(const Ray& aimRay) const
+Vector3 Player::CreateConvergencePoint(const Ray& aimRay) const
 {
-    return aimRay.origin + aimRay.direction * kAimPointDistance;
+    return aimRay.origin + aimRay.direction * kAimConvergenceDistance;
 }
 
 Vector3 Player::ResolveAimPoint(
     const Ray& aimRay,
-    const Vector3& muzzlePosition,
-    const Vector3& baseAimPoint) const
+    const Vector3& muzzlePosition) const
 {
-    Vector3 aimPoint = baseAimPoint;
+    Vector3 convergencePoint = CreateConvergencePoint(aimRay);
+    Vector3 aimPoint = convergencePoint;
     RaycastHit hit {};
 
     if (!CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
         return aimPoint;
     }
 
-    Vector3 baseTargetPoint = hit.position;
     Vector3 enemyCenter = hit.enemy->GetPosition();
 
-    Vector3 initialBulletDirection = Normalize(baseTargetPoint - muzzlePosition);
+    Vector3 initialBulletDirection = Normalize(convergencePoint - muzzlePosition);
     Vector3 enemyCenterDirection = Normalize(enemyCenter - muzzlePosition);
     float aimAssistRate = CalculateAimAssistRate(initialBulletDirection, enemyCenterDirection);
 
     if (aimAssistRate > kNoAimAssistRate) {
-        aimPoint = Lerp(baseTargetPoint, enemyCenter, aimAssistRate);
+        aimPoint = Lerp(convergencePoint, enemyCenter, aimAssistRate);
     } else {
-        aimPoint = baseTargetPoint;
+        aimPoint = convergencePoint;
     }
 
     return aimPoint;

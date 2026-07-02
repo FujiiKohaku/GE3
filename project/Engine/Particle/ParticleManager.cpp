@@ -69,14 +69,8 @@ void ParticleManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager
 
 void ParticleManager::Update()
 {
-    UpdatePerView();
-
-    const Matrix4x4 billboardMatrix = perViewData_->billboardMatrix;
-    const Matrix4x4 viewProjectionMatrix = perViewData_->viewProjection;
-
     for (auto& particleGroupPair : particleGroups_) {
         ParticleGroup& particleGroup = particleGroupPair.second;
-        particleGroup.numInstance = 0;
 
         for (std::list<Particle>::iterator particleIterator = particleGroup.particles.begin();
              particleIterator != particleGroup.particles.end();) {
@@ -89,33 +83,6 @@ void ParticleManager::Update()
             }
 
             particle.transform.translate += particle.velocity * deltaTime_;
-
-            Matrix4x4 worldMatrix {};
-            if (useBillboard_) {
-                Matrix4x4 scaleMatrix = MatrixMath::Matrix4x4MakeScaleMatrix(particle.transform.scale);
-                Matrix4x4 rotateMatrix = MatrixMath::MakeRotateZMatrix(particle.transform.rotate.z);
-                Matrix4x4 translateMatrix = MatrixMath::MakeTranslateMatrix(particle.transform.translate);
-
-                worldMatrix = MatrixMath::Multiply(scaleMatrix, rotateMatrix);
-                worldMatrix = MatrixMath::Multiply(worldMatrix, billboardMatrix);
-                worldMatrix = MatrixMath::Multiply(worldMatrix, translateMatrix);
-            } else {
-                worldMatrix = MatrixMath::MakeAffineMatrix(
-                    particle.transform.scale,
-                    particle.transform.rotate,
-                    particle.transform.translate);
-            }
-
-            if (particleGroup.numInstance < kNumMaxInstance) {
-                const float alpha = 1.0f - (particle.currentTime / particle.lifeTime);
-                ParticleForGPU& instance = particleGroup.instanceData[particleGroup.numInstance];
-                instance.World = worldMatrix;
-                instance.WVP = MatrixMath::Multiply(worldMatrix, viewProjectionMatrix);
-                instance.color = particle.color;
-                instance.color.w *= alpha;
-                particleGroup.numInstance++;
-            }
-
             ++particleIterator;
         }
     }
@@ -348,6 +315,42 @@ void ParticleManager::UpdatePerView()
 
     perViewData_->billboardMatrix = cameraMatrix;
     perViewData_->viewProjection = camera_->GetViewProjectionMatrix();
+
+    const Matrix4x4 billboardMatrix = perViewData_->billboardMatrix;
+    const Matrix4x4 viewProjectionMatrix = perViewData_->viewProjection;
+
+    for (auto& particleGroupPair : particleGroups_) {
+        ParticleGroup& particleGroup = particleGroupPair.second;
+        particleGroup.numInstance = 0;
+
+        for (Particle& particle : particleGroup.particles) {
+            Matrix4x4 worldMatrix {};
+            if (useBillboard_) {
+                Matrix4x4 scaleMatrix = MatrixMath::Matrix4x4MakeScaleMatrix(particle.transform.scale);
+                Matrix4x4 rotateMatrix = MatrixMath::MakeRotateZMatrix(particle.transform.rotate.z);
+                Matrix4x4 translateMatrix = MatrixMath::MakeTranslateMatrix(particle.transform.translate);
+
+                worldMatrix = MatrixMath::Multiply(scaleMatrix, rotateMatrix);
+                worldMatrix = MatrixMath::Multiply(worldMatrix, billboardMatrix);
+                worldMatrix = MatrixMath::Multiply(worldMatrix, translateMatrix);
+            } else {
+                worldMatrix = MatrixMath::MakeAffineMatrix(
+                    particle.transform.scale,
+                    particle.transform.rotate,
+                    particle.transform.translate);
+            }
+
+            if (particleGroup.numInstance < kNumMaxInstance) {
+                const float alpha = 1.0f - (particle.currentTime / particle.lifeTime);
+                ParticleForGPU& instance = particleGroup.instanceData[particleGroup.numInstance];
+                instance.World = worldMatrix;
+                instance.WVP = MatrixMath::Multiply(worldMatrix, viewProjectionMatrix);
+                instance.color = particle.color;
+                instance.color.w *= alpha;
+                particleGroup.numInstance++;
+            }
+        }
+    }
 }
 
 void ParticleManager::Finalize()
@@ -390,4 +393,9 @@ void ParticleManager::Finalize()
     instance_->fogConstantBufferView_ = 0;
 
     instance_.reset();
+}
+
+void ParticleManager::SetCamera(Camera* camera)
+{
+    camera_ = camera;
 }

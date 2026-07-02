@@ -473,6 +473,12 @@ void GamePlayScene::Update()
     playerPosition += railUp * railOffset.y;
     player_->SetTranslate(playerPosition);
 
+    if (input != nullptr) {
+        if (input->IsMouseTrigger(0)) {
+            player_->FireBullet();
+        }
+    }
+
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,
         currentPosition + forward * 20.0f,

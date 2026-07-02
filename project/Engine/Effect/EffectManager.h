@@ -97,6 +97,8 @@ public:
 
     void SetBlendMode(BlendMode blendMode);
     void SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView);
+    void SetCamera(Camera* camera);
+    void UpdatePerView();
 
     const std::vector<ActiveEffect>& GetActiveEffects() const { return activeEffects_; }
 
@@ -216,7 +218,6 @@ private:
 
     void CreateMaterialResource();
     void CreatePerViewResource();
-    void UpdatePerView();
 
     void CreateInitializeRootSignature();
     void CreateInitializePipeline();
