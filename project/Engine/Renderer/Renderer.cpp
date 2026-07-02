@@ -77,9 +77,10 @@ void Renderer::Draw(SceneManager* sceneManager)
 
     // BackBuffer draw start
     DirectXCommon::GetInstance()->PreDraw();
-
+    
     // Post effect apply
     copyImageRenderer_->SetPostEffectType(sceneManager->GetPostEffectType());
+    copyImageRenderer_->SetPostEffectType(PostEffectType::Random);
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
     if (isBoosting) {
