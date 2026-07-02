@@ -1,7 +1,7 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Player/Bullet/MissileBullet.h"
-
 #include "App/Game/Player/Bullet/NormalBullet.h"
+#include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -20,10 +20,10 @@
 #include "Engine/EditorManager/EditorManager.h"
 
 namespace {
-constexpr float kAimPointDistance = 600.0f;
-constexpr float kAimAssistFullAngleDegrees = 1.5f;
+constexpr float kAimPointDistance = 10000.0f;
+constexpr float kAimAssistFullAngleDegrees = 2.5f;
 constexpr float kAimAssistMaxAngleDegrees = 6.0f;
-constexpr float kAimAssistMaxRate = 0.35f;
+constexpr float kAimAssistMaxRate = 0.40f;
 constexpr float kNoAimAssistRate = 0.0f;
 constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0f;
 constexpr float kAimAssistFullAngle = kAimAssistFullAngleDegrees * kDegreesToRadians;
@@ -354,12 +354,17 @@ Vector3 Player::ResolveAimPoint(
         return aimPoint;
     }
 
-    Vector3 initialBulletDirection = Normalize(baseAimPoint - muzzlePosition);
-    Vector3 hitDirection = Normalize(hit.position - muzzlePosition);
-    float aimAssistRate = CalculateAimAssistRate(initialBulletDirection, hitDirection);
+    Vector3 baseTargetPoint = hit.position;
+    Vector3 enemyCenter = hit.enemy->GetPosition();
+
+    Vector3 initialBulletDirection = Normalize(baseTargetPoint - muzzlePosition);
+    Vector3 enemyCenterDirection = Normalize(enemyCenter - muzzlePosition);
+    float aimAssistRate = CalculateAimAssistRate(initialBulletDirection, enemyCenterDirection);
 
     if (aimAssistRate > kNoAimAssistRate) {
-        aimPoint = Lerp(baseAimPoint, hit.position, aimAssistRate);
+        aimPoint = Lerp(baseTargetPoint, enemyCenter, aimAssistRate);
+    } else {
+        aimPoint = baseTargetPoint;
     }
 
     return aimPoint;
@@ -405,7 +410,11 @@ float Player::CalculateAimAssistRate(
     float angleRemaining = kAimAssistMaxAngle - aimAssistAngle;
     float angleRate = angleRemaining / assistAngleRange;
 
-    return kAimAssistMaxRate * angleRate;
+    constexpr float kSmoothstepFactorThree = 3.0f;
+    constexpr float kSmoothstepFactorTwo = 2.0f;
+    float smoothRate = angleRate * angleRate * (kSmoothstepFactorThree - kSmoothstepFactorTwo * angleRate);
+
+    return kAimAssistMaxRate * smoothRate;
 }
 
 std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)

@@ -7,7 +7,7 @@
 std::unique_ptr<CollisionManager> CollisionManager::instance_ = nullptr;
 
 namespace {
-constexpr float kEnemyRaycastRadius = 4.0f;
+constexpr float kEnemyRaycastRadius = 2.5f;
 }
 
 CollisionManager::CollisionManager(ConstructorKey)

@@ -147,8 +147,6 @@ private:
 
     float bulletSpawnOffsetY_ = 0.3f;
     float bulletSpawnOffsetZ_ = 4.0f;
-    float bulletAimPowerX_ = 0.8f;
-    float bulletAimPowerY_ = 0.4f;
     float bulletSpeed_ = 2.5f;
     int currentWeapon_ = kWeaponNormalBullet;
     static constexpr int kMissileFireIntervalFrames = 120;

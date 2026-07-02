@@ -23,7 +23,7 @@ private:
     void StopTrailEffect();
 
 private:
-    float speed_ = 40.0f;
+    float speed_ = 180.0f;
     float scale_ = 2.0f;
 
     EffectHandle trailEffectHandle_ = kInvalidEffectHandle;
