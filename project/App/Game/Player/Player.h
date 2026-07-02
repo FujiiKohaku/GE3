@@ -13,6 +13,7 @@
 
 class Camera;
 class Input;
+struct Ray;
 
 class Player {
 public:
@@ -154,6 +155,16 @@ private:
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
     void FireBullet();
+    Vector3 CalculateMuzzlePosition() const;
+    void CreateAimRay(Ray& aimRay) const;
+    Vector3 CreateBaseAimPoint(const Ray& aimRay) const;
+    Vector3 ResolveAimPoint(
+        const Ray& aimRay,
+        const Vector3& muzzlePosition,
+        const Vector3& baseAimPoint) const;
+    float CalculateAimAssistRate(
+        const Vector3& initialBulletDirection,
+        const Vector3& hitDirection) const;
     std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
     void UpdateWeaponSwitch(Input* input);
     const char* GetCurrentWeaponName() const;

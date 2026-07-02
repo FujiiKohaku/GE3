@@ -4,18 +4,41 @@
 #include "App/Game/Player/Bullet/NormalBullet.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Input/Input.h"
 #include "Engine/debugcamera/DebugCameraController.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <numbers>
 
 #ifdef _DEBUG
 #include "externals/imgui/ImGuizmo.h"
 #endif
 
 #include "Engine/EditorManager/EditorManager.h"
+
+namespace {
+constexpr float kAimPointDistance = 600.0f;
+constexpr float kAimAssistFullAngleDegrees = 1.5f;
+constexpr float kAimAssistMaxAngleDegrees = 6.0f;
+constexpr float kAimAssistMaxRate = 0.35f;
+constexpr float kNoAimAssistRate = 0.0f;
+constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0f;
+constexpr float kAimAssistFullAngle = kAimAssistFullAngleDegrees * kDegreesToRadians;
+constexpr float kAimAssistMaxAngle = kAimAssistMaxAngleDegrees * kDegreesToRadians;
+constexpr float kMinAimDirectionLengthSquared = 0.000001f;
+constexpr float kMinAimAssistAngleRange = 0.0f;
+constexpr float kDirectionDotMin = -1.0f;
+constexpr float kDirectionDotMax = 1.0f;
+
+float LengthSquared(const Vector3& value)
+{
+    return value.x * value.x + value.y * value.y + value.z * value.z;
+}
+}
+
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -255,17 +278,40 @@ void Player::FireBullet()
     bullet->Initialize(bulletModel_);
     bullet->SetCamera(camera_);
 
-    Vector3 bulletPosition = transform_.translate;
-    bulletPosition.y += bulletSpawnOffsetY_;
-    bulletPosition.z += 0.0f;
+    Vector3 muzzlePosition = CalculateMuzzlePosition();
+    EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzlePosition);
 
-    Vector3 muzzleEffectPosition = transform_.translate;
-    muzzleEffectPosition.y += bulletSpawnOffsetY_;
-    muzzleEffectPosition.z += 6.0f;
-    EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzleEffectPosition);
+    bullet->SetTranslate(muzzlePosition);
 
-    bullet->SetTranslate(bulletPosition);
+    Ray aimRay {};
+    CreateAimRay(aimRay);
 
+    Vector3 baseAimPoint = CreateBaseAimPoint(aimRay);
+    Vector3 aimPoint = ResolveAimPoint(aimRay, muzzlePosition, baseAimPoint);
+
+    Vector3 bulletDirection = Normalize(aimPoint - muzzlePosition);
+
+    Vector3 bulletVelocity;
+    bulletVelocity.x = bulletDirection.x * shotSpeed;
+    bulletVelocity.y = bulletDirection.y * shotSpeed;
+    bulletVelocity.z = bulletDirection.z * shotSpeed;
+
+    bullet->SetVelocity(bulletVelocity);
+
+    bullets_.push_back(std::move(bullet));
+}
+
+Vector3 Player::CalculateMuzzlePosition() const
+{
+    Vector3 muzzlePosition = transform_.translate;
+    muzzlePosition.y += bulletSpawnOffsetY_;
+    muzzlePosition.z += bulletSpawnOffsetZ_;
+
+    return muzzlePosition;
+}
+
+void Player::CreateAimRay(Ray& aimRay) const
+{
     float mouseX = aimScreenPosition_.x;
     float mouseY = aimScreenPosition_.y;
 
@@ -287,17 +333,79 @@ void Player::FireBullet()
     nearPoint = MatrixMath::Transform(nearPoint, inverseView);
     farPoint = MatrixMath::Transform(farPoint, inverseView);
 
-    Vector3 bulletDirection = Normalize(farPoint - bulletPosition);
+    aimRay.origin = nearPoint;
+    aimRay.direction = Normalize(farPoint - nearPoint);
+}
 
-    Vector3 bulletVelocity;
-    bulletVelocity.x = bulletDirection.x * shotSpeed + velocity_.x;
-    bulletVelocity.y = bulletDirection.y * shotSpeed + velocity_.y;
-    bulletVelocity.z = bulletDirection.z * shotSpeed + velocity_.z;
+Vector3 Player::CreateBaseAimPoint(const Ray& aimRay) const
+{
+    return aimRay.origin + aimRay.direction * kAimPointDistance;
+}
 
-    bullet->SetVelocity(bulletVelocity);
-    
+Vector3 Player::ResolveAimPoint(
+    const Ray& aimRay,
+    const Vector3& muzzlePosition,
+    const Vector3& baseAimPoint) const
+{
+    Vector3 aimPoint = baseAimPoint;
+    RaycastHit hit {};
 
-    bullets_.push_back(std::move(bullet));
+    if (!CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
+        return aimPoint;
+    }
+
+    Vector3 initialBulletDirection = Normalize(baseAimPoint - muzzlePosition);
+    Vector3 hitDirection = Normalize(hit.position - muzzlePosition);
+    float aimAssistRate = CalculateAimAssistRate(initialBulletDirection, hitDirection);
+
+    if (aimAssistRate > kNoAimAssistRate) {
+        aimPoint = Lerp(baseAimPoint, hit.position, aimAssistRate);
+    }
+
+    return aimPoint;
+}
+
+float Player::CalculateAimAssistRate(
+    const Vector3& initialBulletDirection,
+    const Vector3& hitDirection) const
+{
+    if (LengthSquared(initialBulletDirection) < kMinAimDirectionLengthSquared) {
+        return kNoAimAssistRate;
+    }
+
+    if (LengthSquared(hitDirection) < kMinAimDirectionLengthSquared) {
+        return kNoAimAssistRate;
+    }
+
+    float directionDot = Dot(initialBulletDirection, hitDirection);
+
+    if (directionDot < kDirectionDotMin) {
+        directionDot = kDirectionDotMin;
+    }
+
+    if (directionDot > kDirectionDotMax) {
+        directionDot = kDirectionDotMax;
+    }
+
+    float aimAssistAngle = std::acos(directionDot);
+
+    if (aimAssistAngle >= kAimAssistMaxAngle) {
+        return kNoAimAssistRate;
+    }
+
+    if (aimAssistAngle <= kAimAssistFullAngle) {
+        return kAimAssistMaxRate;
+    }
+
+    float assistAngleRange = kAimAssistMaxAngle - kAimAssistFullAngle;
+    if (assistAngleRange <= kMinAimAssistAngleRange) {
+        return kNoAimAssistRate;
+    }
+
+    float angleRemaining = kAimAssistMaxAngle - aimAssistAngle;
+    float angleRate = angleRemaining / assistAngleRange;
+
+    return kAimAssistMaxRate * angleRate;
 }
 
 std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)

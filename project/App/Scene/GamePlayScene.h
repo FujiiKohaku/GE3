@@ -138,6 +138,12 @@ private:
     float boostFovY_ = 0.75f;
     float currentFovY_ = 0.45f;
     float fovLerpRate_ = 0.1f;
+    float cameraFollowLerpRate_ = 0.2f;
+    float cameraForwardLerpRate_ = 0.2f;
+    bool hasCameraFollowState_ = false;
+    Vector3 smoothedCameraPosition_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 smoothedLookAheadPosition_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 smoothedCameraForward_ = { 0.0f, 0.0f, 1.0f };
     Vector3 cameraOffset_ = {
         0.0f,
         5.0f,

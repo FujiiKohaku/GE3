@@ -1,6 +1,7 @@
 #include "GamePlayScene.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
+#include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/audio/SoundManager.h"
@@ -22,6 +23,9 @@
 #include <cmath>
 
 namespace {
+constexpr float kPlayerEnemyCollisionRadius = 2.0f;
+constexpr float kPlayerBulletEnemyCollisionRadius = 2.0f;
+
 float LengthSquared(const Vector3& value)
 {
     return value.x * value.x + value.y * value.y + value.z * value.z;
@@ -51,14 +55,46 @@ void GamePlayScene::Initialize()
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
     rail_->AddPoint({ 0.0f, 0.0f, 0.0f });
-    rail_->AddPoint({ 0.0f, 5.0f, 50.0f });
-    rail_->AddPoint({ 20.0f, 8.0f, 100.0f });
-    rail_->AddPoint({ 40.0f, 0.0f, 150.0f });
-    rail_->AddPoint({ 10.0f, -5.0f, 200.0f });
-    rail_->AddPoint({ -20.0f, 3.0f, 250.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 50.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 100.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 150.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 200.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 250.0f });
     rail_->AddPoint({ 0.0f, 0.0f, 300.0f });
-    rail_->AddPoint({ 0.0f, 5.0f, 750.0f });
-    rail_->AddPoint({ 0.0f, 10.0f, 2000.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 350.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 400.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 450.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 500.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 550.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 600.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 650.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 700.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 750.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 800.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 850.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 900.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 950.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1000.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1050.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1100.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1150.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1200.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1250.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1300.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1350.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1400.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1450.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1500.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1550.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1600.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1650.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1700.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1750.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1800.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1850.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1900.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 1950.0f });
+    rail_->AddPoint({ 0.0f, 0.0f, 2000.0f });
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
@@ -228,6 +264,8 @@ void GamePlayScene::Initialize()
 
         enemies_.push_back(std::move(enemy));
     }
+
+    CollisionManager::GetInstance()->SetEnemies(&enemies_);
 }
 
 Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railPosition) const
@@ -236,16 +274,26 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
         return { 0.0f, 0.0f, 1.0f };
     }
 
-    Vector3 nextPosition = rail_->GetPositionByDistance(distance + railDirectionSampleDistance_);
-    Vector3 forward = Normalize(nextPosition - railPosition);
+    float previousDistance = distance - railDirectionSampleDistance_;
+    if (previousDistance < 0.0f) {
+        previousDistance = 0.0f;
+    }
+
+    float nextDistance = distance + railDirectionSampleDistance_;
+    float totalLength = rail_->GetTotalLength();
+    if (nextDistance > totalLength) {
+        nextDistance = totalLength;
+    }
+
+    Vector3 previousPosition = rail_->GetPositionByDistance(previousDistance);
+    Vector3 nextPosition = rail_->GetPositionByDistance(nextDistance);
+    Vector3 forward = Normalize(nextPosition - previousPosition);
 
     if (IsZeroVector(forward)) {
-        float previousDistance = distance - railDirectionSampleDistance_;
-        if (previousDistance < 0.0f) {
-            previousDistance = 0.0f;
-        }
+        forward = Normalize(nextPosition - railPosition);
+    }
 
-        Vector3 previousPosition = rail_->GetPositionByDistance(previousDistance);
+    if (IsZeroVector(forward)) {
         forward = Normalize(railPosition - previousPosition);
     }
 
@@ -365,15 +413,41 @@ void GamePlayScene::Update()
     currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
     camera_->SetFovY(currentFovY_);
 
+    debugCameraController_->Update();
+
     if (!debugCameraController_->GetDebugMode()) {
-        Vector3 cameraPosition = currentPosition - forward * 35.0f;
-        cameraPosition.y += 6.0f;
+        Vector3 cameraForward = forward;
 
-        Vector3 lookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+        if (hasCameraFollowState_) {
+            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
 
-        camera_->LookAt(cameraPosition, lookAheadPosition);
-        camera_->Update();
+            if (!IsZeroVector(lerpedForward)) {
+                cameraForward = Normalize(lerpedForward);
+            }
+        }
+
+        smoothedCameraForward_ = cameraForward;
+
+        Vector3 targetCameraPosition = currentPosition - cameraForward * 35.0f;
+        targetCameraPosition.y += 6.0f;
+
+        Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+
+        if (hasCameraFollowState_) {
+            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetCameraPosition, cameraFollowLerpRate_);
+            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPosition, cameraFollowLerpRate_);
+        } else {
+            smoothedCameraPosition_ = targetCameraPosition;
+            smoothedLookAheadPosition_ = targetLookAheadPosition;
+            hasCameraFollowState_ = true;
+        }
+
+        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
+    } else {
+        hasCameraFollowState_ = false;
     }
+
+    camera_->Update();
 
     player_->SetRailFrame(currentPosition, railRight, railUp);
 
@@ -460,21 +534,6 @@ void GamePlayScene::Update()
     EffectManager::GetInstance()->Update();
 
     sceneObjectManager_->Update();
-
-    // デバッグカメラが有効でないときのみ、レール位置を基準にカメラを追従させる
-    if (!debugCameraController_->GetDebugMode()) {
-        // 今回は注視点や回転を触らず、位置だけをレールから少し後ろへずらす。
-        Vector3 cameraPosition = currentPosition - forward * 35.0f;
-        cameraPosition.y += 6.0f;
-
-        Vector3 lookAheadPosition = rail_->GetPositionByDistance(railDistance_ + cameraLookAheadDistance_);
-
-        camera_->LookAt(cameraPosition, lookAheadPosition);
-    }
-
-    // デバッグカメラの更新
-    debugCameraController_->Update();
-    camera_->Update();
 
     // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
@@ -710,7 +769,7 @@ void GamePlayScene::CheckCollision()
 
         float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
 
-        float collisionRadius = 2.0f;
+        float collisionRadius = kPlayerEnemyCollisionRadius;
 
         if (distance <= collisionRadius) {
 
@@ -728,10 +787,9 @@ void GamePlayScene::CheckCollision()
 
             Vector3 difference = enemy->GetPosition() - bullet->GetPosition();
 
-            float distance = sqrtf(
-                difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
 
-            float collisionRadius = 4.0f;
+            float collisionRadius = kPlayerBulletEnemyCollisionRadius;
 
             if (distance <= collisionRadius) {
 
@@ -801,6 +859,7 @@ void GamePlayScene::CheckCollision()
 
 void GamePlayScene::Finalize()
 {
+    CollisionManager::GetInstance()->SetEnemies(nullptr);
 
     EffectManager::GetInstance()->StopEffect(playerJetHandle_);
     playerJetHandle_ = kInvalidEffectHandle;

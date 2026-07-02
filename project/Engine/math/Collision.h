@@ -6,3 +6,8 @@
 bool RaySphereIntersect(
     const Ray& ray,
     const Sphere& sphere);
+
+bool RaySphereIntersect(
+    const Ray& ray,
+    const Sphere& sphere,
+    float& distance);

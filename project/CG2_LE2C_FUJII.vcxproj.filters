@@ -303,6 +303,9 @@
     <ClCompile Include="Engine\math\Collision.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\CollisionManager\CollisionManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -586,6 +589,9 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\math\Collision.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\CollisionManager\CollisionManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h">
