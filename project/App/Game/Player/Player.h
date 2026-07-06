@@ -161,9 +161,6 @@ private:
     Vector3 ResolveAimPoint(
         const Ray& aimRay,
         const Vector3& muzzlePosition) const;
-    float CalculateAimAssistRate(
-        const Vector3& initialBulletDirection,
-        const Vector3& hitDirection) const;
     std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
     void UpdateWeaponSwitch(Input* input);
     const char* GetCurrentWeaponName() const;

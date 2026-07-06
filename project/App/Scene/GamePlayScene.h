@@ -58,6 +58,13 @@ private:
     void CheckCollision();
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
+
+    // Updateメソッドの処理分割用ヘルパー関数
+    void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
+    void UpdatePlayerTransform(const Vector3& currentPosition, const Vector3& railRight, const Vector3& railUp, const Vector3& forward);
+    void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
+    void ProcessPlayerShooting(Input* input);
+
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
 
     int test_ = 0;

@@ -22,22 +22,6 @@
 
 namespace {
 constexpr float kAimConvergenceDistance = 220.0f;
-constexpr float kAimAssistFullAngleDegrees = 4.0f;
-constexpr float kAimAssistMaxAngleDegrees = 10.0f;
-constexpr float kAimAssistMaxRate = 1.00f;
-constexpr float kNoAimAssistRate = 0.0f;
-constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0f;
-constexpr float kAimAssistFullAngle = kAimAssistFullAngleDegrees * kDegreesToRadians;
-constexpr float kAimAssistMaxAngle = kAimAssistMaxAngleDegrees * kDegreesToRadians;
-constexpr float kMinAimDirectionLengthSquared = 0.000001f;
-constexpr float kMinAimAssistAngleRange = 0.0f;
-constexpr float kDirectionDotMin = -1.0f;
-constexpr float kDirectionDotMax = 1.0f;
-
-float LengthSquared(const Vector3& value)
-{
-    return value.x * value.x + value.y * value.y + value.z * value.z;
-}
 }
 
 void Player::Initialize(Model* model)
@@ -387,52 +371,7 @@ Vector3 Player::ResolveAimPoint(
     return aimPoint;
 }
 
-float Player::CalculateAimAssistRate(
-    const Vector3& initialBulletDirection,
-    const Vector3& hitDirection) const
-{
-    if (LengthSquared(initialBulletDirection) < kMinAimDirectionLengthSquared) {
-        return kNoAimAssistRate;
-    }
 
-    if (LengthSquared(hitDirection) < kMinAimDirectionLengthSquared) {
-        return kNoAimAssistRate;
-    }
-
-    float directionDot = Dot(initialBulletDirection, hitDirection);
-
-    if (directionDot < kDirectionDotMin) {
-        directionDot = kDirectionDotMin;
-    }
-
-    if (directionDot > kDirectionDotMax) {
-        directionDot = kDirectionDotMax;
-    }
-
-    float aimAssistAngle = std::acos(directionDot);
-
-    if (aimAssistAngle >= kAimAssistMaxAngle) {
-        return kNoAimAssistRate;
-    }
-
-    if (aimAssistAngle <= kAimAssistFullAngle) {
-        return kAimAssistMaxRate;
-    }
-
-    float assistAngleRange = kAimAssistMaxAngle - kAimAssistFullAngle;
-    if (assistAngleRange <= kMinAimAssistAngleRange) {
-        return kNoAimAssistRate;
-    }
-
-    float angleRemaining = kAimAssistMaxAngle - aimAssistAngle;
-    float angleRate = angleRemaining / assistAngleRange;
-
-    constexpr float kSmoothstepFactorThree = 3.0f;
-    constexpr float kSmoothstepFactorTwo = 2.0f;
-    float smoothRate = angleRate * angleRate * (kSmoothstepFactorThree - kSmoothstepFactorTwo * angleRate);
-
-    return kAimAssistMaxRate * smoothRate;
-}
 
 std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)
 {
@@ -597,12 +536,7 @@ Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
     return correctedRailOffset;
 }
 
-void Player::UpdateScreenBounds(
-    const Vector3& worldPosition,
-    float& minX,
-    float& maxX,
-    float& minY,
-    float& maxY) const
+void Player::UpdateScreenBounds(const Vector3& worldPosition,float& minX,float& maxX,float& minY,float& maxY) const
 {
     if (camera_ == nullptr) {
         return;

@@ -356,191 +356,56 @@ void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, V
 
 void GamePlayScene::Update()
 {
+    // レール自体の更新
     rail_->Update();
 
+    // 敵全体の更新
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Update();
     }
 
-    // プレイヤ�E��EZ座標�E取征E
+    // プレイヤーのZ座標を取得
     float playerZ = player_->GetTranslate().z;
 
-    // エチE��ターマネージャーの更新�E�カメラを渡す！E
+    // エディターマネージャーの更新にカメラを渡す
     editorManager_->Update(camera_.get());
 
-    // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-    //     levelObject->Update();
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
-    //    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
-    //}
-
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_2)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_3)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Vignette);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_4)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::smoothing);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_5)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GaussianFilter);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_6)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_7)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-    // }
-
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_8)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::RadialBlur);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_9)) {
-    //     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Dissolve);
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
-    //     SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-    // }
-    // if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
-    //     SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
-    // }
-    float nextRailDistance = railDistance_ + railSpeed_;
-    if (nextRailDistance > rail_->GetTotalLength()) {
-        nextRailDistance = rail_->GetTotalLength();
-    }
-
-    Vector3 currentPosition = rail_->GetPositionByDistance(nextRailDistance);
-    Vector3 forward = CalculateRailForward(nextRailDistance, currentPosition);
-
+    // 1. レールの移動座標・方向ベクトルの計算
+    Vector3 currentPosition {};
+    Vector3 forward {};
     Vector3 railRight {};
     Vector3 railUp {};
-    CalculateRailBasis(forward, railRight, railUp);
+    float nextRailDistance = 0.0f;
+    UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
 
-    bool isBoostingForCamera = false;
+    // 入力インスタンスの取得
     Input* input = Input::GetInstance();
     if (input != nullptr) {
-        isBoostingForCamera = input->IsKeyPressed(DIK_LSHIFT);
-
         if (input->IsKeyTrigger(DIK_L)) {
             isRandomPostEffect_ = !isRandomPostEffect_;
             hasRandomPostEffectToggle_ = true;
         }
     }
 
-    float targetFovY = normalFovY_;
-    if (isBoostingForCamera) {
-        targetFovY = boostFovY_;
-    }
-
-    currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
-    camera_->SetFovY(currentFovY_);
-
-#ifdef _DEBUG
+    // 静的フラグ（初回フレームのログ出力用）
     static bool isFirstFrame = true;
+#ifdef _DEBUG
     if (isFirstFrame) {
         Logger::Log("GamePlayScene::Update: First frame start");
     }
 #endif
 
-    // 1. プレイヤーの移動更新および座標確定
-    player_->SetRailFrame(currentPosition, railRight, railUp, forward);
-#ifdef _DEBUG
-    if (isFirstFrame) {
-        Logger::Log("GamePlayScene::Update: Calling player_->Update()");
-    }
-#endif
-    player_->Update();
+    // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
+    UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
 
+    // 進行距離を更新
     railDistance_ = nextRailDistance;
 
-    if (forward.x != 0.0f || forward.y != 0.0f || forward.z != 0.0f) {
-        float horizontalLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+    // 3. 描画用カメラと仮想カメラの同期・更新
+    UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
 
-        Vector3 playerRotate {};
-        playerRotate.x = -std::atan2(forward.y, horizontalLength);
-        playerRotate.y = -std::atan2(forward.x, forward.z);
-        playerRotate.z = 0.0f;
-
-        player_->SetRotate(playerRotate);
-    }
-
-    Vector3 railOffset = player_->GetRailOffset();
-    Vector3 playerPosition = currentPosition;
-    playerPosition += railRight * railOffset.x;
-    playerPosition += railUp * railOffset.y;
-    player_->SetTranslate(playerPosition);
-
-    // 2. 描画用カメラの更新 (Lerpによる遅延追従)を射撃処理の前に実行して最新の行列を確定させる
-#ifdef _DEBUG
-    if (isFirstFrame) {
-        Logger::Log("GamePlayScene::Update: Updating debugCameraController");
-    }
-#endif
-    debugCameraController_->Update();
-
-    if (!debugCameraController_->GetDebugMode()) {
-        Vector3 cameraForward = forward;
-
-        if (hasCameraFollowState_) {
-            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
-
-            if (!IsZeroVector(lerpedForward)) {
-                cameraForward = Normalize(lerpedForward);
-            }
-        }
-
-        smoothedCameraForward_ = cameraForward;
-
-        Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
-        targetDrawCameraPosition.y += kCameraUpwardOffset;
-
-        Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
-
-        if (hasCameraFollowState_) {
-            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetDrawCameraPosition, cameraFollowLerpRate_);
-            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPositionDraw, cameraFollowLerpRate_);
-        } else {
-            smoothedCameraPosition_ = targetDrawCameraPosition;
-            smoothedLookAheadPosition_ = targetLookAheadPositionDraw;
-            hasCameraFollowState_ = true;
-        }
-
-        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
-    } else {
-        hasCameraFollowState_ = false;
-    }
-
-#ifdef _DEBUG
-    if (isFirstFrame) {
-        Logger::Log("GamePlayScene::Update: Calling camera_->Update()");
-    }
-#endif
-    camera_->Update();
-
-    // 3. エイム用仮想カメラ（aimCamera_）の更新 (もしデバッグラインや他の処理で使うための同期)
-    Vector3 targetCameraPosition = currentPosition - forward * kCameraBackwardOffset;
-    targetCameraPosition.y += kCameraUpwardOffset;
-    Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
-    aimCamera_->LookAt(targetCameraPosition, targetLookAheadPosition);
-    aimCamera_->SetFovY(currentFovY_);
-    aimCamera_->SetAspectRatio(camera_->GetAspectRatio());
-    aimCamera_->SetNearClip(camera_->GetNearClip());
-    aimCamera_->SetFarClip(camera_->GetFarClip());
-    aimCamera_->Update();
-
-    // 4. 弾の発射判定と射撃 (最新の描画用カメラの参照を渡す)
-    if (input != nullptr) {
-#ifdef _DEBUG
-        if (isFirstFrame) {
-            Logger::Log("GamePlayScene::Update: Checking fire bullet");
-        }
-#endif
-        if (input->IsMouseTrigger(0)) {
-            player_->FireBullet(*camera_);
-        }
-    }
+    // 4. マウス左クリックによる弾の発射処理
+    ProcessPlayerShooting(input);
 
 #ifdef _DEBUG
     if (isFirstFrame) {
@@ -549,14 +414,15 @@ void GamePlayScene::Update()
     }
 #endif
 
+    // デバッグ用の進行方向ライン描画 (緑色)
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,
         currentPosition + forward * 20.0f,
         { 0.0f, 1.0f, 0.0f, 1.0f },
         3.0f);
 
+    // プレイヤーのブースト状態に応じたエフェクト制御
     const bool isPlayerBoosting = player_->IsBoosting();
-
     Vector3 boostLinePosition = player_->GetTranslate();
     boostLinePosition.y += 0.2f;
     boostLinePosition.z += 2.4f;
@@ -584,6 +450,7 @@ void GamePlayScene::Update()
         EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
     }
 
+    // ポストエフェクトの切り替え
     PostEffectType postEffectType = PostEffectType::DepthOutline;
     if (isPlayerBoosting) {
         postEffectType = PostEffectType::RadialBlur;
@@ -599,44 +466,44 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetPostEffectType(postEffectType);
     }
 
-    // AiMスプライチEの位置を更新する
+    // レティクル（AimSprite）のスクリーン位置更新
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
 
+    // スカイボックスの更新
     skyBox_->Update(camera_.get());
 
-    // パーティクルを発生させる
-
+    // 各種マネージャー、オブジェクト、コリジョンの更新
     EffectManager::GetInstance()->Update();
-
     sceneObjectManager_->Update();
-
-    // アニメーションアクターの更新
     animationActor_->Update(1.0f / 60.0f);
+    
+    // コリジョン判定の実行
     CheckCollision();
+
 #pragma region
 #ifdef USE_IMGUI
 
     // player_->DrawImGui();
 
     // ==================================
-    // Lighting Panel�E�ライト操作パネル�E�E
+    // Lighting Panel（ライト操作パネル）
     // ==================================
     ImGui::Begin("Lighting Control");
 
-    // ---- ライト�E ON / OFF ----
+    // ---- ライトの ON / OFF ----
     static bool lightEnabled = false;
     ImGui::Checkbox("Enable Light", &lightEnabled);
 
-    // ---- ライト�E色 ----
+    // ---- ライトの色 ----
     static Vector4 lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     ImGui::ColorEdit3("Light Color", (float*)&lightColor);
 
-    // ---- 明るさ（強さ！E----
+    // ---- 明るさ（強さ） ----
     static float lightIntensity = 1.0f;
     ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
-    // ---- 光�E向き ----
+    // ---- 光の向き ----
     static Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
     ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
 
@@ -645,7 +512,7 @@ void GamePlayScene::Update()
 
     float intensity = lightIntensity;
     if (!lightEnabled) {
-        intensity = 0.0f; // OFF のとき�E光なぁE
+        intensity = 0.0f; // OFF のときは光なし
     }
 
     LightManager::GetInstance()->SetDirectional(
@@ -653,27 +520,29 @@ void GamePlayScene::Update()
         normalizedDir,
         intensity);
 
-    // ---- リセチE��ボタン�E�向きだけ�Eに戻す！E---
+    // ---- リセットボタン（向きだけ元に戻す）---
     if (ImGui::Button("Reset Direction")) {
         lightDir = { 0.0f, -1.0f, 0.0f };
     }
 
     ImGui::SameLine();
 
-    // ---- ライトを完�E初期匁E----
+    // ---- ライトを完全初期化 ----
     if (ImGui::Button("Reset Light")) {
         lightEnabled = true;
         lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
         lightIntensity = 1.0f;
         lightDir = { 0.0f, -1.0f, 0.0f };
     }
-    ImGui::Separator();
-    ImGui::Text("Point Light Control");
 
-    static bool pointEnabled = false;
+    ImGui::End();
+
+    // Point Light コントロール
+    ImGui::Begin("Point Light Control");
+    static bool pointEnabled = true;
     ImGui::Checkbox("Enable Point Light", &pointEnabled);
 
-    static Vector4 pointColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+    static Vector4 pointColor = { 1, 1, 1, 1 };
     ImGui::ColorEdit3("Point Color", (float*)&pointColor);
 
     static Vector3 pointPos = { 0.0f, 2.0f, 0.0f };
@@ -682,22 +551,20 @@ void GamePlayScene::Update()
     static float pointIntensity = 1.0f;
     ImGui::SliderFloat("Point Intensity", &pointIntensity, 0.0f, 5.0f);
 
-    float pI = pointEnabled ? pointIntensity : 0.0f;
     static float pointRadius = 10.0f;
     static float pointDecay = 1.0f;
-
     ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
     ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
 
+    float pI = pointEnabled ? pointIntensity : 0.0f;
     LightManager::GetInstance()->SetPointRadius(pointRadius);
     LightManager::GetInstance()->SetPointDecay(pointDecay);
     LightManager::GetInstance()->SetPointLight(pointColor, pointPos, pI);
-    ImGui::Separator();
-    ImGui::Text("Spot Light Control");
-    // ================================
-    // Spot Light Control
-    // ================================
 
+    ImGui::End();
+
+    // Spot Light コントロール
+    ImGui::Begin("Spot Light Control");
     static bool spotEnabled = true;
     ImGui::Checkbox("Enable Spot Light", &spotEnabled);
 
@@ -709,12 +576,12 @@ void GamePlayScene::Update()
     static Vector3 spotPos = { 0.0f, 0.0f, 0.0f };
     ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
 
-    // 方吁E
+    // 方向
     static Vector3 spotDir = { -1.0f, 0.0f, 0.0f };
     ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
     Vector3 normalizedSpotDir = Normalize(spotDir);
 
-    // 強ぁE
+    // 強さ
     static float spotIntensity = 4.0f;
     ImGui::SliderFloat("Spot Intensity", &spotIntensity, 0.0f, 10.0f);
 
@@ -724,7 +591,7 @@ void GamePlayScene::Update()
     ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
     ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
 
-    // 角度�E�度数で操佁EↁEcos に変換�E�E
+    // 角度（度数で操作し、cos に変換）
     static float spotAngleDeg = 60.0f;
     static float spotFalloffStartDeg = 30.0f;
 
@@ -735,7 +602,7 @@ void GamePlayScene::Update()
     float cosAngle = std::cos(spotAngleDeg * std::numbers::pi_v<float> / 180.0f);
     float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
 
-    // OFF のとぁE
+    // OFF のとき
     float sI = spotEnabled ? spotIntensity : 0.0f;
 
     // LightManager に反映
@@ -778,6 +645,145 @@ void GamePlayScene::Update()
     // terrain_->SetRotate(terrainRotate);
     // terrain_->SetScale(terrainScale);
 #pragma endregion
+}
+
+void GamePlayScene::UpdateRailMovement(
+    Vector3& outPosition,
+    Vector3& outForward,
+    Vector3& outRight,
+    Vector3& outUp,
+    float& outNextDistance)
+{
+    // 次フレームのレール上の進行距離を計算
+    outNextDistance = railDistance_ + railSpeed_;
+    if (outNextDistance > rail_->GetTotalLength()) {
+        outNextDistance = rail_->GetTotalLength();
+    }
+
+    // レール上での次の座標と前方向（Forward）ベクトルを算出
+    outPosition = rail_->GetPositionByDistance(outNextDistance);
+    outForward = CalculateRailForward(outNextDistance, outPosition);
+
+    // 前方向ベクトルを基準に、レールの右方向（Right）と上方向（Up）の軸を計算
+    CalculateRailBasis(outForward, outRight, outUp);
+}
+
+void GamePlayScene::UpdatePlayerTransform(
+    const Vector3& currentPosition,
+    const Vector3& railRight,
+    const Vector3& railUp,
+    const Vector3& forward)
+{
+    // プレイヤーにレール情報の最新のフレーム（座標、右方向、上方向、前方向）を伝える
+    player_->SetRailFrame(currentPosition, railRight, railUp, forward);
+    
+    // プレイヤーの内部座標（移動制限など）を更新
+    player_->Update();
+
+    // 進行方向に合わせてプレイヤーの回転を適用
+    if (forward.x != 0.0f || forward.y != 0.0f || forward.z != 0.0f) {
+        float horizontalLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+        Vector3 playerRotate {};
+        playerRotate.x = -std::atan2(forward.y, horizontalLength);
+        playerRotate.y = -std::atan2(forward.x, forward.z);
+        playerRotate.z = 0.0f;
+        player_->SetRotate(playerRotate);
+    }
+
+    // プレイヤーのキーボード移動オフセットを考慮した最新のワールド座標を確定・適用
+    Vector3 railOffset = player_->GetRailOffset();
+    Vector3 playerPosition = currentPosition;
+    playerPosition += railRight * railOffset.x;
+    playerPosition += railUp * railOffset.y;
+    player_->SetTranslate(playerPosition);
+}
+
+void GamePlayScene::UpdateCamera(
+    const Vector3& currentPosition,
+    const Vector3& forward,
+    const Vector3& railRight,
+    const Vector3& railUp,
+    float nextRailDistance,
+    Input* input)
+{
+    // ブースト中かどうかで視野角（FOV）を切り替える
+    bool isBoostingForCamera = false;
+    if (input != nullptr) {
+        isBoostingForCamera = input->IsKeyPressed(DIK_LSHIFT);
+    }
+
+    float targetFovY = normalFovY_;
+    if (isBoostingForCamera) {
+        targetFovY = boostFovY_;
+    }
+
+    // FOVの補間計算とカメラへの適用
+    currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
+    camera_->SetFovY(currentFovY_);
+
+    // 1. デバッグカメラコントローラーの更新
+    debugCameraController_->Update();
+
+    // デバッグモードでない場合は、描画用カメラをレールに沿って遅延追従（Lerp）させる
+    if (!debugCameraController_->GetDebugMode()) {
+        Vector3 cameraForward = forward;
+
+        if (hasCameraFollowState_) {
+            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
+            if (!IsZeroVector(lerpedForward)) {
+                cameraForward = Normalize(lerpedForward);
+            }
+        }
+
+        smoothedCameraForward_ = cameraForward;
+
+        // 描画用カメラのターゲット座標（Lerp前）
+        Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
+        targetDrawCameraPosition.y += kCameraUpwardOffset;
+
+        // 描画用カメラのターゲット注視点（Lerp前）
+        Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+
+        // 遅延追従（Lerp）の適用
+        if (hasCameraFollowState_) {
+            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetDrawCameraPosition, cameraFollowLerpRate_);
+            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPositionDraw, cameraFollowLerpRate_);
+        } else {
+            smoothedCameraPosition_ = targetDrawCameraPosition;
+            smoothedLookAheadPosition_ = targetLookAheadPositionDraw;
+            hasCameraFollowState_ = true;
+        }
+
+        // cameraを行列再計算のためにLookAt設定
+        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
+    } else {
+        hasCameraFollowState_ = false;
+    }
+
+    // 描画用カメラの行列を最新に確定
+    camera_->Update();
+
+    // 2. エイム用仮想カメラ（aimCamera_）の更新 (遅延なしの最新情報でLookAt)
+    Vector3 targetCameraPosition = currentPosition - forward * kCameraBackwardOffset;
+    targetCameraPosition.y += kCameraUpwardOffset;
+    Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+    
+    aimCamera_->LookAt(targetCameraPosition, targetLookAheadPosition);
+    aimCamera_->SetFovY(currentFovY_);
+    aimCamera_->SetAspectRatio(camera_->GetAspectRatio());
+    aimCamera_->SetNearClip(camera_->GetNearClip());
+    aimCamera_->SetFarClip(camera_->GetFarClip());
+    aimCamera_->Update();
+}
+
+void GamePlayScene::ProcessPlayerShooting(Input* input)
+{
+    if (input != nullptr) {
+        if (input->IsMouseTrigger(0)) {
+            // 最新の描画用カメラを渡して、高精度な射撃用Rayから弾を発射する
+            player_->FireBullet(*camera_);
+        }
+    }
 }
 
 void GamePlayScene::Draw3D()
