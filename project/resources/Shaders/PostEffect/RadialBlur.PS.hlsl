@@ -12,9 +12,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         length(direction);
 
     float blurStrength =
-        smoothstep(
-            0.20f,
-            1.0f,
+        smoothstep(0.20f,1.0f,
             distanceFromCenter);
 
     blurStrength =
