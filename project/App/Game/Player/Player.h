@@ -70,11 +70,13 @@ public:
     void SetRailFrame(
         const Vector3& railBasePosition,
         const Vector3& railRight,
-        const Vector3& railUp)
+        const Vector3& railUp,
+        const Vector3& railForward)
     {
         railBasePosition_ = railBasePosition;
         railRight_ = railRight;
         railUp_ = railUp;
+        railForward_ = railForward;
     }
 
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const
@@ -102,7 +104,7 @@ public:
     }
 
     void DrawImGui();
-    void FireBullet();
+    void FireBullet(const Camera& activeCamera);
 
 
 private:
@@ -139,6 +141,7 @@ private:
     Vector3 railBasePosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 railRight_ = { 1.0f, 0.0f, 0.0f };
     Vector3 railUp_ = { 0.0f, 1.0f, 0.0f };
+    Vector3 railForward_ = { 0.0f, 0.0f, 1.0f };
     Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
     float playerClampMarginX_ = 100.0f;
     float playerClampMarginY_ = 100.0f;
@@ -153,7 +156,7 @@ private:
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
     Vector3 CalculateMuzzlePosition() const;
-    void CreateAimRay(Ray& aimRay) const;
+    void CreateAimRay(Ray& aimRay, const Camera& activeCamera) const;
     Vector3 CreateConvergencePoint(const Ray& aimRay) const;
     Vector3 ResolveAimPoint(
         const Ray& aimRay,
@@ -175,4 +178,14 @@ private:
     Vector2 CalculateScreenCorrection(const Vector3& railOffset) const;
     Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
     void UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const;
+
+#ifdef _DEBUG
+private:
+    bool drawDebugLines_ = false;
+    Vector3 debugAimRayOrigin_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 debugAimPoint_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 debugMuzzlePosition_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 debugDrawRayOrigin_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 debugDrawAimPoint_ = { 0.0f, 0.0f, 0.0f };
+#endif
 };

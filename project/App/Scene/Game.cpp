@@ -64,10 +64,11 @@ void Game::Initialize()
     Input::GetInstance()->Initialize(WinApp::GetInstance());
 
     Logger::Log("Load Default Models");
-    // ModelManager::GetInstance()->Load("plane.obj");
-    // ModelManager::GetInstance()->Load("axis.obj");
-    // ModelManager::GetInstance()->Load("titleTex.obj");
-    // ModelManager::GetInstance()->Load("fence.obj");
+    // Model Path
+    // ModelManager::GetInstance()->Load("Debug/Samples/Plane/plane.obj");
+    // ModelManager::GetInstance()->Load("Debug/Axis/axis.obj");
+    // ModelManager::GetInstance()->Load("UI/Title/TitleTex/titleTex.obj");
+    // ModelManager::GetInstance()->Load("Environment/Fence/fence.obj");
 
     Logger::Log("Load Default Textures");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");

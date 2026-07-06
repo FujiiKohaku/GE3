@@ -47,6 +47,21 @@ void BaseBullet::Draw()
     object_->Draw();
 }
 
+void BaseBullet::SetTranslate(const Vector3& translate)
+{
+    transform_.translate = translate;
+
+    if (object_ == nullptr) {
+        return;
+    }
+
+    // Spawn Sync
+    object_->SetScale(transform_.scale);
+    object_->SetRotate(transform_.rotate);
+    object_->SetTranslate(transform_.translate);
+    object_->Update();
+}
+
 void BaseBullet::Move()
 {
     transform_.translate.x += velocity_.x;

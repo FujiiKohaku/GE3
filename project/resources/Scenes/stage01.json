@@ -3,7 +3,7 @@
         {
             "name": "TestTerrain",
             "type": "MESH",
-            "file_name": "terrain.obj",
+            "file_name": "Environment/Terrain/terrain.obj",
             "transform": {
                 "translation": [0.0, 0.0, 0.0],
                 "rotation": [0.0, 0.0, 0.0],

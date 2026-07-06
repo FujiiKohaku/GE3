@@ -28,6 +28,8 @@ public:
 
     static const int32_t kClientWidth = 1280;
     static const int32_t kClientHeight = 720;
+    int32_t GetClientWidth() const;
+    int32_t GetClientHeight() const;
 
     static LRESULT CALLBACK WindowProc(
         HWND hwnd,

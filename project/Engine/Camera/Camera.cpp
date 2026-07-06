@@ -101,6 +101,19 @@ void Camera::DrawImGui()
 
 void Camera::RecalculateMatrices()
 {
+    // Screen Size
+    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+
+    if (clientWidth <= 0.0f) {
+        clientWidth = static_cast<float>(WinApp::kClientWidth);
+    }
+
+    if (clientHeight <= 0.0f) {
+        clientHeight = static_cast<float>(WinApp::kClientHeight);
+    }
+
+    aspectRatio_ = clientWidth / clientHeight;
     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
     viewMatrix_ = MatrixMath::Inverse(worldMatrix_);
     projectionMatrix_ = MatrixMath::MakePerspectiveFovMatrix(fovY_, aspectRatio_, nearClip_, farClip_);
@@ -130,9 +143,21 @@ Vector2 Camera::WorldToScreen(const Vector3& worldPosition) const
 
     Vector2 screenPosition;
 
-    screenPosition.x = (clipPosition.x + 1.0f) * 0.5f * static_cast<float>(WinApp::GetInstance()->kClientWidth);
+    // Screen Size
+    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
 
-    screenPosition.y = (1.0f - clipPosition.y) * 0.5f * static_cast<float>(WinApp::GetInstance()->kClientHeight);
+    if (clientWidth <= 0.0f) {
+        clientWidth = static_cast<float>(WinApp::kClientWidth);
+    }
+
+    if (clientHeight <= 0.0f) {
+        clientHeight = static_cast<float>(WinApp::kClientHeight);
+    }
+
+    screenPosition.x = (clipPosition.x + 1.0f) * 0.5f * clientWidth;
+
+    screenPosition.y = (1.0f - clipPosition.y) * 0.5f * clientHeight;
 
     return screenPosition;
 }

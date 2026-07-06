@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Engine/3D/SkinningObject3d.h"
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SphereObject.h"
@@ -154,4 +154,11 @@ private:
     float followY_ = 0.35f;
     // エネミー配列
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
+
+    // エイム用仮想カメラ
+    std::unique_ptr<Camera> aimCamera_;
+
+    // カメラオフセット定数
+    static constexpr float kCameraBackwardOffset = 35.0f;
+    static constexpr float kCameraUpwardOffset = 6.0f;
 };

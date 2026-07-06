@@ -88,7 +88,6 @@ void Renderer::Draw(SceneManager* sceneManager)
     
     // Post effect apply
     copyImageRenderer_->SetPostEffectType(sceneManager->GetPostEffectType());
-    copyImageRenderer_->SetPostEffectType(PostEffectType::Random);
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
     if (isBoosting) {

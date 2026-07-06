@@ -96,9 +96,21 @@ void Sprite::Update()
     // -------------------------------
     // 行列を作成（座標変換）
     // -------------------------------
+    // Screen Size
+    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+
+    if (clientWidth <= 0.0f) {
+        clientWidth = static_cast<float>(WinApp::kClientWidth);
+    }
+
+    if (clientHeight <= 0.0f) {
+        clientHeight = static_cast<float>(WinApp::kClientHeight);
+    }
+
     Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
     Matrix4x4 viewMatrix = MatrixMath::MakeIdentity4x4(); // カメラ無し
-    Matrix4x4 orthoSprite = MatrixMath::MakeOrthographicMatrix(0.0f, 0.0f, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0.0f, 100.0f); // スプライト用
+    Matrix4x4 orthoSprite = MatrixMath::MakeOrthographicMatrix(0.0f, 0.0f, clientWidth, clientHeight, 0.0f, 100.0f); // スプライト用
 
     // -------------------------------
     // GPUへ行列を転送

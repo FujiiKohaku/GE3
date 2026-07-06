@@ -112,6 +112,8 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
     Assimp::Importer importer;
     std::string filePath = directoryPath + "/" + filename;
+    std::filesystem::path modelFilePath(filePath);
+    std::filesystem::path modelDirectory = modelFilePath.parent_path(); // Model Path
 
     std::filesystem::path p(filePath);
     if (!std::filesystem::exists(p)) {
@@ -218,7 +220,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
             // "*0" みたいな埋め込み表記�EファイルじゃなぁE
             if (!tex.empty() && tex[0] != '*') {
 
-                std::filesystem::path fullPath = std::filesystem::path(directoryPath) / tex;
+                std::filesystem::path fullPath = modelDirectory / tex; // Model Path
 
                 if (std::filesystem::exists(fullPath)) {
                     modelData.material.textureFilePath = fullPath.lexically_normal().string();

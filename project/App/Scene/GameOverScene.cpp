@@ -12,13 +12,15 @@ void GameOverScene::Initialize()
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     camera_->Update();
     Object3dManager::GetInstance()->SetDefaultCamera(camera_.get());
-    ModelManager::GetInstance()->Load("axis.obj");
+    // Model Path
+    const char* axisModelPath = "Debug/Axis/axis.obj";
+    ModelManager::GetInstance()->Load(axisModelPath);
     LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
     TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
     Object3dManager::GetInstance()->SetEnvironmentTexture(TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/skybox.dds"));
     titleObj_ = std::make_unique<Object3d>();
     titleObj_->Initialize(Object3dManager::GetInstance());
-    titleObj_->SetModel(ModelManager::GetInstance()->FindModel("axis.obj"));
+    titleObj_->SetModel(ModelManager::GetInstance()->FindModel(axisModelPath));
     titleObj_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     titleObj_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     titleObj_->SetScale({ 1.0f, 1.0f, 1.0f });

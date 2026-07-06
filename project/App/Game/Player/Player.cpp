@@ -18,12 +18,13 @@
 #endif
 
 #include "Engine/EditorManager/EditorManager.h"
+#include "Engine/Debug/DebugRenderer.h"
 
 namespace {
 constexpr float kAimConvergenceDistance = 220.0f;
-constexpr float kAimAssistFullAngleDegrees = 2.5f;
-constexpr float kAimAssistMaxAngleDegrees = 6.0f;
-constexpr float kAimAssistMaxRate = 0.40f;
+constexpr float kAimAssistFullAngleDegrees = 4.0f;
+constexpr float kAimAssistMaxAngleDegrees = 10.0f;
+constexpr float kAimAssistMaxRate = 1.00f;
 constexpr float kNoAimAssistRate = 0.0f;
 constexpr float kDegreesToRadians = std::numbers::pi_v<float> / 180.0f;
 constexpr float kAimAssistFullAngle = kAimAssistFullAngleDegrees * kDegreesToRadians;
@@ -50,22 +51,22 @@ void Player::Initialize(Model* model)
     if (camera_ != nullptr) {
         object_->SetCamera(camera_);
     }
-    ModelManager::GetInstance()->Load("star.obj");
-    bulletModel_ = ModelManager::GetInstance()->Load("star.obj");
+    ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
+    bulletModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
 
     transform_.scale = { 1.0f, 1.0f, 1.0f };
     transform_.rotate = { 0.0f, 0.0f, 0.0f };
     transform_.translate = { 0.0f, -2.0f, 0.0f };
     railBasePosition_ = transform_.translate;
     railOffset_ = { 0.0f, 0.0f, 0.0f };
-    aimScreenPosition_.x = WinApp::GetInstance()->kClientWidth / 2.0f;
-    aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight / 2.0f;
+    aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) / 2.0f;
+    aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) / 2.0f;
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
 
-    aimScreenPosition_.x = WinApp::GetInstance()->kClientWidth / 2.0f;
-    aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight / 2.0f;
+    aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) / 2.0f;
+    aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) / 2.0f;
 }
 
 void Player::Update()
@@ -118,6 +119,19 @@ void Player::Update()
     RemoveDeadBullets();
 
     object_->Update();
+
+#ifdef _DEBUG
+    if (drawDebugLines_) {
+        // 1. AimCameraから飛ぶRay (青)
+        DebugRenderer::GetInstance()->AddLine(debugAimRayOrigin_, debugAimPoint_, { 0.0f, 0.0f, 1.0f, 1.0f }, 3.0f);
+
+        // 2. Playerのマズルから飛ぶ実際の弾の進行方向 (赤)
+        DebugRenderer::GetInstance()->AddLine(debugMuzzlePosition_, debugAimPoint_, { 1.0f, 0.0f, 0.0f, 1.0f }, 3.0f);
+
+        // 3. 描画用Cameraから飛ぶRay (黄色 - デバッグ比較専用)
+        DebugRenderer::GetInstance()->AddLine(debugDrawRayOrigin_, debugDrawAimPoint_, { 1.0f, 1.0f, 0.0f, 1.0f }, 3.0f);
+    }
+#endif
 }
 #pragma endregion
 
@@ -174,8 +188,8 @@ void Player::ClampAimScreenPosition()
     }
 
     // 右の制限はウィンドウ幅-64
-    if (aimScreenPosition_.x > WinApp::GetInstance()->kClientWidth - halfAimSize) {
-        aimScreenPosition_.x = WinApp::GetInstance()->kClientWidth - halfAimSize;
+    if (aimScreenPosition_.x > static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - halfAimSize) {
+        aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - halfAimSize;
     }
 
     // 上の制限64で固定
@@ -184,8 +198,8 @@ void Player::ClampAimScreenPosition()
     }
 
     // 下の制限はウィンドウ高さ-64
-    if (aimScreenPosition_.y > WinApp::GetInstance()->kClientHeight - halfAimSize) {
-        aimScreenPosition_.y = WinApp::GetInstance()->kClientHeight - halfAimSize;
+    if (aimScreenPosition_.y > static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - halfAimSize) {
+        aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - halfAimSize;
     }
 }
 
@@ -229,10 +243,10 @@ Vector2 Player::CalculateScreenCorrection(const Vector3& railOffset) const
     UpdateScreenBounds(playerPosition - rightExtent - upExtent, minX, maxX, minY, maxY);
 
     float leftLimit = playerClampMarginX_;
-    float rightLimit = static_cast<float>(WinApp::GetInstance()->kClientWidth) - playerClampMarginX_;
+    float rightLimit = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - playerClampMarginX_;
 
     float topLimit = playerClampMarginY_;
-    float bottomLimit = static_cast<float>(WinApp::GetInstance()->kClientHeight) - playerClampMarginY_;
+    float bottomLimit = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - playerClampMarginY_;
 
     if (minX < leftLimit) {
         correction.x = leftLimit - minX;
@@ -250,7 +264,7 @@ Vector2 Player::CalculateScreenCorrection(const Vector3& railOffset) const
 }
 
 // 弾を発射する関数
-void Player::FireBullet()
+void Player::FireBullet(const Camera& activeCamera)
 {
     if (bulletModel_ == nullptr) {
         return;
@@ -279,16 +293,33 @@ void Player::FireBullet()
     bullet->SetTranslate(muzzlePosition);
 
     Ray aimRay {};
-    CreateAimRay(aimRay);
+    CreateAimRay(aimRay, activeCamera);
 
     Vector3 aimPoint = ResolveAimPoint(aimRay, muzzlePosition);
 
+#ifdef _DEBUG
+    drawDebugLines_ = true;
+    debugAimRayOrigin_ = aimRay.origin;
+    debugAimPoint_ = aimPoint;
+    debugMuzzlePosition_ = muzzlePosition;
+
+    // 描画用カメラでの逆投影レイを作成してエイムポイントを計算する（デバッグ比較用）
+    Ray drawRay {};
+    CreateAimRay(drawRay, *camera_);
+    Vector3 drawAimPoint = ResolveAimPoint(drawRay, muzzlePosition);
+    debugDrawRayOrigin_ = drawRay.origin;
+    debugDrawAimPoint_ = drawAimPoint;
+#endif
+
     Vector3 bulletDirection = Normalize(aimPoint - muzzlePosition);
 
+    // プレイヤーのワールド移動速度 (慣性) を進行方向とスピードから計算
+    Vector3 worldPlayerVelocity = railForward_ * velocity_.z;
+
     Vector3 bulletVelocity;
-    bulletVelocity.x = bulletDirection.x * shotSpeed;
-    bulletVelocity.y = bulletDirection.y * shotSpeed;
-    bulletVelocity.z = bulletDirection.z * shotSpeed;
+    bulletVelocity.x = bulletDirection.x * shotSpeed + worldPlayerVelocity.x;
+    bulletVelocity.y = bulletDirection.y * shotSpeed + worldPlayerVelocity.y;
+    bulletVelocity.z = bulletDirection.z * shotSpeed + worldPlayerVelocity.z;
 
     bullet->SetVelocity(bulletVelocity);
 
@@ -307,19 +338,19 @@ Vector3 Player::CalculateMuzzlePosition() const
     return muzzlePosition;
 }
 
-void Player::CreateAimRay(Ray& aimRay) const
+void Player::CreateAimRay(Ray& aimRay, const Camera& activeCamera) const
 {
     float mouseX = aimScreenPosition_.x;
     float mouseY = aimScreenPosition_.y;
 
-    float screenWidth = static_cast<float>(WinApp::GetInstance()->kClientWidth);
-    float screenHeight = static_cast<float>(WinApp::GetInstance()->kClientHeight);
+    float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
 
     float ndcX = (2.0f * mouseX / screenWidth) - 1.0f;
     float ndcY = 1.0f - (2.0f * mouseY / screenHeight);
 
-    Matrix4x4 inverseProjection = MatrixMath::Inverse(camera_->GetProjectionMatrix());
-    Matrix4x4 inverseView = MatrixMath::Inverse(camera_->GetViewMatrix());
+    Matrix4x4 inverseProjection = MatrixMath::Inverse(activeCamera.GetProjectionMatrix());
+    Matrix4x4 inverseView = MatrixMath::Inverse(activeCamera.GetViewMatrix());
 
     Vector3 nearPoint = { ndcX, ndcY, 0.0f };
     Vector3 farPoint = { ndcX, ndcY, 1.0f };
@@ -347,20 +378,10 @@ Vector3 Player::ResolveAimPoint(
     Vector3 aimPoint = convergencePoint;
     RaycastHit hit {};
 
-    if (!CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
-        return aimPoint;
-    }
-
-    Vector3 enemyCenter = hit.enemy->GetPosition();
-
-    Vector3 initialBulletDirection = Normalize(convergencePoint - muzzlePosition);
-    Vector3 enemyCenterDirection = Normalize(enemyCenter - muzzlePosition);
-    float aimAssistRate = CalculateAimAssistRate(initialBulletDirection, enemyCenterDirection);
-
-    if (aimAssistRate > kNoAimAssistRate) {
-        aimPoint = Lerp(convergencePoint, enemyCenter, aimAssistRate);
-    } else {
-        aimPoint = convergencePoint;
+    // レティクルレイが敵の当たり判定に重なっている場合、
+    // 複雑な角度制限は一切無視して、無条件で弾道を敵の中心へ100%吸い付かせます
+    if (CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
+        aimPoint = hit.enemy->GetPosition();
     }
 
     return aimPoint;

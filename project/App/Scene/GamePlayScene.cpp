@@ -19,6 +19,7 @@
 #include "ClearScene.h"
 #include "GameOverScene.h"
 #include "Engine/Debug/DebugRenderer.h"
+#include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
 #include <cmath>
 
@@ -100,12 +101,21 @@ void GamePlayScene::Initialize()
     // =================================================
     // Camera
     // =================================================
+    Logger::Log("GamePlayScene::Initialize: Starting camera initialization");
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
     camera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     normalFovY_ = camera_->GetFovY();
     currentFovY_ = normalFovY_;
+
+    Logger::Log("GamePlayScene::Initialize: Starting aimCamera initialization");
+    aimCamera_ = std::make_unique<Camera>();
+    aimCamera_->Initialize();
+    aimCamera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
+    aimCamera_->SetRotate({ 0.0f, 0.0f, 0.0f });
+    Logger::Log("GamePlayScene::Initialize: aimCamera initialized successfully");
+
     POINT centerMousePosition;
     centerMousePosition.x = WinApp::GetInstance()->kClientWidth / 2;
     centerMousePosition.y = WinApp::GetInstance()->kClientHeight / 2;
@@ -132,26 +142,26 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png"); // AiMスプライチE
 
     // nodeLoad
-    ModelManager::GetInstance()->Load("dolone.obj");
-    ModelManager::GetInstance()->Load("sneakWalk.gltf");
-    ModelManager::GetInstance()->Load("AnimatedCube.gltf");
-    Model* playerModel = ModelManager::GetInstance()->Load("AirPlane.obj");
+    ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
+    ModelManager::GetInstance()->Load("Characters/Animation/SneakWalk/sneakWalk.gltf");
+    ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
+    Model* playerModel = ModelManager::GetInstance()->Load("Characters/Player/AirPlane/AirPlane.obj");
 
-    Model* enemyModel_ = ModelManager::GetInstance()->Load("star.obj");
-    Model* enemyBulletModel_ = ModelManager::GetInstance()->Load("star.obj");
+    Model* enemyModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
+    Model* enemyBulletModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
     // animationskinLoad
     // skinningWalk
-    ModelManager::GetInstance()->Load("walk.gltf");
+    ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
     //==============
     //  OBJ
     //==============
-    Object3d* terrain_ = sceneObjectManager_->CreateObject("terrain", "terrain.obj");
+    Object3d* terrain_ = sceneObjectManager_->CreateObject("terrain", "Environment/Terrain/terrain.obj");
 
-    Object3d* star = sceneObjectManager_->CreateObject("star", "star.obj");
+    Object3d* star = sceneObjectManager_->CreateObject("star", "Weapons/Star/star.obj");
 
     animationActor_ = std::make_unique<AnimationActor>();
     OutputDebugStringA("A\n");
-    animationActor_->Initialize("sneakWalk.gltf");
+    animationActor_->Initialize("Characters/Animation/SneakWalk/sneakWalk.gltf");
     OutputDebugStringA("B\n");
     animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
@@ -181,25 +191,38 @@ void GamePlayScene::Initialize()
     /*testSprite_ = std::make_unique<Sprite>();
     testSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/uvChecker.png");*/
 
+    Logger::Log("GamePlayScene::Initialize: Allocating aimSprite");
     aimSprite_ = std::make_unique<Sprite>();
+    Logger::Log("GamePlayScene::Initialize: Initializing aimSprite");
     aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+    Logger::Log("GamePlayScene::Initialize: Setting aimSprite size");
     aimSprite_->SetSize({ 128.0f, 128.0f });
+    Logger::Log("GamePlayScene::Initialize: Setting aimSprite anchor");
     aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    Logger::Log("GamePlayScene::Initialize: Setting aimSprite position");
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
+    Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
+    Logger::Log("GamePlayScene::Initialize: Allocating skyBox");
     skyBox_ = std::make_unique<SkyBox>();
+    Logger::Log("GamePlayScene::Initialize: Initializing skyBox");
     skyBox_->Initialize(DirectXCommon::GetInstance());
+    Logger::Log("GamePlayScene::Initialize: Setting skyBox texture");
     skyBox_->SetTexture("resources/Textures/skybox.dds");
+    Logger::Log("GamePlayScene::Initialize: skyBox initialization finished");
 
     // =================================================
     // Playerクラス
     // =================================================
+    Logger::Log("GamePlayScene::Initialize: Starting player initialization");
     player_ = std::make_unique<Player>();
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
     wasPlayerBoosting_ = false;
 
@@ -266,6 +289,7 @@ void GamePlayScene::Initialize()
     }
 
     CollisionManager::GetInstance()->SetEnemies(&enemies_);
+    Logger::Log("GamePlayScene::Initialize: Completed successfully");
 }
 
 Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railPosition) const
@@ -413,45 +437,20 @@ void GamePlayScene::Update()
     currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
     camera_->SetFovY(currentFovY_);
 
-    debugCameraController_->Update();
-
-    if (!debugCameraController_->GetDebugMode()) {
-        Vector3 cameraForward = forward;
-
-        if (hasCameraFollowState_) {
-            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
-
-            if (!IsZeroVector(lerpedForward)) {
-                cameraForward = Normalize(lerpedForward);
-            }
-        }
-
-        smoothedCameraForward_ = cameraForward;
-
-        Vector3 targetCameraPosition = currentPosition - cameraForward * 35.0f;
-        targetCameraPosition.y += 6.0f;
-
-        Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
-
-        if (hasCameraFollowState_) {
-            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetCameraPosition, cameraFollowLerpRate_);
-            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPosition, cameraFollowLerpRate_);
-        } else {
-            smoothedCameraPosition_ = targetCameraPosition;
-            smoothedLookAheadPosition_ = targetLookAheadPosition;
-            hasCameraFollowState_ = true;
-        }
-
-        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
-    } else {
-        hasCameraFollowState_ = false;
+#ifdef _DEBUG
+    static bool isFirstFrame = true;
+    if (isFirstFrame) {
+        Logger::Log("GamePlayScene::Update: First frame start");
     }
+#endif
 
-    camera_->Update();
-
-    player_->SetRailFrame(currentPosition, railRight, railUp);
-
-    //  プレイヤーの更新�E��E力�E琁E��移動など�E�E
+    // 1. プレイヤーの移動更新および座標確定
+    player_->SetRailFrame(currentPosition, railRight, railUp, forward);
+#ifdef _DEBUG
+    if (isFirstFrame) {
+        Logger::Log("GamePlayScene::Update: Calling player_->Update()");
+    }
+#endif
     player_->Update();
 
     railDistance_ = nextRailDistance;
@@ -473,11 +472,82 @@ void GamePlayScene::Update()
     playerPosition += railUp * railOffset.y;
     player_->SetTranslate(playerPosition);
 
+    // 2. 描画用カメラの更新 (Lerpによる遅延追従)を射撃処理の前に実行して最新の行列を確定させる
+#ifdef _DEBUG
+    if (isFirstFrame) {
+        Logger::Log("GamePlayScene::Update: Updating debugCameraController");
+    }
+#endif
+    debugCameraController_->Update();
+
+    if (!debugCameraController_->GetDebugMode()) {
+        Vector3 cameraForward = forward;
+
+        if (hasCameraFollowState_) {
+            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
+
+            if (!IsZeroVector(lerpedForward)) {
+                cameraForward = Normalize(lerpedForward);
+            }
+        }
+
+        smoothedCameraForward_ = cameraForward;
+
+        Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
+        targetDrawCameraPosition.y += kCameraUpwardOffset;
+
+        Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+
+        if (hasCameraFollowState_) {
+            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetDrawCameraPosition, cameraFollowLerpRate_);
+            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPositionDraw, cameraFollowLerpRate_);
+        } else {
+            smoothedCameraPosition_ = targetDrawCameraPosition;
+            smoothedLookAheadPosition_ = targetLookAheadPositionDraw;
+            hasCameraFollowState_ = true;
+        }
+
+        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
+    } else {
+        hasCameraFollowState_ = false;
+    }
+
+#ifdef _DEBUG
+    if (isFirstFrame) {
+        Logger::Log("GamePlayScene::Update: Calling camera_->Update()");
+    }
+#endif
+    camera_->Update();
+
+    // 3. エイム用仮想カメラ（aimCamera_）の更新 (もしデバッグラインや他の処理で使うための同期)
+    Vector3 targetCameraPosition = currentPosition - forward * kCameraBackwardOffset;
+    targetCameraPosition.y += kCameraUpwardOffset;
+    Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+    aimCamera_->LookAt(targetCameraPosition, targetLookAheadPosition);
+    aimCamera_->SetFovY(currentFovY_);
+    aimCamera_->SetAspectRatio(camera_->GetAspectRatio());
+    aimCamera_->SetNearClip(camera_->GetNearClip());
+    aimCamera_->SetFarClip(camera_->GetFarClip());
+    aimCamera_->Update();
+
+    // 4. 弾の発射判定と射撃 (最新の描画用カメラの参照を渡す)
     if (input != nullptr) {
+#ifdef _DEBUG
+        if (isFirstFrame) {
+            Logger::Log("GamePlayScene::Update: Checking fire bullet");
+        }
+#endif
         if (input->IsMouseTrigger(0)) {
-            player_->FireBullet();
+            player_->FireBullet(*camera_);
         }
     }
+
+#ifdef _DEBUG
+    if (isFirstFrame) {
+        Logger::Log("GamePlayScene::Update: First frame completed successfully");
+        isFirstFrame = false;
+    }
+#endif
 
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,

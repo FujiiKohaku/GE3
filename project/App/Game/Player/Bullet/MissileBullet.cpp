@@ -28,6 +28,12 @@ void MissileBullet::Update()
     }
 }
 
+void MissileBullet::SetTranslate(const Vector3& translate)
+{
+    PlayerBullet::SetTranslate(translate);
+    UpdateTrailPosition();
+}
+
 void MissileBullet::SetDead()
 {
     PlayerBullet::SetDead();

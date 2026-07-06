@@ -9,6 +9,7 @@ class MissileBullet : public PlayerBullet {
 public:
     void Initialize(Model* model) override;
     void Update() override;
+    void SetTranslate(const Vector3& translate) override;
     void SetDead() override;
    // void Move() override;
     float GetSpeed() const

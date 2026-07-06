@@ -10,6 +10,10 @@ std::unique_ptr<WinApp> WinApp::instance_ = nullptr;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+namespace {
+constexpr DWORD kWindowStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+}
+
 
 WinApp* WinApp::GetInstance()
 {
@@ -77,12 +81,37 @@ bool WinApp::ProcessMessage()
     return false;
 }
 
+int32_t WinApp::GetClientWidth() const
+{
+    if (hwnd_ == nullptr) {
+        return kClientWidth;
+    }
+
+    RECT clientRect {};
+    GetClientRect(hwnd_, &clientRect);
+    return clientRect.right - clientRect.left;
+}
+
+int32_t WinApp::GetClientHeight() const
+{
+    if (hwnd_ == nullptr) {
+        return kClientHeight;
+    }
+
+    RECT clientRect {};
+    GetClientRect(hwnd_, &clientRect);
+    return clientRect.bottom - clientRect.top;
+}
+
 //==================================================================
 //  初期化処理
 //  ウィンドウクラス登録・生成・表示
 //==================================================================
 void WinApp::initialize()
 {
+    // DPI
+    SetProcessDPIAware();
+
     // COMライブラリ初期化（マルチスレッド対応）
     CoInitializeEx(0, COINIT_MULTITHREADED);
 
@@ -97,13 +126,13 @@ void WinApp::initialize()
 
     // クライアント領域を元にウィンドウサイズを調整
     RECT wrc = { 0, 0, kClientWidth, kClientHeight };
-    AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
+    AdjustWindowRect(&wrc, kWindowStyle, false);
 
     // ウィンドウ生成
     hwnd_ = CreateWindow(
         wc_.lpszClassName, // クラス名
         L"LE3B_21_フジイ_コハク", // タイトル
-        WS_OVERLAPPEDWINDOW, // スタイル
+        kWindowStyle, // スタイル
         CW_USEDEFAULT, CW_USEDEFAULT, // 位置（自動）
         wrc.right - wrc.left, // 幅
         wrc.bottom - wrc.top, // 高さ
