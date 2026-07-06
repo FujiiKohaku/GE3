@@ -160,4 +160,5 @@ private:
     std::unique_ptr<Renderer> renderer_;
 
     bool isMouseCursorVisible_ = false;
+    bool showDebugUI_ = true;
 };

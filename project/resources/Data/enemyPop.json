@@ -1,0 +1,136 @@
+{
+  "enemies": [
+    {
+      "type": "MoveEnemy",
+      "position": [-14.0, -3.0, 120.0],
+      "movePattern": "LeftRight",
+      "moveSpeed": 2.0,
+      "amplitude": 8.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [10.0, 5.0, 160.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [18.0, -6.0, 210.0],
+      "movePattern": "UpDown",
+      "moveSpeed": 2.0,
+      "amplitude": 6.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [-7.0, 7.0, 260.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [14.0, 0.0, 310.0],
+      "movePattern": "ZigZag",
+      "moveSpeed": 2.5,
+      "amplitude": 8.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [-18.0, 4.0, 360.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [4.0, -7.0, 410.0],
+      "movePattern": "SineWave",
+      "moveSpeed": 1.5,
+      "amplitude": 5.0,
+      "frequency": 3.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [17.0, 6.0, 460.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-12.0, 1.0, 510.0],
+      "movePattern": "LeftRight",
+      "moveSpeed": 2.0,
+      "amplitude": 8.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [7.0, -5.0, 560.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-20.0, -2.0, 610.0],
+      "movePattern": "UpDown",
+      "moveSpeed": 2.0,
+      "amplitude": 6.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [13.0, 7.0, 660.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-5.0, 4.0, 710.0],
+      "movePattern": "ZigZag",
+      "moveSpeed": 2.5,
+      "amplitude": 8.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [20.0, -4.0, 760.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-15.0, 6.0, 810.0],
+      "movePattern": "SineWave",
+      "moveSpeed": 1.5,
+      "amplitude": 5.0,
+      "frequency": 3.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [9.0, 0.0, 860.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-2.0, -7.0, 900.0],
+      "movePattern": "LeftRight",
+      "moveSpeed": 2.0,
+      "amplitude": 8.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [16.0, 3.0, 940.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-10.0, -4.0, 980.0],
+      "movePattern": "UpDown",
+      "moveSpeed": 2.0,
+      "amplitude": 6.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [5.0, 6.0, 1000.0]
+    },
+    {
+      "type": "MoveEnemy",
+      "position": [-19.0, 0.0, 450.0],
+      "movePattern": "ZigZag",
+      "moveSpeed": 2.5,
+      "amplitude": 8.0,
+      "frequency": 2.0
+    },
+    {
+      "type": "NormalEnemy",
+      "position": [19.0, -1.0, 720.0]
+    }
+  ]
+}

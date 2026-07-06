@@ -31,6 +31,13 @@ public:
 
     bool CanAllocate(uint32_t count = 1) const;
     void Finalize();
+    uint32_t GetAllocatedCount() const {
+        uint32_t count = 0;
+        for (bool allocated : allocatedFlags_) {
+            if (allocated) count++;
+        }
+        return count;
+    }
     static const uint32_t kMaxSRVCount;
 
 

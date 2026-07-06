@@ -55,6 +55,7 @@ public:
     void DrawImGui() override;
 
 private:
+    void LoadEnemyPopData();
     void CheckCollision();
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
@@ -164,6 +165,10 @@ private:
 
     // エイム用仮想カメラ
     std::unique_ptr<Camera> aimCamera_;
+
+    // エネミー・弾モデル
+    Model* enemyModel_ = nullptr;
+    Model* enemyBulletModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;

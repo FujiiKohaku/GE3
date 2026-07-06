@@ -64,7 +64,7 @@ void Player::Update()
     if (input == nullptr) {
         return;
     }
-    　
+   
     if (invincibleTimer_ > 0) {
         --invincibleTimer_;
     }

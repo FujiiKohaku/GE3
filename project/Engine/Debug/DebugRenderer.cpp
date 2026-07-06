@@ -135,6 +135,11 @@ void DebugRenderer::Draw()
         return;
     }
 
+    if (!isVisible_) {
+        lines_.clear();
+        return;
+    }
+
     if (lines_.empty()) {
         return;
     }

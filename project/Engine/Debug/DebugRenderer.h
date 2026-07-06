@@ -47,6 +47,9 @@ public:
         const Vector4& color,
         float thickness = 1.0f);
 
+    void SetVisible(bool visible) { isVisible_ = visible; }
+    bool IsVisible() const { return isVisible_; }
+
     ~DebugRenderer();
 
 private:
@@ -95,6 +98,7 @@ private:
     uint32_t vertexCapacity_ = 0;
 
     bool isInitialized_ = false;
+    bool isVisible_ = true;
 
     // 1フレーム分のライン情報を保持
     // ------------------------------------------------------------

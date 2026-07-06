@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -212,6 +212,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Scene\GamePlayScene.cpp" />
     <ClCompile Include="Engine\ImGuiManager\ImGuiManager.cpp" />
     <ClCompile Include="App\Scene\Game.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\Profiler.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\CPUProfiler.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\GPUProfiler.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\MemoryProfiler.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\PerformanceCounter.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\BootProfiler.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\TimelineProfiler.cpp" />
+    <ClCompile Include="Engine\Debug\Profiler\ProfilerScope.cpp" />
     <ClCompile Include="Engine\input\Input.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
@@ -274,6 +282,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
   </ItemGroup>
@@ -343,6 +352,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Scene\GamePlayScene.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
     <ClInclude Include="App\Scene\Game.h" />
+    <ClInclude Include="Engine\Debug\Profiler\Profiler.h" />
+    <ClInclude Include="Engine\Debug\Profiler\CPUProfiler.h" />
+    <ClInclude Include="Engine\Debug\Profiler\GPUProfiler.h" />
+    <ClInclude Include="Engine\Debug\Profiler\MemoryProfiler.h" />
+    <ClInclude Include="Engine\Debug\Profiler\PerformanceCounter.h" />
+    <ClInclude Include="Engine\Debug\Profiler\BootProfiler.h" />
+    <ClInclude Include="Engine\Debug\Profiler\TimelineProfiler.h" />
+    <ClInclude Include="Engine\Debug\Profiler\ProfilerScope.h" />
     <ClInclude Include="Engine\input\Input.h" />
     <ClInclude Include="Engine\Logger\Logger.h" />
     <ClInclude Include="Engine\audio\SoundManager.h" />
@@ -390,6 +407,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
     <ClInclude Include="App\Scene\GameOverScene.h" />
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
   </ItemGroup>
@@ -435,3 +453,5 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+
+

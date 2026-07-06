@@ -1,4 +1,5 @@
 #include "GamePlayScene.h"
+#include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -147,8 +148,8 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("Characters/Player/AirPlane/AirPlane.obj");
 
-    Model* enemyModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
-    Model* enemyBulletModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
+    enemyModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
+    enemyBulletModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
@@ -252,41 +253,7 @@ void GamePlayScene::Initialize()
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
-    const Vector3 enemyPositions[] = {
-        { -14.0f, -3.0f, 120.0f },
-        { 10.0f, 5.0f, 160.0f },
-        { 18.0f, -6.0f, 210.0f },
-        { -7.0f, 7.0f, 260.0f },
-        { 14.0f, 0.0f, 310.0f },
-        { -18.0f, 4.0f, 360.0f },
-        { 4.0f, -7.0f, 410.0f },
-        { 17.0f, 6.0f, 460.0f },
-        { -12.0f, 1.0f, 510.0f },
-        { 7.0f, -5.0f, 560.0f },
-        { -20.0f, -2.0f, 610.0f },
-        { 13.0f, 7.0f, 660.0f },
-        { -5.0f, 4.0f, 710.0f },
-        { 20.0f, -4.0f, 760.0f },
-        { -15.0f, 6.0f, 810.0f },
-        { 9.0f, 0.0f, 860.0f },
-        { -2.0f, -7.0f, 900.0f },
-        { 16.0f, 3.0f, 940.0f },
-        { -10.0f, -4.0f, 980.0f },
-        { 5.0f, 6.0f, 1000.0f },
-        { -19.0f, 0.0f, 450.0f },
-        { 19.0f, -1.0f, 720.0f },
-    };
-
-    for (const Vector3& enemyPosition : enemyPositions) {
-
-        std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
-
-        enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-
-        enemy->SetPosition(enemyPosition);
-
-        enemies_.push_back(std::move(enemy));
-    }
+    LoadEnemyPopData();
 
     CollisionManager::GetInstance()->SetEnemies(&enemies_);
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
@@ -840,6 +807,27 @@ void GamePlayScene::DrawImGui()
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());
     player_->DrawImGui();
+
+    ImGui::Begin("MoveEnemy Adjuster");
+    int32_t moveEnemyCount = 0;
+    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (!enemy->IsDead()) {
+            MoveEnemy* moveEnemy = dynamic_cast<MoveEnemy*>(enemy.get());
+            if (moveEnemy != nullptr) {
+                char label[64];
+                sprintf_s(label, "MoveEnemy [%d]", moveEnemyCount);
+                if (ImGui::TreeNode(label)) {
+                    moveEnemy->DrawImGui();
+                    ImGui::TreePop();
+                }
+                moveEnemyCount = moveEnemyCount + 1;
+            }
+        }
+    }
+    if (moveEnemyCount == 0) {
+        ImGui::Text("No active MoveEnemy found.");
+    }
+    ImGui::End();
 #endif
 }
 
@@ -950,4 +938,136 @@ void GamePlayScene::Finalize()
     EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
+}
+
+void GamePlayScene::LoadEnemyPopData()
+{
+    std::string filePath = "resources/Data/enemyPop.json";
+    std::ifstream file(filePath);
+
+    if (file.is_open() == false) {
+        Logger::Log("Warning: Could not open " + filePath + ". Using default enemy layout.");
+        
+        const Vector3 enemyPositions[] = {
+            { -14.0f, -3.0f, 120.0f },
+            { 10.0f, 5.0f, 160.0f },
+            { 18.0f, -6.0f, 210.0f },
+            { -7.0f, 7.0f, 260.0f },
+            { 14.0f, 0.0f, 310.0f },
+            { -18.0f, 4.0f, 360.0f },
+            { 4.0f, -7.0f, 410.0f },
+            { 17.0f, 6.0f, 460.0f },
+            { -12.0f, 1.0f, 510.0f },
+            { 7.0f, -5.0f, 560.0f },
+            { -20.0f, -2.0f, 610.0f },
+            { 13.0f, 7.0f, 660.0f },
+            { -5.0f, 4.0f, 710.0f },
+            { 20.0f, -4.0f, 760.0f },
+            { -15.0f, 6.0f, 810.0f },
+            { 9.0f, 0.0f, 860.0f },
+            { -2.0f, -7.0f, 900.0f },
+            { 16.0f, 3.0f, 940.0f },
+            { -10.0f, -4.0f, 980.0f },
+            { 5.0f, 6.0f, 1000.0f },
+            { -19.0f, 0.0f, 450.0f },
+            { 19.0f, -1.0f, 720.0f },
+        };
+
+        int32_t enemyIndex = 0;
+        for (const Vector3& enemyPosition : enemyPositions) {
+            if (enemyIndex % 2 == 0) {
+                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(enemyPosition);
+
+                if (enemyIndex % 8 == 0) {
+                    enemy->SetMovePattern(MovePattern::LeftRight);
+                    enemy->SetAmplitude(8.0f);
+                    enemy->SetMoveSpeed(2.0f);
+                }
+                if (enemyIndex % 8 == 2) {
+                    enemy->SetMovePattern(MovePattern::UpDown);
+                    enemy->SetAmplitude(6.0f);
+                    enemy->SetMoveSpeed(2.0f);
+                }
+                if (enemyIndex % 8 == 4) {
+                    enemy->SetMovePattern(MovePattern::ZigZag);
+                    enemy->SetAmplitude(8.0f);
+                    enemy->SetMoveSpeed(2.5f);
+                }
+                if (enemyIndex % 8 == 6) {
+                    enemy->SetMovePattern(MovePattern::SineWave);
+                    enemy->SetAmplitude(5.0f);
+                    enemy->SetFrequency(3.0f);
+                    enemy->SetMoveSpeed(1.5f);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            } else {
+                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(enemyPosition);
+                enemies_.push_back(std::move(enemy));
+            }
+            enemyIndex = enemyIndex + 1;
+        }
+        return;
+    }
+
+    nlohmann::json root;
+    file >> root;
+    file.close();
+
+    if (root.contains("enemies") && root["enemies"].is_array()) {
+        nlohmann::json enemiesArray = root["enemies"];
+
+        for (size_t i = 0; i < enemiesArray.size(); i = i + 1) {
+            nlohmann::json enemyData = enemiesArray[i];
+
+            std::string type = enemyData["type"].get<std::string>();
+            std::vector<float> positionArray = enemyData["position"].get<std::vector<float>>();
+            Vector3 position = { positionArray[0], positionArray[1], positionArray[2] };
+
+            if (type == "NormalEnemy") {
+                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(position);
+                enemies_.push_back(std::move(enemy));
+            }
+
+            if (type == "MoveEnemy") {
+                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(position);
+
+                if (enemyData.contains("movePattern")) {
+                    std::string patternStr = enemyData["movePattern"].get<std::string>();
+                    if (patternStr == "LeftRight") {
+                        enemy->SetMovePattern(MovePattern::LeftRight);
+                    }
+                    if (patternStr == "UpDown") {
+                        enemy->SetMovePattern(MovePattern::UpDown);
+                    }
+                    if (patternStr == "ZigZag") {
+                        enemy->SetMovePattern(MovePattern::ZigZag);
+                    }
+                    if (patternStr == "SineWave") {
+                        enemy->SetMovePattern(MovePattern::SineWave);
+                    }
+                }
+
+                if (enemyData.contains("moveSpeed")) {
+                    enemy->SetMoveSpeed(enemyData["moveSpeed"].get<float>());
+                }
+                if (enemyData.contains("amplitude")) {
+                    enemy->SetAmplitude(enemyData["amplitude"].get<float>());
+                }
+                if (enemyData.contains("frequency")) {
+                    enemy->SetFrequency(enemyData["frequency"].get<float>());
+                }
+
+                enemies_.push_back(std::move(enemy));
+            }
+        }
+    }
 }
