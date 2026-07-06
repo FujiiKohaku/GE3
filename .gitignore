@@ -324,4 +324,4 @@ project/Tools/UIAnimationEditor/ai_settings.json
 /Dumps
 # Log Files
 logs/
-!*.obj
+!project/resources/**/*.obj
