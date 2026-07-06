@@ -148,8 +148,8 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("Characters/Player/AirPlane/AirPlane.obj");
 
-    enemyModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
-    enemyBulletModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
+    enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
+    enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");

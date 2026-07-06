@@ -35,8 +35,8 @@ void Player::Initialize(Model* model)
     if (camera_ != nullptr) {
         object_->SetCamera(camera_);
     }
-    ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
-    bulletModel_ = ModelManager::GetInstance()->Load("Weapons/Star/star.obj");
+    ModelManager::GetInstance()->Load("Debug/block/block.obj");
+    bulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
 
     transform_.scale = { 1.0f, 1.0f, 1.0f };
     transform_.rotate = { 0.0f, 0.0f, 0.0f };

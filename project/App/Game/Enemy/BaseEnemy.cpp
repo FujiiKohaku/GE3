@@ -28,9 +28,17 @@ void BaseEnemy::Update()
 
     UpdateAnimation();
 
-    for (std::unique_ptr<EnemyBullet>& bullet :enemyBullets_) {
-
+    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
         bullet->Update();
+    }
+
+    // 死んだ敵の弾を配列から削除してクリーンアップ
+    for (size_t index = 0; index < enemyBullets_.size();) {
+        if (enemyBullets_[index]->IsAlive() == false) {
+            enemyBullets_.erase(enemyBullets_.begin() + index);
+        } else {
+            index = index + 1;
+        }
     }
 
     object_->SetScale(transform_.scale);
