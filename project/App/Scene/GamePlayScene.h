@@ -41,6 +41,8 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 
 #include "App/Game/Enemy/Types/NormalEnemy.h"
+#include "App/Game/Boss/BaseBoss.h"
+
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -178,4 +180,8 @@ private:
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;
     float cameraLookUpFactor_ = 0.7f;
+
+    // ボス戦用
+    std::unique_ptr<BaseBoss> activeBoss_;
+    bool isBossSpawned_ = false;
 };

@@ -1,5 +1,6 @@
 #include "GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
+#include "App/Game/Boss/FearBoss.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -306,6 +307,24 @@ void GamePlayScene::Update()
 
     // プレイヤーのZ座標を取得
     float playerZ = player_->GetTranslate().z;
+
+    // ボス出現処理
+    if (!isBossSpawned_ && playerZ >= 1850.0f) {
+        activeBoss_ = std::make_unique<FearBoss>();
+        activeBoss_->Initialize(enemyModel_);
+        isBossSpawned_ = true;
+    }
+
+    // ボスの更新
+    if (activeBoss_ && !activeBoss_->IsDead()) {
+        activeBoss_->Update(player_->GetTranslate());
+    }
+
+    // ボス撃破でクリアシーンへ遷移
+    if (activeBoss_ && activeBoss_->IsDead()) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+        return;
+    }
 
     // エディターマネージャーの更新にカメラを渡す
     editorManager_->Update(camera_.get());
@@ -777,6 +796,10 @@ void GamePlayScene::Draw3D()
         enemy->Draw();
     }
 
+    if (activeBoss_ && !activeBoss_->IsDead()) {
+        activeBoss_->Draw();
+    }
+
     rail_->DrawDebug();
 
     //----------------------
@@ -882,6 +905,40 @@ void GamePlayScene::CheckCollision()
         }
     }
 
+    // プレイヤーの弾とボスの当たり判定
+    if (activeBoss_ && !activeBoss_->IsDead()) {
+        for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+            if (!bullet->IsAlive()) {
+                continue;
+            }
+
+            for (BossCollider& collider : activeBoss_->GetColliders()) {
+                if (collider.isDestroyed) {
+                    continue;
+                }
+
+                // コライダーのワールド座標を計算
+                Vector3 colliderWorldPos = activeBoss_->GetPosition() + collider.offset;
+                Vector3 difference = colliderWorldPos - bullet->GetPosition();
+                float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+
+                // 判定半径
+                float collisionRadius = collider.radius + kPlayerBulletEnemyCollisionRadius;
+
+                if (distance <= collisionRadius) {
+                    OutputDebugStringA("PlayerBullet Hit Boss\n");
+
+                    bullet->OnHitEnemy(colliderWorldPos);
+
+                    activeBoss_->ApplyDamage(1.0f);
+
+                    bullet->SetDead();
+                    break;
+                }
+            }
+        }
+    }
+
     // プレイヤーの弾と床の当たり判定
     for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
         if (!bullet->IsAlive()) {
@@ -973,18 +1030,7 @@ void GamePlayScene::LoadEnemyPopData()
             { 17.0f, 6.0f, 1472.0f },
             { -12.0f, 1.0f, 1632.0f },
             { 7.0f, -5.0f, 1792.0f },
-            { -20.0f, -2.0f, 1952.0f },
-            { 13.0f, 7.0f, 2112.0f },
-            { -5.0f, 4.0f, 2272.0f },
-            { 20.0f, -4.0f, 2432.0f },
-            { -15.0f, 6.0f, 2592.0f },
-            { 9.0f, 0.0f, 2752.0f },
-            { -2.0f, -7.0f, 2880.0f },
-            { 16.0f, 3.0f, 3008.0f },
-            { -10.0f, -4.0f, 3136.0f },
-            { 5.0f, 6.0f, 3200.0f },
             { -19.0f, 0.0f, 1440.0f },
-            { 19.0f, -1.0f, 2304.0f },
         };
 
         int32_t enemyIndex = 0;

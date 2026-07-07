@@ -62,75 +62,11 @@
     },
     {
       "type": "MoveEnemy",
-      "position": [-20.0, -2.0, 1952.0],
-      "movePattern": "UpDown",
-      "moveSpeed": 2.0,
-      "amplitude": 6.0,
-      "frequency": 2.0
-    },
-    {
-      "type": "NormalEnemy",
-      "position": [13.0, 7.0, 2112.0]
-    },
-    {
-      "type": "MoveEnemy",
-      "position": [-5.0, 4.0, 2272.0],
-      "movePattern": "ZigZag",
-      "moveSpeed": 2.5,
-      "amplitude": 8.0,
-      "frequency": 2.0
-    },
-    {
-      "type": "NormalEnemy",
-      "position": [20.0, -4.0, 2432.0]
-    },
-    {
-      "type": "MoveEnemy",
-      "position": [-15.0, 6.0, 2592.0],
-      "movePattern": "SineWave",
-      "moveSpeed": 1.5,
-      "amplitude": 5.0,
-      "frequency": 3.0
-    },
-    {
-      "type": "NormalEnemy",
-      "position": [9.0, 0.0, 2752.0]
-    },
-    {
-      "type": "MoveEnemy",
-      "position": [-2.0, -7.0, 2880.0],
-      "movePattern": "LeftRight",
-      "moveSpeed": 2.0,
-      "amplitude": 8.0,
-      "frequency": 2.0
-    },
-    {
-      "type": "NormalEnemy",
-      "position": [16.0, 3.0, 3008.0]
-    },
-    {
-      "type": "MoveEnemy",
-      "position": [-10.0, -4.0, 3136.0],
-      "movePattern": "UpDown",
-      "moveSpeed": 2.0,
-      "amplitude": 6.0,
-      "frequency": 2.0
-    },
-    {
-      "type": "NormalEnemy",
-      "position": [5.0, 6.0, 3200.0]
-    },
-    {
-      "type": "MoveEnemy",
       "position": [-19.0, 0.0, 1440.0],
       "movePattern": "ZigZag",
       "moveSpeed": 2.5,
       "amplitude": 8.0,
       "frequency": 2.0
-    },
-    {
-      "type": "NormalEnemy",
-      "position": [19.0, -1.0, 2304.0]
     }
   ]
 }
