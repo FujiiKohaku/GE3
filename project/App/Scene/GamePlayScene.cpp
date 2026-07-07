@@ -219,6 +219,16 @@ void GamePlayScene::Initialize()
     LoadEnemyPopData();
 
     CollisionManager::GetInstance()->SetEnemies(&enemies_);
+
+    // floorの初期化
+    Model* floorModel = ModelManager::GetInstance()->CreatePlane("resources/Textures/floor_dirt_gemini.jpg", 100.0f, 360.0f);
+    floorObj_ = std::make_unique<Object3d>();
+    floorObj_->Initialize(Object3dManager::GetInstance());
+    floorObj_->SetModel(floorModel);
+    floorObj_->SetTranslate({ 0.0f, -30.0f, 1800.0f });
+    floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
+    floorObj_->SetScale({ 1000.0f, 3600.0f, 1.0f });
+
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 }
 
@@ -406,6 +416,10 @@ void GamePlayScene::Update()
     // 各種マネージャー、オブジェクト、コリジョンの更新
     EffectManager::GetInstance()->Update();
     sceneObjectManager_->Update();
+    if (floorObj_) {
+        floorObj_->Update();
+    }
+
     animationActor_->Update(1.0f / 60.0f);
     
     // コリジョン判定の実行
@@ -755,6 +769,9 @@ void GamePlayScene::Draw3D()
     // }
     player_->Draw();
     sceneObjectManager_->Draw();
+    if (floorObj_) {
+        floorObj_->Draw();
+    }
 
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
@@ -864,7 +881,28 @@ void GamePlayScene::CheckCollision()
             }
         }
     }
-    // 死んだ敵の中から「NormalEnemy」だけを選んで安�Eに削除する
+
+    // プレイヤーの弾と床の当たり判定
+    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+        if (!bullet->IsAlive()) {
+            continue;
+        }
+
+        float floorY = -30.0f;
+        if (floorObj_) {
+            floorY = floorObj_->GetTranslate().y;
+        }
+
+        if (bullet->GetPosition().y <= floorY) {
+            Vector3 hitPosition = bullet->GetPosition();
+            hitPosition.y = floorY;
+
+            EffectManager::GetInstance()->PlayEffect("HitEffect", hitPosition);
+            bullet->SetDead();
+        }
+    }
+
+    // 死んだ敵の中から「NormalEnemy」だけを選んで安Eに削除する
     std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
         return enemy->IsDead();
     });

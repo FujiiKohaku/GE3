@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 class ModelManager {
 public:
@@ -17,7 +18,10 @@ public:
 
     Model* Load(const std::string& filepath);
 
+    Model* CreatePlane(const std::string& texturePath = "", float tilingX = 1.0f, float tilingY = 1.0f);
+
     Model* FindModel(const std::string& filePath);
+
     // Passkey
     class ConstructorKey {
         ConstructorKey() = default;

@@ -87,6 +87,7 @@ private:
     std::unique_ptr<SphereObject> sphere_;
     // std::unique_ptr<Object3d> terrain_;
     // std::unique_ptr<Object3d> plane_;
+    std::unique_ptr<Object3d> floorObj_;
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;

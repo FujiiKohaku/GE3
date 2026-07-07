@@ -1,5 +1,6 @@
 #include "Model.h"
 #include "ModelCommon.h"
+#include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
 #include <cstring>
 
@@ -10,10 +11,22 @@ void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath
 {
     modelCommon_ = modelCommon;
     modelData_ = Object3d::LoadModeFile(directorypath, filename);
+    CreateMeshResources();
+}
 
+void Model::Initialize(ModelCommon* modelCommon, const ModelData& modelData)
+{
+    modelCommon_ = modelCommon;
+    modelData_ = modelData;
+    CreateMeshResources();
+}
+
+void Model::CreateMeshResources()
+{
     auto* dx = modelCommon_->GetDxCommon();
 
     for (MeshPrimitive& primitive : modelData_.primitives) {
+        assert(!primitive.vertices.empty());
 
         // ===== Vertex Buffer =====
         primitive.vertexResource = dx->CreateBufferResource(sizeof(VertexData) * primitive.vertices.size());
@@ -45,6 +58,9 @@ void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath
     }
 
     // Texture
+    if (modelData_.material.textureFilePath.empty()) {
+        modelData_.material.textureFilePath = "resources/Textures/BaseColor_Cube.png";
+    }
     TextureManager::GetInstance()->LoadTexture(modelData_.material.textureFilePath);
     modelData_.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData_.material.textureFilePath);
 }
