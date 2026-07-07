@@ -56,47 +56,9 @@ void GamePlayScene::Initialize()
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
-    rail_->AddPoint({ 0.0f, 0.0f, 0.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 50.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 100.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 150.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 200.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 250.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 300.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 350.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 400.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 450.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 500.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 550.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 600.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 650.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 700.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 750.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 800.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 850.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 900.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 950.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1000.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1050.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1100.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1150.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1200.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1250.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1300.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1350.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1400.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1450.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1500.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1550.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1600.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1650.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1700.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1750.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1800.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1850.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1900.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 1950.0f });
-    rail_->AddPoint({ 0.0f, 0.0f, 2000.0f });
+    for (float z = 0.0f; z <= 3600.0f; z += 50.0f) {
+        rail_->AddPoint({ 0.0f, 0.0f, z });
+    }
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
     // =================================================
@@ -976,28 +938,28 @@ void GamePlayScene::LoadEnemyPopData()
         Logger::Log("Warning: Could not open " + filePath + ". Using default enemy layout.");
         
         const Vector3 enemyPositions[] = {
-            { -14.0f, -3.0f, 120.0f },
-            { 10.0f, 5.0f, 160.0f },
-            { 18.0f, -6.0f, 210.0f },
-            { -7.0f, 7.0f, 260.0f },
-            { 14.0f, 0.0f, 310.0f },
-            { -18.0f, 4.0f, 360.0f },
-            { 4.0f, -7.0f, 410.0f },
-            { 17.0f, 6.0f, 460.0f },
-            { -12.0f, 1.0f, 510.0f },
-            { 7.0f, -5.0f, 560.0f },
-            { -20.0f, -2.0f, 610.0f },
-            { 13.0f, 7.0f, 660.0f },
-            { -5.0f, 4.0f, 710.0f },
-            { 20.0f, -4.0f, 760.0f },
-            { -15.0f, 6.0f, 810.0f },
-            { 9.0f, 0.0f, 860.0f },
-            { -2.0f, -7.0f, 900.0f },
-            { 16.0f, 3.0f, 940.0f },
-            { -10.0f, -4.0f, 980.0f },
-            { 5.0f, 6.0f, 1000.0f },
-            { -19.0f, 0.0f, 450.0f },
-            { 19.0f, -1.0f, 720.0f },
+            { -14.0f, -3.0f, 384.0f },
+            { 10.0f, 5.0f, 512.0f },
+            { 18.0f, -6.0f, 672.0f },
+            { -7.0f, 7.0f, 832.0f },
+            { 14.0f, 0.0f, 992.0f },
+            { -18.0f, 4.0f, 1152.0f },
+            { 4.0f, -7.0f, 1312.0f },
+            { 17.0f, 6.0f, 1472.0f },
+            { -12.0f, 1.0f, 1632.0f },
+            { 7.0f, -5.0f, 1792.0f },
+            { -20.0f, -2.0f, 1952.0f },
+            { 13.0f, 7.0f, 2112.0f },
+            { -5.0f, 4.0f, 2272.0f },
+            { 20.0f, -4.0f, 2432.0f },
+            { -15.0f, 6.0f, 2592.0f },
+            { 9.0f, 0.0f, 2752.0f },
+            { -2.0f, -7.0f, 2880.0f },
+            { 16.0f, 3.0f, 3008.0f },
+            { -10.0f, -4.0f, 3136.0f },
+            { 5.0f, 6.0f, 3200.0f },
+            { -19.0f, 0.0f, 1440.0f },
+            { 19.0f, -1.0f, 2304.0f },
         };
 
         int32_t enemyIndex = 0;

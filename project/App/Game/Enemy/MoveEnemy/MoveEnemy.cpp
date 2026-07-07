@@ -67,11 +67,21 @@ void MoveEnemy::Move()
 
 void MoveEnemy::Attack()
 {
-    fireTimer_ = fireTimer_ + 1;
+    if (player_ == nullptr) {
+        return;
+    }
 
-    if (fireTimer_ >= fireInterval_) {
-        FireBullet();
-        fireTimer_ = 0;
+    Vector3 playerPosition = player_->GetTranslate();
+    Vector3 difference = playerPosition - transform_.translate;
+    float distance = std::sqrt(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+
+    if (distance <= 100.0f) {
+        fireTimer_ = fireTimer_ + 1;
+
+        if (fireTimer_ >= fireInterval_) {
+            FireBullet();
+            fireTimer_ = 0;
+        }
     }
 }
 

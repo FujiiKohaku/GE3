@@ -3,6 +3,7 @@
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 
 #include "App/Game/Player/Player.h"
+#include <cmath>
 
 void NormalEnemy::Initialize(
     Model* model,
@@ -23,13 +24,23 @@ void NormalEnemy::Update()
 
 void NormalEnemy::Attack()
 {
-    fireTimer_++;
+    if (player_ == nullptr) {
+        return;
+    }
 
-    if (fireTimer_ >= fireInterval_) {
+    Vector3 playerPosition = player_->GetTranslate();
+    Vector3 difference = playerPosition - transform_.translate;
+    float distance = std::sqrt(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
 
-        FireBullet();
+    if (distance <= 100.0f) {
+        fireTimer_++;
 
-        fireTimer_ = 0;
+        if (fireTimer_ >= fireInterval_) {
+
+            FireBullet();
+
+            fireTimer_ = 0;
+        }
     }
 }
 
