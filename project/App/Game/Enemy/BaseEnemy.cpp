@@ -10,9 +10,9 @@ void BaseEnemy::Initialize(Model* model)
         Object3dManager::GetInstance());
     object_->SetEnableLighting(true);
     transform_.scale = {
-        1.0f,
-        1.0f,
-        1.0f
+        2.0f,
+        2.0f,
+        2.0f
     };
     object_->SetModel(model);
 
@@ -23,6 +23,20 @@ void BaseEnemy::Initialize(Model* model)
 
 void BaseEnemy::Update()
 {
+    if (isDead_) {
+        for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
+            bullet->Update();
+        }
+        for (size_t index = 0; index < enemyBullets_.size();) {
+            if (enemyBullets_[index]->IsAlive() == false) {
+                enemyBullets_.erase(enemyBullets_.begin() + index);
+            } else {
+                index = index + 1;
+            }
+        }
+        return;
+    }
+
     Move();
 
     Attack();
@@ -50,9 +64,9 @@ void BaseEnemy::Update()
 }
 void BaseEnemy::Draw()
 {
-
-
-    object_->Draw();
+    if (!isDead_) {
+        object_->Draw();
+    }
 
     for (std::unique_ptr<EnemyBullet>& bullet :enemyBullets_) {
 

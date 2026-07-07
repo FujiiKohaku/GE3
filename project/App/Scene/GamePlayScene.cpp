@@ -25,8 +25,8 @@
 #include <cmath>
 
 namespace {
-constexpr float kPlayerEnemyCollisionRadius = 2.0f;
-constexpr float kPlayerBulletEnemyCollisionRadius = 2.0f;
+constexpr float kPlayerEnemyCollisionRadius = 4.0f;
+constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
 
 float LengthSquared(const Vector3& value)
 {
@@ -866,20 +866,7 @@ void GamePlayScene::CheckCollision()
     }
     // 死んだ敵の中から「NormalEnemy」だけを選んで安�Eに削除する
     std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        // 1. 敵が死んでいるかをチェックする
-        if (enemy->IsDead()) {
-
-            // 2. 敵が死んでいる場合、さらにそれが NormalEnemy かどうかをチェックする
-            // dynamic_cast を使って、enemy が NormalEnemy に安全にキャストできるかを確認する
-            if (dynamic_cast<NormalEnemy*>(enemy.get()) != nullptr) {
-
-                // 3. 敵が NormalEnemy であれば、true を返して削除する
-                return true;
-            }
-        }
-
-        // 4. 敵が死んでいない、または NormalEnemy でない場合は、false を返して削除しない
-        return false;
+        return enemy->IsDead();
     });
 
     // 敵の弾とプレイヤーの当たり判定
