@@ -173,4 +173,8 @@ private:
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
     static constexpr float kCameraUpwardOffset = 6.0f;
+
+    // カメラパラメータ (プレイヤー上下移動連動用)
+    float cameraHeightFollowFactor_ = 0.3f;
+    float cameraLookUpFactor_ = 0.7f;
 };

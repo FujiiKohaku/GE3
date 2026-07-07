@@ -148,6 +148,7 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("Characters/Player/AirPlane/AirPlane.obj");
 
+    // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
     // animationskinLoad
@@ -705,11 +706,15 @@ void GamePlayScene::UpdateCamera(
         smoothedCameraForward_ = cameraForward;
 
         // 描画用カメラのターゲット座標（Lerp前）
+        // プレイヤーのレール相対移動量を取得
+        Vector3 playerRailOffset = player_->GetRailOffset();
+
         Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
-        targetDrawCameraPosition.y += kCameraUpwardOffset;
+        targetDrawCameraPosition += railUp * (kCameraUpwardOffset + playerRailOffset.y * cameraHeightFollowFactor_);
 
         // 描画用カメラのターゲット注視点（Lerp前）
         Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+        targetLookAheadPositionDraw += railUp * (playerRailOffset.y * cameraLookUpFactor_);
 
         // 遅延追従（Lerp）の適用
         if (hasCameraFollowState_) {
@@ -827,6 +832,11 @@ void GamePlayScene::DrawImGui()
     if (moveEnemyCount == 0) {
         ImGui::Text("No active MoveEnemy found.");
     }
+    ImGui::End();
+
+    ImGui::Begin("Camera Adjuster");
+    ImGui::DragFloat("Height Follow Factor", &cameraHeightFollowFactor_, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Look Up Factor", &cameraLookUpFactor_, 0.01f, 0.0f, 2.0f);
     ImGui::End();
 #endif
 }
