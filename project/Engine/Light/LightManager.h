@@ -34,6 +34,11 @@ public:
     void SetSpotLightDecay(float decay);
     void SetSpotLightCosAngle(float cosAngle);
 
+    void SetAmbientColor(const Vector3& color);
+    Vector3 GetAmbientColor() const;
+    void SetAmbientIntensity(float intensity);
+    float GetAmbientIntensity() const;
+
 private:
     static std::unique_ptr<LightManager> instance_;
 
@@ -60,4 +65,7 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12Resource> spotLightResource_;
     SpotLight* spotLightData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> ambientLightResource_;
+    AmbientLight* ambientLightData_ = nullptr;
 };

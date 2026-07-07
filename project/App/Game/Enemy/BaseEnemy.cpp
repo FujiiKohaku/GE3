@@ -8,6 +8,7 @@ void BaseEnemy::Initialize(Model* model)
 
     object_->Initialize(
         Object3dManager::GetInstance());
+    object_->SetEnableLighting(true);
     transform_.scale = {
         1.0f,
         1.0f,
@@ -80,6 +81,13 @@ Vector3 BaseEnemy::GetPosition() const
 void BaseEnemy::SetPosition(const Vector3& position)
 {
     transform_.translate = position;
+}
+
+void BaseEnemy::SetEnableLighting(bool enable)
+{
+    if (object_ != nullptr) {
+        object_->SetEnableLighting(enable);
+    }
 }
 
 void BaseEnemy::SetDead(bool isDead)

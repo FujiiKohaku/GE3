@@ -46,11 +46,11 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
         0, nullptr, reinterpret_cast<void**>(&materialData_));
 
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    materialData_->enableLighting = true;
+    materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
-    materialData_->enableEnvironmentMap = true;
-    materialData_->environmentCoefficient = 0.5f;
+    materialData_->enableEnvironmentMap = false;
+    materialData_->environmentCoefficient = 0.0f;
     // =====================================================
     // SkinningInformation 用CB
     // =====================================================
@@ -165,12 +165,12 @@ void SkinningObject3d::Draw()
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
-    commandList->SetGraphicsRootDescriptorTable(7, SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
+    commandList->SetGraphicsRootDescriptorTable(8, SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
 
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
 
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
-    commandList->SetGraphicsRootDescriptorTable(8, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootDescriptorTable(9, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
 
     uint32_t vertexOffset = 0;
 

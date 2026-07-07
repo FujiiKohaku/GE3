@@ -488,6 +488,8 @@ void GamePlayScene::Update()
         normalizedDir,
         intensity);
 
+    static Vector4 ambientColor = Vector4(1.0f, 1.0f, 1.0f, 0.25f);
+
     // ---- リセットボタン（向きだけ元に戻す）---
     if (ImGui::Button("Reset Direction")) {
         lightDir = { 0.0f, -1.0f, 0.0f };
@@ -501,7 +503,13 @@ void GamePlayScene::Update()
         lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
         lightIntensity = 1.0f;
         lightDir = { 0.0f, -1.0f, 0.0f };
+        ambientColor = Vector4(1.0f, 1.0f, 1.0f, 0.25f);
     }
+
+    ImGui::ColorEdit3("Ambient Color", &ambientColor.x);
+    ImGui::SliderFloat("Ambient Intensity", &ambientColor.w, 0.0f, 1.0f);
+    LightManager::GetInstance()->SetAmbientColor({ ambientColor.x, ambientColor.y, ambientColor.z });
+    LightManager::GetInstance()->SetAmbientIntensity(ambientColor.w);
 
     ImGui::End();
 
@@ -524,7 +532,10 @@ void GamePlayScene::Update()
     ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
     ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
 
-    float pI = pointEnabled ? pointIntensity : 0.0f;
+    float pI = 0.0f;
+    if (pointEnabled) {
+        pI = pointIntensity;
+    }
     LightManager::GetInstance()->SetPointRadius(pointRadius);
     LightManager::GetInstance()->SetPointDecay(pointDecay);
     LightManager::GetInstance()->SetPointLight(pointColor, pointPos, pI);
@@ -571,7 +582,10 @@ void GamePlayScene::Update()
     float cosFalloffStart = std::cos(spotFalloffStartDeg * std::numbers::pi_v<float> / 180.0f);
 
     // OFF のとき
-    float sI = spotEnabled ? spotIntensity : 0.0f;
+    float sI = 0.0f;
+    if (spotEnabled) {
+        sI = spotIntensity;
+    }
 
     // LightManager に反映
     auto* lm = LightManager::GetInstance();
@@ -598,6 +612,9 @@ void GamePlayScene::Update()
         { 1.0f, 1.0f, 1.0f, 1.0f },
         { 0.0f, 2.0f, 0.0f },
         0.0f);
+
+    LightManager::GetInstance()->SetAmbientColor({ 1.0f, 1.0f, 1.0f });
+    LightManager::GetInstance()->SetAmbientIntensity(0.25f);
 
     LightManager* lightManager = LightManager::GetInstance();
     lightManager->SetSpotLightColor({ 1.0f, 1.0f, 1.0f, 1.0f });

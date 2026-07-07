@@ -6,6 +6,11 @@ struct DirectionalLight {
     Vector3 direction;
     float intensity;
 };
+
+struct AmbientLight {
+    Vector4 color;
+};
+
 struct PointLight {
     Vector4 color; // ライトの色
     Vector3 position; // 位置

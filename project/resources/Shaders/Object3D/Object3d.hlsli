@@ -31,6 +31,10 @@ struct DirectionalLight
     float32_t3 direction;
     float intensity;
 };
+struct AmbientLight
+{
+    float4 color;
+};
 struct Camera
 {
     float32_t3 worldPosition;

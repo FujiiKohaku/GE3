@@ -22,6 +22,7 @@ public:
 
     void SetCamera(Camera* camera);
     void SetDebugCameraController(DebugCameraController* debugCameraController);
+    void SetEnableLighting(bool enable);
 
     const Vector3& GetTranslate() const
     {

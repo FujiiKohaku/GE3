@@ -29,6 +29,7 @@ public:
         return enemyBullets_;
     }
     void SetPosition(const Vector3& position);
+    void SetEnableLighting(bool enable);
     void SetDead(bool isDead);
     void ApplyDamage(float damage);
 

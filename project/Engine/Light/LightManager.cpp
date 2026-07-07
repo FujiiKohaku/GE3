@@ -38,9 +38,15 @@ void LightManager::Finalize()
         instance_->spotLightResource_.Reset();
     }
 
+    if (instance_->ambientLightResource_) {
+        instance_->ambientLightResource_->Unmap(0, nullptr);
+        instance_->ambientLightResource_.Reset();
+    }
+
     instance_->lightData_ = nullptr;
     instance_->pointLightData_ = nullptr;
     instance_->spotLightData_ = nullptr;
+    instance_->ambientLightData_ = nullptr;
     instance_->dxCommon_ = nullptr;
 
     instance_.reset();
@@ -56,6 +62,11 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     lightData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
     lightData_->direction = Normalize(Vector3 { 0.0f, -1.0f, 0.0f });
     lightData_->intensity = 1.0f;
+
+    ambientLightResource_ = dxCommon_->CreateBufferResource(sizeof(AmbientLight));
+    ambientLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&ambientLightData_));
+    ambientLightResource_->SetName(L"Object3d::AmbientLightCB");
+    ambientLightData_->color = { 1.0f, 1.0f, 1.0f, 0.25f };
 
     pointLightResource_ = dxCommon_->CreateBufferResource(sizeof(PointLight));
     pointLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&pointLightData_));
@@ -164,9 +175,32 @@ void LightManager::SetSpotLightCosAngle(float cosAngle)
     spotLightData_->cosAngle = cosAngle;
 }
 
+void LightManager::SetAmbientColor(const Vector3& color)
+{
+    ambientLightData_->color.x = color.x;
+    ambientLightData_->color.y = color.y;
+    ambientLightData_->color.z = color.z;
+}
+
+Vector3 LightManager::GetAmbientColor() const
+{
+    return { ambientLightData_->color.x, ambientLightData_->color.y, ambientLightData_->color.z };
+}
+
+void LightManager::SetAmbientIntensity(float intensity)
+{
+    ambientLightData_->color.w = intensity;
+}
+
+float LightManager::GetAmbientIntensity() const
+{
+    return ambientLightData_->color.w;
+}
+
 void LightManager::Bind(ID3D12GraphicsCommandList* cmd)
 {
     cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootConstantBufferView(5, pointLightResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootConstantBufferView(6, spotLightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(7, ambientLightResource_->GetGPUVirtualAddress());
 }

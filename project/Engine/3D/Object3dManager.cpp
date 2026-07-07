@@ -66,7 +66,7 @@ void Object3dManager::CreateRootSignature()
     HRESULT hr;
 
     // ====== RootParameterの設宁E======
-    D3D12_ROOT_PARAMETER rootParameters[8] = {};
+    D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     // [0] Material�E�ピクセルシェーダ用�E�E
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -106,16 +106,21 @@ void Object3dManager::CreateRootSignature()
     rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[6].Descriptor.ShaderRegister = 4; //  b4
+    // [7] AmbientLight
+    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[7].Descriptor.ShaderRegister = 5; // b5
+
     D3D12_DESCRIPTOR_RANGE descriptorRangeEnvironment[1] = {};
     descriptorRangeEnvironment[0].BaseShaderRegister = 1;
     descriptorRangeEnvironment[0].NumDescriptors = 1;
     descriptorRangeEnvironment[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRangeEnvironment[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    rootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameters[7].DescriptorTable.pDescriptorRanges = descriptorRangeEnvironment;
-    rootParameters[7].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeEnvironment);
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = descriptorRangeEnvironment;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeEnvironment);
     // ====== Sampler設宁E======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

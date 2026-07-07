@@ -30,6 +30,7 @@ void Player::Initialize(Model* model)
 
     object_ = std::make_unique<Object3d>();
     object_->Initialize(Object3dManager::GetInstance());
+    object_->SetEnableLighting(true);
     object_->SetModel(model);
 
     if (camera_ != nullptr) {
@@ -116,6 +117,13 @@ void Player::Update()
         DebugRenderer::GetInstance()->AddLine(debugDrawRayOrigin_, debugDrawAimPoint_, { 1.0f, 1.0f, 0.0f, 1.0f }, 3.0f);
     }
 #endif
+}
+
+void Player::SetEnableLighting(bool enable)
+{
+    if (object_ != nullptr) {
+        object_->SetEnableLighting(enable);
+    }
 }
 #pragma endregion
 

@@ -6,6 +6,7 @@ void BaseBullet::Initialize(Model* model)
     assert(model != nullptr);
     object_ = std::make_unique<Object3d>();
     object_->Initialize(Object3dManager::GetInstance());
+    object_->SetEnableLighting(true);
     object_->SetModel(model);
 
     if (camera_ != nullptr) {
@@ -79,5 +80,12 @@ void BaseBullet::SetCamera(Camera* camera)
 
     if (object_ != nullptr) {
         object_->SetCamera(camera_);
+    }
+}
+
+void BaseBullet::SetEnableLighting(bool enable)
+{
+    if (object_ != nullptr) {
+        object_->SetEnableLighting(enable);
     }
 }

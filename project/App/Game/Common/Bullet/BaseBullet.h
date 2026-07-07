@@ -38,6 +38,7 @@ public:
         return collisionRadius_;
     }
     void SetCamera(Camera* camera);
+    void SetEnableLighting(bool enable);
     virtual void SetTranslate(const Vector3& translate);
     virtual void SetDead();
 

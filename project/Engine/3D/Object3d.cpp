@@ -33,11 +33,11 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
     // チE��ォルト値設定（白・ライチE��ング無効�E�E
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    materialData_->enableLighting = true;
+    materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
-    materialData_->enableEnvironmentMap = true;
-    materialData_->environmentCoefficient = 0.5f;
+    materialData_->enableEnvironmentMap = false;
+    materialData_->environmentCoefficient = 0.0f;
     // ================================
     // Transform初期値設宁E
     // ================================
@@ -94,7 +94,7 @@ void Object3d::Draw()
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
     commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
 
-    commandList->SetGraphicsRootDescriptorTable(7,Object3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootDescriptorTable(8,Object3dManager::GetInstance()->GetEnvironmentTexture());
     // モチE��が設定されてぁE��ば描画
     if (model_) {
         model_->Draw();
