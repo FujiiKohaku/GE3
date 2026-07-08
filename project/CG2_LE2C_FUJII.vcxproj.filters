@@ -648,5 +648,17 @@
     <None Include="resources\Shaders\Fog\DistanceFog.PS.hlsl" />
     <None Include="resources\Shaders\Fog\Fog.VS.hlsl" />
     <None Include="resources\Shaders\Object3D\Object3d.hlsli" />
+    <None Include="resources\Shaders\PostEffect\BoxFilter.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\DepthBasedOutline.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Dissolve.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Fullscreen.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Fullscreen.VS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Fullscreen.hlsli" />
+    <None Include="resources\Shaders\PostEffect\GaussianFilter.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\GrayScale.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\LuminanceBasedOutline.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\RadialBlur.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Random.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Vignette.PS.hlsl" />
   </ItemGroup>
 </Project>

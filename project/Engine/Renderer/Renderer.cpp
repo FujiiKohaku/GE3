@@ -99,7 +99,11 @@ void Renderer::Draw(SceneManager* sceneManager)
     }
 
     copyImageRenderer_->Draw(offscreenRenderer_->GetSrvHandleGPU(), fogRenderer_->GetDepthSRVHandle());
-    fogRenderer_->Apply(offscreenRenderer_->GetSrvHandleGPU(), fogConstantBufferView);
+    
+    // ポストエフェクトが無効（Copy）かつフォグが有効な場合のみ、フォグ描画を適用する
+    if (sceneManager->GetPostEffectType() == PostEffectType::Copy && fogManager_->GetFogData().isEnabled != 0) {
+        fogRenderer_->Apply(offscreenRenderer_->GetSrvHandleGPU(), fogConstantBufferView);
+    }
 
     // Particle draw
     fogRenderer_->PrepareDepthForParticleDraw();

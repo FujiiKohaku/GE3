@@ -46,6 +46,15 @@ void TitleScene::Update()
         SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
     }
 
+    if (Input::GetInstance()->IsKeyTrigger(DIK_L)) {
+        isRandomPostEffect_ = !isRandomPostEffect_;
+        if (isRandomPostEffect_) {
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
+        } else {
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::GrayScale);
+        }
+    }
+
     titleObj_->Update();
     titleSprite_->Update();
     creditSprite_->Update();
