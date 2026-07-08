@@ -21,10 +21,13 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 
     pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl"); // GaussianFilter逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ繧ｬ繧ｦ繧ｷ繧｢繝ｳ繝輔ぅ繝ｫ繧ｿ繧帝←逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
     pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｮ霈晏ｺｦ縺ｫ蝓ｺ縺･縺・※霈ｪ驛ｭ繧呈緒逕ｻ縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::Bloom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl");
 
     pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl");
+    pipelineStates_[PostEffectType::Outline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl");
 
     pipelineStates_[PostEffectType::RadialBlur] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/RadialBlur.PS.hlsl");
+    pipelineStates_[PostEffectType::FocusLine] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/FocusLine.PS.hlsl");
 
     pipelineStates_[PostEffectType::Dissolve] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Dissolve.PS.hlsl");
 
@@ -162,7 +165,12 @@ void CopyImageRenderer::Draw(
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
 
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState = pipelineStates_[currentPostEffectType_];
+    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator iterator = pipelineStates_.find(currentPostEffectType_);
+    if (iterator == pipelineStates_.end()) {
+        iterator = pipelineStates_.find(PostEffectType::Copy);
+    }
+    assert(iterator != pipelineStates_.end());
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState = iterator->second;
 
     commandList->SetPipelineState(pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -204,6 +212,10 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->dissolveThreshold = 0.5f;
     postEffectParameterData_->dissolveEdgeWidth = 0.05f;
     postEffectParameterData_->dissolveEdgeStrength = 2.0f;
+    postEffectParameterData_->boostKickStrength = 0.0f;
+    postEffectParameterData_->padding0 = 0.0f;
+    postEffectParameterData_->padding1 = 0.0f;
+    postEffectParameterData_->padding2 = 0.0f;
 }
 CopyImageRenderer::PostEffectParameter&CopyImageRenderer::GetPostEffectParameter()
 {

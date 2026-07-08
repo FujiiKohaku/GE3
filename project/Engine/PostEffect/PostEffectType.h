@@ -10,4 +10,10 @@ enum class PostEffectType {
     RadialBlur,
     Dissolve,
     Random,
+    Bloom,
+    Outline,
+    Fog,
+    FocusLine,
 };
+
+const char* GetPostEffectTypeName(PostEffectType type);

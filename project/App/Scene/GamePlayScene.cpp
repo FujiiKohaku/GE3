@@ -28,6 +28,56 @@
 namespace {
 constexpr float kPlayerEnemyCollisionRadius = 4.0f;
 constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
+constexpr float kBoostPostEffectBaseWeight = 0.40f;
+constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
+constexpr float kBoostPostEffectPlayerWeight = 0.30f;
+constexpr float kBoostPostEffectCenterMin = 0.28f;
+constexpr float kBoostPostEffectCenterMax = 0.72f;
+constexpr float kBoostPostEffectVanishPointDistance = 150.0f;
+constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
+constexpr float kBoostKickDuration = 0.2f;
+constexpr float kBoostKickFrameTime = 1.0f / 60.0f;
+constexpr float kBoostKickFovAdd = 0.1f;
+
+float ClampFloat(float value, float minValue, float maxValue)
+{
+    if (value < minValue) {
+        value = minValue;
+    }
+
+    if (value > maxValue) {
+        value = maxValue;
+    }
+
+    return value;
+}
+
+Vector2 LerpVector2(const Vector2& start, const Vector2& end, float rate)
+{
+    Vector2 result {};
+    result.x = start.x + (end.x - start.x) * rate;
+    result.y = start.y + (end.y - start.y) * rate;
+    return result;
+}
+
+Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
+{
+    Vector2 center {};
+    center.x = 0.5f;
+    center.y = 0.5f;
+
+    if (clientWidth <= 0.0f) {
+        return center;
+    }
+
+    if (clientHeight <= 0.0f) {
+        return center;
+    }
+
+    center.x = screenPosition.x / clientWidth;
+    center.y = screenPosition.y / clientHeight;
+    return center;
+}
 
 float LengthSquared(const Vector3& value)
 {
@@ -356,6 +406,8 @@ void GamePlayScene::Update()
 
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
+    const bool isPlayerBoosting = player_->IsBoosting();
+    UpdateBoostKick(isPlayerBoosting);
 
     // 進行距離を更新
     railDistance_ = nextRailDistance;
@@ -381,7 +433,6 @@ void GamePlayScene::Update()
         3.0f);
 
     // プレイヤーのブースト状態に応じたエフェクト制御
-    const bool isPlayerBoosting = player_->IsBoosting();
     Vector3 boostLinePosition = player_->GetTranslate();
     boostLinePosition.y += 0.2f;
     boostLinePosition.z += 2.4f;
@@ -409,12 +460,9 @@ void GamePlayScene::Update()
         EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
     }
 
-    // ポストエフェクトの切り替え
-    PostEffectType postEffectType = PostEffectType::DepthOutline;
-    if (isPlayerBoosting) {
-        postEffectType = PostEffectType::RadialBlur;
-    }
+    UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
 
+    // ポストエフェクトの切り替え
     if (hasRandomPostEffectToggle_) {
         if (isRandomPostEffect_) {
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
@@ -422,7 +470,14 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
         }
     } else {
-        SceneManager::GetInstance()->SetPostEffectType(postEffectType);
+        if (isPlayerBoosting) {
+            SceneManager::GetInstance()->ClearPostEffects();
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine);
+        } else {
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
+        }
     }
 
     // レティクル（AimSprite）のスクリーン位置更新
@@ -1130,4 +1185,105 @@ void GamePlayScene::LoadEnemyPopData()
             }
         }
     }
+}
+
+void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
+{
+    if (isPlayerBoosting && !wasBoostingForKick_) {
+        boostKickTimer_ = kBoostKickDuration;
+    }
+
+    wasBoostingForKick_ = isPlayerBoosting;
+
+    if (!isPlayerBoosting) {
+        boostKickTimer_ = 0.0f;
+        boostKickStrength_ = 0.0f;
+        SceneManager::GetInstance()->SetPostEffectKickStrength(boostKickStrength_);
+        return;
+    }
+
+    boostKickStrength_ = 0.0f;
+    if (boostKickTimer_ > 0.0f) {
+        float normalizedTime = boostKickTimer_ / kBoostKickDuration;
+        boostKickStrength_ = normalizedTime * normalizedTime;
+        boostKickTimer_ -= kBoostKickFrameTime;
+        if (boostKickTimer_ < 0.0f) {
+            boostKickTimer_ = 0.0f;
+        }
+    }
+
+    SceneManager::GetInstance()->SetPostEffectKickStrength(boostKickStrength_);
+}
+
+void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting)
+{
+    Vector2 targetCenter {};
+    targetCenter.x = 0.5f;
+    targetCenter.y = 0.5f;
+
+    if (isPlayerBoosting) {
+        targetCenter = CalculateBoostPostEffectCenter(nextRailDistance);
+        smoothedBoostPostEffectCenter_ = LerpVector2(smoothedBoostPostEffectCenter_, targetCenter, kBoostPostEffectCenterLerpRate);
+    } else {
+        smoothedBoostPostEffectCenter_ = targetCenter;
+    }
+
+    SceneManager::GetInstance()->SetPostEffectCenter(smoothedBoostPostEffectCenter_);
+}
+
+Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) const
+{
+    Vector2 center {};
+    center.x = 0.5f;
+    center.y = 0.5f;
+
+    if (camera_ == nullptr) {
+        return center;
+    }
+
+    if (rail_ == nullptr) {
+        return center;
+    }
+
+    if (player_ == nullptr) {
+        return center;
+    }
+
+    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+
+    if (clientWidth <= 0.0f) {
+        clientWidth = static_cast<float>(WinApp::kClientWidth);
+    }
+
+    if (clientHeight <= 0.0f) {
+        clientHeight = static_cast<float>(WinApp::kClientHeight);
+    }
+
+    float vanishPointDistance = nextRailDistance + kBoostPostEffectVanishPointDistance;
+    float totalLength = rail_->GetTotalLength();
+    if (vanishPointDistance > totalLength) {
+        vanishPointDistance = totalLength;
+    }
+
+    Vector3 vanishPointPosition = rail_->GetPositionByDistance(vanishPointDistance);
+    Vector2 vanishPointScreen = camera_->WorldToScreen(vanishPointPosition);
+    Vector2 vanishPointCenter = ScreenPositionToPostEffectCenter(vanishPointScreen, clientWidth, clientHeight);
+
+    Vector2 playerScreen = camera_->WorldToScreen(player_->GetTranslate());
+    Vector2 playerCenter = ScreenPositionToPostEffectCenter(playerScreen, clientWidth, clientHeight);
+
+    center.x =
+        0.5f * kBoostPostEffectBaseWeight +
+        vanishPointCenter.x * kBoostPostEffectVanishPointWeight +
+        playerCenter.x * kBoostPostEffectPlayerWeight;
+    center.y =
+        0.5f * kBoostPostEffectBaseWeight +
+        vanishPointCenter.y * kBoostPostEffectVanishPointWeight +
+        playerCenter.y * kBoostPostEffectPlayerWeight;
+
+    center.x = ClampFloat(center.x, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
+    center.y = ClampFloat(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
+
+    return center;
 }

@@ -16,4 +16,8 @@ cbuffer PostEffectParameter : register(b0)
     float dissolveEdgeWidth;
     float dissolveEdgeStrength;
     float dissolvePadding;
+    float boostKickStrength;
+    float padding0;
+    float padding1;
+    float padding2;
 };

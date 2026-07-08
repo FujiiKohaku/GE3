@@ -66,6 +66,9 @@ private:
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
     void UpdatePlayerTransform(const Vector3& currentPosition, const Vector3& railRight, const Vector3& railUp, const Vector3& forward);
     void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
+    void UpdateBoostKick(bool isPlayerBoosting);
+    void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
+    Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
     void ProcessPlayerShooting(Input* input);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
@@ -143,11 +146,14 @@ private:
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
+    bool wasBoostingForKick_ = false;
     bool isRandomPostEffect_ = false;
     bool hasRandomPostEffectToggle_ = false;
     float normalFovY_ = 0.45f;
     float boostFovY_ = 0.75f;
     float currentFovY_ = 0.45f;
+    float boostKickTimer_ = 0.0f;
+    float boostKickStrength_ = 0.0f;
     float fovLerpRate_ = 0.1f;
     float cameraFollowLerpRate_ = 0.2f;
     float cameraForwardLerpRate_ = 0.2f;
@@ -155,6 +161,7 @@ private:
     Vector3 smoothedCameraPosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 smoothedLookAheadPosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 smoothedCameraForward_ = { 0.0f, 0.0f, 1.0f };
+    Vector2 smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
     Vector3 cameraOffset_ = {
         0.0f,
         5.0f,
