@@ -1,16 +1,16 @@
 {
   "Emitter": {
     "Shape": "Cone",
-    "Count": 512,
+    "Count": 1024,
     "Radius": 0.02,
     "Frequency": 0.002
   },
 
   "Particle": {
-    "LifeTime": 0.12,
+    "LifeTime": 0.16,
 
-    "StartScale": 0.25,
-    "EndScale": 1.20,
+    "StartScale": 0.20,
+    "EndScale": 0.80,
 
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
