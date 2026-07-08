@@ -377,6 +377,7 @@ EffectHandle EffectManager::StartEffect(
     activeEffect.handle = handle;
     activeEffect.effectName = effectName;
     activeEffect.position = position;
+    activeEffect.prevPosition = position;
     activeEffect.positionProvider = std::move(positionProvider);
     activeEffect.duration = duration;
     if (!isLoop && activeEffect.duration < 0.0f) {
@@ -459,6 +460,8 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
 
     resource.emitterData->translate = position;
     resource.emitterData->radius = runtime.emitRadius;
+    resource.emitterData->prevTranslate = position;
+    resource.emitterData->padding1 = 0.0f;
     resource.emitterData->count = runtime.emitCount;
     resource.emitterData->frequency = runtime.emitFrequency;
     resource.emitterData->frequencyTime = 0.0f;
@@ -913,6 +916,8 @@ void EffectManager::UpdateActiveEffect(size_t index)
 
     const EffectRuntime& runtime = runtimeIterator->second;
 
+    activeEffect.prevPosition = activeEffect.position;
+
     if (activeEffect.positionProvider) {
         activeEffect.position = activeEffect.positionProvider();
     }
@@ -922,6 +927,7 @@ void EffectManager::UpdateActiveEffect(size_t index)
     resource.perFrameData->deltaTime = deltaTime_;
 
     resource.emitterData->translate = activeEffect.position;
+    resource.emitterData->prevTranslate = activeEffect.prevPosition;
     resource.emitterData->radius = runtime.emitRadius;
     resource.emitterData->count = runtime.emitCount;
     resource.emitterData->frequency = runtime.emitFrequency;

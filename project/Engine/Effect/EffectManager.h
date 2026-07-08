@@ -33,6 +33,7 @@ struct ActiveEffect {
     EffectHandle handle = kInvalidEffectHandle;
     std::string effectName;
     Vector3 position;
+    Vector3 prevPosition;
     EffectPositionProvider positionProvider;
     float duration = -1.0f;
     bool isLoop = false;

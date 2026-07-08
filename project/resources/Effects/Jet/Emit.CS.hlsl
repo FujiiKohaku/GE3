@@ -109,12 +109,16 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     lifeTime *= randomLife;
 
-    gParticles[particleIndex].translate =
-        gEmitter.translate;
-
-    gParticles[particleIndex].velocity =
+    float32_t t = (float32_t)DTid.x / (float32_t)gEmitter.count;
+    float32_t3 velocity =
         direction * velocityLength +
         gEffectSettings.velocity;
+    float32_t dt = gPerFrame.deltaTime * (1.0f - t);
+
+    gParticles[particleIndex].translate =
+        lerp(gEmitter.prevTranslate, gEmitter.translate, t) + velocity * dt;
+
+    gParticles[particleIndex].velocity = velocity;
 
     gParticles[particleIndex].scale =
         float32_t3(

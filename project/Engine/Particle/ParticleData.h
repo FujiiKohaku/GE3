@@ -17,6 +17,8 @@ struct ParticleForGPU {
 struct EmitterSphere {
     Vector3 translate;
     float radius;
+    Vector3 prevTranslate;
+    float padding1;
     uint32_t count;
     float frequency;
     float frequencyTime;

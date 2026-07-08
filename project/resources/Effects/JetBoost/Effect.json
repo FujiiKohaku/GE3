@@ -7,7 +7,7 @@
   },
 
   "Particle": {
-    "LifeTime": 0.38,
+    "LifeTime": 0.22,
 
     "StartScale": 0.55,
     "EndScale": 2.25,

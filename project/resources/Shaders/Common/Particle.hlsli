@@ -54,6 +54,8 @@ struct EmitterSphere
 {
     float32_t3 translate;
     float radius;
+    float32_t3 prevTranslate;
+    float padding1;
     uint32_t count;
     float frequency;
     float frequencyTime;
