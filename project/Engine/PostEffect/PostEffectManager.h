@@ -8,6 +8,7 @@
 #include <wrl.h>
 
 class Camera;
+class BloomRenderer;
 class FogManager;
 class FogRenderer;
 class SceneManager;
@@ -67,6 +68,7 @@ private:
 
     DirectXCommon* dxCommon_ = nullptr;
     std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
+    std::unique_ptr<BloomRenderer> bloomRenderer_;
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;

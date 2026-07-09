@@ -645,6 +645,10 @@
     <None Include="resources\Shaders\Debug\DebugLine.PS.hlsl" />
     <None Include="resources\Shaders\Debug\DebugLine.VS.hlsl" />
     <None Include="resources\Shaders\Common\Fog.hlsli" />
+    <None Include="resources\Shaders\PostEffect\Bloom\Bloom.hlsli" />
+    <None Include="resources\Shaders\PostEffect\Bloom\BloomBlur.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Bloom\BloomComposite.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Bloom\BloomExtract.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\Fog\DistanceFog.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\Fog\Fog.VS.hlsl" />
     <None Include="resources\Shaders\Object3D\Object3d.hlsli" />
@@ -663,6 +667,8 @@
     <None Include="resources\Shaders\PostEffect\Vignette.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\PostEffect\Bloom\BloomRenderer.cpp" />
+    <ClInclude Include="Engine\PostEffect\Bloom\BloomRenderer.h" />
     <ClCompile Include="Engine\PostEffect\PostEffectManager.cpp" />
     <ClInclude Include="Engine\PostEffect\PostEffectManager.h" />
   </ItemGroup>

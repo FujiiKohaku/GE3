@@ -112,6 +112,7 @@ void GamePlayScene::Initialize()
     }
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
+    SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
     // =================================================
     // Camera
     // =================================================
@@ -468,6 +469,7 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
         } else {
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         }
     } else {
         if (isPlayerBoosting) {
@@ -475,8 +477,10 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         } else {
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         }
     }
 

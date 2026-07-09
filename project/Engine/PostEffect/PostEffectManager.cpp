@@ -2,6 +2,7 @@
 
 #include "App/Scene/SceneManager.h"
 #include "Engine/Camera/Camera.h"
+#include "Engine/PostEffect/Bloom/BloomRenderer.h"
 #include "Engine/PostEffect/Fog/FogManager.h"
 #include "Engine/PostEffect/Fog/FogRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
@@ -26,6 +27,9 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
     copyImageRenderer_ = std::make_unique<CopyImageRenderer>();
     copyImageRenderer_->Initialize(dxCommon_);
 
+    bloomRenderer_ = std::make_unique<BloomRenderer>();
+    bloomRenderer_->Initialize(dxCommon_);
+
     fogManager_ = std::make_unique<FogManager>();
     fogManager_->Initialize(dxCommon_);
 
@@ -48,11 +52,13 @@ void PostEffectManager::Update(Camera* camera)
     }
 
     fogManager_->Update();
+    bloomRenderer_->Update();
 }
 
 void PostEffectManager::DrawImGui()
 {
     fogManager_->DrawImGui();
+    bloomRenderer_->DrawImGui();
 
 #ifdef USE_IMGUI
     ImGui::Begin("Post Effects");
@@ -158,10 +164,28 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
 
         appliedCount++;
         if (appliedCount == enabledCount) {
+            if (postEffect.type == PostEffectType::Bloom && bloomRenderer_->IsEnabled()) {
+                bloomRenderer_->Generate(inputHandle);
+                SetBackBufferRenderTarget();
+                bloomRenderer_->Composite(inputHandle);
+                continue;
+            }
+
             SetBackBufferRenderTarget();
             ApplyPostEffectToCurrentTarget(postEffect.type, inputHandle);
         } else {
             RenderTarget& renderTarget = pingPongRenderTargets_[pingPongIndex];
+            if (postEffect.type == PostEffectType::Bloom && bloomRenderer_->IsEnabled()) {
+                bloomRenderer_->Generate(inputHandle);
+                renderTarget.BeginRender();
+                bloomRenderer_->Composite(inputHandle);
+                renderTarget.EndRender();
+
+                inputHandle = renderTarget.GetSrvHandleGPU();
+                pingPongIndex = GetNextPingPongIndex(pingPongIndex);
+                continue;
+            }
+
             renderTarget.BeginRender();
             ApplyPostEffectToCurrentTarget(postEffect.type, inputHandle);
             renderTarget.EndRender();
@@ -193,6 +217,12 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
         }
 
         fogRenderer_->Apply(inputHandle, fogConstantBufferView);
+        return;
+    }
+
+    if (type == PostEffectType::Bloom) {
+        copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
+        copyImageRenderer_->Draw(inputHandle, fogRenderer_->GetDepthSRVHandle());
         return;
     }
 

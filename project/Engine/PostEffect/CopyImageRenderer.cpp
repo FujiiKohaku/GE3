@@ -21,7 +21,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 
     pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl"); // GaussianFilter逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ繧ｬ繧ｦ繧ｷ繧｢繝ｳ繝輔ぅ繝ｫ繧ｿ繧帝←逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
     pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｮ霈晏ｺｦ縺ｫ蝓ｺ縺･縺・※霈ｪ驛ｭ繧呈緒逕ｻ縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
-    pipelineStates_[PostEffectType::Bloom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl");
+    pipelineStates_[PostEffectType::Bloom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
 
     pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl");
     pipelineStates_[PostEffectType::Outline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl");
