@@ -160,7 +160,7 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
     ModelManager::GetInstance()->Load("Characters/Animation/SneakWalk/sneakWalk.gltf");
     ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
-    Model* playerModel = ModelManager::GetInstance()->Load("Characters/Player/AirPlane/AirPlane.obj");
+    Model* playerModel = ModelManager::GetInstance()->Load("fish/fish.obj");
 
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
