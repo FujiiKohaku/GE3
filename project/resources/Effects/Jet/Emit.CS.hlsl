@@ -70,7 +70,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float32_t3 random =
         generator.Generate3d() - 0.5f;
 
-    float spread = 0.03f;
+    float spread = 0.15f;
 
     float32_t3 direction =
         normalize(

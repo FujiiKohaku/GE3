@@ -70,7 +70,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float32_t3 random =
         generator.Generate3d() - 0.5f;
 
-    float spread = 0.25f;
+    float spread = 0.40f;
 
     float32_t3 direction =
         normalize(
@@ -93,8 +93,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             0.02f);
 
     float randomScale =
-        0.85f +
-        generator.Generate1d() * 0.5f;
+        0.5f +
+        generator.Generate1d() * 1.0f;
 
     scale *= randomScale;
 
@@ -104,14 +104,14 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             0.05f);
 
     float randomLife =
-        0.9f +
-        generator.Generate1d() * 0.4f;
+        0.5f +
+        generator.Generate1d() * 1.0f;
 
     lifeTime *= randomLife;
 
     float32_t t = (float32_t)DTid.x / (float32_t)gEmitter.count;
     float32_t3 velocity =
-        direction * velocityLength +
+        direction * (velocityLength * (0.8f + generator.Generate1d() * 0.4f)) +
         gEffectSettings.velocity;
     float32_t dt = gPerFrame.deltaTime * (1.0f - t);
     float32_t dragFactor = gEffectSettings.enableDrag != 0 ? pow(max(gEffectSettings.drag, 0.0f), dt * 30.0f) : 1.0f;
@@ -137,8 +137,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         gEffectSettings.startColor;
 
     gParticles[particleIndex].rotation =
-        gEffectSettings.startRotation;
+        gEffectSettings.startRotation + generator.Generate1d() * 6.28f;
 
     gParticles[particleIndex].rotationSpeed =
-        gEffectSettings.rotationSpeed;
+        gEffectSettings.rotationSpeed * (generator.Generate1d() - 0.5f) * 2.0f;
 }

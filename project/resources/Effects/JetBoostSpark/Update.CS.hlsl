@@ -97,51 +97,11 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             scale,
             scale);
 
-    float4 currentColor;
-
-    float4 coreColor =
-    {
-        1.0f,
-        1.0f,
-        1.0f,
-        1.0f
-    };
-
-    float4 flameColor =
-    {
-        0.2f,
-        0.8f,
-        1.0f,
-        1.0f
-    };
-
-    float4 smokeColor =
-    {
-        1.0f,
-        0.4f,
-        0.1f,
-        0.0f
-    };
-
-    if (lifeRate < 0.3f)
-    {
-        currentColor =
-            lerp(
-                coreColor,
-                flameColor,
-                lifeRate / 0.3f);
-    }
-    else
-    {
-        currentColor =
-            lerp(
-                flameColor,
-                smokeColor,
-                (lifeRate - 0.3f) / 0.7f);
-    }
-
     gParticles[particleIndex].color =
-        currentColor;
+        lerp(
+            gEffectSettings.startColor,
+            gEffectSettings.endColor,
+            lifeRate);
 
     if (gParticles[particleIndex].currentTime >=
             gParticles[particleIndex].lifeTime ||

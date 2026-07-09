@@ -144,6 +144,7 @@ private:
 
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
+    EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
     EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
     bool wasBoostingForKick_ = false;

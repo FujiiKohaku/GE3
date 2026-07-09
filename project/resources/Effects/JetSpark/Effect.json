@@ -1,0 +1,46 @@
+{
+  "Emitter": {
+    "Shape": "Cone",
+    "Count": 256,
+    "Radius": 0.05,
+    "Frequency": 0.01
+  },
+
+  "Particle": {
+    "LifeTime": 0.35,
+
+    "StartScale": 0.08,
+    "EndScale": 0.01,
+
+    "StartRotation": 0.0,
+    "RotationSpeed": 5.0,
+
+    "Velocity": [ 0.0, 0.0, -10.0 ],
+
+    "StartColor": [ 1.0, 0.7, 0.2, 1.0 ],
+    "EndColor": [ 1.0, 0.1, 0.0, 0.0 ]
+  },
+
+  "Simulation": {
+    "EnableGravity": true,
+    "Gravity": -3.0,
+
+    "EnableDrag": true,
+    "Drag": 0.92,
+
+    "EnableNoise": true,
+    "NoiseStrength": 8.0,
+
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+
+  "Render": {
+    "Texture": "resources/Particles/circle.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+
+    "Loop": true,
+    "Duration": -1.0
+  }
+}

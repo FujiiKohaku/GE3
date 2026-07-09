@@ -1,24 +1,24 @@
 {
   "Emitter": {
     "Shape": "Cone",
-    "Count": 1024,
-    "Radius": 0.07,
-    "Frequency": 0.001
+    "Count": 512,
+    "Radius": 0.10,
+    "Frequency": 0.005
   },
 
   "Particle": {
-    "LifeTime": 0.20,
+    "LifeTime": 0.25,
 
-    "StartScale": 0.04,
-    "EndScale": 3.80,
+    "StartScale": 0.18,
+    "EndScale": 0.04,
 
     "StartRotation": 0.0,
-    "RotationSpeed": 0.0,
+    "RotationSpeed": 8.0,
 
-    "Velocity": [ 0.0, 0.0, -7.5 ],
+    "Velocity": [ 0.0, 0.0, -18.0 ],
 
-    "StartColor": [ 1.0, 0.35, 0.95, 1.0 ],
-    "EndColor": [ 0.25, 0.05, 0.9, 0.0 ]
+    "StartColor": [ 0.0, 1.0, 0.5, 1.0 ],
+    "EndColor": [ 0.0, 0.4, 1.0, 0.0 ]
   },
 
   "Simulation": {
@@ -26,10 +26,10 @@
     "Gravity": 0.0,
 
     "EnableDrag": true,
-    "Drag": 0.94,
+    "Drag": 0.95,
 
-    "EnableNoise": false,
-    "NoiseStrength": 0.0,
+    "EnableNoise": true,
+    "NoiseStrength": 15.0,
 
     "EnableAttraction": false,
     "AttractionStrength": 0.0

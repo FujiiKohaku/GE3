@@ -240,6 +240,7 @@ void GamePlayScene::Initialize()
     player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
+    playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect("JetSpark", player_);
     wasPlayerBoosting_ = false;
 
     /*LevelDataLoader levelDataLoader;
@@ -440,12 +441,16 @@ void GamePlayScene::Update()
 
     if (isPlayerBoosting != wasPlayerBoosting_) {
         EffectManager::GetInstance()->StopEffect(playerJetHandle_);
+        EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
 
         const char* jetEffectName = "Jet";
+        const char* sparkEffectName = "JetSpark";
         if (isPlayerBoosting) {
             jetEffectName = "JetBoost";
+            sparkEffectName = "JetBoostSpark";
         }
         playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(jetEffectName, player_);
+        playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(sparkEffectName, player_);
 
         if (isPlayerBoosting) {
             boostLineHandle_ = EffectManager::GetInstance()->AttachEffect("BoostLine", player_);
@@ -1063,6 +1068,8 @@ void GamePlayScene::Finalize()
 
     EffectManager::GetInstance()->StopEffect(playerJetHandle_);
     playerJetHandle_ = kInvalidEffectHandle;
+    EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
+    playerJetSparkHandle_ = kInvalidEffectHandle;
     EffectManager::GetInstance()->StopEffect(boostLineHandle_);
     boostLineHandle_ = kInvalidEffectHandle;
     EffectManager::Finalize();

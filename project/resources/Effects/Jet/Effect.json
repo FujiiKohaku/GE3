@@ -7,10 +7,10 @@
   },
 
   "Particle": {
-    "LifeTime": 0.16,
+    "LifeTime": 0.15,
 
-    "StartScale": 0.20,
-    "EndScale": 0.80,
+    "StartScale": 0.02,
+    "EndScale": 1.80,
 
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
@@ -36,7 +36,7 @@
   },
 
   "Render": {
-    "Texture": "jet.png",
+    "Texture": "resources/Particles/circle.png",
     "MeshType": "Board",
     "BlendMode": "Add",
 
