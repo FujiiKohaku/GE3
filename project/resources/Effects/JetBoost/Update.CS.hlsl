@@ -93,7 +93,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     gParticles[particleIndex].scale =
         float32_t3(
-            scale,
+            scale * 0.7f,
             scale,
             scale);
 
