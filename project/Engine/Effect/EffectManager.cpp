@@ -42,6 +42,18 @@ ParticleMeshManager::ParticleMeshType ParseParticleMeshType(const std::string& m
         return ParticleMeshManager::ParticleMeshType::Cylinder;
     }
 
+    if (meshType == "Box") {
+        return ParticleMeshManager::ParticleMeshType::Box;
+    }
+
+    if (meshType == "Sphere") {
+        return ParticleMeshManager::ParticleMeshType::Sphere;
+    }
+
+    if (meshType == "Cone") {
+        return ParticleMeshManager::ParticleMeshType::Cone;
+    }
+
     return ParticleMeshManager::ParticleMeshType::Board;
 }
 

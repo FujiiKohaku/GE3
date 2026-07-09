@@ -265,6 +265,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Boss\FearBoss.cpp" />
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
+    <ClCompile Include="Engine\Particle\MeshManager\ParticleBoxMesh.cpp" />
+    <ClCompile Include="Engine\Particle\MeshManager\ParticleSphereMesh.cpp" />
+    <ClCompile Include="Engine\Particle\MeshManager\ParticleConeMesh.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleRingMesh.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
@@ -393,6 +396,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Game\Boss\FearBoss.h" />
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleBoardMesh.h" />
+    <ClInclude Include="Engine\Particle\MeshManager\ParticleBoxMesh.h" />
+    <ClInclude Include="Engine\Particle\MeshManager\ParticleSphereMesh.h" />
+    <ClInclude Include="Engine\Particle\MeshManager\ParticleConeMesh.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleRingMesh.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
