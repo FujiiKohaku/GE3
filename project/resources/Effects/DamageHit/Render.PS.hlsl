@@ -1,5 +1,5 @@
-#include "../../../Effects/Common/ParticlePixelCommon.hlsli"
-#include "../../../Effects/Common/ParticleFogCommon.hlsli"
+#include "../Common/ParticlePixelCommon.hlsli"
+#include "../Common/ParticleFogCommon.hlsli"
 
 PixelShaderOutput main(VertexShaderOutput input)
 {

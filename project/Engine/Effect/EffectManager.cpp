@@ -1,5 +1,6 @@
 #include "EffectManager.h"
 
+#include "Engine/Logger/Logger.h"
 #include "Engine/StringUtility/StringUtility.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/math/MatrixMath.h"
@@ -82,6 +83,19 @@ BlendMode ParseBlendMode(const std::string& blendMode)
     return kBlendModeAdd;
 }
 
+D3D12_CULL_MODE ParseCullMode(const std::string& cullMode)
+{
+    if (cullMode == "Back") {
+        return D3D12_CULL_MODE_BACK;
+    }
+
+    if (cullMode == "Front") {
+        return D3D12_CULL_MODE_FRONT;
+    }
+
+    return D3D12_CULL_MODE_NONE;
+}
+
 int32_t ParseEmitterShape(const std::string& shape)
 {
     if (shape == "Box") {
@@ -98,6 +112,28 @@ int32_t ParseEmitterShape(const std::string& shape)
 
     if (shape == "Circle") {
         return 4;
+    }
+
+    return 0;
+}
+
+const nlohmann::json& SelectJsonSection(const nlohmann::json& config, const char* sectionName)
+{
+    if (config.contains(sectionName)) {
+        return config.at(sectionName);
+    }
+
+    return config;
+}
+
+int32_t ReadBoolFlag(const nlohmann::json& config, const char* key, int32_t fallback)
+{
+    if (!config.contains(key)) {
+        return fallback;
+    }
+
+    if (config.at(key).get<bool>()) {
+        return 1;
     }
 
     return 0;
@@ -234,9 +270,34 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
 {
     EffectRuntime runtime {};
     runtime.data = effectData;
+    if (!runtime.data.vertexShaderPath.empty()) {
+        runtime.vertexShaderPath = runtime.data.vertexShaderPath;
+    }
+    if (!runtime.data.pixelShaderPath.empty()) {
+        runtime.pixelShaderPath = runtime.data.pixelShaderPath;
+    }
+
     ApplyEffectConfig(effectData, runtime);
-    runtime.emitPipelineState = CreateComputePipeline(emitRootSignature_.Get(), effectData.emitShaderPath);
-    runtime.updatePipelineState = CreateComputePipeline(updateRootSignature_.Get(), effectData.updateShaderPath);
+    runtime.emitPipelineState = CreateComputePipeline(
+        runtime.data.effectName,
+        "Emit",
+        emitRootSignature_.Get(),
+        runtime.data.emitShaderPath);
+    runtime.updatePipelineState = CreateComputePipeline(
+        runtime.data.effectName,
+        "Update",
+        updateRootSignature_.Get(),
+        runtime.data.updateShaderPath);
+
+    ParticleRenderManager::GraphicsPipelineDesc graphicsPipelineDesc {};
+    graphicsPipelineDesc.effectName = runtime.data.effectName;
+    graphicsPipelineDesc.vertexShaderPath = runtime.vertexShaderPath;
+    graphicsPipelineDesc.pixelShaderPath = runtime.pixelShaderPath;
+    graphicsPipelineDesc.blendMode = runtime.blendMode;
+    graphicsPipelineDesc.depthTest = runtime.depthTest;
+    graphicsPipelineDesc.depthWrite = runtime.depthWrite;
+    graphicsPipelineDesc.cullMode = runtime.cullMode;
+    runtime.graphicsPipelineState = particleRenderManager_->CreateGraphicsPipeline(graphicsPipelineDesc);
 
     TextureManager::GetInstance()->LoadTexture(runtime.texturePath);
     return runtime;
@@ -259,10 +320,43 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
 
     const std::filesystem::path effectDirectory(effectData.effectDirectory);
 
-    const nlohmann::json& emitter = config.contains("Emitter") ? config.at("Emitter") : config;
-    const nlohmann::json& particle = config.contains("Particle") ? config.at("Particle") : config;
-    const nlohmann::json& simulation = config.contains("Simulation") ? config.at("Simulation") : config;
-    const nlohmann::json& render = config.contains("Render") ? config.at("Render") : config;
+    const nlohmann::json& emitter = SelectJsonSection(config, "Emitter");
+    const nlohmann::json& particle = SelectJsonSection(config, "Particle");
+    const nlohmann::json& simulation = SelectJsonSection(config, "Simulation");
+    const nlohmann::json& render = SelectJsonSection(config, "Render");
+
+    if (config.contains("Shaders")) {
+        const nlohmann::json& shaders = config.at("Shaders");
+        if (shaders.contains("Emit")) {
+            runtime.data.emitShaderPath = ResolveEffectAssetPath(
+                effectDirectory,
+                shaders.at("Emit").get<std::string>())
+                                             .generic_string();
+        }
+
+        if (shaders.contains("Update")) {
+            runtime.data.updateShaderPath = ResolveEffectAssetPath(
+                effectDirectory,
+                shaders.at("Update").get<std::string>())
+                                               .generic_string();
+        }
+
+        if (shaders.contains("Vertex")) {
+            runtime.vertexShaderPath = ResolveEffectAssetPath(
+                effectDirectory,
+                shaders.at("Vertex").get<std::string>())
+                                           .generic_string();
+            runtime.data.vertexShaderPath = runtime.vertexShaderPath;
+        }
+
+        if (shaders.contains("Pixel")) {
+            runtime.pixelShaderPath = ResolveEffectAssetPath(
+                effectDirectory,
+                shaders.at("Pixel").get<std::string>())
+                                          .generic_string();
+            runtime.data.pixelShaderPath = runtime.pixelShaderPath;
+        }
+    }
 
     if (emitter.contains("Shape")) {
         runtime.settings.emitterShape = ParseEmitterShape(emitter.at("Shape").get<std::string>());
@@ -290,13 +384,13 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
         runtime.settings.endColor = ReadVector4(particle.at("EndColor"), runtime.settings.endColor);
     }
 
-    runtime.settings.enableGravity = simulation.value("EnableGravity", false) ? 1 : 0;
+    runtime.settings.enableGravity = ReadBoolFlag(simulation, "EnableGravity", runtime.settings.enableGravity);
     runtime.settings.gravity = simulation.value("Gravity", runtime.settings.gravity);
-    runtime.settings.enableDrag = simulation.value("EnableDrag", false) ? 1 : 0;
+    runtime.settings.enableDrag = ReadBoolFlag(simulation, "EnableDrag", runtime.settings.enableDrag);
     runtime.settings.drag = simulation.value("Drag", runtime.settings.drag);
-    runtime.settings.enableNoise = simulation.value("EnableNoise", false) ? 1 : 0;
+    runtime.settings.enableNoise = ReadBoolFlag(simulation, "EnableNoise", runtime.settings.enableNoise);
     runtime.settings.noiseStrength = simulation.value("NoiseStrength", runtime.settings.noiseStrength);
-    runtime.settings.enableAttraction = simulation.value("EnableAttraction", false) ? 1 : 0;
+    runtime.settings.enableAttraction = ReadBoolFlag(simulation, "EnableAttraction", runtime.settings.enableAttraction);
     runtime.settings.attractionStrength = simulation.value("AttractionStrength", runtime.settings.attractionStrength);
 
     if (render.contains("Texture")) {
@@ -314,14 +408,97 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
         runtime.blendMode = ParseBlendMode(render.at("BlendMode").get<std::string>());
     }
 
+    if (render.contains("DepthTest")) {
+        runtime.depthTest = render.at("DepthTest").get<bool>();
+    }
+
+    if (render.contains("DepthWrite")) {
+        runtime.depthWrite = render.at("DepthWrite").get<bool>();
+    }
+
+    if (render.contains("CullMode")) {
+        runtime.cullMode = ParseCullMode(render.at("CullMode").get<std::string>());
+    }
+
+    if (config.contains("RenderParameter")) {
+        ApplyRenderParameterConfig(config.at("RenderParameter"), runtime.renderParameter);
+    }
+    if (render.contains("RenderParameter")) {
+        ApplyRenderParameterConfig(render.at("RenderParameter"), runtime.renderParameter);
+    }
+    ApplyRenderParameterConfig(render, runtime.renderParameter);
+
     runtime.defaultLoop = render.value("Loop", runtime.defaultLoop);
     runtime.duration = render.value("Duration", runtime.duration);
 }
 
+void EffectManager::ApplyRenderParameterConfig(
+    const nlohmann::json& config,
+    ParticleRenderParameter& renderParameter)
+{
+    if (config.contains("DissolveThreshold")) {
+        renderParameter.dissolveThreshold = config.at("DissolveThreshold").get<float>();
+    }
+
+    if (config.contains("EmissionStrength")) {
+        renderParameter.emissionStrength = config.at("EmissionStrength").get<float>();
+    }
+
+    if (config.contains("UvScrollSpeedX")) {
+        renderParameter.uvScrollSpeedX = config.at("UvScrollSpeedX").get<float>();
+    }
+
+    if (config.contains("UvScrollSpeedY")) {
+        renderParameter.uvScrollSpeedY = config.at("UvScrollSpeedY").get<float>();
+    }
+
+    if (config.contains("UVScrollSpeedX")) {
+        renderParameter.uvScrollSpeedX = config.at("UVScrollSpeedX").get<float>();
+    }
+
+    if (config.contains("UVScrollSpeedY")) {
+        renderParameter.uvScrollSpeedY = config.at("UVScrollSpeedY").get<float>();
+    }
+
+    if (config.contains("UvScrollSpeed")) {
+        const nlohmann::json& uvScrollSpeed = config.at("UvScrollSpeed");
+        if (uvScrollSpeed.is_array() && uvScrollSpeed.size() >= 2) {
+            renderParameter.uvScrollSpeedX = uvScrollSpeed.at(0).get<float>();
+            renderParameter.uvScrollSpeedY = uvScrollSpeed.at(1).get<float>();
+        }
+    }
+
+    if (config.contains("UVScrollSpeed")) {
+        const nlohmann::json& uvScrollSpeed = config.at("UVScrollSpeed");
+        if (uvScrollSpeed.is_array() && uvScrollSpeed.size() >= 2) {
+            renderParameter.uvScrollSpeedX = uvScrollSpeed.at(0).get<float>();
+            renderParameter.uvScrollSpeedY = uvScrollSpeed.at(1).get<float>();
+        }
+    }
+}
+
 Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline(
+    const std::string& effectName,
+    const std::string& shaderStage,
     ID3D12RootSignature* rootSignature,
     const std::string& shaderPath)
 {
+    const std::filesystem::path shaderFilePath(shaderPath);
+    const std::filesystem::path fullShaderPath = std::filesystem::absolute(shaderFilePath);
+    if (!std::filesystem::is_regular_file(shaderFilePath)) {
+        Logger::Error(
+            "Effect compute shader file is missing. Effect:" + effectName +
+            " Stage:" + shaderStage +
+            " Path:" + fullShaderPath.generic_string());
+        assert(false);
+        return nullptr;
+    }
+
+    Logger::Log(
+        "Compile effect compute shader. Effect:" + effectName +
+        " Stage:" + shaderStage +
+        " Path:" + fullShaderPath.generic_string());
+
     Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(StringUtility::ConvertString(shaderPath),L"cs_6_0");
 
     assert(computeShaderBlob);
@@ -370,7 +547,7 @@ EffectHandle EffectManager::StartEffect(
     float duration,
     EffectPositionProvider positionProvider)
 {
-    auto runtimeIterator = effects_.find(effectName);
+    std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator = effects_.find(effectName);
     if (runtimeIterator == effects_.end()) {
         return kInvalidEffectHandle;
     }
@@ -489,6 +666,11 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     resource.effectSettingsResource->SetName(L"EffectManager::EffectSettings");
     resource.effectSettingsResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.effectSettingsData));
     *resource.effectSettingsData = runtime.settings;
+
+    resource.renderParameterResource = dxCommon_->CreateBufferResource(sizeof(ParticleRenderParameter));
+    resource.renderParameterResource->SetName(L"EffectManager::ParticleRenderParameter");
+    resource.renderParameterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.renderParameterData));
+    *resource.renderParameterData = runtime.renderParameter;
 
     return resource;
 }
@@ -669,6 +851,8 @@ void EffectManager::CreateInitializeRootSignature()
 void EffectManager::CreateInitializePipeline()
 {
     initializePipelineState_ = CreateComputePipeline(
+        "InitializeParticle",
+        "Initialize",
         initializeRootSignature_.Get(),
         "resources/Shaders/Effects/Common/InitializeParticle.CS.hlsl");
 }
@@ -920,7 +1104,8 @@ void EffectManager::UpdateActiveEffect(size_t index)
     ActiveEffect& activeEffect = activeEffects_[index];
     ActiveEffectResource& resource = activeResources_[index];
 
-    auto runtimeIterator = effects_.find(activeEffect.effectName);
+    std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
+        effects_.find(activeEffect.effectName);
     if (runtimeIterator == effects_.end()) {
         activeEffect.isAlive = false;
         return;
@@ -1029,23 +1214,29 @@ void EffectManager::UnmapActiveEffectResource(ActiveEffectResource& resource)
         resource.effectSettingsResource->Unmap(0, nullptr);
         resource.effectSettingsData = nullptr;
     }
+
+    if (resource.renderParameterResource && resource.renderParameterData) {
+        resource.renderParameterResource->Unmap(0, nullptr);
+        resource.renderParameterData = nullptr;
+    }
 }
 
 void EffectManager::ReleaseActiveEffectDescriptors(ActiveEffectResource& resource)
 {
-    auto freeDescriptor = [this](uint32_t& descriptorIndex) {
-        if (descriptorIndex == kInvalidDescriptorIndex) {
-            return;
-        }
+    ReleaseActiveEffectDescriptor(resource.particleUavIndex);
+    ReleaseActiveEffectDescriptor(resource.particleSrvIndex);
+    ReleaseActiveEffectDescriptor(resource.freeListIndexUavIndex);
+    ReleaseActiveEffectDescriptor(resource.freeListUavIndex);
+}
 
-        srvManager_->Free(descriptorIndex);
-        descriptorIndex = kInvalidDescriptorIndex;
-    };
+void EffectManager::ReleaseActiveEffectDescriptor(uint32_t& descriptorIndex)
+{
+    if (descriptorIndex == kInvalidDescriptorIndex) {
+        return;
+    }
 
-    freeDescriptor(resource.particleUavIndex);
-    freeDescriptor(resource.particleSrvIndex);
-    freeDescriptor(resource.freeListIndexUavIndex);
-    freeDescriptor(resource.freeListUavIndex);
+    srvManager_->Free(descriptorIndex);
+    descriptorIndex = kInvalidDescriptorIndex;
 }
 
 void EffectManager::ReleaseRetiredResources()
@@ -1059,7 +1250,7 @@ void EffectManager::ReleaseRetiredResources()
 
 void EffectManager::PreDraw()
 {
-    particleRenderManager_->PreDraw(currentBlendMode_);
+    particleRenderManager_->PreDraw();
 }
 
 void EffectManager::Draw()
@@ -1069,6 +1260,7 @@ void EffectManager::Draw()
     }
 
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
+    ID3D12PipelineState* currentPipelineState = nullptr;
 
     for (size_t i = 0; i < activeEffects_.size(); ++i) {
         const ActiveEffect& activeEffect = activeEffects_[i];
@@ -1076,7 +1268,8 @@ void EffectManager::Draw()
             continue;
         }
 
-        const auto runtimeIterator = effects_.find(activeEffect.effectName);
+        std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
+            effects_.find(activeEffect.effectName);
         if (runtimeIterator == effects_.end()) {
             continue;
         }
@@ -1084,10 +1277,16 @@ void EffectManager::Draw()
         const EffectRuntime& runtime = runtimeIterator->second;
         const ActiveEffectResource& resource = activeResources_[i];
 
-        particleRenderManager_->PreDraw(runtime.blendMode);
+        ID3D12PipelineState* graphicsPipelineState = runtime.graphicsPipelineState.Get();
+        if (currentPipelineState != graphicsPipelineState) {
+            commandList->SetPipelineState(graphicsPipelineState);
+            currentPipelineState = graphicsPipelineState;
+        }
+
         commandList->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
         commandList->SetGraphicsRootConstantBufferView(3, perViewResource_->GetGPUVirtualAddress());
         commandList->SetGraphicsRootConstantBufferView(4, fogConstantBufferView_);
+        commandList->SetGraphicsRootConstantBufferView(5, resource.renderParameterResource->GetGPUVirtualAddress());
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView =

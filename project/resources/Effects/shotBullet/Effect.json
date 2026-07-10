@@ -1,4 +1,11 @@
 {
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+
   "Emitter": {
     "Shape": "Cone",
     "Count": 32,
@@ -39,6 +46,9 @@
     "Texture": "shotBullet.png",
     "MeshType": "Board",
     "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
 
     "Loop": false,
     "Duration": 0.1
