@@ -87,7 +87,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     float32_t scale =
         gEffectSettings.startScale *
-        (0.62f + randomB * 0.34f);
+        (0.72f + randomB * 0.42f);
 
     float32_t lifeTime =
         0.10f +
@@ -104,7 +104,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
         scale =
             gEffectSettings.startScale *
-            1.25f;
+            1.45f;
 
         lifeTime =
             0.07f;

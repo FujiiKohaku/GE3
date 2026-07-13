@@ -89,8 +89,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     {
         float32_t flashScale =
             lerp(
-                gEffectSettings.startScale * 1.35f,
-                gEffectSettings.startScale * 0.25f,
+                gEffectSettings.startScale * 1.55f,
+                gEffectSettings.startScale * 0.30f,
                 lifeRate);
 
         gParticles[particleIndex].scale =
@@ -107,8 +107,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     {
         float32_t impactScale =
             lerp(
-                gEffectSettings.startScale * 0.45f,
-                gEffectSettings.startScale * 1.65f,
+                gEffectSettings.startScale * 0.60f,
+                gEffectSettings.startScale * 2.10f,
                 saturate(lifeRate * 1.35f));
 
         gParticles[particleIndex].scale =

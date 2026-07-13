@@ -134,14 +134,14 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         (0.2f + generator.Generate1d() * 0.8f);
 
     float32_t scale =
-        0.26f +
+        0.42f +
         generator.Generate1d() *
-        0.32f;
+        0.48f;
 
     float32_t lifeTime =
-        0.22f +
+        0.24f +
         generator.Generate1d() *
-        0.16f;
+        0.18f;
 
     float32_t rotationDirection =
         1.0f;
@@ -178,10 +178,10 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             gEmitter.translate;
 
         scale =
-            1.55f;
+            2.05f;
 
         lifeTime =
-            0.09f;
+            0.10f;
 
         rotationSpeed =
             0.0f;

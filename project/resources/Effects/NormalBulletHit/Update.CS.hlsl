@@ -115,8 +115,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     {
         float32_t flashScale =
             lerp(
-                1.80f,
-                0.06f,
+                2.25f,
+                0.08f,
                 lifeRate);
 
         gParticles[particleIndex].scale =
@@ -138,8 +138,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
         float32_t startScale =
             lerp(
-                gEffectSettings.startScale * 0.75f,
-                gEffectSettings.startScale * 1.35f,
+                gEffectSettings.startScale * 0.88f,
+                gEffectSettings.startScale * 1.55f,
                 speedRate);
 
         float32_t sparkScale =

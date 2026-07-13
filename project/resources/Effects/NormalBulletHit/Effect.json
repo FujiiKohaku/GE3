@@ -9,15 +9,15 @@
   "Emitter": {
     "Shape": "Sphere",
     "Count": 220,
-    "Radius": 0.09,
+    "Radius": 0.105,
     "Frequency": 0.001
   },
 
   "Particle": {
-    "LifeTime": 0.34,
+    "LifeTime": 0.38,
 
-    "StartScale": 0.58,
-    "EndScale": 0.02,
+    "StartScale": 0.82,
+    "EndScale": 0.035,
 
     "StartRotation": 0.0,
     "RotationSpeed": 58.0,
@@ -51,6 +51,6 @@
     "CullMode": "None",
 
     "Loop": false,
-    "Duration": 0.50
+    "Duration": 0.56
   }
 }
