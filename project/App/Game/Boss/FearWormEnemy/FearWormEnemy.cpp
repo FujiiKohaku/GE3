@@ -10,11 +10,20 @@
 #include <utility>
 
 namespace {
-constexpr int32_t kWormSegmentCount = 6;
+constexpr int32_t kWormSegmentCount = 10;
 constexpr float kFrameTime = 1.0f / 60.0f;
-constexpr float kHeadHp = 6.0f;
-constexpr float kBodyHp = 2.0f;
+constexpr float kHeadHp = 20.0f;
+constexpr float kBodyHp = 6.0f;
 constexpr float kAttackRange = 240.0f;
+constexpr float kHeadChargeDuration = 0.85f;
+constexpr float kHeadChargeShotInterval = 0.22f;
+constexpr float kHeadChargeCooldown = 3.10f;
+constexpr float kHeadChargeEffectInterval = 0.14f;
+constexpr float kChargedBulletSpeed = 1.55f;
+constexpr float kChargedBulletScale = 0.88f;
+constexpr float kChargedBulletCollisionRadius = 2.75f;
+constexpr int32_t kHeadChargeShotMax = 3;
+constexpr int32_t kChargedBulletDamage = 3;
 
 float LengthVector(const Vector3& value)
 {
@@ -103,6 +112,16 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     transform_.translate = position;
     startPosition_ = position;
     isParallelStarted_ = false;
+    movementPattern_ = MovementPattern::Orbit;
+    movementPatternTimer_ = 0.0f;
+    isHeadChargeActive_ = false;
+    isHeadChargeFiring_ = false;
+    headChargeTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
+    headChargeCooldownTimer_ = 1.8f;
+    headChargeEffectTimer_ = 0.0f;
+    headChargeShotCount_ = 0;
+    headAimDirection_ = { 0.0f, 0.0f, -1.0f };
     headTrail_.clear();
 
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
@@ -153,6 +172,8 @@ void FearWormEnemy::UpdateMovement()
     }
 
     Vector3 target = startPosition_;
+    float movementSpeedRate =
+        CalculateMovementSpeedRate();
 
     if (player_ != nullptr) {
         Vector3 playerPosition = player_->GetTranslate();
@@ -164,10 +185,10 @@ void FearWormEnemy::UpdateMovement()
         }
 
         if (isParallelStarted_) {
-            orbitAngle_ += kFrameTime * 1.15f;
-
-            Vector3 orbitTarget =
-                CalculateOrbitTargetPosition(playerPosition);
+            orbitAngle_ +=
+                kFrameTime *
+                1.15f *
+                movementSpeedRate;
 
             if (enterTimer_ < enterDuration_) {
                 enterTimer_ += kFrameTime;
@@ -182,10 +203,11 @@ void FearWormEnemy::UpdateMovement()
 
                 target = LerpVector3(
                     CalculateEntryStartPosition(playerPosition),
-                    orbitTarget,
+                    CalculateMovementTargetPosition(playerPosition),
                     enterRate);
             } else {
-                target = orbitTarget;
+                UpdateMovementPattern(movementSpeedRate);
+                target = CalculateMovementTargetPosition(playerPosition);
             }
         } else {
             target = CalculateEntryStartPosition(playerPosition);
@@ -199,7 +221,7 @@ void FearWormEnemy::UpdateMovement()
     segments_[0].position = LerpVector3(
         segments_[0].position,
         target,
-        moveSpeed_);
+        moveSpeed_ * movementSpeedRate);
 
     transform_.translate = segments_[0].position;
 
@@ -221,19 +243,19 @@ Vector3 FearWormEnemy::CalculateOrbitTargetPosition(const Vector3& playerPositio
 
     float orbitX =
         std::cos(orbitAngle_) *
-        24.0f;
+        16.0f;
 
     float orbitY =
         std::sin(orbitAngle_) *
-        11.0f;
+        7.0f;
 
     float lateralSway =
         std::sin(orbitAngle_ * 2.0f) *
-        3.0f;
+        2.0f;
 
     float depthSway =
         std::sin(orbitAngle_ * 0.80f) *
-        8.0f;
+        3.0f;
 
     result.x += orbitX + lateralSway;
     result.y += 7.0f + orbitY;
@@ -242,11 +264,106 @@ Vector3 FearWormEnemy::CalculateOrbitTargetPosition(const Vector3& playerPositio
     return result;
 }
 
+Vector3 FearWormEnemy::CalculateCoilTargetPosition(const Vector3& playerPosition) const
+{
+    Vector3 result = playerPosition;
+
+    float coilAngle =
+        orbitAngle_ *
+        2.35f;
+
+    float radius =
+        8.0f +
+        std::sin(movementPatternTimer_ * 3.2f) *
+        2.0f;
+
+    result.x += std::cos(coilAngle) * radius;
+    result.y += 8.0f + std::sin(coilAngle) * radius * 0.75f;
+    result.z += parallelForwardOffset_ + std::sin(coilAngle * 0.50f) * 2.5f;
+
+    return result;
+}
+
+Vector3 FearWormEnemy::CalculateWeaveTargetPosition(const Vector3& playerPosition) const
+{
+    Vector3 result = playerPosition;
+
+    float waveAngle =
+        orbitAngle_ *
+        1.35f;
+
+    result.x += std::sin(waveAngle) * 13.0f;
+    result.y += 7.0f + std::sin(waveAngle * 2.0f) * 9.0f;
+    result.z += parallelForwardOffset_ + std::cos(waveAngle) * 2.5f;
+
+    return result;
+}
+
+Vector3 FearWormEnemy::CalculateDriftTargetPosition(const Vector3& playerPosition) const
+{
+    Vector3 result = playerPosition;
+
+    result.x += std::sin(orbitAngle_ * 0.65f) * 8.0f;
+    result.y += 8.0f + std::sin(orbitAngle_ * 0.85f) * 4.5f;
+    result.z += parallelForwardOffset_ + std::cos(orbitAngle_ * 0.50f) * 2.0f;
+
+    return result;
+}
+
+Vector3 FearWormEnemy::CalculateMovementTargetPosition(const Vector3& playerPosition) const
+{
+    if (movementPattern_ == MovementPattern::Coil) {
+        return CalculateCoilTargetPosition(playerPosition);
+    }
+
+    if (movementPattern_ == MovementPattern::Weave) {
+        return CalculateWeaveTargetPosition(playerPosition);
+    }
+
+    if (movementPattern_ == MovementPattern::Drift) {
+        return CalculateDriftTargetPosition(playerPosition);
+    }
+
+    return CalculateOrbitTargetPosition(playerPosition);
+}
+
+void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
+{
+    movementPatternTimer_ +=
+        kFrameTime *
+        movementSpeedRate;
+
+    if (movementPatternTimer_ < movementPatternDuration_) {
+        return;
+    }
+
+    movementPatternTimer_ = 0.0f;
+
+    if (movementPattern_ == MovementPattern::Orbit) {
+        movementPattern_ = MovementPattern::Coil;
+        return;
+    }
+
+    if (movementPattern_ == MovementPattern::Coil) {
+        movementPattern_ = MovementPattern::Weave;
+        return;
+    }
+
+    if (movementPattern_ == MovementPattern::Weave) {
+        movementPattern_ = MovementPattern::Drift;
+        return;
+    }
+
+    movementPattern_ = MovementPattern::Orbit;
+}
+
 void FearWormEnemy::StartOrbitEntry(const Vector3& playerPosition)
 {
     isParallelStarted_ = true;
     enterTimer_ = 0.0f;
     orbitAngle_ = 2.35f;
+    movementPattern_ = MovementPattern::Orbit;
+    movementPatternTimer_ = 0.0f;
 
     Vector3 entryPosition =
         CalculateEntryStartPosition(playerPosition);
@@ -407,6 +524,14 @@ void FearWormEnemy::UpdateSegmentObjects()
             if (!HasAliveBodyParts()) {
                 color = { 1.0f, 0.18f, 0.04f, 1.0f };
             }
+
+            if (isHeadChargeActive_) {
+                color = { 1.0f, 0.48f, 0.08f, 1.0f };
+            }
+
+            if (isHeadChargeFiring_) {
+                color = { 1.0f, 0.08f, 0.02f, 1.0f };
+            }
         } else {
             color = { 0.78f, 0.20f, 1.0f, 1.0f };
         }
@@ -416,6 +541,11 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         float pulse = 1.0f + std::sin(moveTime_ * 5.5f + static_cast<float>(index)) * 0.08f;
+        if (segment.isHead && isHeadChargeActive_) {
+            pulse += 0.12f;
+            pulse += std::sin(headChargeTimer_ * 24.0f) * 0.08f;
+        }
+
         Vector3 scale {};
         scale.x = segment.scale.x * pulse;
         scale.y = segment.scale.y * pulse;
@@ -423,6 +553,9 @@ void FearWormEnemy::UpdateSegmentObjects()
 
         Vector3 rotate {};
         rotate.y = moveTime_ + static_cast<float>(index) * 0.35f;
+        if (segment.isHead && isHeadChargeActive_) {
+            rotate = CalculateHeadLookRotation();
+        }
 
         segment.object->SetScale(scale);
         segment.object->SetRotate(rotate);
@@ -554,6 +687,16 @@ void FearWormEnemy::Attack()
     float distance = LengthVector(toPlayer);
 
     if (distance > kAttackRange) {
+        if (isHeadChargeActive_) {
+            FinishHeadChargeAttack();
+        }
+        return;
+    }
+
+    UpdateHeadAimDirection();
+    UpdateHeadChargeAttack(CalculateMovementSpeedRate());
+
+    if (isHeadChargeActive_) {
         return;
     }
 
@@ -581,6 +724,111 @@ void FearWormEnemy::Attack()
     }
 }
 
+void FearWormEnemy::UpdateHeadChargeAttack(float attackSpeedRate)
+{
+    float deltaTime =
+        kFrameTime *
+        attackSpeedRate;
+
+    if (!isHeadChargeActive_) {
+        if (headChargeCooldownTimer_ > 0.0f) {
+            headChargeCooldownTimer_ -= deltaTime;
+            if (headChargeCooldownTimer_ < 0.0f) {
+                headChargeCooldownTimer_ = 0.0f;
+            }
+            return;
+        }
+
+        StartHeadChargeAttack();
+        return;
+    }
+
+    UpdateHeadAimDirection();
+
+    if (!isHeadChargeFiring_) {
+        headChargeTimer_ += deltaTime;
+        headChargeEffectTimer_ += deltaTime;
+
+        if (headChargeEffectTimer_ >= kHeadChargeEffectInterval) {
+            headChargeEffectTimer_ = 0.0f;
+            EffectManager::GetInstance()->PlayEffect(
+                "WormShotFlash",
+                CalculateHeadMuzzlePosition());
+        }
+
+        if (headChargeTimer_ < kHeadChargeDuration) {
+            return;
+        }
+
+        isHeadChargeFiring_ = true;
+        headChargeShotTimer_ = kHeadChargeShotInterval;
+        return;
+    }
+
+    headChargeTimer_ += deltaTime;
+    headChargeShotTimer_ += deltaTime;
+
+    if (headChargeShotTimer_ < kHeadChargeShotInterval) {
+        return;
+    }
+
+    headChargeShotTimer_ = 0.0f;
+    FireChargedBullet();
+    headChargeShotCount_ = headChargeShotCount_ + 1;
+
+    if (headChargeShotCount_ >= kHeadChargeShotMax) {
+        FinishHeadChargeAttack();
+    }
+}
+
+void FearWormEnemy::StartHeadChargeAttack()
+{
+    isHeadChargeActive_ = true;
+    isHeadChargeFiring_ = false;
+    headChargeTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
+    headChargeEffectTimer_ = 0.0f;
+    headChargeShotCount_ = 0;
+    fireTimer_ = 0;
+
+    UpdateHeadAimDirection();
+
+    EffectManager::GetInstance()->PlayEffect(
+        "WormShotFlash",
+        CalculateHeadMuzzlePosition());
+}
+
+void FearWormEnemy::FinishHeadChargeAttack()
+{
+    isHeadChargeActive_ = false;
+    isHeadChargeFiring_ = false;
+    headChargeTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
+    headChargeEffectTimer_ = 0.0f;
+    headChargeShotCount_ = 0;
+    headChargeCooldownTimer_ = kHeadChargeCooldown;
+}
+
+void FearWormEnemy::UpdateHeadAimDirection()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+
+    if (segments_.empty()) {
+        return;
+    }
+
+    Vector3 targetDirection =
+        NormalizeSafe(player_->GetTranslate() - segments_[0].position);
+
+    headAimDirection_ = NormalizeSafe(
+        LerpVector3(
+            headAimDirection_,
+            targetDirection,
+            0.18f));
+}
+
 void FearWormEnemy::FireBullet(const Vector3& position)
 {
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
@@ -600,6 +848,78 @@ void FearWormEnemy::FireBullet(const Vector3& position)
     EffectManager::GetInstance()->PlayEffect(
         "WormShotFlash",
         position);
+}
+
+void FearWormEnemy::FireChargedBullet()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+
+    if (bulletModel_ == nullptr) {
+        return;
+    }
+
+    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->Initialize(bulletModel_);
+
+    Vector3 position =
+        CalculateHeadMuzzlePosition();
+
+    Vector3 direction =
+        NormalizeSafe(player_->GetTranslate() - position);
+
+    Vector3 velocity {};
+    velocity.x = direction.x * kChargedBulletSpeed;
+    velocity.y = direction.y * kChargedBulletSpeed;
+    velocity.z = direction.z * kChargedBulletSpeed;
+
+    bullet->SetScale({
+        kChargedBulletScale,
+        kChargedBulletScale,
+        kChargedBulletScale
+    });
+    bullet->SetColor({ 1.0f, 0.12f, 0.02f, 1.0f });
+    bullet->SetEnableLighting(false);
+    bullet->SetDamage(kChargedBulletDamage);
+    bullet->SetCollisionRadius(kChargedBulletCollisionRadius);
+    bullet->SetMaxLifeTime(5.8f);
+    bullet->SetTranslate(position);
+    bullet->SetVelocity(velocity);
+
+    enemyBullets_.push_back(std::move(bullet));
+
+    EffectManager::GetInstance()->PlayEffect(
+        "WormShotFlash",
+        position);
+}
+
+Vector3 FearWormEnemy::CalculateHeadMuzzlePosition() const
+{
+    Vector3 position =
+        GetPosition();
+
+    Vector3 direction =
+        NormalizeSafe(headAimDirection_);
+
+    position.x += direction.x * 4.2f;
+    position.y += direction.y * 4.2f;
+    position.z += direction.z * 4.2f;
+
+    return position;
+}
+
+Vector3 FearWormEnemy::CalculateHeadLookRotation() const
+{
+    Vector3 direction =
+        NormalizeSafe(headAimDirection_);
+
+    Vector3 rotate {};
+    rotate.x = -std::asin(direction.y);
+    rotate.y = std::atan2(direction.x, direction.z);
+    rotate.z = 0.0f;
+
+    return rotate;
 }
 
 void FearWormEnemy::UpdateBullets()
@@ -639,6 +959,58 @@ void FearWormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
     EffectManager::GetInstance()->PlayEffect(
         "WormHeadVulnerable",
         position);
+}
+
+float FearWormEnemy::CalculateHealthRate() const
+{
+    float currentHealth = 0.0f;
+    float maxHealth = 0.0f;
+
+    for (const Segment& segment : segments_) {
+        if (segment.isHead) {
+            maxHealth += kHeadHp;
+        } else {
+            maxHealth += kBodyHp;
+        }
+
+        if (!segment.isAlive) {
+            continue;
+        }
+
+        if (segment.hp > 0.0f) {
+            currentHealth += segment.hp;
+        }
+    }
+
+    if (maxHealth <= 0.0001f) {
+        return 0.0f;
+    }
+
+    float healthRate =
+        currentHealth /
+        maxHealth;
+
+    if (healthRate < 0.0f) {
+        healthRate = 0.0f;
+    }
+
+    if (healthRate > 1.0f) {
+        healthRate = 1.0f;
+    }
+
+    return healthRate;
+}
+
+float FearWormEnemy::CalculateMovementSpeedRate() const
+{
+    float healthRate =
+        CalculateHealthRate();
+
+    float damageRate =
+        1.0f -
+        healthRate;
+
+    return 1.0f + damageRate * 0.45f;
 }
 
 bool FearWormEnemy::HasAliveBodyParts() const

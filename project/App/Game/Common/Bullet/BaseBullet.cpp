@@ -48,6 +48,28 @@ void BaseBullet::Draw()
     object_->Draw();
 }
 
+void BaseBullet::SetScale(const Vector3& scale)
+{
+    transform_.scale = scale;
+
+    if (object_ == nullptr) {
+        return;
+    }
+
+    object_->SetScale(transform_.scale);
+    object_->Update();
+}
+
+void BaseBullet::SetColor(const Vector4& color)
+{
+    if (object_ == nullptr) {
+        return;
+    }
+
+    object_->SetColor(color);
+    object_->Update();
+}
+
 void BaseBullet::SetTranslate(const Vector3& translate)
 {
     transform_.translate = translate;

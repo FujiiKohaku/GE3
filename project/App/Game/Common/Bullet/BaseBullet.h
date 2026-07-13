@@ -37,6 +37,20 @@ public:
     {
         return collisionRadius_;
     }
+    void SetScale(const Vector3& scale);
+    void SetColor(const Vector4& color);
+    void SetDamage(int damage)
+    {
+        damage_ = damage;
+    }
+    void SetCollisionRadius(float collisionRadius)
+    {
+        collisionRadius_ = collisionRadius;
+    }
+    void SetMaxLifeTime(float maxLifeTime)
+    {
+        maxLifeTime_ = maxLifeTime;
+    }
     void SetCamera(Camera* camera);
     void SetEnableLighting(bool enable);
     virtual void SetTranslate(const Vector3& translate);

@@ -381,6 +381,7 @@ void GamePlayScene::Update()
     // ボス撃破でクリアシーンへ遷移
     if (activeBoss_ && activeBoss_->IsDead()) {
         CollisionManager::GetInstance()->SetBoss(nullptr);
+        ResetGameplayPostEffects();
         SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
         return;
     }
@@ -1096,6 +1097,7 @@ void GamePlayScene::CheckCollision()
                     EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
 
                     if (player_->IsDead()) {
+                        ResetGameplayPostEffects();
                         SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
                     }
                 }
@@ -1109,6 +1111,7 @@ void GamePlayScene::CheckCollision()
 void GamePlayScene::Finalize()
 {
     CollisionManager::GetInstance()->SetEnemies(nullptr);
+    ResetGameplayPostEffects();
 
     EffectManager::GetInstance()->StopEffect(playerJetHandle_);
     playerJetHandle_ = kInvalidEffectHandle;
@@ -1119,6 +1122,19 @@ void GamePlayScene::Finalize()
     EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
+}
+
+void GamePlayScene::ResetGameplayPostEffects()
+{
+    SceneManager::GetInstance()->ClearPostEffects();
+    SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
+    SceneManager::GetInstance()->SetPostEffectKickStrength(0.0f);
+
+    boostKickTimer_ = 0.0f;
+    boostKickStrength_ = 0.0f;
+    wasBoostingForKick_ = false;
+    wasPlayerBoosting_ = false;
+    smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
 }
 
 void GamePlayScene::LoadEnemyPopData()

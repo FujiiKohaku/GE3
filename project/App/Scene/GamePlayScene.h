@@ -69,6 +69,7 @@ private:
     void UpdateBoostKick(bool isPlayerBoosting);
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
+    void ResetGameplayPostEffects();
     void ProcessPlayerShooting(Input* input);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;

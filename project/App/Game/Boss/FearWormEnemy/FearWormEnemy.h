@@ -25,6 +25,13 @@ public:
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
 private:
+    enum class MovementPattern {
+        Orbit,
+        Coil,
+        Weave,
+        Drift,
+    };
+
     struct Segment {
         std::unique_ptr<Object3d> object;
         Vector3 position = { 0.0f, 0.0f, 0.0f };
@@ -44,15 +51,29 @@ private:
     void RemoveDeadBullets();
     Vector3 CalculateEntryStartPosition(const Vector3& playerPosition) const;
     Vector3 CalculateOrbitTargetPosition(const Vector3& playerPosition) const;
+    Vector3 CalculateCoilTargetPosition(const Vector3& playerPosition) const;
+    Vector3 CalculateWeaveTargetPosition(const Vector3& playerPosition) const;
+    Vector3 CalculateDriftTargetPosition(const Vector3& playerPosition) const;
+    Vector3 CalculateMovementTargetPosition(const Vector3& playerPosition) const;
+    void UpdateMovementPattern(float movementSpeedRate);
     void StartOrbitEntry(const Vector3& playerPosition);
     void ResetHeadTrail();
     void RecordHeadTrail();
     Vector3 SampleHeadTrail(float distanceFromHead) const;
     void Attack() override;
     void FireBullet(const Vector3& position);
+    void UpdateHeadChargeAttack(float attackSpeedRate);
+    void StartHeadChargeAttack();
+    void FinishHeadChargeAttack();
+    void UpdateHeadAimDirection();
+    void FireChargedBullet();
+    Vector3 CalculateHeadMuzzlePosition() const;
+    Vector3 CalculateHeadLookRotation() const;
     void PlayBodyBreakEffect(const Vector3& position);
     void PlayHeadGuardEffect(const Vector3& position);
     void PlayHeadVulnerableEffect(const Vector3& position);
+    float CalculateHealthRate() const;
+    float CalculateMovementSpeedRate() const;
     bool HasAliveBodyParts() const;
     bool IsValidSegmentIndex(int32_t partIndex) const;
     void OnDeath() override;
@@ -69,16 +90,28 @@ private:
     float segmentSpacing_ = 5.0f;
     float bulletSpeed_ = 1.05f;
     float activationLeadDistance_ = 160.0f;
-    float parallelForwardOffset_ = 36.0f;
+    float parallelForwardOffset_ = 52.0f;
     float headTrailSampleStep_ = 1.2f;
     float enterTimer_ = 0.0f;
     float enterDuration_ = 1.20f;
     float orbitAngle_ = 2.35f;
+    float movementPatternTimer_ = 0.0f;
+    float movementPatternDuration_ = 3.40f;
 
     int32_t fireTimer_ = 0;
     int32_t fireInterval_ = 22;
     int32_t fireSegmentIndex_ = 0;
+    int32_t headChargeShotCount_ = 0;
+
+    float headChargeTimer_ = 0.0f;
+    float headChargeShotTimer_ = 0.0f;
+    float headChargeCooldownTimer_ = 1.8f;
+    float headChargeEffectTimer_ = 0.0f;
+    Vector3 headAimDirection_ = { 0.0f, 0.0f, -1.0f };
 
     bool isParallelStarted_ = false;
     bool vulnerableEffectPlayed_ = false;
+    bool isHeadChargeActive_ = false;
+    bool isHeadChargeFiring_ = false;
+    MovementPattern movementPattern_ = MovementPattern::Orbit;
 };
