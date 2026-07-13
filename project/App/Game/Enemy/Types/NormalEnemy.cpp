@@ -30,7 +30,7 @@ void NormalEnemy::Attack()
 
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 difference = playerPosition - transform_.translate;
-    float distance = std::sqrt(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+    float distance = Length(difference);
 
     if (distance <= 100.0f) {
         fireTimer_++;

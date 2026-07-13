@@ -88,13 +88,34 @@ static float Norm(const Quaternion& q)
     return std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
 }
 
+static float LengthSquared(const Vector3& v)
+{
+    return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
+static float Length(const Vector3& v)
+{
+    return std::sqrt(LengthSquared(v));
+}
+
 static Vector3 Normalize(const Vector3& v)
 {
-    float len = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    float len = Length(v);
 
     // 長さ0ならそのまま返す（ゼロ除算を防ぐ）
     if (len == 0.0f) {
         return { 0.0f, 0.0f, 0.0f };
+    }
+
+    return { v.x / len, v.y / len, v.z / len };
+}
+
+static Vector3 NormalizeSafe(const Vector3& v)
+{
+    float len = Length(v);
+
+    if (len <= 0.0001f) {
+        return { 0.0f, 0.0f, 1.0f };
     }
 
     return { v.x / len, v.y / len, v.z / len };

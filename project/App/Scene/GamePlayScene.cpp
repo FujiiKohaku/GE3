@@ -78,11 +78,6 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
     return center;
 }
 
-float LengthSquared(const Vector3& value)
-{
-    return value.x * value.x + value.y * value.y + value.z * value.z;
-}
-
 bool IsZeroVector(const Vector3& value)
 {
     return LengthSquared(value) < 0.000001f;
@@ -955,7 +950,7 @@ void GamePlayScene::CheckCollision()
         for (const EnemyCollisionPart& part : enemyCollisionParts) {
             Vector3 difference = part.position - player_->GetTranslate();
 
-            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+            float distance = Length(difference);
 
             float collisionRadius = part.radius + kPlayerEnemyCollisionRadius * 0.5f;
 
@@ -985,7 +980,7 @@ void GamePlayScene::CheckCollision()
             for (const EnemyCollisionPart& part : enemyCollisionParts) {
                 Vector3 difference = part.position - bullet->GetPosition();
 
-                float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+                float distance = Length(difference);
 
                 float collisionRadius = part.radius + bullet->GetCollisionRadius();
 
@@ -1030,7 +1025,7 @@ void GamePlayScene::CheckCollision()
             for (const EnemyCollisionPart& part : enemyCollisionParts) {
                 // コライダーのワールド座標を計算
                 Vector3 difference = part.position - bullet->GetPosition();
-                float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+                float distance = Length(difference);
 
                 // 判定半径
                 float collisionRadius = part.radius + bullet->GetCollisionRadius();
@@ -1093,7 +1088,7 @@ void GamePlayScene::CheckCollision()
             }
 
             Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
-            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+            float distance = Length(difference);
             float collisionRadius = enemyBullet->GetCollisionRadius();
 
             if (distance <= collisionRadius) {

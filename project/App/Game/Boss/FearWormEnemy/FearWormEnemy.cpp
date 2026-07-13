@@ -27,39 +27,6 @@ constexpr int32_t kChargedBulletDamage = 3;
 constexpr float kDeathExplosionInterval = 0.10f;
 constexpr float kDeathSequenceEndDelay = 0.80f;
 
-float LengthVector(const Vector3& value)
-{
-    return std::sqrt(
-        value.x * value.x +
-        value.y * value.y +
-        value.z * value.z);
-}
-
-Vector3 NormalizeSafe(const Vector3& value)
-{
-    Vector3 result {};
-    float length = LengthVector(value);
-
-    if (length <= 0.0001f) {
-        result.z = 1.0f;
-        return result;
-    }
-
-    result.x = value.x / length;
-    result.y = value.y / length;
-    result.z = value.z / length;
-
-    return result;
-}
-
-Vector3 LerpVector3(const Vector3& start, const Vector3& end, float rate)
-{
-    Vector3 result {};
-    result.x = start.x + (end.x - start.x) * rate;
-    result.y = start.y + (end.y - start.y) * rate;
-    result.z = start.z + (end.z - start.z) * rate;
-    return result;
-}
 }
 
 void FearWormEnemy::Initialize(
@@ -204,7 +171,7 @@ void FearWormEnemy::UpdateMovement()
                     enterRate = 1.0f;
                 }
 
-                target = LerpVector3(
+                target = Lerp(
                     CalculateEntryStartPosition(playerPosition),
                     CalculateMovementTargetPosition(playerPosition),
                     enterRate);
@@ -221,7 +188,7 @@ void FearWormEnemy::UpdateMovement()
         target.z += std::sin(moveTime_ * 0.60f) * 3.0f;
     }
 
-    segments_[0].position = LerpVector3(
+    segments_[0].position = Lerp(
         segments_[0].position,
         target,
         moveSpeed_ * movementSpeedRate);
@@ -398,7 +365,7 @@ void FearWormEnemy::UpdateSegments()
         if (aliveBodyOrder == static_cast<int32_t>(index)) {
             segment.position = targetPosition;
         } else {
-            segment.position = LerpVector3(
+            segment.position = Lerp(
                 segment.position,
                 targetPosition,
                 0.35f);
@@ -440,7 +407,7 @@ void FearWormEnemy::RecordHeadTrail()
             headPosition -
             headTrail_[0];
 
-        if (LengthVector(difference) < headTrailSampleStep_) {
+        if (Length(difference) < headTrailSampleStep_) {
             return;
         }
     }
@@ -476,8 +443,7 @@ Vector3 FearWormEnemy::SampleHeadTrail(float distanceFromHead) const
         Vector3 current =
             headTrail_[index];
 
-        float segmentDistance =
-            LengthVector(current - previous);
+        float segmentDistance =Length(current - previous);
 
         if (segmentDistance <= 0.0001f) {
             continue;
@@ -492,7 +458,7 @@ Vector3 FearWormEnemy::SampleHeadTrail(float distanceFromHead) const
                 remainingDistance /
                 segmentDistance;
 
-            return LerpVector3(
+            return Lerp(
                 previous,
                 current,
                 rate);
@@ -692,7 +658,7 @@ void FearWormEnemy::Attack()
     }
 
     Vector3 toPlayer = player_->GetTranslate() - GetPosition();
-    float distance = LengthVector(toPlayer);
+    float distance = Length(toPlayer);
 
     if (distance > kAttackRange) {
         if (isHeadChargeActive_) {
@@ -831,7 +797,7 @@ void FearWormEnemy::UpdateHeadAimDirection()
         NormalizeSafe(player_->GetTranslate() - segments_[0].position);
 
     headAimDirection_ = NormalizeSafe(
-        LerpVector3(
+        Lerp(
             headAimDirection_,
             targetDirection,
             0.18f));
