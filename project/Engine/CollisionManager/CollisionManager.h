@@ -23,6 +23,7 @@ public:
     CollisionManager& operator=(const CollisionManager&) = delete;
 
     void SetEnemies(const EnemyList* enemies);
+    void SetBoss(BaseEnemy* boss);
     bool Raycast(const Ray& ray, RaycastHit& hit) const;
 
 public:
@@ -38,4 +39,5 @@ private:
     static std::unique_ptr<CollisionManager> instance_;
 
     const EnemyList* enemies_ = nullptr;
+    BaseEnemy* boss_ = nullptr;
 };

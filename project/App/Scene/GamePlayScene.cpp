@@ -1,7 +1,5 @@
 #include "GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
-#include "App/Game/Enemy/WormEnemy/WormEnemy.h"
-#include "App/Game/Boss/FearBoss.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -166,7 +164,7 @@ void GamePlayScene::Initialize()
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
-    wormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
+    fearWormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
@@ -274,6 +272,7 @@ void GamePlayScene::Initialize()
     LoadEnemyPopData();
 
     CollisionManager::GetInstance()->SetEnemies(&enemies_);
+    CollisionManager::GetInstance()->SetBoss(nullptr);
 
     // floorの初期化
     Model* floorModel = ModelManager::GetInstance()->CreatePlane("resources/Textures/floor_dirt_gemini.jpg", 100.0f, 360.0f);
@@ -364,18 +363,24 @@ void GamePlayScene::Update()
 
     // ボス出現処理
     if (!isBossSpawned_ && playerZ >= 1850.0f) {
-        activeBoss_ = std::make_unique<FearBoss>();
-        activeBoss_->Initialize(enemyModel_);
+        activeBoss_ = std::make_unique<FearWormEnemy>();
+        activeBoss_->Initialize(
+            fearWormEnemyModel_,
+            enemyBulletModel_,
+            player_.get());
+        activeBoss_->SetPosition({ 0.0f, 2.0f, 1850.0f });
+        CollisionManager::GetInstance()->SetBoss(activeBoss_.get());
         isBossSpawned_ = true;
     }
 
     // ボスの更新
     if (activeBoss_ && !activeBoss_->IsDead()) {
-        activeBoss_->Update(player_->GetTranslate());
+        activeBoss_->Update();
     }
 
     // ボス撃破でクリアシーンへ遷移
     if (activeBoss_ && activeBoss_->IsDead()) {
+        CollisionManager::GetInstance()->SetBoss(nullptr);
         SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
         return;
     }
@@ -1010,25 +1015,30 @@ void GamePlayScene::CheckCollision()
                 continue;
             }
 
-            for (BossCollider& collider : activeBoss_->GetColliders()) {
-                if (collider.isDestroyed) {
-                    continue;
-                }
+            enemyCollisionParts.clear();
+            activeBoss_->GetCollisionParts(enemyCollisionParts);
 
+            for (const EnemyCollisionPart& part : enemyCollisionParts) {
                 // コライダーのワールド座標を計算
-                Vector3 colliderWorldPos = activeBoss_->GetPosition() + collider.offset;
-                Vector3 difference = colliderWorldPos - bullet->GetPosition();
+                Vector3 difference = part.position - bullet->GetPosition();
                 float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
 
                 // 判定半径
-                float collisionRadius = collider.radius + kPlayerBulletEnemyCollisionRadius;
+                float collisionRadius = part.radius + bullet->GetCollisionRadius();
 
                 if (distance <= collisionRadius) {
                     OutputDebugStringA("PlayerBullet Hit Boss\n");
 
-                    bullet->OnHitEnemy(colliderWorldPos);
-
-                    activeBoss_->ApplyDamage(1.0f);
+                    if (activeBoss_->IsCollisionPartDamageable(part.partIndex)) {
+                        bullet->OnHitEnemy(part.position);
+                        activeBoss_->ApplyDamageToPart(
+                            part.partIndex,
+                            static_cast<float>(bullet->GetDamage()));
+                    } else {
+                        activeBoss_->OnCollisionPartGuarded(
+                            part.partIndex,
+                            part.position);
+                    }
 
                     bullet->SetDead();
                     break;
@@ -1172,10 +1182,6 @@ void GamePlayScene::LoadEnemyPopData()
             enemyIndex = enemyIndex + 1;
         }
 
-        std::unique_ptr<WormEnemy> wormEnemy = std::make_unique<WormEnemy>();
-        wormEnemy->Initialize(wormEnemyModel_, enemyBulletModel_, player_.get());
-        wormEnemy->SetPosition({ 0.0f, 2.0f, 1180.0f });
-        enemies_.push_back(std::move(wormEnemy));
         return;
     }
 
@@ -1234,12 +1240,6 @@ void GamePlayScene::LoadEnemyPopData()
                 enemies_.push_back(std::move(enemy));
             }
 
-            if (type == "WormEnemy") {
-                std::unique_ptr<WormEnemy> enemy = std::make_unique<WormEnemy>();
-                enemy->Initialize(wormEnemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(position);
-                enemies_.push_back(std::move(enemy));
-            }
         }
     }
 }

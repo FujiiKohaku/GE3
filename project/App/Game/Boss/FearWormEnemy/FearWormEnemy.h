@@ -6,7 +6,7 @@ class Model;
 class Object3d;
 class Player;
 
-class WormEnemy : public BaseEnemy {
+class FearWormEnemy : public BaseEnemy {
 public:
     void Initialize(
         Model* model,

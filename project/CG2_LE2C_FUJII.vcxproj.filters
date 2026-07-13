@@ -225,9 +225,6 @@
     <ClCompile Include="App\Game\Boss\BaseBoss.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearBoss.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -342,7 +339,7 @@
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\WormEnemy\WormEnemy.cpp" />
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
     <ClCompile Include="Engine\Particle\ParticleManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -523,9 +520,6 @@
     <ClInclude Include="App\Game\Boss\BaseBoss.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\FearBoss.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -646,7 +640,7 @@
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\WormEnemy\WormEnemy.h" />
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
     <ClInclude Include="Engine\Particle\ParticleManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

@@ -1,4 +1,4 @@
-#include "App/Game/Enemy/WormEnemy/WormEnemy.h"
+#include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
@@ -51,7 +51,7 @@ Vector3 LerpVector3(const Vector3& start, const Vector3& end, float rate)
 }
 }
 
-void WormEnemy::Initialize(
+void FearWormEnemy::Initialize(
     Model* model,
     Model* bulletModel,
     Player* player)
@@ -65,7 +65,7 @@ void WormEnemy::Initialize(
     SetPosition(transform_.translate);
 }
 
-void WormEnemy::InitializeSegments(Model* model)
+void FearWormEnemy::InitializeSegments(Model* model)
 {
     segments_.clear();
     segments_.reserve(kWormSegmentCount);
@@ -98,7 +98,7 @@ void WormEnemy::InitializeSegments(Model* model)
     }
 }
 
-void WormEnemy::SetPosition(const Vector3& position)
+void FearWormEnemy::SetPosition(const Vector3& position)
 {
     transform_.translate = position;
     startPosition_ = position;
@@ -114,7 +114,7 @@ void WormEnemy::SetPosition(const Vector3& position)
     ResetHeadTrail();
 }
 
-Vector3 WormEnemy::GetPosition() const
+Vector3 FearWormEnemy::GetPosition() const
 {
     if (segments_.empty()) {
         return transform_.translate;
@@ -123,7 +123,7 @@ Vector3 WormEnemy::GetPosition() const
     return segments_[0].position;
 }
 
-void WormEnemy::Update()
+void FearWormEnemy::Update()
 {
     if (isDead_) {
         UpdateBullets();
@@ -146,7 +146,7 @@ void WormEnemy::Update()
     }
 }
 
-void WormEnemy::UpdateMovement()
+void FearWormEnemy::UpdateMovement()
 {
     if (segments_.empty()) {
         return;
@@ -206,7 +206,7 @@ void WormEnemy::UpdateMovement()
     RecordHeadTrail();
 }
 
-Vector3 WormEnemy::CalculateEntryStartPosition(const Vector3& playerPosition) const
+Vector3 FearWormEnemy::CalculateEntryStartPosition(const Vector3& playerPosition) const
 {
     Vector3 result = playerPosition;
     result.x -= 34.0f;
@@ -215,7 +215,7 @@ Vector3 WormEnemy::CalculateEntryStartPosition(const Vector3& playerPosition) co
     return result;
 }
 
-Vector3 WormEnemy::CalculateOrbitTargetPosition(const Vector3& playerPosition) const
+Vector3 FearWormEnemy::CalculateOrbitTargetPosition(const Vector3& playerPosition) const
 {
     Vector3 result = playerPosition;
 
@@ -242,7 +242,7 @@ Vector3 WormEnemy::CalculateOrbitTargetPosition(const Vector3& playerPosition) c
     return result;
 }
 
-void WormEnemy::StartOrbitEntry(const Vector3& playerPosition)
+void FearWormEnemy::StartOrbitEntry(const Vector3& playerPosition)
 {
     isParallelStarted_ = true;
     enterTimer_ = 0.0f;
@@ -257,19 +257,38 @@ void WormEnemy::StartOrbitEntry(const Vector3& playerPosition)
     ResetHeadTrail();
 }
 
-void WormEnemy::UpdateSegments()
+void FearWormEnemy::UpdateSegments()
 {
+    int32_t aliveBodyOrder = 1;
+
     for (size_t index = 1; index < segments_.size(); index = index + 1) {
+        Segment& segment = segments_[index];
+
+        if (!segment.isAlive) {
+            continue;
+        }
+
         float distanceFromHead =
             segmentSpacing_ *
-            static_cast<float>(index);
+            static_cast<float>(aliveBodyOrder);
 
-        segments_[index].position =
+        Vector3 targetPosition =
             SampleHeadTrail(distanceFromHead);
+
+        if (aliveBodyOrder == static_cast<int32_t>(index)) {
+            segment.position = targetPosition;
+        } else {
+            segment.position = LerpVector3(
+                segment.position,
+                targetPosition,
+                0.35f);
+        }
+
+        aliveBodyOrder = aliveBodyOrder + 1;
     }
 }
 
-void WormEnemy::ResetHeadTrail()
+void FearWormEnemy::ResetHeadTrail()
 {
     headTrail_.clear();
 
@@ -287,7 +306,7 @@ void WormEnemy::ResetHeadTrail()
     }
 }
 
-void WormEnemy::RecordHeadTrail()
+void FearWormEnemy::RecordHeadTrail()
 {
     if (segments_.empty()) {
         return;
@@ -318,7 +337,7 @@ void WormEnemy::RecordHeadTrail()
     }
 }
 
-Vector3 WormEnemy::SampleHeadTrail(float distanceFromHead) const
+Vector3 FearWormEnemy::SampleHeadTrail(float distanceFromHead) const
 {
     if (headTrail_.empty()) {
         return GetPosition();
@@ -365,7 +384,7 @@ Vector3 WormEnemy::SampleHeadTrail(float distanceFromHead) const
     return headTrail_[headTrail_.size() - 1];
 }
 
-void WormEnemy::UpdateSegmentObjects()
+void FearWormEnemy::UpdateSegmentObjects()
 {
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
         Segment& segment = segments_[index];
@@ -413,7 +432,7 @@ void WormEnemy::UpdateSegmentObjects()
     }
 }
 
-void WormEnemy::Draw()
+void FearWormEnemy::Draw()
 {
     if (!isDead_ && isParallelStarted_) {
         for (Segment& segment : segments_) {
@@ -434,7 +453,7 @@ void WormEnemy::Draw()
     }
 }
 
-void WormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
+void FearWormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
 {
     if (!isParallelStarted_) {
         return;
@@ -456,7 +475,7 @@ void WormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
     }
 }
 
-bool WormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
+bool FearWormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
 {
     if (!IsValidSegmentIndex(partIndex)) {
         return false;
@@ -474,7 +493,7 @@ bool WormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
     return true;
 }
 
-void WormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
+void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
 {
     if (!IsValidSegmentIndex(partIndex)) {
         return;
@@ -507,7 +526,7 @@ void WormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
     }
 }
 
-void WormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& position)
+void FearWormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& position)
 {
     if (!IsValidSegmentIndex(partIndex)) {
         return;
@@ -517,7 +536,7 @@ void WormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& positio
     PlayHeadGuardEffect(position);
 }
 
-void WormEnemy::Attack()
+void FearWormEnemy::Attack()
 {
     if (!isParallelStarted_) {
         return;
@@ -562,7 +581,7 @@ void WormEnemy::Attack()
     }
 }
 
-void WormEnemy::FireBullet(const Vector3& position)
+void FearWormEnemy::FireBullet(const Vector3& position)
 {
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
     bullet->Initialize(bulletModel_);
@@ -583,14 +602,14 @@ void WormEnemy::FireBullet(const Vector3& position)
         position);
 }
 
-void WormEnemy::UpdateBullets()
+void FearWormEnemy::UpdateBullets()
 {
     for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
         bullet->Update();
     }
 }
 
-void WormEnemy::RemoveDeadBullets()
+void FearWormEnemy::RemoveDeadBullets()
 {
     for (size_t index = 0; index < enemyBullets_.size();) {
         if (!enemyBullets_[index]->IsAlive()) {
@@ -601,28 +620,28 @@ void WormEnemy::RemoveDeadBullets()
     }
 }
 
-void WormEnemy::PlayBodyBreakEffect(const Vector3& position)
+void FearWormEnemy::PlayBodyBreakEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect(
         "WormBodyBreak",
         position);
 }
 
-void WormEnemy::PlayHeadGuardEffect(const Vector3& position)
+void FearWormEnemy::PlayHeadGuardEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect(
         "WormHeadGuard",
         position);
 }
 
-void WormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
+void FearWormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect(
         "WormHeadVulnerable",
         position);
 }
 
-bool WormEnemy::HasAliveBodyParts() const
+bool FearWormEnemy::HasAliveBodyParts() const
 {
     for (size_t index = 1; index < segments_.size(); index = index + 1) {
         if (segments_[index].isAlive) {
@@ -633,7 +652,7 @@ bool WormEnemy::HasAliveBodyParts() const
     return false;
 }
 
-bool WormEnemy::IsValidSegmentIndex(int32_t partIndex) const
+bool FearWormEnemy::IsValidSegmentIndex(int32_t partIndex) const
 {
     if (partIndex < 0) {
         return false;
@@ -646,7 +665,7 @@ bool WormEnemy::IsValidSegmentIndex(int32_t partIndex) const
     return true;
 }
 
-void WormEnemy::OnDeath()
+void FearWormEnemy::OnDeath()
 {
     if (!segments_.empty()) {
         EffectManager::GetInstance()->PlayEffect(

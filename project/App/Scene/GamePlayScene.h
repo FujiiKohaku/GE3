@@ -41,7 +41,7 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 
 #include "App/Game/Enemy/Types/NormalEnemy.h"
-#include "App/Game/Boss/BaseBoss.h"
+#include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 
 class GamePlayScene : public BaseScene {
 public:
@@ -180,7 +180,7 @@ private:
     // エネミー・弾モデル
     Model* enemyModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
-    Model* wormEnemyModel_ = nullptr;
+    Model* fearWormEnemyModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
@@ -191,6 +191,6 @@ private:
     float cameraLookUpFactor_ = 0.7f;
 
     // ボス戦用
-    std::unique_ptr<BaseBoss> activeBoss_;
+    std::unique_ptr<FearWormEnemy> activeBoss_;
     bool isBossSpawned_ = false;
 };
