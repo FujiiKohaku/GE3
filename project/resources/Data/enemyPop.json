@@ -67,6 +67,10 @@
       "moveSpeed": 2.5,
       "amplitude": 8.0,
       "frequency": 2.0
+    },
+    {
+      "type": "WormEnemy",
+      "position": [0.0, 2.0, 1180.0]
     }
   ]
 }

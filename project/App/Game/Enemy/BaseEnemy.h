@@ -10,6 +10,12 @@
 class Camera;
 class Model;
 
+struct EnemyCollisionPart {
+    Vector3 position = { 0.0f, 0.0f, 0.0f };
+    float radius = 3.0f;
+    int32_t partIndex = 0;
+};
+
 class BaseEnemy {
 public:
     virtual ~BaseEnemy() = default;
@@ -23,15 +29,19 @@ public:
 
     bool IsDead() const;
 
-    Vector3 GetPosition() const;
+    virtual Vector3 GetPosition() const;
     std::vector<std::unique_ptr<EnemyBullet>>& GetBullets()
     {
         return enemyBullets_;
     }
-    void SetPosition(const Vector3& position);
+    virtual void SetPosition(const Vector3& position);
     void SetEnableLighting(bool enable);
     void SetDead(bool isDead);
     void ApplyDamage(float damage);
+    virtual void ApplyDamageToPart(int32_t partIndex, float damage);
+    virtual void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const;
+    virtual bool IsCollisionPartDamageable(int32_t partIndex) const;
+    virtual void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position);
 
 protected:
     virtual void UpdateAnimation();

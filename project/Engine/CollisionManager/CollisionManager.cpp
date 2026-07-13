@@ -6,10 +6,6 @@
 
 std::unique_ptr<CollisionManager> CollisionManager::instance_ = nullptr;
 
-namespace {
-constexpr float kEnemyRaycastRadius = 2.5f;
-}
-
 CollisionManager::CollisionManager(ConstructorKey)
 {
 }
@@ -49,6 +45,8 @@ bool CollisionManager::Raycast(const Ray& ray, RaycastHit& hit) const
     bool isHit = false;
     float nearestDistance = 0.0f;
     BaseEnemy* nearestEnemy = nullptr;
+    Vector3 nearestPosition = { 0.0f, 0.0f, 0.0f };
+    std::vector<EnemyCollisionPart> enemyCollisionParts;
 
     for (const std::unique_ptr<BaseEnemy>& enemy : *enemies_) {
         if (enemy == nullptr) {
@@ -59,19 +57,25 @@ bool CollisionManager::Raycast(const Ray& ray, RaycastHit& hit) const
             continue;
         }
 
-        Sphere enemySphere {};
-        enemySphere.center = enemy->GetPosition();
-        enemySphere.radius = kEnemyRaycastRadius;
+        enemyCollisionParts.clear();
+        enemy->GetCollisionParts(enemyCollisionParts);
 
-        float distance = 0.0f;
-        if (!RaySphereIntersect(normalizedRay, enemySphere, distance)) {
-            continue;
-        }
+        for (const EnemyCollisionPart& part : enemyCollisionParts) {
+            Sphere enemySphere {};
+            enemySphere.center = part.position;
+            enemySphere.radius = part.radius;
 
-        if (!isHit || distance < nearestDistance) {
-            isHit = true;
-            nearestDistance = distance;
-            nearestEnemy = enemy.get();
+            float distance = 0.0f;
+            if (!RaySphereIntersect(normalizedRay, enemySphere, distance)) {
+                continue;
+            }
+
+            if (!isHit || distance < nearestDistance) {
+                isHit = true;
+                nearestDistance = distance;
+                nearestEnemy = enemy.get();
+                nearestPosition = part.position;
+            }
         }
     }
 
@@ -81,7 +85,7 @@ bool CollisionManager::Raycast(const Ray& ray, RaycastHit& hit) const
 
     hit.distance = nearestDistance;
     hit.enemy = nearestEnemy;
-    hit.position = normalizedRay.origin + normalizedRay.direction * nearestDistance;
+    hit.position = nearestPosition;
 
     return true;
 }

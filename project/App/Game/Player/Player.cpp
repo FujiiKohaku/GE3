@@ -374,7 +374,7 @@ Vector3 Player::ResolveAimPoint(
     // レティクルレイが敵の当たり判定に重なっている場合、
     // 複雑な角度制限は一切無視して、無条件で弾道を敵の中心へ100%吸い付かせます
     if (CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
-        aimPoint = hit.enemy->GetPosition();
+        aimPoint = hit.position;
     }
 
     return aimPoint;

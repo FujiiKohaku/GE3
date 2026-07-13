@@ -290,6 +290,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\WormEnemy\WormEnemy.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
   </ItemGroup>
@@ -422,6 +423,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Scene\GameOverScene.h" />
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h" />
     <ClInclude Include="App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\WormEnemy\WormEnemy.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
   </ItemGroup>

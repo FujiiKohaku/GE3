@@ -1,0 +1,660 @@
+#include "App/Game/Enemy/WormEnemy/WormEnemy.h"
+
+#include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
+#include "App/Game/Player/Player.h"
+#include "Engine/3D/Object3d.h"
+#include "Engine/3D/Object3dManager.h"
+#include "Engine/Effect/EffectManager.h"
+
+#include <cmath>
+#include <utility>
+
+namespace {
+constexpr int32_t kWormSegmentCount = 6;
+constexpr float kFrameTime = 1.0f / 60.0f;
+constexpr float kHeadHp = 6.0f;
+constexpr float kBodyHp = 2.0f;
+constexpr float kAttackRange = 240.0f;
+
+float LengthVector(const Vector3& value)
+{
+    return std::sqrt(
+        value.x * value.x +
+        value.y * value.y +
+        value.z * value.z);
+}
+
+Vector3 NormalizeSafe(const Vector3& value)
+{
+    Vector3 result {};
+    float length = LengthVector(value);
+
+    if (length <= 0.0001f) {
+        result.z = 1.0f;
+        return result;
+    }
+
+    result.x = value.x / length;
+    result.y = value.y / length;
+    result.z = value.z / length;
+
+    return result;
+}
+
+Vector3 LerpVector3(const Vector3& start, const Vector3& end, float rate)
+{
+    Vector3 result {};
+    result.x = start.x + (end.x - start.x) * rate;
+    result.y = start.y + (end.y - start.y) * rate;
+    result.z = start.z + (end.z - start.z) * rate;
+    return result;
+}
+}
+
+void WormEnemy::Initialize(
+    Model* model,
+    Model* bulletModel,
+    Player* player)
+{
+    bulletModel_ = bulletModel;
+    player_ = player;
+    hp_ = kHeadHp;
+    moveSpeed_ = 0.10f;
+
+    InitializeSegments(model);
+    SetPosition(transform_.translate);
+}
+
+void WormEnemy::InitializeSegments(Model* model)
+{
+    segments_.clear();
+    segments_.reserve(kWormSegmentCount);
+
+    for (int32_t index = 0; index < kWormSegmentCount; index = index + 1) {
+        Segment segment {};
+        segment.object = std::make_unique<Object3d>();
+        segment.object->Initialize(Object3dManager::GetInstance());
+        segment.object->SetModel(model);
+        segment.object->SetEnableLighting(false);
+        segment.isHead = false;
+        segment.isAlive = true;
+        segment.hp = kBodyHp;
+
+        float scale = 2.45f;
+        if (index == 0) {
+            segment.isHead = true;
+            segment.hp = kHeadHp;
+            scale = 3.45f;
+        }
+
+        if (index == kWormSegmentCount - 1) {
+            scale = 2.15f;
+        }
+
+        segment.scale = { scale, scale, scale };
+        segment.radius = scale * 0.90f;
+
+        segments_.push_back(std::move(segment));
+    }
+}
+
+void WormEnemy::SetPosition(const Vector3& position)
+{
+    transform_.translate = position;
+    startPosition_ = position;
+    isParallelStarted_ = false;
+    headTrail_.clear();
+
+    for (size_t index = 0; index < segments_.size(); index = index + 1) {
+        float offset = segmentSpacing_ * static_cast<float>(index);
+        segments_[index].position = position;
+        segments_[index].position.z -= offset;
+    }
+
+    ResetHeadTrail();
+}
+
+Vector3 WormEnemy::GetPosition() const
+{
+    if (segments_.empty()) {
+        return transform_.translate;
+    }
+
+    return segments_[0].position;
+}
+
+void WormEnemy::Update()
+{
+    if (isDead_) {
+        UpdateBullets();
+        RemoveDeadBullets();
+        return;
+    }
+
+    moveTime_ += kFrameTime;
+
+    UpdateMovement();
+    UpdateSegments();
+    UpdateSegmentObjects();
+    Attack();
+    UpdateBullets();
+    RemoveDeadBullets();
+
+    if (!vulnerableEffectPlayed_ && !HasAliveBodyParts()) {
+        vulnerableEffectPlayed_ = true;
+        PlayHeadVulnerableEffect(GetPosition());
+    }
+}
+
+void WormEnemy::UpdateMovement()
+{
+    if (segments_.empty()) {
+        return;
+    }
+
+    Vector3 target = startPosition_;
+
+    if (player_ != nullptr) {
+        Vector3 playerPosition = player_->GetTranslate();
+
+        if (!isParallelStarted_) {
+            if (playerPosition.z >= startPosition_.z - activationLeadDistance_) {
+                StartOrbitEntry(playerPosition);
+            }
+        }
+
+        if (isParallelStarted_) {
+            orbitAngle_ += kFrameTime * 1.15f;
+
+            Vector3 orbitTarget =
+                CalculateOrbitTargetPosition(playerPosition);
+
+            if (enterTimer_ < enterDuration_) {
+                enterTimer_ += kFrameTime;
+
+                float enterRate =
+                    enterTimer_ /
+                    enterDuration_;
+
+                if (enterRate > 1.0f) {
+                    enterRate = 1.0f;
+                }
+
+                target = LerpVector3(
+                    CalculateEntryStartPosition(playerPosition),
+                    orbitTarget,
+                    enterRate);
+            } else {
+                target = orbitTarget;
+            }
+        } else {
+            target = CalculateEntryStartPosition(playerPosition);
+        }
+    } else {
+        target.x += std::sin(moveTime_ * 1.00f) * 6.0f;
+        target.y += std::sin(moveTime_ * 1.30f) * 2.5f;
+        target.z += std::sin(moveTime_ * 0.60f) * 3.0f;
+    }
+
+    segments_[0].position = LerpVector3(
+        segments_[0].position,
+        target,
+        moveSpeed_);
+
+    transform_.translate = segments_[0].position;
+
+    RecordHeadTrail();
+}
+
+Vector3 WormEnemy::CalculateEntryStartPosition(const Vector3& playerPosition) const
+{
+    Vector3 result = playerPosition;
+    result.x -= 34.0f;
+    result.y += 18.0f;
+    result.z += parallelForwardOffset_ + 22.0f;
+    return result;
+}
+
+Vector3 WormEnemy::CalculateOrbitTargetPosition(const Vector3& playerPosition) const
+{
+    Vector3 result = playerPosition;
+
+    float orbitX =
+        std::cos(orbitAngle_) *
+        24.0f;
+
+    float orbitY =
+        std::sin(orbitAngle_) *
+        11.0f;
+
+    float lateralSway =
+        std::sin(orbitAngle_ * 2.0f) *
+        3.0f;
+
+    float depthSway =
+        std::sin(orbitAngle_ * 0.80f) *
+        8.0f;
+
+    result.x += orbitX + lateralSway;
+    result.y += 7.0f + orbitY;
+    result.z += parallelForwardOffset_ + depthSway;
+
+    return result;
+}
+
+void WormEnemy::StartOrbitEntry(const Vector3& playerPosition)
+{
+    isParallelStarted_ = true;
+    enterTimer_ = 0.0f;
+    orbitAngle_ = 2.35f;
+
+    Vector3 entryPosition =
+        CalculateEntryStartPosition(playerPosition);
+
+    segments_[0].position = entryPosition;
+    transform_.translate = entryPosition;
+
+    ResetHeadTrail();
+}
+
+void WormEnemy::UpdateSegments()
+{
+    for (size_t index = 1; index < segments_.size(); index = index + 1) {
+        float distanceFromHead =
+            segmentSpacing_ *
+            static_cast<float>(index);
+
+        segments_[index].position =
+            SampleHeadTrail(distanceFromHead);
+    }
+}
+
+void WormEnemy::ResetHeadTrail()
+{
+    headTrail_.clear();
+
+    if (segments_.empty()) {
+        return;
+    }
+
+    Vector3 trailPosition =
+        segments_[0].position;
+
+    const int32_t trailCount = 80;
+    for (int32_t index = 0; index < trailCount; index = index + 1) {
+        headTrail_.push_back(trailPosition);
+        trailPosition.z -= headTrailSampleStep_;
+    }
+}
+
+void WormEnemy::RecordHeadTrail()
+{
+    if (segments_.empty()) {
+        return;
+    }
+
+    Vector3 headPosition =
+        segments_[0].position;
+
+    if (!headTrail_.empty()) {
+        Vector3 difference =
+            headPosition -
+            headTrail_[0];
+
+        if (LengthVector(difference) < headTrailSampleStep_) {
+            return;
+        }
+    }
+
+    headTrail_.insert(
+        headTrail_.begin(),
+        headPosition);
+
+    const size_t maxTrailCount = 120;
+    if (headTrail_.size() > maxTrailCount) {
+        headTrail_.erase(
+            headTrail_.begin() + maxTrailCount,
+            headTrail_.end());
+    }
+}
+
+Vector3 WormEnemy::SampleHeadTrail(float distanceFromHead) const
+{
+    if (headTrail_.empty()) {
+        return GetPosition();
+    }
+
+    if (headTrail_.size() == 1) {
+        return headTrail_[0];
+    }
+
+    float accumulatedDistance = 0.0f;
+
+    for (size_t index = 1; index < headTrail_.size(); index = index + 1) {
+        Vector3 previous =
+            headTrail_[index - 1];
+
+        Vector3 current =
+            headTrail_[index];
+
+        float segmentDistance =
+            LengthVector(current - previous);
+
+        if (segmentDistance <= 0.0001f) {
+            continue;
+        }
+
+        if (accumulatedDistance + segmentDistance >= distanceFromHead) {
+            float remainingDistance =
+                distanceFromHead -
+                accumulatedDistance;
+
+            float rate =
+                remainingDistance /
+                segmentDistance;
+
+            return LerpVector3(
+                previous,
+                current,
+                rate);
+        }
+
+        accumulatedDistance += segmentDistance;
+    }
+
+    return headTrail_[headTrail_.size() - 1];
+}
+
+void WormEnemy::UpdateSegmentObjects()
+{
+    for (size_t index = 0; index < segments_.size(); index = index + 1) {
+        Segment& segment = segments_[index];
+
+        if (segment.object == nullptr) {
+            continue;
+        }
+
+        if (segment.hitFlashTimer > 0.0f) {
+            segment.hitFlashTimer -= kFrameTime;
+            if (segment.hitFlashTimer < 0.0f) {
+                segment.hitFlashTimer = 0.0f;
+            }
+        }
+
+        Vector4 color {};
+        if (segment.isHead) {
+            color = { 0.30f, 0.88f, 1.0f, 1.0f };
+
+            if (!HasAliveBodyParts()) {
+                color = { 1.0f, 0.18f, 0.04f, 1.0f };
+            }
+        } else {
+            color = { 0.78f, 0.20f, 1.0f, 1.0f };
+        }
+
+        if (segment.hitFlashTimer > 0.0f) {
+            color = { 1.0f, 0.95f, 0.35f, 1.0f };
+        }
+
+        float pulse = 1.0f + std::sin(moveTime_ * 5.5f + static_cast<float>(index)) * 0.08f;
+        Vector3 scale {};
+        scale.x = segment.scale.x * pulse;
+        scale.y = segment.scale.y * pulse;
+        scale.z = segment.scale.z * pulse;
+
+        Vector3 rotate {};
+        rotate.y = moveTime_ + static_cast<float>(index) * 0.35f;
+
+        segment.object->SetScale(scale);
+        segment.object->SetRotate(rotate);
+        segment.object->SetTranslate(segment.position);
+        segment.object->SetColor(color);
+        segment.object->Update();
+    }
+}
+
+void WormEnemy::Draw()
+{
+    if (!isDead_ && isParallelStarted_) {
+        for (Segment& segment : segments_) {
+            if (!segment.isAlive) {
+                continue;
+            }
+
+            if (segment.object == nullptr) {
+                continue;
+            }
+
+            segment.object->Draw();
+        }
+    }
+
+    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
+        bullet->Draw();
+    }
+}
+
+void WormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
+{
+    if (!isParallelStarted_) {
+        return;
+    }
+
+    for (size_t index = 0; index < segments_.size(); index = index + 1) {
+        const Segment& segment = segments_[index];
+
+        if (!segment.isAlive) {
+            continue;
+        }
+
+        EnemyCollisionPart part {};
+        part.position = segment.position;
+        part.radius = segment.radius;
+        part.partIndex = static_cast<int32_t>(index);
+
+        parts.push_back(part);
+    }
+}
+
+bool WormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
+{
+    if (!IsValidSegmentIndex(partIndex)) {
+        return false;
+    }
+
+    const Segment& segment = segments_[partIndex];
+    if (!segment.isAlive) {
+        return false;
+    }
+
+    if (segment.isHead && HasAliveBodyParts()) {
+        return false;
+    }
+
+    return true;
+}
+
+void WormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
+{
+    if (!IsValidSegmentIndex(partIndex)) {
+        return;
+    }
+
+    if (!IsCollisionPartDamageable(partIndex)) {
+        OnCollisionPartGuarded(partIndex, segments_[partIndex].position);
+        return;
+    }
+
+    Segment& segment = segments_[partIndex];
+    segment.hp -= damage;
+    segment.hitFlashTimer = 0.10f;
+
+    if (segment.hp > 0.0f) {
+        return;
+    }
+
+    if (segment.isHead) {
+        SetDead(true);
+        return;
+    }
+
+    segment.isAlive = false;
+    PlayBodyBreakEffect(segment.position);
+
+    if (!vulnerableEffectPlayed_ && !HasAliveBodyParts()) {
+        vulnerableEffectPlayed_ = true;
+        PlayHeadVulnerableEffect(GetPosition());
+    }
+}
+
+void WormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& position)
+{
+    if (!IsValidSegmentIndex(partIndex)) {
+        return;
+    }
+
+    segments_[partIndex].hitFlashTimer = 0.08f;
+    PlayHeadGuardEffect(position);
+}
+
+void WormEnemy::Attack()
+{
+    if (!isParallelStarted_) {
+        return;
+    }
+
+    if (player_ == nullptr) {
+        return;
+    }
+
+    if (bulletModel_ == nullptr) {
+        return;
+    }
+
+    Vector3 toPlayer = player_->GetTranslate() - GetPosition();
+    float distance = LengthVector(toPlayer);
+
+    if (distance > kAttackRange) {
+        return;
+    }
+
+    fireTimer_ = fireTimer_ + 1;
+    if (fireTimer_ < fireInterval_) {
+        return;
+    }
+
+    fireTimer_ = 0;
+
+    int32_t segmentCount = static_cast<int32_t>(segments_.size());
+    for (int32_t count = 0; count < segmentCount; count = count + 1) {
+        fireSegmentIndex_ = fireSegmentIndex_ + 1;
+
+        if (fireSegmentIndex_ >= segmentCount) {
+            fireSegmentIndex_ = 0;
+        }
+
+        if (!segments_[fireSegmentIndex_].isAlive) {
+            continue;
+        }
+
+        FireBullet(segments_[fireSegmentIndex_].position);
+        break;
+    }
+}
+
+void WormEnemy::FireBullet(const Vector3& position)
+{
+    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->Initialize(bulletModel_);
+
+    Vector3 direction = NormalizeSafe(player_->GetTranslate() - position);
+    Vector3 velocity {};
+    velocity.x = direction.x * bulletSpeed_;
+    velocity.y = direction.y * bulletSpeed_;
+    velocity.z = direction.z * bulletSpeed_;
+
+    bullet->SetTranslate(position);
+    bullet->SetVelocity(velocity);
+
+    enemyBullets_.push_back(std::move(bullet));
+
+    EffectManager::GetInstance()->PlayEffect(
+        "WormShotFlash",
+        position);
+}
+
+void WormEnemy::UpdateBullets()
+{
+    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
+        bullet->Update();
+    }
+}
+
+void WormEnemy::RemoveDeadBullets()
+{
+    for (size_t index = 0; index < enemyBullets_.size();) {
+        if (!enemyBullets_[index]->IsAlive()) {
+            enemyBullets_.erase(enemyBullets_.begin() + index);
+        } else {
+            index = index + 1;
+        }
+    }
+}
+
+void WormEnemy::PlayBodyBreakEffect(const Vector3& position)
+{
+    EffectManager::GetInstance()->PlayEffect(
+        "WormBodyBreak",
+        position);
+}
+
+void WormEnemy::PlayHeadGuardEffect(const Vector3& position)
+{
+    EffectManager::GetInstance()->PlayEffect(
+        "WormHeadGuard",
+        position);
+}
+
+void WormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
+{
+    EffectManager::GetInstance()->PlayEffect(
+        "WormHeadVulnerable",
+        position);
+}
+
+bool WormEnemy::HasAliveBodyParts() const
+{
+    for (size_t index = 1; index < segments_.size(); index = index + 1) {
+        if (segments_[index].isAlive) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool WormEnemy::IsValidSegmentIndex(int32_t partIndex) const
+{
+    if (partIndex < 0) {
+        return false;
+    }
+
+    if (partIndex >= static_cast<int32_t>(segments_.size())) {
+        return false;
+    }
+
+    return true;
+}
+
+void WormEnemy::OnDeath()
+{
+    if (!segments_.empty()) {
+        EffectManager::GetInstance()->PlayEffect(
+            "WormDeathExplosion",
+            segments_[0].position);
+    }
+
+    for (Segment& segment : segments_) {
+        segment.isAlive = false;
+    }
+}

@@ -180,6 +180,7 @@ private:
     // エネミー・弾モデル
     Model* enemyModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
+    Model* wormEnemyModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;

@@ -128,6 +128,30 @@ void BaseEnemy::ApplyDamage(float damage)
     }
 }
 
+void BaseEnemy::ApplyDamageToPart(int32_t, float damage)
+{
+    ApplyDamage(damage);
+}
+
+void BaseEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
+{
+    EnemyCollisionPart part {};
+    part.position = GetPosition();
+    part.radius = 3.0f;
+    part.partIndex = 0;
+
+    parts.push_back(part);
+}
+
+bool BaseEnemy::IsCollisionPartDamageable(int32_t) const
+{
+    return true;
+}
+
+void BaseEnemy::OnCollisionPartGuarded(int32_t, const Vector3&)
+{
+}
+
 void BaseEnemy::UpdateAnimation()
 {
 }

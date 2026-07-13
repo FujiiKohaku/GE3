@@ -1,5 +1,6 @@
 #include "GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
+#include "App/Game/Enemy/WormEnemy/WormEnemy.h"
 #include "App/Game/Boss/FearBoss.h"
 #include "Engine/3D/SphereObject.h"
 #include "Engine/Animation/AnimationLoder.h"
@@ -165,6 +166,7 @@ void GamePlayScene::Initialize()
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
+    wormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
@@ -926,21 +928,36 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::CheckCollision()
 {
+    std::vector<EnemyCollisionPart> enemyCollisionParts;
+
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (enemy->IsDead()) {
+            continue;
+        }
 
-        Vector3 difference = enemy->GetPosition() - player_->GetTranslate();
+        enemyCollisionParts.clear();
+        enemy->GetCollisionParts(enemyCollisionParts);
 
-        float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+        for (const EnemyCollisionPart& part : enemyCollisionParts) {
+            Vector3 difference = part.position - player_->GetTranslate();
 
-        float collisionRadius = kPlayerEnemyCollisionRadius;
+            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
 
-        if (distance <= collisionRadius) {
+            float collisionRadius = part.radius + kPlayerEnemyCollisionRadius * 0.5f;
 
-            OutputDebugStringA("Player Hit Enemy\n");
+            if (distance <= collisionRadius) {
+
+                OutputDebugStringA("Player Hit Enemy\n");
+            }
         }
     }
 
     for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+        if (!bullet->IsAlive()) {
+            continue;
+        }
+
+        bool bulletHit = false;
 
         for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
 
@@ -948,22 +965,39 @@ void GamePlayScene::CheckCollision()
                 continue;
             }
 
-            Vector3 difference = enemy->GetPosition() - bullet->GetPosition();
+            enemyCollisionParts.clear();
+            enemy->GetCollisionParts(enemyCollisionParts);
 
-            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+            for (const EnemyCollisionPart& part : enemyCollisionParts) {
+                Vector3 difference = part.position - bullet->GetPosition();
 
-            float collisionRadius = kPlayerBulletEnemyCollisionRadius;
+                float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
 
-            if (distance <= collisionRadius) {
+                float collisionRadius = part.radius + bullet->GetCollisionRadius();
 
-                OutputDebugStringA("PlayerBullet Hit Enemy\n");
+                if (distance <= collisionRadius) {
 
-                bullet->OnHitEnemy(enemy->GetPosition());
+                    OutputDebugStringA("PlayerBullet Hit Enemy\n");
 
-                enemy->ApplyDamage(static_cast<float>(bullet->GetDamage()));
+                    if (enemy->IsCollisionPartDamageable(part.partIndex)) {
+                        bullet->OnHitEnemy(part.position);
+                        enemy->ApplyDamageToPart(
+                            part.partIndex,
+                            static_cast<float>(bullet->GetDamage()));
+                    } else {
+                        enemy->OnCollisionPartGuarded(
+                            part.partIndex,
+                            part.position);
+                    }
 
-                bullet->SetDead();
+                    bullet->SetDead();
+                    bulletHit = true;
 
+                    break;
+                }
+            }
+
+            if (bulletHit) {
                 break;
             }
         }
@@ -1137,6 +1171,11 @@ void GamePlayScene::LoadEnemyPopData()
             }
             enemyIndex = enemyIndex + 1;
         }
+
+        std::unique_ptr<WormEnemy> wormEnemy = std::make_unique<WormEnemy>();
+        wormEnemy->Initialize(wormEnemyModel_, enemyBulletModel_, player_.get());
+        wormEnemy->SetPosition({ 0.0f, 2.0f, 1180.0f });
+        enemies_.push_back(std::move(wormEnemy));
         return;
     }
 
@@ -1192,6 +1231,13 @@ void GamePlayScene::LoadEnemyPopData()
                     enemy->SetFrequency(enemyData["frequency"].get<float>());
                 }
 
+                enemies_.push_back(std::move(enemy));
+            }
+
+            if (type == "WormEnemy") {
+                std::unique_ptr<WormEnemy> enemy = std::make_unique<WormEnemy>();
+                enemy->Initialize(wormEnemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(position);
                 enemies_.push_back(std::move(enemy));
             }
         }
