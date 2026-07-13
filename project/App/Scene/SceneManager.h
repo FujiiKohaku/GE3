@@ -59,4 +59,5 @@ private:
 private:
     std::unique_ptr<BaseScene> scene_;
     std::unique_ptr<BaseScene> nextScene_;
+    std::unique_ptr<BaseScene> retiredScene_;
 };

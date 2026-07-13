@@ -1,28 +1,53 @@
 #include "SceneManager.h"
 #include <cassert>
 
+namespace {
+bool ChangeScene(
+    std::unique_ptr<BaseScene>& scene,
+    std::unique_ptr<BaseScene>& nextScene,
+    std::unique_ptr<BaseScene>& retiredScene)
+{
+    if (!nextScene) {
+        return false;
+    }
+
+    if (scene) {
+        retiredScene = std::move(scene);
+    }
+
+    scene = std::move(nextScene);
+    scene->Initialize();
+    return true;
+}
+}
 
 
 void SceneManager::Update()
 {
-    if (nextScene_) {
-
-        if (scene_) {
-            scene_->Finalize();
-        }
-
-        scene_ = std::move(nextScene_);
-
-        scene_->Initialize();
+    if (retiredScene_) {
+        retiredScene_->Finalize();
+        retiredScene_.reset();
     }
 
+    ChangeScene(scene_, nextScene_, retiredScene_);
+
     if (scene_) {
+        scene_->Update();
+    }
+
+    // Keep the old scene alive until its last frame has finished rendering.
+    if (ChangeScene(scene_, nextScene_, retiredScene_) && scene_) {
         scene_->Update();
     }
 }
 
 void SceneManager::Finalize()
 {
+    if (retiredScene_) {
+        retiredScene_->Finalize();
+        retiredScene_.reset();
+    }
+
     if (scene_) {
         scene_->Finalize();
         scene_.reset();

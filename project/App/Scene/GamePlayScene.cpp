@@ -374,15 +374,21 @@ void GamePlayScene::Update()
     }
 
     // ボスの更新
-    if (activeBoss_ && !activeBoss_->IsDead()) {
+    if (activeBoss_) {
         activeBoss_->Update();
     }
 
     // ボス撃破でクリアシーンへ遷移
     if (activeBoss_ && activeBoss_->IsDead()) {
         CollisionManager::GetInstance()->SetBoss(nullptr);
-        ResetGameplayPostEffects();
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+
+        EffectManager::GetInstance()->Update();
+
+        if (activeBoss_->IsDeathSequenceFinished()) {
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+        }
+
         return;
     }
 
@@ -868,7 +874,7 @@ void GamePlayScene::Draw3D()
         enemy->Draw();
     }
 
-    if (activeBoss_ && !activeBoss_->IsDead()) {
+    if (activeBoss_) {
         activeBoss_->Draw();
     }
 
@@ -893,7 +899,9 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
-    aimSprite_->Draw();
+    if (!activeBoss_ || !activeBoss_->IsDead()) {
+        aimSprite_->Draw();
+    }
 }
 
 void GamePlayScene::DrawImGui()

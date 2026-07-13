@@ -16,6 +16,8 @@ public:
     void Update() override;
     void Draw() override;
 
+    bool IsDeathSequenceFinished() const;
+
     Vector3 GetPosition() const override;
     void SetPosition(const Vector3& position) override;
 
@@ -72,6 +74,7 @@ private:
     void PlayBodyBreakEffect(const Vector3& position);
     void PlayHeadGuardEffect(const Vector3& position);
     void PlayHeadVulnerableEffect(const Vector3& position);
+    void UpdateDeathSequence();
     float CalculateHealthRate() const;
     float CalculateMovementSpeedRate() const;
     bool HasAliveBodyParts() const;
@@ -113,5 +116,8 @@ private:
     bool vulnerableEffectPlayed_ = false;
     bool isHeadChargeActive_ = false;
     bool isHeadChargeFiring_ = false;
+    bool isDeathSequenceFinished_ = false;
+    float deathSequenceTimer_ = 0.0f;
+    int32_t nextDeathSegmentIndex_ = -1;
     MovementPattern movementPattern_ = MovementPattern::Orbit;
 };

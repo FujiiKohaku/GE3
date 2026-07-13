@@ -24,6 +24,8 @@ constexpr float kChargedBulletScale = 0.88f;
 constexpr float kChargedBulletCollisionRadius = 2.75f;
 constexpr int32_t kHeadChargeShotMax = 3;
 constexpr int32_t kChargedBulletDamage = 3;
+constexpr float kDeathExplosionInterval = 0.10f;
+constexpr float kDeathSequenceEndDelay = 0.80f;
 
 float LengthVector(const Vector3& value)
 {
@@ -145,6 +147,7 @@ Vector3 FearWormEnemy::GetPosition() const
 void FearWormEnemy::Update()
 {
     if (isDead_) {
+        UpdateDeathSequence();
         UpdateBullets();
         RemoveDeadBullets();
         return;
@@ -567,7 +570,7 @@ void FearWormEnemy::UpdateSegmentObjects()
 
 void FearWormEnemy::Draw()
 {
-    if (!isDead_ && isParallelStarted_) {
+    if (isParallelStarted_) {
         for (Segment& segment : segments_) {
             if (!segment.isAlive) {
                 continue;
@@ -584,6 +587,11 @@ void FearWormEnemy::Draw()
     for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
         bullet->Draw();
     }
+}
+
+bool FearWormEnemy::IsDeathSequenceFinished() const
+{
+    return isDeathSequenceFinished_;
 }
 
 void FearWormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
@@ -961,6 +969,43 @@ void FearWormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
         position);
 }
 
+void FearWormEnemy::UpdateDeathSequence()
+{
+    if (isDeathSequenceFinished_) {
+        return;
+    }
+
+    deathSequenceTimer_ += kFrameTime;
+
+    if (nextDeathSegmentIndex_ >= 0) {
+        if (deathSequenceTimer_ < kDeathExplosionInterval) {
+            return;
+        }
+
+        deathSequenceTimer_ = 0.0f;
+
+        Segment& segment = segments_[nextDeathSegmentIndex_];
+        if (segment.isAlive) {
+            if (segment.isHead) {
+                EffectManager::GetInstance()->PlayEffect(
+                    "WormDeathExplosion",
+                    segment.position);
+            } else {
+                PlayBodyBreakEffect(segment.position);
+            }
+
+            segment.isAlive = false;
+        }
+
+        nextDeathSegmentIndex_ = nextDeathSegmentIndex_ - 1;
+        return;
+    }
+
+    if (deathSequenceTimer_ >= kDeathSequenceEndDelay) {
+        isDeathSequenceFinished_ = true;
+    }
+}
+
 float FearWormEnemy::CalculateHealthRate() const
 {
     float currentHealth = 0.0f;
@@ -1039,13 +1084,10 @@ bool FearWormEnemy::IsValidSegmentIndex(int32_t partIndex) const
 
 void FearWormEnemy::OnDeath()
 {
-    if (!segments_.empty()) {
-        EffectManager::GetInstance()->PlayEffect(
-            "WormDeathExplosion",
-            segments_[0].position);
-    }
-
-    for (Segment& segment : segments_) {
-        segment.isAlive = false;
-    }
+    enemyBullets_.clear();
+    isHeadChargeActive_ = false;
+    isHeadChargeFiring_ = false;
+    isDeathSequenceFinished_ = false;
+    deathSequenceTimer_ = 0.0f;
+    nextDeathSegmentIndex_ = static_cast<int32_t>(segments_.size()) - 1;
 }
