@@ -407,7 +407,7 @@ void FearWormEnemy::RecordHeadTrail()
             headPosition -
             headTrail_[0];
 
-        if (Length(difference) < headTrailSampleStep_) {
+        if (Vector3Length(difference) < headTrailSampleStep_) {
             return;
         }
     }
@@ -443,7 +443,7 @@ Vector3 FearWormEnemy::SampleHeadTrail(float distanceFromHead) const
         Vector3 current =
             headTrail_[index];
 
-        float segmentDistance =Length(current - previous);
+        float segmentDistance = Vector3Length(current - previous);
 
         if (segmentDistance <= 0.0001f) {
             continue;
@@ -658,7 +658,7 @@ void FearWormEnemy::Attack()
     }
 
     Vector3 toPlayer = player_->GetTranslate() - GetPosition();
-    float distance = Length(toPlayer);
+    float distance = Vector3Length(toPlayer);
 
     if (distance > kAttackRange) {
         if (isHeadChargeActive_) {
@@ -840,7 +840,7 @@ void FearWormEnemy::FireChargedBullet()
     Vector3 position =
         CalculateHeadMuzzlePosition();
 
-    Vector3 direction =NormalizeSafe(player_->GetTranslate() - position);
+    Vector3 direction = NormalizeSafe(player_->GetTranslate() - position);
 
     Vector3 velocity {};
     velocity.x = direction.x * kChargedBulletSpeed;

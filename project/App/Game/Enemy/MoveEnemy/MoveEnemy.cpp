@@ -74,7 +74,7 @@ void MoveEnemy::Attack()
 
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 difference = playerPosition - transform_.translate;
-    float distance = Length(difference);
+    float distance = Vector3Length(difference);
 
     if (distance <= 100.0f) {
         fireTimer_ = fireTimer_ + 1;

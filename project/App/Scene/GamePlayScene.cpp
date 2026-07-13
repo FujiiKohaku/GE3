@@ -81,7 +81,7 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 
 bool IsZeroVector(const Vector3& value)
 {
-    return LengthSquared(value) < 0.000001f;
+    return Vector3LengthSquared(value) < 0.000001f;
 }
 
 Vector3 Cross(const Vector3& a, const Vector3& b)
@@ -951,7 +951,7 @@ void GamePlayScene::CheckCollision()
         for (const EnemyCollisionPart& part : enemyCollisionParts) {
             Vector3 difference = part.position - player_->GetTranslate();
 
-            float distance = Length(difference);
+            float distance = Vector3Length(difference);
 
             float collisionRadius = part.radius + kPlayerEnemyCollisionRadius * 0.5f;
 
@@ -981,7 +981,7 @@ void GamePlayScene::CheckCollision()
             for (const EnemyCollisionPart& part : enemyCollisionParts) {
                 Vector3 difference = part.position - bullet->GetPosition();
 
-                float distance = Length(difference);
+                float distance = Vector3Length(difference);
 
                 float collisionRadius = part.radius + bullet->GetCollisionRadius();
 
@@ -1026,7 +1026,7 @@ void GamePlayScene::CheckCollision()
             for (const EnemyCollisionPart& part : enemyCollisionParts) {
                 // コライダーのワールド座標を計算
                 Vector3 difference = part.position - bullet->GetPosition();
-                float distance = Length(difference);
+                float distance = Vector3Length(difference);
 
                 // 判定半径
                 float collisionRadius = part.radius + bullet->GetCollisionRadius();
@@ -1089,7 +1089,7 @@ void GamePlayScene::CheckCollision()
             }
 
             Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
-            float distance = Length(difference);
+            float distance = Vector3Length(difference);
             float collisionRadius = enemyBullet->GetCollisionRadius();
 
             if (distance <= collisionRadius) {
