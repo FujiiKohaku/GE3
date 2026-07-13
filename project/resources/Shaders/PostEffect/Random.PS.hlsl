@@ -15,7 +15,7 @@ float rand2dTo1d(float2 value)
 
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
-    float random = rand2dTo1d(input.texcoord);
+    float random = rand2dTo1d(input.texcoord + float2(time, time));
 
     return float4(
         random,
