@@ -3,6 +3,7 @@
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 
 #include "App/Game/Player/Player.h"
+#include "Engine/math/MathStruct.h"
 #include <cmath>
 
 void NormalEnemy::Initialize(

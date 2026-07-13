@@ -5,6 +5,7 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
+#include "Engine/math/MathStruct.h"
 #include "Engine/audio/SoundManager.h"
 #include <numbers>
 

@@ -840,8 +840,7 @@ void FearWormEnemy::FireChargedBullet()
     Vector3 position =
         CalculateHeadMuzzlePosition();
 
-    Vector3 direction =
-        NormalizeSafe(player_->GetTranslate() - position);
+    Vector3 direction =NormalizeSafe(player_->GetTranslate() - position);
 
     Vector3 velocity {};
     velocity.x = direction.x * kChargedBulletSpeed;
