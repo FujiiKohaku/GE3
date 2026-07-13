@@ -1,6 +1,8 @@
 #pragma once
 #include "Engine/math/MathStruct.h"
 
+#include <cstdint>
+
 struct Particle {
     EulerTransform transform;
     Vector3 velocity;

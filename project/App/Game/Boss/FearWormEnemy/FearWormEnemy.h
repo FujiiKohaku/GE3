@@ -13,22 +13,36 @@ public:
         Model* bulletModel,
         Player* player);
 
+    
     void Update() override;
+
+    // 生存中の各部位とボスが発射した弾を描画する。
     void Draw() override;
 
+    // 撃破演出が完了してシーン遷移可能かを返す。
     bool IsDeathSequenceFinished() const;
 
+    // 頭部をボスの代表位置として返す。
     Vector3 GetPosition() const override;
+
+    // ボスの基準位置を設定し、全部位と移動状態をリセットする。
     void SetPosition(const Vector3& position) override;
 
+    // 生存している頭部と胴体の当たり判定情報を取得する。
     void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const override;
+
+    // 指定部位が現在ダメージを受けられる状態かを返す。
     bool IsCollisionPartDamageable(int32_t partIndex) const override;
+
+    // 指定部位へダメージを与え、部位破壊または撃破を処理する。
     void ApplyDamageToPart(int32_t partIndex, float damage) override;
+
+    // 無効な攻撃を受けた頭部のガード演出を再生する。
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
 private:
     enum class MovementPattern {
-        Orbit,
+        Orbit, 
         Coil,
         Weave,
         Drift,
@@ -45,47 +59,106 @@ private:
         bool isAlive = true;
     };
 
+    // 頭部、胴体、尻尾の各セグメントを生成する。
     void InitializeSegments(Model* model);
+
+    // 現在の移動パターンに従って頭部を移動させる。
     void UpdateMovement();
+
+    // 生存中の胴体を1つ前の部位から一定距離に配置する。
     void UpdateSegments();
+
+    // 各セグメントの色、拡縮、回転、座標を描画用オブジェクトへ反映する。
     void UpdateSegmentObjects();
+
+    // ボスが発射した全弾を更新する。
     void UpdateBullets();
+
+    // 寿命切れまたは命中済みの弾をリストから削除する。
     void RemoveDeadBullets();
+
+    // プレイヤーを基準に登場開始位置を計算する。
     Vector3 CalculateEntryStartPosition(const Vector3& playerPosition) const;
+
+    // プレイヤー周辺を旋回する目標位置を計算する。
     Vector3 CalculateOrbitTargetPosition(const Vector3& playerPosition) const;
+
+    // プレイヤー周辺を巻くように動く目標位置を計算する。
     Vector3 CalculateCoilTargetPosition(const Vector3& playerPosition) const;
+
+    // 上下左右へ波打つ目標位置を計算する。
     Vector3 CalculateWeaveTargetPosition(const Vector3& playerPosition) const;
+
+    // 緩やかに漂う目標位置を計算する。
     Vector3 CalculateDriftTargetPosition(const Vector3& playerPosition) const;
+
+    // 現在選択中の移動パターンに対応する目標位置を返す。
     Vector3 CalculateMovementTargetPosition(const Vector3& playerPosition) const;
+
+    // 経過時間に応じて次の移動パターンへ切り替える。
     void UpdateMovementPattern(float movementSpeedRate);
+
+    // ボス戦開始時の登場状態と頭部位置を設定する。
     void StartOrbitEntry(const Vector3& playerPosition);
-    void ResetHeadTrail();
-    void RecordHeadTrail();
-    Vector3 SampleHeadTrail(float distanceFromHead) const;
+
+    // 通常弾とチャージ攻撃の発射タイミングを更新する。
     void Attack() override;
+
+    // 指定位置からプレイヤー方向へ通常弾を発射する。
     void FireBullet(const Vector3& position);
+
+    // チャージ、連射、クールダウンの状態を更新する。
     void UpdateHeadChargeAttack(float attackSpeedRate);
+
+    // 頭部のチャージ攻撃を開始する。
     void StartHeadChargeAttack();
+
+    // チャージ攻撃を終了してクールダウンへ移行する。
     void FinishHeadChargeAttack();
+
+    // 頭部の照準方向をプレイヤー方向へ滑らかに追従させる。
     void UpdateHeadAimDirection();
+
+    // チャージ済みの強化弾を発射する。
     void FireChargedBullet();
+
+    // 頭部位置と照準方向から弾の発射位置を計算する。
     Vector3 CalculateHeadMuzzlePosition() const;
+
+    // 照準方向から頭部モデルの回転角を計算する。
     Vector3 CalculateHeadLookRotation() const;
+
+    // 胴体が破壊された位置に破壊エフェクトを再生する。
     void PlayBodyBreakEffect(const Vector3& position);
+
+    // 頭部で攻撃を防いだ位置にガードエフェクトを再生する。
     void PlayHeadGuardEffect(const Vector3& position);
+
+    // 全胴体破壊後に頭部が弱点化したことを示すエフェクトを再生する。
     void PlayHeadVulnerableEffect(const Vector3& position);
+
+    // 尻尾側から順に部位を爆発させる撃破演出を更新する。
     void UpdateDeathSequence();
+
+    // 全部位の現在HPからボス全体の残りHP割合を計算する。
     float CalculateHealthRate() const;
+
+    // 残りHPに応じた移動・攻撃速度の倍率を計算する。
     float CalculateMovementSpeedRate() const;
+
+    // 生存している胴体部位が1つでもあるかを返す。
     bool HasAliveBodyParts() const;
+
+    // 部位番号がセグメント配列の有効範囲内かを返す。
     bool IsValidSegmentIndex(int32_t partIndex) const;
+
+    // 撃破直後に弾と攻撃状態を停止し、撃破演出を開始する。
     void OnDeath() override;
 
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
     std::vector<Segment> segments_;
-    std::vector<Vector3> headTrail_;
 
     Vector3 startPosition_ = { 0.0f, 0.0f, 0.0f };
 
@@ -94,10 +167,9 @@ private:
     float bulletSpeed_ = 1.05f;
     float activationLeadDistance_ = 160.0f;
     float parallelForwardOffset_ = 52.0f;
-    float headTrailSampleStep_ = 1.2f;
     float enterTimer_ = 0.0f;
     float enterDuration_ = 1.20f;
-    float orbitAngle_ = 2.35f;
+    float orbitAngle_ = 0.0f;
     float movementPatternTimer_ = 0.0f;
     float movementPatternDuration_ = 3.40f;
 
@@ -108,9 +180,9 @@ private:
 
     float headChargeTimer_ = 0.0f;
     float headChargeShotTimer_ = 0.0f;
-    float headChargeCooldownTimer_ = 1.8f;
+    float headChargeCooldownTimer_ = 0.0f;
     float headChargeEffectTimer_ = 0.0f;
-    Vector3 headAimDirection_ = { 0.0f, 0.0f, -1.0f };
+    Vector3 headAimDirection_ = { 0.0f, 0.0f, 0.0f };
 
     bool isParallelStarted_ = false;
     bool vulnerableEffectPlayed_ = false;
