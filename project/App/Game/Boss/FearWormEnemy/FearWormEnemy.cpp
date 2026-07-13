@@ -188,7 +188,7 @@ Vector3 FearWormEnemy::GetPosition() const
 
 void FearWormEnemy::Update()
 {
-    if (isDead_) {
+    if (isDead_) {//死亡時処理
         UpdateDeathSequence();
         UpdateBullets();
         RemoveDeadBullets();
@@ -197,6 +197,8 @@ void FearWormEnemy::Update()
 
     moveTime_ += kFrameTime;
 
+
+
     UpdateMovement();
     UpdateSegments();
     UpdateSegmentObjects();
@@ -204,6 +206,7 @@ void FearWormEnemy::Update()
     UpdateBullets();
     RemoveDeadBullets();
 
+	// HPが0以下になった場合、死亡処理を開始する。
     if (!vulnerableEffectPlayed_ && !HasAliveBodyParts()) {
         vulnerableEffectPlayed_ = true;
         PlayHeadVulnerableEffect(GetPosition());
@@ -216,9 +219,9 @@ void FearWormEnemy::UpdateMovement()
         return;
     }
 
+	
     Vector3 target = startPosition_;
-    float movementSpeedRate =
-        CalculateMovementSpeedRate();
+    float movementSpeedRate =CalculateMovementSpeedRate();
 
     if (player_ != nullptr) {
         Vector3 playerPosition = player_->GetTranslate();
@@ -921,23 +924,17 @@ void FearWormEnemy::RemoveDeadBullets()
 
 void FearWormEnemy::PlayBodyBreakEffect(const Vector3& position)
 {
-    EffectManager::GetInstance()->PlayEffect(
-        "WormBodyBreak",
-        position);
+    EffectManager::GetInstance()->PlayEffect("WormBodyBreak",position);
 }
 
 void FearWormEnemy::PlayHeadGuardEffect(const Vector3& position)
 {
-    EffectManager::GetInstance()->PlayEffect(
-        "WormHeadGuard",
-        position);
+    EffectManager::GetInstance()->PlayEffect("WormHeadGuard",position);
 }
 
 void FearWormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
 {
-    EffectManager::GetInstance()->PlayEffect(
-        "WormHeadVulnerable",
-        position);
+    EffectManager::GetInstance()->PlayEffect("WormHeadVulnerable",position);
 }
 
 void FearWormEnemy::UpdateDeathSequence()
@@ -1004,9 +1001,7 @@ float FearWormEnemy::CalculateHealthRate() const
     }
 
     // 最大HPに対する割合を求め、0～1の範囲に収める。
-    float healthRate =
-        currentHealth /
-        maxHealth;
+    float healthRate =currentHealth /maxHealth;
 
     if (healthRate < 0.0f) {
         healthRate = 0.0f;
@@ -1019,11 +1014,11 @@ float FearWormEnemy::CalculateHealthRate() const
     return healthRate;
 }
 
+
 float FearWormEnemy::CalculateMovementSpeedRate() const
 {
     // HPが減るほど移動と攻撃の速度倍率を上げる。
-    float healthRate =
-        CalculateHealthRate();
+    float healthRate =CalculateHealthRate();
 
     float damageRate =
         1.0f -
