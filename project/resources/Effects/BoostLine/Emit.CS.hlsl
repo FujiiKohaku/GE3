@@ -40,11 +40,16 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float randomLife = 0.85f + Hash(seed * 9.1f + 1.9f) * 0.3f;
     float randomRotation = (Hash(seed * 17.7f + 4.6f) * 2.0f - 1.0f) * 0.06f;
 
+    float32_t t = (float32_t) DTid.x / (float32_t) gEmitter.count;
+    float32_t3 velocity = gEffectSettings.velocity;
+    float32_t dt = gPerFrame.deltaTime * (1.0f - t);
+    float32_t dragFactor = gEffectSettings.enableDrag != 0 ? pow(max(gEffectSettings.drag, 0.0f), dt * 30.0f) : 1.0f;
+
     gParticles[particleIndex].translate =
-        gEmitter.translate +
-        float3(randomX * gEmitter.radius, randomY * gEmitter.radius * 0.6f, randomDepth);
-    gParticles[particleIndex].velocity =
-        gEffectSettings.velocity;
+        lerp(gEmitter.prevTranslate, gEmitter.translate, t) +
+        float3(randomX * gEmitter.radius, randomY * gEmitter.radius * 0.6f, randomDepth) +
+        velocity * dt * dragFactor;
+    gParticles[particleIndex].velocity = velocity;
     gParticles[particleIndex].scale =
         float3(gEffectSettings.startScale * randomScale, gEffectSettings.endScale * randomScale, 1.0f);
     gParticles[particleIndex].lifeTime =

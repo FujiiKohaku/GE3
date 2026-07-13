@@ -2,10 +2,8 @@
 
 #include <memory>
 
-class CopyImageRenderer;
-class FogManager;
-class FogRenderer;
 class OffscreenRenderer;
+class PostEffectManager;
 class SceneManager;
 
 class Renderer {
@@ -20,7 +18,5 @@ public:
 
 private:
     std::unique_ptr<OffscreenRenderer> offscreenRenderer_;
-    std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
-    std::unique_ptr<FogManager> fogManager_;
-    std::unique_ptr<FogRenderer> fogRenderer_;
+    std::unique_ptr<PostEffectManager> postEffectManager_;
 };

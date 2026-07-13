@@ -1,16 +1,23 @@
 {
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+
   "Emitter": {
     "Shape": "Cone",
-    "Count": 896,
+    "Count": 1024,
     "Radius": 0.07,
     "Frequency": 0.001
   },
 
   "Particle": {
-    "LifeTime": 0.38,
+    "LifeTime": 0.20,
 
-    "StartScale": 0.55,
-    "EndScale": 2.25,
+    "StartScale": 0.04,
+    "EndScale": 3.80,
 
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
@@ -36,9 +43,12 @@
   },
 
   "Render": {
-    "Texture": "resources/Effects/Jet/jet.png",
+    "Texture": "resources/Particles/circle.png",
     "MeshType": "Board",
     "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
 
     "Loop": true,
     "Duration": -1.0

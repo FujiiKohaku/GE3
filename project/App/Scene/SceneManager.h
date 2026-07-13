@@ -1,8 +1,17 @@
 #pragma once
 #include "BaseScene.h"
+#include "Engine/Math/MathStruct.h"
 #include <memory>
+#include <vector>
 
 #include "Engine/PostEffect/PostEffectType.h"
+
+struct PostEffectInfo {
+    PostEffectType type = PostEffectType::Copy;
+    bool enabled = true;
+    int priority = 0;
+};
+
 class SceneManager {
 public:
     static SceneManager* GetInstance()
@@ -26,6 +35,15 @@ public:
     // PostEffectTypeのセッターとゲッター
     void SetPostEffectType(PostEffectType postEffectType);
     PostEffectType GetPostEffectType() const;
+    void AddPostEffect(PostEffectType type);
+    void RemovePostEffect(PostEffectType type);
+    void ClearPostEffects();
+    void SetPostEffectEnabled(PostEffectType type, bool enable);
+    const std::vector<PostEffectInfo>& GetPostEffects() const;
+    void SetPostEffectCenter(const Vector2& center);
+    const Vector2& GetPostEffectCenter() const;
+    void SetPostEffectKickStrength(float strength);
+    float GetPostEffectKickStrength() const;
 
 private:
     SceneManager() = default;
@@ -34,6 +52,9 @@ private:
     SceneManager(const SceneManager&) = delete;
     SceneManager& operator=(const SceneManager&) = delete;
     PostEffectType postEffectType_ = PostEffectType::Copy;
+    std::vector<PostEffectInfo> postEffects_;
+    Vector2 postEffectCenter_ = { 0.5f, 0.5f };
+    float postEffectKickStrength_ = 0.0f;
 
 private:
     std::unique_ptr<BaseScene> scene_;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
-#include "Engine/Fog/FogData.h"
+#include "Engine/PostEffect/Fog/FogData.h"
 #include <d3d12.h>
 #include <wrl.h>
 

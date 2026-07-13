@@ -1,4 +1,4 @@
-#include "../Common/Fog.hlsli"
+#include "../../Common/Fog.hlsli"
 
 struct VertexShaderOutput
 {

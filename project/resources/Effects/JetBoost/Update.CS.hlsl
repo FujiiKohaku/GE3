@@ -84,15 +84,16 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             gParticles[particleIndex].currentTime /
             gParticles[particleIndex].lifeTime);
 
+    float scaleRate = lifeRate * lifeRate;
     float scale =
         lerp(
             gEffectSettings.startScale,
             gEffectSettings.endScale,
-            lifeRate);
+            scaleRate);
 
     gParticles[particleIndex].scale =
         float32_t3(
-            scale,
+            scale * 0.7f,
             scale,
             scale);
 

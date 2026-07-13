@@ -2,6 +2,9 @@
 #include "ParticleBoardMesh.h"
 #include "ParticleRingMesh.h"
 #include "ParticleCylinderMesh.h"
+#include "ParticleBoxMesh.h"
+#include "ParticleSphereMesh.h"
+#include "ParticleConeMesh.h"
 #include <memory>
 
 class DirectXCommon;
@@ -12,6 +15,9 @@ public:
         Board,
         Ring,
         Cylinder,
+        Box,
+        Sphere,
+        Cone,
     };
 
 public:
@@ -25,4 +31,7 @@ private:
     std::unique_ptr<ParticleBoardMesh> boardMesh_;
     std::unique_ptr<ParticleRingMesh> ringMesh_;
     std::unique_ptr<ParticleCylinderMesh> cylinderMesh_;
+    std::unique_ptr<ParticleBoxMesh> boxMesh_;
+    std::unique_ptr<ParticleSphereMesh> sphereMesh_;
+    std::unique_ptr<ParticleConeMesh> coneMesh_;
 };

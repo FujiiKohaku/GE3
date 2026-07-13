@@ -22,6 +22,11 @@ public:
         float dissolveEdgeWidth;
         float dissolveEdgeStrength;
         float dissolvePadding;
+
+        float boostKickStrength;
+        float padding0;
+        float padding1;
+        float padding2;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);

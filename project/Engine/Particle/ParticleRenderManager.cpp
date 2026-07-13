@@ -1,22 +1,35 @@
 #include "ParticleRenderManager.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Logger/Logger.h"
+#include "Engine/StringUtility/StringUtility.h"
 #include <cassert>
+#include <filesystem>
 #pragma region
 void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
 {
     dxCommon_ = dxCommon;
 
     CreateRootSignature();
-    CreateGraphicsPipeline();
+    CreateDefaultGraphicsPipelines();
 }
 #pragma endregion
 #pragma region
 void ParticleRenderManager::PreDraw(int blendMode)
 {
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
+    int validBlendMode = blendMode;
+    if (validBlendMode < 0 || validBlendMode >= kCountOfBlendMode) {
+        validBlendMode = kBlendModeAdd;
+    }
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
-    commandList->SetPipelineState(pipelineStates_[blendMode].Get());
+    commandList->SetPipelineState(pipelineStates_[validBlendMode].Get());
+}
+
+void ParticleRenderManager::PreDraw()
+{
+    ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
+    commandList->SetGraphicsRootSignature(rootSignature_.Get());
 }
 #pragma endregion
 #pragma region
@@ -36,7 +49,7 @@ void ParticleRenderManager::CreateRootSignature()
     textureRange.RegisterSpace = 0;
     textureRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[5] = {};
+    D3D12_ROOT_PARAMETER rootParameters[6] = {};
 
     // [0] Material : PS b0
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -64,6 +77,11 @@ void ParticleRenderManager::CreateRootSignature()
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[4].Descriptor.ShaderRegister = 1;
+
+    // [5] Effect render parameters : b2
+    rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[5].Descriptor.ShaderRegister = 2;
 
     D3D12_STATIC_SAMPLER_DESC sampler {};
     sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -106,8 +124,32 @@ void ParticleRenderManager::CreateRootSignature()
 }
 #pragma endregion
 #pragma region
-void ParticleRenderManager::CreateGraphicsPipeline()
+void ParticleRenderManager::CreateDefaultGraphicsPipelines()
 {
+    GraphicsPipelineDesc desc {};
+    desc.effectName = "DefaultParticle";
+    desc.vertexShaderPath = "resources/Shaders/Effects/Common/Particle.VS.hlsl";
+    desc.pixelShaderPath = "resources/Shaders/Effects/Common/Particle.PS.hlsl";
+    desc.depthTest = true;
+    desc.depthWrite = false;
+    desc.cullMode = D3D12_CULL_MODE_NONE;
+
+    for (int blendModeIndex = 0; blendModeIndex < kCountOfBlendMode; blendModeIndex++) {
+        desc.blendMode = static_cast<BlendMode>(blendModeIndex);
+        pipelineStates_[blendModeIndex] = CreateGraphicsPipeline(desc);
+    }
+}
+
+Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphicsPipeline(
+    const GraphicsPipelineDesc& desc)
+{
+    const std::string cacheKey = MakePipelineCacheKey(desc);
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator pipelineIterator =
+        pipelineStateCache_.find(cacheKey);
+    if (pipelineIterator != pipelineStateCache_.end()) {
+        return pipelineIterator->second;
+    }
+
     D3D12_INPUT_ELEMENT_DESC inputElementDescriptions[3] = {};
 
     inputElementDescriptions[0].SemanticName = "POSITION";
@@ -128,19 +170,31 @@ void ParticleRenderManager::CreateGraphicsPipeline()
     inputLayoutDesc.NumElements = _countof(inputElementDescriptions);
 
     D3D12_RASTERIZER_DESC rasterizerDesc {};
-    rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+    rasterizerDesc.CullMode = desc.cullMode;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
-    depthStencilDesc.DepthEnable = TRUE;
+    depthStencilDesc.DepthEnable = FALSE;
+    if (desc.depthTest) {
+        depthStencilDesc.DepthEnable = TRUE;
+    }
     depthStencilDesc.StencilEnable = FALSE;
     depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    if (desc.depthWrite) {
+        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    }
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(
-        L"resources/Shaders/Effects/Common/Particle.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(
-        L"resources/Shaders/Effects/Common/Particle.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = CompileShaderWithLog(
+        desc.effectName,
+        "VS",
+        desc.vertexShaderPath,
+        L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = CompileShaderWithLog(
+        desc.effectName,
+        "PS",
+        desc.pixelShaderPath,
+        L"ps_6_0");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc {};
@@ -156,15 +210,77 @@ void ParticleRenderManager::CreateGraphicsPipeline()
     pipelineStateDesc.SampleDesc.Count = 1;
     pipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pipelineStateDesc.BlendState = CreateBlendDesc(desc.blendMode);
 
-    for (int blendModeIndex = 0; blendModeIndex < (int)BlendMode::kCountOfBlendMode; blendModeIndex++) {
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC currentPipelineStateDesc = pipelineStateDesc;
-        currentPipelineStateDesc.BlendState = CreateBlendDesc((BlendMode)blendModeIndex);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState;
+    HRESULT result = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
+        &pipelineStateDesc,
+        IID_PPV_ARGS(&pipelineState));
+    assert(SUCCEEDED(result));
 
-        HRESULT result = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
-            &currentPipelineStateDesc,
-            IID_PPV_ARGS(&pipelineStates_[blendModeIndex]));
-        assert(SUCCEEDED(result));
+    pipelineStateCache_[cacheKey] = pipelineState;
+    return pipelineState;
+}
+
+Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::CompileShaderWithLog(
+    const std::string& effectName,
+    const std::string& shaderStage,
+    const std::string& shaderPath,
+    const wchar_t* profile)
+{
+    const std::filesystem::path shaderFilePath(shaderPath);
+    const std::filesystem::path fullShaderPath = std::filesystem::absolute(shaderFilePath);
+
+    if (!std::filesystem::is_regular_file(shaderFilePath)) {
+        Logger::Error(
+            "Particle render shader file is missing. Effect:" + effectName +
+            " Stage:" + shaderStage +
+            " Path:" + fullShaderPath.generic_string());
+        assert(false);
+        return nullptr;
     }
+
+    Logger::Log(
+        "Compile particle render shader. Effect:" + effectName +
+        " Stage:" + shaderStage +
+        " Path:" + fullShaderPath.generic_string());
+
+    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob =
+        dxCommon_->CompileShader(StringUtility::ConvertString(shaderPath), profile);
+
+    if (!shaderBlob) {
+        Logger::Error(
+            "Particle render shader compile failed. Effect:" + effectName +
+            " Stage:" + shaderStage +
+            " Path:" + fullShaderPath.generic_string());
+    }
+
+    return shaderBlob;
+}
+
+std::string ParticleRenderManager::MakePipelineCacheKey(const GraphicsPipelineDesc& desc) const
+{
+    std::string cacheKey;
+    cacheKey += desc.vertexShaderPath;
+    cacheKey += "|";
+    cacheKey += desc.pixelShaderPath;
+    cacheKey += "|Blend:";
+    cacheKey += std::to_string(static_cast<int>(desc.blendMode));
+    cacheKey += "|DepthTest:";
+    if (desc.depthTest) {
+        cacheKey += "1";
+    } else {
+        cacheKey += "0";
+    }
+    cacheKey += "|DepthWrite:";
+    if (desc.depthWrite) {
+        cacheKey += "1";
+    } else {
+        cacheKey += "0";
+    }
+    cacheKey += "|Cull:";
+    cacheKey += std::to_string(static_cast<int>(desc.cullMode));
+
+    return cacheKey;
 }
 #pragma endregion

@@ -16,6 +16,10 @@ void NormalBullet::Update()
 void NormalBullet::OnHitEnemy(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect(
-        "HitEffect",
+        "NormalBulletHit",
+        position);
+
+    EffectManager::GetInstance()->PlayEffect(
+        "NormalBulletImpactFlash",
         position);
 }

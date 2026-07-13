@@ -90,6 +90,7 @@ void Player::Update()
     // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
     if (!isDebugMode) {
         UpdateMouseAim();
+        UpdateRolling(input);
         UpdateKeyboardMove(input);
         ClampAimScreenPosition();
     }
@@ -157,7 +158,7 @@ void Player::SetDebugCameraController(DebugCameraController* debugCameraControll
 
 bool Player::ApplyDamage(int damage)
 {
-    if (damage <= 0 || invincibleTimer_ > 0 || currentHp_ <= 0) {
+    if (damage <= 0 || invincibleTimer_ > 0 || isRolling_ || currentHp_ <= 0) {
         return false;
     }
 
@@ -454,6 +455,10 @@ void Player::ApplyTransform()
 
 void Player::UpdateKeyboardMove(Input* input)
 {
+    if (isRolling_) {
+        return;
+    }
+
     Vector3 nextRailOffset = railOffset_;
 
     if (input->IsKeyPressed(DIK_A)) {
@@ -474,6 +479,73 @@ void Player::UpdateKeyboardMove(Input* input)
 
     nextRailOffset.z = 0.0f;
     railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
+}
+
+void Player::UpdateRolling(Input* input)
+{
+    if (rollCooldown_ > 0) {
+        rollCooldown_--;
+    }
+
+    if (isRolling_) {
+        rollTimer_--;
+
+        // 移動
+        Vector3 nextRailOffset = railOffset_;
+        nextRailOffset.x += rollDirection_ * kRollSpeed;
+        railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
+
+        // 自機のZ軸回転（1回転）
+        // 30フレームで360度（2 * PI ラジアン）
+        float progress = static_cast<float>(kRollDuration - rollTimer_) / kRollDuration;
+        
+        // easeInOutSine イージングを適用して重みを表現
+        float easedProgress = 0.5f - 0.5f * std::cos(progress * std::numbers::pi_v<float>);
+        float rollAngle = easedProgress * std::numbers::pi_v<float> * 2.0f;
+
+        // 回転の向きを反転して修正
+        transform_.rotate.z = rollDirection_ * rollAngle;
+
+        if (rollTimer_ <= 0) {
+            isRolling_ = false;
+            transform_.rotate.z = 0.0f;
+            rollCooldown_ = kRollCooldownDuration;
+        }
+    } else {
+        // キータップタイマーの更新
+        if (leftKeyTapTimer_ > 0) {
+            leftKeyTapTimer_--;
+        }
+        if (rightKeyTapTimer_ > 0) {
+            rightKeyTapTimer_--;
+        }
+
+        // ダブルタップの検出（非ローリング中かつクールダウン中でない場合）
+        if (rollCooldown_ <= 0) {
+            // Aキー（左）
+            if (input->IsKeyTrigger(DIK_A)) {
+                if (leftKeyTapTimer_ > 0) {
+                    isRolling_ = true;
+                    rollTimer_ = kRollDuration;
+                    rollDirection_ = -1.0f; // 左
+                    leftKeyTapTimer_ = 0;
+                } else {
+                    leftKeyTapTimer_ = kMaxTapInterval;
+                }
+            }
+            // Dキー（右）
+            if (input->IsKeyTrigger(DIK_D)) {
+                if (rightKeyTapTimer_ > 0) {
+                    isRolling_ = true;
+                    rollTimer_ = kRollDuration;
+                    rollDirection_ = 1.0f; // 右
+                    rightKeyTapTimer_ = 0;
+                } else {
+                    rightKeyTapTimer_ = kMaxTapInterval;
+                }
+            }
+        }
+    }
 }
 
 Vector3 Player::CalculateRailWorldPosition(const Vector3& railOffset) const

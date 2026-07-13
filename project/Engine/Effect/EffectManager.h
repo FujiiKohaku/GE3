@@ -8,6 +8,7 @@
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/blend/BlendUtil.h"
 #include "Engine/math/EngineStruct.h"
+#include "externals/json.hpp"
 
 #include <d3d12.h>
 #include <functional>
@@ -27,12 +28,15 @@ struct EffectData {
     std::string jsonPath;
     std::string emitShaderPath;
     std::string updateShaderPath;
+    std::string vertexShaderPath;
+    std::string pixelShaderPath;
 };
 
 struct ActiveEffect {
     EffectHandle handle = kInvalidEffectHandle;
     std::string effectName;
     Vector3 position;
+    Vector3 prevPosition;
     EffectPositionProvider positionProvider;
     float duration = -1.0f;
     bool isLoop = false;
@@ -75,9 +79,7 @@ public:
 
         return AttachEffect(
             effectName,
-            [target]() {
-                return target->GetTranslate();
-            },
+            std::bind(static_cast<const Vector3& (Target::*)() const>(&Target::GetTranslate), target),
             duration);
     }
 
@@ -141,19 +143,33 @@ private:
         float padding[3] = {};
     };
 
+    struct ParticleRenderParameter {
+        float dissolveThreshold = 0.0f;
+        float emissionStrength = 1.0f;
+        float uvScrollSpeedX = 0.0f;
+        float uvScrollSpeedY = 0.0f;
+    };
+
     struct EffectRuntime {
         EffectData data;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> emitPipelineState;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> updatePipelineState;
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> graphicsPipelineState;
         std::string texturePath = "resources/Particles/circle.png";
+        std::string vertexShaderPath = "resources/Shaders/Effects/Common/Particle.VS.hlsl";
+        std::string pixelShaderPath = "resources/Shaders/Effects/Common/Particle.PS.hlsl";
         ParticleMeshManager::ParticleMeshType meshType = ParticleMeshManager::ParticleMeshType::Board;
         BlendMode blendMode = kBlendModeAdd;
+        bool depthTest = true;
+        bool depthWrite = false;
+        D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
         uint32_t emitCount = 128;
         float emitRadius = 0.2f;
         float emitFrequency = 0.05f;
         float duration = 1.5f;
         bool defaultLoop = false;
         EffectSettings settings;
+        ParticleRenderParameter renderParameter;
     };
 
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
@@ -165,10 +181,12 @@ private:
         Microsoft::WRL::ComPtr<ID3D12Resource> emitterResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> perFrameResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> effectSettingsResource;
+        Microsoft::WRL::ComPtr<ID3D12Resource> renderParameterResource;
 
         EmitterSphere* emitterData = nullptr;
         PerFrame* perFrameData = nullptr;
         EffectSettings* effectSettingsData = nullptr;
+        ParticleRenderParameter* renderParameterData = nullptr;
 
         uint32_t particleUavIndex = kInvalidDescriptorIndex;
         uint32_t particleSrvIndex = kInvalidDescriptorIndex;
@@ -193,7 +211,10 @@ private:
     void WarmUpEffects();
     EffectRuntime CreateEffectRuntime(const EffectData& effectData);
     void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime);
+    void ApplyRenderParameterConfig(const nlohmann::json& config, ParticleRenderParameter& renderParameter);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateComputePipeline(
+        const std::string& effectName,
+        const std::string& shaderStage,
         ID3D12RootSignature* rootSignature,
         const std::string& shaderPath);
 
@@ -234,6 +255,7 @@ private:
     void RemoveDeadEffects();
     void UnmapActiveEffectResource(ActiveEffectResource& resource);
     void ReleaseActiveEffectDescriptors(ActiveEffectResource& resource);
+    void ReleaseActiveEffectDescriptor(uint32_t& descriptorIndex);
     void ReleaseRetiredResources();
 
     void TransitionResource(

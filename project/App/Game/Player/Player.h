@@ -60,7 +60,11 @@ public:
 
     void SetRotate(const Vector3& rotate)
     {
-        transform_.rotate = rotate;
+        transform_.rotate.x = rotate.x;
+        transform_.rotate.y = rotate.y;
+        if (!isRolling_) {
+            transform_.rotate.z = rotate.z;
+        }
     }
 
     void SetScale(const Vector3& scale)
@@ -88,6 +92,11 @@ public:
     bool IsBoosting() const
     {
         return isBoosting_;
+    }
+
+    bool IsRolling() const
+    {
+        return isRolling_;
     }
 
     bool ApplyDamage(int damage);
@@ -126,6 +135,19 @@ private:
 
     bool isDebugMode = false;
     bool isBoosting_ = false;
+
+    // ローリング（バレルロール）用
+    bool isRolling_ = false;
+    int rollTimer_ = 0;
+    int rollCooldown_ = 0;
+    float rollDirection_ = 0.0f;
+    int leftKeyTapTimer_ = 0;
+    int rightKeyTapTimer_ = 0;
+    static constexpr int kMaxTapInterval = 15;
+    static constexpr int kRollDuration = 30;
+    static constexpr int kRollCooldownDuration = 60;
+    static constexpr float kRollSpeed = 0.8f;
+
     int maxHp_ = 5;
     int currentHp_ = maxHp_;
     int invincibleTimer_ = 0;
@@ -170,6 +192,7 @@ private:
     void ApplyTransform();
 
     void UpdateKeyboardMove(Input* input);
+    void UpdateRolling(Input* input);
     void UpdateMouseAim();
     void ClampAimScreenPosition();
     Vector3 CalculateRailWorldPosition(const Vector3& railOffset) const;

@@ -70,7 +70,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float32_t3 random =
         generator.Generate3d() - 0.5f;
 
-    float spread = 0.06f;
+    float spread = 0.25f;
 
     float32_t3 direction =
         normalize(
@@ -109,12 +109,19 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     lifeTime *= randomLife;
 
-    gParticles[particleIndex].translate =
-        gEmitter.translate;
-
-    gParticles[particleIndex].velocity =
+    float32_t t = (float32_t)DTid.x / (float32_t)gEmitter.count;
+    float32_t3 velocity =
         direction * velocityLength +
         gEffectSettings.velocity;
+    float32_t dt = gPerFrame.deltaTime * (1.0f - t);
+    float32_t dragFactor = gEffectSettings.enableDrag != 0 ? pow(max(gEffectSettings.drag, 0.0f), dt * 30.0f) : 1.0f;
+
+    gParticles[particleIndex].translate =
+        lerp(gEmitter.prevTranslate, gEmitter.translate, t) + 
+        MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius) + 
+        velocity * dt * dragFactor;
+
+    gParticles[particleIndex].velocity = velocity;
 
     gParticles[particleIndex].scale =
         float32_t3(
