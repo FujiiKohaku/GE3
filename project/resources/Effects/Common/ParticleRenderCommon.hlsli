@@ -38,4 +38,46 @@ VertexShaderOutput BuildBillboardParticleVertex(VertexShaderInput input, uint32_
     return output;
 }
 
+VertexShaderOutput BuildMeshParticleVertex(VertexShaderInput input, uint32_t instanceId)
+{
+    VertexShaderOutput output;
+
+    ParticleCS particle = gParticles[instanceId];
+
+    float32_t rotationSin = sin(particle.rotation);
+    float32_t rotationCos = cos(particle.rotation);
+
+    float32_t4x4 worldMatrix;
+    worldMatrix[0] = float32_t4(
+        rotationCos * particle.scale.x,
+        rotationSin * particle.scale.x,
+        0.0f,
+        0.0f);
+    worldMatrix[1] = float32_t4(
+        -rotationSin * particle.scale.y,
+        rotationCos * particle.scale.y,
+        0.0f,
+        0.0f);
+    worldMatrix[2] = float32_t4(
+        0.0f,
+        0.0f,
+        particle.scale.z,
+        0.0f);
+    worldMatrix[3] = float32_t4(
+        particle.translate,
+        1.0f);
+
+    float32_t4x4 wvpMatrix = mul(worldMatrix, gPerView.viewProjection);
+    float32_t4 worldPosition = mul(input.position, worldMatrix);
+
+    output.position = mul(input.position, wvpMatrix);
+    output.texcoord = input.texcoord;
+    output.normal = input.normal;
+    output.color = particle.color;
+    output.worldPosition = worldPosition.xyz;
+    output.viewDistance = length(worldPosition.xyz - gPerView.cameraPosition);
+
+    return output;
+}
+
 #endif
