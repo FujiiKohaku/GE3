@@ -3,7 +3,9 @@
 #include "Engine/Logger/Logger.h"
 #include "Engine/StringUtility/StringUtility.h"
 #include <cassert>
+#include <chrono>
 #include <filesystem>
+#include <format>
 #pragma region
 void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -150,6 +152,11 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
         return pipelineIterator->second;
     }
 
+#ifdef _DEBUG
+    const std::chrono::steady_clock::time_point beginTime =
+        std::chrono::steady_clock::now();
+#endif
+
     D3D12_INPUT_ELEMENT_DESC inputElementDescriptions[3] = {};
 
     inputElementDescriptions[0].SemanticName = "POSITION";
@@ -215,6 +222,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
         &pipelineStateDesc,
         IID_PPV_ARGS(&pipelineState));
     assert(SUCCEEDED(result));
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectPSO] {} Render Graphics: {} ms",
+        desc.effectName,
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - beginTime).count()));
+#endif
 
     pipelineStateCache_[cacheKey] = pipelineState;
     return pipelineState;

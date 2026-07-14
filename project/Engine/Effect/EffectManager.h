@@ -62,6 +62,11 @@ public:
 
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
 
+    void BeginWarmUp();
+    void UpdateWarmUp();
+    bool IsWarmUpComplete() const;
+    float GetWarmUpProgress() const;
+
     void RegisterEffect(const EffectData& effectData);
     EffectHandle PlayEffect(const std::string& effectName, const Vector3& position);
     EffectHandle PlayLoopEffect(const std::string& effectName, const Vector3& position, float duration = -1.0f);
@@ -211,7 +216,7 @@ private:
 
 private:
     void RegisterDefaultEffects();
-    void WarmUpEffects();
+    bool WarmUpEffect(const std::string& effectName);
     EffectRuntime CreateEffectRuntime(const EffectData& effectData);
     void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime);
     void ApplyRenderParameterConfig(const nlohmann::json& config, ParticleRenderParameter& renderParameter);
@@ -297,6 +302,10 @@ private:
     std::vector<ActiveEffectResource> activeResources_;
     std::vector<ActiveEffectResource> retiredResources_;
     EffectHandle nextEffectHandle_ = 1;
+
+    std::vector<std::string> warmUpEffectNames_;
+    size_t warmUpEffectIndex_ = 0;
+    bool isWarmUpComplete_ = false;
 
     static constexpr uint32_t kMaxGPUParticle = 1024;
 };

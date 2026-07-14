@@ -7,9 +7,11 @@
 #include "externals/json.hpp"
 
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <format>
 
 std::unique_ptr<EffectManager> EffectManager::instance_ = nullptr;
 
@@ -181,6 +183,12 @@ EffectManager* EffectManager::GetInstance()
 
 void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
+#ifdef _DEBUG
+    const std::chrono::steady_clock::time_point initializeBeginTime =
+        std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point phaseBeginTime = initializeBeginTime;
+#endif
+
     dxCommon_ = dxCommon;
     srvManager_ = srvManager;
     camera_ = camera;
@@ -188,8 +196,24 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
     particleRenderManager_ = std::make_unique<ParticleRenderManager>();
     particleRenderManager_->Initialize(dxCommon_);
 
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectInit] ParticleRenderManager: {} ms",
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - phaseBeginTime).count()));
+    phaseBeginTime = std::chrono::steady_clock::now();
+#endif
+
     particleMeshManager_ = std::make_unique<ParticleMeshManager>();
     particleMeshManager_->Initialize(dxCommon_);
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectInit] ParticleMeshManager: {} ms",
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - phaseBeginTime).count()));
+    phaseBeginTime = std::chrono::steady_clock::now();
+#endif
 
     CreateMaterialResource();
     CreatePerViewResource();
@@ -199,8 +223,31 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
     CreateEmitRootSignature();
     CreateUpdateRootSignature();
 
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectInit] Common resources and root signatures: {} ms",
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - phaseBeginTime).count()));
+    phaseBeginTime = std::chrono::steady_clock::now();
+#endif
+
     RegisterDefaultEffects();
-    WarmUpEffects();
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectInit] Register {} effects: {} ms",
+        effects_.size(),
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - phaseBeginTime).count()));
+    phaseBeginTime = std::chrono::steady_clock::now();
+#endif
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectInit] Total: {} ms",
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - initializeBeginTime).count()));
+#endif
 }
 
 void EffectManager::RegisterDefaultEffects()
@@ -242,28 +289,78 @@ void EffectManager::RegisterEffect(const EffectData& effectData)
     effects_[effectData.effectName] = CreateEffectRuntime(effectData);
 }
 
-void EffectManager::WarmUpEffects()
+void EffectManager::BeginWarmUp()
 {
-    if (effects_.empty()) {
+    if (isWarmUpComplete_ || !warmUpEffectNames_.empty()) {
         return;
     }
 
+    warmUpEffectNames_.reserve(effects_.size());
+    for (const auto& [effectName, runtime] : effects_) {
+        (void)runtime;
+        warmUpEffectNames_.push_back(effectName);
+    }
+    warmUpEffectIndex_ = 0;
+    isWarmUpComplete_ = warmUpEffectNames_.empty();
+}
+
+void EffectManager::UpdateWarmUp()
+{
+    if (isWarmUpComplete_) {
+        return;
+    }
+    if (warmUpEffectNames_.empty()) {
+        BeginWarmUp();
+    }
+    if (warmUpEffectIndex_ >= warmUpEffectNames_.size()) {
+        isWarmUpComplete_ = true;
+        return;
+    }
+
+    const std::string& effectName = warmUpEffectNames_[warmUpEffectIndex_];
+    if (!WarmUpEffect(effectName)) {
+        Logger::Log(std::format("[EffectWarmUp] Failed: {}", effectName));
+    }
+    ++warmUpEffectIndex_;
+
+    if (warmUpEffectIndex_ >= warmUpEffectNames_.size()) {
+        isWarmUpComplete_ = true;
+        Logger::Log(std::format("[EffectWarmUp] Completed: {} effects", warmUpEffectNames_.size()));
+    }
+}
+
+bool EffectManager::IsWarmUpComplete() const
+{
+    return isWarmUpComplete_;
+}
+
+float EffectManager::GetWarmUpProgress() const
+{
+    if (isWarmUpComplete_) {
+        return 1.0f;
+    }
+    if (warmUpEffectNames_.empty()) {
+        return 0.0f;
+    }
+    return static_cast<float>(warmUpEffectIndex_) / static_cast<float>(warmUpEffectNames_.size());
+}
+
+bool EffectManager::WarmUpEffect(const std::string& effectName)
+{
     const Vector3 warmUpPosition = { 0.0f, -10000.0f, 0.0f };
     const float warmUpDuration = deltaTime_ * 3.0f;
-
-    for (const std::pair<const std::string, EffectRuntime>& effect : effects_) {
-        const EffectHandle handle = StartEffect(effect.first, warmUpPosition, false, warmUpDuration, nullptr);
-        if (handle == kInvalidEffectHandle) {
-            continue;
-        }
-
-        const size_t activeEffectIndex = FindActiveEffectIndex(handle);
-        if (activeEffectIndex == static_cast<size_t>(-1)) {
-            continue;
-        }
-
-        UpdateActiveEffect(activeEffectIndex);
+    const EffectHandle handle = StartEffect(effectName, warmUpPosition, false, warmUpDuration, nullptr);
+    if (handle == kInvalidEffectHandle) {
+        return false;
     }
+
+    const size_t activeEffectIndex = FindActiveEffectIndex(handle);
+    if (activeEffectIndex == static_cast<size_t>(-1)) {
+        return false;
+    }
+
+    UpdateActiveEffect(activeEffectIndex);
+    return true;
 }
 
 EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData& effectData)
@@ -483,6 +580,11 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
     ID3D12RootSignature* rootSignature,
     const std::string& shaderPath)
 {
+#ifdef _DEBUG
+    const std::chrono::steady_clock::time_point beginTime =
+        std::chrono::steady_clock::now();
+#endif
+
     const std::filesystem::path shaderFilePath(shaderPath);
     const std::filesystem::path fullShaderPath = std::filesystem::absolute(shaderFilePath);
     if (!std::filesystem::is_regular_file(shaderFilePath)) {
@@ -514,6 +616,15 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
         &pipelineStateDesc,
         IID_PPV_ARGS(&pipelineState));
     assert(SUCCEEDED(hr));
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectPSO] {} {} Compute: {} ms",
+        effectName,
+        shaderStage,
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - beginTime).count()));
+#endif
 
     return pipelineState;
 }

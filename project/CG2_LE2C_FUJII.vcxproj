@@ -166,6 +166,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="App\Scene\LoadingScene.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
@@ -393,6 +394,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\StringUtility\StringUtility.h" />
     <ClInclude Include="Engine\TextureManager\TextureManager.h" />
     <ClInclude Include="App\Scene\TitleScene.h" />
+    <ClInclude Include="App\Scene\LoadingScene.h" />
     <ClInclude Include="Engine\Winapp\Utility.h" />
     <ClInclude Include="Engine\math\MatrixMath.h" />
     <ClInclude Include="Engine\Winapp\WinApp.h" />

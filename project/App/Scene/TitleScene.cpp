@@ -1,7 +1,13 @@
 #include "TitleScene.h"
+#include "Engine/2D/SpriteManager.h"
+#include "Engine/3D/ModelManager.h"
+#include "Engine/3D/Object3dManager.h"
+#include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
-#include "GamePlayScene.h"
+#include "LoadingScene.h"
+
+#include <numbers>
 void TitleScene::Initialize()
 {
     camera_ = std::make_unique<Camera>();
@@ -43,7 +49,7 @@ void TitleScene::Update()
 {
     if (Input::GetInstance()->IsKeyPressed(DIK_SPACE)) {
 
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>());
     }
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_L)) {
