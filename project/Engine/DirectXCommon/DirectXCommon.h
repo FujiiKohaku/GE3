@@ -48,7 +48,8 @@ public:
         return kSwapChainBufferCount;
     }
 
-    Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& filepath, const wchar_t* profile);
+    // HLSLのパスから対応するコンパイル済みDXILを読み込む。
+    Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShader(const std::wstring& hlslPath);
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, const DirectX::TexMetadata& metadata);
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages);
@@ -119,6 +120,4 @@ private:
     D3D12_RECT scissorRect {};
 
     Microsoft::WRL::ComPtr<IDxcUtils> dxcUtils;
-    Microsoft::WRL::ComPtr<IDxcCompiler3> dxcCompiler;
-    Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler;
 };

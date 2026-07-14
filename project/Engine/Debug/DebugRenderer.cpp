@@ -271,11 +271,11 @@ void DebugRenderer::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/Debug/DebugLine.VS.hlsl", L"vs_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/Debug/DebugLine.VS.hlsl");
     Microsoft::WRL::ComPtr<IDxcBlob> geometryShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/Debug/DebugLine.GS.hlsl", L"gs_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/Debug/DebugLine.GS.hlsl");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/Debug/DebugLine.PS.hlsl", L"ps_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/Debug/DebugLine.PS.hlsl");
     assert(vertexShaderBlob && geometryShaderBlob && pixelShaderBlob);
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc {};

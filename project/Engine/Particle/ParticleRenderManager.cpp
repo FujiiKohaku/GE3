@@ -185,16 +185,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     }
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = CompileShaderWithLog(
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = LoadCompiledShaderWithLog(
         desc.effectName,
         "VS",
-        desc.vertexShaderPath,
-        L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = CompileShaderWithLog(
+        desc.vertexShaderPath);
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = LoadCompiledShaderWithLog(
         desc.effectName,
         "PS",
-        desc.pixelShaderPath,
-        L"ps_6_0");
+        desc.pixelShaderPath);
     assert(vertexShaderBlob && pixelShaderBlob);
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc {};
@@ -222,11 +220,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     return pipelineState;
 }
 
-Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::CompileShaderWithLog(
+Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::LoadCompiledShaderWithLog(
     const std::string& effectName,
     const std::string& shaderStage,
-    const std::string& shaderPath,
-    const wchar_t* profile)
+    const std::string& shaderPath)
 {
     const std::filesystem::path shaderFilePath(shaderPath);
     const std::filesystem::path fullShaderPath = std::filesystem::absolute(shaderFilePath);
@@ -241,16 +238,16 @@ Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::CompileShaderWithLog(
     }
 
     Logger::Log(
-        "Compile particle render shader. Effect:" + effectName +
+        "Load particle render shader. Effect:" + effectName +
         " Stage:" + shaderStage +
         " Path:" + fullShaderPath.generic_string());
 
     Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob =
-        dxCommon_->CompileShader(StringUtility::ConvertString(shaderPath), profile);
+        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));
 
     if (!shaderBlob) {
         Logger::Error(
-            "Particle render shader compile failed. Effect:" + effectName +
+            "Particle render shader load failed. Effect:" + effectName +
             " Stage:" + shaderStage +
             " Path:" + fullShaderPath.generic_string());
     }

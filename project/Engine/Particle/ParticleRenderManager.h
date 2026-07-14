@@ -35,11 +35,10 @@ public:
 private:
     void CreateRootSignature();
     void CreateDefaultGraphicsPipelines();
-    Microsoft::WRL::ComPtr<IDxcBlob> CompileShaderWithLog(
+    Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShaderWithLog(
         const std::string& effectName,
         const std::string& shaderStage,
-        const std::string& shaderPath,
-        const wchar_t* profile);
+        const std::string& shaderPath);
     std::string MakePipelineCacheKey(const GraphicsPipelineDesc& desc) const;
 
 

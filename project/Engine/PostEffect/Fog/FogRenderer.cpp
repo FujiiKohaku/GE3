@@ -162,9 +162,9 @@ void FogRenderer::CreatePipelineState()
     ID3D12Device* device = dxCommon_->GetDevice();
 
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/PostEffect/Fog/Fog.VS.hlsl", L"vs_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fog/Fog.VS.hlsl");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/PostEffect/Fog/DistanceFog.PS.hlsl", L"ps_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fog/DistanceFog.PS.hlsl");
 
     D3D12_RASTERIZER_DESC rasterizerDesc = {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;

@@ -107,9 +107,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
 
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(pixelShaderPath, L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->LoadCompiledShader(pixelShaderPath);
 
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;

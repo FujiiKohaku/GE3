@@ -185,8 +185,8 @@ void SpriteManager::CreateGraphicsPipeline()
     // ------------------------------
     // シェーダーコンパイル
     // ------------------------------
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Sprite/Sprite.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Sprite/Sprite.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Sprite/Sprite.VS.hlsl");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Sprite/Sprite.PS.hlsl");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ------------------------------

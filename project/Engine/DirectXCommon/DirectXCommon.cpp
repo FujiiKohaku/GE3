@@ -5,8 +5,26 @@
 #include "Engine/Winapp/WinApp.h"
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <filesystem>
 #include <format>
+#include <stdexcept>
 #include <wrl.h>
+
+namespace {
+std::filesystem::path MakeCompiledShaderPath(const std::filesystem::path& hlslPath)
+{
+    const std::filesystem::path resourcesRoot = "resources";
+    std::filesystem::path relativePath = hlslPath.lexically_relative(resourcesRoot);
+
+    if (relativePath.empty() || relativePath.native().starts_with(L"..")) {
+        return {};
+    }
+
+    std::filesystem::path compiledPath = resourcesRoot / "CompiledShaders" / relativePath;
+    compiledPath.replace_extension(".dxil");
+    return compiledPath;
+}
+}
 
 std::unique_ptr<DirectXCommon> DirectXCommon::instance_ = nullptr;
 // Singleton Instance
@@ -387,15 +405,7 @@ void DirectXCommon::InitializeScissorRect()
 #pragma region
 void DirectXCommon::InitializeDxcCompiler()
 {
-    HRESULT hr;
-
-    hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-    assert(SUCCEEDED(hr));
-    hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
-    assert(SUCCEEDED(hr));
-
-    // 現時点でincludeはしないがincludeに対応するための設定を行っておく
-    hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
+    HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
@@ -488,73 +498,55 @@ void DirectXCommon::SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHan
 }
 #pragma endregion
 #pragma region
-Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring& filepath, const wchar_t* profile)
+Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath)
 {
-    // 1.hlslファイルを読み込む02_00
-    Logger::Log(StringUtility::ConvertString(std::format(L"Begin CompileShader,path:{},profike:{}\n", filepath, profile))); // これからシェーダーをコンパイルする旨をログに出す
-    // hlslファイルを読む
-    Microsoft::WRL::ComPtr<IDxcBlobEncoding> shaderSource = nullptr;
-    HRESULT hr = dxcUtils->LoadFile(filepath.c_str(), nullptr, &shaderSource);
-    assert(SUCCEEDED(hr)); // 読めなかったら止める
-    // 読み込んだファイルの内容を設定する
-    DxcBuffer shaderSourceBuffer;
-    shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
-    shaderSourceBuffer.Size = shaderSource->GetBufferSize();
-    shaderSourceBuffer.Encoding = DXC_CP_UTF8; // UTF8の文字コードであることを通知
-    // 2.Compileする
-#ifdef _DEBUG
-    LPCWSTR arguments[] = {
-        filepath.c_str(),
-        L"-E", L"main",
-        L"-T", profile,
-        L"-Zi",
-        L"-Qembed_debug",
-        L"-Od",
-        L"-Zpr"
-    };
-#else
-    LPCWSTR arguments[] = {
-        filepath.c_str(),
-        L"-E", L"main",
-        L"-T", profile,
-        L"-O3",
-        L"-Zpr"
-    };
-#endif
-    // 実際にShaderをコンパイルする
-    Microsoft::WRL::ComPtr<IDxcResult> shaderResult = nullptr;
-    hr = dxcCompiler->Compile(
+    const std::filesystem::path sourcePath(hlslPath);
+    const std::filesystem::path compiledPath = MakeCompiledShaderPath(sourcePath);
 
-        &shaderSourceBuffer, // 読み込んだファイル
-        arguments, // コンパイルオプション02_00
-        _countof(arguments), // コンパイルオプションの数02_00
-        includeHandler.Get(), // includeが含まれた諸々02_00
-        IID_PPV_ARGS(&shaderResult) // コンパイル結果02_00
-    );
-    // コンパイルエラーではなくdxcが起動できないなど致命的な状況02_00
-    assert(SUCCEEDED(hr));
-    // 3.警告、エラーが出ていないか確認する02_00
-    // 警告.エラーが出ていたらログに出して止める02_00
-    IDxcBlobUtf8* shaderError = nullptr;
-    shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
-    if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
-        Logger::Log(shaderError->GetStringPointer());
-        // 警告、エラーダメ絶対02_00
-        assert(false);
+    if (compiledPath.empty()) {
+        const std::string message =
+            "Could not convert HLSL path to DXIL path. HLSL:" +
+            StringUtility::ConvertString(hlslPath);
+        Logger::Error(message);
+        throw std::runtime_error(message);
     }
-    // 4.Compile結果を受け取って返す02_00
-    // コンパイル結果から実行用のバイナリ部分を取得02_00
-    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob = nullptr;
-    hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob),nullptr);
-    assert(SUCCEEDED(hr));
-    // 成功したログを出す02_00
-    Logger::Log(StringUtility::ConvertString(std::format(L"Compile Succeeded, path:{}, profike:{}\n ",filepath, profile)));
 
-    // 実行用のバイナリを返却02_00
+    if (!std::filesystem::is_regular_file(compiledPath)) {
+        const std::string message =
+            "Compiled shader file is missing. HLSL:" + sourcePath.generic_string() +
+            " DXIL:" + std::filesystem::absolute(compiledPath).generic_string() +
+            " Run a project build to generate the DXIL file.";
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlobEncoding> shaderBinary;
+    HRESULT hr = dxcUtils->LoadFile(compiledPath.c_str(), nullptr, &shaderBinary);
+    if (FAILED(hr) || !shaderBinary) {
+        const std::string message =
+            "Failed to load compiled shader. HLSL:" + sourcePath.generic_string() +
+            " DXIL:" + std::filesystem::absolute(compiledPath).generic_string() +
+            " HRESULT:" + std::to_string(static_cast<unsigned long>(hr));
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob;
+    hr = shaderBinary.As(&shaderBlob);
+    if (FAILED(hr) || !shaderBlob) {
+        const std::string message =
+            "Failed to access compiled shader data. DXIL:" +
+            std::filesystem::absolute(compiledPath).generic_string();
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Logger::Log(
+        "Loaded compiled shader. HLSL:" + sourcePath.generic_string() +
+        " DXIL:" + compiledPath.generic_string());
     return shaderBlob;
 }
-#pragma endregion
-#pragma region
+
 // バッファリソース生成関数
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_t sizeInBytes)
 {

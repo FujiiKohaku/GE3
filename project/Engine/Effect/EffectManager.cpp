@@ -495,11 +495,12 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
     }
 
     Logger::Log(
-        "Compile effect compute shader. Effect:" + effectName +
+        "Load effect compute shader. Effect:" + effectName +
         " Stage:" + shaderStage +
         " Path:" + fullShaderPath.generic_string());
 
-    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(StringUtility::ConvertString(shaderPath),L"cs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob =
+        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));
 
     assert(computeShaderBlob);
 

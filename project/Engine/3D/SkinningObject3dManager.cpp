@@ -235,8 +235,8 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== ・ｽV・ｽF・ｽ[・ｽ_・ｽ[・ｽﾌコ・ｽ・ｽ・ｽp・ｽC・ｽ・ｽ ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/SkinningObject3d.PS.hlsl", L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Object3D/Object3d.VS.hlsl");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Object3D/SkinningObject3d.PS.hlsl");
     assert(vertexShaderBlob && pixelShaderBlob);
 
     // ====== PSO・ｽﾝ抵ｿｽ ======
@@ -361,7 +361,7 @@ void SkinningObject3dManager::CreateComputePipeline()
 {
     HRESULT hr;
 
-    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Skinning.CS.hlsl", L"cs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Object3D/Skinning.CS.hlsl");
     assert(computeShaderBlob);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
