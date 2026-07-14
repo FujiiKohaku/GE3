@@ -607,6 +607,34 @@ bool EffectManager::StopEffect(EffectHandle handle)
     return true;
 }
 
+void EffectManager::StopAllEffects()
+{
+    if (activeResources_.empty() && retiredResources_.empty()) {
+        activeEffects_.clear();
+        return;
+    }
+
+    // 直前のフレームでGPUが参照している可能性があるため、解放前に完了を待つ。
+    // EffectManager本体は破棄しないので、シェーダーやPSOは次のシーンでも再利用できる。
+    if (dxCommon_ != nullptr) {
+        dxCommon_->WaitForGPU();
+    }
+
+    for (ActiveEffectResource& resource : activeResources_) {
+        UnmapActiveEffectResource(resource);
+        ReleaseActiveEffectDescriptors(resource);
+    }
+
+    for (ActiveEffectResource& resource : retiredResources_) {
+        UnmapActiveEffectResource(resource);
+        ReleaseActiveEffectDescriptors(resource);
+    }
+
+    activeEffects_.clear();
+    activeResources_.clear();
+    retiredResources_.clear();
+}
+
 bool EffectManager::IsEffectAlive(EffectHandle handle) const
 {
     return FindActiveEffectIndex(handle) != static_cast<size_t>(-1);

@@ -37,6 +37,7 @@
 #include "Engine/D3DResourceLeakChecker/D3DResourceLeakChecker.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/input/Input.h"

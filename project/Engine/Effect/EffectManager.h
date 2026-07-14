@@ -91,6 +91,9 @@ public:
 
     bool SetEffectPosition(EffectHandle handle, const Vector3& position);
     bool StopEffect(EffectHandle handle);
+    // シーンに属する再生中エフェクトだけを停止する。
+    // シェーダーやパイプラインなどの共通リソースは保持する。
+    void StopAllEffects();
     bool IsEffectAlive(EffectHandle handle) const;
 
     void Update();

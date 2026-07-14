@@ -92,6 +92,13 @@ void Game::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
 
+    // エフェクトのシェーダーとパイプラインはゲーム起動時に一度だけ作成する。
+    // 使用するカメラは各シーンのInitializeで設定する。
+    EffectManager::GetInstance()->Initialize(
+        DirectXCommon::GetInstance(),
+        SrvManager::GetInstance(),
+        nullptr);
+
     Profiler::GetInstance()->GetBootProfiler()->Begin("Scene");
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
     Profiler::GetInstance()->GetBootProfiler()->End("Scene");
@@ -185,6 +192,8 @@ void Game::Finalize()
     UnlockCursor(); // カーソルをウィンドウに固定解除
     ShowCursor(TRUE);
     SceneManager::GetInstance()->Finalize();
+    // EffectManagerの共通リソースはゲーム終了時にだけ破棄する。
+    EffectManager::Finalize();
     ImGuiManager::GetInstance()->Finalize();
     renderer_.reset();
 

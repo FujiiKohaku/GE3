@@ -140,7 +140,9 @@ void GamePlayScene::Initialize()
     // =================================================
     // Managers
     // =================================================
-    EffectManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_.get());
+    // EffectManager本体はゲーム起動時に初期化済みなので、
+    // このシーンで使用するカメラだけを設定する。
+    EffectManager::GetInstance()->SetCamera(camera_.get());
     // =================================================
     // SkinningObject3d
     // =================================================
@@ -1164,13 +1166,13 @@ void GamePlayScene::Finalize()
     CollisionManager::GetInstance()->SetEnemies(nullptr);
     ResetGameplayPostEffects();
 
-    EffectManager::GetInstance()->StopEffect(playerJetHandle_);
+    // シーン内で再生していたエフェクトだけを停止する。
+    // シェーダーやパイプラインは次回のゲームシーンで再利用する。
+    EffectManager::GetInstance()->StopAllEffects();
+    EffectManager::GetInstance()->SetCamera(nullptr);
     playerJetHandle_ = kInvalidEffectHandle;
-    EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
     playerJetSparkHandle_ = kInvalidEffectHandle;
-    EffectManager::GetInstance()->StopEffect(boostLineHandle_);
     boostLineHandle_ = kInvalidEffectHandle;
-    EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
