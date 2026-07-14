@@ -1,6 +1,7 @@
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
+#include "App/Game/Enemy/Bullet/TrackingEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
@@ -35,6 +36,11 @@ constexpr float kTailScale = 2.15f;
 constexpr float kCollisionRadiusScale = 0.90f;
 constexpr float kInitialHeadChargeCooldown = 1.80f;
 constexpr Vector3 kDefaultHeadAimDirection = { 0.0f, 0.0f, -1.0f };
+
+// 追尾ミサイル攻撃用の定数
+constexpr float kMissileAttackInterval = 18.0f;  // ミサイル攻撃の間隔（秒）
+constexpr float kMissileAimWaitDuration = 2.0f;   // 整列完了（前準備）を待つ時間（秒）
+constexpr float kMissileFireInterval = 0.45f;    // ミサイルの発射間隔（秒）
 
 constexpr float kOrbitAngularSpeed = 1.15f;
 constexpr float kFallbackMoveXFrequency = 1.00f;
@@ -168,6 +174,16 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     headChargeEffectTimer_ = 0.0f;
     headChargeShotCount_ = 0;
     headAimDirection_ = kDefaultHeadAimDirection;
+
+    // 追尾ミサイル関連の初期化
+    missileAttackTimer_ = 0.0f;
+    isMissileAttackActive_ = false;
+    missilePhaseTimer_ = 0.0f;
+    hasFiredMissiles_ = false;
+    isFiringMissilesSequence_ = false;
+    missileFireTimer_ = 0.0f;
+    missileShotCount_ = 0;
+    missileTargetIndices_.clear();
     // 全セグメントを基準位置から後方へ等間隔に並べる。
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
         float offset = segmentSpacing_ * static_cast<float>(index);
@@ -292,6 +308,84 @@ void FearWormEnemy::UpdateBattle()
     // 回転角度の更新
     orbitAngle_ += kFrameTime * kOrbitAngularSpeed * movementSpeedRate;
 
+    // ミサイル攻撃の進行管理（準備と発射シーケンスの制御）
+    if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
+        missileAttackTimer_ += kFrameTime;
+        if (missileAttackTimer_ >= kMissileAttackInterval) {
+            isMissileAttackActive_ = true;
+            hasFiredMissiles_ = false;
+            missilePhaseTimer_ = 0.0f;
+            movementPattern_ = MovementPattern::Line;
+            // 進行中のチャージ攻撃があればキャンセルする
+            if (isHeadChargeActive_) {
+                FinishHeadChargeAttack();
+            }
+        }
+    } else if (isMissileAttackActive_) {
+        // Line状態（前準備・チャージ警告演出）
+        missilePhaseTimer_ += kFrameTime;
+        if (missilePhaseTimer_ >= kMissileAimWaitDuration) {
+            // Line準備完了！発射シーケンスを開始する（Line状態・移動パターンは維持）
+            isMissileAttackActive_ = false;
+
+            // 生存しているセグメントのインデックスをリストアップ
+            missileTargetIndices_.clear();
+            std::vector<size_t> aliveIndices;
+            for (size_t index = 0; index < segments_.size(); ++index) {
+                if (segments_[index].isAlive) {
+                    aliveIndices.push_back(index);
+                }
+            }
+
+            if (!aliveIndices.empty()) {
+                isFiringMissilesSequence_ = true;
+                missileFireTimer_ = kMissileFireInterval; // 最初は即座に撃ち出すようにタイマーを満たす
+                missileShotCount_ = 0;
+
+                if (aliveIndices.size() <= 3) {
+                    missileTargetIndices_ = aliveIndices;
+                } else {
+                    missileTargetIndices_.push_back(aliveIndices.front());
+                    missileTargetIndices_.push_back(aliveIndices[aliveIndices.size() / 2]);
+                    missileTargetIndices_.push_back(aliveIndices.back());
+                }
+            } else {
+                // 生存セグメントがない（通常はあり得ないが安全のため）
+                movementPattern_ = MovementPattern::Orbit;
+                movementPatternTimer_ = 0.0f;
+                missileAttackTimer_ = 0.0f;
+            }
+        }
+    }
+
+    // 時間差ミサイル発射シーケンスの実行（Line状態のまま実行される）
+    if (isFiringMissilesSequence_ && player_ != nullptr && bulletModel_ != nullptr) {
+        missileFireTimer_ += kFrameTime;
+        int32_t maxShots = static_cast<int32_t>(missileTargetIndices_.size());
+
+        if (missileShotCount_ < maxShots) {
+            // 発射フェーズ
+            if (missileFireTimer_ >= kMissileFireInterval) {
+                missileFireTimer_ = 0.0f;
+                size_t segmentIndex = missileTargetIndices_[missileShotCount_];
+                if (segmentIndex < segments_.size() && segments_[segmentIndex].isAlive) {
+                    FireSingleMissile(segmentIndex);
+                }
+                missileShotCount_++;
+            }
+        } else {
+            // 撃ち終わった後の硬直フェーズ（隙を見せる）
+            constexpr float kMissilePostFireCooldown = 1.8f; // 撃ち終わった後の隙（秒）
+            if (missileFireTimer_ >= kMissilePostFireCooldown) {
+                // 硬直終了！通常状態に戻り、Orbitへ復帰
+                isFiringMissilesSequence_ = false;
+                missileAttackTimer_ = 0.0f;
+                movementPattern_ = MovementPattern::Orbit;
+                movementPatternTimer_ = 0.0f;
+            }
+        }
+    }
+
     // 戦闘目的地を計算
     Vector3 target = CalculateBattleTarget(playerPosition, movementSpeedRate);
 
@@ -299,8 +393,10 @@ void FearWormEnemy::UpdateBattle()
     segments_[0].position = Lerp(segments_[0].position, target, moveSpeed_ * movementSpeedRate);
     transform_.translate = segments_[0].position;
 
-    // 攻撃処理の実行
-    Attack();
+    // 攻撃処理の実行（ミサイル準備中および発射中は通常/チャージ攻撃を行わない）
+    if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
+        Attack();
+    }
 }
 
 Vector3 FearWormEnemy::CalculateFallbackTarget()
@@ -418,11 +514,25 @@ Vector3 FearWormEnemy::CalculateMovementTargetPosition(const Vector3& playerPosi
         return CalculateDriftTargetPosition(playerPosition);
     }
 
+    if (movementPattern_ == MovementPattern::Line) {
+        // プレイヤーの正面やや前方の左上に頭部を配置する（体はそこから左側に並ぶ）
+        Vector3 result = playerPosition;
+        result.x += 20.0f; // 遠くなるため、右寄せのオフセットも少し広げる
+        result.y += 3.0f;  // 高度を下げて、ミサイルが真上に上がっていく軌道を見えやすくする
+        result.z += parallelForwardOffset_ + 75.0f; // より遠く (画面奥) に配置
+        return result;
+    }
+
     return CalculateOrbitTargetPosition(playerPosition);
 }
 
 void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
 {
+    // ミサイル専用のLineパターンのときは、自動で次の移動パターンに切り替えない
+    if (movementPattern_ == MovementPattern::Line) {
+        return;
+    }
+
     movementPatternTimer_ += kFrameTime * movementSpeedRate;
 
     if (movementPatternTimer_ < movementPatternDuration_) { // 時間に達していない場合はリターンする
@@ -468,6 +578,31 @@ void FearWormEnemy::SetupEntryPosition(const Vector3& playerPosition)
 void FearWormEnemy::UpdateSegments()
 {
     if (segments_.empty()) {
+        return;
+    }
+
+    if (movementPattern_ == MovementPattern::Line) {
+        // Lineパターンのときは、頭部の左側（X軸マイナス方向）に等間隔でLerp整列させる（うねうね効果を追加、破壊部位の隙間を詰める）
+        int32_t aliveOrder = 0;
+        for (size_t index = 1; index < segments_.size(); index = index + 1) {
+            Segment& segment = segments_[index];
+            if (!segment.isAlive) {
+                continue;
+            }
+            aliveOrder++;
+
+            // 時間経過とうねりの周期・振幅
+            float waveScaleY = 3.2f;
+            float waveScaleZ = 2.0f;
+            float waveFrequency = 4.2f;
+
+            Vector3 targetPos = {
+                segments_[0].position.x - (segmentSpacing_ * static_cast<float>(aliveOrder)),
+                segments_[0].position.y + std::sin(moveTime_ * waveFrequency + static_cast<float>(aliveOrder) * 0.8f) * waveScaleY,
+                segments_[0].position.z + std::cos(moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(aliveOrder) * 0.6f) * waveScaleZ
+            };
+            segment.position = Lerp(segment.position, targetPos, 0.18f); // 滑らかに整列・うねうねさせる
+        }
         return;
     }
 
@@ -1102,4 +1237,24 @@ void FearWormEnemy::OnDeath()
     // 落下中にクルクルと回転させる回転速度を設定
     deathRotation_ = { 1.8f, 2.5f, 0.8f };
     currentDeathRotation_ = segments_[0].object->GetRotate();
+}
+
+void FearWormEnemy::FireSingleMissile(size_t segmentIndex)
+{
+    if (player_ == nullptr || bulletModel_ == nullptr) {
+        return;
+    }
+
+    std::unique_ptr<TrackingEnemyBullet> bullet = std::make_unique<TrackingEnemyBullet>();
+    bullet->Initialize(bulletModel_);
+    bullet->SetPlayer(player_);
+
+    // 発射座標を設定
+    bullet->SetTranslate(segments_[segmentIndex].position);
+
+    // 発射エフェクトの再生
+    EffectManager::GetInstance()->PlayEffect("WormShotFlash", segments_[segmentIndex].position);
+
+    // ボスの弾リストに追加
+    enemyBullets_.push_back(std::move(bullet));
 }

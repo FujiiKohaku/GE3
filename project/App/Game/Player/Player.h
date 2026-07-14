@@ -148,7 +148,7 @@ private:
     static constexpr int kRollCooldownDuration = 60;
     static constexpr float kRollSpeed = 0.8f;
 
-    int maxHp_ = 5;
+    int maxHp_ = 20;
     int currentHp_ = maxHp_;
     int invincibleTimer_ = 0;
     static constexpr int kInvincibleFrames = 60;

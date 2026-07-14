@@ -56,6 +56,7 @@ private:
         Coil,
         Weave,
         Drift,
+        Line,
     };
 
     struct Segment {
@@ -118,6 +119,9 @@ private:
 
     // 指定位置からプレイヤー方向へ通常弾を発射する。
     void FireBullet(const Vector3& position);
+
+    // 指定部位から追尾ミサイルを1発撃ち上げる。
+    void FireSingleMissile(size_t segmentIndex);
 
     // チャージ、連射、クールダウンの状態を更新する。
     void UpdateHeadChargeAttack(float attackSpeedRate);
@@ -209,6 +213,18 @@ private:
     int32_t nextDeathSegmentIndex_ = -1;
     MovementPattern movementPattern_ = MovementPattern::Orbit;
     BossState state_ = BossState::Wait;
+
+    // 追尾ミサイル攻撃用のタイマー・フラグ
+    float missileAttackTimer_ = 0.0f;
+    bool isMissileAttackActive_ = false;
+    float missilePhaseTimer_ = 0.0f;
+    bool hasFiredMissiles_ = false;
+
+    // 時間差ミサイル発射用
+    bool isFiringMissilesSequence_ = false;
+    float missileFireTimer_ = 0.0f;
+    int32_t missileShotCount_ = 0;
+    std::vector<size_t> missileTargetIndices_;
 
     // 死亡演出（落下）用のパラメータ
     Vector3 deathVelocity_ = { 0.0f, 0.0f, 0.0f };      // 落下速度ベクトル

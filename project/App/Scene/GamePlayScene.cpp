@@ -933,6 +933,24 @@ void GamePlayScene::DrawImGui()
     ImGui::DragFloat("Height Follow Factor", &cameraHeightFollowFactor_, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Look Up Factor", &cameraLookUpFactor_, 0.01f, 0.0f, 2.0f);
     ImGui::End();
+
+    ImGui::Begin("Debug Teleport Menu");
+    if (activeBoss_) {
+        ImGui::Text("Boss Z: %.2f", activeBoss_->GetPosition().z);
+        if (ImGui::Button("Teleport to Boss")) {
+            float bossZ = activeBoss_->GetPosition().z;
+            railDistance_ = bossZ - 130.0f;
+            if (railDistance_ < 0.0f) {
+                railDistance_ = 0.0f;
+            }
+        }
+    } else {
+        ImGui::Text("Boss has not spawned yet.");
+        if (ImGui::Button("Warp to Boss Area (Trigger Spawn)")) {
+            railDistance_ = 1750.0f;
+        }
+    }
+    ImGui::End();
 #endif
 }
 
@@ -1107,6 +1125,35 @@ void GamePlayScene::CheckCollision()
                 }
                 enemyBullet->SetDead();
                 // 1発の弾で複数回ダメージを受けないように、当たったらすぐに弾を無効化する
+            }
+        }
+    }
+
+    // ボスの弾とプレイヤーの当たり判定
+    if (activeBoss_ && !activeBoss_->IsDead()) {
+        for (const std::unique_ptr<EnemyBullet>& enemyBullet : activeBoss_->GetBullets()) {
+            if (!enemyBullet->IsAlive()) {
+                continue;
+            }
+
+            Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
+            float distance = Vector3Length(difference);
+            float collisionRadius = enemyBullet->GetCollisionRadius();
+
+            if (distance <= collisionRadius) {
+                OutputDebugStringA("BossBullet Hit Player\n");
+
+                enemyBullet->OnHitPlayer(player_->GetTranslate());
+
+                if (player_->ApplyDamage(enemyBullet->GetDamage())) {
+                    EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
+
+                    if (player_->IsDead()) {
+                        ResetGameplayPostEffects();
+                        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+                    }
+                }
+                enemyBullet->SetDead();
             }
         }
     }
