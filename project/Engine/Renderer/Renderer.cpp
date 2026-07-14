@@ -11,6 +11,7 @@
 #include "Engine/PostEffect/OffscreenRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/SrvManager/SrvManager.h"
+#include "Engine/TextureManager/TextureManager.h"
 #include "Engine/input/Input.h"
 
 Renderer::Renderer() = default;
@@ -41,6 +42,9 @@ void Renderer::DrawImGui()
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    // シーンやモデルが予約したテクスチャ転送を、描画前に一度だけまとめて実行する。
+    TextureManager::GetInstance()->FlushUploads();
+
     // SRV heap setup
     SrvManager::GetInstance()->PreDraw();
 

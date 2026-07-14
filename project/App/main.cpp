@@ -24,16 +24,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     game.Initialize();
 
 #ifdef _DEBUG
-    const std::chrono::steady_clock::time_point startupEndTime =
-        std::chrono::steady_clock::now();
-    const long long startupMilliseconds =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            startupEndTime - startupBeginTime)
-            .count();
-
-    Logger::Log(
-        "[StartupTime] Application start to Game::Initialize complete: " +
-        std::to_string(startupMilliseconds) + " ms");
+    bool hasLoggedStartupTime = false;
 #endif
 
     MSG msg {};
@@ -51,6 +42,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
         game.Update();
         game.Draw();
+
+#ifdef _DEBUG
+        if (!hasLoggedStartupTime) {
+            const long long startupMilliseconds =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - startupBeginTime)
+                    .count();
+
+            Logger::Log(
+                "[StartupTime] Application start to first frame presented: " +
+                std::to_string(startupMilliseconds) + " ms");
+            hasLoggedStartupTime = true;
+        }
+#endif
     }
 
     Logger::Log("Game Finalize");

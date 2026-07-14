@@ -1,4 +1,5 @@
 ﻿#include "TextureManager.h"
+#include <chrono>
 #include <format>
 
 std::unique_ptr<TextureManager> TextureManager::instance = nullptr;
@@ -24,6 +25,8 @@ void TextureManager::Finalize()
     if (!instance) {
         return;
     }
+
+    instance->FlushUploads();
 
     textureDatas.clear();
     dxCommon_ = nullptr;
@@ -93,12 +96,11 @@ void TextureManager::LoadTexture(const std::string& filePath)
 
     // 繝・け繧ｹ繝√Ε繝ｪ繧ｽ繝ｼ繧ｹ逕滓・
     textureData.resource = dxCommon_->CreateTextureResource(dxCommon_->GetDevice(), textureData.metadata);
-    Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = dxCommon_->UploadTextureData(textureData.resource, mipImages);
+    Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource =
+        dxCommon_->UploadTextureData(textureData.resource, mipImages);
 
-    // 繧ｳ繝槭Φ繝蛾∽ｿ｡
-    dxCommon_->GetCommandList()->Close();
-    ID3D12CommandList* lists[] = { dxCommon_->GetCommandList() };
-    dxCommon_->GetCommandQueue()->ExecuteCommandLists(_countof(lists), lists);
+    // 描画開始前にまとめて転送するため、それまでは一時リソースを保持する。
+    pendingUploadResources_.push_back(std::move(intermediateResource));
 
     // SRV繧､繝ｳ繝・ャ繧ｯ繧ｹ險育ｮ・
     uint32_t srvIndex = static_cast<uint32_t>(textureDatas.size() - 1) + kSRVIndexTop;
@@ -126,12 +128,74 @@ void TextureManager::LoadTexture(const std::string& filePath)
 
     dxCommon_->GetDevice()->CreateShaderResourceView(textureData.resource.Get(), &srvDesc, textureData.srvHandleCPU);
 
-    // GPU蠕・ｩ滂ｼ・・蛻ｩ逕ｨ貅門ｙ
-    dxCommon_->WaitForGPU();
-    dxCommon_->GetCommandAllocator()->Reset();
-    dxCommon_->GetCommandList()->Reset(dxCommon_->GetCommandAllocator(), nullptr);
-
     Logger::Log(std::format("srvIndex = {}", srvIndex));
+}
+
+void TextureManager::FlushUploads()
+{
+    if (pendingUploadResources_.empty()) {
+        return;
+    }
+
+    if (dxCommon_ == nullptr) {
+        Logger::Error("Texture upload flush failed: DirectXCommon is not initialized.");
+        return;
+    }
+
+#ifdef _DEBUG
+    const std::chrono::steady_clock::time_point beginTime =
+        std::chrono::steady_clock::now();
+#endif
+
+    const size_t uploadCount = pendingUploadResources_.size();
+    HRESULT hr = dxCommon_->GetCommandList()->Close();
+    if (FAILED(hr)) {
+        Logger::Error(
+            std::format(
+                "Texture upload flush failed while closing the command list. HRESULT:{}",
+                static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+    ID3D12CommandList* commandLists[] = { dxCommon_->GetCommandList() };
+    dxCommon_->GetCommandQueue()->ExecuteCommandLists(_countof(commandLists), commandLists);
+    dxCommon_->WaitForGPU();
+
+    // GPU転送完了後にアップロード用リソースを解放する。
+    pendingUploadResources_.clear();
+
+    hr = dxCommon_->GetCommandAllocator()->Reset();
+    if (FAILED(hr)) {
+        Logger::Error(
+            std::format(
+                "Texture upload flush failed while resetting the command allocator. HRESULT:{}",
+                static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+    hr = dxCommon_->GetCommandList()->Reset(dxCommon_->GetCommandAllocator(), nullptr);
+    if (FAILED(hr)) {
+        Logger::Error(
+            std::format(
+                "Texture upload flush failed while resetting the command list. HRESULT:{}",
+                static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+#ifdef _DEBUG
+    const long long elapsedMilliseconds =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - beginTime)
+            .count();
+    Logger::Log(
+        std::format(
+            "[TextureUpload] Flushed {} textures in {} ms",
+            uploadCount,
+            elapsedMilliseconds));
+#endif
 }
 
 //=================================================================

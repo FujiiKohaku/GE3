@@ -20,6 +20,8 @@ public:
     // 初期化・読み込み
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager);
     void LoadTexture(const std::string& filePath);
+    // 保留中のテクスチャ転送をまとめてGPUへ送る。
+    void FlushUploads();
 
     // 取得
     uint32_t GetTextureIndexByFilePath(const std::string& filePath);
@@ -66,6 +68,9 @@ private:
     static const uint32_t kMaxSRVCount = 512;
 
     uint32_t defaultTextureSrvIndex_ = 0;
+
+    // GPU転送が完了するまでアップロード用リソースを保持する。
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> pendingUploadResources_;
 
     static std::unique_ptr<TextureManager> instance;
 };
