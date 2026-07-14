@@ -8,6 +8,13 @@ class Player;
 
 class FearWormEnemy : public BaseEnemy {
 public:
+    enum class BossState {
+        Wait,    // プレイヤーを待つ待機状態
+        Entry,   // 登場演出状態 (Lerpによるスライドイン)
+        Battle,  // 通常戦闘状態 (行動切り替えと攻撃)
+        Dead     // 撃破演出状態
+    };
+
     void Initialize(
         Model* model,
         Model* bulletModel,
@@ -40,6 +47,9 @@ public:
     // 無効な攻撃を受けた頭部のガード演出を再生する。
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
+    // 現在の状態を取得する
+    BossState GetBossState() const { return state_; }
+
 private:
     enum class MovementPattern {
         Orbit, 
@@ -62,10 +72,12 @@ private:
     // 頭部、胴体、尻尾の各セグメントを生成する。
     void InitializeSegments(Model* model);
 
-    // 現在の移動パターンに従って頭部を移動させる。
-    void UpdateMovement();
+    // 各状態の更新関数
+    void UpdateWait();
+    void UpdateEntry();
+    void UpdateBattle();
 
-    // 生存中の胴体を1つ前の部位から一定距離に配置する。
+    // 生存している胴体を1つ前の部位から一定距離に配置する。
     void UpdateSegments();
 
     // 各セグメントの色、拡縮、回転、座標を描画用オブジェクトへ反映する。
@@ -98,8 +110,8 @@ private:
     // 経過時間に応じて次の移動パターンへ切り替える。
     void UpdateMovementPattern(float movementSpeedRate);
 
-    // ボス戦開始時の登場状態と頭部位置を設定する。
-    void StartOrbitEntry(const Vector3& playerPosition);
+    // ボス戦開始時の登場位置と状態のセットアップを行う。
+    void SetupEntryPosition(const Vector3& playerPosition);
 
     // 通常弾とチャージ攻撃の発射タイミングを更新する。
     void Attack() override;
@@ -155,6 +167,11 @@ private:
     // 撃破直後に弾と攻撃状態を停止し、撃破演出を開始する。
     void OnDeath() override;
 
+    // 各状態（フェーズ）の目的地を計算するヘルパー関数
+    Vector3 CalculateFallbackTarget();                                      // プレイヤー不在時の目的地
+    Vector3 CalculateEntryTarget(const Vector3& playerPosition);             // 登場演出中の目的地
+    Vector3 CalculateBattleTarget(const Vector3& playerPosition, float rate);// 戦闘中の目的地
+
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
@@ -184,7 +201,6 @@ private:
     float headChargeEffectTimer_ = 0.0f;
     Vector3 headAimDirection_ = { 0.0f, 0.0f, 0.0f };
 
-    bool isParallelStarted_ = false;
     bool vulnerableEffectPlayed_ = false;
     bool isHeadChargeActive_ = false;
     bool isHeadChargeFiring_ = false;
@@ -192,4 +208,10 @@ private:
     float deathSequenceTimer_ = 0.0f;
     int32_t nextDeathSegmentIndex_ = -1;
     MovementPattern movementPattern_ = MovementPattern::Orbit;
+    BossState state_ = BossState::Wait;
+
+    // 死亡演出（落下）用のパラメータ
+    Vector3 deathVelocity_ = { 0.0f, 0.0f, 0.0f };      // 落下速度ベクトル
+    Vector3 deathRotation_ = { 0.0f, 0.0f, 0.0f };      // 落下中の回転速度ベクトル
+    Vector3 currentDeathRotation_ = { 0.0f, 0.0f, 0.0f };// 現在の回転角
 };
