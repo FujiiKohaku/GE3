@@ -91,22 +91,22 @@ private:
     void RemoveDeadBullets();
 
     // プレイヤーを基準に登場開始位置を計算する。
-    Vector3 CalculateEntryStartPosition(const Vector3& playerPosition) const;
+    Vector3 EntryStartPosition(const Vector3& playerPosition) const;
 
     // プレイヤー周辺を旋回する目標位置を計算する。
-    Vector3 CalculateOrbitTargetPosition(const Vector3& playerPosition) const;
+    Vector3 OrbitTargetPosition(const Vector3& playerPosition) const;
 
     // プレイヤー周辺を巻くように動く目標位置を計算する。
-    Vector3 CalculateCoilTargetPosition(const Vector3& playerPosition) const;
+    Vector3 CoilTargetPosition(const Vector3& playerPosition) const;
 
     // 上下左右へ波打つ目標位置を計算する。
-    Vector3 CalculateWeaveTargetPosition(const Vector3& playerPosition) const;
+    Vector3 WeaveTargetPosition(const Vector3& playerPosition) const;
 
     // 緩やかに漂う目標位置を計算する。
-    Vector3 CalculateDriftTargetPosition(const Vector3& playerPosition) const;
+    Vector3 DriftTargetPosition(const Vector3& playerPosition) const;
 
     // 現在選択中の移動パターンに対応する目標位置を返す。
-    Vector3 CalculateMovementTargetPosition(const Vector3& playerPosition) const;
+    Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
 
     // 経過時間に応じて次の移動パターンへ切り替える。
     void UpdateMovementPattern(float movementSpeedRate);
@@ -139,10 +139,10 @@ private:
     void FireChargedBullet();
 
     // 頭部位置と照準方向から弾の発射位置を計算する。
-    Vector3 CalculateHeadMuzzlePosition() const;
+    Vector3 HeadMuzzlePosition() const;
 
     // 照準方向から頭部モデルの回転角を計算する。
-    Vector3 CalculateHeadLookRotation() const;
+    Vector3 HeadLookRotation() const;
 
     // 胴体が破壊された位置に破壊エフェクトを再生する。
     void PlayBodyBreakEffect(const Vector3& position);
@@ -157,10 +157,10 @@ private:
     void UpdateDeathSequence();
 
     // 全部位の現在HPからボス全体の残りHP割合を計算する。
-    float CalculateHealthRate() const;
+    float HealthRate() const;
 
     // 残りHPに応じた移動・攻撃速度の倍率を計算する。
-    float CalculateMovementSpeedRate() const;
+    float MovementSpeedRate() const;
 
     // 生存している胴体部位が1つでもあるかを返す。
     bool HasAliveBodyParts() const;
@@ -172,9 +172,9 @@ private:
     void OnDeath() override;
 
     // 各状態（フェーズ）の目的地を計算するヘルパー関数
-    Vector3 CalculateFallbackTarget();                                      // プレイヤー不在時の目的地
-    Vector3 CalculateEntryTarget(const Vector3& playerPosition);             // 登場演出中の目的地
-    Vector3 CalculateBattleTarget(const Vector3& playerPosition, float rate);// 戦闘中の目的地
+    Vector3 FallbackTarget();                                      // プレイヤー不在時の目的地
+    Vector3 EntryTarget(const Vector3& playerPosition);             // 登場演出中の目的地
+    Vector3 BattleTarget(const Vector3& playerPosition, float rate);// 戦闘中の目的地
 
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;

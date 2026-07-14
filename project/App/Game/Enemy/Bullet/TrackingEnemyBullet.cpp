@@ -4,13 +4,14 @@
 #include <cmath>
 
 namespace {
-constexpr float kLaunchDuration = 0.75f;     // 打ち上げフェーズの時間（秒）
-constexpr float kLaunchUpSpeed = 1.35f;      // 打ち上げ時の初期上方向速度（減速させていく）
+constexpr float kLaunchDuration = 0.45f;     // 打ち上げフェーズの時間（秒）
+constexpr float kLaunchUpSpeed = 0.55f;      // ボスの体から見える程度に短く打ち上げる
 constexpr float kMissileStartSpeed = 0.15f;  // 追尾開始時の初速
 constexpr float kMissileMaxSpeed = 1.35f;    // 追尾時の最高速度
 constexpr float kAccelDuration = 1.50f;      // 最高速度に達するまでの加速時間（秒）
 constexpr float kTrackingRate = 0.050f;      // 追尾旋回率
 constexpr float kTrackingDuration = 1.50f;   // 追尾する最大時間（秒）
+constexpr float kPassCheckDelay = 0.25f;     // プレイヤー方向へ向き直るまで通過判定を待つ
 }
 
 void TrackingEnemyBullet::Initialize(Model* model)
@@ -62,8 +63,10 @@ void TrackingEnemyBullet::Move()
                 trackingTimer_ += 1.0f / 60.0f;
 
                 float dot = Dot(NormalizeSafe(toPlayer), NormalizeSafe(velocity_));
-                // すれ違ったか、あるいは最大追尾時間を経過したら外れたとみなす
-                if (dot < 0.0f || trackingTimer_ >= kTrackingDuration) {
+                // 打ち上げ直後の上向き速度を「通過した」と誤判定しないよう、
+                // プレイヤー方向へ向き直る時間を確保してから通過判定を行う。
+                bool hasPassedPlayer = trackingTimer_ >= kPassCheckDelay && dot < 0.0f;
+                if (hasPassedPlayer || trackingTimer_ >= kTrackingDuration) {
                     isPassed_ = true;
                     isTracking_ = false;
                 }
