@@ -372,6 +372,18 @@ void GamePlayScene::Update()
         isBossSpawned_ = true;
     }
 
+    // プレイヤーのHP減少検知による被弾カメラシェイク
+    if (player_) {
+        static int lastPlayerHp = player_->GetCurrentHp();
+        int currentPlayerHp = player_->GetCurrentHp();
+        if (currentPlayerHp < lastPlayerHp) {
+            cameraShakeTime_ = 0.35f;
+            cameraShakeDuration_ = 0.35f;
+            cameraShakeIntensity_ = 0.6f;
+        }
+        lastPlayerHp = currentPlayerHp;
+    }
+
     // ボスの更新
     if (activeBoss_) {
         bool wasMadMode = activeBoss_->IsMadModeActive();
@@ -383,6 +395,15 @@ void GamePlayScene::Update()
             cameraShakeTime_ = 7.0f;
             cameraShakeDuration_ = 7.0f;
             cameraShakeIntensity_ = 0.8f;
+        }
+
+        // ビーム被弾中のカメラ微振動
+        if (activeBoss_->IsBeamHittingPlayer()) {
+            if (cameraShakeTime_ < 0.1f || cameraShakeIntensity_ < 0.15f) {
+                cameraShakeTime_ = 0.1f;
+                cameraShakeDuration_ = 0.1f;
+                cameraShakeIntensity_ = 0.15f;
+            }
         }
     }
 

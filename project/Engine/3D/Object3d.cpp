@@ -60,7 +60,13 @@ void Object3d::Update()
         localMatrix = animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
     }
 
-    worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
+    if (useCustomWorldMatrix_) {
+        worldMatrix_ = customWorldMatrix_;
+    } else if (useQuaternionRotation_) {
+        worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, quaternionRotation_, transform.translate));
+    } else {
+        worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
+    }
 
     Matrix4x4 worldViewProjectionMatrix;
 

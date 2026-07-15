@@ -50,6 +50,7 @@ public:
     // 現在の状態を取得する
     BossState GetBossState() const { return state_; }
     bool IsMadModeActive() const { return isMadModeActive_; }
+    bool IsBeamHittingPlayer() const { return isBeamHittingPlayer_; }
 
 private:
     enum class MovementPattern {
@@ -272,5 +273,7 @@ private:
     float beamCurrentLength_ = 0.0f;
     float beamCurrentWidth_ = 0.0f;
     float beamRotateTheta_ = 0.0f;
+    bool isBeamHittingPlayer_ = false;
+    float beamEffectTimer_ = 0.0f;
 };
 

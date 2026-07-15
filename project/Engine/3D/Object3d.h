@@ -30,9 +30,11 @@ public:
     // setter
     void SetModel(Model* model) { model_ = model; }
     // === setter ===
-    void SetScale(const Vector3& scale) { transform.scale = scale; }
-    void SetRotate(const Vector3& rotate) { transform.rotate = rotate; }
-    void SetTranslate(const Vector3& translate) { transform.translate = translate; }
+    void SetScale(const Vector3& scale) { transform.scale = scale; useCustomWorldMatrix_ = false; }
+    void SetRotate(const Vector3& rotate) { transform.rotate = rotate; useQuaternionRotation_ = false; useCustomWorldMatrix_ = false; }
+    void SetRotateQuaternion(const Quaternion& rotate) { quaternionRotation_ = rotate; useQuaternionRotation_ = true; useCustomWorldMatrix_ = false; }
+    void SetTranslate(const Vector3& translate) { transform.translate = translate; useCustomWorldMatrix_ = false; }
+    void SetCustomWorldMatrix(const Matrix4x4& matrix) { customWorldMatrix_ = matrix; useCustomWorldMatrix_ = true; }
     void SetModel(const std::string& filePath);
     void SetCamera(Camera* camera) { camera_ = camera; }
 
@@ -124,6 +126,12 @@ private:
     // Transform
     EulerTransform transform;
     EulerTransform cameraTransform;
+
+    Quaternion quaternionRotation_ = { 0.0f, 0.0f, 0.0f, 1.0f };
+    bool useQuaternionRotation_ = false;
+
+    Matrix4x4 customWorldMatrix_ = {};
+    bool useCustomWorldMatrix_ = false;
 
     // カメラ
     Camera* camera_ = nullptr;

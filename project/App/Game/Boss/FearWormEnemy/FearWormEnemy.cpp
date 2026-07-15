@@ -431,7 +431,15 @@ void FearWormEnemy::UpdateBattle()
     Vector3 target = BattleTarget(playerPosition, movementSpeedRate);
 
     // 移動処理
-    segments_[0].position = Lerp(segments_[0].position, target, moveSpeed_ * movementSpeedRate);
+    // 頭だけかつビーム発射フェーズ（Charge, Fire, FadeOut）のときは、X・Y軸の移動のみ静止し、Z軸の前進は維持する
+    bool isBeamActive = !HasAliveBodyParts() && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut);
+    if (isBeamActive) {
+        // Z座標のみ追従前進させる (floatのLerp)
+        float t = moveSpeed_ * movementSpeedRate;
+        segments_[0].position.z = segments_[0].position.z + (target.z - segments_[0].position.z) * t;
+    } else {
+        segments_[0].position = Lerp(segments_[0].position, target, moveSpeed_ * movementSpeedRate);
+    }
     transform_.translate = segments_[0].position;
 
     // 攻撃処理の実行
@@ -1409,7 +1417,7 @@ void FearWormEnemy::UpdateSpiralBarrage()
     Vector3 right = NormalizeSafe(Cross(tempUp, toPlayer));
     Vector3 up = NormalizeSafe(Cross(toPlayer, right));
 
-    float spread = 0.4f; // プレイヤーの周囲へ回る螺旋の広がり幅
+    float spread = (std::sin(barrageAngle_ * 2.5f) * 0.22f) + 0.22f; // 0.0(正確に狙う)〜0.44(周囲に拡散)を変動させる
     constexpr float kPi = 3.1415926535f;
 
     // プレイヤー方向を軸とした直交平面上で対角線上に広がる2つの螺旋オフセットベクトル
@@ -1472,7 +1480,7 @@ void FearWormEnemy::UpdateBeamAttack()
     beamTimer_ += deltaTime;
 
     // UVスクロールオフセットを更新
-    constexpr float kUVScrollSpeed = -2.5f; // 流れる速度（負の値で前方向へ流す）
+    constexpr float kUVScrollSpeed = -6.5f; // より高速に流す
     beamUVScrollOffset_ += kUVScrollSpeed * deltaTime;
     if (beamUVScrollOffset_ < -1.0f) {
         beamUVScrollOffset_ += 1.0f;
@@ -1486,7 +1494,7 @@ void FearWormEnemy::UpdateBeamAttack()
     }
 
     // ビームの自転角度を更新
-    constexpr float kRotateSpeed = 6.0f;
+    constexpr float kRotateSpeed = 45.0f; // 高速自転（うねりの表現を強化）
     beamRotateTheta_ += kRotateSpeed * deltaTime;
     constexpr float kPi = 3.1415926535f;
     if (beamRotateTheta_ > kPi * 2.0f) {
@@ -1518,6 +1526,9 @@ void FearWormEnemy::UpdateBeamAttack()
             }
             beamState_ = BeamState::Charge;
             beamTimer_ = 0.0f;
+            beamEffectTimer_ = 0.0f; // エフェクトタイマーリセット
+            // 予兆開始時に、照準方向をプレイヤーの位置へ即座にリセットする
+            headAimDirection_ = NormalizeSafe(playerPos - headPos);
             // 予兆エフェクトを再生
             EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
         }
@@ -1528,19 +1539,22 @@ void FearWormEnemy::UpdateBeamAttack()
             beamCurrentLength_ = 0.0f;
             beamCurrentWidth_ = 0.0f;
 
-            // 予兆中エイム：かなり強力に追従
+            // 予兆中エイム：ボスが静止した状態できれいに狙いを定める
             Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
-            constexpr float kChargeAimFollowRate = 0.18f; // 強めの追従
+            constexpr float kChargeAimFollowRate = 0.08f; // 正確な追従
             headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kChargeAimFollowRate));
 
-            // 予兆エフェクトの点滅的な演出
-            if (std::fmod(beamTimer_, 0.25f) < 0.06f) {
+            // 予兆エフェクトの点滅的な演出 (多重生成を防ぐためタイマー制御)
+            beamEffectTimer_ += deltaTime;
+            if (beamEffectTimer_ >= 0.25f) {
+                beamEffectTimer_ = 0.0f;
                 EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
             }
 
             if (beamTimer_ >= kChargeDuration) {
                 beamState_ = BeamState::Fire;
                 beamTimer_ = 0.0f;
+                beamEffectTimer_ = 0.0f; // エフェクトタイマーリセット
                 // 照射開始時にマズルフラッシュ
                 EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
             }
@@ -1554,16 +1568,18 @@ void FearWormEnemy::UpdateBeamAttack()
             beamCurrentLength_ = (std::min)(kMaxBeamLength, beamCurrentLength_ + 1000.0f * deltaTime);
             beamCurrentWidth_ = 3.5f; // ビームの太さ
 
-            // 照射中エイム：緩やかに追従（逃げる隙を与えるため、追従速度を遅めにする）
+            // 照射中エイム：プレイヤーがダッシュ等で避けることができる程度にゆっくり追従
             Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
-            constexpr float kFireAimFollowRate = 0.025f; // 遅めの追従
+            constexpr float kFireAimFollowRate = 0.015f; // 回避可能なゆっくりとした追従
             headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kFireAimFollowRate));
 
             // 衝突判定
             CheckBeamCollision();
 
-            // 定期的にマズルエフェクト
-            if (std::fmod(beamTimer_, 0.2f) < 0.06f) {
+            // 定期的にマズルエフェクト (多重生成を防ぐためタイマー制御)
+            beamEffectTimer_ += deltaTime;
+            if (beamEffectTimer_ >= 0.2f) {
+                beamEffectTimer_ = 0.0f;
                 EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
             }
 
@@ -1591,13 +1607,30 @@ void FearWormEnemy::UpdateBeamAttack()
         break;
     }
 
-    // Planeオブジェクトの座標、回転、スケールを更新
-    Vector3 beamRot = HeadLookRotation(); // 照準方向からの回転角を取得
+    // ビーム用アフィン行列を直接計算してセットする
+    // 1. スケール行列
+    Matrix4x4 matScale = MatrixMath::Matrix4x4MakeScaleMatrix({ beamCurrentWidth_, beamCurrentWidth_, beamCurrentLength_ });
 
-    // ビーム用クロスPlaneの更新（Z軸が長さ、X/Yが太さ）
-    beamPlane_->SetTranslate(headPos);
-    beamPlane_->SetRotate({ beamRot.x, beamRot.y, beamRot.z + beamRotateTheta_ });
-    beamPlane_->SetScale({ beamCurrentWidth_, beamCurrentWidth_, beamCurrentLength_ });
+    // 2. 自転回転行列 (Z軸ロール)
+    Matrix4x4 matRoll = MatrixMath::MakeRotateZMatrix(beamRotateTheta_);
+
+    // 3. 射出方向回転行列 (オイラー角のピッチとヨーから合成：ヨーのあとにピッチを適用)
+    Vector3 beamRot = HeadLookRotation();
+    Matrix4x4 matPitch = MatrixMath::MakeRotateXMatrix(beamRot.x);
+    Matrix4x4 matYaw = MatrixMath::MakeRotateYMatrix(beamRot.y);
+    Matrix4x4 matLook = MatrixMath::Multiply(matYaw, matPitch);
+
+    // 4. 自転と射出回転の合成 (先に自転を適用し、その後に射出方向を向かせる)
+    Matrix4x4 matRot = MatrixMath::Multiply(matRoll, matLook);
+
+    // 5. 平行移動行列
+    Matrix4x4 matTrans = MatrixMath::MakeTranslateMatrix(headPos);
+
+    // 6. アフィン行列の合成 (Scale -> Rotate -> Translate)
+    Matrix4x4 worldMat = MatrixMath::Multiply(MatrixMath::Multiply(matScale, matRot), matTrans);
+
+    // 7. ワールド行列を直接設定
+    beamPlane_->SetCustomWorldMatrix(worldMat);
     beamPlane_->Update();
 }
 
@@ -1613,13 +1646,19 @@ void FearWormEnemy::DrawBeam()
 
     if (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut) {
         if (beamPlane_) {
+            // 加算ブレンドを適用して、黒背景を透過させ発光感を出す
+            Object3dManager::GetInstance()->SetBlendMode(kBlendModeAdd);
             beamPlane_->Draw();
+            // 通常ブレンドに戻す
+            Object3dManager::GetInstance()->SetBlendMode(kBlendModeNormal);
         }
     }
 }
 
 void FearWormEnemy::CheckBeamCollision()
 {
+    isBeamHittingPlayer_ = false; // 毎フレーム初期化
+
     if (player_ == nullptr || beamCurrentLength_ <= 0.0f || beamCurrentWidth_ <= 0.0f) {
         return;
     }
@@ -1656,10 +1695,13 @@ void FearWormEnemy::CheckBeamCollision()
     float hitRadiusSq = hitRadius * hitRadius;
 
     if (distanceSq <= hitRadiusSq) {
+        isBeamHittingPlayer_ = true; // プレイヤーへの接触状態をON
+
         constexpr int kBeamDamage = 1;
-        if (player_->ApplyDamage(kBeamDamage)) {
-            EffectManager::GetInstance()->PlayEffect("DamageHit", playerPos);
-        }
+        player_->ApplyDamage(kBeamDamage); // HP減少は無敵時間が適用される
+
+        // 無敵時間に関わらず、接触している間は毎フレーム被弾火花エフェクトを発生させる
+        EffectManager::GetInstance()->PlayEffect("DamageHit", playerPos);
     }
 }
 
