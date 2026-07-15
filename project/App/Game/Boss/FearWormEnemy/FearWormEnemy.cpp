@@ -1308,10 +1308,13 @@ bool FearWormEnemy::IsValidSegmentIndex(int32_t partIndex) const
 
 void FearWormEnemy::OnDeath()
 {
-    // 弾と攻撃状態をクリア
+    // 弾と攻撃状態をクリア (ビームも強制消去)
     enemyBullets_.clear();
     isHeadChargeActive_ = false;
     isHeadChargeFiring_ = false;
+    beamState_ = BeamState::Wait;
+    beamCurrentLength_ = 0.0f;
+    beamCurrentWidth_ = 0.0f;
     isDeathSequenceFinished_ = false;
     deathSequenceTimer_ = 0.0f;
 
@@ -1753,8 +1756,14 @@ void FearWormEnemy::CheckBeamCollision()
         constexpr int kBeamDamage = 1;
         player_->ApplyDamage(kBeamDamage); // HP減少は無敵時間が適用される
 
-        // 無敵時間に関わらず、接触している間は毎フレーム被弾火花エフェクトを発生させる
-        EffectManager::GetInstance()->PlayEffect("DamageHit", playerPos);
+        // 無敵時間に関わらず、接触している間は被弾火花エフェクトを3フレームに1回に間引いて発生させる (FPS低下防止)
+        beamHitEffectFrameCount_++;
+        if (beamHitEffectFrameCount_ >= 3) {
+            beamHitEffectFrameCount_ = 0;
+            EffectManager::GetInstance()->PlayEffect("DamageHit", playerPos);
+        }
+    } else {
+        beamHitEffectFrameCount_ = 0;
     }
 }
 

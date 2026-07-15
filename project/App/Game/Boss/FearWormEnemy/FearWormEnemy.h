@@ -275,5 +275,6 @@ private:
     float beamRotateTheta_ = 0.0f;
     bool isBeamHittingPlayer_ = false;
     float beamEffectTimer_ = 0.0f;
+    int32_t beamHitEffectFrameCount_ = 0;
 };
 

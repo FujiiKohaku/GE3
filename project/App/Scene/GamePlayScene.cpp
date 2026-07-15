@@ -411,6 +411,8 @@ void GamePlayScene::Update()
     if (activeBoss_ && activeBoss_->IsDead()) {
         CollisionManager::GetInstance()->SetBoss(nullptr);
 
+        // 死亡演出(頭部の落下回転)が完了するまでボスのUpdateを回し続ける
+        activeBoss_->Update();
         EffectManager::GetInstance()->Update();
 
         if (activeBoss_->IsDeathSequenceFinished()) {
@@ -1091,13 +1093,14 @@ void GamePlayScene::CheckCollision()
 
     // プレイヤーの弾とボスの当たり判定
     if (activeBoss_ && !activeBoss_->IsDead()) {
+        // ボスのパーツ一覧をループ外で一度だけ取得し、弾ごとのメモリアロケーションを回避
+        enemyCollisionParts.clear();
+        activeBoss_->GetCollisionParts(enemyCollisionParts);
+
         for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
             if (!bullet->IsAlive()) {
                 continue;
             }
-
-            enemyCollisionParts.clear();
-            activeBoss_->GetCollisionParts(enemyCollisionParts);
 
             for (const EnemyCollisionPart& part : enemyCollisionParts) {
                 // コライダーのワールド座標を計算
