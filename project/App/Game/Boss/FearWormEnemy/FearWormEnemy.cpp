@@ -772,7 +772,8 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         rotate.y = moveTime_ + static_cast<float>(index) * kSegmentRotationOffset;
-        if (segment.isHead && isHeadChargeActive_) {
+        bool isBeamAiming = !HasAliveBodyParts() && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut);
+        if (segment.isHead && (isHeadChargeActive_ || isBeamAiming)) {
             rotate = HeadLookRotation();
         }
 
@@ -1388,6 +1389,38 @@ Vector3 Cross(const Vector3& a, const Vector3& b)
         a.x * b.y - a.y * b.x
     };
 }
+
+// 任意軸まわりの回転行列を生成する関数 (ロドリゲスの回転公式)
+Matrix4x4 MakeRotateAxisAngleMatrix(const Vector3& axis, float angle)
+{
+    Vector3 u = NormalizeSafe(axis);
+    float c = std::cos(angle);
+    float s = std::sin(angle);
+    float t = 1.0f - c;
+
+    Matrix4x4 mat {};
+    mat.m[0][0] = t * u.x * u.x + c;
+    mat.m[0][1] = t * u.x * u.y + s * u.z;
+    mat.m[0][2] = t * u.x * u.z - s * u.y;
+    mat.m[0][3] = 0.0f;
+
+    mat.m[1][0] = t * u.x * u.y - s * u.z;
+    mat.m[1][1] = t * u.y * u.y + c;
+    mat.m[1][2] = t * u.y * u.z + s * u.x;
+    mat.m[1][3] = 0.0f;
+
+    mat.m[2][0] = t * u.x * u.z + s * u.y;
+    mat.m[2][1] = t * u.y * u.z - s * u.x;
+    mat.m[2][2] = t * u.z * u.z + c;
+    mat.m[2][3] = 0.0f;
+
+    mat.m[3][0] = 0.0f;
+    mat.m[3][1] = 0.0f;
+    mat.m[3][2] = 0.0f;
+    mat.m[3][3] = 1.0f;
+
+    return mat;
+}
 }
 
 void FearWormEnemy::UpdateSpiralBarrage()
@@ -1528,7 +1561,7 @@ void FearWormEnemy::UpdateBeamAttack()
             beamTimer_ = 0.0f;
             beamEffectTimer_ = 0.0f; // エフェクトタイマーリセット
             // 予兆開始時に、照準方向をプレイヤーの位置へ即座にリセットする
-            headAimDirection_ = NormalizeSafe(playerPos - headPos);
+            headAimDirection_ = NormalizeSafe(playerPos - segments_[0].position);
             // 予兆エフェクトを再生
             EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
         }
@@ -1540,8 +1573,8 @@ void FearWormEnemy::UpdateBeamAttack()
             beamCurrentWidth_ = 0.0f;
 
             // 予兆中エイム：ボスが静止した状態できれいに狙いを定める
-            Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
-            constexpr float kChargeAimFollowRate = 0.08f; // 正確な追従
+            Vector3 targetDirection = NormalizeSafe(playerPos - segments_[0].position);
+            constexpr float kChargeAimFollowRate = 0.08f; // ゆっくりとした予兆追従
             headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kChargeAimFollowRate));
 
             // 予兆エフェクトの点滅的な演出 (多重生成を防ぐためタイマー制御)
@@ -1569,8 +1602,8 @@ void FearWormEnemy::UpdateBeamAttack()
             beamCurrentWidth_ = 3.5f; // ビームの太さ
 
             // 照射中エイム：プレイヤーがダッシュ等で避けることができる程度にゆっくり追従
-            Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
-            constexpr float kFireAimFollowRate = 0.015f; // 回避可能なゆっくりとした追従
+            Vector3 targetDirection = NormalizeSafe(playerPos - segments_[0].position);
+            constexpr float kFireAimFollowRate = 0.015f; // 回避可能なゆっくりとした追従スピード
             headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kFireAimFollowRate));
 
             // 衝突判定
@@ -1596,7 +1629,7 @@ void FearWormEnemy::UpdateBeamAttack()
             beamCurrentWidth_ = (std::max)(0.0f, beamCurrentWidth_ - 8.0f * deltaTime);
             
             // 判定は行わないが、方向の計算のみ維持
-            Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
+            Vector3 targetDirection = NormalizeSafe(playerPos - segments_[0].position);
             headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, 0.01f));
 
             if (beamTimer_ >= kFadeOutDuration) {
@@ -1607,29 +1640,49 @@ void FearWormEnemy::UpdateBeamAttack()
         break;
     }
 
-    // ビーム用アフィン行列を直接計算してセットする
-    // 1. スケール行列
-    Matrix4x4 matScale = MatrixMath::Matrix4x4MakeScaleMatrix({ beamCurrentWidth_, beamCurrentWidth_, beamCurrentLength_ });
+    // 1. 射向ベクトル (Lerpでゆっくり追従しているheadAimDirection_をそのままビームの進行方向軸とする)
+    Vector3 zAxis = headAimDirection_;
+    float length = beamCurrentLength_;
+    if (length < 0.001f) length = 0.001f;
 
-    // 2. 自転回転行列 (Z軸ロール)
-    Matrix4x4 matRoll = MatrixMath::MakeRotateZMatrix(beamRotateTheta_);
+    // 2. 正規直交基底の作成 (仮の上方向と射向ベクトルの外積から右方向を算出)
+    Vector3 tempUp = { 0.0f, 1.0f, 0.0f };
+    if (std::abs(zAxis.y) > 0.999f) {
+        tempUp = { 0.0f, 0.0f, 1.0f }; // 真上・真下を向いている場合のフォールバック
+    }
+    
+    Vector3 xAxis = NormalizeSafe(Cross(tempUp, zAxis));
+    Vector3 yAxis = Cross(zAxis, xAxis); // すでに直交かつ正規化されている
 
-    // 3. 射出方向回転行列 (オイラー角のピッチとヨーから合成：ヨーのあとにピッチを適用)
-    Vector3 beamRot = HeadLookRotation();
-    Matrix4x4 matPitch = MatrixMath::MakeRotateXMatrix(beamRot.x);
-    Matrix4x4 matYaw = MatrixMath::MakeRotateYMatrix(beamRot.y);
-    Matrix4x4 matLook = MatrixMath::Multiply(matYaw, matPitch);
+    // 3. 進行方向(zAxis)まわりの自転適用 (xAxis と yAxis を theta で回転)
+    float cosT = std::cos(beamRotateTheta_);
+    float sinT = std::sin(beamRotateTheta_);
 
-    // 4. 自転と射出回転の合成 (先に自転を適用し、その後に射出方向を向かせる)
-    Matrix4x4 matRot = MatrixMath::Multiply(matRoll, matLook);
+    Vector3 xAxisRot = {
+        xAxis.x * cosT + yAxis.x * sinT,
+        xAxis.y * cosT + yAxis.y * sinT,
+        xAxis.z * cosT + yAxis.z * sinT
+    };
 
-    // 5. 平行移動行列
+    Vector3 yAxisRot = {
+        -xAxis.x * sinT + yAxis.x * cosT,
+        -xAxis.y * sinT + yAxis.y * cosT,
+        -xAxis.z * sinT + yAxis.z * cosT
+    };
+
+    // 4. 回転行列の直接構築 (基底ベクトルを直接代入)
+    Matrix4x4 matRot = MatrixMath::MakeIdentity4x4();
+    matRot.m[0][0] = xAxisRot.x;  matRot.m[0][1] = xAxisRot.y;  matRot.m[0][2] = xAxisRot.z;
+    matRot.m[1][0] = yAxisRot.x;  matRot.m[1][1] = yAxisRot.y;  matRot.m[1][2] = yAxisRot.z;
+    matRot.m[2][0] = zAxis.x;     matRot.m[2][1] = zAxis.y;     matRot.m[2][2] = zAxis.z;
+
+    // 5. スケールと平行移動の合成 (Scale -> Rotate -> Translate)
+    Matrix4x4 matScale = MatrixMath::Matrix4x4MakeScaleMatrix({ beamCurrentWidth_, beamCurrentWidth_, length });
     Matrix4x4 matTrans = MatrixMath::MakeTranslateMatrix(headPos);
 
-    // 6. アフィン行列の合成 (Scale -> Rotate -> Translate)
     Matrix4x4 worldMat = MatrixMath::Multiply(MatrixMath::Multiply(matScale, matRot), matTrans);
 
-    // 7. ワールド行列を直接設定
+    // 6. ワールド行列を直接設定
     beamPlane_->SetCustomWorldMatrix(worldMat);
     beamPlane_->Update();
 }
