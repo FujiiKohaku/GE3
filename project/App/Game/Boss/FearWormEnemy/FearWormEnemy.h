@@ -49,6 +49,7 @@ public:
 
     // 現在の状態を取得する
     BossState GetBossState() const { return state_; }
+    bool IsMadModeActive() const { return isMadModeActive_; }
 
 private:
     enum class MovementPattern {
@@ -57,6 +58,7 @@ private:
         Weave,
         Drift,
         Line,
+        Spiral,
     };
 
     struct Segment {
@@ -80,6 +82,11 @@ private:
 
     // 生存している胴体を1つ前の部位から一定距離に配置する。
     void UpdateSegments();
+
+    // 渦巻き移動と弾幕用
+    Vector3 SpiralTargetPosition(const Vector3& playerPosition) const;
+    void UpdateSpiralBarrage();
+    void FireDirectionalBullet(const Vector3& position, const Vector3& direction);
 
     // 各セグメントの色、拡縮、回転、座標を描画用オブジェクトへ反映する。
     void UpdateSegmentObjects();
@@ -176,6 +183,19 @@ private:
     Vector3 EntryTarget(const Vector3& playerPosition);             // 登場演出中の目的地
     Vector3 BattleTarget(const Vector3& playerPosition, float rate);// 戦闘中の目的地
 
+    // ビーム攻撃用メンバー関数
+    enum class BeamState {
+        Wait,    // 次のビームまでの待機（クールダウン）
+        Charge,  // 発射前の予兆（マズルフラッシュと強めの追従）
+        Fire,    // ビーム発射（3秒照射、弱めの追従、当たり判定）
+        FadeOut  // 照射終了（ビーム細小化フェード）
+    };
+    void InitializeBeam();
+    void UpdateBeamAttack();
+    void DrawBeam();
+    void CheckBeamCollision();
+
+
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
@@ -229,8 +249,28 @@ private:
     // Lineパターンへの遷移補間用
     float lineTransitionTimer_ = 0.0f;
 
+    // 渦巻き・弾幕パラメータ
+    float spiralAngle_ = 0.0f;
+    float barrageAngle_ = 0.0f;
+    int32_t barrageFireTimer_ = 0;
+
+    // 発狂モード制限時間用
+    float madModeTimer_ = 0.0f;
+    bool isMadModeActive_ = false;
+    bool isMadModeFinished_ = false;
+
     // 死亡演出（落下）用のパラメータ
     Vector3 deathVelocity_ = { 0.0f, 0.0f, 0.0f };      // 落下速度ベクトル
     Vector3 deathRotation_ = { 0.0f, 0.0f, 0.0f };      // 落下中の回転速度ベクトル
     Vector3 currentDeathRotation_ = { 0.0f, 0.0f, 0.0f };// 現在の回転角
+
+    // ビーム攻撃用メンバー変数
+    std::unique_ptr<Object3d> beamPlane_;
+    BeamState beamState_ = BeamState::Wait;
+    float beamTimer_ = 0.0f;
+    float beamUVScrollOffset_ = 0.0f;
+    float beamCurrentLength_ = 0.0f;
+    float beamCurrentWidth_ = 0.0f;
+    float beamRotateTheta_ = 0.0f;
 };
+

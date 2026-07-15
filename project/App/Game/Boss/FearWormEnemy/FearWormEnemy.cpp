@@ -8,6 +8,7 @@
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/3D/ModelManager.h"
 
 #include <cmath>
 #include <cstddef>
@@ -120,7 +121,12 @@ void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
     hp_ = kHeadHp;
     moveSpeed_ = kBaseMoveSpeed;
 
+    isMadModeActive_ = false;
+    isMadModeFinished_ = false;
+    madModeTimer_ = 0.0f;
+
     InitializeSegments(model);
+    InitializeBeam();
     SetPosition(transform_.translate);
 }
 
@@ -306,79 +312,117 @@ void FearWormEnemy::UpdateBattle()
     float movementSpeedRate = MovementSpeedRate();
     Vector3 playerPosition = player_->GetTranslate();
 
-    // 回転角度の更新
-    orbitAngle_ += kFrameTime * kOrbitAngularSpeed * movementSpeedRate;
+    // HP30%以下かつ未発動かつ未完了のときに発狂トリガー
+    bool shouldTriggerMad = (HealthRate() <= 0.30f) && !isMadModeActive_ && !isMadModeFinished_;
 
-    // ミサイル攻撃の進行管理（準備と発射シーケンスの制御）
-    if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
-        missileAttackTimer_ += kFrameTime;
-        if (missileAttackTimer_ >= kMissileAttackInterval) {
-            isMissileAttackActive_ = true;
-            hasFiredMissiles_ = false;
-            missilePhaseTimer_ = 0.0f;
-            movementPattern_ = MovementPattern::Line;
-            lineTransitionTimer_ = 0.0f;
-            // 進行中のチャージ攻撃があればキャンセルする
-            if (isHeadChargeActive_) {
-                FinishHeadChargeAttack();
-            }
+    if (shouldTriggerMad) {
+        isMadModeActive_ = true;
+        madModeTimer_ = 0.0f;
+        movementPattern_ = MovementPattern::Spiral;
+        spiralAngle_ = 0.0f;
+        barrageAngle_ = 0.0f;
+
+        if (isHeadChargeActive_) {
+            FinishHeadChargeAttack();
         }
-    } else if (isMissileAttackActive_) {
-        // Line状態（前準備・チャージ警告演出）
-        missilePhaseTimer_ += kFrameTime;
-        if (missilePhaseTimer_ >= kMissileAimWaitDuration) {
-            // Line準備完了！発射シーケンスを開始する（Line状態・移動パターンは維持）
-            isMissileAttackActive_ = false;
+        isMissileAttackActive_ = false;
+        isFiringMissilesSequence_ = false;
+    }
 
-            // 生存しているセグメントのインデックスをリストアップ
-            missileTargetIndices_.clear();
-            std::vector<size_t> aliveIndices;
-            for (size_t index = 0; index < segments_.size(); ++index) {
-                if (segments_[index].isAlive) {
-                    aliveIndices.push_back(index);
-                }
-            }
-
-            if (!aliveIndices.empty()) {
-                isFiringMissilesSequence_ = true;
-                missileFireTimer_ = kMissileFireInterval; // 最初は即座に撃ち出すようにタイマーを満たす
-                missileShotCount_ = 0;
-
-                // 生存している全部位から、頭側から順番にミサイルを発射する。
-                missileTargetIndices_ = aliveIndices;
-            } else {
-                // 生存セグメントがない（通常はあり得ないが安全のため）
-                movementPattern_ = MovementPattern::Orbit;
-                movementPatternTimer_ = 0.0f;
-                missileAttackTimer_ = 0.0f;
-            }
+    // 発狂モードタイマー更新 (7秒制限: 2秒威嚇 + 5秒大暴れ)
+    if (isMadModeActive_) {
+        madModeTimer_ += kFrameTime;
+        if (madModeTimer_ >= 7.0f) {
+            isMadModeActive_ = false;
+            isMadModeFinished_ = true; // 終了フラグを立てて、再度発狂しないようにする
+            movementPattern_ = MovementPattern::Orbit; // 通常パターンに復帰
+            movementPatternTimer_ = 0.0f;
+            missileAttackTimer_ = 0.0f;
         }
     }
 
-    // 時間差ミサイル発射シーケンスの実行（Line状態のまま実行される）
-    if (isFiringMissilesSequence_ && player_ != nullptr && bulletModel_ != nullptr) {
-        missileFireTimer_ += kFrameTime;
-        int32_t maxShots = static_cast<int32_t>(missileTargetIndices_.size());
+    bool isMadMode = isMadModeActive_;
 
-        if (missileShotCount_ < maxShots) {
-            // 発射フェーズ
-            if (missileFireTimer_ >= kMissileFireInterval) {
-                missileFireTimer_ = 0.0f;
-                size_t segmentIndex = missileTargetIndices_[missileShotCount_];
-                if (segmentIndex < segments_.size() && segments_[segmentIndex].isAlive) {
-                    FireSingleMissile(segmentIndex);
+    // 回転角度の更新
+    orbitAngle_ += kFrameTime * kOrbitAngularSpeed * movementSpeedRate;
+
+    if (isMadMode) {
+        spiralAngle_ += kFrameTime * 2.5f * movementSpeedRate;
+        barrageAngle_ += kFrameTime * 4.0f;
+    }
+
+    // ミサイル攻撃の進行管理（発狂モード中は行わない）
+    if (!isMadMode) {
+        if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
+            missileAttackTimer_ += kFrameTime;
+            if (missileAttackTimer_ >= kMissileAttackInterval) {
+                isMissileAttackActive_ = true;
+                hasFiredMissiles_ = false;
+                missilePhaseTimer_ = 0.0f;
+                movementPattern_ = MovementPattern::Line;
+                lineTransitionTimer_ = 0.0f;
+                // 進行中のチャージ攻撃があればキャンセルする
+                if (isHeadChargeActive_) {
+                    FinishHeadChargeAttack();
                 }
-                missileShotCount_++;
             }
-        } else {
-            // 撃ち終わった後の硬直フェーズ（隙を見せる）
-            constexpr float kMissilePostFireCooldown = 1.8f; // 撃ち終わった後の隙（秒）
-            if (missileFireTimer_ >= kMissilePostFireCooldown) {
-                // 硬直終了！通常状態に戻り、Orbitへ復帰
-                isFiringMissilesSequence_ = false;
-                missileAttackTimer_ = 0.0f;
-                movementPattern_ = MovementPattern::Orbit;
-                movementPatternTimer_ = 0.0f;
+        } else if (isMissileAttackActive_) {
+            // Line状態（前準備・チャージ警告演出）
+            missilePhaseTimer_ += kFrameTime;
+            if (missilePhaseTimer_ >= kMissileAimWaitDuration) {
+                // Line準備完了！発射シーケンスを開始する（Line状態・移動パターンは維持）
+                isMissileAttackActive_ = false;
+
+                // 生存しているセグメントのインデックスをリストアップ
+                missileTargetIndices_.clear();
+                std::vector<size_t> aliveIndices;
+                for (size_t index = 0; index < segments_.size(); ++index) {
+                    if (segments_[index].isAlive) {
+                        aliveIndices.push_back(index);
+                    }
+                }
+
+                if (!aliveIndices.empty()) {
+                    isFiringMissilesSequence_ = true;
+                    missileFireTimer_ = kMissileFireInterval; // 最初は即座に撃ち出すようにタイマーを満たす
+                    missileShotCount_ = 0;
+
+                    // 生存している全部位から、頭側から順番にミサイルを発射する。
+                    missileTargetIndices_ = aliveIndices;
+                } else {
+                    // 生存セグメントがない（通常はあり得ないが安全のため）
+                    movementPattern_ = MovementPattern::Orbit;
+                    movementPatternTimer_ = 0.0f;
+                    missileAttackTimer_ = 0.0f;
+                }
+            }
+        }
+
+        // 時間差ミサイル発射シーケンスの実行（Line状態のまま実行される）
+        if (isFiringMissilesSequence_ && player_ != nullptr && bulletModel_ != nullptr) {
+            missileFireTimer_ += kFrameTime;
+            int32_t maxShots = static_cast<int32_t>(missileTargetIndices_.size());
+
+            if (missileShotCount_ < maxShots) {
+                // 発射フェーズ
+                if (missileFireTimer_ >= kMissileFireInterval) {
+                    missileFireTimer_ = 0.0f;
+                    size_t segmentIndex = missileTargetIndices_[missileShotCount_];
+                    if (segmentIndex < segments_.size() && segments_[segmentIndex].isAlive) {
+                        FireSingleMissile(segmentIndex);
+                    }
+                    missileShotCount_++;
+                }
+            } else {
+                // 撃ち終わった後の硬直フェーズ（隙を見せる）
+                constexpr float kMissilePostFireCooldown = 1.8f; // 撃ち終わった後の隙（秒）
+                if (missileFireTimer_ >= kMissilePostFireCooldown) {
+                    // 硬直終了！通常状態に戻り、Orbitへ復帰
+                    isFiringMissilesSequence_ = false;
+                    missileAttackTimer_ = 0.0f;
+                    movementPattern_ = MovementPattern::Orbit;
+                    movementPatternTimer_ = 0.0f;
+                }
             }
         }
     }
@@ -390,9 +434,22 @@ void FearWormEnemy::UpdateBattle()
     segments_[0].position = Lerp(segments_[0].position, target, moveSpeed_ * movementSpeedRate);
     transform_.translate = segments_[0].position;
 
-    // 攻撃処理の実行（ミサイル準備中および発射中は通常/チャージ攻撃を行わない）
-    if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
-        Attack();
+    // 攻撃処理の実行
+    if (!HasAliveBodyParts()) {
+        // 頭部だけになったらビーム攻撃に移行
+        if (isHeadChargeActive_) {
+            FinishHeadChargeAttack();
+        }
+        isMissileAttackActive_ = false;
+        isFiringMissilesSequence_ = false;
+
+        UpdateBeamAttack();
+    } else if (isMadMode) {
+        UpdateSpiralBarrage();
+    } else {
+        if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
+            Attack();
+        }
     }
 }
 
@@ -520,6 +577,10 @@ Vector3 FearWormEnemy::DriftTargetPosition(const Vector3& playerPosition) const
 Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) const
 {
     // 現在の移動状態に対応する計算へ振り分ける。
+    if (movementPattern_ == MovementPattern::Spiral) {
+        return SpiralTargetPosition(playerPosition);
+    }
+
     if (movementPattern_ == MovementPattern::Coil) {
         return CoilTargetPosition(playerPosition);
     }
@@ -546,8 +607,8 @@ Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) con
 
 void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
 {
-    // ミサイル専用のLineパターンのときは、自動で次の移動パターンに切り替えない
-    if (movementPattern_ == MovementPattern::Line) {
+    // ミサイル専用のLineパターンや発狂モードのSpiralパターンのときは、自動で次の移動パターンに切り替えない
+    if (movementPattern_ == MovementPattern::Line || movementPattern_ == MovementPattern::Spiral) {
         return;
     }
 
@@ -734,6 +795,8 @@ void FearWormEnemy::Draw()
     for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
         bullet->Draw();
     }
+
+    DrawBeam();
 }
 
 bool FearWormEnemy::IsDeathSequenceFinished() const
@@ -1278,3 +1341,326 @@ void FearWormEnemy::FireSingleMissile(size_t segmentIndex)
     // ボスの弾リストに追加
     enemyBullets_.push_back(std::move(bullet));
 }
+
+Vector3 FearWormEnemy::SpiralTargetPosition(const Vector3& playerPosition) const
+{
+    Vector3 result = playerPosition;
+    float baseDistZ = parallelForwardOffset_ + 50.0f;
+
+    // 最初の2秒間は画面中央に静止して威嚇
+    if (madModeTimer_ < 2.0f) {
+        result.x += 0.0f;
+        result.y += 7.0f;
+        result.z += baseDistZ;
+    } else {
+        // 後半の5秒間で、中心から外側へ渦を描くように広がる (半径 0.0f 〜 25.0f)
+        float t = (madModeTimer_ - 2.0f) / 5.0f;
+        float spiralRadius = t * 25.0f;
+
+        result.x += std::cos(spiralAngle_) * spiralRadius;
+        result.y += 7.0f + std::sin(spiralAngle_) * spiralRadius;
+        result.z += baseDistZ;
+    }
+
+    // 地面にめり込まないように下限（Y = 1.5f）をかける
+    if (result.y < 1.5f) {
+        result.y = 1.5f;
+    }
+
+    return result;
+}
+
+namespace {
+// プレイヤー狙い補正用の外積ヘルパー関数
+Vector3 Cross(const Vector3& a, const Vector3& b)
+{
+    return {
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    };
+}
+}
+
+void FearWormEnemy::UpdateSpiralBarrage()
+{
+    // 最初の2秒間（威嚇中）は弾を撃たずにプレイヤーに猶予を与える
+    if (madModeTimer_ < 2.0f) {
+        return;
+    }
+
+    barrageFireTimer_++;
+    if (barrageFireTimer_ < 3) {
+        return;
+    }
+    barrageFireTimer_ = 0;
+
+    Vector3 headPos = GetPosition();
+    Vector3 playerPos = player_->GetTranslate();
+    
+    // ボスからプレイヤーへの方向ベクトルを基準にする（プレイヤー狙い補正）
+    Vector3 toPlayer = NormalizeSafe(playerPos - headPos);
+
+    // toPlayer に直交する直交座標系 (right, up) を構築
+    Vector3 tempUp = { 0.0f, 1.0f, 0.0f };
+    if (std::abs(toPlayer.y) > 0.99f) {
+        tempUp = { 1.0f, 0.0f, 0.0f };
+    }
+    Vector3 right = NormalizeSafe(Cross(tempUp, toPlayer));
+    Vector3 up = NormalizeSafe(Cross(toPlayer, right));
+
+    float spread = 0.4f; // プレイヤーの周囲へ回る螺旋の広がり幅
+    constexpr float kPi = 3.1415926535f;
+
+    // プレイヤー方向を軸とした直交平面上で対角線上に広がる2つの螺旋オフセットベクトル
+    Vector3 offset1 = right * (std::cos(barrageAngle_) * spread) + up * (std::sin(barrageAngle_) * spread);
+    Vector3 offset2 = right * (std::cos(barrageAngle_ + kPi) * spread) + up * (std::sin(barrageAngle_ + kPi) * spread);
+
+    // プレイヤー方向ベクトルと螺旋オフセットを合成して最終的な発射方向を決定
+    Vector3 dir1 = NormalizeSafe(toPlayer + offset1);
+    Vector3 dir2 = NormalizeSafe(toPlayer + offset2);
+
+    FireDirectionalBullet(headPos, dir1);
+    FireDirectionalBullet(headPos, dir2);
+}
+
+void FearWormEnemy::FireDirectionalBullet(const Vector3& position, const Vector3& direction)
+{
+    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->Initialize(bulletModel_);
+
+    Vector3 velocity { };
+    velocity.x = direction.x * bulletSpeed_;
+    velocity.y = direction.y * bulletSpeed_;
+    velocity.z = direction.z * bulletSpeed_;
+
+    bullet->SetTranslate(position);
+    bullet->SetVelocity(velocity);
+
+    enemyBullets_.push_back(std::move(bullet));
+
+    EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+}
+
+void FearWormEnemy::InitializeBeam()
+{
+    // ビーム用クロスPlaneモデルのロード
+    Model* beamModel = ModelManager::GetInstance()->CreateBeamCross("resources/Textures/beam.jpg");
+
+    // ビームオブジェクトの初期化
+    beamPlane_ = std::make_unique<Object3d>();
+    beamPlane_->Initialize(Object3dManager::GetInstance());
+    beamPlane_->SetModel(beamModel);
+    beamPlane_->SetEnableLighting(false);
+
+    // 初期状態の設定
+    beamState_ = BeamState::Wait;
+    beamTimer_ = 0.0f;
+    beamUVScrollOffset_ = 0.0f;
+    beamCurrentLength_ = 0.0f;
+    beamCurrentWidth_ = 0.0f;
+    beamRotateTheta_ = 0.0f;
+}
+
+void FearWormEnemy::UpdateBeamAttack()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+
+    float deltaTime = kFrameTime;
+    beamTimer_ += deltaTime;
+
+    // UVスクロールオフセットを更新
+    constexpr float kUVScrollSpeed = -2.5f; // 流れる速度（負の値で前方向へ流す）
+    beamUVScrollOffset_ += kUVScrollSpeed * deltaTime;
+    if (beamUVScrollOffset_ < -1.0f) {
+        beamUVScrollOffset_ += 1.0f;
+    }
+
+    // UVスクロール行列を作成してマテリアルにセット
+    Vector3 uvTranslation = { 0.0f, beamUVScrollOffset_, 0.0f }; // V方向にスクロール
+    Matrix4x4 uvMat = MatrixMath::MakeTranslateMatrix(uvTranslation);
+    if (beamPlane_->GetMaterial()) {
+        beamPlane_->GetMaterial()->uvTransform = uvMat;
+    }
+
+    // ビームの自転角度を更新
+    constexpr float kRotateSpeed = 6.0f;
+    beamRotateTheta_ += kRotateSpeed * deltaTime;
+    constexpr float kPi = 3.1415926535f;
+    if (beamRotateTheta_ > kPi * 2.0f) {
+        beamRotateTheta_ -= kPi * 2.0f;
+    }
+
+    // プレイヤーの座標
+    Vector3 playerPos = player_->GetTranslate();
+    Vector3 headPos = HeadMuzzlePosition();
+
+    // 状態管理
+    constexpr float kWaitDuration = 4.0f;     // クールダウン
+    constexpr float kChargeDuration = 1.5f;   // 警告チャージ時間
+    constexpr float kFireDuration = 3.0f;     // 照射時間
+    constexpr float kFadeOutDuration = 0.5f;  // フェードアウト
+
+    switch (beamState_) {
+    case BeamState::Wait:
+        beamCurrentLength_ = 0.0f;
+        beamCurrentWidth_ = 0.0f;
+        
+        // 待機中（クールダウン中）は通常弾／チャージ攻撃を行う
+        Attack();
+
+        if (beamTimer_ >= kWaitDuration) {
+            // ビーム発射サイクルに入るため、通常チャージ攻撃を終了
+            if (isHeadChargeActive_) {
+                FinishHeadChargeAttack();
+            }
+            beamState_ = BeamState::Charge;
+            beamTimer_ = 0.0f;
+            // 予兆エフェクトを再生
+            EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
+        }
+        break;
+
+    case BeamState::Charge:
+        {
+            beamCurrentLength_ = 0.0f;
+            beamCurrentWidth_ = 0.0f;
+
+            // 予兆中エイム：かなり強力に追従
+            Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
+            constexpr float kChargeAimFollowRate = 0.18f; // 強めの追従
+            headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kChargeAimFollowRate));
+
+            // 予兆エフェクトの点滅的な演出
+            if (std::fmod(beamTimer_, 0.25f) < 0.06f) {
+                EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
+            }
+
+            if (beamTimer_ >= kChargeDuration) {
+                beamState_ = BeamState::Fire;
+                beamTimer_ = 0.0f;
+                // 照射開始時にマズルフラッシュ
+                EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
+            }
+        }
+        break;
+
+    case BeamState::Fire:
+        {
+            // ビームを急速に伸ばす
+            constexpr float kMaxBeamLength = 400.0f;
+            beamCurrentLength_ = (std::min)(kMaxBeamLength, beamCurrentLength_ + 1000.0f * deltaTime);
+            beamCurrentWidth_ = 3.5f; // ビームの太さ
+
+            // 照射中エイム：緩やかに追従（逃げる隙を与えるため、追従速度を遅めにする）
+            Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
+            constexpr float kFireAimFollowRate = 0.025f; // 遅めの追従
+            headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kFireAimFollowRate));
+
+            // 衝突判定
+            CheckBeamCollision();
+
+            // 定期的にマズルエフェクト
+            if (std::fmod(beamTimer_, 0.2f) < 0.06f) {
+                EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
+            }
+
+            if (beamTimer_ >= kFireDuration) {
+                beamState_ = BeamState::FadeOut;
+                beamTimer_ = 0.0f;
+            }
+        }
+        break;
+
+    case BeamState::FadeOut:
+        {
+            // 太さを縮める
+            beamCurrentWidth_ = (std::max)(0.0f, beamCurrentWidth_ - 8.0f * deltaTime);
+            
+            // 判定は行わないが、方向の計算のみ維持
+            Vector3 targetDirection = NormalizeSafe(playerPos - headPos);
+            headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, 0.01f));
+
+            if (beamTimer_ >= kFadeOutDuration) {
+                beamState_ = BeamState::Wait;
+                beamTimer_ = 0.0f;
+            }
+        }
+        break;
+    }
+
+    // Planeオブジェクトの座標、回転、スケールを更新
+    Vector3 beamRot = HeadLookRotation(); // 照準方向からの回転角を取得
+
+    // ビーム用クロスPlaneの更新（Z軸が長さ、X/Yが太さ）
+    beamPlane_->SetTranslate(headPos);
+    beamPlane_->SetRotate({ beamRot.x, beamRot.y, beamRot.z + beamRotateTheta_ });
+    beamPlane_->SetScale({ beamCurrentWidth_, beamCurrentWidth_, beamCurrentLength_ });
+    beamPlane_->Update();
+}
+
+void FearWormEnemy::DrawBeam()
+{
+    if (state_ == BossState::Wait || segments_.empty()) {
+        return;
+    }
+
+    if (!segments_[0].isAlive) {
+        return;
+    }
+
+    if (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut) {
+        if (beamPlane_) {
+            beamPlane_->Draw();
+        }
+    }
+}
+
+void FearWormEnemy::CheckBeamCollision()
+{
+    if (player_ == nullptr || beamCurrentLength_ <= 0.0f || beamCurrentWidth_ <= 0.0f) {
+        return;
+    }
+
+    // ビームの始点と終点
+    Vector3 beamStart = HeadMuzzlePosition();
+    Vector3 beamEnd = beamStart + headAimDirection_ * beamCurrentLength_;
+
+    // プレイヤーの座標と半径
+    Vector3 playerPos = player_->GetTranslate();
+    float playerRadius = 1.0f;
+    float beamRadius = beamCurrentWidth_ * 0.5f;
+
+    // 線分 AB (ビーム) と点 C (プレイヤー) の最短距離を求める
+    Vector3 AB = beamEnd - beamStart;
+    Vector3 AC = playerPos - beamStart;
+
+    float abLenSq = Vector3LengthSquared(AB);
+    float t = 0.0f;
+    if (abLenSq > 0.0f) {
+        t = Dot(AC, AB) / abLenSq;
+        t = std::clamp(t, 0.0f, 1.0f);
+    }
+
+    // 最短点 P
+    Vector3 P = beamStart + AB * t;
+
+    // 最短距離の2乗
+    Vector3 diff = playerPos - P;
+    float distanceSq = Vector3LengthSquared(diff);
+
+    // 衝突半径の合計の2乗
+    float hitRadius = beamRadius + playerRadius;
+    float hitRadiusSq = hitRadius * hitRadius;
+
+    if (distanceSq <= hitRadiusSq) {
+        constexpr int kBeamDamage = 1;
+        if (player_->ApplyDamage(kBeamDamage)) {
+            EffectManager::GetInstance()->PlayEffect("DamageHit", playerPos);
+        }
+    }
+}
+
+

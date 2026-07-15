@@ -8,6 +8,7 @@
 #include "Engine/math/MathStruct.h"
 #include "Engine/audio/SoundManager.h"
 #include <numbers>
+#include <cstdlib>
 
 #include "SceneManager.h"
 
@@ -373,7 +374,16 @@ void GamePlayScene::Update()
 
     // ボスの更新
     if (activeBoss_) {
+        bool wasMadMode = activeBoss_->IsMadModeActive();
+
         activeBoss_->Update();
+
+        // 発狂モードに入った瞬間を検知してカメラシェイクを開始する
+        if (activeBoss_->IsMadModeActive() && !wasMadMode) {
+            cameraShakeTime_ = 7.0f;
+            cameraShakeDuration_ = 7.0f;
+            cameraShakeIntensity_ = 0.8f;
+        }
     }
 
     // ボス撃破でクリアシーンへ遷移
@@ -814,8 +824,33 @@ void GamePlayScene::UpdateCamera(
             hasCameraFollowState_ = true;
         }
 
+        // カメラシェイクの適用
+        Vector3 shakeOffset = { 0.0f, 0.0f, 0.0f };
+        if (cameraShakeTime_ > 0.0f) {
+            cameraShakeTime_ -= 1.0f / 60.0f;
+            if (cameraShakeTime_ < 0.0f) {
+                cameraShakeTime_ = 0.0f;
+            }
+
+            // 最初の2.0秒間（残り7.0s〜5.0s）は最大強度を維持、後半5.0秒間で徐々に減衰
+            float intensity = cameraShakeIntensity_;
+            if (cameraShakeTime_ < 5.0f) {
+                float ratio = cameraShakeTime_ / 5.0f; // 1.0 -> 0.0
+                intensity = cameraShakeIntensity_ * ratio;
+            }
+
+            // 簡易乱数による3軸方向の揺れ量
+            float rx = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
+            float ry = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
+            float rz = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
+
+            shakeOffset.x = rx * intensity;
+            shakeOffset.y = ry * intensity;
+            shakeOffset.z = rz * intensity;
+        }
+
         // cameraを行列再計算のためにLookAt設定
-        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
+        camera_->LookAt(smoothedCameraPosition_ + shakeOffset, smoothedLookAheadPosition_ + shakeOffset);
     } else {
         hasCameraFollowState_ = false;
     }

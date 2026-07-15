@@ -194,4 +194,9 @@ private:
     // ボス戦用
     std::unique_ptr<FearWormEnemy> activeBoss_;
     bool isBossSpawned_ = false;
+
+    // カメラシェイク演出用
+    float cameraShakeTime_ = 0.0f;
+    float cameraShakeIntensity_ = 0.0f;
+    float cameraShakeDuration_ = 0.0f;
 };
