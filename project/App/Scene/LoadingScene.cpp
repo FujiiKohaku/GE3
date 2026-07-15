@@ -2,6 +2,7 @@
 
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/TextureManager/TextureManager.h"
 #include "GamePlayScene.h"
 #include "SceneManager.h"
 
@@ -15,6 +16,12 @@ constexpr const char* kWhiteTexturePath = "resources/Textures/white.png";
 
 void LoadingScene::Initialize()
 {
+    // 起動時から遅延ロードされたデフォルトテクスチャ
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/fence.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
+
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
 
     backgroundSprite_ = std::make_unique<Sprite>();
@@ -53,7 +60,7 @@ void LoadingScene::Update()
     progressSprite_->Update();
 
     if (EffectManager::GetInstance()->IsWarmUpComplete()) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
+        SceneManager::GetInstance()->SetNextScene(std::move(nextScene_));
     }
 }
 

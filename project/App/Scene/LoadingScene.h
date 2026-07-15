@@ -7,6 +7,9 @@
 
 class LoadingScene : public BaseScene {
 public:
+    LoadingScene(std::unique_ptr<BaseScene> nextScene)
+        : nextScene_(std::move(nextScene)) {}
+
     void Initialize() override;
     void Finalize() override;
     void Update() override;
@@ -16,6 +19,7 @@ public:
     void DrawImGui() override;
 
 private:
+    std::unique_ptr<BaseScene> nextScene_;
     std::unique_ptr<Sprite> backgroundSprite_;
     std::unique_ptr<Sprite> progressBackSprite_;
     std::unique_ptr<Sprite> progressSprite_;

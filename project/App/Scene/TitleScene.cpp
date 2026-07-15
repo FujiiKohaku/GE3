@@ -6,6 +6,7 @@
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
 #include "LoadingScene.h"
+#include "GamePlayScene.h"
 
 #include <numbers>
 void TitleScene::Initialize()
@@ -48,8 +49,7 @@ void TitleScene::Initialize()
 void TitleScene::Update()
 {
     if (Input::GetInstance()->IsKeyPressed(DIK_SPACE)) {
-
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>());
+        SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>();
     }
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_L)) {

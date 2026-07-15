@@ -83,14 +83,8 @@ void Game::Initialize()
 
     Input::GetInstance()->Initialize(WinApp::GetInstance());
 
-    Logger::Log("Load Default Models");
-
     Logger::Log("Load Default Textures");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/fence.png");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
 
     // エフェクトのシェーダーとパイプラインはゲーム起動時に一度だけ作成する。
     // 使用するカメラは各シーンのInitializeで設定する。

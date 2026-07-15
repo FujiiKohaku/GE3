@@ -19,6 +19,8 @@
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "mfuuid.lib")
 
+#include <future>
+#include <atomic>
 #include "Engine/StringUtility/StringUtility.h"
 
 // --------------------------------------
@@ -65,6 +67,10 @@ public:
     void SoundPlayWave(const SoundData& soundData);
 
 private:
+    void EnsureInitialized();
+    std::future<void> initFuture_;
+    std::atomic<bool> isInitialized_ = false;
+
     Microsoft::WRL::ComPtr<IXAudio2> xAudio2;
     IXAudio2MasteringVoice* masterVoice = nullptr;
 };

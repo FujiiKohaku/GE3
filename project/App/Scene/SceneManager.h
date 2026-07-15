@@ -26,6 +26,15 @@ public:
         nextScene_ = std::move(nextScene);
     }
 
+    // ロード画面を挟んでシーン遷移するテンプレート関数
+    template <typename TLoadingScene, typename TTargetScene, typename... Args>
+    void SetNextSceneWithLoading(Args&&... args)
+    {
+        auto targetScene = std::make_unique<TTargetScene>(std::forward<Args>(args)...);
+        auto loadingScene = std::make_unique<TLoadingScene>(std::move(targetScene));
+        SetNextScene(std::move(loadingScene));
+    }
+
     void Update();
     void Finalize();
     void DrawImGui();
