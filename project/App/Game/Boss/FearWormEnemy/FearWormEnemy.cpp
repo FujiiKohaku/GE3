@@ -3,6 +3,7 @@
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 #include "App/Game/Enemy/Bullet/TrackingEnemyBullet.h"
 #include "App/Game/Player/Player.h"
+#include "Engine/Camera/Camera.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Effect/EffectManager.h"
@@ -417,7 +418,28 @@ Vector3 FearWormEnemy::EntryTarget(const Vector3& playerPosition)
 Vector3 FearWormEnemy::BattleTarget(const Vector3& playerPosition, float rate)
 {
     UpdateMovementPattern(rate);
-    return MovementTargetPosition(playerPosition);
+
+    Vector3 adjustedPlayerPosition = playerPosition;
+
+    // プレイヤーのカメラのピッチ角（上下の角度）を取得し、基準とするY座標を補正する
+    if (player_ != nullptr && player_->GetCamera() != nullptr) {
+        Camera* camera = player_->GetCamera();
+        
+        // カメラのピッチ角を取得（ラジアン）
+        // 上を向くと pitch < 0 になるため、符号を反転します
+        float pitch = -camera->GetRotate().x;
+
+        // プレイヤーとボスの奥行き（Z方向）の距離
+        float distanceZ = std::abs(playerPosition.z - GetPosition().z);
+
+        // プレイヤーから見たカメラの視線の高低差（Yオフセット）を計算
+        float lookOffsetY = distanceZ * std::sin(pitch);
+
+        // ボスの基準高度を補正
+        adjustedPlayerPosition.y += lookOffsetY;
+    }
+
+    return MovementTargetPosition(adjustedPlayerPosition);
 }
 
 Vector3 FearWormEnemy::EntryStartPosition(const Vector3& playerPosition) const

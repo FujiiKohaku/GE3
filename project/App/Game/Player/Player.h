@@ -115,6 +115,7 @@ public:
 
     void DrawImGui();
     void FireBullet(const Camera& activeCamera);
+    Camera* GetCamera() const { return camera_; }
 
 
 private:
