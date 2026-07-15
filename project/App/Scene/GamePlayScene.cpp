@@ -963,6 +963,69 @@ void GamePlayScene::Draw2D()
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
+    // ボス出現時、画面上部中央にスタイリッシュな2本の横長HPバーをHUD風にオーバーレイ表示する
+    if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        // 画面上部中央付近に横幅550pxで表示
+        ImVec2 windowPos = ImVec2(viewport->Pos.x + viewport->Size.x * 0.5f - 275.0f, viewport->Pos.y + 40.0f);
+        ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(550.0f, 95.0f), ImGuiCond_Always);
+        
+        // 背景・タイトルバー・枠線などを非表示にして、HUDスプライトのように見せる
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | 
+                                       ImGuiWindowFlags_NoResize | 
+                                       ImGuiWindowFlags_NoMove | 
+                                       ImGuiWindowFlags_NoScrollbar | 
+                                       ImGuiWindowFlags_NoSavedSettings | 
+                                       ImGuiWindowFlags_NoBackground;
+
+        if (ImGui::Begin("Boss HP HUD", nullptr, windowFlags)) {
+            // ボス名称
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+            ImGui::Text("BOSS: FEAR WORM");
+            ImGui::PopStyleColor();
+
+            // 1. 頭部HPバー (ネオンブルー)
+            float headFraction = activeBoss_->GetHeadHpFraction();
+            ImGui::Text("HEAD CORE  ");
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 1.0f, 1.0f)); // ネオンブルー
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.2f, 0.3f, 0.4f));       // 暗い青背景
+            ImGui::ProgressBar(headFraction, ImVec2(-1, 14.0f), "");
+            ImGui::PopStyleColor(2);
+
+            // 2. 胴体HPバー (ネオンレッド + 胴体数に応じた9分割の区切り線)
+            float bodyFraction = activeBoss_->GetBodyHpFraction();
+            ImGui::Text("BODY SHIELD");
+            ImGui::SameLine();
+            
+            ImVec2 barPosMin = ImGui::GetCursorScreenPos();
+            
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // ネオンレッド
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.1f, 0.1f, 0.4f));       // 暗い赤背景
+            ImGui::ProgressBar(bodyFraction, ImVec2(-1, 14.0f), "");
+            ImGui::PopStyleColor(2);
+
+            // 直前に描画したProgressBarの領域を取得して、9分割(8本の縦線)で区切る
+            ImVec2 barPosMax = ImGui::GetItemRectMax();
+            float barWidth = barPosMax.x - barPosMin.x;
+            constexpr int kSegmentDivisions = 9;
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            ImU32 lineColor = IM_COL32(10, 10, 10, 255); // ほぼ黒のシャープな区切り線
+
+            for (int i = 1; i < kSegmentDivisions; ++i) {
+                float splitX = barPosMin.x + (barWidth * i / static_cast<float>(kSegmentDivisions));
+                drawList->AddLine(
+                    ImVec2(splitX, barPosMin.y),
+                    ImVec2(splitX, barPosMax.y),
+                    lineColor,
+                    2.0f // 2pxの太さでしっかり区切る
+                );
+            }
+        }
+        ImGui::End();
+    }
+
     camera_->DrawImGui();
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());

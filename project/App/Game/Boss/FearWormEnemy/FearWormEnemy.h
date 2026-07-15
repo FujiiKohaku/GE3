@@ -52,6 +52,10 @@ public:
     bool IsMadModeActive() const { return isMadModeActive_; }
     bool IsBeamHittingPlayer() const { return isBeamHittingPlayer_; }
 
+    // HP割合のGetter
+    float GetHeadHpFraction() const;
+    float GetBodyHpFraction() const;
+
 private:
     enum class MovementPattern {
         Orbit, 

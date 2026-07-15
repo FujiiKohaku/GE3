@@ -1767,4 +1767,30 @@ void FearWormEnemy::CheckBeamCollision()
     }
 }
 
+float FearWormEnemy::GetHeadHpFraction() const
+{
+    if (segments_.empty()) {
+        return 0.0f;
+    }
+    return (std::max)(0.0f, segments_[0].hp) / kHeadHp;
+}
+
+float FearWormEnemy::GetBodyHpFraction() const
+{
+    if (segments_.size() <= 1) {
+        return 0.0f;
+    }
+    
+    float totalMaxHp = (segments_.size() - 1) * kBodyHp;
+    float currentTotalHp = 0.0f;
+    
+    for (size_t index = 1; index < segments_.size(); ++index) {
+        if (segments_[index].isAlive) {
+            currentTotalHp += (std::max)(0.0f, segments_[index].hp);
+        }
+    }
+    
+    return currentTotalHp / totalMaxHp;
+}
+
 
