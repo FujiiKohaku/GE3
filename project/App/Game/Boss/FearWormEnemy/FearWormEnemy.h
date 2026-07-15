@@ -226,6 +226,9 @@ private:
     int32_t missileShotCount_ = 0;
     std::vector<size_t> missileTargetIndices_;
 
+    // Lineパターンへの遷移補間用
+    float lineTransitionTimer_ = 0.0f;
+
     // 死亡演出（落下）用のパラメータ
     Vector3 deathVelocity_ = { 0.0f, 0.0f, 0.0f };      // 落下速度ベクトル
     Vector3 deathRotation_ = { 0.0f, 0.0f, 0.0f };      // 落下中の回転速度ベクトル

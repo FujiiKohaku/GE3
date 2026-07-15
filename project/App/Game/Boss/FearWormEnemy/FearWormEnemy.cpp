@@ -317,6 +317,7 @@ void FearWormEnemy::UpdateBattle()
             hasFiredMissiles_ = false;
             missilePhaseTimer_ = 0.0f;
             movementPattern_ = MovementPattern::Line;
+            lineTransitionTimer_ = 0.0f;
             // 進行中のチャージ攻撃があればキャンセルする
             if (isHeadChargeActive_) {
                 FinishHeadChargeAttack();
@@ -598,32 +599,18 @@ void FearWormEnemy::UpdateSegments()
         return;
     }
 
+    // Lineパターンへの遷移補間係数の計算 (1.0秒かけて 0.0 から 1.0 へ)
+    // 通常状態 (Line以外) では 0.0f にすることで、元通りの完全な縦並び挙動にします
+    float blendT = 0.0f;
     if (movementPattern_ == MovementPattern::Line) {
-        // Lineパターンのときは、頭部の左側（X軸マイナス方向）に等間隔でLerp整列させる（うねうね効果を追加、破壊部位の隙間を詰める）
-        int32_t aliveOrder = 0;
-        for (size_t index = 1; index < segments_.size(); index = index + 1) {
-            Segment& segment = segments_[index];
-            if (!segment.isAlive) {
-                continue;
-            }
-            aliveOrder++;
-
-            // 時間経過とうねりの周期・振幅
-            float waveScaleY = 3.2f;
-            float waveScaleZ = 2.0f;
-            float waveFrequency = 4.2f;
-
-            Vector3 targetPos = {
-                segments_[0].position.x - (segmentSpacing_ * static_cast<float>(aliveOrder)),
-                segments_[0].position.y + std::sin(moveTime_ * waveFrequency + static_cast<float>(aliveOrder) * 0.8f) * waveScaleY,
-                segments_[0].position.z + std::cos(moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(aliveOrder) * 0.6f) * waveScaleZ
-            };
-            segment.position = Lerp(segment.position, targetPos, 0.18f); // 滑らかに整列・うねうねさせる
-        }
-        return;
+        lineTransitionTimer_ += kFrameTime;
+        blendT = std::min(lineTransitionTimer_ / 1.0f, 1.0f);
+    } else {
+        lineTransitionTimer_ = 0.0f;
     }
 
     Segment* previousSegment = &segments_[0];
+    int32_t aliveOrder = 0;
 
     for (size_t index = 1; index < segments_.size(); index = index + 1) {
         Segment& segment = segments_[index];
@@ -631,11 +618,27 @@ void FearWormEnemy::UpdateSegments()
         if (!segment.isAlive) {
             continue;
         }
+        aliveOrder++;
 
-        Vector3 direction = Normalize(
-            segment.position - previousSegment->position);
+        // 1. 通常の追従目標位置 (縦並び - 元の引き戻し拘束)
+        Vector3 diff = segment.position - previousSegment->position;
+        Vector3 direction = Normalize(diff);
+        Vector3 posNormal = previousSegment->position + direction * segmentSpacing_;
 
-        segment.position = previousSegment->position + direction * segmentSpacing_;
+        // 2. Line状態の目標位置 (横並び＋うねうね)
+        float waveScaleY = 3.2f;
+        float waveScaleZ = 2.0f;
+        float waveFrequency = 4.2f;
+
+        Vector3 posLine = {
+            segments_[0].position.x - (segmentSpacing_ * static_cast<float>(aliveOrder)),
+            segments_[0].position.y + std::sin(moveTime_ * waveFrequency + static_cast<float>(aliveOrder) * 0.8f) * waveScaleY,
+            segments_[0].position.z + std::cos(moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(aliveOrder) * 0.6f) * waveScaleZ
+        };
+
+        // 3. 通常位置とLine位置をブレンドして直接適用する
+        // blendT = 0.0f のときは posNormal (従来と100%同一の挙動) になります
+        segment.position = Lerp(posNormal, posLine, blendT);
 
         previousSegment = &segment;
     }
