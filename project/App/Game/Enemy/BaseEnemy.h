@@ -35,6 +35,12 @@ public:
         return enemyBullets_;
     }
     virtual void SetPosition(const Vector3& position);
+    virtual void SetRotate(const Vector3& rotate);
+    void SetPatrolWaypoints(const std::vector<Vector3>& waypoints)
+    {
+        waypoints_ = waypoints;
+        currentWaypointIndex_ = 0;
+    }
     void SetEnableLighting(bool enable);
     void SetDead(bool isDead);
     void ApplyDamage(float damage);
@@ -59,4 +65,7 @@ protected:
     float moveSpeed_ = 0.1f;
 
     std::vector<std::unique_ptr<EnemyBullet>> enemyBullets_;
+
+    std::vector<Vector3> waypoints_;
+    size_t currentWaypointIndex_ = 0;
 };

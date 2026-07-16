@@ -5,6 +5,7 @@
 #include <vector>
 
 class BaseEnemy;
+class BoxCollider;
 
 struct RaycastHit {
     Vector3 position = { 0.0f, 0.0f, 0.0f };
@@ -24,6 +25,8 @@ public:
 
     void SetEnemies(const EnemyList* enemies);
     void SetBoss(BaseEnemy* boss);
+    void RegisterCollider(BoxCollider* collider);
+    void UnregisterCollider(BoxCollider* collider);
     bool Raycast(const Ray& ray, RaycastHit& hit) const;
 
 public:

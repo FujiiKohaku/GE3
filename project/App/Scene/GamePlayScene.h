@@ -43,6 +43,8 @@
 #include "App/Game/Enemy/Types/NormalEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 
+struct LevelData;
+
 class GamePlayScene : public BaseScene {
 public:
     void Initialize() override;
@@ -57,7 +59,9 @@ public:
     void DrawImGui() override;
 
 private:
-    void LoadEnemyPopData();
+    void CreateLevelObjects(const LevelData& levelData);
+    void HotReloadLevel();
+    void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
@@ -199,4 +203,7 @@ private:
     float cameraShakeTime_ = 0.0f;
     float cameraShakeIntensity_ = 0.0f;
     float cameraShakeDuration_ = 0.0f;
+
+    const LevelData::ObjectData* cameraPointObject_ = nullptr;
+    float cameraPointLerpTime_ = 0.0f;
 };

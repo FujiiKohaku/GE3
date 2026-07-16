@@ -236,7 +236,7 @@ private:
     bool isDeathSequenceFinished_ = false;
     float deathSequenceTimer_ = 0.0f;
     int32_t nextDeathSegmentIndex_ = -1;
-    MovementPattern movementPattern_ = MovementPattern::Orbit;
+    MovementPattern movementPattern_ = MovementPattern::Orbit; 
     BossState state_ = BossState::Wait;
 
     // 追尾ミサイル攻撃用のタイマー・フラグ

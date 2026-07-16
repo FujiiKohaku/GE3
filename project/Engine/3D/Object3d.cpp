@@ -50,6 +50,21 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
 void Object3d::Update()
 {
+    // ギミックの更新
+    if (gimmick_.exists) {
+        float deltaTime = 1.0f / 60.0f;
+        if (gimmick_.type == "ROTATION") {
+            transform.rotate.y += gimmick_.speed * deltaTime;
+        }
+        else if (gimmick_.type == "MOVE") {
+            gimmickTime_ += gimmick_.speed * deltaTime;
+            float factor = std::sin(gimmickTime_);
+            transform.translate.x = baseTranslate_.x + gimmick_.range.x * factor;
+            transform.translate.y = baseTranslate_.y + gimmick_.range.y * factor;
+            transform.translate.z = baseTranslate_.z + gimmick_.range.z * factor;
+        }
+    }
+
     Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
     if (model_) {

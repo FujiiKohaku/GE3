@@ -10,11 +10,13 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
+#include "Engine/LevelEditor/LevelData.h"
 
 #include "../Animation/PlayAnimation.h"
 #include "Engine/math/object3Dstruct.h"
 class Object3dManager;
 class Model;
+class BoxCollider;
 class Object3d {
 public:
     // ===============================
@@ -105,6 +107,17 @@ public:
         return name_;
     }
 
+    void SetGimmick(const LevelData::ObjectData::GimmickData& gimmick)
+    {
+        gimmick_ = gimmick;
+        baseTranslate_ = transform.translate;
+        gimmickTime_ = 0.0f;
+    }
+    const LevelData::ObjectData::GimmickData& GetGimmick() const { return gimmick_; }
+
+    void SetCollider(BoxCollider* collider) { collider_ = collider; }
+    BoxCollider* GetCollider() const { return collider_; }
+
 private:
     // ===============================
     // メンバ変数
@@ -144,4 +157,9 @@ private:
     //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
     std::string name_ = "Object[nameNull]";
+
+    LevelData::ObjectData::GimmickData gimmick_ {};
+    Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };
+    float gimmickTime_ = 0.0f;
+    BoxCollider* collider_ = nullptr;
 };

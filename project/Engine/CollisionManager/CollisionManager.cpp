@@ -120,3 +120,11 @@ bool CollisionManager::Raycast(const Ray& ray, RaycastHit& hit) const
 
     return true;
 }
+
+void CollisionManager::RegisterCollider(BoxCollider*)
+{
+}
+
+void CollisionManager::UnregisterCollider(BoxCollider*)
+{
+}

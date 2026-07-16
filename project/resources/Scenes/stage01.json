@@ -9,6 +9,24 @@
                 "rotation": [0.0, 0.0, 0.0],
                 "scale": [1.0, 1.0, 1.0]
             }
+        },
+        {
+            "name": "TestNormalEnemy",
+            "type": "EnemySpawn",
+            "file_name": "NormalEnemy",
+            "transform": {
+                "translation": [10.0, 30.0, 0.0],
+                "rotation": [0.0, 0.0, 0.0]
+            }
+        },
+        {
+            "name": "TestMoveEnemy",
+            "type": "EnemySpawn",
+            "file_name": "MoveEnemy",
+            "transform": {
+                "translation": [-10.0, 50.0, 0.0],
+                "rotation": [0.0, 180.0, 0.0]
+            }
         }
     ]
 }

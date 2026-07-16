@@ -1,6 +1,7 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 
 #include "Engine/3D/Object3dManager.h"
+#include <cmath>
 
 void BaseEnemy::Initialize(Model* model)
 {
@@ -76,6 +77,23 @@ void BaseEnemy::Draw()
 
 void BaseEnemy::Move()
 {
+    if (!waypoints_.empty()) {
+        float deltaTime = 1.0f / 60.0f;
+        Vector3 target = waypoints_[currentWaypointIndex_];
+        Vector3 currentPos = GetPosition();
+
+        Vector3 dir = { target.x - currentPos.x, target.y - currentPos.y, target.z - currentPos.z };
+        float distance = std::sqrt(dir.x * dir.x + dir.y * dir.y + dir.z * dir.z);
+
+        if (distance < 0.5f) {
+            currentWaypointIndex_ = (currentWaypointIndex_ + 1) % waypoints_.size();
+        } else {
+            currentPos.x += (dir.x / distance) * moveSpeed_ * deltaTime;
+            currentPos.y += (dir.y / distance) * moveSpeed_ * deltaTime;
+            currentPos.z += (dir.z / distance) * moveSpeed_ * deltaTime;
+            SetPosition(currentPos);
+        }
+    }
 }
 
 void BaseEnemy::Attack()
@@ -95,6 +113,11 @@ Vector3 BaseEnemy::GetPosition() const
 void BaseEnemy::SetPosition(const Vector3& position)
 {
     transform_.translate = position;
+}
+
+void BaseEnemy::SetRotate(const Vector3& rotate)
+{
+    transform_.rotate = rotate;
 }
 
 void BaseEnemy::SetEnableLighting(bool enable)

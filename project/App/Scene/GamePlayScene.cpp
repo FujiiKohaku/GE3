@@ -18,6 +18,7 @@
 #include <string_view>
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
+#include "../../Engine/CollisionManager/BoxCollider.h"
 
 #include "ClearScene.h"
 #include "GameOverScene.h"
@@ -236,39 +237,31 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
-    player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+
+    Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
+    Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
+
+    LevelDataLoader levelDataLoader;
+    LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");
+
+    if (!levelData.playerSpawns.empty()) {
+        const LevelData::PlayerSpawnData& spawn = levelData.playerSpawns[0];
+        playerStartPos = spawn.translation;
+        playerStartRot = spawn.rotation;
+    }
+
+    player_->SetTranslate(playerStartPos);
+    player_->SetRotate(playerStartRot);
+    player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
     playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect("JetSpark", player_);
     wasPlayerBoosting_ = false;
 
-    /*LevelDataLoader levelDataLoader;
-    LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");*/
-
-    /* for (const LevelData::ObjectData& objectData : levelData.objects) {
-         if (objectData.type != "MESH") {
-             continue;
-         }
-
-         if (objectData.fileName.empty()) {
-             continue;
-         }
-
-         ModelManager::GetInstance()->Load(objectData.fileName);
-
-         std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
-         levelObject->Initialize(Object3dManager::GetInstance());
-         levelObject->SetModel(objectData.fileName);
-         levelObject->SetTranslate(objectData.translation);
-         levelObject->SetRotate(objectData.rotation);
-         levelObject->SetScale(objectData.scale);
-         levelObjects_.push_back(std::move(levelObject));
-     }*/
-    // editorManager_->SetSelectedObject(terrain_);
+    CreateLevelObjects(levelData);
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
-
-    LoadEnemyPopData();
 
     CollisionManager::GetInstance()->SetEnemies(&enemies_);
     CollisionManager::GetInstance()->SetBoss(nullptr);
@@ -349,6 +342,10 @@ void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, V
 
 void GamePlayScene::Update()
 {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
+        HotReloadLevel();
+    }
+
     // レール自体の更新
     rail_->Update();
 
@@ -795,6 +792,37 @@ void GamePlayScene::UpdateCamera(
     float nextRailDistance,
     Input* input)
 {
+    // カメラポイント補間の適用
+    if (cameraPointObject_) {
+        float deltaTime = 1.0f / 60.0f;
+        cameraPointLerpTime_ += deltaTime;
+        float t = cameraPointLerpTime_ / cameraPointObject_->cameraPoint.moveTime;
+        if (t > 1.0f) {
+            t = 1.0f;
+        }
+
+        // カメラ位置の補間
+        Vector3 currentEye = camera_->GetTranslate();
+        Vector3 targetEye = cameraPointObject_->translation;
+        Vector3 eye = {
+            currentEye.x + (targetEye.x - currentEye.x) * t,
+            currentEye.y + (targetEye.y - currentEye.y) * t,
+            currentEye.z + (targetEye.z - currentEye.z) * t
+        };
+
+        // カメラ注視点の補間
+        Vector3 currentTarget = smoothedLookAheadPosition_;
+        Vector3 targetTarget = cameraPointObject_->cameraPoint.target;
+        Vector3 target = {
+            currentTarget.x + (targetTarget.x - currentTarget.x) * t,
+            currentTarget.y + (targetTarget.y - currentTarget.y) * t,
+            currentTarget.z + (targetTarget.z - currentTarget.z) * t
+        };
+
+        camera_->LookAt(eye, target);
+        return;
+    }
+
     // ブースト中かどうかで視野角（FOV）を切り替える
     bool isBoostingForCamera = false;
     if (input != nullptr) {
@@ -1312,125 +1340,29 @@ void GamePlayScene::ResetGameplayPostEffects()
     smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
 }
 
-void GamePlayScene::LoadEnemyPopData()
+void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
 {
-    std::string filePath = "resources/Data/enemyPop.json";
-    std::ifstream file(filePath);
+    // レベルデータから敵を生成、配置
+    for (const auto& enemyData : levelData.enemies) {
+        if (enemyData.fileName == "MoveEnemy") {
+            std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
+            enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+            enemy->SetPosition(enemyData.translation);
+            enemy->SetRotate(enemyData.rotation);
 
-    if (file.is_open() == false) {
-        Logger::Log("Warning: Could not open " + filePath + ". Using default enemy layout.");
-        
-        const Vector3 enemyPositions[] = {
-            { -14.0f, -3.0f, 384.0f },
-            { 10.0f, 5.0f, 512.0f },
-            { 18.0f, -6.0f, 672.0f },
-            { -7.0f, 7.0f, 832.0f },
-            { 14.0f, 0.0f, 992.0f },
-            { -18.0f, 4.0f, 1152.0f },
-            { 4.0f, -7.0f, 1312.0f },
-            { 17.0f, 6.0f, 1472.0f },
-            { -12.0f, 1.0f, 1632.0f },
-            { 7.0f, -5.0f, 1792.0f },
-            { -19.0f, 0.0f, 1440.0f },
-        };
+            // デフォルトの移動パターンを設定
+            enemy->SetMovePattern(MovePattern::LeftRight);
+            enemy->SetAmplitude(8.0f);
+            enemy->SetMoveSpeed(2.0f);
 
-        int32_t enemyIndex = 0;
-        for (const Vector3& enemyPosition : enemyPositions) {
-            if (enemyIndex % 2 == 0) {
-                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(enemyPosition);
+            enemies_.push_back(std::move(enemy));
+        } else {
+            std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+            enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+            enemy->SetPosition(enemyData.translation);
+            enemy->SetRotate(enemyData.rotation);
 
-                if (enemyIndex % 8 == 0) {
-                    enemy->SetMovePattern(MovePattern::LeftRight);
-                    enemy->SetAmplitude(8.0f);
-                    enemy->SetMoveSpeed(2.0f);
-                }
-                if (enemyIndex % 8 == 2) {
-                    enemy->SetMovePattern(MovePattern::UpDown);
-                    enemy->SetAmplitude(6.0f);
-                    enemy->SetMoveSpeed(2.0f);
-                }
-                if (enemyIndex % 8 == 4) {
-                    enemy->SetMovePattern(MovePattern::ZigZag);
-                    enemy->SetAmplitude(8.0f);
-                    enemy->SetMoveSpeed(2.5f);
-                }
-                if (enemyIndex % 8 == 6) {
-                    enemy->SetMovePattern(MovePattern::SineWave);
-                    enemy->SetAmplitude(5.0f);
-                    enemy->SetFrequency(3.0f);
-                    enemy->SetMoveSpeed(1.5f);
-                }
-
-                enemies_.push_back(std::move(enemy));
-            } else {
-                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(enemyPosition);
-                enemies_.push_back(std::move(enemy));
-            }
-            enemyIndex = enemyIndex + 1;
-        }
-
-        return;
-    }
-
-    nlohmann::json root;
-    file >> root;
-    file.close();
-
-    if (root.contains("enemies") && root["enemies"].is_array()) {
-        nlohmann::json enemiesArray = root["enemies"];
-
-        for (size_t i = 0; i < enemiesArray.size(); i = i + 1) {
-            nlohmann::json enemyData = enemiesArray[i];
-
-            std::string type = enemyData["type"].get<std::string>();
-            std::vector<float> positionArray = enemyData["position"].get<std::vector<float>>();
-            Vector3 position = { positionArray[0], positionArray[1], positionArray[2] };
-
-            if (type == "NormalEnemy") {
-                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(position);
-                enemies_.push_back(std::move(enemy));
-            }
-
-            if (type == "MoveEnemy") {
-                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(position);
-
-                if (enemyData.contains("movePattern")) {
-                    std::string patternStr = enemyData["movePattern"].get<std::string>();
-                    if (patternStr == "LeftRight") {
-                        enemy->SetMovePattern(MovePattern::LeftRight);
-                    }
-                    if (patternStr == "UpDown") {
-                        enemy->SetMovePattern(MovePattern::UpDown);
-                    }
-                    if (patternStr == "ZigZag") {
-                        enemy->SetMovePattern(MovePattern::ZigZag);
-                    }
-                    if (patternStr == "SineWave") {
-                        enemy->SetMovePattern(MovePattern::SineWave);
-                    }
-                }
-
-                if (enemyData.contains("moveSpeed")) {
-                    enemy->SetMoveSpeed(enemyData["moveSpeed"].get<float>());
-                }
-                if (enemyData.contains("amplitude")) {
-                    enemy->SetAmplitude(enemyData["amplitude"].get<float>());
-                }
-                if (enemyData.contains("frequency")) {
-                    enemy->SetFrequency(enemyData["frequency"].get<float>());
-                }
-
-                enemies_.push_back(std::move(enemy));
-            }
-
+            enemies_.push_back(std::move(enemy));
         }
     }
 }
@@ -1534,4 +1466,116 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
     center.y = ClampFloat(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
 
     return center;
+}
+
+void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
+{
+    cameraPointObject_ = nullptr;
+    cameraPointLerpTime_ = 0.0f;
+
+    for (const LevelData::ObjectData& objData : levelData.objects) {
+        if (objData.disabled) {
+            continue;
+        }
+
+        if (objData.cameraPoint.exists) {
+            cameraPointObject_ = &objData;
+            cameraPointLerpTime_ = 0.0f;
+        }
+
+        if (objData.type == "MESH") {
+            if (objData.fileName.empty()) {
+                continue;
+            }
+            ModelManager::GetInstance()->Load(objData.fileName);
+
+            std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
+            levelObject->Initialize(Object3dManager::GetInstance());
+            levelObject->SetModel(objData.fileName);
+            levelObject->SetTranslate(objData.translation);
+            levelObject->SetRotate(objData.rotation);
+            levelObject->SetScale(objData.scale);
+
+            if (objData.gimmick.exists) {
+                levelObject->SetGimmick(objData.gimmick);
+            }
+
+            if (objData.collider.exists) {
+                if (objData.collider.type == "BOX") {
+                    BoxCollider* collider = new BoxCollider();
+                    Vector3 center = {
+                        objData.translation.x + objData.collider.center.x,
+                        objData.translation.y + objData.collider.center.y,
+                        objData.translation.z + objData.collider.center.z
+                    };
+                    collider->SetCenter(center);
+                    collider->SetSize(objData.collider.size);
+
+                    CollisionManager::GetInstance()->RegisterCollider(collider);
+                    levelObject->SetCollider(collider);
+                }
+            }
+
+            levelObjects_.push_back(std::move(levelObject));
+        }
+        else if (objData.type == "EnemySpawn") {
+            if (objData.fileName == "MoveEnemy") {
+                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(objData.translation);
+                enemy->SetRotate(objData.rotation);
+
+                enemy->SetMovePattern(MovePattern::LeftRight);
+                enemy->SetAmplitude(8.0f);
+                enemy->SetMoveSpeed(2.0f);
+
+                if (objData.patrolRoute.exists) {
+                    enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            } else {
+                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(objData.translation);
+                enemy->SetRotate(objData.rotation);
+
+                if (objData.patrolRoute.exists) {
+                    enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            }
+        }
+    }
+}
+
+void GamePlayScene::HotReloadLevel()
+{
+    for (auto& obj : levelObjects_) {
+        if (obj->GetCollider() != nullptr) {
+            CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider());
+            delete obj->GetCollider();
+        }
+    }
+    levelObjects_.clear();
+    enemies_.clear();
+
+    Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
+    Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
+
+    LevelDataLoader levelDataLoader;
+    LevelData newLevelData = levelDataLoader.Load("resources/Scenes/stage01.json");
+
+    if (!newLevelData.playerSpawns.empty()) {
+        const LevelData::PlayerSpawnData& spawn = newLevelData.playerSpawns[0];
+        playerStartPos = spawn.translation;
+        playerStartRot = spawn.rotation;
+    }
+
+    player_->SetTranslate(playerStartPos);
+    player_->SetRotate(playerStartRot);
+    player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+
+    CreateLevelObjects(newLevelData);
 }
