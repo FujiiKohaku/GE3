@@ -3,7 +3,6 @@
 #include "../Animation/PlayAnimation.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/TextureManager/TextureManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/math/MatrixMath.h"
 #include "Engine/math/Object3DStruct.h"
 #include "Model.h"
@@ -103,28 +102,22 @@ public:
         }
     }
 
-    void setEnableEnvironmentMap(bool enable)
-    {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableEnvironmentMap = 1;
-            } else {
-                materialData_->enableEnvironmentMap = 0;
-            }
-        }
-    }
     const Matrix4x4& GetWorldMatrix() const
     {
         return worldMatrix_;
     }
     void SetEnableEnvironmentMap(bool enable)
     {
-        materialData_->enableEnvironmentMap = enable;
+        if (materialData_) {
+            materialData_->enableEnvironmentMap = enable;
+        }
     }
 
     void SetEnvironmentMapStrength(float strength)
     {
-        materialData_->environmentCoefficient = strength;
+        if (materialData_) {
+            materialData_->environmentCoefficient = strength;
+        }
     }
 
 private:
@@ -179,6 +172,7 @@ private:
     D3D12_RESOURCE_STATES skinnedVertexState_ = D3D12_RESOURCE_STATE_COMMON;
     struct SkinningInformation {
         uint32_t numVertices;
+        uint32_t numJoints;
     };
 
     Microsoft::WRL::ComPtr<ID3D12Resource> skinningInformationResource_;

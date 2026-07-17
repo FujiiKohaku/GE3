@@ -5,6 +5,8 @@
 #include"Engine/SrvManager/SrvManager.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -20,6 +22,12 @@ public:
     // 初期化・読み込み
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager);
     void LoadTexture(const std::string& filePath);
+    void LoadTextureFromMemory(const std::string& textureKey, const uint8_t* data, size_t dataSize);
+    void LoadTextureFromBGRA(
+        const std::string& textureKey,
+        const uint8_t* data,
+        size_t width,
+        size_t height);
     // 保留中のテクスチャ転送をまとめてGPUへ送る。
     void FlushUploads();
 
@@ -64,13 +72,14 @@ private:
     DirectXCommon* dxCommon_ = nullptr;
     SrvManager* srvManager_ = nullptr;
 
-    static uint32_t kSRVIndexTop;
     static const uint32_t kMaxSRVCount = 512;
 
     uint32_t defaultTextureSrvIndex_ = 0;
 
     // GPU転送が完了するまでアップロード用リソースを保持する。
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> pendingUploadResources_;
+
+    void RegisterTexture(const std::string& textureKey, DirectX::ScratchImage& image);
 
     static std::unique_ptr<TextureManager> instance;
 };

@@ -55,9 +55,11 @@ void TestScene1::Initialize()
     Model* roboModel = ModelManager::GetInstance()->FindModel("Characters/Robo/Robo.gltf");
     if (roboModel) {
         std::string texturePath = "resources/Models/Characters/Robo/Robo_Armor_Texture.png";
-        TextureManager::GetInstance()->LoadTexture(texturePath);
-        roboModel->modelData_.material.textureFilePath = texturePath;
-        roboModel->modelData_.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(texturePath);
+        for (uint32_t materialIndex = 0;
+            materialIndex < roboModel->GetModelData().materials.size();
+            ++materialIndex) {
+            roboModel->SetTexture(texturePath, materialIndex);
+        }
     }
 
     // アニメーションのロード
@@ -99,6 +101,9 @@ void TestScene1::Initialize()
 
     // エフェクトマネージャーへのカメラ登録
     EffectManager::GetInstance()->SetCamera(camera_.get());
+
+    selectedPostEffectIndex_ = 0;
+    ApplySelectedPostEffect();
 }
 
 void TestScene1::Update()
@@ -107,6 +112,23 @@ void TestScene1::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
         return;
+    }
+
+    LONG mouseWheel = Input::GetInstance()->GetMouseWheel();
+    bool canSwitchPostEffect = !ImGui::GetIO().WantCaptureMouse;
+    if (canSwitchPostEffect && mouseWheel > 0) {
+        if (selectedPostEffectIndex_ == 0) {
+            selectedPostEffectIndex_ = postEffectTypes_.size() - 1;
+        } else {
+            selectedPostEffectIndex_--;
+        }
+        ApplySelectedPostEffect();
+    } else if (canSwitchPostEffect && mouseWheel < 0) {
+        selectedPostEffectIndex_++;
+        if (selectedPostEffectIndex_ >= postEffectTypes_.size()) {
+            selectedPostEffectIndex_ = 0;
+        }
+        ApplySelectedPostEffect();
     }
 
     // 1. マウスによるTPSカメラ操作（回転）は無効化 (完全固定カメラ)
@@ -273,7 +295,10 @@ void TestScene1::Update()
 
     // 更新処理 (止まっている時はアニメーション時間を進めない。ただしブレンド更新中は進める)
     bool isBlending = playerActor_ && playerActor_->GetPlayAnimation() && playerActor_->GetPlayAnimation()->IsBlending();
-    float animDeltaTime = (currentAnimState_ == PlayerAnimState::Idle && !isBlending) ? 0.0f : (1.0f / 60.0f);
+    float animDeltaTime = 1.0f / 60.0f;
+    if (currentAnimState_ == PlayerAnimState::Idle && !isBlending) {
+        animDeltaTime = 0.0f;
+    }
     playerActor_->Update(animDeltaTime);
     if (sneakWalkActor_) {
         sneakWalkActor_->Update(1.0f / 60.0f);
@@ -324,6 +349,12 @@ void TestScene1::DrawImGui()
     ImGui::Text("F1: Toggle Debug Camera");
     ImGui::Text("SPACE: Jump");
     ImGui::Text("Fixed SneakWalk: skeleton debug display");
+    ImGui::Text("Mouse Wheel: Change Post Effect");
+    ImGui::Text(
+        "Post Effect: %s (%u/%u)",
+        GetPostEffectTypeName(postEffectTypes_[selectedPostEffectIndex_]),
+        static_cast<unsigned int>(selectedPostEffectIndex_ + 1),
+        static_cast<unsigned int>(postEffectTypes_.size()));
     ImGui::Separator();
     ImGui::Text("Player Pos: (%.2f, %.2f, %.2f)", playerPos_.x, playerPos_.y, playerPos_.z);
     ImGui::Text("Camera Yaw: %.2f, Pitch: %.2f", cameraYaw_, cameraPitch_);
@@ -338,4 +369,11 @@ void TestScene1::DrawImGui()
 
 void TestScene1::Finalize()
 {
+}
+
+void TestScene1::ApplySelectedPostEffect()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    sceneManager->ClearPostEffects();
+    sceneManager->AddPostEffect(postEffectTypes_[selectedPostEffectIndex_]);
 }

@@ -10,7 +10,7 @@
 #pragma region
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
-    // Object3dManager と DebugCamera を受け取って保持
+    // Object3dManagerを保持
     object3dManager_ = object3DManager;
 
     camera_ = object3dManager_->GetDefaultCamera();
@@ -112,9 +112,6 @@ void Object3d::Draw()
 
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
 
-    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
-    commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
-
     commandList->SetGraphicsRootDescriptorTable(8,Object3dManager::GetInstance()->GetEnvironmentTexture());
     // モチE��が設定されてぁE��ば描画
     if (model_) {
@@ -164,6 +161,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         aiMesh* mesh = scene->mMeshes[meshIndex];
 
         MeshPrimitive primitive;
+        primitive.materialIndex = mesh->mMaterialIndex;
         primitive.mode = PrimitiveMode::Triangles; // 今E固定でOK
 
         // ---- vertices ----
@@ -229,38 +227,61 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         globalVertexOffset += mesh->mNumVertices;
         modelData.primitives.push_back(primitive);
     }
-    bool hasTexture = false;
+    modelData.materials.resize(scene->mNumMaterials);
+    if (modelData.materials.empty()) {
+        modelData.materials.push_back(MaterialData {});
+    }
 
     for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex) {
         aiMaterial* material = scene->mMaterials[materialIndex];
+        MaterialData& materialData = modelData.materials[materialIndex];
+        materialData.textureFilePath = "resources/Textures/BaseColor_Cube.png";
 
-        if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+        aiTextureType textureType = aiTextureType_BASE_COLOR;
+        if (material->GetTextureCount(textureType) == 0) {
+            textureType = aiTextureType_DIFFUSE;
+        }
+
+        if (material->GetTextureCount(textureType) > 0) {
             aiString textureFilePath;
-            material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
+            material->GetTexture(textureType, 0, &textureFilePath);
 
             std::string tex = textureFilePath.C_Str();
+            const aiTexture* embeddedTexture = scene->GetEmbeddedTexture(textureFilePath.C_Str());
+            if (embeddedTexture != nullptr) {
+                std::string embeddedTextureKey = "embedded://";
+                embeddedTextureKey += modelFilePath.lexically_normal().generic_string();
+                embeddedTextureKey += "/";
+                embeddedTextureKey += tex;
+
+                if (embeddedTexture->mHeight == 0) {
+                    TextureManager::GetInstance()->LoadTextureFromMemory(
+                        embeddedTextureKey,
+                        reinterpret_cast<const uint8_t*>(embeddedTexture->pcData),
+                        embeddedTexture->mWidth);
+                } else {
+                    TextureManager::GetInstance()->LoadTextureFromBGRA(
+                        embeddedTextureKey,
+                        reinterpret_cast<const uint8_t*>(embeddedTexture->pcData),
+                        embeddedTexture->mWidth,
+                        embeddedTexture->mHeight);
+                }
+                materialData.textureFilePath = embeddedTextureKey;
+            }
 
             // "*0" みたいな埋め込み表記�EファイルじゃなぁE
-            if (!tex.empty() && tex[0] != '*') {
+            else if (!tex.empty()) {
 
                 std::filesystem::path fullPath = modelDirectory / tex; // Model Path
 
                 if (std::filesystem::exists(fullPath)) {
-                    modelData.material.textureFilePath = fullPath.lexically_normal().string();
-                    hasTexture = true;
-                    break;
+                    materialData.textureFilePath = fullPath.lexically_normal().string();
                 }
             }
         }
     }
 
     // ここで刁E��すめE
-    if (hasTexture) {
-        TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
-    } else {
-        TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
-        modelData.material.textureFilePath = "resources/Textures/BaseColor_Cube.png";
-    }
     // -------------------------
     // Node�E�既存�E処琁E��E
     // -------------------------

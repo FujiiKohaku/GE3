@@ -63,6 +63,38 @@ void PostEffectManager::DrawImGui()
 #ifdef USE_IMGUI
     ImGui::Begin("Post Effects");
 
+    CopyImageRenderer::PostEffectParameter& parameter = copyImageRenderer_->GetPostEffectParameter();
+    const char* animationButtonLabel = "Animated Effects: OFF";
+    if (isAnimationEnabled_) {
+        animationButtonLabel = "Animated Effects: ON";
+    }
+    if (ImGui::Button(animationButtonLabel)) {
+        isAnimationEnabled_ = !isAnimationEnabled_;
+        if (isAnimationEnabled_) { parameter.animationEnabled = 1; } else { parameter.animationEnabled = 0; }
+    }
+    ImGui::SliderFloat("Pixel Size", &parameter.pixelSize, 1.0f, 64.0f, "%.0f");
+    ImGui::SliderFloat("Brightness", &parameter.colorBrightness, -1.0f, 1.0f);
+    ImGui::SliderFloat("Contrast", &parameter.colorContrast, 0.0f, 3.0f);
+    ImGui::SliderFloat("Saturation", &parameter.colorSaturation, 0.0f, 3.0f);
+    ImGui::SliderFloat("Focus Depth", &parameter.focusDepth, 0.0f, 1.0f, "%.4f");
+    ImGui::SliderFloat("Focus Range", &parameter.focusRange, 0.0001f, 0.2f, "%.4f");
+    ImGui::SliderFloat("DoF Radius", &parameter.depthOfFieldRadius, 0.0f, 32.0f);
+    ImGui::SliderFloat2("Motion Direction", &parameter.motionBlurDirection.x, -1.0f, 1.0f);
+    ImGui::SliderFloat("Motion Strength", &parameter.motionBlurStrength, 0.0f, 0.1f);
+    ImGui::SliderInt("Motion Samples", &parameter.motionBlurSampleCount, 1, 32);
+    ImGui::SliderFloat("Chromatic Aberration", &parameter.chromaticAberrationStrength, 0.0f, 0.05f);
+    ImGui::SliderFloat("Lens Distortion", &parameter.lensDistortionStrength, -1.0f, 1.0f);
+    ImGui::SliderFloat("Film Grain", &parameter.filmGrainStrength, 0.0f, 0.5f);
+    ImGui::SliderFloat("Lens Dirt", &parameter.lensDirtStrength, 0.0f, 3.0f);
+    ImGui::SliderFloat("Camera Shake", &parameter.cameraShakeStrength, 0.0f, 0.05f);
+    ImGui::SliderFloat("Bokeh Radius", &parameter.bokehRadius, 0.0f, 32.0f);
+    ImGui::SliderInt("Bokeh Sides", &parameter.bokehSides, 3, 12);
+    ImGui::SliderFloat("Fisheye", &parameter.fisheyeStrength, 0.01f, 3.0f);
+    ImGui::SliderFloat("Light Threshold", &parameter.lightThreshold, 0.0f, 2.0f);
+    ImGui::SliderFloat("Light Strength", &parameter.lightStrength, 0.0f, 5.0f);
+    ImGui::SliderFloat("Light Radius", &parameter.lightRadius, 0.01f, 1.0f);
+    ImGui::Separator();
+
     const std::vector<PostEffectInfo>& postEffects = SceneManager::GetInstance()->GetPostEffects();
     if (postEffects.empty()) {
         ImGui::Text("1: Copy (implicit)");
@@ -104,7 +136,9 @@ void PostEffectManager::PrepareDepthForParticleDraw()
 void PostEffectManager::SetBoostRadialBlurParameters(bool isBoosting)
 {
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-    postEffectParameter.time += 1.0f / 60.0f;
+    if (isAnimationEnabled_) {
+        postEffectParameter.time += 1.0f / 60.0f;
+    }
     if (postEffectParameter.time > 1000.0f) {
         postEffectParameter.time = 0.0f;
     }

@@ -39,7 +39,6 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/input/Input.h"
 #include "Engine/math/MatrixMath.h"
 
@@ -47,7 +46,6 @@
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/3D/Object3D.h"
 #include "Engine/3D/Object3dManager.h"
-#include "Engine/Particle/ParticleManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/Winapp/Utility.h"
@@ -97,7 +95,6 @@ private:
     // グラフィック / モデル
     // ------------------------------
     ModelCommon modelCommon_;
-    DebugCamera debugCamera_;
 
     // game
     // GamePlayScene* scene_;

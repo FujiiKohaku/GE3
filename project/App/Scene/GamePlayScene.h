@@ -1,7 +1,6 @@
 #pragma once
 #include "Engine/3D/SkinningObject3d.h"
 #include "Engine/3D/SkinningObject3dManager.h"
-#include "Engine/3D/SphereObject.h"
 
 #include "Engine/Animation/PlayAnimation.h"
 #include "Engine/Skeleton/Skeleton.h"
@@ -95,7 +94,6 @@ private:
     // 3dオブジェクト
     // ------------------------------
 
-    std::unique_ptr<SphereObject> sphere_;
     // std::unique_ptr<Object3d> terrain_;
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;

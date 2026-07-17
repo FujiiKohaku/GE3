@@ -8,6 +8,7 @@
 #include <d3d12.h>
 #include <dxcapi.h>
 #include <dxgi1_6.h>
+#include <filesystem>
 #include <wrl.h>
 #pragma comment(lib, "dxcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -89,6 +90,9 @@ private:
     void InitializeViewport();
     void InitializeScissorRect();
     void InitializeDxcCompiler();
+    Microsoft::WRL::ComPtr<IDxcBlob> CompileShaderAndSaveCache(
+        const std::filesystem::path& sourcePath,
+        const std::filesystem::path& compiledPath);
 
 private:
     Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = nullptr;
@@ -120,4 +124,6 @@ private:
     D3D12_RECT scissorRect {};
 
     Microsoft::WRL::ComPtr<IDxcUtils> dxcUtils;
+    Microsoft::WRL::ComPtr<IDxcCompiler3> dxcCompiler;
+    Microsoft::WRL::ComPtr<IDxcIncludeHandler> dxcIncludeHandler;
 };

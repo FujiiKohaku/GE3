@@ -7,7 +7,6 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/ImGuiManager/ImGuiManager.h"
-#include "Engine/Particle/ParticleManager.h"
 #include "Engine/PostEffect/OffscreenRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/SrvManager/SrvManager.h"
@@ -51,14 +50,11 @@ void Renderer::Draw(SceneManager* sceneManager)
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
     if (defaultCamera != nullptr) {
         EffectManager::GetInstance()->SetCamera(defaultCamera);
-        ParticleManager::GetInstance()->SetCamera(defaultCamera);
         EffectManager::GetInstance()->UpdatePerView();
-        ParticleManager::GetInstance()->UpdatePerView();
     }
 
     D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = postEffectManager_->GetFogConstantBufferView();
     EffectManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
-    ParticleManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
 
     // Offscreen draw start
     postEffectManager_->PreDrawDepth();

@@ -7,6 +7,8 @@
 #include "Engine/Animation/AnimationActor.h"
 #include "Engine/Animation/Animation.h"
 #include "Engine/Math/MathStruct.h"
+#include <array>
+#include <cstddef>
 #include <memory>
 
 class TestScene1 : public BaseScene {
@@ -20,6 +22,8 @@ public:
     void DrawImGui() override;
 
 private:
+    void ApplySelectedPostEffect();
+
     enum class PlayerAnimState {
         Idle,
         Running,
@@ -57,4 +61,42 @@ private:
     // Attack Control
     float attackTimer_ = 0.0f;
     bool hasEmittedParticle_ = false;
+
+    std::array<PostEffectType, 34> postEffectTypes_ = {
+        PostEffectType::Copy,
+        PostEffectType::GrayScale,
+        PostEffectType::Vignette,
+        PostEffectType::DepthOfField,
+        PostEffectType::MotionBlur,
+        PostEffectType::ChromaticAberration,
+        PostEffectType::LensDistortion,
+        PostEffectType::FilmGrain,
+        PostEffectType::LensDirt,
+        PostEffectType::CameraShake,
+        PostEffectType::BokehShape,
+        PostEffectType::Fisheye,
+        PostEffectType::Pixelate,
+        PostEffectType::ColorAdjust,
+        PostEffectType::smoothing,
+        PostEffectType::GaussianFilter,
+        PostEffectType::LuminanceBasedOutline,
+        PostEffectType::DepthOutline,
+        PostEffectType::RadialBlur,
+        PostEffectType::Dissolve,
+        PostEffectType::Random,
+        PostEffectType::Bloom,
+        PostEffectType::LensFlare,
+        PostEffectType::Glare,
+        PostEffectType::LightShafts,
+        PostEffectType::VolumetricLight,
+        PostEffectType::AnamorphicFlare,
+        PostEffectType::Halo,
+        PostEffectType::LightStreak,
+        PostEffectType::NeonGlow,
+        PostEffectType::GhostImage,
+        PostEffectType::Outline,
+        PostEffectType::Fog,
+        PostEffectType::FocusLine,
+    };
+    std::size_t selectedPostEffectIndex_ = 0;
 };

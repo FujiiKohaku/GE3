@@ -65,6 +65,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     assert(skinningInformationData_);
 
     skinningInformationData_->numVertices = vertexCount;
+    skinningInformationData_->numJoints = static_cast<uint32_t>(playAnimation_->GetSkeleton()->joints.size());
     // ================================
     // Transform 初期値
     // ================================
@@ -89,8 +90,6 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData());
     // すきんぐりんぐ�Eリソースを作�E
     CreateSkinningResources();
-
-    // assert(model_->GetVertexResource() != nullptr);　
 
    // TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
     //environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/skybox.dds");
@@ -166,18 +165,17 @@ void SkinningObject3d::Draw()
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
-    commandList->SetGraphicsRootDescriptorTable(8, SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
-
-    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
-
-    commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
-    commandList->SetGraphicsRootDescriptorTable(9, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootDescriptorTable(8, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
 
     uint32_t vertexOffset = 0;
 
     const ModelData& modelData = model_->GetModelData();
 
     for (const auto& primitive : modelData.primitives) {
+
+        const MaterialData& material = model_->GetMaterial(primitive.materialIndex);
+        D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(material.textureFilePath);
+        commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
 
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
         vbView.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;

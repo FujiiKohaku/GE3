@@ -1,10 +1,10 @@
 ﻿#include "TextureManager.h"
 #include <chrono>
+#include <cstring>
 #include <format>
 
 std::unique_ptr<TextureManager> TextureManager::instance = nullptr;
 // ImGui縺ｧ0逡ｪ繧剃ｽｿ逕ｨ縺吶ｋ縺溘ａ縲・逡ｪ縺九ｉ菴ｿ逕ｨ
-uint32_t TextureManager::kSRVIndexTop = 1;
 
 //=================================================================
 // 繧､繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ蜿門ｾ暦ｼ医す繝ｳ繧ｰ繝ｫ繝医Φ・・
@@ -75,43 +75,109 @@ void TextureManager::LoadTexture(const std::string& filePath)
     } else {
         hr = DirectX::LoadFromWICFile(filePathW.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
     }
-    assert(SUCCEEDED(hr));
-
-    // 繝溘ャ繝励・繝・・逕滓・
-    DirectX::ScratchImage mipImages {};
-
-    if (DirectX::IsCompressed(image.GetMetadata().format)) {
-        mipImages = std::move(image); // 蝨ｧ邵ｮ繝・け繧ｹ繝√Ε縺ｯ繝溘ャ繝励・繝・・縺後☆縺ｧ縺ｫ逕滓・縺輔ｌ縺ｦ縺・ｋ縺薙→縺悟､壹＞縺ｮ縺ｧ縲√◎縺ｮ縺ｾ縺ｾ菴ｿ逕ｨ
-    } else {
-        hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(), image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImages);
+    if (FAILED(hr)) {
+        Logger::Error(std::format("Texture load failed: {}, HRESULT:{}", filePath, static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
     }
 
-    assert(SUCCEEDED(hr));
+    RegisterTexture(filePath, image);
+}
 
-    // 繝・け繧ｹ繝√Ε繝・・繧ｿ繧定ｿｽ蜉縺励※譖ｸ縺崎ｾｼ繧
-    TextureData& textureData = textureDatas[filePath];
+void TextureManager::LoadTextureFromMemory(
+    const std::string& textureKey,
+    const uint8_t* data,
+    size_t dataSize)
+{
+    if (textureKey.empty() || data == nullptr || dataSize == 0) {
+        return;
+    }
+    if (textureDatas.contains(textureKey)) {
+        return;
+    }
 
-    // 諠・ｱ繧定ｨ倬鹸
+    DirectX::ScratchImage image {};
+    HRESULT hr = DirectX::LoadFromDDSMemory(data, dataSize, DirectX::DDS_FLAGS_NONE, nullptr, image);
+    if (FAILED(hr)) {
+        image.Release();
+        hr = DirectX::LoadFromWICMemory(data, dataSize, DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+    }
+    if (FAILED(hr)) {
+        Logger::Error(std::format("Embedded texture load failed: {}, HRESULT:{}", textureKey, static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+    RegisterTexture(textureKey, image);
+}
+
+void TextureManager::LoadTextureFromBGRA(
+    const std::string& textureKey,
+    const uint8_t* data,
+    size_t width,
+    size_t height)
+{
+    if (textureKey.empty() || data == nullptr || width == 0 || height == 0) {
+        return;
+    }
+    if (textureDatas.contains(textureKey)) {
+        return;
+    }
+
+    DirectX::ScratchImage image {};
+    HRESULT hr = image.Initialize2D(DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, width, height, 1, 1);
+    if (FAILED(hr)) {
+        Logger::Error(std::format("Embedded texture initialization failed: {}, HRESULT:{}", textureKey, static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+    const DirectX::Image* destinationImage = image.GetImage(0, 0, 0);
+    size_t sourceRowPitch = width * sizeof(uint32_t);
+    for (size_t row = 0; row < height; ++row) {
+        std::memcpy(
+            destinationImage->pixels + destinationImage->rowPitch * row,
+            data + sourceRowPitch * row,
+            sourceRowPitch);
+    }
+
+    RegisterTexture(textureKey, image);
+}
+
+void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::ScratchImage& image)
+{
+    assert(srvManager_ != nullptr);
+    assert(srvManager_->CanAllocate());
+
+    DirectX::ScratchImage mipImages {};
+    if (DirectX::IsCompressed(image.GetMetadata().format)) {
+        mipImages = std::move(image);
+    } else {
+        HRESULT hr = DirectX::GenerateMipMaps(
+            image.GetImages(),
+            image.GetImageCount(),
+            image.GetMetadata(),
+            DirectX::TEX_FILTER_SRGB,
+            0,
+            mipImages);
+        if (FAILED(hr)) {
+            Logger::Error(std::format("Texture mipmap generation failed: {}, HRESULT:{}", textureKey, static_cast<unsigned long>(hr)));
+            assert(false);
+            return;
+        }
+    }
+
+    TextureData& textureData = textureDatas[textureKey];
     textureData.metadata = mipImages.GetMetadata();
-
-    // 繝・け繧ｹ繝√Ε繝ｪ繧ｽ繝ｼ繧ｹ逕滓・
     textureData.resource = dxCommon_->CreateTextureResource(dxCommon_->GetDevice(), textureData.metadata);
     Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource =
         dxCommon_->UploadTextureData(textureData.resource, mipImages);
-
-    // 描画開始前にまとめて転送するため、それまでは一時リソースを保持する。
     pendingUploadResources_.push_back(std::move(intermediateResource));
 
-    // SRV繧､繝ｳ繝・ャ繧ｯ繧ｹ險育ｮ・
-    uint32_t srvIndex = static_cast<uint32_t>(textureDatas.size() - 1) + kSRVIndexTop;
-    Logger::Log(std::format("Texture Loaded: {}, SRV Index: {}", filePath, srvIndex));
-
-    // CPU/GPU繝上Φ繝峨Ν蜿門ｾ・
     textureData.srvIndex = srvManager_->Allocate();
     textureData.srvHandleCPU = srvManager_->GetCPUDescriptorHandle(textureData.srvIndex);
     textureData.srvHandleGPU = srvManager_->GetGPUDescriptorHandle(textureData.srvIndex);
 
-    // SRV險ｭ螳・
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
     srvDesc.Format = textureData.metadata.format;
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -121,14 +187,12 @@ void TextureManager::LoadTexture(const std::string& filePath)
         srvDesc.TextureCube.MipLevels = UINT_MAX;
         srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
     } else {
-    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels = static_cast<UINT>(textureData.metadata.mipLevels);
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels = static_cast<UINT>(textureData.metadata.mipLevels);
     }
 
-
     dxCommon_->GetDevice()->CreateShaderResourceView(textureData.resource.Get(), &srvDesc, textureData.srvHandleCPU);
-
-    Logger::Log(std::format("srvIndex = {}", srvIndex));
+    Logger::Log(std::format("Texture Loaded: {}, SRV Index: {}", textureKey, textureData.srvIndex));
 }
 
 void TextureManager::FlushUploads()

@@ -48,7 +48,7 @@ void SkinningObject3dManager::CreateRootSignature()
 {
     HRESULT hr;
 
-    D3D12_ROOT_PARAMETER rootParameters[10] = {};
+    D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
     // [0] Material・ｽiPS : b0・ｽj
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -97,28 +97,17 @@ void SkinningObject3dManager::CreateRootSignature()
     rootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[7].Descriptor.ShaderRegister = 5;
 
-    // [8] MatrixPalette・ｽiVS : t0・ｽj
-    D3D12_DESCRIPTOR_RANGE matrixPaletteRange {};
-    matrixPaletteRange.BaseShaderRegister = 0;
-    matrixPaletteRange.NumDescriptors = 1;
-    matrixPaletteRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    matrixPaletteRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-    rootParameters[8].DescriptorTable.pDescriptorRanges = &matrixPaletteRange;
-    rootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
-    // [9] EnvironmentTexture・ｽiPS : t1・ｽj
+    // [8] EnvironmentTexture (PS : t1)
     D3D12_DESCRIPTOR_RANGE environmentTextureRange {};
     environmentTextureRange.BaseShaderRegister = 1;
     environmentTextureRange.NumDescriptors = 1;
     environmentTextureRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     environmentTextureRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    rootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameters[9].DescriptorTable.pDescriptorRanges = &environmentTextureRange;
-    rootParameters[9].DescriptorTable.NumDescriptorRanges = 1;
+    rootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[8].DescriptorTable.pDescriptorRanges = &environmentTextureRange;
+    rootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
     // ===============================
     // Sampler
     // ===============================
@@ -169,7 +158,7 @@ void SkinningObject3dManager::CreateRootSignature()
 #pragma region
 void SkinningObject3dManager::CreateGraphicsPipeline()
 {
-    std::array<D3D12_INPUT_ELEMENT_DESC, 5> inputElementDescs {};
+    std::array<D3D12_INPUT_ELEMENT_DESC, 3> inputElementDescs {};
 
     // ---------------------------------
     // Stream 0 : VertexData
@@ -197,25 +186,6 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     inputElementDescs[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
     inputElementDescs[2].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
     inputElementDescs[2].InstanceDataStepRate = 0;
-
-    // ---------------------------------
-    // Stream 1 : VertexInfluence
-    // ---------------------------------
-    inputElementDescs[3].SemanticName = "WEIGHT";
-    inputElementDescs[3].SemanticIndex = 0;
-    inputElementDescs[3].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-    inputElementDescs[3].InputSlot = 1; //
-    inputElementDescs[3].AlignedByteOffset = 0;
-    inputElementDescs[3].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-    inputElementDescs[3].InstanceDataStepRate = 0;
-
-    inputElementDescs[4].SemanticName = "INDEX";
-    inputElementDescs[4].SemanticIndex = 0;
-    inputElementDescs[4].Format = DXGI_FORMAT_R32G32B32A32_SINT;
-    inputElementDescs[4].InputSlot = 1; //
-    inputElementDescs[4].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-    inputElementDescs[4].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-    inputElementDescs[4].InstanceDataStepRate = 0;
 
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
     inputLayoutDesc.pInputElementDescs = inputElementDescs.data();

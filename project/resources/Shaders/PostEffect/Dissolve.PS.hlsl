@@ -8,14 +8,16 @@ float4 main(VertexShaderOutput input) : SV_TARGET
 {
     float mask = gMaskTexture.Sample(gSampler, input.texcoord).r;
 
-    if (mask <= dissolveThreshold)
+    float activeThreshold = dissolveThreshold;
+    if (animationEnabled != 0) { activeThreshold = 0.5f + sin(time) * 0.5f; }
+    if (mask <= activeThreshold)
     {
         return float4(0.0f, 1.0f, 0.0f, 1.0f);
     }
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 
-    float edge = 1.0f - smoothstep(dissolveThreshold,dissolveThreshold + dissolveEdgeWidth,mask);
+    float edge = 1.0f - smoothstep(activeThreshold, activeThreshold + dissolveEdgeWidth, mask);
 
     textureColor.rgb += edge * dissolveEdgeStrength * float3(1.0f, 0.4f, 0.0f);
 

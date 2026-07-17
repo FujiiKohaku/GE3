@@ -15,6 +15,7 @@ public:
 
     uint32_t Allocate();
     void Free(uint32_t index);
+    bool FreeByCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE handle);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(uint32_t index);
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(uint32_t index);

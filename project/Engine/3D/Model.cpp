@@ -57,12 +57,16 @@ void Model::CreateMeshResources()
         }
     }
 
-    // Texture
-    if (modelData_.material.textureFilePath.empty()) {
-        modelData_.material.textureFilePath = "resources/Textures/BaseColor_Cube.png";
+    if (modelData_.materials.empty()) {
+        modelData_.materials.push_back(MaterialData {});
     }
-    TextureManager::GetInstance()->LoadTexture(modelData_.material.textureFilePath);
-    modelData_.material.textureIndex = TextureManager::GetInstance()->GetTextureIndexByFilePath(modelData_.material.textureFilePath);
+
+    for (MaterialData& material : modelData_.materials) {
+        if (material.textureFilePath.empty()) {
+            material.textureFilePath = "resources/Textures/BaseColor_Cube.png";
+        }
+        TextureManager::GetInstance()->LoadTexture(material.textureFilePath);
+    }
 }
 
 // ===============================================
@@ -80,9 +84,9 @@ void Model::Draw()
         // vertex buffer
         commandList->IASetVertexBuffers(0, 1, &primitive.vbView);
 
-        // texture
-       /* auto handle = TextureManager::GetInstance()->GetSrvHandleGPU(modelData_.material.textureFilePath);
-        commandList->SetGraphicsRootDescriptorTable(2, handle);*/
+        const MaterialData& material = GetMaterial(primitive.materialIndex);
+        D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(material.textureFilePath);
+        commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
 
         // draw
         if (!primitive.indices.empty()) {
@@ -92,4 +96,29 @@ void Model::Draw()
             commandList->DrawInstanced(UINT(primitive.vertices.size()), 1, 0, 0);
         }
     }
+}
+
+void Model::SetTexture(const std::string& filePath, uint32_t materialIndex)
+{
+    if (materialIndex >= modelData_.materials.size()) {
+        modelData_.materials.resize(materialIndex + 1);
+    }
+
+    MaterialData& material = modelData_.materials[materialIndex];
+    material.textureFilePath = filePath;
+    TextureManager::GetInstance()->LoadTexture(filePath);
+}
+
+const std::string& Model::GetTexture(uint32_t materialIndex) const
+{
+    return GetMaterial(materialIndex).textureFilePath;
+}
+
+const MaterialData& Model::GetMaterial(uint32_t materialIndex) const
+{
+    assert(!modelData_.materials.empty());
+    if (materialIndex >= modelData_.materials.size()) {
+        return modelData_.materials[0];
+    }
+    return modelData_.materials[materialIndex];
 }

@@ -48,7 +48,9 @@ ModelData CreatePlaneModelData(const std::string& texturePath, float tilingX, fl
     primitive.indices = { 0, 1, 2, 0, 2, 3 };
 
     modelData.primitives.push_back(primitive);
-    modelData.material.textureFilePath = texturePath;
+    MaterialData material {};
+    material.textureFilePath = texturePath;
+    modelData.materials.push_back(material);
     SetupDefaultRootNode(modelData, "Plane");
 
     return modelData;
@@ -170,7 +172,9 @@ ModelData CreateBeamCrossModelData(const std::string& texturePath)
     };
 
     modelData.primitives.push_back(primitive);
-    modelData.material.textureFilePath = texturePath;
+    MaterialData material {};
+    material.textureFilePath = texturePath;
+    modelData.materials.push_back(material);
     
     modelData.rootNode.name = "BeamCross";
     modelData.rootNode.transform.scale = { 1.0f, 1.0f, 1.0f };

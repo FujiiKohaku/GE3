@@ -1,7 +1,6 @@
 #pragma once
 #include "Engine/Camera/Camera.h"
 #include "Engine/TextureManager/TextureManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/math/MatrixMath.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -67,16 +66,6 @@ public:
         }
     }
 
-    void setEnableEnvironmentMap(bool enable)
-    {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableEnvironmentMap = 1;
-            } else {
-                materialData_->enableEnvironmentMap = 0;
-            }
-        }
-    }
     void SetAnimation(PlayAnimation* anim);
     const Node& GetRootNode() const;
     const Matrix4x4& GetWorldMatrix() const
@@ -90,12 +79,16 @@ public:
     }
     void SetEnableEnvironmentMap(bool enable)
     {
-        materialData_->enableEnvironmentMap = enable;
+        if (materialData_) {
+            materialData_->enableEnvironmentMap = enable;
+        }
     }
 
     void SetEnvironmentMapStrength(float strength)
     {
-        materialData_->environmentCoefficient = strength;
+        if (materialData_) {
+            materialData_->environmentCoefficient = strength;
+        }
     }
     void SetName(const std::string& name)
     {

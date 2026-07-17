@@ -24,9 +24,38 @@ public:
         float dissolvePadding;
 
         float boostKickStrength;
+        float pixelSize;
+        float colorBrightness;
+        float colorContrast;
+
+        float colorSaturation;
         float padding0;
         float padding1;
         float padding2;
+
+        float focusDepth;
+        float focusRange;
+        float depthOfFieldRadius;
+        float motionBlurStrength;
+
+        Vector2 motionBlurDirection;
+        int32_t motionBlurSampleCount;
+        float chromaticAberrationStrength;
+
+        float lensDistortionStrength;
+        float filmGrainStrength;
+        float lensDirtStrength;
+        float cameraShakeStrength;
+
+        float bokehRadius;
+        int32_t bokehSides;
+        float fisheyeStrength;
+        int32_t animationEnabled;
+
+        float lightThreshold;
+        float lightStrength;
+        float lightRadius;
+        float lightAngle;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);

@@ -72,4 +72,5 @@ private:
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
+    bool isAnimationEnabled_ = true;
 };

@@ -34,7 +34,8 @@ void TitleScene::Initialize()
     titleObj_->SetTranslate({ 0.0f, 0.0f, 0.0f });
     titleObj_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     titleObj_->SetScale({ 1.0f, 1.0f, 1.0f });
-    titleObj_->SetEnvironmentMapStrength(false);
+    titleObj_->SetEnableEnvironmentMap(false);
+    titleObj_->SetEnvironmentMapStrength(0.0f);
     //  titleObj_->SetCamera(camera_.get());
 
     TextureManager::GetInstance()->LoadTexture("resources/Textures/Credit.png");
