@@ -136,6 +136,9 @@
     <ClCompile Include="App\Scene\TitleScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Scene\TestScene1.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="App\Scene\BaseScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -433,6 +436,9 @@
     </ClInclude>
     <ClInclude Include="App\Scene\LoadingScene.h" />
     <ClInclude Include="App\Scene\TitleScene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\TestScene1.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Scene\BaseScene.h">

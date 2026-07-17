@@ -256,6 +256,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\StringUtility\StringUtility.cpp" />
     <ClCompile Include="Engine\TextureManager\TextureManager.cpp" />
     <ClCompile Include="App\Scene\TitleScene.cpp" />
+    <ClCompile Include="App\Scene\TestScene1.cpp" />
     <ClCompile Include="Engine\Winapp\Utility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
@@ -394,6 +395,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\StringUtility\StringUtility.h" />
     <ClInclude Include="Engine\TextureManager\TextureManager.h" />
     <ClInclude Include="App\Scene\TitleScene.h" />
+    <ClInclude Include="App\Scene\TestScene1.h" />
     <ClInclude Include="App\Scene\LoadingScene.h" />
     <ClInclude Include="Engine\Winapp\Utility.h" />
     <ClInclude Include="Engine\math\MatrixMath.h" />

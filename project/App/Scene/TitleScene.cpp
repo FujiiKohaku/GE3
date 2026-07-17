@@ -7,6 +7,8 @@
 #include "Engine/input/Input.h"
 #include "LoadingScene.h"
 #include "GamePlayScene.h"
+#include "TestScene1.h"
+#include "externals/imgui/imgui.h"
 
 #include <numbers>
 void TitleScene::Initialize()
@@ -52,6 +54,10 @@ void TitleScene::Update()
         SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>();
     }
 
+    if (Input::GetInstance()->IsKeyTrigger(DIK_T)) {
+        SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, TestScene1>();
+    }
+
     if (Input::GetInstance()->IsKeyTrigger(DIK_L)) {
         isRandomPostEffect_ = !isRandomPostEffect_;
         if (isRandomPostEffect_) {
@@ -88,6 +94,10 @@ void TitleScene::DrawParticle()
 
 void TitleScene::DrawImGui()
 {
+    ImGui::Begin("Title Scene");
+    ImGui::Text("Press SPACE to start GamePlayScene");
+    ImGui::Text("Press T to start TestScene1");
+    ImGui::End();
 }
 
 void TitleScene::Finalize()
