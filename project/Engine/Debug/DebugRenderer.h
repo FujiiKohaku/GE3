@@ -8,6 +8,7 @@
 #include <wrl.h>
 
 class DirectXCommon;
+struct Skeleton;
 
 // DebugLine は、CPU側で「どこからどこまで線を描きたいか」を覚えておくためのデータです。
 // AddLine() が呼ばれるたびに、この構造体を lines_ に追加します。
@@ -47,6 +48,22 @@ public:
         const Vector4& color,
         float thickness = 1.0f);
 
+    void AddOverlayLine(
+        const Vector3& start,
+        const Vector3& end,
+        const Vector4& color,
+        float thickness = 1.0f);
+
+    void AddSkeleton(
+        const Skeleton& skeleton,
+        const Matrix4x4& worldMatrix);
+
+    void AddSkeleton(
+        const Skeleton& skeleton,
+        const Matrix4x4& worldMatrix,
+        const Vector4& color,
+        float thickness = 2.0f);
+
     void SetVisible(bool visible) { isVisible_ = visible; }
     bool IsVisible() const { return isVisible_; }
 
@@ -85,6 +102,7 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> overlayPipelineState_;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> viewProjectionResource_;
     ViewProjectionData* viewProjectionData_ = nullptr;
@@ -106,4 +124,5 @@ private:
     // AddLine() は GPU を直接触らず、まずこの配列に描きたい線を追加します。
     // Draw() でまとめて GPU 用の頂点データへ変換することで、呼び出し側は手軽にデバッグ線を登録できます。
     std::vector<DebugLine> lines_;
+    std::vector<DebugLine> overlayLines_;
 };

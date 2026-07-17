@@ -1,4 +1,5 @@
 #include "AnimationActor.h"
+#include "Engine/Debug/DebugRenderer.h"
 #include "Engine/3D/ModelManager.h"
 
 void AnimationActor::Initialize(const std::string& modelName)
@@ -29,6 +30,8 @@ void AnimationActor::Update(float deltaTime)
     if (object_) {
         object_->Update();
     }
+
+    DrawSkeletonDebug();
 }
 
 void AnimationActor::Draw()
@@ -57,6 +60,26 @@ void AnimationActor::SetScale(const Vector3& scale)
     if (object_) {
         object_->SetScale(scale);
     }
+}
+
+void AnimationActor::SetSkeletonDebugVisible(bool visible)
+{
+    isSkeletonDebugVisible_ = visible;
+}
+
+void AnimationActor::DrawSkeletonDebug()
+{
+    if (!isSkeletonDebugVisible_) {
+        return;
+    }
+
+    if (!object_) {
+        return;
+    }
+
+    DebugRenderer::GetInstance()->AddSkeleton(
+        skeleton_,
+        object_->GetWorldMatrix());
 }
 
 SkinningObject3d* AnimationActor::GetObject()

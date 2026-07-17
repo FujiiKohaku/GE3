@@ -1,0 +1,56 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 16,
+    "Radius": 0.1,
+    "Frequency": 0.02
+  },
+
+  "Particle": {
+    "LifeTime": 0.35,
+
+    "StartScale": 0.15,
+    "EndScale": 1.2,
+
+    "StartRotation": 0.0,
+    "RotationSpeed": 5.0,
+
+    "Velocity": [0.0, 1.5, 0.0],
+
+    "StartColor": [1.0, 1.0, 0.8, 1.0],
+    "EndColor": [0.8, 0.2, 0.0, 0.0]
+  },
+
+  "Simulation": {
+    "EnableGravity": true,
+    "Gravity": 4.0,
+
+    "EnableDrag": true,
+    "Drag": 0.9,
+
+    "EnableNoise": true,
+    "NoiseStrength": 1.5,
+
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+
+  "Render": {
+    "Texture": "handFlame.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+
+    "Loop": false,
+    "Duration": 0.5
+  }
+}

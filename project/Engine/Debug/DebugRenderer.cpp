@@ -5,6 +5,7 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Math/MatrixMath.h"
+#include "Engine/Skeleton/Skeleton.h"
 #include "Engine/WinApp/WinApp.h"
 #include "Engine/blend/BlendUtil.h"
 #include <cassert>
@@ -121,6 +122,73 @@ void DebugRenderer::AddLine(
     lines_.push_back(line);
 }
 
+void DebugRenderer::AddOverlayLine(
+    const Vector3& start,
+    const Vector3& end,
+    const Vector4& color,
+    float thickness)
+{
+    DebugLine line {};
+    line.start = start;
+    line.end = end;
+    line.color = color;
+    line.thickness = thickness;
+
+    if (line.thickness <= 0.0f) {
+        line.thickness = 1.0f;
+    }
+
+    overlayLines_.push_back(line);
+}
+
+void DebugRenderer::AddSkeleton(
+    const Skeleton& skeleton,
+    const Matrix4x4& worldMatrix)
+{
+    const Vector4 defaultColor = { 0.0f, 1.0f, 1.0f, 1.0f };
+    AddSkeleton(skeleton, worldMatrix, defaultColor, 2.0f);
+}
+
+void DebugRenderer::AddSkeleton(
+    const Skeleton& skeleton,
+    const Matrix4x4& worldMatrix,
+    const Vector4& color,
+    float thickness)
+{
+    for (const Joint& joint : skeleton.joints) {
+        if (!joint.parent.has_value()) {
+            continue;
+        }
+
+        const int32_t parentIndex = joint.parent.value();
+        if (parentIndex < 0) {
+            continue;
+        }
+
+        const size_t parentArrayIndex = static_cast<size_t>(parentIndex);
+        if (parentArrayIndex >= skeleton.joints.size()) {
+            continue;
+        }
+
+        const Joint& parent = skeleton.joints[parentArrayIndex];
+        Vector3 jointPosition = {
+            joint.skeletonSpaceMatrix.m[3][0],
+            joint.skeletonSpaceMatrix.m[3][1],
+            joint.skeletonSpaceMatrix.m[3][2]
+        };
+        Vector3 parentPosition = {
+            parent.skeletonSpaceMatrix.m[3][0],
+            parent.skeletonSpaceMatrix.m[3][1],
+            parent.skeletonSpaceMatrix.m[3][2]
+        };
+
+        jointPosition = MatrixMath::Transform(jointPosition, worldMatrix);
+        parentPosition = MatrixMath::Transform(parentPosition, worldMatrix);
+
+        AddOverlayLine(parentPosition, jointPosition, color, thickness);
+    }
+}
+
 void DebugRenderer::Draw()
 {
     // Drawで何をしているか
@@ -137,10 +205,11 @@ void DebugRenderer::Draw()
 
     if (!isVisible_) {
         lines_.clear();
+        overlayLines_.clear();
         return;
     }
 
-    if (lines_.empty()) {
+    if (lines_.empty() && overlayLines_.empty()) {
         return;
     }
 
@@ -149,6 +218,7 @@ void DebugRenderer::Draw()
         // カメラが無い状態ではワールド座標の線を画面に投影できません。
         // 描けなかった線を次フレームへ持ち越すと、古いデバッグ線が急に出る原因になるため破棄します。
         lines_.clear();
+        overlayLines_.clear();
         return;
     }
 
@@ -158,14 +228,15 @@ void DebugRenderer::Draw()
         static_cast<float>(WinApp::kClientHeight)
     };
 
-    const std::size_t vertexCount = lines_.size() * 2;
+    const std::size_t depthVertexCount = lines_.size() * 2;
+    const std::size_t overlayVertexCount = overlayLines_.size() * 2;
+    const std::size_t vertexCount = depthVertexCount + overlayVertexCount;
     EnsureVertexCapacity(vertexCount);
     UploadLineVertices();
 
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
-    commandList->SetPipelineState(pipelineState_.Get());
 
     // GPUへ送る頂点データ
     // ------------------------------------------------------------
@@ -176,7 +247,19 @@ void DebugRenderer::Draw()
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
     commandList->SetGraphicsRootConstantBufferView(0, viewProjectionResource_->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, screenResource_->GetGPUVirtualAddress());
-    commandList->DrawInstanced(static_cast<UINT>(vertexCount), 1, 0, 0);
+    if (depthVertexCount > 0) {
+        commandList->SetPipelineState(pipelineState_.Get());
+        commandList->DrawInstanced(static_cast<UINT>(depthVertexCount), 1, 0, 0);
+    }
+
+    if (overlayVertexCount > 0) {
+        commandList->SetPipelineState(overlayPipelineState_.Get());
+        commandList->DrawInstanced(
+            static_cast<UINT>(overlayVertexCount),
+            1,
+            static_cast<UINT>(depthVertexCount),
+            0);
+    }
 
     // なぜDraw後にlines_をクリアするのか
     // ------------------------------------------------------------
@@ -186,6 +269,7 @@ void DebugRenderer::Draw()
     // こうすると、レイキャストや当たり判定のように毎フレーム変わる情報が古く残りません。
     // また、不要になったデバッグ線を消すための個別管理も不要になります。
     lines_.clear();
+    overlayLines_.clear();
 }
 
 void DebugRenderer::CreateRootSignature()
@@ -298,6 +382,13 @@ void DebugRenderer::CreateGraphicsPipeline()
         &desc,
         IID_PPV_ARGS(&pipelineState_));
     assert(SUCCEEDED(hr));
+
+    depthStencilDesc.DepthEnable = FALSE;
+    desc.DepthStencilState = depthStencilDesc;
+    hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
+        &desc,
+        IID_PPV_ARGS(&overlayPipelineState_));
+    assert(SUCCEEDED(hr));
 }
 
 void DebugRenderer::EnsureVertexCapacity(std::size_t vertexCount)
@@ -338,6 +429,20 @@ void DebugRenderer::UploadLineVertices()
 
     for (std::size_t lineIndex = 0; lineIndex < lines_.size(); ++lineIndex) {
         const DebugLine& line = lines_[lineIndex];
+
+        vertexData_[vertexIndex].position = line.start;
+        vertexData_[vertexIndex].color = line.color;
+        vertexData_[vertexIndex].thickness = line.thickness;
+        ++vertexIndex;
+
+        vertexData_[vertexIndex].position = line.end;
+        vertexData_[vertexIndex].color = line.color;
+        vertexData_[vertexIndex].thickness = line.thickness;
+        ++vertexIndex;
+    }
+
+    for (std::size_t lineIndex = 0; lineIndex < overlayLines_.size(); ++lineIndex) {
+        const DebugLine& line = overlayLines_[lineIndex];
 
         vertexData_[vertexIndex].position = line.start;
         vertexData_[vertexIndex].color = line.color;

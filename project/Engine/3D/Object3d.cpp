@@ -159,11 +159,12 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
     // -------------------------
     // Mesh -> MeshPrimitive
     // -------------------------
+    uint32_t globalVertexOffset = 0;
     for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
         aiMesh* mesh = scene->mMeshes[meshIndex];
 
         MeshPrimitive primitive;
-        primitive.mode = PrimitiveMode::Triangles; // 今�E固定でOK
+        primitive.mode = PrimitiveMode::Triangles; // 今E固定でOK
 
         // ---- vertices ----
         for (uint32_t v = 0; v < mesh->mNumVertices; ++v) {
@@ -178,7 +179,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
                 ? mesh->mTextureCoords[0][v]
                 : aiVector3D(0, 0, 0);
 
-            // 右扁EↁE左手！E反転�E�E
+            // 右扁EↁE左手！E反転EE
             vertex.position = { -pos.x, pos.y, pos.z, 1.0f };
             vertex.normal = { -nrm.x, nrm.y, nrm.z };
             vertex.texcoord = { uv.x, uv.y };
@@ -190,13 +191,13 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         if (mesh->HasFaces()) {
             for (uint32_t f = 0; f < mesh->mNumFaces; ++f) {
                 aiFace& face = mesh->mFaces[f];
-                // Triangulate してる�Eで 3 のはぁE
+                // Triangulate してるEで 3 のはぁE
                 for (uint32_t i = 0; i < face.mNumIndices; ++i) {
                     primitive.indices.push_back(face.mIndices[i]);
                 }
             }
         }
-        // indices が空なめEdrawArrays 扱ぁE��OK
+        // indices が空なめEdrawArrays 扱ぁEOK
 
         for (uint32_t boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
             aiBone* bone = mesh->mBones[boneIndex];
@@ -221,10 +222,11 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
                 ++weightIndex) {
 
                 jointWeightData.vertexWeights.push_back({ bone->mWeights[weightIndex].mWeight,
-                    bone->mWeights[weightIndex].mVertexId });
+                    globalVertexOffset + bone->mWeights[weightIndex].mVertexId });
             }
         }
 
+        globalVertexOffset += mesh->mNumVertices;
         modelData.primitives.push_back(primitive);
     }
     bool hasTexture = false;

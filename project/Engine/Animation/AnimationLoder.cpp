@@ -1,8 +1,9 @@
-﻿#include "AnimationLoder.h"
+#include "AnimationLoder.h"
 
 Animation AnimationLoder::LoadAnimationFile(
     const std::string& directoryPath,
-    const std::string& filename) {
+    const std::string& filename,
+    uint32_t animationIndex) {
     Animation animation;
     Assimp::Importer importer;
 
@@ -12,12 +13,12 @@ Animation AnimationLoder::LoadAnimationFile(
     assert(scene);
 
     // Animation が無いモデル対応
-    if (scene->mNumAnimations == 0) {
+    if (scene->mNumAnimations == 0 || animationIndex >= scene->mNumAnimations) {
         animation.duration = 0.0f;
         return animation;
     }
 
-    aiAnimation* animAssimp = scene->mAnimations[0];
+    aiAnimation* animAssimp = scene->mAnimations[animationIndex];
 
     animation.duration =
         static_cast<float>(animAssimp->mDuration / animAssimp->mTicksPerSecond);

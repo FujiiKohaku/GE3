@@ -1,4 +1,4 @@
-﻿#include "SkinCluster.h"
+#include "SkinCluster.h"
 
 SkinCluster::SkinClusterData SkinCluster::CreateSkinCluster(
     ID3D12Device* device,
@@ -104,52 +104,50 @@ SkinCluster::SkinClusterData SkinCluster::CreateSkinCluster(
     // =================================================
     // ModelData を解析して Influence を詰める
     // =================================================
-    size_t baseVertex = 0;
+    for (const auto& jointWeight : modelData.skinClusterData) {
 
-    for (const auto& primitive : modelData.primitives) {
-
-        assert(baseVertex + primitive.vertices.size() <= vertexCount);
-
-        for (const auto& jointWeight : modelData.skinClusterData) {
-
-            auto it = skeleton.jointMap.find(jointWeight.first);
-            if (it == skeleton.jointMap.end()) {
-                continue;
-            }
-
-            uint32_t jointIndex = it->second;
-
-            assert(jointIndex < jointCount);
-
-            skinCluster.inverseBindPoseMatrices[jointIndex] = jointWeight.second.inverseBindPoseMatrix;
-
-            for (const auto& vertexWeight : jointWeight.second.vertexWeights) {
-
-                size_t finalIndex = baseVertex + vertexWeight.vertexIndex;
-
-                assert(finalIndex < skinCluster.mappedInfluence.size());
-
-                VertexInfluence& influence = skinCluster.mappedInfluence[finalIndex];
-
-                bool written = false;
-
-                for (uint32_t i = 0; i < kNumMaxInfluence; ++i) {
-                    if (influence.weights[i] == 0.0f) {
-                        influence.weights[i] = vertexWeight.weight;
-                        influence.jointIndices[i] = jointIndex;
-                        written = true;
-                        break;
-                    }
-                }
-
-                assert(written && "VertexInfluence overflow");
-            }
+        auto it = skeleton.jointMap.find(jointWeight.first);
+        if (it == skeleton.jointMap.end()) {
+            continue;
         }
 
-        baseVertex += primitive.vertices.size();
+        uint32_t jointIndex = it->second;
+
+        assert(jointIndex < jointCount);
+
+        skinCluster.inverseBindPoseMatrices[jointIndex] = jointWeight.second.inverseBindPoseMatrix;
+
+        for (const auto& vertexWeight : jointWeight.second.vertexWeights) {
+
+            size_t finalIndex = vertexWeight.vertexIndex;
+
+            assert(finalIndex < skinCluster.mappedInfluence.size());
+
+            VertexInfluence& influence = skinCluster.mappedInfluence[finalIndex];
+
+            for (uint32_t i = 0; i < kNumMaxInfluence; ++i) {
+                if (influence.weights[i] == 0.0f) {
+                    influence.weights[i] = vertexWeight.weight;
+                    influence.jointIndices[i] = jointIndex;
+                    break;
+                }
+            }
+        }
     }
 
-    assert(baseVertex == vertexCount);
+    // ウェイトの合計が1.0になるように再正規化する
+    for (size_t i = 0; i < vertexCount; ++i) {
+        VertexInfluence& influence = skinCluster.mappedInfluence[i];
+        float sum = 0.0f;
+        for (uint32_t j = 0; j < kNumMaxInfluence; ++j) {
+            sum += influence.weights[j];
+        }
+        if (sum > 0.0f) {
+            for (uint32_t j = 0; j < kNumMaxInfluence; ++j) {
+                influence.weights[j] /= sum;
+            }
+        }
+    }
 
     return skinCluster;
 }

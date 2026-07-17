@@ -62,20 +62,22 @@ void DebugCameraController::Update()
         move.y += moveSpeed;
     }
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_LEFT)) {
-        cameraRotate.y += rotateSpeed;
-    }
+    if (isArrowKeyRotationEnabled_) {
+        if (Input::GetInstance()->IsKeyPressed(DIK_LEFT)) {
+            cameraRotate.y += rotateSpeed;
+        }
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_RIGHT)) {
-        cameraRotate.y -= rotateSpeed;
-    }
+        if (Input::GetInstance()->IsKeyPressed(DIK_RIGHT)) {
+            cameraRotate.y -= rotateSpeed;
+        }
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_UP)) {
-        cameraRotate.x += rotateSpeed;
-    }
+        if (Input::GetInstance()->IsKeyPressed(DIK_UP)) {
+            cameraRotate.x += rotateSpeed;
+        }
 
-    if (Input::GetInstance()->IsKeyPressed(DIK_DOWN)) {
-        cameraRotate.x -= rotateSpeed;
+        if (Input::GetInstance()->IsKeyPressed(DIK_DOWN)) {
+            cameraRotate.x -= rotateSpeed;
+        }
     }
 
     bool isUsingImGuiMouse = false;
@@ -89,7 +91,7 @@ void DebugCameraController::Update()
         return;
     }
 
-    if (Input::GetInstance()->IsMousePressed(0)) {
+    if (Input::GetInstance()->IsMousePressed(rotationMouseButton_)) {
         cameraRotate.y += static_cast<float>(Input::GetInstance()->GetMouseDeltaX()) * mouseSensitivity;
         cameraRotate.x -= static_cast<float>(Input::GetInstance()->GetMouseDeltaY()) * mouseSensitivity;
     }
