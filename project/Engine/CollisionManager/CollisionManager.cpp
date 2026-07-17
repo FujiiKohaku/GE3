@@ -1,6 +1,7 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/Math/Collision.h"
 #include "Engine/Math/Sphere.h"
 
@@ -50,6 +51,8 @@ CollisionManager::CollisionManager(ConstructorKey)
 {
 }
 
+CollisionManager::~CollisionManager() = default;
+
 CollisionManager* CollisionManager::GetInstance()
 {
     if (!instance_) {
@@ -90,6 +93,7 @@ bool CollisionManager::Raycast(const Ray& ray, RaycastHit& hit) const
     bool isHit = false;
     float nearestDistance = 0.0f;
     BaseEnemy* nearestEnemy = nullptr;
+    BoxCollider* nearestCollider = nullptr;
     Vector3 nearestPosition = { 0.0f, 0.0f, 0.0f };
 
     for (const std::unique_ptr<BaseEnemy>& enemy : *enemies_) {
@@ -110,21 +114,56 @@ bool CollisionManager::Raycast(const Ray& ray, RaycastHit& hit) const
         nearestEnemy,
         nearestPosition);
 
+    for (const std::unique_ptr<BoxCollider>& collider : colliders_) {
+        float distance = 0.0f;
+        if (!RayAabbIntersect(
+                normalizedRay,
+                collider->GetCenter(),
+                collider->GetSize(),
+                distance)) {
+            continue;
+        }
+
+        if (!isHit || distance < nearestDistance) {
+            isHit = true;
+            nearestDistance = distance;
+            nearestEnemy = nullptr;
+            nearestCollider = collider.get();
+            nearestPosition = normalizedRay.origin + normalizedRay.direction * distance;
+        }
+    }
+
     if (!isHit) {
         return false;
     }
 
     hit.distance = nearestDistance;
     hit.enemy = nearestEnemy;
+    hit.collider = nearestCollider;
     hit.position = nearestPosition;
 
     return true;
 }
 
-void CollisionManager::RegisterCollider(BoxCollider*)
+BoxCollider* CollisionManager::RegisterCollider(std::unique_ptr<BoxCollider> collider)
 {
+    if (!collider) {
+        return nullptr;
+    }
+
+    BoxCollider* registeredCollider = collider.get();
+    colliders_.push_back(std::move(collider));
+    return registeredCollider;
 }
 
-void CollisionManager::UnregisterCollider(BoxCollider*)
+void CollisionManager::UnregisterCollider(BoxCollider* collider)
 {
+    for (std::vector<std::unique_ptr<BoxCollider>>::iterator iterator = colliders_.begin();
+        iterator != colliders_.end();
+        ++iterator) {
+        if (iterator->get() == collider) {
+            colliders_.erase(iterator);
+            return;
+        }
+    }
 }

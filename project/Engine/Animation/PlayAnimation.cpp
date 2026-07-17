@@ -4,6 +4,25 @@
 #include <cassert>
 #include <cmath>
 
+namespace {
+float AdvanceLoopingTime(float currentTime, float deltaTime, float duration)
+{
+    if (duration <= 0.0f) {
+        return 0.0f;
+    }
+
+    float nextTime = currentTime + deltaTime;
+    if (nextTime >= duration || nextTime < 0.0f) {
+        nextTime = std::fmod(nextTime, duration);
+        if (nextTime < 0.0f) {
+            nextTime += duration;
+        }
+    }
+
+    return nextTime;
+}
+}
+
 void PlayAnimation::ApplyAnimation(
     Skeleton& skeleton,
     const Animation& animation,
@@ -51,18 +70,15 @@ void PlayAnimation::Update(float deltaTime) {
         return;
     }
 
-    animationTime_ += deltaTime;
-    if (animationTime_ > animation_->duration) {
-        animationTime_ = fmod(animationTime_, animation_->duration);
-    }
+    animationTime_ = AdvanceLoopingTime(animationTime_, deltaTime, animation_->duration);
 
     // ブレンド更新
     bool isBlending = (prevAnimation_ != nullptr && blendTime_ < blendDuration_);
     if (isBlending) {
-        prevAnimationTime_ += deltaTime;
-        if (prevAnimationTime_ > prevAnimation_->duration) {
-            prevAnimationTime_ = fmod(prevAnimationTime_, prevAnimation_->duration);
-        }
+        prevAnimationTime_ = AdvanceLoopingTime(
+            prevAnimationTime_,
+            deltaTime,
+            prevAnimation_->duration);
         blendTime_ += deltaTime;
         if (blendTime_ >= blendDuration_) {
             // ブレンド終了
@@ -100,7 +116,11 @@ Vector3 PlayAnimation::CalculateValue(const std::vector<KeyframeVector3>& keyfra
 
     for (size_t i = 0; i + 1 < keyframes.size(); ++i) {
         if (keyframes[i].time <= time && time <= keyframes[i + 1].time) {
-            float t = (time - keyframes[i].time) / (keyframes[i + 1].time - keyframes[i].time);
+            float keyframeDuration = keyframes[i + 1].time - keyframes[i].time;
+            if (keyframeDuration <= 0.0f) {
+                return keyframes[i + 1].value;
+            }
+            float t = (time - keyframes[i].time) / keyframeDuration;
             return Lerp(keyframes[i].value, keyframes[i + 1].value, t);
         }
     }
@@ -122,7 +142,11 @@ Quaternion PlayAnimation::CalculateValue(const std::vector<KeyframeQuaternion>& 
 
     for (size_t i = 0; i + 1 < keyframes.size(); ++i) {
         if (keyframes[i].time <= time && time <= keyframes[i + 1].time) {
-            float t = (time - keyframes[i].time) / (keyframes[i + 1].time - keyframes[i].time);
+            float keyframeDuration = keyframes[i + 1].time - keyframes[i].time;
+            if (keyframeDuration <= 0.0f) {
+                return keyframes[i + 1].value;
+            }
+            float t = (time - keyframes[i].time) / keyframeDuration;
             return Slerp(keyframes[i].value, keyframes[i + 1].value, t);
         }
     }

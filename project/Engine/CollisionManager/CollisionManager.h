@@ -11,6 +11,7 @@ struct RaycastHit {
     Vector3 position = { 0.0f, 0.0f, 0.0f };
     float distance = 0.0f;
     BaseEnemy* enemy = nullptr;
+    BoxCollider* collider = nullptr;
 };
 
 class CollisionManager {
@@ -25,7 +26,7 @@ public:
 
     void SetEnemies(const EnemyList* enemies);
     void SetBoss(BaseEnemy* boss);
-    void RegisterCollider(BoxCollider* collider);
+    BoxCollider* RegisterCollider(std::unique_ptr<BoxCollider> collider);
     void UnregisterCollider(BoxCollider* collider);
     bool Raycast(const Ray& ray, RaycastHit& hit) const;
 
@@ -36,11 +37,12 @@ public:
     };
 
     explicit CollisionManager(ConstructorKey);
-    ~CollisionManager() = default;
+    ~CollisionManager();
 
 private:
     static std::unique_ptr<CollisionManager> instance_;
 
     const EnemyList* enemies_ = nullptr;
     BaseEnemy* boss_ = nullptr;
+    std::vector<std::unique_ptr<BoxCollider>> colliders_;
 };

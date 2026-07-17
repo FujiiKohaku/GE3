@@ -1,5 +1,9 @@
 #include "AnimationLoder.h"
 
+namespace {
+constexpr double kDefaultTicksPerSecond = 25.0;
+}
+
 Animation AnimationLoder::LoadAnimationFile(
     const std::string& directoryPath,
     const std::string& filename,
@@ -20,8 +24,13 @@ Animation AnimationLoder::LoadAnimationFile(
 
     aiAnimation* animAssimp = scene->mAnimations[animationIndex];
 
+    double ticksPerSecond = animAssimp->mTicksPerSecond;
+    if (ticksPerSecond <= 0.0) {
+        ticksPerSecond = kDefaultTicksPerSecond;
+    }
+
     animation.duration =
-        static_cast<float>(animAssimp->mDuration / animAssimp->mTicksPerSecond);
+        static_cast<float>(animAssimp->mDuration / ticksPerSecond);
 
     for (uint32_t channelIndex = 0;
         channelIndex < animAssimp->mNumChannels;
@@ -35,7 +44,7 @@ Animation AnimationLoder::LoadAnimationFile(
         for (uint32_t i = 0; i < nodeAnimAssimp->mNumPositionKeys; ++i) {
             aiVectorKey& key = nodeAnimAssimp->mPositionKeys[i];
             KeyframeVector3 kf;
-            kf.time = static_cast<float>(key.mTime / animAssimp->mTicksPerSecond);
+            kf.time = static_cast<float>(key.mTime / ticksPerSecond);
             kf.value = { -key.mValue.x, key.mValue.y, key.mValue.z };
             nodeAnim.translate.push_back(kf);
         }
@@ -44,7 +53,7 @@ Animation AnimationLoder::LoadAnimationFile(
         for (uint32_t i = 0; i < nodeAnimAssimp->mNumRotationKeys; ++i) {
             aiQuatKey& key = nodeAnimAssimp->mRotationKeys[i];
             KeyframeQuaternion kf;
-            kf.time = static_cast<float>(key.mTime / animAssimp->mTicksPerSecond);
+            kf.time = static_cast<float>(key.mTime / ticksPerSecond);
             kf.value = {
                 -key.mValue.x,
                 key.mValue.y,
@@ -58,7 +67,7 @@ Animation AnimationLoder::LoadAnimationFile(
         for (uint32_t i = 0; i < nodeAnimAssimp->mNumScalingKeys; ++i) {
             aiVectorKey& key = nodeAnimAssimp->mScalingKeys[i];
             KeyframeVector3 kf;
-            kf.time = static_cast<float>(key.mTime / animAssimp->mTicksPerSecond);
+            kf.time = static_cast<float>(key.mTime / ticksPerSecond);
             kf.value = { key.mValue.x, key.mValue.y, key.mValue.z };
             nodeAnim.scale.push_back(kf);
         }

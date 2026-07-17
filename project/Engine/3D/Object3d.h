@@ -107,6 +107,11 @@ public:
         return name_;
     }
 
+    const std::string& GetModelFilePath() const
+    {
+        return modelFilePath_;
+    }
+
     void SetGimmick(const LevelData::ObjectData::GimmickData& gimmick)
     {
         gimmick_ = gimmick;
@@ -157,6 +162,7 @@ private:
     //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
     std::string name_ = "Object[nameNull]";
+    std::string modelFilePath_;
 
     LevelData::ObjectData::GimmickData gimmick_ {};
     Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };

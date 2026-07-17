@@ -60,6 +60,7 @@ public:
 
 private:
     void CreateLevelObjects(const LevelData& levelData);
+    void ClearLevelObjects();
     void HotReloadLevel();
     void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();

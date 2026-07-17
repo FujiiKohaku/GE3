@@ -10,12 +10,13 @@
 #pragma region
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
+    assert(model_ && "Call SetModel() before Initialize()");
+    assert(playAnimation_ && "Call SetAnimation() before Initialize()");
+
     uint32_t vertexCount = 0;
     for (const auto& primitive : model_->GetModelData().primitives) {
         vertexCount += static_cast<uint32_t>(primitive.vertices.size());
     }
-    assert(model_ && "Call SetModel() before Initialize()");
-    assert(playAnimation_ && "Call SetAnimation() before Initialize()");
     // Manager を保持
     skinningObject3dManager_ = skinningObject3DManager;
 
@@ -85,7 +86,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
         { 0.0f, 4.0f, -10.0f }
     };
 
-    skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData(), SrvManager::GetInstance());
+    skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData());
     // すきんぐりんぐ�Eリソースを作�E
     CreateSkinningResources();
 
@@ -207,6 +208,29 @@ SkinningObject3d::~SkinningObject3d()
     if (materialResource) {
         materialResource->Unmap(0, nullptr);
     }
+
+    if (skinningInformationResource_ && skinningInformationData_) {
+        skinningInformationResource_->Unmap(0, nullptr);
+        skinningInformationData_ = nullptr;
+    }
+
+    SrvManager* srvManager = SrvManager::GetInstance();
+    if (inputVertexSrvIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(inputVertexSrvIndex_);
+        inputVertexSrvIndex_ = kInvalidDescriptorIndex;
+    }
+    if (influenceSrvIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(influenceSrvIndex_);
+        influenceSrvIndex_ = kInvalidDescriptorIndex;
+    }
+    if (paletteSrvIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(paletteSrvIndex_);
+        paletteSrvIndex_ = kInvalidDescriptorIndex;
+    }
+    if (skinnedVertexUavIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(skinnedVertexUavIndex_);
+        skinnedVertexUavIndex_ = kInvalidDescriptorIndex;
+    }
 }
 void SkinningObject3d::CreateSkinningResources()
 {
@@ -284,6 +308,7 @@ void SkinningObject3d::CreateSkinningResources()
     assert(skinnedVertexResource_);
 
     skinnedVertexResource_->SetName(L"SkinningObject3d::SkinnedVertexResource");
+    skinnedVertexState_ = D3D12_RESOURCE_STATE_COMMON;
 
     // =====================================================
     // 描画用 VBV
@@ -393,11 +418,12 @@ void SkinningObject3d::DispatchSkinning()
     barrierBefore.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrierBefore.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     barrierBefore.Transition.pResource = skinnedVertexResource_.Get();
-    barrierBefore.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+    barrierBefore.Transition.StateBefore = skinnedVertexState_;
     barrierBefore.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrierBefore.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
     commandList->ResourceBarrier(1, &barrierBefore);
+    skinnedVertexState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
     // =========================================
     // Compute設宁E
@@ -454,5 +480,6 @@ void SkinningObject3d::DispatchSkinning()
     barrierAfter.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
     commandList->ResourceBarrier(1, &barrierAfter);
+    skinnedVertexState_ = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 }
 #pragma endregion

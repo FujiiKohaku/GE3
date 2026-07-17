@@ -14,7 +14,7 @@ Object3d* SceneObjectManager::CreateObject(
 
     ModelManager::GetInstance()->Load(modelName);
 
-    object->SetModel(ModelManager::GetInstance()->FindModel(modelName));
+    object->SetModel(modelName);
 
     object->SetName(name);
 

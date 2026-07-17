@@ -13,6 +13,7 @@
 #include "../externals/json.hpp"
 
 #include "../../Engine/SceneObjectManager/SceneObjectManager.h"
+#include "../../Engine/LevelEditor/LevelDataLoader.h"
 void EditorManager::Initialize()
 {
 }
@@ -288,7 +289,7 @@ void EditorManager::SaveJson(const std::string& filePath)
 {
     nlohmann::json root;
 
-    root["Objects"] = nlohmann::json::array();
+    root["scene"] = nlohmann::json::array();
 
     for (const std::unique_ptr<Object3d>& object :
         sceneObjectManager_->GetObjects()) {
@@ -297,27 +298,35 @@ void EditorManager::SaveJson(const std::string& filePath)
 
         nlohmann::json objectData;
 
-        objectData["Name"] = currentObject->GetName();
+        objectData["name"] = currentObject->GetName();
+        objectData["type"] = "MESH";
 
-        objectData["Translate"] = {
+        if (!currentObject->GetModelFilePath().empty()) {
+            objectData["file_name"] = currentObject->GetModelFilePath();
+        }
+
+        nlohmann::json transformData;
+
+        transformData["translation"] = {
             currentObject->GetTranslate().x,
-            currentObject->GetTranslate().y,
-            currentObject->GetTranslate().z
+            currentObject->GetTranslate().z,
+            currentObject->GetTranslate().y
         };
 
-        objectData["Rotate"] = {
-            currentObject->GetRotate().x,
-            currentObject->GetRotate().y,
-            currentObject->GetRotate().z
+        transformData["rotation"] = {
+            -currentObject->GetRotate().x,
+            -currentObject->GetRotate().z,
+            -currentObject->GetRotate().y
         };
 
-        objectData["Scale"] = {
+        transformData["scale"] = {
             currentObject->GetScale().x,
-            currentObject->GetScale().y,
-            currentObject->GetScale().z
+            currentObject->GetScale().z,
+            currentObject->GetScale().y
         };
 
-        root["Objects"].push_back(objectData);
+        objectData["transform"] = transformData;
+        root["scene"].push_back(objectData);
     }
 
     std::ofstream file(filePath);
@@ -329,28 +338,30 @@ void EditorManager::SaveJson(const std::string& filePath)
 }
 void EditorManager::LoadJson(const std::string& filePath)
 {
-    std::ifstream file(filePath);
-
-    if (!file.is_open()) {
+    if (sceneObjectManager_ == nullptr) {
         return;
     }
 
-    nlohmann::json root;
-    file >> root;
+    LevelDataLoader loader;
+    LevelData levelData = loader.Load(filePath);
 
-    for (const auto& objectData : root["Objects"]) {
+    for (const LevelData::ObjectData& objectData : levelData.objects) {
+        if (objectData.type != "MESH") {
+            continue;
+        }
 
-        std::string objectName = objectData["Name"];
+        Object3d* object = sceneObjectManager_->FindObject(objectData.name);
+        if (object == nullptr && !objectData.fileName.empty()) {
+            object = sceneObjectManager_->CreateObject(objectData.name, objectData.fileName);
+        }
 
-        Vector3 translate;
+        if (object == nullptr) {
+            continue;
+        }
 
-        translate.x = objectData["Translate"][0];
-
-        translate.y = objectData["Translate"][1];
-
-        translate.z = objectData["Translate"][2];
-
-        OutputDebugStringA((objectName + "\n").c_str());
+        object->SetTranslate(objectData.translation);
+        object->SetRotate(objectData.rotation);
+        object->SetScale(objectData.scale);
     }
 }
 void EditorManager::SetSceneObjectManager(

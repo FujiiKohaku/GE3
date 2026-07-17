@@ -274,6 +274,7 @@ void Object3d::SetModel(const std::string& filePath)
 {
     // モチE��を検索してセチE��する
     model_ = ModelManager::GetInstance()->FindModel(filePath);
+    modelFilePath_ = filePath;
 }
 Node Object3d::ReadNode(aiNode* node)
 {

@@ -11,6 +11,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <d3d12.h>
+#include <limits>
 #include <string>
 #include <vector>
 #include <wrl.h>
@@ -170,10 +171,12 @@ private:
 
     D3D12_VERTEX_BUFFER_VIEW skinnedVertexBufferView_ {};
 
-    uint32_t inputVertexSrvIndex_ = 0;
-    uint32_t influenceSrvIndex_ = 0;
-    uint32_t paletteSrvIndex_ = 0;
-    uint32_t skinnedVertexUavIndex_ = 0;
+    static constexpr uint32_t kInvalidDescriptorIndex = (std::numeric_limits<uint32_t>::max)();
+    uint32_t inputVertexSrvIndex_ = kInvalidDescriptorIndex;
+    uint32_t influenceSrvIndex_ = kInvalidDescriptorIndex;
+    uint32_t paletteSrvIndex_ = kInvalidDescriptorIndex;
+    uint32_t skinnedVertexUavIndex_ = kInvalidDescriptorIndex;
+    D3D12_RESOURCE_STATES skinnedVertexState_ = D3D12_RESOURCE_STATE_COMMON;
     struct SkinningInformation {
         uint32_t numVertices;
     };

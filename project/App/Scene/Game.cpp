@@ -2,6 +2,7 @@
 #include "Engine/Debug/Profiler/Profiler.h"
 #include "Engine/Debug/Profiler/BootProfiler.h"
 #include "Engine/Debug/Profiler/ProfilerScope.h"
+#include "Engine/CollisionManager/CollisionManager.h"
 
 namespace {
 void CheckInitializeTime(const char* name, std::chrono::steady_clock::time_point& prevTime)
@@ -186,6 +187,7 @@ void Game::Finalize()
     UnlockCursor(); // カーソルをウィンドウに固定解除
     ShowCursor(TRUE);
     SceneManager::GetInstance()->Finalize();
+    CollisionManager::Finalize();
     // EffectManagerの共通リソースはゲーム終了時にだけ破棄する。
     EffectManager::Finalize();
     ImGuiManager::GetInstance()->Finalize();

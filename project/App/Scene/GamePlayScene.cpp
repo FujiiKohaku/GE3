@@ -541,6 +541,9 @@ void GamePlayScene::Update()
     // 各種マネージャー、オブジェクト、コリジョンの更新
     EffectManager::GetInstance()->Update();
     sceneObjectManager_->Update();
+    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        levelObject->Update();
+    }
     if (floorObj_) {
         floorObj_->Update();
     }
@@ -945,9 +948,9 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     // terrain_->Draw();
-    // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-    //     levelObject->Draw();
-    // }
+    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        levelObject->Draw();
+    }
     player_->Draw();
     sceneObjectManager_->Draw();
     if (floorObj_) {
@@ -1314,6 +1317,8 @@ void GamePlayScene::CheckCollision()
 void GamePlayScene::Finalize()
 {
     CollisionManager::GetInstance()->SetEnemies(nullptr);
+    CollisionManager::GetInstance()->SetBoss(nullptr);
+    ClearLevelObjects();
     ResetGameplayPostEffects();
 
     // シーン内で再生していたエフェクトだけを停止する。
@@ -1502,7 +1507,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 
             if (objData.collider.exists) {
                 if (objData.collider.type == "BOX") {
-                    BoxCollider* collider = new BoxCollider();
+                    std::unique_ptr<BoxCollider> collider = std::make_unique<BoxCollider>();
                     Vector3 center = {
                         objData.translation.x + objData.collider.center.x,
                         objData.translation.y + objData.collider.center.y,
@@ -1511,8 +1516,8 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                     collider->SetCenter(center);
                     collider->SetSize(objData.collider.size);
 
-                    CollisionManager::GetInstance()->RegisterCollider(collider);
-                    levelObject->SetCollider(collider);
+                    BoxCollider* registeredCollider = CollisionManager::GetInstance()->RegisterCollider(std::move(collider));
+                    levelObject->SetCollider(registeredCollider);
                 }
             }
 
@@ -1552,13 +1557,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 
 void GamePlayScene::HotReloadLevel()
 {
-    for (auto& obj : levelObjects_) {
-        if (obj->GetCollider() != nullptr) {
-            CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider());
-            delete obj->GetCollider();
-        }
-    }
-    levelObjects_.clear();
+    ClearLevelObjects();
     enemies_.clear();
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
@@ -1578,4 +1577,15 @@ void GamePlayScene::HotReloadLevel()
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
 
     CreateLevelObjects(newLevelData);
+}
+
+void GamePlayScene::ClearLevelObjects()
+{
+    for (std::unique_ptr<Object3d>& obj : levelObjects_) {
+        if (obj->GetCollider() != nullptr) {
+            CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider());
+            obj->SetCollider(nullptr);
+        }
+    }
+    levelObjects_.clear();
 }
