@@ -27,7 +27,7 @@
 #include <cmath>
 
 namespace {
-constexpr float kPlayerEnemyCollisionRadius = 4.0f;
+constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
 constexpr float kBoostPostEffectBaseWeight = 0.40f;
 constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
@@ -103,7 +103,7 @@ void GamePlayScene::Initialize()
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
-    for (float z = 0.0f; z <= 3600.0f; z += 50.0f) {
+    for (float z = 0.0f; z <= 4600.0f; z += 50.0f) {
         rail_->AddPoint({ 0.0f, 0.0f, z });
     }
     /// ポストエフェクト初期化
@@ -270,9 +270,9 @@ void GamePlayScene::Initialize()
     floorObj_ = std::make_unique<Object3d>();
     floorObj_->Initialize(Object3dManager::GetInstance());
     floorObj_->SetModel(floorModel);
-    floorObj_->SetTranslate({ 0.0f, -30.0f, 1800.0f });
+    floorObj_->SetTranslate({ 0.0f, -30.0f, 2300.0f });
     floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
-    floorObj_->SetScale({ 1000.0f, 3600.0f, 1.0f });
+    floorObj_->SetScale({ 1000.0f, 4600.0f, 1.0f });
 
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 }
@@ -966,6 +966,10 @@ void GamePlayScene::Draw3D()
 
     rail_->DrawDebug();
 
+#ifdef _DEBUG
+    DrawCollisionDebug();
+#endif
+
     //----------------------
     // スキニング
     //----------------------
@@ -1262,7 +1266,10 @@ void GamePlayScene::CheckCollision()
 
             Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
             float distance = Vector3Length(difference);
-            float collisionRadius = enemyBullet->GetCollisionRadius();
+            // 球同士の当たり判定として、敵弾とプレイヤー両方の半径を加算する。
+            float collisionRadius =
+                enemyBullet->GetCollisionRadius() * 0.5f +
+                kPlayerEnemyCollisionRadius * 0.5f;
 
             if (distance <= collisionRadius) {
                 OutputDebugStringA("EnemyBullet Hit Player\n");
@@ -1292,7 +1299,10 @@ void GamePlayScene::CheckCollision()
 
             Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
             float distance = Vector3Length(difference);
-            float collisionRadius = enemyBullet->GetCollisionRadius();
+            // 球同士の当たり判定として、ボス弾とプレイヤー両方の半径を加算する。
+            float collisionRadius =
+                enemyBullet->GetCollisionRadius() * 0.5f +
+                kPlayerEnemyCollisionRadius * 0.5f;
 
             if (distance <= collisionRadius) {
                 OutputDebugStringA("BossBullet Hit Player\n");
@@ -1312,6 +1322,85 @@ void GamePlayScene::CheckCollision()
         }
     }
 }
+
+#ifdef _DEBUG
+void GamePlayScene::DrawCollisionDebug()
+{
+    DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
+    constexpr Vector4 kPlayerColor = { 0.0f, 1.0f, 0.0f, 1.0f };
+    constexpr Vector4 kEnemyColor = { 1.0f, 0.15f, 0.15f, 1.0f };
+    constexpr Vector4 kPlayerBulletColor = { 0.0f, 0.8f, 1.0f, 1.0f };
+    constexpr Vector4 kEnemyBulletColor = { 1.0f, 0.85f, 0.0f, 1.0f };
+    constexpr float kLineThickness = 2.0f;
+
+    debugRenderer->AddWireSphere(
+        player_->GetTranslate(),
+        kPlayerEnemyCollisionRadius * 0.5f,
+        kPlayerColor,
+        kLineThickness);
+
+    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+        if (bullet->IsAlive()) {
+            debugRenderer->AddWireSphere(
+                bullet->GetPosition(),
+                bullet->GetCollisionRadius(),
+                kPlayerBulletColor,
+                kLineThickness);
+        }
+    }
+
+    std::vector<EnemyCollisionPart> collisionParts;
+    for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (enemy->IsDead()) {
+            continue;
+        }
+
+        collisionParts.clear();
+        enemy->GetCollisionParts(collisionParts);
+        for (const EnemyCollisionPart& part : collisionParts) {
+            debugRenderer->AddWireSphere(
+                part.position,
+                part.radius,
+                kEnemyColor,
+                kLineThickness);
+        }
+
+        for (const std::unique_ptr<EnemyBullet>& bullet : enemy->GetBullets()) {
+            if (bullet->IsAlive()) {
+                debugRenderer->AddWireSphere(
+                    bullet->GetPosition(),
+                    bullet->GetCollisionRadius() * 0.5f,
+                    kEnemyBulletColor,
+                    kLineThickness);
+            }
+        }
+    }
+
+    if (!activeBoss_ || activeBoss_->IsDead()) {
+        return;
+    }
+
+    collisionParts.clear();
+    activeBoss_->GetCollisionParts(collisionParts);
+    for (const EnemyCollisionPart& part : collisionParts) {
+        debugRenderer->AddWireSphere(
+            part.position,
+            part.radius,
+            kEnemyColor,
+            kLineThickness);
+    }
+
+    for (const std::unique_ptr<EnemyBullet>& bullet : activeBoss_->GetBullets()) {
+        if (bullet->IsAlive()) {
+            debugRenderer->AddWireSphere(
+                bullet->GetPosition(),
+                bullet->GetCollisionRadius() * 0.5f,
+                kEnemyBulletColor,
+                kLineThickness);
+        }
+    }
+}
+#endif
 
 void GamePlayScene::Finalize()
 {

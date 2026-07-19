@@ -63,6 +63,9 @@ private:
     void HotReloadLevel();
     void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
+#ifdef _DEBUG
+    void DrawCollisionDebug();
+#endif
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
 

@@ -54,6 +54,14 @@ public:
         const Vector4& color,
         float thickness = 1.0f);
 
+    // 3つの大円で球形の当たり判定をワイヤーフレーム表示する。
+    void AddWireSphere(
+        const Vector3& center,
+        float radius,
+        const Vector4& color,
+        float thickness = 1.0f,
+        uint32_t segmentCount = 24);
+
     void AddSkeleton(
         const Skeleton& skeleton,
         const Matrix4x4& worldMatrix);

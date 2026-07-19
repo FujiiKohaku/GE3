@@ -9,6 +9,8 @@
 #include "Engine/WinApp/WinApp.h"
 #include "Engine/blend/BlendUtil.h"
 #include <cassert>
+#include <cmath>
+#include <numbers>
 
 std::unique_ptr<DebugRenderer> DebugRenderer::instance_ = nullptr;
 
@@ -139,6 +141,48 @@ void DebugRenderer::AddOverlayLine(
     }
 
     overlayLines_.push_back(line);
+}
+
+void DebugRenderer::AddWireSphere(
+    const Vector3& center,
+    float radius,
+    const Vector4& color,
+    float thickness,
+    uint32_t segmentCount)
+{
+    if (radius <= 0.0f || segmentCount < 3) {
+        return;
+    }
+
+    const float angleStep = 2.0f * std::numbers::pi_v<float> /
+        static_cast<float>(segmentCount);
+
+    for (uint32_t segment = 0; segment < segmentCount; ++segment) {
+        const float angle = angleStep * static_cast<float>(segment);
+        const float nextAngle = angleStep * static_cast<float>(segment + 1);
+
+        const float cosAngle = std::cos(angle);
+        const float sinAngle = std::sin(angle);
+        const float cosNextAngle = std::cos(nextAngle);
+        const float sinNextAngle = std::sin(nextAngle);
+
+        // XY、XZ、YZの3平面に円を描き、判定球の立体形状を確認できるようにする。
+        AddLine(
+            { center.x + radius * cosAngle, center.y + radius * sinAngle, center.z },
+            { center.x + radius * cosNextAngle, center.y + radius * sinNextAngle, center.z },
+            color,
+            thickness);
+        AddLine(
+            { center.x + radius * cosAngle, center.y, center.z + radius * sinAngle },
+            { center.x + radius * cosNextAngle, center.y, center.z + radius * sinNextAngle },
+            color,
+            thickness);
+        AddLine(
+            { center.x, center.y + radius * cosAngle, center.z + radius * sinAngle },
+            { center.x, center.y + radius * cosNextAngle, center.z + radius * sinNextAngle },
+            color,
+            thickness);
+    }
 }
 
 void DebugRenderer::AddSkeleton(
