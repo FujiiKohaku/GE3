@@ -3,10 +3,8 @@
 
 #include "SceneManager.h"
 
-#include "Engine/3D/Object3d.h"
-#include "Engine/Camera/Camera.h"
-
 #include "Engine/2D/Sprite.h"
+
 class TitleScene : public BaseScene {
 public:
     void Initialize() override;
@@ -21,9 +19,13 @@ public:
     void DrawImGui() override;
 
 private:
-    std::unique_ptr<Camera> camera_;
-    std::unique_ptr<Object3d> titleObj_;
-    std::unique_ptr<Sprite> titleSprite_;
-    std::unique_ptr<Sprite> creditSprite_;
-    bool isRandomPostEffect_ = false;
+    bool IsMouseOver(float left, float top, float width, float height) const;
+    void SetMouseCursorVisible(bool visible) const;
+
+    std::unique_ptr<Sprite> backgroundSprite_;
+    std::unique_ptr<Sprite> headerLineSprite_;
+    std::unique_ptr<Sprite> gamePlayButtonSprite_;
+    std::unique_ptr<Sprite> gamePlayImageSprite_;
+    std::unique_ptr<Sprite> testButtonSprite_;
+    std::unique_ptr<Sprite> testImageSprite_;
 };

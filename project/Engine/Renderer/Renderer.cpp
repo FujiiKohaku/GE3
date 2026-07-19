@@ -80,8 +80,10 @@ void Renderer::Draw(SceneManager* sceneManager)
     // 2D draw
     sceneManager->Draw2D();
 
-    // ImGui draw
+    // ImGui is not initialized in the Release configuration.
+#ifdef USE_IMGUI
     ImGuiManager::GetInstance()->Draw();
+#endif
 
     // Present
     DirectXCommon::GetInstance()->PostDraw();

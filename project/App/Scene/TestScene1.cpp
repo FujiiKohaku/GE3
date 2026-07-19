@@ -115,7 +115,10 @@ void TestScene1::Update()
     }
 
     LONG mouseWheel = Input::GetInstance()->GetMouseWheel();
-    bool canSwitchPostEffect = !ImGui::GetIO().WantCaptureMouse;
+    bool canSwitchPostEffect = true;
+#ifdef USE_IMGUI
+    canSwitchPostEffect = !ImGui::GetIO().WantCaptureMouse;
+#endif
     if (canSwitchPostEffect && mouseWheel > 0) {
         if (selectedPostEffectIndex_ == 0) {
             selectedPostEffectIndex_ = postEffectTypes_.size() - 1;
@@ -341,6 +344,7 @@ void TestScene1::DrawParticle()
 
 void TestScene1::DrawImGui()
 {
+#ifdef USE_IMGUI
     ImGui::Begin("Test Scene 1 - Robo Controller");
     ImGui::Text("ESCAPE: Return to Title");
     ImGui::Text("Arrow Keys: Move Robo");
@@ -365,6 +369,7 @@ void TestScene1::DrawImGui()
     ImGui::SliderFloat("Camera Distance", &cameraDistance_, 1.0f, 100.0f);
     ImGui::SliderFloat("Camera Pitch", &cameraPitch_, -1.5f, 1.5f);
     ImGui::End();
+#endif
 }
 
 void TestScene1::Finalize()

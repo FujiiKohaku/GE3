@@ -49,10 +49,15 @@ void Game::Initialize()
     Profiler::GetInstance()->GetBootProfiler()->End("Texture");
     CheckInitializeTime("TextureManager", prevTime);
 
+#ifdef USE_IMGUI
     Profiler::GetInstance()->GetBootProfiler()->Begin("ImGui");
-    ImGuiManager::GetInstance()->Initialize(WinApp::GetInstance(), DirectXCommon::GetInstance(), SrvManager::GetInstance());
+    ImGuiManager::GetInstance()->Initialize(
+        WinApp::GetInstance(),
+        DirectXCommon::GetInstance(),
+        SrvManager::GetInstance());
     Profiler::GetInstance()->GetBootProfiler()->End("ImGui");
     CheckInitializeTime("ImGuiManager", prevTime);
+#endif
 
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     CheckInitializeTime("SpriteManager", prevTime);
@@ -141,7 +146,9 @@ void Game::Update()
         DebugRenderer::GetInstance()->SetVisible(showDebugUI_);
     }
 
+#ifdef USE_IMGUI
     ImGuiManager::GetInstance()->Begin();
+#endif
 
     if (Input::GetInstance()->IsKeyPressed(DIK_ESCAPE)) {
         Logger::Log("Escape Pressed");
@@ -155,21 +162,25 @@ void Game::Update()
     
     DebugRenderer::GetInstance()->Update();
     
+#ifdef USE_IMGUI
     if (showDebugUI_) {
         SceneManager::GetInstance()->DrawImGui();
     }
+#endif
     
     {
         ProfilerScope scope("Renderer");
         renderer_->Update();
     }
     
+#ifdef USE_IMGUI
     if (showDebugUI_) {
         renderer_->DrawImGui();
         Profiler::GetInstance()->DrawImGui();
     }
 
     ImGuiManager::GetInstance()->End();
+#endif
     
     // フレームの終了
     Profiler::GetInstance()->EndFrame();
@@ -190,7 +201,9 @@ void Game::Finalize()
     CollisionManager::Finalize();
     // EffectManagerの共通リソースはゲーム終了時にだけ破棄する。
     EffectManager::Finalize();
-    ImGuiManager::GetInstance()->Finalize();
+#ifdef USE_IMGUI
+    ImGuiManager::Finalize();
+#endif
     renderer_.reset();
 
     SkinningObject3dManager::GetInstance()->Finalize();
