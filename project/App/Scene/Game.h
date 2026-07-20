@@ -44,6 +44,8 @@
 
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/SpriteManager.h"
+#include "Engine/2D/Text/FontManager.h"
+#include "Engine/2D/Text/TextRenderer.h"
 #include "Engine/3D/Object3D.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/SrvManager/SrvManager.h"

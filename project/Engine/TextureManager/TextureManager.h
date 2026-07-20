@@ -28,6 +28,11 @@ public:
         const uint8_t* data,
         size_t width,
         size_t height);
+    void UpdateTextureFromBGRA(
+        const std::string& textureKey,
+        const uint8_t* data,
+        size_t width,
+        size_t height);
     // 保留中のテクスチャ転送をまとめてGPUへ送る。
     void FlushUploads();
 
@@ -78,6 +83,7 @@ private:
 
     // GPU転送が完了するまでアップロード用リソースを保持する。
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> pendingUploadResources_;
+    std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> pendingTextureResources_;
 
     void RegisterTexture(const std::string& textureKey, DirectX::ScratchImage& image);
 

@@ -112,7 +112,28 @@
     <ClCompile Include="Engine\2D\Sprite.cpp">
       <Filter>2D</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\2D\SpriteMaterialManager.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2D\SpriteMeshManager.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
     <ClCompile Include="Engine\2D\SpriteManager.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2D\SpriteRenderManager.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2D\Text\FontManager.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2D\Text\Text.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2D\Text\TextRenderer.cpp">
+      <Filter>2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\2D\Text\Utf8Utility.cpp">
       <Filter>2D</Filter>
     </ClCompile>
     <ClCompile Include="Engine\TextureManager\TextureManager.cpp">
@@ -149,6 +170,12 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Scene\TitleScene.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\SpriteTestScene.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\TextTestScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Scene\TestScene1.cpp">
@@ -383,7 +410,31 @@
     <ClInclude Include="Engine\2D\Sprite.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\2D\SpriteMaterialManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\SpriteMeshManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\2D\SpriteManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\SpriteRenderManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\Text\FontManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\Text\Text.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\Text\TextRenderer.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\Text\TextStruct.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\2D\Text\Utf8Utility.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\TextureManager\TextureManager.h">
@@ -421,6 +472,12 @@
     </ClInclude>
     <ClInclude Include="App\Scene\LoadingScene.h" />
     <ClInclude Include="App\Scene\TitleScene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\SpriteTestScene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\TextTestScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Scene\TestScene1.h">

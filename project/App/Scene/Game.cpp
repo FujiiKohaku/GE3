@@ -62,6 +62,9 @@ void Game::Initialize()
     SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     CheckInitializeTime("SpriteManager", prevTime);
 
+    TextRenderer::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    CheckInitializeTime("TextRenderer", prevTime);
+
     Profiler::GetInstance()->GetBootProfiler()->Begin("Model");
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     Profiler::GetInstance()->GetBootProfiler()->End("Model");
@@ -209,6 +212,8 @@ void Game::Finalize()
     SkinningObject3dManager::GetInstance()->Finalize();
     DebugRenderer::GetInstance()->Finalize();
     Object3dManager::GetInstance()->Finalize();
+    TextRenderer::Finalize();
+    FontManager::Finalize();
     SpriteManager::GetInstance()->Finalize();
     ModelManager::GetInstance()->Finalize();
     SkyBoxManager::GetInstance()->Finalize();

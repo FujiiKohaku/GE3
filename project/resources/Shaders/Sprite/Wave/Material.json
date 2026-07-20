@@ -1,0 +1,25 @@
+{
+  "Name": "Flag Wave VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 32,
+    "DivisionY": 16
+  },
+  "Effect": {
+    "Amplitude": 18,
+    "Frequency": 1.5,
+    "Speed": 3,
+    "Phase": 0,
+    "Direction": [
+      0,
+      1
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

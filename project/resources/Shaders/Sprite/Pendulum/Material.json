@@ -1,0 +1,25 @@
+{
+  "Name": "Pendulum VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 16,
+    "DivisionY": 12
+  },
+  "Effect": {
+    "Amplitude": 0.35,
+    "Frequency": 1,
+    "Speed": 1.8,
+    "Phase": 0,
+    "Direction": [
+      1,
+      1
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

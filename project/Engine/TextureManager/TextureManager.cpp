@@ -29,6 +29,7 @@ void TextureManager::Finalize()
     instance->FlushUploads();
 
     textureDatas.clear();
+    pendingTextureResources_.clear();
     dxCommon_ = nullptr;
     srvManager_ = nullptr;
 
@@ -144,6 +145,82 @@ void TextureManager::LoadTextureFromBGRA(
     RegisterTexture(textureKey, image);
 }
 
+void TextureManager::UpdateTextureFromBGRA(
+    const std::string& textureKey,
+    const uint8_t* data,
+    size_t width,
+    size_t height)
+{
+    if (textureKey.empty() || data == nullptr || width == 0 || height == 0) {
+        return;
+    }
+    if (!textureDatas.contains(textureKey)) {
+        LoadTextureFromBGRA(textureKey, data, width, height);
+        return;
+    }
+
+    DirectX::ScratchImage image {};
+    HRESULT hr = image.Initialize2D(
+        DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
+        width,
+        height,
+        1,
+        1);
+    if (FAILED(hr)) {
+        Logger::Error(std::format(
+            "Texture update initialization failed: {}, HRESULT:{}",
+            textureKey,
+            static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+    const DirectX::Image* destinationImage = image.GetImage(0, 0, 0);
+    const size_t sourceRowPitch = width * sizeof(uint32_t);
+    for (size_t row = 0; row < height; ++row) {
+        std::memcpy(
+            destinationImage->pixels + destinationImage->rowPitch * row,
+            data + sourceRowPitch * row,
+            sourceRowPitch);
+    }
+
+    DirectX::ScratchImage mipImages {};
+    hr = DirectX::GenerateMipMaps(
+        image.GetImages(),
+        image.GetImageCount(),
+        image.GetMetadata(),
+        DirectX::TEX_FILTER_SRGB,
+        0,
+        mipImages);
+    if (FAILED(hr)) {
+        Logger::Error(std::format(
+            "Texture update mipmap generation failed: {}, HRESULT:{}",
+            textureKey,
+            static_cast<unsigned long>(hr)));
+        assert(false);
+        return;
+    }
+
+    TextureData& textureData = textureDatas.at(textureKey);
+    pendingTextureResources_.push_back(textureData.resource);
+    textureData.metadata = mipImages.GetMetadata();
+    textureData.resource =
+        dxCommon_->CreateTextureResource(dxCommon_->GetDevice(), textureData.metadata);
+    Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource =
+        dxCommon_->UploadTextureData(textureData.resource, mipImages);
+    pendingUploadResources_.push_back(std::move(intermediateResource));
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
+    srvDesc.Format = textureData.metadata.format;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = static_cast<UINT>(textureData.metadata.mipLevels);
+    dxCommon_->GetDevice()->CreateShaderResourceView(
+        textureData.resource.Get(),
+        &srvDesc,
+        textureData.srvHandleCPU);
+}
+
 void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::ScratchImage& image)
 {
     assert(srvManager_ != nullptr);
@@ -228,6 +305,7 @@ void TextureManager::FlushUploads()
 
     // GPU転送完了後にアップロード用リソースを解放する。
     pendingUploadResources_.clear();
+    pendingTextureResources_.clear();
 
     hr = dxCommon_->GetCommandAllocator()->Reset();
     if (FAILED(hr)) {

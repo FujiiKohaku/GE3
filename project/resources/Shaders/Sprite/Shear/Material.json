@@ -1,0 +1,25 @@
+{
+  "Name": "Shear VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 16,
+    "DivisionY": 16
+  },
+  "Effect": {
+    "Amplitude": 0.18,
+    "Frequency": 1,
+    "Speed": 2.5,
+    "Phase": 0,
+    "Direction": [
+      1,
+      0
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

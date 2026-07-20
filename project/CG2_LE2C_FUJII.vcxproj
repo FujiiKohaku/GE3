@@ -233,7 +233,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
     <ClCompile Include="Engine\2D\Sprite.cpp" />
+    <ClCompile Include="Engine\2D\SpriteMaterialManager.cpp" />
+    <ClCompile Include="Engine\2D\SpriteMeshManager.cpp" />
     <ClCompile Include="Engine\2D\SpriteManager.cpp" />
+    <ClCompile Include="Engine\2D\SpriteRenderManager.cpp" />
+    <ClCompile Include="Engine\2D\Text\FontManager.cpp" />
+    <ClCompile Include="Engine\2D\Text\Text.cpp" />
+    <ClCompile Include="Engine\2D\Text\TextRenderer.cpp" />
+    <ClCompile Include="Engine\2D\Text\Utf8Utility.cpp" />
     <ClCompile Include="Engine\3D\Object3dManager.cpp" />
     <ClCompile Include="Engine\3D\Object3d.cpp" />
     <ClCompile Include="Engine\3D\ModelCommon.cpp" />
@@ -248,6 +255,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\StringUtility\StringUtility.cpp" />
     <ClCompile Include="Engine\TextureManager\TextureManager.cpp" />
     <ClCompile Include="App\Scene\TitleScene.cpp" />
+    <ClCompile Include="App\Scene\SpriteTestScene.cpp" />
+    <ClCompile Include="App\Scene\TextTestScene.cpp" />
     <ClCompile Include="App\Scene\TestScene1.cpp" />
     <ClCompile Include="Engine\Winapp\Utility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
@@ -362,7 +371,15 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Logger\Logger.h" />
     <ClInclude Include="Engine\audio\SoundManager.h" />
     <ClInclude Include="Engine\2D\Sprite.h" />
+    <ClInclude Include="Engine\2D\SpriteMaterialManager.h" />
+    <ClInclude Include="Engine\2D\SpriteMeshManager.h" />
     <ClInclude Include="Engine\2D\SpriteManager.h" />
+    <ClInclude Include="Engine\2D\SpriteRenderManager.h" />
+    <ClInclude Include="Engine\2D\Text\FontManager.h" />
+    <ClInclude Include="Engine\2D\Text\Text.h" />
+    <ClInclude Include="Engine\2D\Text\TextRenderer.h" />
+    <ClInclude Include="Engine\2D\Text\TextStruct.h" />
+    <ClInclude Include="Engine\2D\Text\Utf8Utility.h" />
     <ClInclude Include="Engine\3D\Object3dManager.h" />
     <ClInclude Include="Engine\3D\Object3d.h" />
     <ClInclude Include="Engine\3D\ModelCommon.h" />
@@ -377,6 +394,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\StringUtility\StringUtility.h" />
     <ClInclude Include="Engine\TextureManager\TextureManager.h" />
     <ClInclude Include="App\Scene\TitleScene.h" />
+    <ClInclude Include="App\Scene\SpriteTestScene.h" />
+    <ClInclude Include="App\Scene\TextTestScene.h" />
     <ClInclude Include="App\Scene\TestScene1.h" />
     <ClInclude Include="App\Scene\LoadingScene.h" />
     <ClInclude Include="Engine\Winapp\Utility.h" />

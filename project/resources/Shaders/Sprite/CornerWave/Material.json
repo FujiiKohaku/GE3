@@ -1,0 +1,25 @@
+{
+  "Name": "Corner Wave VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 24,
+    "DivisionY": 18
+  },
+  "Effect": {
+    "Amplitude": 18,
+    "Frequency": 3,
+    "Speed": 3,
+    "Phase": 0,
+    "Direction": [
+      1,
+      1
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "Name": "Curtain VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 32,
+    "DivisionY": 20
+  },
+  "Effect": {
+    "Amplitude": 0.12,
+    "Frequency": 3,
+    "Speed": 2.5,
+    "Phase": 0,
+    "Direction": [
+      1,
+      0
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

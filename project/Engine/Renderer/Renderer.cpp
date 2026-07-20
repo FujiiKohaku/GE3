@@ -6,6 +6,7 @@
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/2D/Text/FontManager.h"
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/PostEffect/OffscreenRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
@@ -41,6 +42,7 @@ void Renderer::DrawImGui()
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    FontManager::GetInstance()->FlushAtlasUpdates();
     // シーンやモデルが予約したテクスチャ転送を、描画前に一度だけまとめて実行する。
     TextureManager::GetInstance()->FlushUploads();
 

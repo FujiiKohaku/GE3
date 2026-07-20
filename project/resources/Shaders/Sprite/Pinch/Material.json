@@ -1,0 +1,25 @@
+{
+  "Name": "Pinch VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 32,
+    "DivisionY": 24
+  },
+  "Effect": {
+    "Amplitude": 0.35,
+    "Frequency": 1,
+    "Speed": 2.4,
+    "Phase": 0,
+    "Direction": [
+      1,
+      1
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}
