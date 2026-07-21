@@ -217,6 +217,15 @@ private:
     float damageFlashTimer_ = 0.0f;
     int lastPlayerHp_ = 20;
 
+    // ボス登場時電波障害ノイズ用フェードアウトタイマー
+    float bossNoiseFadeTimer_ = 0.0f;
+
+    // プレイヤー死亡ディゾルブ用タイマー
+    float playerDeathDissolveTimer_ = 0.0f;
+
+    // ボス撃破ディゾルブ用タイマー
+    float bossDeathDissolveTimer_ = 0.0f;
+
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
     std::unique_ptr<Sprite> pauseMenuPanelSprite_;

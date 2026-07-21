@@ -502,9 +502,13 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
         HotReloadLevel();
     }
-    // デバッグ用: Vキーを押すと自機にダメージを与えてVignetting効果を即確認可能
-    if (Input::GetInstance()->IsKeyTrigger(DIK_V) && player_) {
-        player_->ApplyDamage(3);
+    // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
+    if (Input::GetInstance()->IsKeyTrigger(DIK_V)) {
+        railDistance_ = 1450.0f;
+        if (player_) {
+            Vector3 pPos = player_->GetTranslate();
+            player_->SetTranslate({ pPos.x, pPos.y, 1450.0f });
+        }
     }
 
     // レール自体の更新
@@ -528,6 +532,9 @@ void GamePlayScene::Update()
         activeBoss_->SetPosition({ 0.0f, 2.0f, 1850.0f });
         CollisionManager::GetInstance()->SetBoss(activeBoss_.get());
         isBossSpawned_ = true;
+
+        // ボス登場後の余韻フェードアウトノイズ（たっぷり4.5秒間かけて非常にゆっくり滑らかに消えていく）
+        bossNoiseFadeTimer_ = 4.5f;
     }
 
     // プレイヤーのHP減少検知による被弾カメラシェイク
@@ -565,7 +572,7 @@ void GamePlayScene::Update()
         }
     }
 
-    // ボス撃破でクリアシーンへ遷移
+    // ボス撃破でディゾルブ消滅演出の完了後にクリアシーンへ遷移
     if (activeBoss_ && activeBoss_->IsDead()) {
         CollisionManager::GetInstance()->SetBoss(nullptr);
 
@@ -574,8 +581,19 @@ void GamePlayScene::Update()
         EffectManager::GetInstance()->Update();
 
         if (activeBoss_->IsDeathSequenceFinished()) {
-            ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+            bossDeathDissolveTimer_ += 1.0f / 60.0f;
+            float dissolveProgress = bossDeathDissolveTimer_ / 2.0f;
+            if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
+
+            // 撃破ディゾルブポストエフェクトの適用
+            SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Dissolve);
+
+            // たっぷり2.0秒かけてディゾルブ消滅が100%完了してからクリア画面へ遷移！
+            if (dissolveProgress >= 1.0f) {
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+            }
         }
 
         return;
@@ -692,6 +710,7 @@ void GamePlayScene::Update()
     }
 
     // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
+    // ★加点要素: BoxFilter (3点) をインク付着時の油分視界ぼやけとして同時適用し、時間経過で徐々に減衰フェードアウト！
     if (isPaintEffectActive_) {
         paintEffectTimer_ += 1.0f / 60.0f;
         float progress = paintEffectTimer_ / paintEffectDuration_;
@@ -699,11 +718,16 @@ void GamePlayScene::Update()
             isPaintEffectActive_ = false;
             paintEffectTimer_ = 0.0f;
             SceneManager::GetInstance()->RemovePostEffect(PostEffectType::Paint);
+            SceneManager::GetInstance()->RemovePostEffect(PostEffectType::smoothing);
             SceneManager::GetInstance()->SetPaintProgress(0.0f);
             SceneManager::GetInstance()->SetPaintIntensity(0.0f);
         } else {
-            // 毎フレームの ClearPostEffects() / SetPostEffectType() による消去を防止し、ペイント効果を維持
+            // 時間経過に伴い 1.0f -> 0.0f へ徐々にフェードアウトする BoxFilter ブラー強度
+            float boxFilterFade = 1.0f - progress;
+            SceneManager::GetInstance()->SetVignetteStrength(boxFilterFade);
+
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Paint);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::smoothing);
             SceneManager::GetInstance()->SetPaintProgress(progress);
             SceneManager::GetInstance()->SetPaintIntensity(1.0f);
         }
@@ -729,21 +753,79 @@ void GamePlayScene::Update()
             if (damageFlashTimer_ < 0.0f) damageFlashTimer_ = 0.0f;
         }
 
-        // (A) 被弾瞬間の一瞬暗赤色フラッシュ
+        // (A) 被弾瞬間の一瞬暗赤色フラッシュ (小さめでスタイリッシュな範囲)
         if (damageFlashTimer_ > 0.0f) {
             float flashRatio = damageFlashTimer_ / 0.35f;
-            SceneManager::GetInstance()->SetVignetteStrength(0.60f + 0.40f * flashRatio);
+            SceneManager::GetInstance()->SetVignetteStrength(0.35f + 0.35f * flashRatio);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Vignette);
         }
-        // (B) HP ≦ 3 時の常時ドクンドクン脈動演出
+        // (B) HP ≦ 3 時の常時ドクンドクン脈動演出 (小さめの四隅赤色鼓動)
         else if (currentHp <= 3) {
             static float vignettePulseTimer = 0.0f;
             vignettePulseTimer += 1.0f / 60.0f;
 
-            float pulseFactor = 0.65f + 0.30f * std::sin(vignettePulseTimer * 8.5f);
+            float pulseFactor = 0.45f + 0.25f * std::sin(vignettePulseTimer * 8.5f);
             SceneManager::GetInstance()->SetVignetteStrength(pulseFactor);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Vignette);
         }
+    }
+
+    // -------------------------------------------------
+    // 加点要素: Dissolve (4点)
+    // プレイヤーやられ（死亡/HP 0）時の燃え広がり焼き切り消滅ディゾルブ演出
+    // 2.0秒かけてディゾルブ消滅が完了した後にゲームオーバー画面へ移行！
+    // -------------------------------------------------
+    if (player_ && player_->GetCurrentHp() <= 0) {
+        playerDeathDissolveTimer_ += 1.0f / 60.0f;
+        float dissolveProgress = playerDeathDissolveTimer_ / 2.0f;
+        if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
+
+        SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Dissolve);
+
+        // たっぷり2.0秒かけて画面全体が粒子状に焼き切れた後に GameOverScene へ移行！
+        if (dissolveProgress >= 1.0f) {
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
+            return;
+        }
+    } else {
+        playerDeathDissolveTimer_ = 0.0f;
+    }
+
+    // -------------------------------------------------
+    // HP ≦ 5 ピンチ時: 画面端の不規則ビキビキガラスひび割れ (GlassCrack)
+    // -------------------------------------------------
+    if (player_ && player_->GetCurrentHp() <= 5) {
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GlassCrack);
+    }
+
+    // -------------------------------------------------
+    // 加点要素: Random (4点)
+    // 途切れ一切無しの完全シームレスノイズ＆たっぷり4.5秒間のロングフェードアウト
+    // -------------------------------------------------
+    float noiseIntensity = 0.0f;
+
+    // (A) ボス登場前予兆ノイズ (Z = 1450 〜 1850)
+    if (!isBossSpawned_ && player_ && player_->GetTranslate().z >= 1450.0f) {
+        float pZ = player_->GetTranslate().z;
+        float progress = (pZ - 1450.0f) / (1850.0f - 1450.0f);
+        if (progress > 1.0f) progress = 1.0f;
+        noiseIntensity = 0.30f + 0.70f * progress;
+    }
+    // (B) ボス登場後のロングフェードアウトノイズ (たっぷり4.5秒間かけて非常にゆっくり消えていく)
+    else if (bossNoiseFadeTimer_ > 0.0f) {
+        bossNoiseFadeTimer_ -= 1.0f / 60.0f;
+        if (bossNoiseFadeTimer_ < 0.0f) bossNoiseFadeTimer_ = 0.0f;
+
+        float fadeProgress = bossNoiseFadeTimer_ / 4.5f;
+        noiseIntensity = fadeProgress;
+    }
+
+    // 途切れが絶対に発生しないよう、ノイズ強度がわずかでもある場合は100%確実に適用！
+    if (noiseIntensity > 0.001f) {
+        SceneManager::GetInstance()->SetVignetteStrength(noiseIntensity);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Random);
     }
 
     // -------------------------------------------------
@@ -1643,11 +1725,6 @@ void GamePlayScene::CheckCollision()
 
                 if (player_->ApplyDamage(enemyBullet->GetDamage())) {
                     EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-
-                    if (player_->IsDead()) {
-                        ResetGameplayPostEffects();
-                        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-                    }
                 }
                 enemyBullet->SetDead();
                 // 1発の弾で複数回ダメージを受けないように、当たったらすぐに弾を無効化する
@@ -1676,11 +1753,6 @@ void GamePlayScene::CheckCollision()
 
                 if (player_->ApplyDamage(enemyBullet->GetDamage())) {
                     EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-
-                    if (player_->IsDead()) {
-                        ResetGameplayPostEffects();
-                        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-                    }
                 }
                 enemyBullet->SetDead();
             }

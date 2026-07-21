@@ -56,6 +56,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 
     pipelineStates_[PostEffectType::Random] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Random.PS.hlsl");
     pipelineStates_[PostEffectType::Paint] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Paint.PS.hlsl");
+    pipelineStates_[PostEffectType::GlassCrack] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GlassCrack.PS.hlsl");
 
 }
 
