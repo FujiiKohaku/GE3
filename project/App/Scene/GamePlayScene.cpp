@@ -473,8 +473,9 @@ void GamePlayScene::Update()
     }
 
     if (isPaused_) {
-        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）を適用！
+        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）とモノクロ白黒化（GrayScale）を同時に適用！
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale);
 
         // ポーズテキストオブジェクトの更新
         if (pauseTitleText_) pauseTitleText_->Update();
@@ -703,7 +704,12 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+        } else if (activeBoss_ && !activeBoss_->IsDead()) {
+            // ボス戦中: 3Dボスの輝度境界を強調する LuminanceBasedOutline (5点加点) を適用！
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         } else {
+            // 通常時: 深度ベースのアウトライン (DepthOutline: 8点加点)
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         }

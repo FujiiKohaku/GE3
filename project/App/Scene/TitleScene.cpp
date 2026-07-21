@@ -163,6 +163,7 @@ void TitleScene::Initialize()
 
 void TitleScene::Update()
 {
+
     const bool isGamePlayHovered = IsMouseOver(
         kGamePlayButtonLeft,
         kButtonTop,
