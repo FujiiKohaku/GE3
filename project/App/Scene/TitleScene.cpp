@@ -79,6 +79,10 @@ void TitleScene::Initialize()
     gamePlayButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     gamePlayButtonSprite_->SetPosition({ kGamePlayButtonLeft, kButtonTop });
     gamePlayButtonSprite_->SetSize({ kButtonWidth, kButtonHeight });
+    gamePlayButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
+    gamePlayButtonSprite_->SetEffectAmplitude(0.04f);
+    gamePlayButtonSprite_->SetEffectSpeed(3.0f);
+    gamePlayButtonSprite_->SetEffectStrength(0.0f);
 
     gamePlayButtonText_ = std::make_unique<Text>();
     gamePlayButtonText_->Initialize(kDefaultFont);
@@ -96,6 +100,10 @@ void TitleScene::Initialize()
     testButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     testButtonSprite_->SetPosition({ kTestButtonLeft, kButtonTop });
     testButtonSprite_->SetSize({ kButtonWidth, kButtonHeight });
+    testButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
+    testButtonSprite_->SetEffectAmplitude(0.04f);
+    testButtonSprite_->SetEffectSpeed(3.0f);
+    testButtonSprite_->SetEffectStrength(0.0f);
 
     testButtonText_ = std::make_unique<Text>();
     testButtonText_->Initialize(kDefaultFont);
@@ -113,6 +121,10 @@ void TitleScene::Initialize()
     spriteTestButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     spriteTestButtonSprite_->SetPosition({ kSpriteTestButtonLeft, kButtonTop });
     spriteTestButtonSprite_->SetSize({ kButtonWidth, kButtonHeight });
+    spriteTestButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
+    spriteTestButtonSprite_->SetEffectAmplitude(0.04f);
+    spriteTestButtonSprite_->SetEffectSpeed(3.0f);
+    spriteTestButtonSprite_->SetEffectStrength(0.0f);
 
     spriteTestButtonText_ = std::make_unique<Text>();
     spriteTestButtonText_->Initialize(kDefaultFont);
@@ -130,6 +142,10 @@ void TitleScene::Initialize()
     textTestButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     textTestButtonSprite_->SetPosition({ kTextTestButtonLeft, kTextTestButtonTop });
     textTestButtonSprite_->SetSize({ kTextTestButtonWidth, kTextTestButtonHeight });
+    textTestButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
+    textTestButtonSprite_->SetEffectAmplitude(0.05f);
+    textTestButtonSprite_->SetEffectSpeed(3.0f);
+    textTestButtonSprite_->SetEffectStrength(0.0f);
 
     textTestButtonText_ = std::make_unique<Text>();
     textTestButtonText_->Initialize(kDefaultFont);
@@ -309,16 +325,8 @@ void TitleScene::DrawImGui()
 
 void TitleScene::Finalize()
 {
-    SetMouseCursorVisible(false);
-
-    RECT clientRect {};
-    GetClientRect(WinApp::GetInstance()->GetHwnd(), &clientRect);
-    POINT leftTop { clientRect.left, clientRect.top };
-    POINT rightBottom { clientRect.right, clientRect.bottom };
-    ClientToScreen(WinApp::GetInstance()->GetHwnd(), &leftTop);
-    ClientToScreen(WinApp::GetInstance()->GetHwnd(), &rightBottom);
-    RECT screenRect { leftTop.x, leftTop.y, rightBottom.x, rightBottom.y };
-    ClipCursor(&screenRect);
+    SetMouseCursorVisible(true);
+    ClipCursor(nullptr);
 }
 
 bool TitleScene::IsMouseOver(float left, float top, float width, float height) const
@@ -363,22 +371,27 @@ void TitleScene::UpdateButtonVisual(
     float targetOffsetY = 0.0f;
     Vector4 targetButtonColor = kButtonColor;
     Vector4 targetTextColor = kButtonTextColor;
+    float targetGlowStrength = 0.0f;
 
     if (isHovered) {
         targetScale = kHoverScale;
         targetButtonColor = kButtonHoverColor;
+        targetGlowStrength = 1.0f;
     }
     if (isPressed) {
         targetScale = kPressedScale;
         targetOffsetY = kPressedOffsetY;
         targetButtonColor = kButtonPressedColor;
         targetTextColor = kButtonPressedTextColor;
+        targetGlowStrength = 1.5f;
     }
 
     buttonScales_[animationIndex] +=
         (targetScale - buttonScales_[animationIndex]) * kButtonAnimationSpeed;
     buttonOffsetsY_[animationIndex] +=
         (targetOffsetY - buttonOffsetsY_[animationIndex]) * kButtonAnimationSpeed;
+    buttonGlowStrengths_[animationIndex] +=
+        (targetGlowStrength - buttonGlowStrengths_[animationIndex]) * kButtonAnimationSpeed;
 
     const float animatedWidth = baseWidth * buttonScales_[animationIndex];
     const float animatedHeight = baseHeight * buttonScales_[animationIndex];
@@ -391,6 +404,7 @@ void TitleScene::UpdateButtonVisual(
     buttonSprite->SetPosition({ animatedLeft, animatedTop });
     buttonSprite->SetSize({ animatedWidth, animatedHeight });
     buttonSprite->SetColor(targetButtonColor);
+    buttonSprite->SetEffectStrength(buttonGlowStrengths_[animationIndex]);
     buttonText->SetPosition({
         baseLeft + baseWidth * 0.5f,
         baseTop + baseHeight * 0.5f + buttonOffsetsY_[animationIndex]

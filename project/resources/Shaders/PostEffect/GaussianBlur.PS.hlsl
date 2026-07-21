@@ -23,7 +23,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         [unroll]
         for (int y = -4; y <= 4; ++y)
         {
-            float2 offset = float2(x, y) * texelSize * 2.2f; // ふわっと深いガウスぼかし
+            float2 offset = float2(x, y) * texelSize * 1.8f;
             float weight = kWeights[x + 4] * kWeights[y + 4];
             blurredColor += gTexture.Sample(gSampler, uv + offset) * weight;
             totalWeight += weight;

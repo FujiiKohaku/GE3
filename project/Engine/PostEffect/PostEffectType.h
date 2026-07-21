@@ -34,6 +34,7 @@ enum class PostEffectType {
     Outline,
     Fog,
     FocusLine,
+    Paint,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

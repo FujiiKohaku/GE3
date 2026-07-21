@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/math/EngineStruct.h"
 #include "PostEffectType.h"
@@ -56,6 +56,13 @@ public:
         float lightStrength;
         float lightRadius;
         float lightAngle;
+
+        float paintProgress;
+        float paintIntensity;
+        float paintSeed;
+        int32_t paintPatternType;
+        Vector3 paintColor;
+        float paintPadding1;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);

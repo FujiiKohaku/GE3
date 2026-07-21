@@ -1,5 +1,7 @@
 #include "GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
+#include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
+#include "App/Game/Enemy/Bullet/PaintBullet.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
@@ -21,6 +23,7 @@
 
 #include "ClearScene.h"
 #include "GameOverScene.h"
+#include "TitleScene.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
@@ -218,6 +221,87 @@ void GamePlayScene::Initialize()
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
+
+    // ホワイトPNG (resources/Textures/white.png) を使用した縦長ポーズUIスプライトの初期化
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
+
+    // 1. 縦長背景パネル (280x380)
+    pauseMenuPanelSprite_ = std::make_unique<Sprite>();
+    pauseMenuPanelSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseMenuPanelSprite_->SetSize({ 280.0f, 380.0f });
+    pauseMenuPanelSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseMenuPanelSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseMenuPanelSprite_->SetColor({ 0.06f, 0.06f, 0.09f, 0.92f });
+    pauseMenuPanelSprite_->Update();
+
+    // 2. 「再開」ボタン用枠
+    pauseResumeBtnSprite_ = std::make_unique<Sprite>();
+    pauseResumeBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseResumeBtnSprite_->SetSize({ 220.0f, 44.0f });
+    pauseResumeBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseResumeBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 70.0f });
+    pauseResumeBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
+    pauseResumeBtnSprite_->Update();
+
+    // 3. 「リトライ」ボタン用枠
+    pauseRetryBtnSprite_ = std::make_unique<Sprite>();
+    pauseRetryBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseRetryBtnSprite_->SetSize({ 220.0f, 44.0f });
+    pauseRetryBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseRetryBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseRetryBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
+    pauseRetryBtnSprite_->Update();
+
+    // 4. 「タイトルに戻る」ボタン用枠
+    pauseTitleBtnSprite_ = std::make_unique<Sprite>();
+    pauseTitleBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseTitleBtnSprite_->SetSize({ 220.0f, 44.0f });
+    pauseTitleBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseTitleBtnSprite_->SetColor({ 0.75f, 0.22f, 0.22f, 0.90f });
+    pauseTitleBtnSprite_->Update();
+
+    // -------------------------------------------------
+    // ポーズ用日本語テキストUI（Release構成対応 Text描画システム）
+    // -------------------------------------------------
+    constexpr const char* kDefaultFont = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
+
+    pauseTitleText_ = std::make_unique<Text>();
+    pauseTitleText_->Initialize(kDefaultFont);
+    pauseTitleText_->SetText("PAUSE MENU");
+    pauseTitleText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 135.0f });
+    pauseTitleText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseTitleText_->SetFontSize(34.0f);
+    pauseTitleText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+    pauseTitleText_->Update();
+
+    pauseResumeText_ = std::make_unique<Text>();
+    pauseResumeText_->Initialize(kDefaultFont);
+    pauseResumeText_->SetText("ゲーム再開 [TAB]");
+    pauseResumeText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 70.0f });
+    pauseResumeText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseResumeText_->SetFontSize(22.0f);
+    pauseResumeText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    pauseResumeText_->Update();
+
+    pauseRetryText_ = std::make_unique<Text>();
+    pauseRetryText_->Initialize(kDefaultFont);
+    pauseRetryText_->SetText("リトライ [R]");
+    pauseRetryText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseRetryText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseRetryText_->SetFontSize(22.0f);
+    pauseRetryText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    pauseRetryText_->Update();
+
+    pauseTitleBtnText_ = std::make_unique<Text>();
+    pauseTitleBtnText_->Initialize(kDefaultFont);
+    pauseTitleBtnText_->SetText("タイトルに戻る [ESC]");
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseTitleBtnText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseTitleBtnText_->SetFontSize(22.0f);
+    pauseTitleBtnText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    pauseTitleBtnText_->Update();
+
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
     Logger::Log("GamePlayScene::Initialize: Allocating skyBox");
@@ -259,6 +343,16 @@ void GamePlayScene::Initialize()
     wasPlayerBoosting_ = false;
 
     CreateLevelObjects(levelData);
+
+    // ペイント弾を撃ってくるエネミーをコース上に5体配置（視認しやすくインクを連射する位置）
+    for (int i = 0; i < 5; ++i) {
+        std::unique_ptr<PaintShooterEnemy> paintEnemy = std::make_unique<PaintShooterEnemy>();
+        paintEnemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+        float zPos = 200.0f + i * 300.0f;
+        float xPos = (i % 2 == 0) ? -8.0f : 8.0f;
+        paintEnemy->SetPosition({ xPos, 2.0f, zPos });
+        enemies_.push_back(std::move(paintEnemy));
+    }
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
@@ -341,6 +435,39 @@ void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, V
 
 void GamePlayScene::Update()
 {
+    // TABキーによるポーズメニュー（Pause Menu）切り替え
+    Input* input = Input::GetInstance();
+    if (input != nullptr && input->IsKeyTrigger(DIK_TAB)) {
+        isPaused_ = !isPaused_;
+    }
+
+    if (isPaused_) {
+        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）を適用！
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter);
+
+        // ポーズテキストオブジェクトの更新
+        if (pauseTitleText_) pauseTitleText_->Update();
+        if (pauseResumeText_) pauseResumeText_->Update();
+        if (pauseRetryText_) pauseRetryText_->Update();
+        if (pauseTitleBtnText_) pauseTitleBtnText_->Update();
+
+        // ESCキーでタイトル画面へ戻る
+        if (input != nullptr && input->IsKeyTrigger(DIK_ESCAPE)) {
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+            return;
+        }
+
+        // Rキーでステージリトライ
+        if (input != nullptr && input->IsKeyTrigger(DIK_R)) {
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
+            return;
+        }
+
+        // ポーズ中はゲームオブジェクトの更新を停止
+        return;
+    }
     if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
         HotReloadLevel();
     }
@@ -431,7 +558,6 @@ void GamePlayScene::Update()
     UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
 
     // 入力インスタンスの取得
-    Input* input = Input::GetInstance();
     if (input != nullptr) {
         if (input->IsKeyTrigger(DIK_L)) {
             isRandomPostEffect_ = !isRandomPostEffect_;
@@ -527,6 +653,24 @@ void GamePlayScene::Update()
         } else {
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+        }
+    }
+
+    // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
+    if (isPaintEffectActive_) {
+        paintEffectTimer_ += 1.0f / 60.0f;
+        float progress = paintEffectTimer_ / paintEffectDuration_;
+        if (progress >= 1.0f) {
+            isPaintEffectActive_ = false;
+            paintEffectTimer_ = 0.0f;
+            SceneManager::GetInstance()->RemovePostEffect(PostEffectType::Paint);
+            SceneManager::GetInstance()->SetPaintProgress(0.0f);
+            SceneManager::GetInstance()->SetPaintIntensity(0.0f);
+        } else {
+            // 毎フレームの ClearPostEffects() / SetPostEffectType() による消去を防止し、ペイント効果を維持
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Paint);
+            SceneManager::GetInstance()->SetPaintProgress(progress);
+            SceneManager::GetInstance()->SetPaintIntensity(1.0f);
         }
     }
 
@@ -992,10 +1136,80 @@ void GamePlayScene::Draw2D()
     if (!activeBoss_ || !activeBoss_->IsDead()) {
         aimSprite_->Draw();
     }
+
+    if (isPaused_) {
+        if (pauseMenuPanelSprite_) pauseMenuPanelSprite_->Draw();
+        if (pauseResumeBtnSprite_) pauseResumeBtnSprite_->Draw();
+        if (pauseRetryBtnSprite_) pauseRetryBtnSprite_->Draw();
+        if (pauseTitleBtnSprite_) pauseTitleBtnSprite_->Draw();
+
+        // 独自TextRendererによるRelease構成対応の超高画質日本語テキスト描画
+        TextRenderer::GetInstance()->PreDraw();
+        if (pauseTitleText_) pauseTitleText_->Draw();
+        if (pauseResumeText_) pauseResumeText_->Draw();
+        if (pauseRetryText_) pauseRetryText_->Draw();
+        if (pauseTitleBtnText_) pauseTitleBtnText_->Draw();
+    }
 }
 
 void GamePlayScene::DrawImGui()
 {
+#ifdef USE_IMGUI
+    if (isPaused_) {
+        ImGui::SetNextWindowPos(ImVec2(WinApp::kClientWidth * 0.5f, WinApp::kClientHeight * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(280.0f, 380.0f));
+
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                                 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
+                                 ImGuiWindowFlags_NoBackground;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.25f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 1.0f, 1.0f, 0.40f));
+
+        if (ImGui::Begin("VerticalPauseWindow", nullptr, flags)) {
+            ImGui::SetWindowFontScale(1.4f);
+            ImGui::Spacing();
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("PAUSE MENU").x * 1.4f) * 0.5f);
+            ImGui::TextColored(ImVec4(0.35f, 0.85f, 1.0f, 1.0f), "PAUSE MENU");
+            ImGui::Separator();
+
+            ImGui::SetWindowFontScale(1.25f);
+
+            // 1. RESUME (TAB)
+            ImGui::SetCursorPosY(110.0f);
+            if (ImGui::Button("RESUME (TAB)", ImVec2(-1, 44.0f))) {
+                isPaused_ = false;
+            }
+
+            // 2. RETRY (R)
+            ImGui::SetCursorPosY(180.0f);
+            if (ImGui::Button("RETRY (R)", ImVec2(-1, 44.0f))) {
+                isPaused_ = false;
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
+            }
+
+            // 3. TITLE (ESC)
+            ImGui::SetCursorPosY(250.0f);
+            if (ImGui::Button("TITLE (ESC)", ImVec2(-1, 44.0f))) {
+                isPaused_ = false;
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+            }
+
+            ImGui::End();
+        }
+
+        ImGui::PopStyleColor(6);
+        ImGui::PopStyleVar(1);
+        return;
+    }
+#endif
 #ifdef USE_IMGUI
     // ボス出現時、画面上部中央にスタイリッシュな2本の横長HPバーをHUD風にオーバーレイ表示する
     if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
@@ -1275,6 +1489,46 @@ void GamePlayScene::CheckCollision()
                 OutputDebugStringA("EnemyBullet Hit Player\n");
 
                 enemyBullet->OnHitPlayer(player_->GetTranslate());
+
+                if (dynamic_cast<PaintBullet*>(enemyBullet.get())) {
+                    if (!isPaintEffectActive_) {
+                        isPaintEffectActive_ = true;
+                        paintEffectTimer_ = 0.0f;
+
+                        // 鮮やかなカラーからランダム抽出
+                        static const Vector3 kPaintColors[] = {
+                            { 0.98f, 0.12f, 0.60f }, // ネオンピンク
+                            { 0.10f, 0.88f, 0.95f }, // エレクトリックシアン
+                            { 0.98f, 0.88f, 0.10f }, // ポップイエロー
+                            { 0.20f, 0.95f, 0.35f }, // ライムグリーン
+                            { 0.98f, 0.42f, 0.10f }, // サンセットオレンジ
+                            { 0.72f, 0.15f, 0.98f }  // バイオレットパープル
+                        };
+                        int colorIndex = rand() % 6;
+                        float randomSeed = static_cast<float>(rand() % 10000) * 0.137f;
+
+                        // シルエット形状の確率選出
+                        int patternType = 0;
+                        int roll = rand() % 10;
+                        if (roll < 3) {
+                            patternType = 1; // 30%の確率でキュートな【ハート型】！
+                        } else if (roll < 5) {
+                            patternType = 2; // 20%の確率でインパクトのある【星型】！
+                        } else if (roll < 7) {
+                            patternType = 3; // 20%の確率でスタイリッシュな【リング型】！
+                        } else {
+                            patternType = 0; // 30%の確率でダイナミックな【通常スプラッター】
+                        }
+
+                        SceneManager::GetInstance()->SetPaintColor(kPaintColors[colorIndex]);
+                        SceneManager::GetInstance()->SetPaintSeed(randomSeed);
+                        SceneManager::GetInstance()->SetPaintPatternType(patternType);
+
+                        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Paint);
+                        SceneManager::GetInstance()->SetPaintProgress(0.0f);
+                        SceneManager::GetInstance()->SetPaintIntensity(1.0f);
+                    }
+                }
 
                 if (player_->ApplyDamage(enemyBullet->GetDamage())) {
                     EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());

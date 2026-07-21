@@ -46,6 +46,7 @@ private:
 
     std::array<float, 4> buttonScales_ = { 1.0f, 1.0f, 1.0f, 1.0f };
     std::array<float, 4> buttonOffsetsY_ = { 0.0f, 0.0f, 0.0f, 0.0f };
+    std::array<float, 4> buttonGlowStrengths_ = { 0.0f, 0.0f, 0.0f, 0.0f };
     int pressedButtonIndex_ = -1;
     bool wasMousePressed_ = false;
 };

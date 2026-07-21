@@ -62,6 +62,8 @@ const char* GetPostEffectTypeName(PostEffectType type)
         return "Fog";
     case PostEffectType::FocusLine:
         return "FocusLine";
+    case PostEffectType::Paint:
+        return "Paint";
     }
 
     return "Unknown";

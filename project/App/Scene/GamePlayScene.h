@@ -6,6 +6,8 @@
 #include "Engine/Skeleton/Skeleton.h"
 
 #include "App/Scene/BaseScene.h"
+#include "Engine/2D/Text/Text.h"
+#include "Engine/2D/Text/TextRenderer.h"
 
 #include "Engine/Camera/Camera.h"
 #include "Engine/debugcamera/DebugCameraController.h"
@@ -205,6 +207,24 @@ private:
     float cameraShakeTime_ = 0.0f;
     float cameraShakeIntensity_ = 0.0f;
     float cameraShakeDuration_ = 0.0f;
+
+    // ペイントポストエフェクト用
+    bool isPaintEffectActive_ = false;
+    float paintEffectTimer_ = 0.0f;
+    float paintEffectDuration_ = 5.5f;
+
+    // ポーズメニュー（TABキー）関連
+    bool isPaused_ = false;
+    std::unique_ptr<Sprite> pauseMenuPanelSprite_;
+    std::unique_ptr<Sprite> pauseResumeBtnSprite_;
+    std::unique_ptr<Sprite> pauseRetryBtnSprite_;
+    std::unique_ptr<Sprite> pauseTitleBtnSprite_;
+
+    // ポーズ用日本語テキストUI（Textクラス）
+    std::unique_ptr<Text> pauseTitleText_;
+    std::unique_ptr<Text> pauseResumeText_;
+    std::unique_ptr<Text> pauseRetryText_;
+    std::unique_ptr<Text> pauseTitleBtnText_;
 
     const LevelData::ObjectData* cameraPointObject_ = nullptr;
     float cameraPointLerpTime_ = 0.0f;

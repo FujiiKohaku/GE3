@@ -1,4 +1,4 @@
-﻿#include "CopyImageRenderer.h"
+#include "CopyImageRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
@@ -55,6 +55,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::Dissolve] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Dissolve.PS.hlsl");
 
     pipelineStates_[PostEffectType::Random] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Random.PS.hlsl");
+    pipelineStates_[PostEffectType::Paint] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Paint.PS.hlsl");
 
 }
 

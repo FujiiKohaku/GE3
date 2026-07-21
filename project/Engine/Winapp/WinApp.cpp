@@ -148,6 +148,7 @@ void WinApp::initialize()
 //==================================================================
 void WinApp::Finalize()
 {
+    ClipCursor(nullptr);
     CloseWindow(hwnd_);
     CoUninitialize();
 }

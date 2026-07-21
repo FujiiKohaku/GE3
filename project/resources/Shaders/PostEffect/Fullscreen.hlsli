@@ -43,4 +43,10 @@ cbuffer PostEffectParameter : register(b0)
     float lightStrength;
     float lightRadius;
     float lightAngle;
+    float paintProgress;
+    float paintIntensity;
+    float paintSeed;
+    int paintPatternType;
+    float3 paintColor;
+    float paintPadding1;
 };

@@ -172,6 +172,11 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
 
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     postEffectParameter.radialBlurCenter = sceneManager->GetPostEffectCenter();
+    postEffectParameter.paintProgress = sceneManager->GetPaintProgress();
+    postEffectParameter.paintIntensity = sceneManager->GetPaintIntensity();
+    postEffectParameter.paintSeed = sceneManager->GetPaintSeed();
+    postEffectParameter.paintPatternType = sceneManager->GetPaintPatternType();
+    postEffectParameter.paintColor = sceneManager->GetPaintColor();
 
     const std::vector<PostEffectInfo>& postEffects = sceneManager->GetPostEffects();
     int enabledCount = 0;

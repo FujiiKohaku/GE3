@@ -288,7 +288,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
   </ItemGroup>
@@ -315,6 +317,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Scene\ClearScene.h" />
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h" />
+    <ClInclude Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\PaintBullet.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.h" />
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h" />
