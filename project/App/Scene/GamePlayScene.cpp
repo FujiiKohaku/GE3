@@ -473,9 +473,10 @@ void GamePlayScene::Update()
     }
 
     if (isPaused_) {
-        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）とモノクロ白黒化（GrayScale）を同時に適用！
+        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用！
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter);
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::CyberScanline);
 
         // ポーズテキストオブジェクトの更新
         if (pauseTitleText_) pauseTitleText_->Update();
@@ -740,6 +741,37 @@ void GamePlayScene::Update()
         float shockProgress = 1.0f - (bossShockwaveTimer_ / 0.95f);
         SceneManager::GetInstance()->SetVignetteStrength(shockProgress);
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::Shockwave);
+    }
+
+    // -------------------------------------------------
+    // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
+    // -------------------------------------------------
+    static bool prevBoostingState = false;
+    bool isShiftPressed = Input::GetInstance()->IsKeyTrigger(DIK_LSHIFT) || Input::GetInstance()->IsKeyTrigger(DIK_RSHIFT);
+
+    // シフトキーを押した瞬間、またはブースト未開始から開始に切り替わった瞬間に100%確実に発動！
+    if (isShiftPressed || (isPlayerBoosting && !prevBoostingState)) {
+        sonicBoomTimer_ = 0.85f;
+
+        // プレイヤーの現在位置を中心発生源として画面UV座標(0.0〜1.0)へ変換
+        if (player_ && camera_) {
+            Vector3 playerWorldPos = player_->GetTranslate();
+            Vector2 screenPos = camera_->WorldToScreen(playerWorldPos);
+            float screenW = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+            float screenH = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+            Vector2 playerUV = { screenPos.x / screenW, screenPos.y / screenH };
+            SceneManager::GetInstance()->SetSonicBoomCenter(playerUV);
+        }
+    }
+    prevBoostingState = isPlayerBoosting;
+
+    if (sonicBoomTimer_ > 0.0f) {
+        sonicBoomTimer_ -= 1.0f / 60.0f;
+        if (sonicBoomTimer_ < 0.0f) sonicBoomTimer_ = 0.0f;
+
+        float boomProgress = 1.0f - (sonicBoomTimer_ / 0.85f);
+        SceneManager::GetInstance()->SetSonicBoomProgress(boomProgress);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::SonicBoom);
     }
 
     // -------------------------------------------------

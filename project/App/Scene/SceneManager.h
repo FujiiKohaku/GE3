@@ -65,6 +65,10 @@ public:
     const Vector3& GetPaintColor() const { return paintColor_; }
     void SetVignetteStrength(float strength) { vignetteStrength_ = strength; }
     float GetVignetteStrength() const { return vignetteStrength_; }
+    void SetSonicBoomProgress(float progress) { sonicBoomProgress_ = progress; }
+    float GetSonicBoomProgress() const { return sonicBoomProgress_; }
+    void SetSonicBoomCenter(const Vector2& center) { sonicBoomCenter_ = center; }
+    const Vector2& GetSonicBoomCenter() const { return sonicBoomCenter_; }
 
 private:
     SceneManager() = default;
@@ -77,6 +81,8 @@ private:
     Vector2 postEffectCenter_ = { 0.5f, 0.5f };
     float postEffectKickStrength_ = 0.0f;
     float vignetteStrength_ = 1.0f;
+    float sonicBoomProgress_ = 0.0f;
+    Vector2 sonicBoomCenter_ = { 0.5f, 0.5f };
     float paintProgress_ = 0.0f;
     float paintIntensity_ = 0.0f;
     float paintSeed_ = 0.0f;

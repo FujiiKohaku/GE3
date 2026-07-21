@@ -62,7 +62,9 @@ public:
         float paintSeed;
         int32_t paintPatternType;
         Vector3 paintColor;
-        float paintPadding1;
+        float sonicBoomProgress;
+        Vector2 sonicBoomCenter;
+        Vector2 paddingSonicBoom;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);

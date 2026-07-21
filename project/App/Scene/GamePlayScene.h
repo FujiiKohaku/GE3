@@ -229,6 +229,9 @@ private:
     // ボス無差別弾バラマキ衝撃波タイマー
     float bossShockwaveTimer_ = 0.0f;
 
+    // ブースト加速ソニックブーム衝撃音波タイマー
+    float sonicBoomTimer_ = 0.0f;
+
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
     std::unique_ptr<Sprite> pauseMenuPanelSprite_;
