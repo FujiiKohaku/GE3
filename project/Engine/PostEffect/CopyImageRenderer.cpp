@@ -62,6 +62,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::SonicBoom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl");
     pipelineStates_[PostEffectType::RainDrops] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/RainDrops.PS.hlsl");
     pipelineStates_[PostEffectType::CyberScanline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/CyberScanline.PS.hlsl");
+    pipelineStates_[PostEffectType::ChromaticAberration] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/ChromaticAberration.PS.hlsl");
 
 }
 

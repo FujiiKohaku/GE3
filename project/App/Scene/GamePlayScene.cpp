@@ -708,6 +708,7 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::ChromaticAberration);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         } else if (activeBoss_ && !activeBoss_->IsDead()) {
             // ボス戦中: 3Dボスの輝度境界を強調する LuminanceBasedOutline (5点加点) を適用！
