@@ -31,6 +31,7 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthDSVHandle() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
+    CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
 
 private:
     class RenderTarget {

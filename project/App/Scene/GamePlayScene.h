@@ -213,6 +213,10 @@ private:
     float paintEffectTimer_ = 0.0f;
     float paintEffectDuration_ = 5.5f;
 
+    // 被弾フラッシュ演出用
+    float damageFlashTimer_ = 0.0f;
+    int lastPlayerHp_ = 20;
+
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
     std::unique_ptr<Sprite> pauseMenuPanelSprite_;
@@ -225,6 +229,11 @@ private:
     std::unique_ptr<Text> pauseResumeText_;
     std::unique_ptr<Text> pauseRetryText_;
     std::unique_ptr<Text> pauseTitleBtnText_;
+
+    // 画面右側のプレイヤーHPゲージUI
+    std::unique_ptr<Sprite> playerHpBgSprite_;
+    std::unique_ptr<Sprite> playerHpBarSprite_;
+    std::unique_ptr<Text> playerHpText_;
 
     const LevelData::ObjectData* cameraPointObject_ = nullptr;
     float cameraPointLerpTime_ = 0.0f;

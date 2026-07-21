@@ -63,6 +63,8 @@ public:
     int GetPaintPatternType() const { return paintPatternType_; }
     void SetPaintColor(const Vector3& color) { paintColor_ = color; }
     const Vector3& GetPaintColor() const { return paintColor_; }
+    void SetVignetteStrength(float strength) { vignetteStrength_ = strength; }
+    float GetVignetteStrength() const { return vignetteStrength_; }
 
 private:
     SceneManager() = default;
@@ -74,6 +76,7 @@ private:
     std::vector<PostEffectInfo> postEffects_;
     Vector2 postEffectCenter_ = { 0.5f, 0.5f };
     float postEffectKickStrength_ = 0.0f;
+    float vignetteStrength_ = 1.0f;
     float paintProgress_ = 0.0f;
     float paintIntensity_ = 0.0f;
     float paintSeed_ = 0.0f;

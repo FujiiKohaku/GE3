@@ -15,6 +15,8 @@
 
 #include "../externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
+#include "Engine/PostEffect/CopyImageRenderer.h"
+#include "Engine/PostEffect/PostEffectManager.h"
 #include <fstream>
 #include <string_view>
 
@@ -302,6 +304,34 @@ void GamePlayScene::Initialize()
     pauseTitleBtnText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     pauseTitleBtnText_->Update();
 
+    // -------------------------------------------------
+    // 画面右側に表示するプレイヤーHPゲージUIの初期化
+    // -------------------------------------------------
+    playerHpBgSprite_ = std::make_unique<Sprite>();
+    playerHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    playerHpBgSprite_->SetSize({ 220.0f, 22.0f });
+    playerHpBgSprite_->SetAnchorPoint({ 1.0f, 0.0f });
+    playerHpBgSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
+    playerHpBgSprite_->SetColor({ 0.08f, 0.08f, 0.12f, 0.85f });
+    playerHpBgSprite_->Update();
+
+    playerHpBarSprite_ = std::make_unique<Sprite>();
+    playerHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    playerHpBarSprite_->SetSize({ 220.0f, 22.0f });
+    playerHpBarSprite_->SetAnchorPoint({ 1.0f, 0.0f });
+    playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
+    playerHpBarSprite_->SetColor({ 0.20f, 0.85f, 0.40f, 0.95f });
+    playerHpBarSprite_->Update();
+
+    playerHpText_ = std::make_unique<Text>();
+    playerHpText_->Initialize(kDefaultFont);
+    playerHpText_->SetText("HP 20 / 20");
+    playerHpText_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 12.0f });
+    playerHpText_->SetAnchorPoint({ 1.0f, 0.0f });
+    playerHpText_->SetFontSize(20.0f);
+    playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    playerHpText_->Update();
+
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
     Logger::Log("GamePlayScene::Initialize: Allocating skyBox");
@@ -320,6 +350,7 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
+    lastPlayerHp_ = player_->GetMaxHp();
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
     Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
@@ -470,6 +501,10 @@ void GamePlayScene::Update()
     }
     if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
         HotReloadLevel();
+    }
+    // デバッグ用: Vキーを押すと自機にダメージを与えてVignetting効果を即確認可能
+    if (Input::GetInstance()->IsKeyTrigger(DIK_V) && player_) {
+        player_->ApplyDamage(3);
     }
 
     // レール自体の更新
@@ -672,6 +707,74 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetPaintProgress(progress);
             SceneManager::GetInstance()->SetPaintIntensity(1.0f);
         }
+    }
+
+    // -------------------------------------------------
+    // 加点要素: Vignetting (3点)
+    // 1. ダメージを受けた瞬間は一瞬だけ暗く赤くフラッシュ
+    // 2. HPが3以下になったら常時ドクンドクンと脈動（鼓動パルス）
+    // -------------------------------------------------
+    if (player_) {
+        int currentHp = player_->GetCurrentHp();
+
+        // ダメージ検知
+        if (currentHp < lastPlayerHp_) {
+            damageFlashTimer_ = 0.35f;
+        }
+        lastPlayerHp_ = currentHp;
+
+        // ダメージフラッシュタイマー消化
+        if (damageFlashTimer_ > 0.0f) {
+            damageFlashTimer_ -= 1.0f / 60.0f;
+            if (damageFlashTimer_ < 0.0f) damageFlashTimer_ = 0.0f;
+        }
+
+        // (A) 被弾瞬間の一瞬暗赤色フラッシュ
+        if (damageFlashTimer_ > 0.0f) {
+            float flashRatio = damageFlashTimer_ / 0.35f;
+            SceneManager::GetInstance()->SetVignetteStrength(0.60f + 0.40f * flashRatio);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Vignette);
+        }
+        // (B) HP ≦ 3 時の常時ドクンドクン脈動演出
+        else if (currentHp <= 3) {
+            static float vignettePulseTimer = 0.0f;
+            vignettePulseTimer += 1.0f / 60.0f;
+
+            float pulseFactor = 0.65f + 0.30f * std::sin(vignettePulseTimer * 8.5f);
+            SceneManager::GetInstance()->SetVignetteStrength(pulseFactor);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Vignette);
+        }
+    }
+
+    // -------------------------------------------------
+    // 画面右側のプレイヤーHPゲージのリアルタイム更新
+    // -------------------------------------------------
+    if (player_ && playerHpBarSprite_ && playerHpText_) {
+        int currentHp = player_->GetCurrentHp();
+        int maxHp = player_->GetMaxHp();
+        float hpRatio = (maxHp > 0) ? (float)currentHp / (float)maxHp : 0.0f;
+        if (hpRatio < 0.0f) hpRatio = 0.0f;
+        if (hpRatio > 1.0f) hpRatio = 1.0f;
+
+        // 残りHP割合に合わせてゲージの横幅を滑らかに変更
+        float barWidth = 220.0f * hpRatio;
+        playerHpBarSprite_->SetSize({ barWidth, 22.0f });
+
+        // 残りHP量に応じてバーの色を変化（緑 -> 黄色 -> 赤）
+        if (currentHp <= 3) {
+            playerHpBarSprite_->SetColor({ 0.95f, 0.15f, 0.15f, 0.95f });
+        } else if (hpRatio < 0.45f) {
+            playerHpBarSprite_->SetColor({ 0.95f, 0.70f, 0.15f, 0.95f });
+        } else {
+            playerHpBarSprite_->SetColor({ 0.20f, 0.85f, 0.40f, 0.95f });
+        }
+
+        playerHpBarSprite_->Update();
+        if (playerHpBgSprite_) playerHpBgSprite_->Update();
+
+        // HP数値テキストの更新
+        playerHpText_->SetText("HP " + std::to_string(currentHp) + " / " + std::to_string(maxHp));
+        playerHpText_->Update();
     }
 
     // レティクル（AimSprite）のスクリーン位置更新
@@ -1137,6 +1240,10 @@ void GamePlayScene::Draw2D()
         aimSprite_->Draw();
     }
 
+    // 画面右側のプレイヤーHPゲージ（背景スプライト＆HPバー）の描画
+    if (playerHpBgSprite_) playerHpBgSprite_->Draw();
+    if (playerHpBarSprite_) playerHpBarSprite_->Draw();
+
     if (isPaused_) {
         if (pauseMenuPanelSprite_) pauseMenuPanelSprite_->Draw();
         if (pauseResumeBtnSprite_) pauseResumeBtnSprite_->Draw();
@@ -1149,6 +1256,10 @@ void GamePlayScene::Draw2D()
         if (pauseResumeText_) pauseResumeText_->Draw();
         if (pauseRetryText_) pauseRetryText_->Draw();
         if (pauseTitleBtnText_) pauseTitleBtnText_->Draw();
+    } else {
+        // 通常プレイ中の画面右上HP数値テキストの描画
+        TextRenderer::GetInstance()->PreDraw();
+        if (playerHpText_) playerHpText_->Draw();
     }
 }
 

@@ -172,6 +172,7 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
 
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     postEffectParameter.radialBlurCenter = sceneManager->GetPostEffectCenter();
+    postEffectParameter.vignetteStrength = sceneManager->GetVignetteStrength();
     postEffectParameter.paintProgress = sceneManager->GetPaintProgress();
     postEffectParameter.paintIntensity = sceneManager->GetPaintIntensity();
     postEffectParameter.paintSeed = sceneManager->GetPaintSeed();
