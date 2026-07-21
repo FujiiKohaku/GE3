@@ -174,3 +174,25 @@ Shader build completed. Compiled: 0, Up-to-date: 121
 - Assimp
 - nlohmann/json
 - Dear ImGui docking branch
+
+## GPU Trail Particle
+
+`EffectManager` に通常のメッシュパーティクルとは独立した、GPUベースのTrail描画を追加した。
+`Effect.json` の `Render.Type` に `"Trail"` を指定すると、Compute Shaderが移動履歴を
+`StructuredBuffer<TrailPoint>` に最大64点保存し、Vertex Shaderが隣接点をカメラ向きの帯状ポリゴンへ展開する。
+`Render.Type` を省略した既存Effectは従来通り `Mesh` として処理される。
+
+Trailでは次のJSONパラメータを指定できる。
+
+- `MaxPoints`: 履歴点数（2～64）
+- `LifeTime`: 各履歴点が残る時間
+- `MinVertexDistance`: 新しい点を追加する最小移動距離
+- `BreakDistance`: テレポートなどでTrailを切断する距離
+- `StartWidth` / `EndWidth`: 先端と末端の幅
+- `StartColor` / `EndColor`: 寿命に応じた色と透明度
+- `TextureTiling`: Trail方向のテクスチャ反復数
+- `FaceCamera`: カメラ方向を向く帯にするか
+- `RootExtension`: Trailの根元を進行方向へ延長し、発生元へ重ねる距離
+
+`MissileTrail` をこの方式へ移行済み。発生を停止した後も `LifeTime` の間だけ履歴が残り、
+末端から透明になって消える。

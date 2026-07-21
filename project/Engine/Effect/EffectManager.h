@@ -40,6 +40,7 @@ struct ActiveEffect {
     EffectPositionProvider positionProvider;
     float duration = -1.0f;
     bool isLoop = false;
+    bool isEmitting = true;
     bool isAlive = false;
 };
 
@@ -113,6 +114,11 @@ public:
     const std::vector<ActiveEffect>& GetActiveEffects() const { return activeEffects_; }
 
 private:
+    enum class ParticleRenderType {
+        Mesh,
+        Trail,
+    };
+
     enum class EmitterShape : int32_t {
         Sphere,
         Box,
@@ -156,6 +162,25 @@ private:
         float emissionStrength = 1.0f;
         float uvScrollSpeedX = 0.0f;
         float uvScrollSpeedY = 0.0f;
+        Vector4 trailStartColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        Vector4 trailEndColor = { 1.0f, 1.0f, 1.0f, 0.0f };
+        float trailLifeTime = 0.5f;
+        float trailStartWidth = 0.2f;
+        float trailEndWidth = 0.0f;
+        float trailTextureTiling = 1.0f;
+        float trailMinVertexDistance = 0.05f;
+        float trailBreakDistance = 5.0f;
+        uint32_t maxTrailPoints = 64;
+        int32_t faceCamera = 1;
+        float trailRootExtension = 0.0f;
+        float trailPadding[3] = {};
+    };
+
+    struct TrailPoint {
+        Vector3 position;
+        float age = 0.0f;
+        uint32_t isActive = 0;
+        float padding[3] = {};
     };
 
     struct EffectRuntime {
@@ -166,6 +191,7 @@ private:
         std::string texturePath = "resources/Particles/circle.png";
         std::string vertexShaderPath = "resources/Shaders/Effects/Common/Particle.VS.hlsl";
         std::string pixelShaderPath = "resources/Shaders/Effects/Common/Particle.PS.hlsl";
+        ParticleRenderType renderType = ParticleRenderType::Mesh;
         ParticleMeshManager::ParticleMeshType meshType = ParticleMeshManager::ParticleMeshType::Board;
         BlendMode blendMode = kBlendModeAdd;
         bool depthTest = true;
@@ -183,6 +209,7 @@ private:
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
 
     struct ActiveEffectResource {
+        ParticleRenderType renderType = ParticleRenderType::Mesh;
         Microsoft::WRL::ComPtr<ID3D12Resource> particleResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> freeListIndexResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource;
@@ -294,6 +321,7 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> initializeRootSignature_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> initializePipelineState_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> trailInitializePipelineState_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> emitRootSignature_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> updateRootSignature_;
 
@@ -308,4 +336,5 @@ private:
     bool isWarmUpComplete_ = false;
 
     static constexpr uint32_t kMaxGPUParticle = 1024;
+    static constexpr uint32_t kMaxTrailPoints = 64;
 };

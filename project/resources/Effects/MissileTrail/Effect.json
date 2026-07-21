@@ -1,8 +1,8 @@
 {
   "Shaders": {
     "Emit": "Emit.CS.hlsl",
-    "Update": "Update.CS.hlsl",
-    "Vertex": "Render.VS.hlsl",
+    "Update": "UpdateTrail.CS.hlsl",
+    "Vertex": "Trail.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
 
@@ -44,13 +44,28 @@
 
   "Render": {
     "Texture": "resources/Effects/Jet/jet.png",
-    "MeshType": "Board",
+    "Type": "Trail",
     "BlendMode": "Add",
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",
+    "EmissionStrength": 2.4,
 
     "Loop": true,
     "Duration": -1.0
+  },
+
+  "Trail": {
+    "MaxPoints": 64,
+    "LifeTime": 0.42,
+    "MinVertexDistance": 0.05,
+    "BreakDistance": 5.0,
+    "StartWidth": 1.8,
+    "EndWidth": 0.15,
+    "StartColor": [1.0, 1.0, 0.88, 1.0],
+    "EndColor": [0.9, 0.08, 0.01, 0.0],
+    "TextureTiling": 2.0,
+    "RootExtension": 0.7,
+    "FaceCamera": true
   }
 }

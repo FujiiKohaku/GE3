@@ -375,11 +375,13 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
     }
 
     ApplyEffectConfig(effectData, runtime);
-    runtime.emitPipelineState = CreateComputePipeline(
-        runtime.data.effectName,
-        "Emit",
-        emitRootSignature_.Get(),
-        runtime.data.emitShaderPath);
+    if (runtime.renderType == ParticleRenderType::Mesh) {
+        runtime.emitPipelineState = CreateComputePipeline(
+            runtime.data.effectName,
+            "Emit",
+            emitRootSignature_.Get(),
+            runtime.data.emitShaderPath);
+    }
     runtime.updatePipelineState = CreateComputePipeline(
         runtime.data.effectName,
         "Update",
@@ -501,6 +503,15 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
         runtime.meshType = ParseParticleMeshType(render.at("MeshType").get<std::string>());
     }
 
+    if (render.contains("Type")) {
+        const std::string renderType = render.at("Type").get<std::string>();
+        if (renderType == "Trail") {
+            runtime.renderType = ParticleRenderType::Trail;
+        } else {
+            runtime.renderType = ParticleRenderType::Mesh;
+        }
+    }
+
     if (render.contains("BlendMode")) {
         runtime.blendMode = ParseBlendMode(render.at("BlendMode").get<std::string>());
     }
@@ -524,6 +535,67 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
         ApplyRenderParameterConfig(render.at("RenderParameter"), runtime.renderParameter);
     }
     ApplyRenderParameterConfig(render, runtime.renderParameter);
+
+    if (config.contains("Trail")) {
+        const nlohmann::json& trail = config.at("Trail");
+        if (trail.contains("StartColor")) {
+            runtime.renderParameter.trailStartColor = ReadVector4(
+                trail.at("StartColor"),
+                runtime.renderParameter.trailStartColor);
+        }
+        if (trail.contains("EndColor")) {
+            runtime.renderParameter.trailEndColor = ReadVector4(
+                trail.at("EndColor"),
+                runtime.renderParameter.trailEndColor);
+        }
+        runtime.renderParameter.trailLifeTime = trail.value(
+            "LifeTime",
+            runtime.renderParameter.trailLifeTime);
+        runtime.renderParameter.trailStartWidth = trail.value(
+            "StartWidth",
+            runtime.renderParameter.trailStartWidth);
+        runtime.renderParameter.trailEndWidth = trail.value(
+            "EndWidth",
+            runtime.renderParameter.trailEndWidth);
+        runtime.renderParameter.trailTextureTiling = trail.value(
+            "TextureTiling",
+            runtime.renderParameter.trailTextureTiling);
+        runtime.renderParameter.trailMinVertexDistance = trail.value(
+            "MinVertexDistance",
+            runtime.renderParameter.trailMinVertexDistance);
+        runtime.renderParameter.trailBreakDistance = trail.value(
+            "BreakDistance",
+            runtime.renderParameter.trailBreakDistance);
+        runtime.renderParameter.maxTrailPoints = trail.value(
+            "MaxPoints",
+            runtime.renderParameter.maxTrailPoints);
+        runtime.renderParameter.faceCamera = ReadBoolFlag(
+            trail,
+            "FaceCamera",
+            runtime.renderParameter.faceCamera);
+        runtime.renderParameter.trailRootExtension = trail.value(
+            "RootExtension",
+            runtime.renderParameter.trailRootExtension);
+
+        if (runtime.renderParameter.maxTrailPoints < 2) {
+            runtime.renderParameter.maxTrailPoints = 2;
+        }
+        if (runtime.renderParameter.maxTrailPoints > kMaxTrailPoints) {
+            runtime.renderParameter.maxTrailPoints = kMaxTrailPoints;
+        }
+        if (runtime.renderParameter.trailLifeTime <= 0.0f) {
+            runtime.renderParameter.trailLifeTime = 0.01f;
+        }
+        if (runtime.renderParameter.trailMinVertexDistance < 0.0f) {
+            runtime.renderParameter.trailMinVertexDistance = 0.0f;
+        }
+        if (runtime.renderParameter.trailBreakDistance < runtime.renderParameter.trailMinVertexDistance) {
+            runtime.renderParameter.trailBreakDistance = runtime.renderParameter.trailMinVertexDistance;
+        }
+        if (runtime.renderParameter.trailRootExtension < 0.0f) {
+            runtime.renderParameter.trailRootExtension = 0.0f;
+        }
+    }
 
     runtime.defaultLoop = render.value("Loop", runtime.defaultLoop);
     runtime.duration = render.value("Duration", runtime.duration);
@@ -715,6 +787,17 @@ bool EffectManager::StopEffect(EffectHandle handle)
         return false;
     }
 
+    std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
+        effects_.find(activeEffects_[index].effectName);
+    if (runtimeIterator != effects_.end() &&
+        runtimeIterator->second.renderType == ParticleRenderType::Trail) {
+        activeEffects_[index].isEmitting = false;
+        activeEffects_[index].positionProvider = nullptr;
+        activeEffects_[index].duration =
+            activeResources_[index].age + runtimeIterator->second.renderParameter.trailLifeTime;
+        return true;
+    }
+
     activeEffects_[index].isAlive = false;
     return true;
 }
@@ -757,20 +840,32 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     const Vector3& position)
 {
     ActiveEffectResource resource {};
+    resource.renderType = runtime.renderType;
 
-    resource.particleResource = CreateUavBufferResource(sizeof(ParticleCS) * kMaxGPUParticle,L"EffectManager::ParticleBuffer");
+    uint32_t particleCount = kMaxGPUParticle;
+    uint32_t particleStride = sizeof(ParticleCS);
+    const wchar_t* particleResourceName = L"EffectManager::ParticleBuffer";
+    if (runtime.renderType == ParticleRenderType::Trail) {
+        particleCount = kMaxTrailPoints;
+        particleStride = sizeof(TrailPoint);
+        particleResourceName = L"EffectManager::TrailPointBuffer";
+    }
+
+    resource.particleResource = CreateUavBufferResource(
+        static_cast<size_t>(particleStride) * particleCount,
+        particleResourceName);
     resource.freeListIndexResource = CreateUavBufferResource(sizeof(int32_t),L"EffectManager::FreeListIndex");
     resource.freeListResource = CreateUavBufferResource(sizeof(uint32_t) * kMaxGPUParticle,L"EffectManager::FreeList");
 
     resource.particleUavHandleGPU = CreateStructuredBufferUAV(
         resource.particleResource.Get(),
-        kMaxGPUParticle,
-        sizeof(ParticleCS),
+        particleCount,
+        particleStride,
         resource.particleUavIndex);
     resource.particleSrvHandleGPU = CreateStructuredBufferSRV(
         resource.particleResource.Get(),
-        kMaxGPUParticle,
-        sizeof(ParticleCS),
+        particleCount,
+        particleStride,
         resource.particleSrvIndex);
     resource.freeListIndexUavHandleGPU = CreateStructuredBufferUAV(
         resource.freeListIndexResource.Get(),
@@ -995,6 +1090,11 @@ void EffectManager::CreateInitializePipeline()
         "Initialize",
         initializeRootSignature_.Get(),
         "resources/Shaders/Effects/Common/InitializeParticle.CS.hlsl");
+    trailInitializePipelineState_ = CreateComputePipeline(
+        "InitializeTrail",
+        "Initialize",
+        initializeRootSignature_.Get(),
+        "resources/Shaders/Effects/Common/InitializeTrail.CS.hlsl");
 }
 
 void EffectManager::CreateEmitRootSignature()
@@ -1140,14 +1240,24 @@ void EffectManager::CreateUpdateRootSignature()
 void EffectManager::DispatchInitialize(ActiveEffectResource& resource)
 {
     TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    TransitionResource(resource.freeListIndexResource.Get(), resource.freeListIndexState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-    TransitionResource(resource.freeListResource.Get(), resource.freeListState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
     ID3D12DescriptorHeap* descriptorHeaps[] = { srvManager_->GetDescriptorHeap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
 
     commandList->SetComputeRootSignature(initializeRootSignature_.Get());
+    if (resource.renderType == ParticleRenderType::Trail) {
+        commandList->SetPipelineState(trailInitializePipelineState_.Get());
+        commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
+        commandList->Dispatch(1, 1, 1);
+        InsertUavBarrier(resource.particleResource.Get());
+        TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        return;
+    }
+
+    TransitionResource(resource.freeListIndexResource.Get(), resource.freeListIndexState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    TransitionResource(resource.freeListResource.Get(), resource.freeListState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
     commandList->SetPipelineState(initializePipelineState_.Get());
     commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
     commandList->SetComputeRootDescriptorTable(1, resource.freeListIndexUavHandleGPU);
@@ -1188,6 +1298,14 @@ void EffectManager::DispatchUpdate(const EffectRuntime& runtime, ActiveEffectRes
     commandList->SetComputeRootSignature(updateRootSignature_.Get());
     commandList->SetPipelineState(runtime.updatePipelineState.Get());
     commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
+    if (runtime.renderType == ParticleRenderType::Trail) {
+        commandList->SetComputeRootConstantBufferView(3, resource.perFrameResource->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(4, resource.renderParameterResource->GetGPUVirtualAddress());
+        commandList->SetComputeRootConstantBufferView(5, resource.emitterResource->GetGPUVirtualAddress());
+        commandList->Dispatch(1, 1, 1);
+        return;
+    }
+
     commandList->SetComputeRootDescriptorTable(1, resource.freeListIndexUavHandleGPU);
     commandList->SetComputeRootDescriptorTable(2, resource.freeListUavHandleGPU);
     commandList->SetComputeRootConstantBufferView(3, resource.perFrameResource->GetGPUVirtualAddress());
@@ -1269,7 +1387,12 @@ void EffectManager::UpdateActiveEffect(size_t index)
     resource.emitterData->count = runtime.emitCount;
     resource.emitterData->frequency = runtime.emitFrequency;
 
-    if (activeEffect.isLoop) {
+    if (!activeEffect.isEmitting) {
+        resource.emitterData->emit = 0;
+    } else if (runtime.renderType == ParticleRenderType::Trail) {
+        resource.emitterData->emit = 1;
+        resource.hasEmitted = true;
+    } else if (activeEffect.isLoop) {
         resource.emitterData->frequencyTime += deltaTime_;
         if (resource.emitterData->frequency <= resource.emitterData->frequencyTime) {
             resource.emitterData->frequencyTime -= resource.emitterData->frequency;
@@ -1286,7 +1409,7 @@ void EffectManager::UpdateActiveEffect(size_t index)
 
     TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-    if (resource.emitterData->emit != 0) {
+    if (runtime.renderType == ParticleRenderType::Mesh && resource.emitterData->emit != 0) {
         DispatchEmit(runtime, resource);
         InsertUavBarrier(resource.particleResource.Get());
     }
@@ -1297,7 +1420,13 @@ void EffectManager::UpdateActiveEffect(size_t index)
     TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
     if (activeEffect.duration >= 0.0f && activeEffect.duration <= resource.age) {
-        activeEffect.isAlive = false;
+        if (runtime.renderType == ParticleRenderType::Trail && activeEffect.isEmitting) {
+            activeEffect.isEmitting = false;
+            activeEffect.positionProvider = nullptr;
+            activeEffect.duration = resource.age + runtime.renderParameter.trailLifeTime;
+        } else {
+            activeEffect.isAlive = false;
+        }
     }
 }
 
@@ -1428,6 +1557,19 @@ void EffectManager::Draw()
         commandList->SetGraphicsRootConstantBufferView(4, fogConstantBufferView_);
         commandList->SetGraphicsRootConstantBufferView(5, resource.renderParameterResource->GetGPUVirtualAddress());
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->SetGraphicsRootDescriptorTable(1, resource.particleSrvHandleGPU);
+        commandList->SetGraphicsRootDescriptorTable(
+            2,
+            TextureManager::GetInstance()->GetSrvHandleGPU(runtime.texturePath));
+
+        if (runtime.renderType == ParticleRenderType::Trail) {
+            const uint32_t trailVertexCount =
+                (runtime.renderParameter.maxTrailPoints - 1) * 6;
+            commandList->IASetVertexBuffers(0, 0, nullptr);
+            commandList->IASetIndexBuffer(nullptr);
+            commandList->DrawInstanced(trailVertexCount, 1, 0, 0);
+            continue;
+        }
 
         const D3D12_VERTEX_BUFFER_VIEW& vertexBufferView =
             particleMeshManager_->GetVertexBufferView(runtime.meshType);
@@ -1437,11 +1579,6 @@ void EffectManager::Draw()
 
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
         commandList->IASetIndexBuffer(&indexBufferView);
-
-        commandList->SetGraphicsRootDescriptorTable(1, resource.particleSrvHandleGPU);
-        commandList->SetGraphicsRootDescriptorTable(
-            2,
-            TextureManager::GetInstance()->GetSrvHandleGPU(runtime.texturePath));
 
         commandList->DrawIndexedInstanced(indexCount, kMaxGPUParticle, 0, 0, 0);
     }
