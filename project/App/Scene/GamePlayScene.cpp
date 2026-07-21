@@ -511,6 +511,10 @@ void GamePlayScene::Update()
             player_->SetTranslate({ pPos.x, pPos.y, 1450.0f });
         }
     }
+    // Nキーを押すといつでもド迫力衝撃波ディストーションを発動・テスト可能！
+    if (Input::GetInstance()->IsKeyTrigger(DIK_N)) {
+        bossShockwaveTimer_ = 0.95f;
+    }
 
     // レール自体の更新
     rail_->Update();
@@ -713,6 +717,29 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
         }
+    }
+
+    // -------------------------------------------------
+    // ボス無差別弾バラマキ時の「衝撃波ディストーション (Shockwave)」演出
+    // -------------------------------------------------
+    if (activeBoss_ && !activeBoss_->IsDead()) {
+        static size_t lastBossBulletCount = 0;
+        size_t currentBulletCount = activeBoss_->GetBullets().size();
+
+        // ボスが弾幕を一斉発射した瞬間（衝撃波タイマー起動！）
+        if (currentBulletCount > lastBossBulletCount + 1) {
+            bossShockwaveTimer_ = 0.95f;
+        }
+        lastBossBulletCount = currentBulletCount;
+    }
+
+    if (bossShockwaveTimer_ > 0.0f) {
+        bossShockwaveTimer_ -= 1.0f / 60.0f;
+        if (bossShockwaveTimer_ < 0.0f) bossShockwaveTimer_ = 0.0f;
+
+        float shockProgress = 1.0f - (bossShockwaveTimer_ / 0.95f);
+        SceneManager::GetInstance()->SetVignetteStrength(shockProgress);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Shockwave);
     }
 
     // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
