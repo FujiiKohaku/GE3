@@ -48,44 +48,30 @@ void TestScene1::Initialize()
     floorObj_->SetScale({ 100.0f, 100.0f, 1.0f });
 
     // Robo Playerの初期化
+    const std::string playerModelPath = "Characters/precision_robot_rigged_single_gltf/precision_robot_rigged_single.gltf";
     playerActor_ = std::make_unique<AnimationActor>();
-    playerActor_->Initialize("Characters/Robo/Robo.gltf");
-
-    // 新しく追加されたテクスチャをロードして明示的にモデルに割り当てる
-    Model* roboModel = ModelManager::GetInstance()->FindModel("Characters/Robo/Robo.gltf");
-    if (roboModel) {
-        std::string texturePath = "resources/Models/Characters/Robo/Robo_Armor_Texture.png";
-        for (uint32_t materialIndex = 0;
-            materialIndex < roboModel->GetModelData().materials.size();
-            ++materialIndex) {
-            roboModel->SetTexture(texturePath, materialIndex);
-        }
-    }
+    playerActor_->Initialize(playerModelPath);
 
     // アニメーションのロード
-    // 待機モーションがGLTF内に含まれていないため、スケルトンの初期バインドポーズ（直立Tポーズ）から待機用ダミーアニメーションを自動構築する
-    idleAnimation_.duration = 1.0f;
-    idleAnimation_.nodeAnimations.clear();
-    Skeleton* skeleton = playerActor_->GetSkeleton();
-    if (skeleton) {
-        for (const Joint& joint : skeleton->joints) {
-            NodeAnimation nodeAnim;
-            nodeAnim.translate.push_back({ 0.0f, joint.transform.translate });
-            nodeAnim.rotation.push_back({ 0.0f, joint.transform.rotate });
-            nodeAnim.scale.push_back({ 0.0f, joint.transform.scale });
-            idleAnimation_.nodeAnimations[joint.name] = nodeAnim;
-        }
-    }
-
-    attackAnimation_ = AnimationLoder::LoadAnimationFile("resources/Models", "Characters/Robo/Robo.gltf", 1); // Beam_Attack (両手攻撃)
-    jumpAnimation_   = AnimationLoder::LoadAnimationFile("resources/Models", "Characters/Robo/Robo.gltf", 2); // Jump_Action
-    runAnimation_    = AnimationLoder::LoadAnimationFile("resources/Models", "Characters/Robo/Robo.gltf", 3); // Run_Cycle
+    idleAnimation_   = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 4); // Robot_Idle
+    combatIdleAnimation_ = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 1); // Robot_CombatIdle
+    attackAnimation_ = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 6); // Robot_Punch
+    leftPunchAnimation_ = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 7); // Robot_Punch_L
+    rocketUppercutAnimation_ = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 8); // Robot_RocketUppercut
+    jumpAnimation_   = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 5); // Robot_Jump
+    runAnimation_    = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 9); // Robot_Walk
+    dashAnimation_   = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 2); // Robot_Dash
 
     playerPos_ = { 0.0f, -5.0f, 0.0f };
     playerRot_ = { 0.0f, 0.0f, 0.0f };
     playerActor_->SetTranslate(playerPos_);
     playerActor_->SetRotate(playerRot_);
     playerActor_->SetScale({ playerScale_, playerScale_, playerScale_ });
+
+    Model* katanaModel = ModelManager::GetInstance()->Load("Characters/cyan_katana/cyan_katana.obj");
+    katanaObj_ = std::make_unique<Object3d>();
+    katanaObj_->Initialize(Object3dManager::GetInstance());
+    katanaObj_->SetModel(katanaModel);
 
     // Fixed SneakWalk model for skeleton debug display
     sneakWalkActor_ = std::make_unique<AnimationActor>();
@@ -158,12 +144,22 @@ void TestScene1::Update()
         hasMoveInput = (moveDir.x != 0.0f || moveDir.z != 0.0f);
     }
 
+    bool isDashInput = false;
+    if (hasMoveInput) {
+        bool isLeftShiftPressed = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
+        bool isRightShiftPressed = Input::GetInstance()->IsKeyPressed(DIK_RSHIFT);
+        isDashInput = isLeftShiftPressed || isRightShiftPressed;
+    }
+
     if (hasMoveInput) {
         moveDir = Normalize(moveDir);
 
         Vector3 worldMoveDir = NormalizeSafe(moveDir);
 
         float speed = 0.15f;
+        if (isDashInput) {
+            speed = 0.4f;
+        }
         playerPos_.x += worldMoveDir.x * speed;
         playerPos_.z += worldMoveDir.z * speed;
 
@@ -183,6 +179,12 @@ void TestScene1::Update()
     // 3. ジャンプ、攻撃、およびアニメーションステート制御
     if (currentAnimState_ == PlayerAnimState::Attacking) {
         attackTimer_ += 1.0f / 60.0f;
+
+        if (Input::GetInstance()->IsMouseTrigger(0)) {
+            if (comboStep_ + queuedComboAttacks_ < 2) {
+                queuedComboAttacks_++;
+            }
+        }
 
         // アニメーションに合わせて手からパーティクルを出す
         if (attackTimer_ >= 0.2f && !hasEmittedParticle_) {
@@ -228,13 +230,28 @@ void TestScene1::Update()
         }
 
         // 攻撃アニメーション終了判定
-        if (attackTimer_ >= 0.7f) {
-            if (hasMoveInput) {
-                currentAnimState_ = PlayerAnimState::Running;
-                playerActor_->GetPlayAnimation()->SetAnimation(&runAnimation_, 0.2f);
+        float attackStepDuration = 0.7f;
+        if (comboStep_ == 2) {
+            attackStepDuration = 1.1f;
+        }
+
+        if (attackTimer_ >= attackStepDuration) {
+            if (queuedComboAttacks_ > 0 && comboStep_ < 2) {
+                comboStep_++;
+                queuedComboAttacks_--;
+                attackTimer_ = 0.0f;
+                hasEmittedParticle_ = false;
+
+                if (comboStep_ == 1) {
+                    playerActor_->GetPlayAnimation()->SetAnimation(&leftPunchAnimation_, 0.1f);
+                } else {
+                    playerActor_->GetPlayAnimation()->SetAnimation(&rocketUppercutAnimation_, 0.1f);
+                }
             } else {
                 currentAnimState_ = PlayerAnimState::Idle;
                 playerActor_->GetPlayAnimation()->SetAnimation(&idleAnimation_, 0.2f);
+                comboStep_ = 0;
+                queuedComboAttacks_ = 0;
             }
         }
     }
@@ -245,25 +262,58 @@ void TestScene1::Update()
             currentAnimState_ = PlayerAnimState::Attacking;
             attackTimer_ = 0.0f;
             hasEmittedParticle_ = false;
+            comboStep_ = 0;
+            queuedComboAttacks_ = 0;
+            idleVariationTimer_ = 0.0f;
+            combatIdleTimer_ = 0.0f;
             playerActor_->GetPlayAnimation()->SetAnimation(&attackAnimation_, 0.1f);
         }
         else if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE)) {
             // ジャンプ開始
             isJumping_ = true;
             jumpVelocity_ = 0.35f;
+            idleVariationTimer_ = 0.0f;
+            combatIdleTimer_ = 0.0f;
             currentAnimState_ = PlayerAnimState::Jumping;
             playerActor_->GetPlayAnimation()->SetAnimation(&jumpAnimation_, 0.2f);
         } else {
             // 歩行/待機のステート変更
             if (hasMoveInput) {
-                if (currentAnimState_ != PlayerAnimState::Running) {
-                    currentAnimState_ = PlayerAnimState::Running;
-                    playerActor_->GetPlayAnimation()->SetAnimation(&runAnimation_, 0.2f);
+                idleVariationTimer_ = 0.0f;
+                combatIdleTimer_ = 0.0f;
+                if (isDashInput) {
+                    if (currentAnimState_ != PlayerAnimState::Dashing) {
+                        currentAnimState_ = PlayerAnimState::Dashing;
+                        playerActor_->GetPlayAnimation()->SetAnimation(&dashAnimation_, 0.15f);
+                    }
+                } else {
+                    if (currentAnimState_ != PlayerAnimState::Running) {
+                        currentAnimState_ = PlayerAnimState::Running;
+                        playerActor_->GetPlayAnimation()->SetAnimation(&runAnimation_, 0.15f);
+                    }
                 }
             } else {
-                if (currentAnimState_ != PlayerAnimState::Idle) {
+                if (currentAnimState_ == PlayerAnimState::CombatIdle) {
+                    combatIdleTimer_ += 1.0f / 60.0f;
+                    if (combatIdleTimer_ >= combatIdleAnimation_.duration) {
+                        currentAnimState_ = PlayerAnimState::Idle;
+                        playerActor_->GetPlayAnimation()->SetAnimation(&idleAnimation_, 0.2f);
+                        idleVariationTimer_ = 0.0f;
+                        combatIdleTimer_ = 0.0f;
+                    }
+                } else if (currentAnimState_ == PlayerAnimState::Idle) {
+                    idleVariationTimer_ += 1.0f / 60.0f;
+                    if (idleVariationTimer_ >= 6.0f) {
+                        currentAnimState_ = PlayerAnimState::CombatIdle;
+                        playerActor_->GetPlayAnimation()->SetAnimation(&combatIdleAnimation_, 0.2f);
+                        idleVariationTimer_ = 0.0f;
+                        combatIdleTimer_ = 0.0f;
+                    }
+                } else {
                     currentAnimState_ = PlayerAnimState::Idle;
                     playerActor_->GetPlayAnimation()->SetAnimation(&idleAnimation_, 0.2f);
+                    idleVariationTimer_ = 0.0f;
+                    combatIdleTimer_ = 0.0f;
                 }
             }
         }
@@ -279,8 +329,13 @@ void TestScene1::Update()
 
             // 着地後のステート変更
             if (hasMoveInput) {
-                currentAnimState_ = PlayerAnimState::Running;
-                playerActor_->GetPlayAnimation()->SetAnimation(&runAnimation_, 0.2f);
+                if (isDashInput) {
+                    currentAnimState_ = PlayerAnimState::Dashing;
+                    playerActor_->GetPlayAnimation()->SetAnimation(&dashAnimation_, 0.2f);
+                } else {
+                    currentAnimState_ = PlayerAnimState::Running;
+                    playerActor_->GetPlayAnimation()->SetAnimation(&runAnimation_, 0.2f);
+                }
             } else {
                 currentAnimState_ = PlayerAnimState::Idle;
                 playerActor_->GetPlayAnimation()->SetAnimation(&idleAnimation_, 0.2f);
@@ -303,6 +358,7 @@ void TestScene1::Update()
         animDeltaTime = 0.0f;
     }
     playerActor_->Update(animDeltaTime);
+    UpdateKatanaAttachment();
     if (sneakWalkActor_) {
         sneakWalkActor_->Update(1.0f / 60.0f);
     }
@@ -323,6 +379,9 @@ void TestScene1::Draw3D()
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     if (floorObj_) {
         floorObj_->Draw();
+    }
+    if (katanaObj_) {
+        katanaObj_->Draw();
     }
 
     // プレイヤー(Robo)の描画
@@ -348,6 +407,8 @@ void TestScene1::DrawImGui()
     ImGui::Begin("Test Scene 1 - Robo Controller");
     ImGui::Text("ESCAPE: Return to Title");
     ImGui::Text("Arrow Keys: Move Robo");
+    ImGui::Text("Shift + Arrow Keys: Dash");
+    ImGui::Text("Left Click Repeatedly: Punch Combo");
     ImGui::Text("WASD/QE: Move Debug Camera");
     ImGui::Text("Right Mouse Drag: Rotate Debug Camera");
     ImGui::Text("F1: Toggle Debug Camera");
@@ -366,6 +427,11 @@ void TestScene1::DrawImGui()
     ImGui::SliderFloat("Player Scale", &playerScale_, 0.1f, 50.0f);
     ImGui::SliderFloat("Player Rot Offset", &playerRotOffset_, -3.1415f, 3.1415f);
     ImGui::SliderFloat("Player Y", &playerPos_.y, -10.0f, 20.0f);
+    ImGui::Separator();
+    ImGui::Text("Katana Attachment");
+    ImGui::SliderFloat("Katana Scale", &katanaScale_, 0.05f, 2.0f);
+    ImGui::DragFloat3("Katana Offset", &katanaOffset_.x, 0.01f);
+    ImGui::SliderFloat3("Katana Rotation", &katanaRotation_.x, -3.1415f, 3.1415f);
     ImGui::SliderFloat("Camera Distance", &cameraDistance_, 1.0f, 100.0f);
     ImGui::SliderFloat("Camera Pitch", &cameraPitch_, -1.5f, 1.5f);
     ImGui::End();
@@ -374,6 +440,45 @@ void TestScene1::DrawImGui()
 
 void TestScene1::Finalize()
 {
+}
+
+void TestScene1::UpdateKatanaAttachment()
+{
+    if (!katanaObj_ || !playerActor_ || !playerActor_->GetObject()) {
+        return;
+    }
+
+    Skeleton* skeleton = playerActor_->GetSkeleton();
+    if (!skeleton) {
+        return;
+    }
+
+    auto handIt = skeleton->jointMap.find("hand.L");
+    if (handIt == skeleton->jointMap.end()) {
+        return;
+    }
+
+    const Joint& handJoint = skeleton->joints[handIt->second];
+    Vector3 gripToOrigin = {
+        -katanaGripPosition_.x,
+        -katanaGripPosition_.y,
+        -katanaGripPosition_.z
+    };
+    Vector3 katanaScale = { katanaScale_, katanaScale_, katanaScale_ };
+
+    Matrix4x4 gripMatrix = MatrixMath::MakeTranslateMatrix(gripToOrigin);
+    Matrix4x4 attachmentMatrix = MatrixMath::MakeAffineMatrix(
+        katanaScale,
+        katanaRotation_,
+        katanaOffset_);
+    Matrix4x4 katanaLocalMatrix = MatrixMath::Multiply(gripMatrix, attachmentMatrix);
+    Matrix4x4 handWorldMatrix = MatrixMath::Multiply(
+        handJoint.skeletonSpaceMatrix,
+        playerActor_->GetObject()->GetWorldMatrix());
+    Matrix4x4 katanaWorldMatrix = MatrixMath::Multiply(katanaLocalMatrix, handWorldMatrix);
+
+    katanaObj_->SetCustomWorldMatrix(katanaWorldMatrix);
+    katanaObj_->Update();
 }
 
 void TestScene1::ApplySelectedPostEffect()

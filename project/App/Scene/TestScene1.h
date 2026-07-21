@@ -23,10 +23,13 @@ public:
 
 private:
     void ApplySelectedPostEffect();
+    void UpdateKatanaAttachment();
 
     enum class PlayerAnimState {
         Idle,
+        CombatIdle,
         Running,
+        Dashing,
         Jumping,
         Attacking
     };
@@ -34,19 +37,30 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<DebugCameraController> debugCameraController_;
     std::unique_ptr<Object3d> floorObj_;
+    std::unique_ptr<Object3d> katanaObj_;
 
     // Player (Robo)
     std::unique_ptr<AnimationActor> playerActor_;
     std::unique_ptr<AnimationActor> sneakWalkActor_;
     Animation runAnimation_;
+    Animation dashAnimation_;
     Animation jumpAnimation_;
     Animation idleAnimation_;
+    Animation combatIdleAnimation_;
     Animation attackAnimation_;
+    Animation leftPunchAnimation_;
+    Animation rocketUppercutAnimation_;
     Vector3 playerPos_ = { 0.0f, -5.0f, 0.0f };
     Vector3 playerRot_ = { 0.0f, 0.0f, 0.0f };
-    float playerScale_ = 3.0f;
-    float playerRotOffset_ = -1.57079f;
+    float playerScale_ = 0.4f;
+    float playerRotOffset_ = 0.0f;
+    Vector3 katanaGripPosition_ = { -1.3f, 0.7f, -2.2f };
+    Vector3 katanaOffset_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 katanaRotation_ = { 3.14159265f, 0.0f, 0.0f };
+    float katanaScale_ = 0.65f;
     PlayerAnimState currentAnimState_ = PlayerAnimState::Idle;
+    float idleVariationTimer_ = 0.0f;
+    float combatIdleTimer_ = 0.0f;
 
     // TPS Camera
     float cameraYaw_ = 0.0f;
@@ -61,6 +75,8 @@ private:
     // Attack Control
     float attackTimer_ = 0.0f;
     bool hasEmittedParticle_ = false;
+    int comboStep_ = 0;
+    int queuedComboAttacks_ = 0;
 
     std::array<PostEffectType, 34> postEffectTypes_ = {
         PostEffectType::Copy,

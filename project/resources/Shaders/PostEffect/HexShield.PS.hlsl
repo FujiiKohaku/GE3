@@ -10,7 +10,7 @@ float HexDist(float2 p)
     float c = dot(p, normalize(float2(1.0f, 1.7320508f)));
     return max(c, p.x);
 }
-//（さかなを食べたいサカナクションちんちんぱんじー）
+//
 float4 HexGrid(float2 uv, float scale)
 {
     uv *= scale;
