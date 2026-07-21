@@ -37,6 +37,7 @@ enum class PostEffectType {
     Paint,
     GlassCrack,
     Shockwave,
+    HeatHaze,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

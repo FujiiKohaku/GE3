@@ -742,6 +742,14 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::Shockwave);
     }
 
+    // -------------------------------------------------
+    // ミニガン連射時の「銃身熱気カゲロウ (HeatHaze)」演出
+    // -------------------------------------------------
+    if (player_ && player_->GetHeatRatio() > 0.01f) {
+        SceneManager::GetInstance()->SetVignetteStrength(player_->GetHeatRatio());
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::HeatHaze);
+    }
+
     // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
     // ★加点要素: BoxFilter (3点) をインク付着時の油分視界ぼやけとして同時適用し、時間経過で徐々に減衰フェードアウト！
     if (isPaintEffectActive_) {

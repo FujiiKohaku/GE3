@@ -58,6 +58,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::Paint] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Paint.PS.hlsl");
     pipelineStates_[PostEffectType::GlassCrack] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GlassCrack.PS.hlsl");
     pipelineStates_[PostEffectType::Shockwave] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Shockwave.PS.hlsl");
+    pipelineStates_[PostEffectType::HeatHaze] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl");
 
 }
 

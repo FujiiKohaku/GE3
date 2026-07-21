@@ -122,8 +122,14 @@ private:
     enum WeaponType {
         kWeaponNormalBullet = 0,
         kWeaponMissileBullet,
+        kWeaponMinigun, // 新武器: 超高速連射ミニガン
         kWeaponCount
     };
+
+public:
+    float GetHeatRatio() const { return minigunHeat_; }
+
+private:
 
     std::unique_ptr<Object3d> object_;
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
@@ -174,10 +180,14 @@ private:
 
     float bulletSpawnOffsetY_ = 0.3f;
     float bulletSpawnOffsetZ_ = 4.0f;
-    float bulletSpeed_ = 2.5f;
+    float bulletSpeed_ = 5.8f; // 爆速化！照準を動かしても一瞬で即座に着弾！
     int currentWeapon_ = kWeaponNormalBullet;
     static constexpr int kMissileFireIntervalFrames = 120;
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
+
+    // ミニガン（超高速連射＆熱気蓄積）用
+    float minigunHeat_ = 0.0f;
+    int minigunFireCooldown_ = 0;
 
     Vector3 CalculateMuzzlePosition() const;
     void CreateAimRay(Ray& aimRay, const Camera& activeCamera) const;

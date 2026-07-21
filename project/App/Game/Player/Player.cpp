@@ -74,8 +74,7 @@ void Player::Update()
     if (debugCameraController_ != nullptr) {
         isDebugMode = debugCameraController_->GetDebugMode();
     }
-    // plaerの移動速度
- 
+
     isBoosting_ = input->IsKeyPressed(DIK_LSHIFT);
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
@@ -83,10 +82,33 @@ void Player::Update()
         velocity_.z = boostMaxSpeed_;
         moveSpeed_ = boostAcceleration_;
     }
+
     UpdateWeaponSwitch(input);
     if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
         ++missileFireCooldownFrames_;
     }
+
+    // ミニガンの熱気自然冷却
+    minigunHeat_ -= 1.0f / 180.0f;
+    if (minigunHeat_ < 0.0f) minigunHeat_ = 0.0f;
+
+    // 攻撃ボタン長押しで熱気蓄積 ＆ ミニガン超高速連射
+    if (input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0)) {
+        minigunHeat_ += 1.0f / 80.0f;
+        if (minigunHeat_ > 1.0f) minigunHeat_ = 1.0f;
+
+        // ミニガンモード時: 3フレームに1発(通常弾の4倍レート)のガトリング連射！
+        if (currentWeapon_ == kWeaponMinigun) {
+            minigunFireCooldown_++;
+            if (minigunFireCooldown_ >= 3) {
+                minigunFireCooldown_ = 0;
+                if (camera_) {
+                    FireBullet(*camera_);
+                }
+            }
+        }
+    }
+
     // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
     if (!isDebugMode) {
         UpdateMouseAim();
@@ -97,9 +119,9 @@ void Player::Update()
 
     transform_.translate = CalculateRailWorldPosition(railOffset_);
 
-    //  transform反映
+    // transform反映
     ApplyTransform();
-    // 弾更新と死んだ弾の削除
+    // 弾更新
     UpdateBullets();
     // 死んだ弾の削除
     RemoveDeadBullets();
@@ -126,7 +148,6 @@ void Player::SetEnableLighting(bool enable)
         object_->SetEnableLighting(enable);
     }
 }
-#pragma endregion
 
 void Player::Draw()
 {
@@ -134,7 +155,6 @@ void Player::Draw()
         return;
     }
     for (std::unique_ptr<PlayerBullet>& bullet : bullets_) {
-
         bullet->Draw();
     }
     if (invincibleTimer_ <= 0 || (invincibleTimer_ / 4) % 2 == 0) {
@@ -175,22 +195,18 @@ void Player::ClampAimScreenPosition()
 {
     float halfAimSize = 64.0f;
 
-    // 左の制限64で固定
     if (aimScreenPosition_.x < halfAimSize) {
         aimScreenPosition_.x = halfAimSize;
     }
 
-    // 右の制限はウィンドウ幅-64
     if (aimScreenPosition_.x > static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - halfAimSize) {
         aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - halfAimSize;
     }
 
-    // 上の制限64で固定
     if (aimScreenPosition_.y < halfAimSize) {
         aimScreenPosition_.y = halfAimSize;
     }
 
-    // 下の制限はウィンドウ高さ-64
     if (aimScreenPosition_.y > static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - halfAimSize) {
         aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - halfAimSize;
     }
@@ -259,11 +275,7 @@ Vector2 Player::CalculateScreenCorrection(const Vector3& railOffset) const
 // 弾を発射する関数
 void Player::FireBullet(const Camera& activeCamera)
 {
-    if (bulletModel_ == nullptr) {
-        return;
-    }
-
-    if (camera_ == nullptr) {
+    if (bulletModel_ == nullptr || camera_ == nullptr) {
         return;
     }
 
@@ -296,7 +308,6 @@ void Player::FireBullet(const Camera& activeCamera)
     debugAimPoint_ = aimPoint;
     debugMuzzlePosition_ = muzzlePosition;
 
-    // 描画用カメラでの逆投影レイを作成してエイムポイントを計算する（デバッグ比較用）
     Ray drawRay {};
     CreateAimRay(drawRay, *camera_);
     Vector3 drawAimPoint = ResolveAimPoint(drawRay, muzzlePosition);
@@ -305,8 +316,6 @@ void Player::FireBullet(const Camera& activeCamera)
 #endif
 
     Vector3 bulletDirection = Normalize(aimPoint - muzzlePosition);
-
-    // プレイヤーのワールド移動速度 (慣性) を進行方向とスピードから計算
     Vector3 worldPlayerVelocity = railForward_ * velocity_.z;
 
     Vector3 bulletVelocity;
@@ -315,8 +324,6 @@ void Player::FireBullet(const Camera& activeCamera)
     bulletVelocity.z = bulletDirection.z * shotSpeed + worldPlayerVelocity.z;
 
     bullet->SetVelocity(bulletVelocity);
-
-    // 描画前にワールド行列を最新座標に同期する
     bullet->Update();
 
     bullets_.push_back(std::move(bullet));
@@ -326,9 +333,7 @@ Vector3 Player::CalculateMuzzlePosition() const
 {
     Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
     Vector3 localMuzzle = { 0.0f, bulletSpawnOffsetY_, bulletSpawnOffsetZ_ };
-    Vector3 muzzlePosition = MatrixMath::Transform(localMuzzle, worldMatrix);
-
-    return muzzlePosition;
+    return MatrixMath::Transform(localMuzzle, worldMatrix);
 }
 
 void Player::CreateAimRay(Ray& aimRay, const Camera& activeCamera) const
@@ -371,8 +376,6 @@ Vector3 Player::ResolveAimPoint(
     Vector3 aimPoint = convergencePoint;
     RaycastHit hit {};
 
-    // レティクルレイが敵の当たり判定に重なっている場合、
-    // 複雑な角度制限は一切無視して、無条件で弾道を敵の中心へ100%吸い付かせます
     if (CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
         aimPoint = hit.position;
     }
@@ -380,24 +383,20 @@ Vector3 Player::ResolveAimPoint(
     return aimPoint;
 }
 
-
-
 std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)
 {
     switch (currentWeapon_) {
 
     case kWeaponMissileBullet: {
         std::unique_ptr<MissileBullet> missileBullet = std::make_unique<MissileBullet>();
-
         shotSpeed = missileBullet->GetSpeed() / 60.0f;
-
         return missileBullet;
     }
 
+    case kWeaponMinigun:
     case kWeaponNormalBullet:
     default: {
         shotSpeed = bulletSpeed_;
-
         return std::make_unique<NormalBullet>();
     }
     }
@@ -412,20 +411,25 @@ void Player::UpdateWeaponSwitch(Input* input)
     if (input->GetMouseWheel() < 0) {
         currentWeapon_ = (currentWeapon_ + kWeaponCount - 1) % kWeaponCount;
     }
+
+    if (input->IsKeyTrigger(DIK_1)) currentWeapon_ = kWeaponNormalBullet;
+    if (input->IsKeyTrigger(DIK_2)) currentWeapon_ = kWeaponMissileBullet;
+    if (input->IsKeyTrigger(DIK_3)) currentWeapon_ = kWeaponMinigun;
 }
 
 const char* Player::GetCurrentWeaponName() const
 {
     switch (currentWeapon_) {
     case kWeaponMissileBullet:
-        return "MissileBullet";
+        return "Missile";
+    case kWeaponMinigun:
+        return "Minigun";
     case kWeaponNormalBullet:
     default:
-        return "NormalBullet";
+        return "Normal";
     }
 }
 
-// 弾更新
 void Player::UpdateBullets()
 {
     for (std::unique_ptr<PlayerBullet>& bullet : bullets_) {
@@ -433,7 +437,6 @@ void Player::UpdateBullets()
     }
 }
 
-// 死んだ弾を削除する関数
 void Player::RemoveDeadBullets()
 {
     for (uint32_t i = 0; i < bullets_.size();) {
@@ -445,7 +448,6 @@ void Player::RemoveDeadBullets()
     }
 }
 
-// transform反映
 void Player::ApplyTransform()
 {
     object_->SetScale(transform_.scale);
@@ -477,72 +479,57 @@ void Player::UpdateKeyboardMove(Input* input)
         nextRailOffset.y -= moveSpeed_;
     }
 
-    nextRailOffset.z = 0.0f;
     railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
 }
 
 void Player::UpdateRolling(Input* input)
 {
-    if (rollCooldown_ > 0) {
-        rollCooldown_--;
-    }
-
     if (isRolling_) {
-        rollTimer_--;
+        rollTimer_++;
+        float progress = static_cast<float>(rollTimer_) / static_cast<float>(kRollDuration);
+        transform_.rotate.z = rollDirection_ * progress * 2.0f * std::numbers::pi_v<float>;
 
-        // 移動
-        Vector3 nextRailOffset = railOffset_;
-        nextRailOffset.x += rollDirection_ * kRollSpeed;
-        railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
-
-        // 自機のZ軸回転（1回転）
-        // 30フレームで360度（2 * PI ラジアン）
-        float progress = static_cast<float>(kRollDuration - rollTimer_) / kRollDuration;
-        
-        // easeInOutSine イージングを適用して重みを表現
-        float easedProgress = 0.5f - 0.5f * std::cos(progress * std::numbers::pi_v<float>);
-        float rollAngle = easedProgress * std::numbers::pi_v<float> * 2.0f;
-
-        // 回転の向きを反転して修正
-        transform_.rotate.z = rollDirection_ * rollAngle;
-
-        if (rollTimer_ <= 0) {
+        if (rollTimer_ >= kRollDuration) {
             isRolling_ = false;
             transform_.rotate.z = 0.0f;
             rollCooldown_ = kRollCooldownDuration;
         }
-    } else {
-        // キータップタイマーの更新
-        if (leftKeyTapTimer_ > 0) {
-            leftKeyTapTimer_--;
-        }
-        if (rightKeyTapTimer_ > 0) {
-            rightKeyTapTimer_--;
+        return;
+    }
+
+    if (rollCooldown_ > 0) {
+        rollCooldown_--;
+    }
+
+    if (leftKeyTapTimer_ > 0) {
+        leftKeyTapTimer_--;
+    }
+    if (rightKeyTapTimer_ > 0) {
+        rightKeyTapTimer_--;
+    }
+
+    if (rollCooldown_ <= 0) {
+        if (input->IsKeyTrigger(DIK_A)) {
+            if (leftKeyTapTimer_ > 0) {
+                isRolling_ = true;
+                rollTimer_ = 0;
+                rollDirection_ = 1.0f;
+                leftKeyTapTimer_ = 0;
+                return;
+            } else {
+                leftKeyTapTimer_ = kMaxTapInterval;
+            }
         }
 
-        // ダブルタップの検出（非ローリング中かつクールダウン中でない場合）
-        if (rollCooldown_ <= 0) {
-            // Aキー（左）
-            if (input->IsKeyTrigger(DIK_A)) {
-                if (leftKeyTapTimer_ > 0) {
-                    isRolling_ = true;
-                    rollTimer_ = kRollDuration;
-                    rollDirection_ = -1.0f; // 左
-                    leftKeyTapTimer_ = 0;
-                } else {
-                    leftKeyTapTimer_ = kMaxTapInterval;
-                }
-            }
-            // Dキー（右）
-            if (input->IsKeyTrigger(DIK_D)) {
-                if (rightKeyTapTimer_ > 0) {
-                    isRolling_ = true;
-                    rollTimer_ = kRollDuration;
-                    rollDirection_ = 1.0f; // 右
-                    rightKeyTapTimer_ = 0;
-                } else {
-                    rightKeyTapTimer_ = kMaxTapInterval;
-                }
+        if (input->IsKeyTrigger(DIK_D)) {
+            if (rightKeyTapTimer_ > 0) {
+                isRolling_ = true;
+                rollTimer_ = 0;
+                rollDirection_ = -1.0f;
+                rightKeyTapTimer_ = 0;
+                return;
+            } else {
+                rightKeyTapTimer_ = kMaxTapInterval;
             }
         }
     }
@@ -550,16 +537,12 @@ void Player::UpdateRolling(Input* input)
 
 Vector3 Player::CalculateRailWorldPosition(const Vector3& railOffset) const
 {
-    Vector3 position = railBasePosition_;
-    position += railRight_ * railOffset.x;
-    position += railUp_ * railOffset.y;
-    return position;
+    return railBasePosition_ + railRight_ * railOffset.x + railUp_ * railOffset.y + railForward_ * railOffset.z;
 }
 
 Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
 {
     Vector3 correctedRailOffset = railOffset;
-    correctedRailOffset.z = 0.0f;
 
     if (camera_ == nullptr) {
         return correctedRailOffset;
@@ -616,96 +599,26 @@ Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
     return correctedRailOffset;
 }
 
-void Player::UpdateScreenBounds(const Vector3& worldPosition,float& minX,float& maxX,float& minY,float& maxY) const
+void Player::UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const
 {
     if (camera_ == nullptr) {
         return;
     }
 
     Vector2 screenPosition = camera_->WorldToScreen(worldPosition);
-
-    if (screenPosition.x < minX) {
-        minX = screenPosition.x;
-    }
-
-    if (screenPosition.x > maxX) {
-        maxX = screenPosition.x;
-    }
-
-    if (screenPosition.y < minY) {
-        minY = screenPosition.y;
-    }
-
-    if (screenPosition.y > maxY) {
-        maxY = screenPosition.y;
-    }
+    minX = (std::min)(minX, screenPosition.x);
+    maxX = (std::max)(maxX, screenPosition.x);
+    minY = (std::min)(minY, screenPosition.y);
+    maxY = (std::max)(maxY, screenPosition.y);
 }
-#ifdef _DEBUG
 
 void Player::DrawImGui()
 {
-    ImGui::Begin("Player");
-
-    ImGui::Text("Position");
-
-    ImGui::Text("X : %.2f", transform_.translate.x);
-    ImGui::Text("Y : %.2f", transform_.translate.y);
-    ImGui::Text("Z : %.2f", transform_.translate.z);
-
-    ImGui::Separator();
-
-    ImGui::Text("Rail Offset");
-
-    ImGui::Text("X : %.2f", railOffset_.x);
-    ImGui::Text("Y : %.2f", railOffset_.y);
-    ImGui::Text("Z : %.2f", railOffset_.z);
-
-    ImGui::Separator();
-
-    ImGui::Text("Rail Frame");
-
-    ImGui::Text("Right X : %.2f Y : %.2f Z : %.2f", railRight_.x, railRight_.y, railRight_.z);
-    ImGui::Text("Up    X : %.2f Y : %.2f Z : %.2f", railUp_.x, railUp_.y, railUp_.z);
-
-    ImGui::Separator();
-
-    ImGui::Text("Velocity");
-
-    ImGui::Text("X : %.2f", velocity_.x);
-    ImGui::Text("Y : %.2f", velocity_.y);
-    ImGui::Text("Z : %.2f", velocity_.z);
-    ImGui::Separator();
-
-    ImGui::Text("Weapon No : %d", currentWeapon_);
-    ImGui::Text("Weapon Name : %s", GetCurrentWeaponName());
-    ImGui::Separator();
-
-    ImGui::Text("HP : %d / %d", currentHp_, maxHp_);
-    ImGui::Text("Invincible : %d", invincibleTimer_);
-    ImGui::Separator();
-
-    ImGui::Text("Screen Clamp Margin");
-
-    ImGui::DragFloat(
-        "ScreenMarginX",
-        &playerClampMarginX_,
-        0.1f);
-
-    ImGui::DragFloat(
-        "ScreenMarginY",
-        &playerClampMarginY_,
-        0.1f);
-
-    ImGui::DragFloat(
-        "BoundsHalfWidth",
-        &playerBoundsHalfWidth_,
-        0.1f);
-
-    ImGui::DragFloat(
-        "BoundsHalfHeight",
-        &playerBoundsHalfHeight_,
-        0.1f);
+#ifdef _DEBUG
+    ImGui::Begin("Player Controls");
+    ImGui::Text("HP: %d / %d", currentHp_, maxHp_);
+    ImGui::Text("Weapon: %s", GetCurrentWeaponName());
+    ImGui::Text("Heat: %.2f", minigunHeat_);
     ImGui::End();
+#endif
 }
-
-#endif // _DEBUG
