@@ -173,8 +173,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     inputElementDescriptions[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
-    inputLayoutDesc.pInputElementDescs = inputElementDescriptions;
-    inputLayoutDesc.NumElements = _countof(inputElementDescriptions);
+    if (desc.usesVertexInput) {
+        inputLayoutDesc.pInputElementDescs = inputElementDescriptions;
+        inputLayoutDesc.NumElements = _countof(inputElementDescriptions);
+    }
 
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = desc.cullMode;
@@ -286,6 +288,12 @@ std::string ParticleRenderManager::MakePipelineCacheKey(const GraphicsPipelineDe
     }
     cacheKey += "|DepthWrite:";
     if (desc.depthWrite) {
+        cacheKey += "1";
+    } else {
+        cacheKey += "0";
+    }
+    cacheKey += "|VertexInput:";
+    if (desc.usesVertexInput) {
         cacheKey += "1";
     } else {
         cacheKey += "0";

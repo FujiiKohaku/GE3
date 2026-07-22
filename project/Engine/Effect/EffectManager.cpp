@@ -1,6 +1,8 @@
 #include "EffectManager.h"
 
 #include "Engine/Logger/Logger.h"
+#include "Engine/Light/LightManager.h"
+#include "Engine/Debug/DebugRenderer.h"
 #include "Engine/StringUtility/StringUtility.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/math/MatrixMath.h"
@@ -8,6 +10,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -119,6 +122,20 @@ int32_t ParseEmitterShape(const std::string& shape)
     return 0;
 }
 
+int32_t ParseParticleFieldType(const std::string& type)
+{
+    if (type == "Attractor") {
+        return 1;
+    }
+    if (type == "Repulsor") {
+        return 2;
+    }
+    if (type == "Vortex") {
+        return 3;
+    }
+    return 0;
+}
+
 const nlohmann::json& SelectJsonSection(const nlohmann::json& config, const char* sectionName)
 {
     if (config.contains(sectionName)) {
@@ -222,6 +239,8 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
     CreateInitializePipeline();
     CreateEmitRootSignature();
     CreateUpdateRootSignature();
+    CreateFieldRootSignature();
+    CreateFieldPipelines();
 
 #ifdef _DEBUG
     Logger::Log(std::format(
@@ -396,6 +415,9 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
     graphicsPipelineDesc.depthTest = runtime.depthTest;
     graphicsPipelineDesc.depthWrite = runtime.depthWrite;
     graphicsPipelineDesc.cullMode = runtime.cullMode;
+    if (runtime.renderType == ParticleRenderType::Trail) {
+        graphicsPipelineDesc.usesVertexInput = false;
+    }
     runtime.graphicsPipelineState = particleRenderManager_->CreateGraphicsPipeline(graphicsPipelineDesc);
 
     TextureManager::GetInstance()->LoadTexture(runtime.texturePath);
@@ -597,6 +619,132 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
         }
     }
 
+    if (config.contains("Light")) {
+        const nlohmann::json& light = config.at("Light");
+        runtime.lightSettings.enabled = ReadBoolFlag(
+            light,
+            "Enabled",
+            runtime.lightSettings.enabled);
+
+        if (light.contains("Type")) {
+            const std::string lightType = light.at("Type").get<std::string>();
+            if (lightType != "Point") {
+                runtime.lightSettings.enabled = 0;
+                Logger::Warning(
+                    "Effect Light currently supports Point only. Effect:" +
+                    effectData.effectName + " Type:" + lightType);
+            }
+        }
+
+        if (light.contains("Color")) {
+            runtime.lightSettings.color = ReadVector4(
+                light.at("Color"),
+                runtime.lightSettings.color);
+        }
+        if (light.contains("Offset")) {
+            runtime.lightSettings.offset = ReadVector3(
+                light.at("Offset"),
+                runtime.lightSettings.offset);
+        }
+
+        runtime.lightSettings.intensity = light.value(
+            "Intensity",
+            runtime.lightSettings.intensity);
+        runtime.lightSettings.radius = light.value(
+            "Radius",
+            runtime.lightSettings.radius);
+        runtime.lightSettings.decay = light.value(
+            "Decay",
+            runtime.lightSettings.decay);
+        runtime.lightSettings.fadeDuration = light.value(
+            "FadeDuration",
+            runtime.lightSettings.fadeDuration);
+        runtime.lightSettings.followEmitter = ReadBoolFlag(
+            light,
+            "FollowEmitter",
+            runtime.lightSettings.followEmitter);
+        runtime.lightSettings.fadeOut = ReadBoolFlag(
+            light,
+            "FadeOut",
+            runtime.lightSettings.fadeOut);
+
+        if (runtime.lightSettings.intensity < 0.0f) {
+            runtime.lightSettings.intensity = 0.0f;
+        }
+        if (runtime.lightSettings.radius < 0.01f) {
+            runtime.lightSettings.radius = 0.01f;
+        }
+        if (runtime.lightSettings.decay < 0.0f) {
+            runtime.lightSettings.decay = 0.0f;
+        }
+        if (runtime.lightSettings.fadeDuration < 0.0f) {
+            runtime.lightSettings.fadeDuration = 0.0f;
+        }
+    }
+
+    if (config.contains("Fields") && config.at("Fields").is_array()) {
+        const nlohmann::json& fields = config.at("Fields");
+        const size_t fieldLimit = fields.size();
+        for (size_t fieldIndex = 0; fieldIndex < fieldLimit; ++fieldIndex) {
+            if (runtime.fieldCount >= kMaxParticleFields) {
+                Logger::Warning(
+                    "Effect Field count exceeded maximum. Effect:" +
+                    effectData.effectName);
+                break;
+            }
+
+            const nlohmann::json& fieldJson = fields.at(fieldIndex);
+            if (!fieldJson.is_object()) {
+                continue;
+            }
+
+            ParticleFieldDefinition& definition =
+                runtime.fields[runtime.fieldCount];
+            if (fieldJson.contains("Type")) {
+                definition.field.type = ParseParticleFieldType(
+                    fieldJson.at("Type").get<std::string>());
+            }
+            if (fieldJson.contains("Position")) {
+                definition.field.position = ReadVector3(
+                    fieldJson.at("Position"),
+                    definition.field.position);
+            }
+            if (fieldJson.contains("Direction")) {
+                definition.field.direction = ReadVector3(
+                    fieldJson.at("Direction"),
+                    definition.field.direction);
+            }
+            if (fieldJson.contains("Space")) {
+                const std::string fieldSpace =
+                    fieldJson.at("Space").get<std::string>();
+                if (fieldSpace == "World") {
+                    definition.isLocal = 0;
+                } else {
+                    definition.isLocal = 1;
+                }
+            }
+
+            definition.field.radius = fieldJson.value(
+                "Radius",
+                definition.field.radius);
+            definition.field.strength = fieldJson.value(
+                "Strength",
+                definition.field.strength);
+            definition.field.falloff = fieldJson.value(
+                "Falloff",
+                definition.field.falloff);
+
+            if (definition.field.radius < 0.01f) {
+                definition.field.radius = 0.01f;
+            }
+            if (definition.field.falloff < 0.01f) {
+                definition.field.falloff = 0.01f;
+            }
+
+            runtime.fieldCount++;
+        }
+    }
+
     runtime.defaultLoop = render.value("Loop", runtime.defaultLoop);
     runtime.duration = render.value("Duration", runtime.duration);
 }
@@ -760,7 +908,9 @@ EffectHandle EffectManager::StartEffect(
     activeEffect.isAlive = true;
 
     ActiveEffectResource resource = CreateActiveEffectResource(runtime, position);
+    UpdateEffectFields(runtime, activeEffect, resource);
     DispatchInitialize(resource);
+    CreateEffectLight(runtime, activeEffect);
 
     activeEffects_.push_back(std::move(activeEffect));
     activeResources_.push_back(std::move(resource));
@@ -789,12 +939,11 @@ bool EffectManager::StopEffect(EffectHandle handle)
 
     std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
         effects_.find(activeEffects_[index].effectName);
-    if (runtimeIterator != effects_.end() &&
-        runtimeIterator->second.renderType == ParticleRenderType::Trail) {
-        activeEffects_[index].isEmitting = false;
-        activeEffects_[index].positionProvider = nullptr;
-        activeEffects_[index].duration =
-            activeResources_[index].age + runtimeIterator->second.renderParameter.trailLifeTime;
+    if (runtimeIterator != effects_.end()) {
+        BeginEffectFadeOut(
+            runtimeIterator->second,
+            activeEffects_[index],
+            activeResources_[index]);
         return true;
     }
 
@@ -804,6 +953,10 @@ bool EffectManager::StopEffect(EffectHandle handle)
 
 void EffectManager::StopAllEffects()
 {
+    for (ActiveEffect& activeEffect : activeEffects_) {
+        ReleaseEffectLight(activeEffect);
+    }
+
     if (activeResources_.empty() && retiredResources_.empty()) {
         activeEffects_.clear();
         return;
@@ -833,6 +986,145 @@ void EffectManager::StopAllEffects()
 bool EffectManager::IsEffectAlive(EffectHandle handle) const
 {
     return FindActiveEffectIndex(handle) != static_cast<size_t>(-1);
+}
+
+void EffectManager::CreateEffectLight(const EffectRuntime& runtime, ActiveEffect& activeEffect)
+{
+    if (runtime.lightSettings.enabled == 0) {
+        return;
+    }
+
+    const Vector3 lightPosition = {
+        activeEffect.position.x + runtime.lightSettings.offset.x,
+        activeEffect.position.y + runtime.lightSettings.offset.y,
+        activeEffect.position.z + runtime.lightSettings.offset.z,
+    };
+
+    const PointLightHandle lightHandle = LightManager::GetInstance()->AddPointLight(
+        runtime.lightSettings.color,
+        lightPosition,
+        runtime.lightSettings.intensity,
+        runtime.lightSettings.radius,
+        runtime.lightSettings.decay);
+    if (lightHandle == kInvalidPointLightHandle) {
+        Logger::Warning(
+            "Effect Point Light allocation failed. Effect:" +
+            activeEffect.effectName);
+        return;
+    }
+
+    activeEffect.pointLightHandle = lightHandle;
+    activeEffect.lightBaseIntensity = runtime.lightSettings.intensity;
+    activeEffect.lightFadeDuration = runtime.lightSettings.fadeDuration;
+}
+
+void EffectManager::UpdateEffectLight(
+    const EffectRuntime& runtime,
+    ActiveEffect& activeEffect,
+    const ActiveEffectResource& resource)
+{
+    if (activeEffect.pointLightHandle == kInvalidPointLightHandle) {
+        return;
+    }
+
+    LightManager* lightManager = LightManager::GetInstance();
+    if (runtime.lightSettings.followEmitter != 0) {
+        const Vector3 lightPosition = {
+            activeEffect.position.x + runtime.lightSettings.offset.x,
+            activeEffect.position.y + runtime.lightSettings.offset.y,
+            activeEffect.position.z + runtime.lightSettings.offset.z,
+        };
+        lightManager->SetPointLightPosition(
+            activeEffect.pointLightHandle,
+            lightPosition);
+    }
+
+    float intensity = activeEffect.lightBaseIntensity;
+    if (activeEffect.isLightFading) {
+        if (activeEffect.lightFadeDuration <= 0.0f) {
+            intensity = 0.0f;
+        } else {
+            const float fadeElapsed = resource.age - activeEffect.lightFadeStartAge;
+            float fadeRate = fadeElapsed / activeEffect.lightFadeDuration;
+            if (fadeRate < 0.0f) {
+                fadeRate = 0.0f;
+            }
+            if (fadeRate > 1.0f) {
+                fadeRate = 1.0f;
+            }
+            intensity = activeEffect.lightBaseIntensity * (1.0f - fadeRate);
+        }
+    }
+
+    lightManager->SetPointLightIntensity(
+        activeEffect.pointLightHandle,
+        intensity);
+}
+
+void EffectManager::BeginEffectFadeOut(
+    const EffectRuntime& runtime,
+    ActiveEffect& activeEffect,
+    const ActiveEffectResource& resource)
+{
+    if (!activeEffect.isAlive || !activeEffect.isEmitting) {
+        return;
+    }
+
+    float tailDuration = 0.0f;
+    if (runtime.renderType == ParticleRenderType::Trail) {
+        tailDuration = runtime.renderParameter.trailLifeTime;
+    }
+
+    if (activeEffect.pointLightHandle != kInvalidPointLightHandle &&
+        runtime.lightSettings.fadeOut != 0) {
+        if (tailDuration < runtime.lightSettings.fadeDuration) {
+            tailDuration = runtime.lightSettings.fadeDuration;
+        }
+        activeEffect.isLightFading = true;
+        activeEffect.lightFadeStartAge = resource.age;
+        activeEffect.lightFadeDuration = runtime.lightSettings.fadeDuration;
+    }
+
+    if (tailDuration <= 0.0f) {
+        activeEffect.isAlive = false;
+        return;
+    }
+
+    activeEffect.isEmitting = false;
+    activeEffect.positionProvider = nullptr;
+    activeEffect.duration = resource.age + tailDuration;
+}
+
+void EffectManager::ReleaseEffectLight(ActiveEffect& activeEffect)
+{
+    if (activeEffect.pointLightHandle == kInvalidPointLightHandle) {
+        return;
+    }
+
+    LightManager::GetInstance()->RemovePointLight(activeEffect.pointLightHandle);
+    activeEffect.pointLightHandle = kInvalidPointLightHandle;
+}
+
+void EffectManager::UpdateEffectFields(
+    const EffectRuntime& runtime,
+    const ActiveEffect& activeEffect,
+    ActiveEffectResource& resource)
+{
+    if (!resource.fieldData) {
+        return;
+    }
+
+    resource.fieldData->fieldCount = runtime.fieldCount;
+    for (uint32_t fieldIndex = 0; fieldIndex < runtime.fieldCount; ++fieldIndex) {
+        const ParticleFieldDefinition& definition = runtime.fields[fieldIndex];
+        ParticleField field = definition.field;
+        if (definition.isLocal != 0) {
+            field.position.x += activeEffect.position.x;
+            field.position.y += activeEffect.position.y;
+            field.position.z += activeEffect.position.z;
+        }
+        resource.fieldData->fields[fieldIndex] = field;
+    }
 }
 
 EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
@@ -906,6 +1198,11 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     resource.renderParameterResource->SetName(L"EffectManager::ParticleRenderParameter");
     resource.renderParameterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.renderParameterData));
     *resource.renderParameterData = runtime.renderParameter;
+
+    resource.fieldResource = dxCommon_->CreateBufferResource(sizeof(ParticleFieldCollection));
+    resource.fieldResource->SetName(L"EffectManager::ParticleFieldCollection");
+    resource.fieldResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.fieldData));
+    *resource.fieldData = {};
 
     return resource;
 }
@@ -1237,6 +1534,64 @@ void EffectManager::CreateUpdateRootSignature()
     assert(SUCCEEDED(hr));
 }
 
+void EffectManager::CreateFieldRootSignature()
+{
+    D3D12_DESCRIPTOR_RANGE particleUavRange {};
+    particleUavRange.BaseShaderRegister = 0;
+    particleUavRange.NumDescriptors = 1;
+    particleUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    particleUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameters[3] {};
+    rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[0].DescriptorTable.pDescriptorRanges = &particleUavRange;
+    rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[1].Descriptor.ShaderRegister = 0;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[2].Descriptor.ShaderRegister = 1;
+
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
+    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    rootSignatureDesc.pParameters = rootParameters;
+    rootSignatureDesc.NumParameters = _countof(rootParameters);
+
+    Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+    Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+    HRESULT hr = D3D12SerializeRootSignature(
+        &rootSignatureDesc,
+        D3D_ROOT_SIGNATURE_VERSION_1,
+        &signatureBlob,
+        &errorBlob);
+    assert(SUCCEEDED(hr));
+
+    hr = dxCommon_->GetDevice()->CreateRootSignature(
+        0,
+        signatureBlob->GetBufferPointer(),
+        signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&fieldRootSignature_));
+    assert(SUCCEEDED(hr));
+}
+
+void EffectManager::CreateFieldPipelines()
+{
+    particleFieldPipelineState_ = CreateComputePipeline(
+        "ParticleField",
+        "Update",
+        fieldRootSignature_.Get(),
+        "resources/Shaders/Effects/Common/ApplyParticleFields.CS.hlsl");
+    trailFieldPipelineState_ = CreateComputePipeline(
+        "TrailField",
+        "Update",
+        fieldRootSignature_.Get(),
+        "resources/Shaders/Effects/Common/ApplyTrailFields.CS.hlsl");
+}
+
 void EffectManager::DispatchInitialize(ActiveEffectResource& resource)
 {
     TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -1314,6 +1669,33 @@ void EffectManager::DispatchUpdate(const EffectRuntime& runtime, ActiveEffectRes
     commandList->Dispatch((kMaxGPUParticle + 255) / 256, 1, 1);
 }
 
+void EffectManager::DispatchFields(const EffectRuntime& runtime, ActiveEffectResource& resource)
+{
+    if (!resource.fieldData || resource.fieldData->fieldCount == 0) {
+        return;
+    }
+
+    ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
+    ID3D12DescriptorHeap* descriptorHeaps[] = { srvManager_->GetDescriptorHeap() };
+    commandList->SetDescriptorHeaps(1, descriptorHeaps);
+    commandList->SetComputeRootSignature(fieldRootSignature_.Get());
+    if (runtime.renderType == ParticleRenderType::Trail) {
+        commandList->SetPipelineState(trailFieldPipelineState_.Get());
+    } else {
+        commandList->SetPipelineState(particleFieldPipelineState_.Get());
+    }
+
+    commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
+    commandList->SetComputeRootConstantBufferView(1, resource.fieldResource->GetGPUVirtualAddress());
+    commandList->SetComputeRootConstantBufferView(2, resource.perFrameResource->GetGPUVirtualAddress());
+
+    if (runtime.renderType == ParticleRenderType::Trail) {
+        commandList->Dispatch(1, 1, 1);
+    } else {
+        commandList->Dispatch((kMaxGPUParticle + 255) / 256, 1, 1);
+    }
+}
+
 void EffectManager::Update()
 {
     ReleaseRetiredResources();
@@ -1380,6 +1762,8 @@ void EffectManager::UpdateActiveEffect(size_t index)
     resource.age += deltaTime_;
     resource.perFrameData->time = resource.age;
     resource.perFrameData->deltaTime = deltaTime_;
+    UpdateEffectLight(runtime, activeEffect, resource);
+    UpdateEffectFields(runtime, activeEffect, resource);
 
     resource.emitterData->translate = activeEffect.position;
     resource.emitterData->prevTranslate = activeEffect.prevPosition;
@@ -1417,13 +1801,16 @@ void EffectManager::UpdateActiveEffect(size_t index)
     DispatchUpdate(runtime, resource);
     InsertUavBarrier(resource.particleResource.Get());
 
+    if (resource.fieldData && resource.fieldData->fieldCount > 0) {
+        DispatchFields(runtime, resource);
+        InsertUavBarrier(resource.particleResource.Get());
+    }
+
     TransitionResource(resource.particleResource.Get(), resource.particleState, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
     if (activeEffect.duration >= 0.0f && activeEffect.duration <= resource.age) {
-        if (runtime.renderType == ParticleRenderType::Trail && activeEffect.isEmitting) {
-            activeEffect.isEmitting = false;
-            activeEffect.positionProvider = nullptr;
-            activeEffect.duration = resource.age + runtime.renderParameter.trailLifeTime;
+        if (activeEffect.isEmitting) {
+            BeginEffectFadeOut(runtime, activeEffect, resource);
         } else {
             activeEffect.isAlive = false;
         }
@@ -1459,6 +1846,7 @@ void EffectManager::RemoveDeadEffects()
             continue;
         }
 
+        ReleaseEffectLight(activeEffects_[i]);
         UnmapActiveEffectResource(activeResources_[i]);
         retiredResources_.push_back(std::move(activeResources_[i]));
 
@@ -1487,6 +1875,11 @@ void EffectManager::UnmapActiveEffectResource(ActiveEffectResource& resource)
     if (resource.renderParameterResource && resource.renderParameterData) {
         resource.renderParameterResource->Unmap(0, nullptr);
         resource.renderParameterData = nullptr;
+    }
+
+    if (resource.fieldResource && resource.fieldData) {
+        resource.fieldResource->Unmap(0, nullptr);
+        resource.fieldData = nullptr;
     }
 }
 
@@ -1584,6 +1977,148 @@ void EffectManager::Draw()
     }
 }
 
+void EffectManager::DrawFieldDebug() const
+{
+    DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
+    const Vector4 fieldColors[] = {
+        { 0.1f, 0.9f, 1.0f, 1.0f },
+        { 0.2f, 1.0f, 0.3f, 1.0f },
+        { 1.0f, 0.25f, 0.15f, 1.0f },
+        { 0.85f, 0.2f, 1.0f, 1.0f },
+    };
+
+    for (size_t effectIndex = 0; effectIndex < activeEffects_.size(); ++effectIndex) {
+        if (!activeEffects_[effectIndex].isAlive ||
+            effectIndex >= activeResources_.size()) {
+            continue;
+        }
+
+        const ActiveEffectResource& resource = activeResources_[effectIndex];
+        if (!resource.fieldData) {
+            continue;
+        }
+
+        uint32_t fieldCount = resource.fieldData->fieldCount;
+        if (fieldCount > kMaxParticleFields) {
+            fieldCount = kMaxParticleFields;
+        }
+
+        for (uint32_t fieldIndex = 0; fieldIndex < fieldCount; ++fieldIndex) {
+            const ParticleField& field = resource.fieldData->fields[fieldIndex];
+            int32_t colorIndex = field.type;
+            if (colorIndex < 0 || colorIndex >= 4) {
+                colorIndex = 0;
+            }
+            const Vector4 color = fieldColors[colorIndex];
+
+            debugRenderer->AddWireSphere(
+                field.position,
+                field.radius,
+                color,
+                2.0f,
+                32);
+
+            float centerMarkSize = field.radius * 0.08f;
+            if (centerMarkSize < 0.15f) {
+                centerMarkSize = 0.15f;
+            }
+            debugRenderer->AddLine(
+                { field.position.x - centerMarkSize, field.position.y, field.position.z },
+                { field.position.x + centerMarkSize, field.position.y, field.position.z },
+                color,
+                3.0f);
+            debugRenderer->AddLine(
+                { field.position.x, field.position.y - centerMarkSize, field.position.z },
+                { field.position.x, field.position.y + centerMarkSize, field.position.z },
+                color,
+                3.0f);
+            debugRenderer->AddLine(
+                { field.position.x, field.position.y, field.position.z - centerMarkSize },
+                { field.position.x, field.position.y, field.position.z + centerMarkSize },
+                color,
+                3.0f);
+
+            if (field.type != static_cast<int32_t>(ParticleFieldType::Wind) &&
+                field.type != static_cast<int32_t>(ParticleFieldType::Vortex)) {
+                continue;
+            }
+
+            const float directionLength = std::sqrt(
+                field.direction.x * field.direction.x +
+                field.direction.y * field.direction.y +
+                field.direction.z * field.direction.z);
+            if (directionLength <= 0.0001f) {
+                continue;
+            }
+
+            const Vector3 direction = {
+                field.direction.x / directionLength,
+                field.direction.y / directionLength,
+                field.direction.z / directionLength,
+            };
+            float arrowLength = field.radius * 0.65f;
+            if (arrowLength > 3.5f) {
+                arrowLength = 3.5f;
+            }
+            if (arrowLength < 0.5f) {
+                arrowLength = 0.5f;
+            }
+
+            Vector3 arrowStart = field.position;
+            if (field.type == static_cast<int32_t>(ParticleFieldType::Vortex)) {
+                arrowStart.x -= direction.x * arrowLength;
+                arrowStart.y -= direction.y * arrowLength;
+                arrowStart.z -= direction.z * arrowLength;
+            }
+            const Vector3 arrowEnd = {
+                field.position.x + direction.x * arrowLength,
+                field.position.y + direction.y * arrowLength,
+                field.position.z + direction.z * arrowLength,
+            };
+            debugRenderer->AddLine(arrowStart, arrowEnd, color, 4.0f);
+
+            Vector3 helperAxis = { 0.0f, 1.0f, 0.0f };
+            if (std::abs(direction.y) > 0.9f) {
+                helperAxis = { 1.0f, 0.0f, 0.0f };
+            }
+            Vector3 perpendicular = {
+                direction.y * helperAxis.z - direction.z * helperAxis.y,
+                direction.z * helperAxis.x - direction.x * helperAxis.z,
+                direction.x * helperAxis.y - direction.y * helperAxis.x,
+            };
+            const float perpendicularLength = std::sqrt(
+                perpendicular.x * perpendicular.x +
+                perpendicular.y * perpendicular.y +
+                perpendicular.z * perpendicular.z);
+            if (perpendicularLength <= 0.0001f) {
+                continue;
+            }
+            perpendicular.x /= perpendicularLength;
+            perpendicular.y /= perpendicularLength;
+            perpendicular.z /= perpendicularLength;
+
+            const float arrowHeadLength = arrowLength * 0.22f;
+            const Vector3 arrowHeadBase = {
+                arrowEnd.x - direction.x * arrowHeadLength,
+                arrowEnd.y - direction.y * arrowHeadLength,
+                arrowEnd.z - direction.z * arrowHeadLength,
+            };
+            const Vector3 arrowHeadLeft = {
+                arrowHeadBase.x + perpendicular.x * arrowHeadLength,
+                arrowHeadBase.y + perpendicular.y * arrowHeadLength,
+                arrowHeadBase.z + perpendicular.z * arrowHeadLength,
+            };
+            const Vector3 arrowHeadRight = {
+                arrowHeadBase.x - perpendicular.x * arrowHeadLength,
+                arrowHeadBase.y - perpendicular.y * arrowHeadLength,
+                arrowHeadBase.z - perpendicular.z * arrowHeadLength,
+            };
+            debugRenderer->AddLine(arrowEnd, arrowHeadLeft, color, 4.0f);
+            debugRenderer->AddLine(arrowEnd, arrowHeadRight, color, 4.0f);
+        }
+    }
+}
+
 void EffectManager::SetBlendMode(BlendMode blendMode)
 {
     currentBlendMode_ = blendMode;
@@ -1640,6 +2175,10 @@ void EffectManager::Finalize()
         instance_->dxCommon_->WaitForGPU();
     }
 
+    for (ActiveEffect& activeEffect : instance_->activeEffects_) {
+        instance_->ReleaseEffectLight(activeEffect);
+    }
+
     for (ActiveEffectResource& resource : instance_->activeResources_) {
         instance_->UnmapActiveEffectResource(resource);
         instance_->ReleaseActiveEffectDescriptors(resource);
@@ -1663,6 +2202,10 @@ void EffectManager::Finalize()
     instance_->initializePipelineState_.Reset();
     instance_->emitRootSignature_.Reset();
     instance_->updateRootSignature_.Reset();
+    instance_->trailInitializePipelineState_.Reset();
+    instance_->fieldRootSignature_.Reset();
+    instance_->particleFieldPipelineState_.Reset();
+    instance_->trailFieldPipelineState_.Reset();
 
     instance_->particleRenderManager_.reset();
     instance_->particleMeshManager_.reset();

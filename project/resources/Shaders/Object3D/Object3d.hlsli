@@ -50,7 +50,7 @@ struct PointLight
     float padding;
 };
 
-static const uint32_t kMaxPointLights = 16;
+static const uint32_t kMaxPointLights = 32;
 
 struct PointLightCollection
 {
@@ -68,5 +68,15 @@ struct SpotLight
     float distance;
     float decay;
     float cosAngle;
-    float padding[2];
+    int32_t isActive;
+    float padding;
+};
+
+static const uint32_t kMaxSpotLights = 8;
+
+struct SpotLightCollection
+{
+    SpotLight lights[kMaxSpotLights];
+    uint32_t activeCount;
+    float32_t3 padding;
 };

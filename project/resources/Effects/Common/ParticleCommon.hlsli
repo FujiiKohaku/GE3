@@ -27,8 +27,8 @@ struct TrailPoint
 {
     float32_t3 position;
     float32_t age;
+    float32_t3 velocity;
     uint32_t isActive;
-    float32_t3 padding;
 };
 
 #endif

@@ -84,15 +84,23 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     defaultPointLight.isActive = 1;
     pointLightData_->activeCount = 1;
 
-    spotLightResource_ = dxCommon_->CreateBufferResource(sizeof(SpotLight));
+    spotLightResource_ = dxCommon_->CreateBufferResource(sizeof(SpotLightCollection));
     spotLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&spotLightData_));
-    spotLightData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-    spotLightData_->position = { 2.0f, 1.25f, 0.0f };
-    spotLightData_->distance = 7.0f;
-    spotLightData_->direction = Normalize(Vector3 { -1.0f, -1.0f, 0.0f });
-    spotLightData_->intensity = 4.0f;
-    spotLightData_->decay = 2.0f;
-    spotLightData_->cosAngle = std::cos(std::numbers::pi_v<float> / 3.0f);
+    spotLightResource_->SetName(L"Object3d::SpotLightCollectionCB");
+    for (uint32_t lightIndex = 0; lightIndex < kMaxSpotLights; ++lightIndex) {
+        spotLightData_->lights[lightIndex] = {};
+    }
+
+    SpotLight& defaultSpotLight = spotLightData_->lights[0];
+    defaultSpotLight.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    defaultSpotLight.position = { 2.0f, 1.25f, 0.0f };
+    defaultSpotLight.distance = 7.0f;
+    defaultSpotLight.direction = Normalize(Vector3 { -1.0f, -1.0f, 0.0f });
+    defaultSpotLight.intensity = 4.0f;
+    defaultSpotLight.decay = 2.0f;
+    defaultSpotLight.cosAngle = std::cos(std::numbers::pi_v<float> / 3.0f);
+    defaultSpotLight.isActive = 1;
+    spotLightData_->activeCount = 1;
 }
 
 void LightManager::Update()
@@ -285,37 +293,198 @@ bool LightManager::IsValidDynamicPointLightHandle(PointLightHandle handle) const
 
 void LightManager::SetSpotLightColor(const Vector4& color)
 {
-    spotLightData_->color = color;
+    spotLightData_->lights[0].color = color;
 }
 
 void LightManager::SetSpotLightPosition(const Vector3& pos)
 {
-    spotLightData_->position = pos;
+    spotLightData_->lights[0].position = pos;
 }
 
 void LightManager::SetSpotLightDirection(const Vector3& dir)
 {
-    spotLightData_->direction = Normalize(dir);
+    spotLightData_->lights[0].direction = Normalize(dir);
 }
 
 void LightManager::SetSpotLightIntensity(float intensity)
 {
-    spotLightData_->intensity = intensity;
+    spotLightData_->lights[0].intensity = intensity;
 }
 
 void LightManager::SetSpotLightDistance(float distance)
 {
-    spotLightData_->distance = distance;
+    spotLightData_->lights[0].distance = distance;
 }
 
 void LightManager::SetSpotLightDecay(float decay)
 {
-    spotLightData_->decay = decay;
+    spotLightData_->lights[0].decay = decay;
 }
 
 void LightManager::SetSpotLightCosAngle(float cosAngle)
 {
-    spotLightData_->cosAngle = cosAngle;
+    spotLightData_->lights[0].cosAngle = cosAngle;
+}
+
+SpotLightHandle LightManager::AddSpotLight(
+    const Vector4& color,
+    const Vector3& position,
+    const Vector3& direction,
+    float intensity,
+    float distance,
+    float decay,
+    float cosAngle)
+{
+    for (uint32_t lightIndex = 1; lightIndex < kMaxSpotLights; ++lightIndex) {
+        SpotLight& spotLight = spotLightData_->lights[lightIndex];
+        if (spotLight.isActive != 0) {
+            continue;
+        }
+
+        spotLight.color = color;
+        spotLight.position = position;
+        spotLight.direction = Normalize(direction);
+        spotLight.intensity = intensity;
+        spotLight.distance = distance;
+        spotLight.decay = decay;
+        spotLight.cosAngle = cosAngle;
+        spotLight.isActive = 1;
+        spotLightData_->activeCount++;
+        return lightIndex;
+    }
+
+    return kInvalidSpotLightHandle;
+}
+
+bool LightManager::UpdateSpotLight(
+    SpotLightHandle handle,
+    const Vector4& color,
+    const Vector3& position,
+    const Vector3& direction,
+    float intensity,
+    float distance,
+    float decay,
+    float cosAngle)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    SpotLight& spotLight = spotLightData_->lights[handle];
+    spotLight.color = color;
+    spotLight.position = position;
+    spotLight.direction = Normalize(direction);
+    spotLight.intensity = intensity;
+    spotLight.distance = distance;
+    spotLight.decay = decay;
+    spotLight.cosAngle = cosAngle;
+    return true;
+}
+
+bool LightManager::SetSpotLightPosition(SpotLightHandle handle, const Vector3& position)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].position = position;
+    return true;
+}
+
+bool LightManager::SetSpotLightDirection(SpotLightHandle handle, const Vector3& direction)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].direction = Normalize(direction);
+    return true;
+}
+
+bool LightManager::SetSpotLightIntensity(SpotLightHandle handle, float intensity)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].intensity = intensity;
+    return true;
+}
+
+bool LightManager::SetSpotLightColor(SpotLightHandle handle, const Vector4& color)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].color = color;
+    return true;
+}
+
+bool LightManager::SetSpotLightDistance(SpotLightHandle handle, float distance)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].distance = distance;
+    return true;
+}
+
+bool LightManager::SetSpotLightDecay(SpotLightHandle handle, float decay)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].decay = decay;
+    return true;
+}
+
+bool LightManager::SetSpotLightCosAngle(SpotLightHandle handle, float cosAngle)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle].cosAngle = cosAngle;
+    return true;
+}
+
+bool LightManager::RemoveSpotLight(SpotLightHandle handle)
+{
+    if (!IsValidDynamicSpotLightHandle(handle)) {
+        return false;
+    }
+
+    spotLightData_->lights[handle] = {};
+    if (spotLightData_->activeCount > 0) {
+        spotLightData_->activeCount--;
+    }
+    return true;
+}
+
+void LightManager::ClearDynamicSpotLights()
+{
+    for (uint32_t lightIndex = 1; lightIndex < kMaxSpotLights; ++lightIndex) {
+        spotLightData_->lights[lightIndex] = {};
+    }
+
+    spotLightData_->activeCount = 0;
+    if (spotLightData_->lights[0].isActive != 0) {
+        spotLightData_->activeCount = 1;
+    }
+}
+
+bool LightManager::IsValidDynamicSpotLightHandle(SpotLightHandle handle) const
+{
+    if (!spotLightData_) {
+        return false;
+    }
+    if (handle == kInvalidSpotLightHandle || handle == 0 || handle >= kMaxSpotLights) {
+        return false;
+    }
+    return spotLightData_->lights[handle].isActive != 0;
 }
 
 void LightManager::SetAmbientColor(const Vector3& color)

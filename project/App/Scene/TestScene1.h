@@ -2,6 +2,7 @@
 #include "BaseScene.h"
 #include "SceneManager.h"
 #include "Engine/Camera/Camera.h"
+#include "Engine/Effect/EffectManager.h"
 #include "Engine/debugcamera/DebugCameraController.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/Animation/AnimationActor.h"
@@ -61,6 +62,9 @@ private:
     PlayerAnimState currentAnimState_ = PlayerAnimState::Idle;
     float idleVariationTimer_ = 0.0f;
     float combatIdleTimer_ = 0.0f;
+
+    EffectHandle fieldDemoEffectHandle_ = kInvalidEffectHandle;
+    bool showFieldDebug_ = true;
 
     // TPS Camera
     float cameraYaw_ = 0.0f;

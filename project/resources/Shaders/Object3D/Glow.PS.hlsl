@@ -4,7 +4,7 @@ ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
 ConstantBuffer<PointLightCollection> gPointLights : register(b3);
-ConstantBuffer<SpotLight> gSpotLight : register(b4);
+ConstantBuffer<SpotLightCollection> gSpotLights : register(b4);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 

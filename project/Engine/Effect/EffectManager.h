@@ -39,8 +39,13 @@ struct ActiveEffect {
     Vector3 prevPosition;
     EffectPositionProvider positionProvider;
     float duration = -1.0f;
+    uint32_t pointLightHandle = 0xffffffffu;
+    float lightBaseIntensity = 0.0f;
+    float lightFadeStartAge = 0.0f;
+    float lightFadeDuration = 0.0f;
     bool isLoop = false;
     bool isEmitting = true;
+    bool isLightFading = false;
     bool isAlive = false;
 };
 
@@ -105,6 +110,7 @@ public:
     void Update();
     void PreDraw();
     void Draw();
+    void DrawFieldDebug() const;
 
     void SetBlendMode(BlendMode blendMode);
     void SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView);
@@ -125,6 +131,13 @@ private:
         Cone,
         Cylinder,
         Circle,
+    };
+
+    enum class ParticleFieldType : int32_t {
+        Wind,
+        Attractor,
+        Repulsor,
+        Vortex,
     };
 
     struct Material {
@@ -179,8 +192,43 @@ private:
     struct TrailPoint {
         Vector3 position;
         float age = 0.0f;
+        Vector3 velocity = { 0.0f, 0.0f, 0.0f };
         uint32_t isActive = 0;
+    };
+
+    struct ParticleField {
+        Vector3 position = { 0.0f, 0.0f, 0.0f };
+        float radius = 1.0f;
+        Vector3 direction = { 0.0f, 1.0f, 0.0f };
+        float strength = 1.0f;
+        int32_t type = static_cast<int32_t>(ParticleFieldType::Wind);
+        float falloff = 1.0f;
+        float padding[2] = {};
+    };
+
+    struct ParticleFieldDefinition {
+        ParticleField field;
+        int32_t isLocal = 1;
+    };
+
+    static constexpr uint32_t kMaxParticleFields = 16;
+
+    struct ParticleFieldCollection {
+        ParticleField fields[kMaxParticleFields];
+        uint32_t fieldCount = 0;
         float padding[3] = {};
+    };
+
+    struct EffectLightSettings {
+        Vector4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        Vector3 offset = { 0.0f, 0.0f, 0.0f };
+        float intensity = 1.0f;
+        float radius = 5.0f;
+        float decay = 2.0f;
+        float fadeDuration = 0.25f;
+        int32_t enabled = 0;
+        int32_t followEmitter = 1;
+        int32_t fadeOut = 1;
     };
 
     struct EffectRuntime {
@@ -204,6 +252,9 @@ private:
         bool defaultLoop = false;
         EffectSettings settings;
         ParticleRenderParameter renderParameter;
+        EffectLightSettings lightSettings;
+        ParticleFieldDefinition fields[kMaxParticleFields];
+        uint32_t fieldCount = 0;
     };
 
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
@@ -217,11 +268,13 @@ private:
         Microsoft::WRL::ComPtr<ID3D12Resource> perFrameResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> effectSettingsResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> renderParameterResource;
+        Microsoft::WRL::ComPtr<ID3D12Resource> fieldResource;
 
         EmitterSphere* emitterData = nullptr;
         PerFrame* perFrameData = nullptr;
         EffectSettings* effectSettingsData = nullptr;
         ParticleRenderParameter* renderParameterData = nullptr;
+        ParticleFieldCollection* fieldData = nullptr;
 
         uint32_t particleUavIndex = kInvalidDescriptorIndex;
         uint32_t particleSrvIndex = kInvalidDescriptorIndex;
@@ -279,14 +332,31 @@ private:
     void CreateInitializePipeline();
     void CreateEmitRootSignature();
     void CreateUpdateRootSignature();
+    void CreateFieldRootSignature();
+    void CreateFieldPipelines();
 
     void DispatchInitialize(ActiveEffectResource& resource);
     void DispatchEmit(const EffectRuntime& runtime, ActiveEffectResource& resource);
     void DispatchUpdate(const EffectRuntime& runtime, ActiveEffectResource& resource);
+    void DispatchFields(const EffectRuntime& runtime, ActiveEffectResource& resource);
 
     EffectHandle AllocateEffectHandle();
     size_t FindActiveEffectIndex(EffectHandle handle) const;
     void UpdateActiveEffect(size_t index);
+    void CreateEffectLight(const EffectRuntime& runtime, ActiveEffect& activeEffect);
+    void UpdateEffectLight(
+        const EffectRuntime& runtime,
+        ActiveEffect& activeEffect,
+        const ActiveEffectResource& resource);
+    void BeginEffectFadeOut(
+        const EffectRuntime& runtime,
+        ActiveEffect& activeEffect,
+        const ActiveEffectResource& resource);
+    void ReleaseEffectLight(ActiveEffect& activeEffect);
+    void UpdateEffectFields(
+        const EffectRuntime& runtime,
+        const ActiveEffect& activeEffect,
+        ActiveEffectResource& resource);
     void RemoveDeadEffects();
     void UnmapActiveEffectResource(ActiveEffectResource& resource);
     void ReleaseActiveEffectDescriptors(ActiveEffectResource& resource);
@@ -324,6 +394,9 @@ private:
     Microsoft::WRL::ComPtr<ID3D12PipelineState> trailInitializePipelineState_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> emitRootSignature_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> updateRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> fieldRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> particleFieldPipelineState_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> trailFieldPipelineState_;
 
     std::unordered_map<std::string, EffectRuntime> effects_;
     std::vector<ActiveEffect> activeEffects_;

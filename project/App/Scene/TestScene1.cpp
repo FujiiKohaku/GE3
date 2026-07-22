@@ -88,6 +88,11 @@ void TestScene1::Initialize()
     // エフェクトマネージャーへのカメラ登録
     EffectManager::GetInstance()->SetCamera(camera_.get());
 
+    // Local WindとLocal Vortexを設定した明るい粒子をフィールド確認用に常設する
+    fieldDemoEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect(
+        "FieldDemo",
+        { -7.0f, -4.5f, 0.0f });
+
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
 }
@@ -366,6 +371,9 @@ void TestScene1::Update()
         floorObj_->Update();
     }
     EffectManager::GetInstance()->Update();
+    if (showFieldDebug_) {
+        EffectManager::GetInstance()->DrawFieldDebug();
+    }
 }
 
 void TestScene1::Draw2D()
@@ -414,6 +422,8 @@ void TestScene1::DrawImGui()
     ImGui::Text("F1: Toggle Debug Camera");
     ImGui::Text("SPACE: Jump");
     ImGui::Text("Fixed SneakWalk: skeleton debug display");
+    ImGui::Text("Left-side cyan particles: GPU Particle Field demo");
+    ImGui::Checkbox("Show Particle Field Range", &showFieldDebug_);
     ImGui::Text("Mouse Wheel: Change Post Effect");
     ImGui::Text(
         "Post Effect: %s (%u/%u)",
@@ -440,6 +450,10 @@ void TestScene1::DrawImGui()
 
 void TestScene1::Finalize()
 {
+    if (fieldDemoEffectHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(fieldDemoEffectHandle_);
+        fieldDemoEffectHandle_ = kInvalidEffectHandle;
+    }
 }
 
 void TestScene1::UpdateKatanaAttachment()

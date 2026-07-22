@@ -67,5 +67,18 @@
     "TextureTiling": 2.0,
     "RootExtension": 0.7,
     "FaceCamera": true
+  },
+
+  "Light": {
+    "Enabled": true,
+    "Type": "Point",
+    "Color": [1.0, 0.22, 0.03, 1.0],
+    "Intensity": 5.0,
+    "Radius": 8.0,
+    "Decay": 2.0,
+    "Offset": [0.0, 0.0, 0.0],
+    "FollowEmitter": true,
+    "FadeOut": true,
+    "FadeDuration": 0.35
   }
 }

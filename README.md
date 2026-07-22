@@ -199,9 +199,10 @@ Trailでは次のJSONパラメータを指定できる。
 
 ## Multiple Point Lights
 
-`LightManager` は最大16個のPoint Lightを同時にGPUへ渡せる。0番は従来の
-`SetPointLight()` APIとの互換用として予約し、1～15番はハンドルで追加・更新・解放する。
-通常モデルとスキニングモデルのPixel Shaderは、有効なPoint Lightをすべて加算して描画する。
+`LightManager` は最大32個のPoint Lightと最大8個のSpot Lightを同時にGPUへ渡せる。
+各Collectionの0番は従来APIとの互換用として予約し、残りはハンドルで追加・更新・解放する。
+Directional LightとAmbient Lightはそれぞれ1個。通常モデルとスキニングモデルの
+Pixel Shaderは、有効なPoint LightとSpot Lightをすべて加算して描画する。
 
 ```cpp
 PointLightHandle handle = LightManager::GetInstance()->AddPointLight(
@@ -216,3 +217,70 @@ LightManager::GetInstance()->RemovePointLight(handle);
 ```
 
 動的ライトをまとめて破棄する場合は`ClearDynamicPointLights()`を使用する。
+Spot Lightは`AddSpotLight()`、`UpdateSpotLight()`、`RemoveSpotLight()`で管理し、
+一括破棄には`ClearDynamicSpotLights()`を使用する。
+
+### Effect Light Assignment
+
+Effectの`Light`セクションにPoint Lightを記述すると、再生時に動的ライトを自動取得する。
+`FollowEmitter`が有効な場合はEmitter位置へ追従し、停止時は`FadeDuration`を使って減光した後、
+Effect終了時にライトを自動解放する。ライト枠が満杯の場合もParticle本体は再生を継続する。
+
+```json
+"Light": {
+  "Enabled": true,
+  "Type": "Point",
+  "Color": [1.0, 0.22, 0.03, 1.0],
+  "Intensity": 5.0,
+  "Radius": 8.0,
+  "Decay": 2.0,
+  "Offset": [0.0, 0.0, 0.0],
+  "FollowEmitter": true,
+  "FadeOut": true,
+  "FadeDuration": 0.35
+}
+```
+
+現在のJSONアサインはPoint Lightに対応している。`MissileTrail`はこの設定を使用している。
+
+## GPU Particle Fields
+
+Effectごとに最大16個のFieldをJSONから設定できる。通常のGPU ParticleとGPU Trailの両方に作用し、
+複数Fieldの力は加算される。各Effect固有のUpdate Shaderを変更せず、共通のCompute Passで適用する。
+
+- `Wind`: `Direction`の方向へ流す
+- `Attractor`: `Position`へ引き寄せる
+- `Repulsor`: `Position`から押し出す
+- `Vortex`: `Direction`を回転軸として渦を作る
+- `Space: "Local"`: Field位置がEffectのEmitterへ追従する
+- `Space: "World"`: Field位置をワールド座標に固定する
+- `Radius`: 影響半径
+- `Strength`: 力の強さ
+- `Falloff`: 中心から外側へ弱くなるカーブ。値が大きいほど外側で急に弱くなる
+
+```json
+"Fields": [
+  {
+    "Type": "Wind",
+    "Space": "Local",
+    "Position": [0.0, 1.5, 0.0],
+    "Direction": [0.35, 1.0, 0.0],
+    "Radius": 8.0,
+    "Strength": 1.5,
+    "Falloff": 0.6
+  },
+  {
+    "Type": "Vortex",
+    "Space": "World",
+    "Position": [0.0, 3.0, 0.0],
+    "Direction": [0.0, 1.0, 0.0],
+    "Radius": 5.0,
+    "Strength": 1.1,
+    "Falloff": 1.0
+  }
+]
+```
+
+`Fields`自体を省略したEffectは、追加のField Compute Passを実行せず従来通り動作する。
+`World`指定も現段階ではそのEffectが生成したParticleだけを対象とし、シーン内の全Effectへ作用する
+グローバルFieldではない。`FieldDemo`にLocal WindとLocal Vortexの確認用設定を追加済み。

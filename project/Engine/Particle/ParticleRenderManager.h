@@ -19,6 +19,7 @@ public:
         BlendMode blendMode = kBlendModeAdd;
         bool depthTest = true;
         bool depthWrite = false;
+        bool usesVertexInput = true;
         D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
     };
 
