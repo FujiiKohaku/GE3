@@ -196,3 +196,23 @@ Trailでは次のJSONパラメータを指定できる。
 
 `MissileTrail` をこの方式へ移行済み。発生を停止した後も `LifeTime` の間だけ履歴が残り、
 末端から透明になって消える。
+
+## Multiple Point Lights
+
+`LightManager` は最大16個のPoint Lightを同時にGPUへ渡せる。0番は従来の
+`SetPointLight()` APIとの互換用として予約し、1～15番はハンドルで追加・更新・解放する。
+通常モデルとスキニングモデルのPixel Shaderは、有効なPoint Lightをすべて加算して描画する。
+
+```cpp
+PointLightHandle handle = LightManager::GetInstance()->AddPointLight(
+    { 1.0f, 0.25f, 0.05f, 1.0f },
+    { 0.0f, 2.0f, 0.0f },
+    4.0f,
+    8.0f,
+    2.0f);
+
+LightManager::GetInstance()->SetPointLightPosition(handle, newPosition);
+LightManager::GetInstance()->RemovePointLight(handle);
+```
+
+動的ライトをまとめて破棄する場合は`ClearDynamicPointLights()`を使用する。

@@ -68,13 +68,21 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     ambientLightResource_->SetName(L"Object3d::AmbientLightCB");
     ambientLightData_->color = { 1.0f, 1.0f, 1.0f, 0.25f };
 
-    pointLightResource_ = dxCommon_->CreateBufferResource(sizeof(PointLight));
+    pointLightResource_ = dxCommon_->CreateBufferResource(sizeof(PointLightCollection));
     pointLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&pointLightData_));
-    pointLightData_->color = { 1.0f, 1.0f, 1.0f, 1.0f };
-    pointLightData_->position = { 0.0f, 2.0f, 0.0f };
-    pointLightData_->intensity = 1.0f;
-    pointLightData_->radius = 10.0f;
-    pointLightData_->decay = 1.0f;
+    pointLightResource_->SetName(L"Object3d::PointLightCollectionCB");
+    for (uint32_t lightIndex = 0; lightIndex < kMaxPointLights; ++lightIndex) {
+        pointLightData_->lights[lightIndex] = {};
+    }
+
+    PointLight& defaultPointLight = pointLightData_->lights[0];
+    defaultPointLight.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    defaultPointLight.position = { 0.0f, 2.0f, 0.0f };
+    defaultPointLight.intensity = 1.0f;
+    defaultPointLight.radius = 10.0f;
+    defaultPointLight.decay = 1.0f;
+    defaultPointLight.isActive = 1;
+    pointLightData_->activeCount = 1;
 
     spotLightResource_ = dxCommon_->CreateBufferResource(sizeof(SpotLight));
     spotLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&spotLightData_));
@@ -110,34 +118,169 @@ void LightManager::SetIntensity(float intensity)
 
 void LightManager::SetPointLight(const Vector4& color, const Vector3& pos, float intensity)
 {
-    pointLightData_->color = color;
-    pointLightData_->position = pos;
-    pointLightData_->intensity = intensity;
+    PointLight& pointLight = pointLightData_->lights[0];
+    pointLight.color = color;
+    pointLight.position = pos;
+    pointLight.intensity = intensity;
+    pointLight.isActive = 1;
 }
 
 void LightManager::SetPointPosition(const Vector3& pos)
 {
-    pointLightData_->position = pos;
+    pointLightData_->lights[0].position = pos;
 }
 
 void LightManager::SetPointIntensity(float intensity)
 {
-    pointLightData_->intensity = intensity;
+    pointLightData_->lights[0].intensity = intensity;
 }
 
 void LightManager::SetPointColor(const Vector4& color)
 {
-    pointLightData_->color = color;
+    pointLightData_->lights[0].color = color;
 }
 
 void LightManager::SetPointRadius(float radius)
 {
-    pointLightData_->radius = radius;
+    pointLightData_->lights[0].radius = radius;
 }
 
 void LightManager::SetPointDecay(float decay)
 {
-    pointLightData_->decay = decay;
+    pointLightData_->lights[0].decay = decay;
+}
+
+PointLightHandle LightManager::AddPointLight(
+    const Vector4& color,
+    const Vector3& position,
+    float intensity,
+    float radius,
+    float decay)
+{
+    for (uint32_t lightIndex = 1; lightIndex < kMaxPointLights; ++lightIndex) {
+        PointLight& pointLight = pointLightData_->lights[lightIndex];
+        if (pointLight.isActive != 0) {
+            continue;
+        }
+
+        pointLight.color = color;
+        pointLight.position = position;
+        pointLight.intensity = intensity;
+        pointLight.radius = radius;
+        pointLight.decay = decay;
+        pointLight.isActive = 1;
+        pointLightData_->activeCount++;
+        return lightIndex;
+    }
+
+    return kInvalidPointLightHandle;
+}
+
+bool LightManager::UpdatePointLight(
+    PointLightHandle handle,
+    const Vector4& color,
+    const Vector3& position,
+    float intensity,
+    float radius,
+    float decay)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    PointLight& pointLight = pointLightData_->lights[handle];
+    pointLight.color = color;
+    pointLight.position = position;
+    pointLight.intensity = intensity;
+    pointLight.radius = radius;
+    pointLight.decay = decay;
+    return true;
+}
+
+bool LightManager::SetPointLightPosition(PointLightHandle handle, const Vector3& position)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    pointLightData_->lights[handle].position = position;
+    return true;
+}
+
+bool LightManager::SetPointLightIntensity(PointLightHandle handle, float intensity)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    pointLightData_->lights[handle].intensity = intensity;
+    return true;
+}
+
+bool LightManager::SetPointLightColor(PointLightHandle handle, const Vector4& color)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    pointLightData_->lights[handle].color = color;
+    return true;
+}
+
+bool LightManager::SetPointLightRadius(PointLightHandle handle, float radius)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    pointLightData_->lights[handle].radius = radius;
+    return true;
+}
+
+bool LightManager::SetPointLightDecay(PointLightHandle handle, float decay)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    pointLightData_->lights[handle].decay = decay;
+    return true;
+}
+
+bool LightManager::RemovePointLight(PointLightHandle handle)
+{
+    if (!IsValidDynamicPointLightHandle(handle)) {
+        return false;
+    }
+
+    pointLightData_->lights[handle] = {};
+    if (pointLightData_->activeCount > 0) {
+        pointLightData_->activeCount--;
+    }
+    return true;
+}
+
+void LightManager::ClearDynamicPointLights()
+{
+    for (uint32_t lightIndex = 1; lightIndex < kMaxPointLights; ++lightIndex) {
+        pointLightData_->lights[lightIndex] = {};
+    }
+
+    pointLightData_->activeCount = 0;
+    if (pointLightData_->lights[0].isActive != 0) {
+        pointLightData_->activeCount = 1;
+    }
+}
+
+bool LightManager::IsValidDynamicPointLightHandle(PointLightHandle handle) const
+{
+    if (!pointLightData_) {
+        return false;
+    }
+    if (handle == kInvalidPointLightHandle || handle == 0 || handle >= kMaxPointLights) {
+        return false;
+    }
+    return pointLightData_->lights[handle].isActive != 0;
 }
 
 void LightManager::SetSpotLightColor(const Vector4& color)
