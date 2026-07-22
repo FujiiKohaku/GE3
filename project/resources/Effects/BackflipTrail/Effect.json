@@ -1,0 +1,34 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl", "Update": "UpdateTrail.CS.hlsl",
+    "Vertex": "Trail.VS.hlsl", "Pixel": "Render.PS.hlsl"
+  },
+  "Emitter": { "Shape": "Sphere", "Count": 1, "Radius": 0.05, "Frequency": 0.01 },
+  "Particle": {
+    "LifeTime": 0.48, "StartScale": 0.25, "EndScale": 0.05,
+    "StartRotation": 0.0, "RotationSpeed": 0.0,
+    "Velocity": [0.0, 0.0, 0.0],
+    "StartColor": [0.75, 0.98, 1.0, 0.95],
+    "EndColor": [0.30, 0.60, 1.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": false, "Gravity": 0.0,
+    "EnableDrag": false, "Drag": 1.0,
+    "EnableNoise": false, "NoiseStrength": 0.0,
+    "EnableAttraction": false, "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "resources/Effects/Jet/jet.png", "Type": "Trail",
+    "BlendMode": "Add", "DepthTest": true, "DepthWrite": false,
+    "CullMode": "None", "EmissionStrength": 2.0,
+    "Loop": true, "Duration": -1.0
+  },
+  "Trail": {
+    "MaxPoints": 64, "LifeTime": 0.48,
+    "MinVertexDistance": 0.035, "BreakDistance": 7.0,
+    "StartWidth": 1.15, "EndWidth": 0.04,
+    "StartColor": [0.75, 0.98, 1.0, 0.92],
+    "EndColor": [0.25, 0.45, 1.0, 0.0],
+    "TextureTiling": 1.5, "RootExtension": 0.15, "FaceCamera": true
+  }
+}

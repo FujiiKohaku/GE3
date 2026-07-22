@@ -1,5 +1,7 @@
 #include "ModelManager.h"
+#include "Engine/Animation/Event/AnimationEventLoader.h"
 #include "Engine/math/MatrixMath.h"
+#include <filesystem>
 #include <utility>
 
 namespace {
@@ -87,6 +89,11 @@ Model* ModelManager::Load(const std::string& filepath)
     }
 
     auto model = std::make_unique<Model>();
+#ifdef _DEBUG
+    const std::filesystem::path modelPath =
+        std::filesystem::path("resources/Models") / filepath;
+    AnimationEventLoader::EnsureEventFilesForModel(modelPath);
+#endif
     model->Initialize(modelCommon_.get(), "resources/Models", filepath);
 
     Model* raw = model.get();

@@ -1,0 +1,12 @@
+{
+  "Animation": "Robot_RocketUppercut",
+  "Duration": 2.25,
+  "Events": [
+    {
+      "Time": 0.28,
+      "Name": "PlayEffect",
+      "Bone": "hand.R",
+      "Value": "HandFlame"
+    }
+  ]
+}

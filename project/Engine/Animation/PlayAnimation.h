@@ -1,4 +1,5 @@
 #pragma once
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ public:
     Quaternion CalculateValue(const std::vector<KeyframeQuaternion>& keyframes, float time);
     void ApplyAnimation(Skeleton& skeleton,const Animation& animation,float animationTime);
     void ApplyBlendAnimation(Skeleton& skeleton, const Animation& prevAnimation, float prevTime, const Animation& nextAnimation, float nextTime, float blendRatio);
+    bool PopTriggeredEvent(AnimationEvent& event);
     const Skeleton* GetSkeleton() const
     {
         return skeleton_;
@@ -30,8 +32,15 @@ public:
 
 
 private:
+    void QueueTriggeredEvents(
+        float previousTime,
+        float currentTime,
+        float deltaTime);
+
     const Animation* animation_ = nullptr;
     float animationTime_ = 0.0f;
+    bool hasAdvancedAnimation_ = false;
+    std::deque<AnimationEvent> triggeredEvents_;
     Skeleton* skeleton_ = nullptr;
 
     // Animation Blending

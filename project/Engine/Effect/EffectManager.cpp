@@ -930,6 +930,22 @@ bool EffectManager::SetEffectPosition(EffectHandle handle, const Vector3& positi
     return true;
 }
 
+bool EffectManager::SetEffectVelocity(EffectHandle handle, const Vector3& velocity)
+{
+    const size_t index = FindActiveEffectIndex(handle);
+    if (index == static_cast<size_t>(-1)) {
+        return false;
+    }
+
+    EffectSettings* settings = activeResources_[index].effectSettingsData;
+    if (!settings) {
+        return false;
+    }
+
+    settings->velocity = velocity;
+    return true;
+}
+
 bool EffectManager::StopEffect(EffectHandle handle)
 {
     const size_t index = FindActiveEffectIndex(handle);

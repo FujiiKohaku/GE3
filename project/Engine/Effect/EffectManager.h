@@ -101,6 +101,7 @@ public:
     }
 
     bool SetEffectPosition(EffectHandle handle, const Vector3& position);
+    bool SetEffectVelocity(EffectHandle handle, const Vector3& velocity);
     bool StopEffect(EffectHandle handle);
     // シーンに属する再生中エフェクトだけを停止する。
     // シェーダーやパイプラインなどの共通リソースは保持する。

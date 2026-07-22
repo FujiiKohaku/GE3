@@ -1,0 +1,28 @@
+{
+  "Animation": "Robot_CombatIdle",
+  "Duration": 4.0416665,
+  "Events": [
+    {
+      "Time": 0.18,
+      "Name": "PlayEffect",
+      "Value": "BackflipDust",
+      "Bone": "foot.L"
+    },
+    {
+      "Time": 0.28,
+      "Name": "StartTrail",
+      "Value": "BackflipTrail",
+      "Bone": "chest"
+    },
+    {
+      "Time": 3.42,
+      "Name": "StopTrail"
+    },
+    {
+      "Time": 3.55,
+      "Name": "PlayEffect",
+      "Value": "BackflipDust",
+      "Bone": "foot.R"
+    }
+  ]
+}

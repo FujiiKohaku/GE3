@@ -1,0 +1,18 @@
+{
+  "Animation": "Robot_Walk",
+  "Duration": 1.375,
+  "Events": [
+    {
+      "Time": 0.08,
+      "Name": "PlayEffect",
+      "Value": "FootstepDust",
+      "Bone": "foot.L"
+    },
+    {
+      "Time": 0.72,
+      "Name": "PlayEffect",
+      "Value": "FootstepDust",
+      "Bone": "foot.R"
+    }
+  ]
+}

@@ -43,7 +43,11 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float32_t t = (float32_t) DTid.x / (float32_t) gEmitter.count;
     float32_t3 velocity = gEffectSettings.velocity;
     float32_t dt = gPerFrame.deltaTime * (1.0f - t);
-    float32_t dragFactor = gEffectSettings.enableDrag != 0 ? pow(max(gEffectSettings.drag, 0.0f), dt * 30.0f) : 1.0f;
+    float32_t dragFactor = 1.0f;
+    if (gEffectSettings.enableDrag != 0)
+    {
+        dragFactor = pow(max(gEffectSettings.drag, 0.0f), dt * 30.0f);
+    }
 
     gParticles[particleIndex].translate =
         lerp(gEmitter.prevTranslate, gEmitter.translate, t) +

@@ -1,5 +1,20 @@
 # KohakuEngine
 
+## TestScene Player Movement Effects
+
+TestSceneのプレイヤー動作に、次のGPU Particleを追加している。
+
+- `FootstepDust`: 歩行中、左右の足ボーンから交互に土埃を発生
+- `DashDust`: ダッシュ中、左右の足ボーンから強い土埃を発生
+- `LandingDust`: ジャンプの接地判定時に広い土埃を発生
+- `BackflipDust`: 待機中のバク転開始時と着地時に土埃を発生
+- `BackflipTrail`: バク転中、胸ボーンを追跡する専用Trailを発生
+- `BodySpeedLines`: ダッシュ中、進行方向と逆向きに流れる速度線を発生
+
+歩行・ダッシュ・バク転の発生時刻は、モデルと同じ階層の
+`AnimationEvents/Robot_Walk.json`、`Robot_Dash.json`、`Robot_CombatIdle.json`で調整できる。
+土埃の量・寿命・色・大きさ、Trailの幅と寿命、速度線の密度は各Effectの`Effect.json`で調整できる。
+
 DirectX 12とC++20で開発している3Dゲームエンジンです。描画、GPUパーティクル、ポストエフェクト、モデル・テクスチャ管理、シーン管理、デバッグ機能をまとめています。
 
 ## 動作環境
@@ -284,3 +299,40 @@ Effectごとに最大16個のFieldをJSONから設定できる。通常のGPU Pa
 `Fields`自体を省略したEffectは、追加のField Compute Passを実行せず従来通り動作する。
 `World`指定も現段階ではそのEffectが生成したParticleだけを対象とし、シーン内の全Effectへ作用する
 グローバルFieldではない。`FieldDemo`にLocal WindとLocal Vortexの確認用設定を追加済み。
+
+## Animation Events
+
+glTF内のAnimation名と時刻を使い、Bone位置からEffectなどのゲーム処理を発生させる。
+Debugビルドでモデルを初めてインポートすると、glTFと同じ階層の`AnimationEvents`フォルダへ
+AnimationごとのJSONテンプレートを不足分だけ生成する。既存JSONは上書きしない。
+Releaseビルドと通常の再生処理は生成済みJSONの読み込みだけを行う。
+
+```text
+precision_robot_rigged_single_gltf/
+├─ precision_robot_rigged_single.gltf
+└─ AnimationEvents/
+   ├─ Robot_Punch.json
+   ├─ Robot_Punch_L.json
+   └─ Robot_RocketUppercut.json
+```
+
+```json
+{
+  "Animation": "Robot_Punch",
+  "Duration": 1.5,
+  "Events": [
+    {
+      "Time": 0.2,
+      "Name": "PlayEffect",
+      "Bone": "hand.R",
+      "Value": "HandFlame"
+    }
+  ]
+}
+```
+
+`PlayAnimation`は前フレームから現在フレームまでに通過したイベントをキューへ追加する。
+Animationのループ境界、初回再生、ブレンド中の新しいAnimationに対応し、`deltaTime`が0の場合は
+イベントを発生させない。利用側は`PopTriggeredEvent()`でイベントを順番に取得する。
+TestSceneの3段パンチコンボは、右手・左手・右手のBoneに設定したJSONイベントから
+`HandFlame`を発生させる。

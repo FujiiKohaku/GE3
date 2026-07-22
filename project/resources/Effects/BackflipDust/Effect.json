@@ -1,0 +1,25 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl", "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl", "Pixel": "Render.PS.hlsl"
+  },
+  "Emitter": { "Shape": "Sphere", "Count": 28, "Radius": 0.50, "Frequency": 0.001 },
+  "Particle": {
+    "LifeTime": 0.85, "StartScale": 0.34, "EndScale": 1.65,
+    "StartRotation": 0.0, "RotationSpeed": 2.0,
+    "Velocity": [0.0, 0.0, 0.0],
+    "StartColor": [0.55, 0.39, 0.22, 0.78],
+    "EndColor": [0.24, 0.15, 0.08, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": true, "Gravity": -1.4,
+    "EnableDrag": true, "Drag": 0.95,
+    "EnableNoise": false, "NoiseStrength": 0.0,
+    "EnableAttraction": false, "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "resources/Effects/Smoke/smoke.png", "MeshType": "Board",
+    "BlendMode": "Normal", "DepthTest": true, "DepthWrite": false,
+    "CullMode": "None", "Loop": false, "Duration": 0.9
+  }
+}

@@ -191,49 +191,6 @@ void TestScene1::Update()
             }
         }
 
-        // アニメーションに合わせて手からパーティクルを出す
-        if (attackTimer_ >= 0.2f && !hasEmittedParticle_) {
-            hasEmittedParticle_ = true;
-
-            // 左右の手、およびビーム発射用ジョイント(BeamSocket)のワールド座標を取得する (純粋なジョイント行列計算)
-            Vector3 leftHandPos = playerPos_;
-            Vector3 rightHandPos = playerPos_;
-            Vector3 beamSocketPos = playerPos_;
-
-            Skeleton* skeleton = playerActor_->GetSkeleton();
-            if (skeleton) {
-                Matrix4x4 worldMatrix = playerActor_->GetObject()->GetWorldMatrix();
-
-                // 左手
-                auto itL = skeleton->jointMap.find("hand.L");
-                if (itL != skeleton->jointMap.end()) {
-                    const Joint& jointL = skeleton->joints[itL->second];
-                    Vector3 localPosL = { jointL.skeletonSpaceMatrix.m[3][0], jointL.skeletonSpaceMatrix.m[3][1], jointL.skeletonSpaceMatrix.m[3][2] };
-                    leftHandPos = MatrixMath::Transform(localPosL, worldMatrix);
-                }
-
-                // 右手
-                auto itR = skeleton->jointMap.find("hand.R");
-                if (itR != skeleton->jointMap.end()) {
-                    const Joint& jointR = skeleton->joints[itR->second];
-                    Vector3 localPosR = { jointR.skeletonSpaceMatrix.m[3][0], jointR.skeletonSpaceMatrix.m[3][1], jointR.skeletonSpaceMatrix.m[3][2] };
-                    rightHandPos = MatrixMath::Transform(localPosR, worldMatrix);
-                }
-
-                // ビーム発射用ソケット (モデル設定の射撃口ジョイント)
-                auto itB = skeleton->jointMap.find("BeamSocket");
-                if (itB != skeleton->jointMap.end()) {
-                    const Joint& jointB = skeleton->joints[itB->second];
-                    Vector3 localPosB = { jointB.skeletonSpaceMatrix.m[3][0], jointB.skeletonSpaceMatrix.m[3][1], jointB.skeletonSpaceMatrix.m[3][2] };
-                    beamSocketPos = MatrixMath::Transform(localPosB, worldMatrix);
-                }
-            }
-
-            // ジョイントの正確な位置からエフェクトを発生 (手から湧き上がる炎エフェクト "HandFlame" に変更)
-            EffectManager::GetInstance()->PlayEffect("HandFlame", leftHandPos);
-            EffectManager::GetInstance()->PlayEffect("HandFlame", rightHandPos);
-        }
-
         // 攻撃アニメーション終了判定
         float attackStepDuration = 0.7f;
         if (comboStep_ == 2) {
@@ -245,7 +202,6 @@ void TestScene1::Update()
                 comboStep_++;
                 queuedComboAttacks_--;
                 attackTimer_ = 0.0f;
-                hasEmittedParticle_ = false;
 
                 if (comboStep_ == 1) {
                     playerActor_->GetPlayAnimation()->SetAnimation(&leftPunchAnimation_, 0.1f);
@@ -266,7 +222,6 @@ void TestScene1::Update()
             // 攻撃開始 (両手ビームアニメーション)
             currentAnimState_ = PlayerAnimState::Attacking;
             attackTimer_ = 0.0f;
-            hasEmittedParticle_ = false;
             comboStep_ = 0;
             queuedComboAttacks_ = 0;
             idleVariationTimer_ = 0.0f;
@@ -332,6 +287,10 @@ void TestScene1::Update()
             playerPos_.y = -5.0f;
             isJumping_ = false;
 
+            EffectManager::GetInstance()->PlayEffect(
+                "LandingDust",
+                { playerPos_.x, -4.85f, playerPos_.z });
+
             // 着地後のステート変更
             if (hasMoveInput) {
                 if (isDashInput) {
@@ -363,6 +322,8 @@ void TestScene1::Update()
         animDeltaTime = 0.0f;
     }
     playerActor_->Update(animDeltaTime);
+    ProcessAnimationEvents();
+    UpdateMovementEffects();
     UpdateKatanaAttachment();
     if (sneakWalkActor_) {
         sneakWalkActor_->Update(1.0f / 60.0f);
@@ -432,6 +393,9 @@ void TestScene1::DrawImGui()
         static_cast<unsigned int>(postEffectTypes_.size()));
     ImGui::Separator();
     ImGui::Text("Player Pos: (%.2f, %.2f, %.2f)", playerPos_.x, playerPos_.y, playerPos_.z);
+    if (!lastAnimationEventName_.empty()) {
+        ImGui::Text("Last Animation Event: %s", lastAnimationEventName_.c_str());
+    }
     ImGui::Text("Camera Yaw: %.2f, Pitch: %.2f", cameraYaw_, cameraPitch_);
     ImGui::Separator();
     ImGui::SliderFloat("Player Scale", &playerScale_, 0.1f, 50.0f);
@@ -450,6 +414,7 @@ void TestScene1::DrawImGui()
 
 void TestScene1::Finalize()
 {
+    StopMovementEffects();
     if (fieldDemoEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(fieldDemoEffectHandle_);
         fieldDemoEffectHandle_ = kInvalidEffectHandle;
@@ -493,6 +458,138 @@ void TestScene1::UpdateKatanaAttachment()
 
     katanaObj_->SetCustomWorldMatrix(katanaWorldMatrix);
     katanaObj_->Update();
+}
+
+void TestScene1::ProcessAnimationEvents()
+{
+    if (!playerActor_ || !playerActor_->GetPlayAnimation()) {
+        return;
+    }
+
+    AnimationEvent event;
+    while (playerActor_->GetPlayAnimation()->PopTriggeredEvent(event)) {
+        lastAnimationEventName_ = event.name;
+        if (event.value.empty() && event.name != "StopTrail") {
+            continue;
+        }
+
+        Vector3 eventPosition = playerPos_;
+        if (!event.bone.empty()) {
+            TryGetJointWorldPosition(event.bone, eventPosition);
+        }
+
+        if (event.name == "PlayEffect") {
+            EffectManager::GetInstance()->PlayEffect(
+                event.value,
+                eventPosition);
+        } else if (event.name == "StartTrail") {
+            if (backflipTrailEffectHandle_ != kInvalidEffectHandle) {
+                EffectManager::GetInstance()->StopEffect(backflipTrailEffectHandle_);
+            }
+            backflipTrailEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect(
+                event.value,
+                eventPosition);
+        } else if (event.name == "StopTrail") {
+            if (backflipTrailEffectHandle_ != kInvalidEffectHandle) {
+                EffectManager::GetInstance()->StopEffect(backflipTrailEffectHandle_);
+                backflipTrailEffectHandle_ = kInvalidEffectHandle;
+            }
+        }
+    }
+}
+
+void TestScene1::UpdateMovementEffects()
+{
+    EffectManager* effectManager = EffectManager::GetInstance();
+    Vector3 chestPosition = {
+        playerPos_.x,
+        playerPos_.y + 2.0f,
+        playerPos_.z
+    };
+    TryGetJointWorldPosition("chest", chestPosition);
+
+    if (currentAnimState_ == PlayerAnimState::Dashing) {
+        if (bodySpeedLineEffectHandle_ == kInvalidEffectHandle) {
+            bodySpeedLineEffectHandle_ = effectManager->PlayLoopEffect(
+                "BodySpeedLines",
+                chestPosition);
+        }
+
+        if (bodySpeedLineEffectHandle_ != kInvalidEffectHandle) {
+            Vector3 backwardVelocity = {
+                std::sin(playerRot_.y) * 7.0f,
+                0.0f,
+                -std::cos(playerRot_.y) * 7.0f
+            };
+            bool positionUpdated = effectManager->SetEffectPosition(
+                bodySpeedLineEffectHandle_,
+                chestPosition);
+            bool velocityUpdated = effectManager->SetEffectVelocity(
+                bodySpeedLineEffectHandle_,
+                backwardVelocity);
+            if (!positionUpdated || !velocityUpdated) {
+                bodySpeedLineEffectHandle_ = kInvalidEffectHandle;
+            }
+        }
+    } else if (bodySpeedLineEffectHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(bodySpeedLineEffectHandle_);
+        bodySpeedLineEffectHandle_ = kInvalidEffectHandle;
+    }
+
+    if (backflipTrailEffectHandle_ != kInvalidEffectHandle) {
+        if (currentAnimState_ != PlayerAnimState::CombatIdle) {
+            effectManager->StopEffect(backflipTrailEffectHandle_);
+            backflipTrailEffectHandle_ = kInvalidEffectHandle;
+        } else if (!effectManager->SetEffectPosition(
+            backflipTrailEffectHandle_,
+            chestPosition)) {
+            backflipTrailEffectHandle_ = kInvalidEffectHandle;
+        }
+    }
+}
+
+void TestScene1::StopMovementEffects()
+{
+    EffectManager* effectManager = EffectManager::GetInstance();
+    if (bodySpeedLineEffectHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(bodySpeedLineEffectHandle_);
+        bodySpeedLineEffectHandle_ = kInvalidEffectHandle;
+    }
+    if (backflipTrailEffectHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(backflipTrailEffectHandle_);
+        backflipTrailEffectHandle_ = kInvalidEffectHandle;
+    }
+}
+
+bool TestScene1::TryGetJointWorldPosition(
+    const std::string& jointName,
+    Vector3& worldPosition) const
+{
+    if (!playerActor_ || !playerActor_->GetObject()) {
+        return false;
+    }
+
+    Skeleton* skeleton = playerActor_->GetSkeleton();
+    if (!skeleton) {
+        return false;
+    }
+
+    std::map<std::string, int32_t>::const_iterator jointIterator =
+        skeleton->jointMap.find(jointName);
+    if (jointIterator == skeleton->jointMap.end()) {
+        return false;
+    }
+
+    const Joint& joint = skeleton->joints[jointIterator->second];
+    const Vector3 localPosition = {
+        joint.skeletonSpaceMatrix.m[3][0],
+        joint.skeletonSpaceMatrix.m[3][1],
+        joint.skeletonSpaceMatrix.m[3][2],
+    };
+    worldPosition = MatrixMath::Transform(
+        localPosition,
+        playerActor_->GetObject()->GetWorldMatrix());
+    return true;
 }
 
 void TestScene1::ApplySelectedPostEffect()

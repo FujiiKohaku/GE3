@@ -1,4 +1,7 @@
 #include "AnimationLoder.h"
+#include "Event/AnimationEventLoader.h"
+
+#include <filesystem>
 
 namespace {
 constexpr double kDefaultTicksPerSecond = 25.0;
@@ -23,6 +26,10 @@ Animation AnimationLoder::LoadAnimationFile(
     }
 
     aiAnimation* animAssimp = scene->mAnimations[animationIndex];
+    animation.name = animAssimp->mName.C_Str();
+    if (animation.name.empty()) {
+        animation.name = "Animation_" + std::to_string(animationIndex);
+    }
 
     double ticksPerSecond = animAssimp->mTicksPerSecond;
     if (ticksPerSecond <= 0.0) {
@@ -72,6 +79,11 @@ Animation AnimationLoder::LoadAnimationFile(
             nodeAnim.scale.push_back(kf);
         }
     }
+
+    animation.events = AnimationEventLoader::LoadEvents(
+        std::filesystem::path(filePath),
+        animation.name,
+        animation.duration);
 
     return animation;
 }

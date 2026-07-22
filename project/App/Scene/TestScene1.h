@@ -25,6 +25,12 @@ public:
 private:
     void ApplySelectedPostEffect();
     void UpdateKatanaAttachment();
+    void ProcessAnimationEvents();
+    void UpdateMovementEffects();
+    void StopMovementEffects();
+    bool TryGetJointWorldPosition(
+        const std::string& jointName,
+        Vector3& worldPosition) const;
 
     enum class PlayerAnimState {
         Idle,
@@ -64,6 +70,8 @@ private:
     float combatIdleTimer_ = 0.0f;
 
     EffectHandle fieldDemoEffectHandle_ = kInvalidEffectHandle;
+    EffectHandle bodySpeedLineEffectHandle_ = kInvalidEffectHandle;
+    EffectHandle backflipTrailEffectHandle_ = kInvalidEffectHandle;
     bool showFieldDebug_ = true;
 
     // TPS Camera
@@ -78,9 +86,9 @@ private:
 
     // Attack Control
     float attackTimer_ = 0.0f;
-    bool hasEmittedParticle_ = false;
     int comboStep_ = 0;
     int queuedComboAttacks_ = 0;
+    std::string lastAnimationEventName_;
 
     std::array<PostEffectType, 34> postEffectTypes_ = {
         PostEffectType::Copy,

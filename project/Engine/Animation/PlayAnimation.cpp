@@ -63,6 +63,8 @@ void PlayAnimation::SetAnimation(const Animation* animation, float blendDuration
 
     animation_ = animation;
     animationTime_ = 0.0f;
+    hasAdvancedAnimation_ = false;
+    triggeredEvents_.clear();
 }
 
 void PlayAnimation::Update(float deltaTime) {
@@ -70,7 +72,12 @@ void PlayAnimation::Update(float deltaTime) {
         return;
     }
 
+    const float previousAnimationTime = animationTime_;
     animationTime_ = AdvanceLoopingTime(animationTime_, deltaTime, animation_->duration);
+    QueueTriggeredEvents(
+        previousAnimationTime,
+        animationTime_,
+        deltaTime);
 
     // ブレンド更新
     bool isBlending = (prevAnimation_ != nullptr && blendTime_ < blendDuration_);
@@ -101,6 +108,55 @@ void PlayAnimation::Update(float deltaTime) {
         }
         skeleton_->UpdateSkeleton();
     }
+}
+
+bool PlayAnimation::PopTriggeredEvent(AnimationEvent& event)
+{
+    if (triggeredEvents_.empty()) {
+        return false;
+    }
+
+    event = triggeredEvents_.front();
+    triggeredEvents_.pop_front();
+    return true;
+}
+
+void PlayAnimation::QueueTriggeredEvents(
+    float previousTime,
+    float currentTime,
+    float deltaTime)
+{
+    if (!animation_ || deltaTime <= 0.0f ||
+        animation_->duration <= 0.0f ||
+        animation_->events.empty()) {
+        return;
+    }
+
+    const bool crossedFullLoop = deltaTime >= animation_->duration;
+    const bool wrapped = currentTime < previousTime;
+
+    for (const AnimationEvent& event : animation_->events) {
+        bool shouldTrigger = false;
+        if (!hasAdvancedAnimation_) {
+            if (event.time >= 0.0f && event.time <= currentTime) {
+                shouldTrigger = true;
+            }
+        } else if (crossedFullLoop) {
+            shouldTrigger = true;
+        } else if (wrapped) {
+            if (event.time > previousTime || event.time <= currentTime) {
+                shouldTrigger = true;
+            }
+        } else if (event.time > previousTime && event.time <= currentTime) {
+            shouldTrigger = true;
+        }
+
+        if (shouldTrigger) {
+            triggeredEvents_.push_back(event);
+        }
+    }
+
+    hasAdvancedAnimation_ = true;
 }
 
 Vector3 PlayAnimation::CalculateValue(const std::vector<KeyframeVector3>& keyframes,float time)
