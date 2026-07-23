@@ -50,13 +50,17 @@ void Renderer::Draw(SceneManager* sceneManager)
     SrvManager::GetInstance()->PreDraw();
 
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
-    if (defaultCamera != nullptr) {
-        EffectManager::GetInstance()->SetCamera(defaultCamera);
-        EffectManager::GetInstance()->UpdatePerView();
-    }
+    EffectManager* effectManager = EffectManager::GetInstance();
+    if (effectManager->IsInitialized()) {
+        if (defaultCamera != nullptr) {
+            effectManager->SetCamera(defaultCamera);
+            effectManager->UpdatePerView();
+        }
 
-    D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = postEffectManager_->GetFogConstantBufferView();
-    EffectManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
+        D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView =
+            postEffectManager_->GetFogConstantBufferView();
+        effectManager->SetFogConstantBufferView(fogConstantBufferView);
+    }
 
     // Offscreen draw start
     postEffectManager_->PreDrawDepth();

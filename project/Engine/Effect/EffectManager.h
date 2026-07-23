@@ -67,6 +67,7 @@ public:
     EffectManager& operator=(const EffectManager&) = delete;
 
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
+    bool IsInitialized() const { return isInitialized_; }
 
     void BeginWarmUp();
     void UpdateWarmUp();
@@ -408,6 +409,7 @@ private:
     std::vector<std::string> warmUpEffectNames_;
     size_t warmUpEffectIndex_ = 0;
     bool isWarmUpComplete_ = false;
+    bool isInitialized_ = false;
 
     static constexpr uint32_t kMaxGPUParticle = 1024;
     static constexpr uint32_t kMaxTrailPoints = 64;

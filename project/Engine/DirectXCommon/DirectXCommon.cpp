@@ -610,9 +610,11 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::ws
         throw std::runtime_error(message);
     }
 
+#ifdef _DEBUG
     Logger::Log(
         "Loaded compiled shader. HLSL:" + sourcePath.generic_string() +
         " DXIL:" + compiledPath.generic_string());
+#endif
     return shaderBlob;
 }
 

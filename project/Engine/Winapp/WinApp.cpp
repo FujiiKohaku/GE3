@@ -122,6 +122,7 @@ void WinApp::initialize()
     wc_.hCursor = LoadCursor(nullptr, IDC_ARROW); // カーソル設定
 
     // ウィンドウクラスを登録
+    wc_.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
     RegisterClass(&wc_);
 
     // クライアント領域を元にウィンドウサイズを調整
@@ -138,6 +139,10 @@ void WinApp::initialize()
         wrc.bottom - wrc.top, // 高さ
         nullptr, nullptr, wc_.hInstance, nullptr);
 
+}
+
+void WinApp::Show()
+{
     // ウィンドウ表示
     ShowWindow(hwnd_, SW_SHOW);
 }

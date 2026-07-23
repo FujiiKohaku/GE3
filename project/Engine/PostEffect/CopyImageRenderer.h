@@ -76,8 +76,9 @@ public:
 
 private:
     void CreateRootSignature();
-    // void CreateGraphicsPipeline();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(const std::wstring& pixelShaderPath);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> GetOrCreateGraphicsPipeline(PostEffectType type);
+    const wchar_t* GetPixelShaderPath(PostEffectType type) const;
     void CreatePostEffectParameterResource();
 
 private:

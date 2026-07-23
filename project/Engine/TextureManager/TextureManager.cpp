@@ -269,7 +269,9 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
     }
 
     dxCommon_->GetDevice()->CreateShaderResourceView(textureData.resource.Get(), &srvDesc, textureData.srvHandleCPU);
+#ifdef _DEBUG
     Logger::Log(std::format("Texture Loaded: {}, SRV Index: {}", textureKey, textureData.srvIndex));
+#endif
 }
 
 void TextureManager::FlushUploads()

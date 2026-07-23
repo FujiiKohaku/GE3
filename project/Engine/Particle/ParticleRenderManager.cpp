@@ -254,10 +254,12 @@ Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::LoadCompiledShaderWithLo
         return nullptr;
     }
 
+#ifdef _DEBUG
     Logger::Log(
         "Load particle render shader. Effect:" + effectName +
         " Stage:" + shaderStage +
         " Path:" + fullShaderPath.generic_string());
+#endif
 
     Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob =
         dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));

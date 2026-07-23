@@ -200,6 +200,10 @@ EffectManager* EffectManager::GetInstance()
 
 void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
+    if (isInitialized_) {
+        return;
+    }
+
 #ifdef _DEBUG
     const std::chrono::steady_clock::time_point initializeBeginTime =
         std::chrono::steady_clock::now();
@@ -251,6 +255,7 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
 #endif
 
     RegisterDefaultEffects();
+    isInitialized_ = true;
 
 #ifdef _DEBUG
     Logger::Log(std::format(
@@ -816,10 +821,12 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
         return nullptr;
     }
 
+#ifdef _DEBUG
     Logger::Log(
         "Load effect compute shader. Effect:" + effectName +
         " Stage:" + shaderStage +
         " Path:" + fullShaderPath.generic_string());
+#endif
 
     Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob =
         dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));

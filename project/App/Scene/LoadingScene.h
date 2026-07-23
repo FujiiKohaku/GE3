@@ -24,4 +24,5 @@ private:
     std::unique_ptr<Sprite> progressBackSprite_;
     std::unique_ptr<Sprite> progressSprite_;
     bool hasDrawnFirstFrame_ = false;
+    bool gameResourcesInitialized_ = false;
 };

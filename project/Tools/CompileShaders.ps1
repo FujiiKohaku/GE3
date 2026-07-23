@@ -3,7 +3,10 @@ param(
     [string]$ProjectRoot,
 
     [Parameter(Mandatory = $true)]
-    [string]$DxcPath
+    [string]$DxcPath,
+
+    [ValidateRange(1, 64)]
+    [int]$MaxParallel = 12
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,7 +65,7 @@ foreach ($includeFile in $includeFiles) {
     }
 }
 
-$compiledCount = 0
+$compileJobs = New-Object System.Collections.ArrayList
 $skippedCount = 0
 
 foreach ($sourceRoot in $sourceRoots) {
@@ -99,37 +102,113 @@ foreach ($sourceRoot in $sourceRoots) {
             continue
         }
 
-        New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
-
-        $arguments = @(
-            "-E", "main",
-            "-T", $profile,
-            "-O3",
-            "-Zpr",
-            "-Fo", $outputPath,
-            $shaderFile.FullName
-        )
-
-        Write-ShaderLog "Log" "Compiling $relativePath -> $outputRelativePath ($profile)"
-        $compilerOutput = & $DxcPath @arguments 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            foreach ($outputLine in $compilerOutput) {
-                Write-ShaderLog "Error" ([string]$outputLine)
-            }
-
-            if (Test-Path -LiteralPath $outputPath -PathType Leaf) {
-                Remove-Item -LiteralPath $outputPath -Force
-            }
-
-            throw "Shader compilation failed: $relativePath"
+        $compileJob = [PSCustomObject]@{
+            SourcePath = $shaderFile.FullName
+            RelativePath = $relativePath
+            OutputPath = $outputPath
+            OutputRelativePath = $outputRelativePath
+            OutputDirectory = $outputDirectory
+            Profile = $profile
         }
-
-        foreach ($outputLine in $compilerOutput) {
-            Write-ShaderLog "Warning" ([string]$outputLine)
-        }
-
-        $compiledCount++
+        $compileJobs.Add($compileJob) | Out-Null
     }
+}
+
+$compiledCount = 0
+$failedShaderPaths = New-Object System.Collections.ArrayList
+$runningJobs = New-Object System.Collections.ArrayList
+$nextJobIndex = 0
+
+Write-ShaderLog "Log" "Shader compile queue started. Pending: $($compileJobs.Count), Max parallel: $MaxParallel"
+
+while ($nextJobIndex -lt $compileJobs.Count -or $runningJobs.Count -gt 0) {
+    while ($nextJobIndex -lt $compileJobs.Count -and $runningJobs.Count -lt $MaxParallel) {
+        $compileJob = $compileJobs[$nextJobIndex]
+        $nextJobIndex++
+
+        New-Item -ItemType Directory -Path $compileJob.OutputDirectory -Force | Out-Null
+
+        $processArguments = '-E main -T {0} -O3 -Zpr -Fo "{1}" "{2}"' -f `
+            $compileJob.Profile, `
+            $compileJob.OutputPath, `
+            $compileJob.SourcePath
+
+        $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $processStartInfo.FileName = $DxcPath
+        $processStartInfo.Arguments = $processArguments
+        $processStartInfo.UseShellExecute = $false
+        $processStartInfo.CreateNoWindow = $true
+        $processStartInfo.RedirectStandardOutput = $true
+        $processStartInfo.RedirectStandardError = $true
+
+        $compilerProcess = New-Object System.Diagnostics.Process
+        $compilerProcess.StartInfo = $processStartInfo
+
+        Write-ShaderLog "Log" "Compiling $($compileJob.RelativePath) -> $($compileJob.OutputRelativePath) ($($compileJob.Profile))"
+        if (-not $compilerProcess.Start()) {
+            throw "Failed to start dxc.exe: $($compileJob.RelativePath)"
+        }
+
+        $runningJob = [PSCustomObject]@{
+            CompileJob = $compileJob
+            Process = $compilerProcess
+        }
+        $runningJobs.Add($runningJob) | Out-Null
+    }
+
+    for ($runningJobIndex = $runningJobs.Count - 1; $runningJobIndex -ge 0; $runningJobIndex--) {
+        $runningJob = $runningJobs[$runningJobIndex]
+        if (-not $runningJob.Process.HasExited) {
+            continue
+        }
+
+        $standardOutput = $runningJob.Process.StandardOutput.ReadToEnd()
+        $standardError = $runningJob.Process.StandardError.ReadToEnd()
+        $runningJob.Process.WaitForExit()
+        $exitCode = $runningJob.Process.ExitCode
+        $runningJob.Process.Dispose()
+
+        $compilerOutput = @()
+        if (-not [string]::IsNullOrWhiteSpace($standardOutput)) {
+            $compilerOutput += $standardOutput -split "\r?\n"
+        }
+        if (-not [string]::IsNullOrWhiteSpace($standardError)) {
+            $compilerOutput += $standardError -split "\r?\n"
+        }
+
+        if ($exitCode -ne 0) {
+            foreach ($outputLine in $compilerOutput) {
+                if (-not [string]::IsNullOrWhiteSpace($outputLine)) {
+                    Write-ShaderLog "Error" ([string]$outputLine)
+                }
+            }
+
+            if (Test-Path -LiteralPath $runningJob.CompileJob.OutputPath -PathType Leaf) {
+                Remove-Item -LiteralPath $runningJob.CompileJob.OutputPath -Force
+            }
+
+            $failedShaderPaths.Add($runningJob.CompileJob.RelativePath) | Out-Null
+        } else {
+            foreach ($outputLine in $compilerOutput) {
+                if (-not [string]::IsNullOrWhiteSpace($outputLine)) {
+                    Write-ShaderLog "Warning" ([string]$outputLine)
+                }
+            }
+
+            $compiledCount++
+        }
+
+        $runningJobs.RemoveAt($runningJobIndex)
+    }
+
+    if ($runningJobs.Count -gt 0) {
+        Start-Sleep -Milliseconds 20
+    }
+}
+
+if ($failedShaderPaths.Count -gt 0) {
+    $failedShaderList = $failedShaderPaths -join ", "
+    throw "Shader compilation failed: $failedShaderList"
 }
 
 Write-ShaderLog "Log" "Shader build completed. Compiled: $compiledCount, Up-to-date: $skippedCount"

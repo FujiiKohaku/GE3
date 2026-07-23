@@ -2,16 +2,12 @@
 #include "Engine/Logger/Logger.h"
 #include "Scene/Game.h"
 
-#ifdef _DEBUG
 #include <chrono>
-#endif
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 {
-#ifdef _DEBUG
     const std::chrono::steady_clock::time_point startupBeginTime =
         std::chrono::steady_clock::now();
-#endif
 
     Logger::Initialize();
     Logger::Log("Application Start");
@@ -23,9 +19,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     Logger::Log("Game Initialize");
     game.Initialize();
 
-#ifdef _DEBUG
     bool hasLoggedStartupTime = false;
-#endif
 
     MSG msg {};
     while (msg.message != WM_QUIT) {
@@ -43,7 +37,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         game.Update();
         game.Draw();
 
-#ifdef _DEBUG
         if (!hasLoggedStartupTime) {
             const long long startupMilliseconds =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -55,7 +48,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
                 std::to_string(startupMilliseconds) + " ms");
             hasLoggedStartupTime = true;
         }
-#endif
     }
 
     Logger::Log("Game Finalize");

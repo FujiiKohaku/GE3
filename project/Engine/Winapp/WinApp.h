@@ -24,6 +24,7 @@ public:
 
 public:
     void initialize();
+    void Show();
     void Finalize();
 
     static const int32_t kClientWidth = 1280;

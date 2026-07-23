@@ -38,6 +38,7 @@ void Game::Initialize()
 
     Profiler::GetInstance()->GetBootProfiler()->Begin("DirectX");
     DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
+    WinApp::GetInstance()->Show();
     Profiler::GetInstance()->GetBootProfiler()->End("DirectX");
     CheckInitializeTime("DirectXCommon", prevTime);
 
@@ -75,21 +76,6 @@ void Game::Initialize()
     modelCommon_.Initialize(DirectXCommon::GetInstance());
     Profiler::GetInstance()->GetBootProfiler()->End("Shader");
 
-    Object3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckInitializeTime("Object3dManager", prevTime);
-
-    SkinningObject3dManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckInitializeTime("SkinningObject3dManager", prevTime);
-
-    SkyBoxManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckInitializeTime("SkyBoxManager", prevTime);
-
-    LightManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    CheckInitializeTime("LightManager", prevTime);
-
-    DebugRenderer::GetInstance()->Initialize();
-    CheckInitializeTime("DebugRenderer", prevTime);
-
     Input::GetInstance()->Initialize(WinApp::GetInstance());
 
     Logger::Log("Load Default Textures");
@@ -97,11 +83,6 @@ void Game::Initialize()
 
     // エフェクトのシェーダーとパイプラインはゲーム起動時に一度だけ作成する。
     // 使用するカメラは各シーンのInitializeで設定する。
-    EffectManager::GetInstance()->Initialize(
-        DirectXCommon::GetInstance(),
-        SrvManager::GetInstance(),
-        nullptr);
-
     Profiler::GetInstance()->GetBootProfiler()->Begin("Scene");
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
     Profiler::GetInstance()->GetBootProfiler()->End("Scene");
