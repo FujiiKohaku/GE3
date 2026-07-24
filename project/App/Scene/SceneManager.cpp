@@ -87,8 +87,12 @@ void SceneManager::DrawImGui()
 void SceneManager::SetPostEffectType(PostEffectType postEffectType)
 {
     ClearPostEffects();
-    AddPostEffect(postEffectType);
-    AddPostEffect(PostEffectType::Fog);
+    AddPostEffect(
+        postEffectType,
+        PostEffectStage::BeforeParticle);
+    AddPostEffect(
+        PostEffectType::Fog,
+        PostEffectStage::BeforeParticle);
     postEffectType_ = postEffectType;
 }
 
@@ -97,7 +101,9 @@ PostEffectType SceneManager::GetPostEffectType() const
     return postEffectType_;
 }
 
-void SceneManager::AddPostEffect(PostEffectType type)
+void SceneManager::AddPostEffect(
+    PostEffectType type,
+    PostEffectStage stage)
 {
     for (const PostEffectInfo& postEffect : postEffects_) {
         if (postEffect.type == type) {
@@ -107,6 +113,7 @@ void SceneManager::AddPostEffect(PostEffectType type)
 
     PostEffectInfo postEffect;
     postEffect.type = type;
+    postEffect.stage = stage;
     postEffect.enabled = true;
     postEffect.priority = 0;
     postEffects_.push_back(postEffect);

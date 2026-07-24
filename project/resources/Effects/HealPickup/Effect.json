@@ -38,7 +38,7 @@
   "Render": {
     "Texture": "resources/Particles/HealingCross.png",
     "MeshType": "Board",
-    "BlendMode": "Add",
+    "BlendMode": "Normal",
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",

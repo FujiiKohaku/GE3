@@ -140,7 +140,9 @@ void GamePlayScene::Initialize()
     }
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-    SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+    SceneManager::GetInstance()->AddPostEffect(
+        PostEffectType::Bloom,
+        PostEffectStage::BeforeParticle);
     // =================================================
     // Camera
     // =================================================
@@ -571,9 +573,15 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
 
         // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用！
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::CyberScanline);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::GaussianFilter,
+            PostEffectStage::BeforeParticle);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::GrayScale,
+            PostEffectStage::BeforeParticle);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::CyberScanline,
+            PostEffectStage::BeforeParticle);
 
         // ポーズテキストオブジェクトの更新
         if (pauseTitleText_) pauseTitleText_->Update();
@@ -694,7 +702,9 @@ void GamePlayScene::Update()
 
             // 撃破ディゾルブポストエフェクトの適用
             SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Dissolve);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Dissolve,
+                PostEffectStage::BeforeParticle);
 
             // たっぷり2.0秒かけてディゾルブ消滅が100%完了してからクリア画面へ遷移！
             if (dissolveProgress >= 1.0f) {
@@ -801,24 +811,40 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
         } else {
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         }
     } else {
         if (isPlayerBoosting) {
             SceneManager::GetInstance()->ClearPostEffects();
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::ChromaticAberration);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Fog,
+                PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::RadialBlur,
+                PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::FocusLine,
+                PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::ChromaticAberration,
+                PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         } else if (activeBoss_ && !activeBoss_->IsDead()) {
             // ボス戦中: 3Dボスの輝度境界を強調する LuminanceBasedOutline (5点加点) を適用！
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         } else {
             // 通常時: 深度ベースのアウトライン (DepthOutline: 8点加点)
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         }
     }
 
@@ -850,7 +876,9 @@ void GamePlayScene::Update()
 
         float boomProgress = 1.0f - (sonicBoomTimer_ / 0.85f);
         SceneManager::GetInstance()->SetSonicBoomProgress(boomProgress);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::SonicBoom);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::SonicBoom,
+            PostEffectStage::BeforeParticle);
     }
 
     // -------------------------------------------------
@@ -858,7 +886,9 @@ void GamePlayScene::Update()
     // -------------------------------------------------
     if (player_ && player_->GetHeatRatio() > 0.01f) {
         SceneManager::GetInstance()->SetVignetteStrength(player_->GetHeatRatio());
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::HeatHaze);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::HeatHaze,
+            PostEffectStage::BeforeParticle);
     }
 
     // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
@@ -878,8 +908,12 @@ void GamePlayScene::Update()
             float boxFilterFade = 1.0f - progress;
             SceneManager::GetInstance()->SetVignetteStrength(boxFilterFade);
 
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Paint);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::smoothing);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Paint,
+                PostEffectStage::AfterParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::smoothing,
+                PostEffectStage::AfterParticle);
             SceneManager::GetInstance()->SetPaintProgress(progress);
             SceneManager::GetInstance()->SetPaintIntensity(1.0f);
         }
@@ -909,7 +943,9 @@ void GamePlayScene::Update()
         if (damageFlashTimer_ > 0.0f) {
             float flashRatio = damageFlashTimer_ / 0.35f;
             SceneManager::GetInstance()->SetVignetteStrength(0.35f + 0.35f * flashRatio);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Vignette);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Vignette,
+                PostEffectStage::BeforeParticle);
         }
         // (B) HP ≦ 3 時の常時ドクンドクン脈動演出 (小さめの四隅赤色鼓動)
         else if (currentHp <= 3) {
@@ -918,7 +954,9 @@ void GamePlayScene::Update()
 
             float pulseFactor = 0.45f + 0.25f * std::sin(vignettePulseTimer * 8.5f);
             SceneManager::GetInstance()->SetVignetteStrength(pulseFactor);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Vignette);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Vignette,
+                PostEffectStage::BeforeParticle);
         }
     }
 
@@ -934,7 +972,9 @@ void GamePlayScene::Update()
         if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
 
         SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Dissolve);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::Dissolve,
+            PostEffectStage::BeforeParticle);
 
         // たっぷり2.0秒かけて画面全体が粒子状に焼き切れた後に GameOverScene へ移行！
         if (dissolveProgress >= 1.0f) {
@@ -950,7 +990,9 @@ void GamePlayScene::Update()
     // HP ≦ 5 ピンチ時: 画面端の不規則ビキビキガラスひび割れ (GlassCrack)
     // -------------------------------------------------
     if (player_ && player_->GetCurrentHp() <= 5) {
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GlassCrack);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::GlassCrack,
+            PostEffectStage::BeforeParticle);
     }
 
     // -------------------------------------------------
@@ -978,7 +1020,9 @@ void GamePlayScene::Update()
     // 途切れが絶対に発生しないよう、ノイズ強度がわずかでもある場合は100%確実に適用！
     if (noiseIntensity > 0.001f) {
         SceneManager::GetInstance()->SetVignetteStrength(noiseIntensity);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Random);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::Random,
+            PostEffectStage::BeforeParticle);
     }
 
     // -------------------------------------------------
@@ -2036,7 +2080,9 @@ void GamePlayScene::CheckCollision()
                         SceneManager::GetInstance()->SetPaintSeed(randomSeed);
                         SceneManager::GetInstance()->SetPaintPatternType(patternType);
 
-                        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Paint);
+                        SceneManager::GetInstance()->AddPostEffect(
+                            PostEffectType::Paint,
+                            PostEffectStage::AfterParticle);
                         SceneManager::GetInstance()->SetPaintProgress(0.0f);
                         SceneManager::GetInstance()->SetPaintIntensity(1.0f);
                     }
@@ -2226,7 +2272,9 @@ void GamePlayScene::UpdateCameraShakePostEffect()
     float currentStrength = cameraShakeStrength_ * fadeRatio;
     sceneManager->SetCameraShakeStrength(currentStrength);
     if (currentStrength > 0.0f) {
-        sceneManager->AddPostEffect(PostEffectType::CameraShake);
+        sceneManager->AddPostEffect(
+            PostEffectType::CameraShake,
+            PostEffectStage::BeforeParticle);
     } else {
         cameraShakeDuration_ = 0.0f;
         cameraShakeStrength_ = 0.0f;

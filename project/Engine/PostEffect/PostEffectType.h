@@ -1,4 +1,10 @@
 #pragma once
+
+enum class PostEffectStage {
+    BeforeParticle,
+    AfterParticle,
+};
+
 enum class PostEffectType {
     Copy,
     GrayScale,

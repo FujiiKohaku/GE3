@@ -8,6 +8,7 @@
 
 struct PostEffectInfo {
     PostEffectType type = PostEffectType::Copy;
+    PostEffectStage stage = PostEffectStage::BeforeParticle;
     bool enabled = true;
     int priority = 0;
 };
@@ -46,7 +47,9 @@ public:
     // PostEffectTypeのセッターとゲッター
     void SetPostEffectType(PostEffectType postEffectType);
     PostEffectType GetPostEffectType() const;
-    void AddPostEffect(PostEffectType type);
+    void AddPostEffect(
+        PostEffectType type,
+        PostEffectStage stage = PostEffectStage::BeforeParticle);
     void RemovePostEffect(PostEffectType type);
     void ClearPostEffects();
     void SetPostEffectEnabled(PostEffectType type, bool enable);

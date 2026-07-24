@@ -76,12 +76,17 @@ void Renderer::Draw(SceneManager* sceneManager)
     // Post effect apply
     const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
     postEffectManager_->SetBoostRadialBlurParameters(isBoosting);
-    postEffectManager_->Apply(sceneManager, offscreenRenderer_->GetSrvHandleGPU());
+    postEffectManager_->PrepareSceneForParticleDraw(
+        sceneManager,
+        offscreenRenderer_->GetSrvHandleGPU());
 
-    // Particle draw
     postEffectManager_->PrepareDepthForParticleDraw();
-    DirectXCommon::GetInstance()->SetBackBufferRenderTarget(postEffectManager_->GetDepthDSVHandle());
+    postEffectManager_->BeginParticleDraw();
     sceneManager->DrawParticle();
+    postEffectManager_->EndParticleDraw();
+    postEffectManager_->PostDrawDepth();
+
+    postEffectManager_->ApplyAfterParticleDraw(sceneManager);
 
     // 2D draw
     sceneManager->Draw2D();

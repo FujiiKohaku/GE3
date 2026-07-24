@@ -640,5 +640,7 @@ void TestScene1::ApplySelectedPostEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
     sceneManager->ClearPostEffects();
-    sceneManager->AddPostEffect(postEffectTypes_[selectedPostEffectIndex_]);
+    sceneManager->AddPostEffect(
+        postEffectTypes_[selectedPostEffectIndex_],
+        PostEffectStage::BeforeParticle);
 }
