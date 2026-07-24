@@ -88,6 +88,8 @@ private:
     void SpawnSwarmWave(
         SwarmFormationType formationType,
         int32_t travelDirection);
+    void InitializeRecoveryItems(Model* model);
+    void UpdateRecoveryItems();
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
 
@@ -115,6 +117,15 @@ private:
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
+
+    struct RecoveryItem {
+        std::unique_ptr<Object3d> object;
+        Vector3 basePosition = { 0.0f, 0.0f, 0.0f };
+        float animationTime = 0.0f;
+        bool collected = false;
+    };
+    std::vector<RecoveryItem> recoveryItems_;
+
     // player
     std::unique_ptr<Player> player_;
 

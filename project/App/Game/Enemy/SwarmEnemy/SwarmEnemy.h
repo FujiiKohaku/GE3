@@ -11,6 +11,9 @@ enum class SwarmFormationType {
     Spiral,
     Wall,
     Glyph,
+    Diamond,
+    Wave,
+    Arrow,
 };
 
 struct SwarmGroupState {
@@ -18,8 +21,6 @@ struct SwarmGroupState {
     int32_t activeCount = 0;
     int32_t defeatedCount = 0;
     int32_t escapedCount = 0;
-    int32_t escapeThreshold = 5;
-    bool volleyTriggered = false;
 };
 
 class SwarmEnemy : public BaseEnemy {
@@ -40,11 +41,14 @@ private:
     void Move() override;
     void Attack() override;
     void OnDeath() override;
-    void FireVolleyBullet();
+    void FireMovingBullet();
     Vector3 CalculateFormationOffset() const;
     Vector3 CalculateSpiralOffset() const;
     Vector3 CalculateWallOffset() const;
     Vector3 CalculateGlyphOffset() const;
+    Vector3 CalculateDiamondOffset() const;
+    Vector3 CalculateWaveOffset() const;
+    Vector3 CalculateArrowOffset() const;
 
 private:
     Player* player_ = nullptr;
@@ -58,7 +62,10 @@ private:
     float centerStartX_ = -38.0f;
     float baseHeight_ = 2.0f;
     float forwardDistance_ = 72.0f;
-    float volleyHoldTimer_ = 0.0f;
+    float attackTimer_ = 0.0f;
+    float fadeTimer_ = 0.0f;
+    int32_t shotsFired_ = 0;
+    Vector4 baseColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
+    bool isFading_ = false;
     bool escaped_ = false;
-    bool firedVolley_ = false;
 };

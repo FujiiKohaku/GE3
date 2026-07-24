@@ -190,6 +190,20 @@ bool Player::ApplyDamage(int damage)
     return true;
 }
 
+bool Player::Heal(int amount)
+{
+    if (amount <= 0 || currentHp_ <= 0 || currentHp_ >= maxHp_) {
+        return false;
+    }
+
+    currentHp_ += amount;
+    if (currentHp_ > maxHp_) {
+        currentHp_ = maxHp_;
+    }
+
+    return true;
+}
+
 // 照準の画面上の位置を制限する関数
 void Player::ClampAimScreenPosition()
 {

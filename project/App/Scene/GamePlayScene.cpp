@@ -51,14 +51,20 @@ constexpr float kBossMadShakeDuration = 7.0f;
 constexpr float kBossMadShakeStrength = 0.008f;
 constexpr float kBossBeamShakeDuration = 0.1f;
 constexpr float kBossBeamShakeStrength = 0.0015f;
+constexpr float kRecoveryItemCollisionRadius = 3.0f;
+constexpr float kRecoveryItemRotationSpeed = 0.035f;
+constexpr float kRecoveryItemBobSpeed = 0.045f;
+constexpr float kRecoveryItemBobHeight = 0.65f;
+constexpr int32_t kRecoveryItemHealAmount = 5;
 constexpr int32_t kSwarmMembersPerWave = 18;
-constexpr size_t kSwarmWaveCount = 5;
+constexpr size_t kSwarmWaveCount = 6;
 constexpr float kSwarmWaveDistances[kSwarmWaveCount] = {
     260.0f,
     620.0f,
     980.0f,
     1340.0f,
     1560.0f,
+    1740.0f,
 };
 
 float ClampFloat(float value, float minValue, float maxValue)
@@ -183,7 +189,7 @@ void GamePlayScene::Initialize()
     // nodeLoad
     ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
     ModelManager::GetInstance()->Load("Characters/Animation/SneakWalk/sneakWalk.gltf");
-    ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
+    Model* recoveryItemModel = ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("fish/fish.obj");
 
     // エネミー・弾モデル
@@ -456,6 +462,7 @@ void GamePlayScene::Initialize()
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
 
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
+    InitializeRecoveryItems(recoveryItemModel);
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
     playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect("JetSpark", player_);
     wasPlayerBoosting_ = false;
@@ -1029,6 +1036,7 @@ void GamePlayScene::Update()
     for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
         levelObject->Update();
     }
+    UpdateRecoveryItems();
     if (floorObj_) {
         floorObj_->Update();
     }
@@ -1412,6 +1420,11 @@ void GamePlayScene::Draw3D()
     for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
         levelObject->Draw();
     }
+    for (RecoveryItem& recoveryItem : recoveryItems_) {
+        if (!recoveryItem.collected && recoveryItem.object != nullptr) {
+            recoveryItem.object->Draw();
+        }
+    }
     player_->Draw();
     sceneObjectManager_->Draw();
     if (floorObj_) {
@@ -1445,6 +1458,87 @@ void GamePlayScene::DrawParticle()
 {
     EffectManager::GetInstance()->PreDraw();
     EffectManager::GetInstance()->Draw();
+}
+
+void GamePlayScene::InitializeRecoveryItems(Model* model)
+{
+    if (model == nullptr) {
+        return;
+    }
+
+    const Vector3 positions[] = {
+        { -4.0f, 1.5f, 430.0f },
+        { 5.0f, 1.5f, 1030.0f },
+        { 0.0f, 1.5f, 1580.0f },
+    };
+
+    recoveryItems_.clear();
+    recoveryItems_.reserve(3);
+
+    for (const Vector3& position : positions) {
+        RecoveryItem recoveryItem {};
+        recoveryItem.object = std::make_unique<Object3d>();
+        recoveryItem.object->Initialize(Object3dManager::GetInstance());
+        recoveryItem.object->SetModel(model);
+        recoveryItem.object->SetTranslate(position);
+        recoveryItem.object->SetScale({ 0.75f, 0.75f, 0.75f });
+        recoveryItem.object->SetColor({ 0.20f, 1.0f, 0.35f, 1.0f });
+        recoveryItem.object->SetEnableLighting(false);
+        recoveryItem.basePosition = position;
+        recoveryItem.object->Update();
+        recoveryItems_.push_back(std::move(recoveryItem));
+    }
+}
+
+void GamePlayScene::UpdateRecoveryItems()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+
+    const Vector3 playerPosition = player_->GetTranslate();
+    const float collisionRadiusSquared =
+        kRecoveryItemCollisionRadius * kRecoveryItemCollisionRadius;
+
+    for (RecoveryItem& recoveryItem : recoveryItems_) {
+        if (recoveryItem.collected || recoveryItem.object == nullptr) {
+            continue;
+        }
+
+        recoveryItem.animationTime += kRecoveryItemBobSpeed;
+
+        Vector3 itemPosition = recoveryItem.basePosition;
+        itemPosition.y +=
+            std::sin(recoveryItem.animationTime) * kRecoveryItemBobHeight;
+
+        Vector3 itemRotation = recoveryItem.object->GetRotate();
+        itemRotation.x += kRecoveryItemRotationSpeed * 0.65f;
+        itemRotation.y += kRecoveryItemRotationSpeed;
+        recoveryItem.object->SetTranslate(itemPosition);
+        recoveryItem.object->SetRotate(itemRotation);
+        recoveryItem.object->Update();
+
+        const float differenceX = playerPosition.x - itemPosition.x;
+        const float differenceY = playerPosition.y - itemPosition.y;
+        const float differenceZ = playerPosition.z - itemPosition.z;
+        const float distanceSquared =
+            differenceX * differenceX +
+            differenceY * differenceY +
+            differenceZ * differenceZ;
+
+        if (distanceSquared > collisionRadiusSquared) {
+            continue;
+        }
+
+        if (!player_->Heal(kRecoveryItemHealAmount)) {
+            continue;
+        }
+
+        recoveryItem.collected = true;
+        EffectManager::GetInstance()->PlayEffect(
+            "HealPickup",
+            itemPosition);
+    }
 }
 
 void GamePlayScene::Draw2D()
@@ -2174,12 +2268,21 @@ void GamePlayScene::UpdateSwarmWaveSpawning()
     }
 
     SwarmFormationType formationType = SwarmFormationType::Spiral;
-    size_t formationIndex = nextSwarmWaveIndex_ % 3;
+    size_t formationIndex = nextSwarmWaveIndex_ % 6;
     if (formationIndex == 1) {
         formationType = SwarmFormationType::Wall;
     }
     if (formationIndex == 2) {
         formationType = SwarmFormationType::Glyph;
+    }
+    if (formationIndex == 3) {
+        formationType = SwarmFormationType::Diamond;
+    }
+    if (formationIndex == 4) {
+        formationType = SwarmFormationType::Wave;
+    }
+    if (formationIndex == 5) {
+        formationType = SwarmFormationType::Arrow;
     }
 
     int32_t travelDirection = 1;
@@ -2209,7 +2312,6 @@ void GamePlayScene::SpawnSwarmWave(
         std::make_shared<SwarmGroupState>();
     groupState->totalCount = kSwarmMembersPerWave;
     groupState->activeCount = kSwarmMembersPerWave;
-    groupState->escapeThreshold = 5;
 
     for (int32_t slotIndex = 0;
          slotIndex < kSwarmMembersPerWave;

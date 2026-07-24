@@ -100,6 +100,7 @@ public:
     }
 
     bool ApplyDamage(int damage);
+    bool Heal(int amount);
     bool IsDead() const
     {
         return currentHp_ <= 0;
