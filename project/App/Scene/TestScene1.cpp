@@ -73,6 +73,18 @@ void TestScene1::Initialize()
     katanaObj_->Initialize(Object3dManager::GetInstance());
     katanaObj_->SetModel(katanaModel);
 
+    Model* recoveryCubeModel =
+        ModelManager::GetInstance()->Load(
+            "Debug/Samples/AnimatedCube/AnimatedCube.gltf");
+    recoveryCubeObj_ = std::make_unique<Object3d>();
+    recoveryCubeObj_->Initialize(Object3dManager::GetInstance());
+    recoveryCubeObj_->SetModel(recoveryCubeModel);
+    recoveryCubeObj_->SetTranslate(recoveryCubeBasePosition_);
+    recoveryCubeObj_->SetScale({ 0.75f, 0.75f, 0.75f });
+    recoveryCubeObj_->SetColor({ 0.20f, 1.0f, 0.35f, 1.0f });
+    recoveryCubeObj_->SetEnableLighting(false);
+    recoveryCubeObj_->Update();
+
     // Fixed SneakWalk model for skeleton debug display
     sneakWalkActor_ = std::make_unique<AnimationActor>();
     sneakWalkActor_->Initialize("Characters/Animation/SneakWalk/sneakWalk.gltf");
@@ -92,6 +104,10 @@ void TestScene1::Initialize()
     fieldDemoEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect(
         "FieldDemo",
         { -7.0f, -4.5f, 0.0f });
+    recoveryEffectHandle_ =
+        EffectManager::GetInstance()->PlayLoopEffect(
+            "HealPickup",
+            recoveryCubeBasePosition_);
 
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
@@ -331,6 +347,26 @@ void TestScene1::Update()
     if (floorObj_) {
         floorObj_->Update();
     }
+    if (recoveryCubeObj_) {
+        recoveryCubeAnimationTime_ += 0.035f;
+        Vector3 recoveryPosition = recoveryCubeBasePosition_;
+        recoveryPosition.y +=
+            std::sin(recoveryCubeAnimationTime_) * 0.35f;
+
+        Vector3 recoveryRotation =
+            recoveryCubeObj_->GetRotate();
+        recoveryRotation.x += 0.018f;
+        recoveryRotation.y += 0.032f;
+        recoveryCubeObj_->SetTranslate(recoveryPosition);
+        recoveryCubeObj_->SetRotate(recoveryRotation);
+        recoveryCubeObj_->Update();
+
+        if (recoveryEffectHandle_ != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(
+                recoveryEffectHandle_,
+                recoveryPosition);
+        }
+    }
     EffectManager::GetInstance()->Update();
     if (showFieldDebug_) {
         EffectManager::GetInstance()->DrawFieldDebug();
@@ -351,6 +387,9 @@ void TestScene1::Draw3D()
     }
     if (katanaObj_) {
         katanaObj_->Draw();
+    }
+    if (recoveryCubeObj_) {
+        recoveryCubeObj_->Draw();
     }
 
     // プレイヤー(Robo)の描画
@@ -384,6 +423,7 @@ void TestScene1::DrawImGui()
     ImGui::Text("SPACE: Jump");
     ImGui::Text("Fixed SneakWalk: skeleton debug display");
     ImGui::Text("Left-side cyan particles: GPU Particle Field demo");
+    ImGui::Text("Green cube: HealPickup effect preview");
     ImGui::Checkbox("Show Particle Field Range", &showFieldDebug_);
     ImGui::Text("Mouse Wheel: Change Post Effect");
     ImGui::Text(
@@ -418,6 +458,10 @@ void TestScene1::Finalize()
     if (fieldDemoEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(fieldDemoEffectHandle_);
         fieldDemoEffectHandle_ = kInvalidEffectHandle;
+    }
+    if (recoveryEffectHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(recoveryEffectHandle_);
+        recoveryEffectHandle_ = kInvalidEffectHandle;
     }
 }
 

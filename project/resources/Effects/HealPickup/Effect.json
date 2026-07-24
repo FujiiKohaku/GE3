@@ -8,17 +8,17 @@
 
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 3,
-    "Radius": 1.15,
-    "Frequency": 0.06
+    "Count": 8,
+    "Radius": 1.40,
+    "Frequency": 0.35
   },
 
   "Particle": {
     "LifeTime": 1.20,
-    "StartScale": 0.38,
-    "EndScale": 0.64,
+    "StartScale": 0.42,
+    "EndScale": 0.50,
     "StartRotation": 0.0,
-    "RotationSpeed": 0.18,
+    "RotationSpeed": 0.0,
     "Velocity": [0.0, 3.6, 0.0],
     "StartColor": [0.82, 1.0, 0.72, 1.0],
     "EndColor": [0.20, 1.0, 0.32, 0.0]
@@ -29,8 +29,8 @@
     "Gravity": 0.0,
     "EnableDrag": true,
     "Drag": 0.985,
-    "EnableNoise": true,
-    "NoiseStrength": 0.32,
+    "EnableNoise": false,
+    "NoiseStrength": 0.0,
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },

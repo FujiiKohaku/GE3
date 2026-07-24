@@ -42,6 +42,7 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 
 #include "App/Game/Enemy/Types/NormalEnemy.h"
+#include "App/Game/Enemy/Types/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 
@@ -121,6 +122,7 @@ private:
     struct RecoveryItem {
         std::unique_ptr<Object3d> object;
         Vector3 basePosition = { 0.0f, 0.0f, 0.0f };
+        EffectHandle effectHandle = kInvalidEffectHandle;
         float animationTime = 0.0f;
         bool collected = false;
     };

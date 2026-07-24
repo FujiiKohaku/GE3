@@ -8,24 +8,7 @@ ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
 static const int32_t kMaxGPUParticle = 1024;
-
-class RandomGenerator
-{
-    float32_t3 seed;
-
-    float32_t3 Generate3d()
-    {
-        seed = frac(sin(seed * 12.9898f) * 43758.5453f);
-        return seed;
-    }
-
-    float32_t Generate1d()
-    {
-        float32_t result = frac(sin(seed.x * 78.233f) * 43758.5453f);
-        seed.x = result;
-        return result;
-    }
-};
+static const float kPi = 3.14159265f;
 
 [numthreads(256, 1, 1)]
 void main(uint32_t3 DTid : SV_DispatchThreadID)
@@ -58,32 +41,23 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     uint32_t particleIndex = gFreeList[freeListIndex];
 
-    RandomGenerator generator;
-    generator.seed =
-        float32_t3(
-            (float32_t)DTid.x + 1.0f,
-            gPerFrame.time + 3.7f,
-            (float32_t)DTid.x * 9.3f) *
-        17.731f;
-
-    float32_t3 random = generator.Generate3d();
+    float slotRate =
+        ((float)DTid.x + 0.5f) /
+        (float)gEmitter.count;
+    float spawnAngle =
+        slotRate * kPi * 2.0f +
+        gPerFrame.time * 0.35f;
 
     float32_t3 spawnOffset;
-    spawnOffset.x = (random.x - 0.5f) * gEmitter.radius * 2.0f;
-    spawnOffset.y = (random.y - 0.5f) * 0.35f;
-    spawnOffset.z = (random.z - 0.5f) * gEmitter.radius * 0.8f;
+    spawnOffset.x = cos(spawnAngle) * gEmitter.radius;
+    spawnOffset.y =
+        sin(spawnAngle * 2.0f) * gEmitter.radius * 0.32f;
+    spawnOffset.z =
+        sin(spawnAngle) * gEmitter.radius * 0.60f;
 
     float32_t3 velocity = gEffectSettings.velocity;
-    velocity.x += (generator.Generate1d() - 0.5f) * 0.55f;
-    velocity.y += generator.Generate1d() * 1.25f;
-    velocity.z += (generator.Generate1d() - 0.5f) * 0.35f;
-
-    float scale =
-        gEffectSettings.startScale *
-        (0.78f + generator.Generate1d() * 0.44f);
-    float lifeTime =
-        gEffectSettings.lifeTime *
-        (0.82f + generator.Generate1d() * 0.36f);
+    float scale = gEffectSettings.startScale;
+    float lifeTime = gEffectSettings.lifeTime;
 
     gParticles[particleIndex].translate =
         gEmitter.translate + spawnOffset;
@@ -95,9 +69,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     gParticles[particleIndex].color =
         gEffectSettings.startColor;
     gParticles[particleIndex].rotation =
-        gEffectSettings.startRotation +
-        (generator.Generate1d() - 0.5f) * 0.16f;
+        gEffectSettings.startRotation;
     gParticles[particleIndex].rotationSpeed =
-        gEffectSettings.rotationSpeed *
-        (generator.Generate1d() - 0.5f);
+        gEffectSettings.rotationSpeed;
 }

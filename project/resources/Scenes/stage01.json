@@ -58,7 +58,7 @@
         {
             "name": "RouteNormalEnemy02",
             "type": "EnemySpawn",
-            "file_name": "NormalEnemy",
+            "file_name": "ArmoredEnemy",
             "transform": {
                 "translation": [-7.0, 832.0, 7.0],
                 "rotation": [0.0, 0.0, 0.0]
@@ -103,7 +103,7 @@
         {
             "name": "RouteNormalEnemy04",
             "type": "EnemySpawn",
-            "file_name": "NormalEnemy",
+            "file_name": "ArmoredEnemy",
             "transform": {
                 "translation": [17.0, 1472.0, 6.0],
                 "rotation": [0.0, 0.0, 0.0]

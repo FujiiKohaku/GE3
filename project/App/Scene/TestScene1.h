@@ -45,6 +45,10 @@ private:
     std::unique_ptr<DebugCameraController> debugCameraController_;
     std::unique_ptr<Object3d> floorObj_;
     std::unique_ptr<Object3d> katanaObj_;
+    std::unique_ptr<Object3d> recoveryCubeObj_;
+    Vector3 recoveryCubeBasePosition_ = { -6.0f, -3.5f, -4.0f };
+    float recoveryCubeAnimationTime_ = 0.0f;
+    EffectHandle recoveryEffectHandle_ = kInvalidEffectHandle;
 
     // Player (Robo)
     std::unique_ptr<AnimationActor> playerActor_;

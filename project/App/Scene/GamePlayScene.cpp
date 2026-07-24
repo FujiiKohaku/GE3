@@ -1486,6 +1486,10 @@ void GamePlayScene::InitializeRecoveryItems(Model* model)
         recoveryItem.object->SetEnableLighting(false);
         recoveryItem.basePosition = position;
         recoveryItem.object->Update();
+        recoveryItem.effectHandle =
+            EffectManager::GetInstance()->PlayLoopEffect(
+                "HealPickup",
+                position);
         recoveryItems_.push_back(std::move(recoveryItem));
     }
 }
@@ -1517,6 +1521,11 @@ void GamePlayScene::UpdateRecoveryItems()
         recoveryItem.object->SetTranslate(itemPosition);
         recoveryItem.object->SetRotate(itemRotation);
         recoveryItem.object->Update();
+        if (recoveryItem.effectHandle != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(
+                recoveryItem.effectHandle,
+                itemPosition);
+        }
 
         const float differenceX = playerPosition.x - itemPosition.x;
         const float differenceY = playerPosition.y - itemPosition.y;
@@ -1535,6 +1544,9 @@ void GamePlayScene::UpdateRecoveryItems()
         }
 
         recoveryItem.collected = true;
+        EffectManager::GetInstance()->StopEffect(
+            recoveryItem.effectHandle);
+        recoveryItem.effectHandle = kInvalidEffectHandle;
         EffectManager::GetInstance()->PlayEffect(
             "HealPickup",
             itemPosition);
@@ -2346,6 +2358,17 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
             enemy->SetMoveSpeed(2.0f);
 
             enemies_.push_back(std::move(enemy));
+        } else if (enemyData.fileName == "ArmoredEnemy") {
+            std::unique_ptr<ArmoredEnemy> enemy =
+                std::make_unique<ArmoredEnemy>();
+            enemy->Initialize(
+                enemyModel_,
+                enemyBulletModel_,
+                player_.get());
+            enemy->SetPosition(enemyData.translation);
+            enemy->SetRotate(enemyData.rotation);
+
+            enemies_.push_back(std::move(enemy));
         } else {
             std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
             enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
@@ -2521,6 +2544,22 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 
                 if (objData.patrolRoute.exists) {
                     enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            } else if (objData.fileName == "ArmoredEnemy") {
+                std::unique_ptr<ArmoredEnemy> enemy =
+                    std::make_unique<ArmoredEnemy>();
+                enemy->Initialize(
+                    enemyModel_,
+                    enemyBulletModel_,
+                    player_.get());
+                enemy->SetPosition(objData.translation);
+                enemy->SetRotate(objData.rotation);
+
+                if (objData.patrolRoute.exists) {
+                    enemy->SetPatrolWaypoints(
+                        objData.patrolRoute.waypoints);
                 }
 
                 enemies_.push_back(std::move(enemy));
