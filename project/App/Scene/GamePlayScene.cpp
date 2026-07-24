@@ -2,21 +2,20 @@
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
 #include "App/Game/Enemy/Bullet/PaintBullet.h"
+#include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/math/MathStruct.h"
 #include "Engine/audio/SoundManager.h"
-#include <numbers>
 #include <cstdlib>
+#include <numbers>
 
 #include "SceneManager.h"
 
 #include "../externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
-#include "Engine/PostEffect/CopyImageRenderer.h"
-#include "Engine/PostEffect/PostEffectManager.h"
 #include <fstream>
 #include <string_view>
 
@@ -44,6 +43,23 @@ constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
 constexpr float kBoostKickDuration = 0.2f;
 constexpr float kBoostKickFrameTime = 1.0f / 60.0f;
 constexpr float kBoostKickFovAdd = 0.1f;
+constexpr float kCameraShakeFrameTime = 1.0f / 60.0f;
+constexpr float kCameraShakeFadeDuration = 5.0f;
+constexpr float kPlayerDamageShakeDuration = 0.35f;
+constexpr float kPlayerDamageShakeStrength = 0.006f;
+constexpr float kBossMadShakeDuration = 7.0f;
+constexpr float kBossMadShakeStrength = 0.008f;
+constexpr float kBossBeamShakeDuration = 0.1f;
+constexpr float kBossBeamShakeStrength = 0.0015f;
+constexpr int32_t kSwarmMembersPerWave = 18;
+constexpr size_t kSwarmWaveCount = 5;
+constexpr float kSwarmWaveDistances[kSwarmWaveCount] = {
+    260.0f,
+    620.0f,
+    980.0f,
+    1340.0f,
+    1560.0f,
+};
 
 float ClampFloat(float value, float minValue, float maxValue)
 {
@@ -64,6 +80,11 @@ Vector2 LerpVector2(const Vector2& start, const Vector2& end, float rate)
     result.x = start.x + (end.x - start.x) * rate;
     result.y = start.y + (end.y - start.y) * rate;
     return result;
+}
+
+float LerpFloat(float start, float end, float rate)
+{
+    return start + (end - start) * rate;
 }
 
 Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
@@ -317,6 +338,7 @@ void GamePlayScene::Initialize()
 
     playerHpBarSprite_ = std::make_unique<Sprite>();
     playerHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    playerHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
     playerHpBarSprite_->SetSize({ 220.0f, 22.0f });
     playerHpBarSprite_->SetAnchorPoint({ 1.0f, 0.0f });
     playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
@@ -331,6 +353,71 @@ void GamePlayScene::Initialize()
     playerHpText_->SetFontSize(20.0f);
     playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     playerHpText_->Update();
+
+    const float bossHudCenterX = WinApp::GetInstance()->kClientWidth / 2.0f;
+    const float bossHpBarLeft = bossHudCenterX - 170.0f;
+    const float bossHpBarWidth = 340.0f;
+
+    bossHeadHpBgSprite_ = std::make_unique<Sprite>();
+    bossHeadHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossHeadHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossHeadHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossHeadHpBgSprite_->SetPosition({ bossHpBarLeft, 65.0f });
+    bossHeadHpBgSprite_->SetColor({ 0.06f, 0.12f, 0.18f, 0.90f });
+    bossHeadHpBgSprite_->Update();
+
+    bossHeadHpBarSprite_ = std::make_unique<Sprite>();
+    bossHeadHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossHeadHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
+    bossHeadHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossHeadHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossHeadHpBarSprite_->SetPosition({ bossHpBarLeft, 65.0f });
+    bossHeadHpBarSprite_->SetColor({ 0.20f, 0.60f, 1.00f, 0.95f });
+    bossHeadHpBarSprite_->Update();
+
+    bossBodyHpBgSprite_ = std::make_unique<Sprite>();
+    bossBodyHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossBodyHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossBodyHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossBodyHpBgSprite_->SetPosition({ bossHpBarLeft, 91.0f });
+    bossBodyHpBgSprite_->SetColor({ 0.18f, 0.06f, 0.06f, 0.90f });
+    bossBodyHpBgSprite_->Update();
+
+    bossBodyHpBarSprite_ = std::make_unique<Sprite>();
+    bossBodyHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossBodyHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
+    bossBodyHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossBodyHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossBodyHpBarSprite_->SetPosition({ bossHpBarLeft, 91.0f });
+    bossBodyHpBarSprite_->SetColor({ 1.00f, 0.20f, 0.20f, 0.95f });
+    bossBodyHpBarSprite_->Update();
+
+    bossNameText_ = std::make_unique<Text>();
+    bossNameText_->Initialize(kDefaultFont);
+    bossNameText_->SetText("BOSS: FEAR WORM");
+    bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
+    bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
+    bossNameText_->SetFontSize(20.0f);
+    bossNameText_->SetColor({ 1.0f, 0.25f, 0.25f, 1.0f });
+    bossNameText_->Update();
+
+    bossHeadHpText_ = std::make_unique<Text>();
+    bossHeadHpText_->Initialize(kDefaultFont);
+    bossHeadHpText_->SetText("HEAD CORE");
+    bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
+    bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
+    bossHeadHpText_->SetFontSize(14.0f);
+    bossHeadHpText_->SetColor({ 0.55f, 0.80f, 1.0f, 1.0f });
+    bossHeadHpText_->Update();
+
+    bossBodyHpText_ = std::make_unique<Text>();
+    bossBodyHpText_->Initialize(kDefaultFont);
+    bossBodyHpText_->SetText("BODY SHIELD");
+    bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
+    bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
+    bossBodyHpText_->SetFontSize(14.0f);
+    bossBodyHpText_->SetColor({ 1.0f, 0.55f, 0.55f, 1.0f });
+    bossBodyHpText_->Update();
 
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
@@ -473,6 +560,9 @@ void GamePlayScene::Update()
     }
 
     if (isPaused_) {
+        SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
+        SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
+
         // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用！
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter);
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale);
@@ -512,11 +602,6 @@ void GamePlayScene::Update()
             player_->SetTranslate({ pPos.x, pPos.y, 1450.0f });
         }
     }
-    // Nキーを押すといつでもド迫力衝撃波ディストーションを発動・テスト可能！
-    if (Input::GetInstance()->IsKeyTrigger(DIK_N)) {
-        bossShockwaveTimer_ = 0.95f;
-    }
-
     // レール自体の更新
     rail_->Update();
 
@@ -527,6 +612,7 @@ void GamePlayScene::Update()
 
     // プレイヤーのZ座標を取得
     float playerZ = player_->GetTranslate().z;
+    UpdateSwarmWaveSpawning();
 
     // ボス出現処理
     if (!isBossSpawned_ && playerZ >= 1850.0f) {
@@ -548,9 +634,9 @@ void GamePlayScene::Update()
         static int lastPlayerHp = player_->GetCurrentHp();
         int currentPlayerHp = player_->GetCurrentHp();
         if (currentPlayerHp < lastPlayerHp) {
-            cameraShakeTime_ = 0.35f;
-            cameraShakeDuration_ = 0.35f;
-            cameraShakeIntensity_ = 0.6f;
+            cameraShakeTime_ = kPlayerDamageShakeDuration;
+            cameraShakeDuration_ = kPlayerDamageShakeDuration;
+            cameraShakeStrength_ = kPlayerDamageShakeStrength;
         }
         lastPlayerHp = currentPlayerHp;
     }
@@ -560,20 +646,22 @@ void GamePlayScene::Update()
         bool wasMadMode = activeBoss_->IsMadModeActive();
 
         activeBoss_->Update();
+        UpdateBossHpHud();
 
         // 発狂モードに入った瞬間を検知してカメラシェイクを開始する
         if (activeBoss_->IsMadModeActive() && !wasMadMode) {
-            cameraShakeTime_ = 7.0f;
-            cameraShakeDuration_ = 7.0f;
-            cameraShakeIntensity_ = 0.8f;
+            cameraShakeTime_ = kBossMadShakeDuration;
+            cameraShakeDuration_ = kBossMadShakeDuration;
+            cameraShakeStrength_ = kBossMadShakeStrength;
         }
 
         // ビーム被弾中のカメラ微振動
         if (activeBoss_->IsBeamHittingPlayer()) {
-            if (cameraShakeTime_ < 0.1f || cameraShakeIntensity_ < 0.15f) {
-                cameraShakeTime_ = 0.1f;
-                cameraShakeDuration_ = 0.1f;
-                cameraShakeIntensity_ = 0.15f;
+            if (cameraShakeTime_ < kBossBeamShakeDuration ||
+                cameraShakeStrength_ < kBossBeamShakeStrength) {
+                cameraShakeTime_ = kBossBeamShakeDuration;
+                cameraShakeDuration_ = kBossBeamShakeDuration;
+                cameraShakeStrength_ = kBossBeamShakeStrength;
             }
         }
     }
@@ -581,12 +669,18 @@ void GamePlayScene::Update()
     // ボス撃破でディゾルブ消滅演出の完了後にクリアシーンへ遷移
     if (activeBoss_ && activeBoss_->IsDead()) {
         CollisionManager::GetInstance()->SetBoss(nullptr);
+        cameraShakeTime_ = 0.0f;
+        cameraShakeDuration_ = 0.0f;
+        cameraShakeStrength_ = 0.0f;
+        SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
+        SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
 
         // 死亡演出(頭部の落下回転)が完了するまでボスのUpdateを回し続ける
         activeBoss_->Update();
         EffectManager::GetInstance()->Update();
 
         if (activeBoss_->IsDeathSequenceFinished()) {
+            StopPlayerEngineEffects();
             bossDeathDissolveTimer_ += 1.0f / 60.0f;
             float dissolveProgress = bossDeathDissolveTimer_ / 2.0f;
             if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
@@ -722,29 +816,6 @@ void GamePlayScene::Update()
     }
 
     // -------------------------------------------------
-    // ボス無差別弾バラマキ時の「衝撃波ディストーション (Shockwave)」演出
-    // -------------------------------------------------
-    if (activeBoss_ && !activeBoss_->IsDead()) {
-        static size_t lastBossBulletCount = 0;
-        size_t currentBulletCount = activeBoss_->GetBullets().size();
-
-        // ボスが弾幕を一斉発射した瞬間（衝撃波タイマー起動！）
-        if (currentBulletCount > lastBossBulletCount + 1) {
-            bossShockwaveTimer_ = 0.95f;
-        }
-        lastBossBulletCount = currentBulletCount;
-    }
-
-    if (bossShockwaveTimer_ > 0.0f) {
-        bossShockwaveTimer_ -= 1.0f / 60.0f;
-        if (bossShockwaveTimer_ < 0.0f) bossShockwaveTimer_ = 0.0f;
-
-        float shockProgress = 1.0f - (bossShockwaveTimer_ / 0.95f);
-        SceneManager::GetInstance()->SetVignetteStrength(shockProgress);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::Shockwave);
-    }
-
-    // -------------------------------------------------
     // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
     // -------------------------------------------------
     static bool prevBoostingState = false;
@@ -850,6 +921,7 @@ void GamePlayScene::Update()
     // 2.0秒かけてディゾルブ消滅が完了した後にゲームオーバー画面へ移行！
     // -------------------------------------------------
     if (player_ && player_->GetCurrentHp() <= 0) {
+        StopPlayerEngineEffects();
         playerDeathDissolveTimer_ += 1.0f / 60.0f;
         float dissolveProgress = playerDeathDissolveTimer_ / 2.0f;
         if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
@@ -908,12 +980,23 @@ void GamePlayScene::Update()
     if (player_ && playerHpBarSprite_ && playerHpText_) {
         int currentHp = player_->GetCurrentHp();
         int maxHp = player_->GetMaxHp();
-        float hpRatio = (maxHp > 0) ? (float)currentHp / (float)maxHp : 0.0f;
+        float hpRatio = 0.0f;
+        if (maxHp > 0) {
+            hpRatio = static_cast<float>(currentHp) / static_cast<float>(maxHp);
+        }
         if (hpRatio < 0.0f) hpRatio = 0.0f;
         if (hpRatio > 1.0f) hpRatio = 1.0f;
 
         // 残りHP割合に合わせてゲージの横幅を滑らかに変更
-        float barWidth = 220.0f * hpRatio;
+        displayedPlayerHpRatio_ = LerpFloat(
+            displayedPlayerHpRatio_,
+            hpRatio,
+            0.12f);
+        if (std::abs(displayedPlayerHpRatio_ - hpRatio) < 0.001f) {
+            displayedPlayerHpRatio_ = hpRatio;
+        }
+
+        float barWidth = 220.0f * displayedPlayerHpRatio_;
         playerHpBarSprite_->SetSize({ barWidth, 22.0f });
 
         // 残りHP量に応じてバーの色を変化（緑 -> 黄色 -> 赤）
@@ -954,6 +1037,7 @@ void GamePlayScene::Update()
     
     // コリジョン判定の実行
     CheckCollision();
+    UpdateCameraShakePostEffect();
 
 #pragma region
 #ifdef USE_IMGUI
@@ -1280,33 +1364,8 @@ void GamePlayScene::UpdateCamera(
             hasCameraFollowState_ = true;
         }
 
-        // カメラシェイクの適用
-        Vector3 shakeOffset = { 0.0f, 0.0f, 0.0f };
-        if (cameraShakeTime_ > 0.0f) {
-            cameraShakeTime_ -= 1.0f / 60.0f;
-            if (cameraShakeTime_ < 0.0f) {
-                cameraShakeTime_ = 0.0f;
-            }
-
-            // 最初の2.0秒間（残り7.0s〜5.0s）は最大強度を維持、後半5.0秒間で徐々に減衰
-            float intensity = cameraShakeIntensity_;
-            if (cameraShakeTime_ < 5.0f) {
-                float ratio = cameraShakeTime_ / 5.0f; // 1.0 -> 0.0
-                intensity = cameraShakeIntensity_ * ratio;
-            }
-
-            // 簡易乱数による3軸方向の揺れ量
-            float rx = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-            float ry = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-            float rz = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) * 2.0f - 1.0f;
-
-            shakeOffset.x = rx * intensity;
-            shakeOffset.y = ry * intensity;
-            shakeOffset.z = rz * intensity;
-        }
-
         // cameraを行列再計算のためにLookAt設定
-        camera_->LookAt(smoothedCameraPosition_ + shakeOffset, smoothedLookAheadPosition_ + shakeOffset);
+        camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
     } else {
         hasCameraFollowState_ = false;
     }
@@ -1400,6 +1459,13 @@ void GamePlayScene::Draw2D()
     if (playerHpBgSprite_) playerHpBgSprite_->Draw();
     if (playerHpBarSprite_) playerHpBarSprite_->Draw();
 
+    if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
+        if (bossHeadHpBgSprite_) bossHeadHpBgSprite_->Draw();
+        if (bossHeadHpBarSprite_) bossHeadHpBarSprite_->Draw();
+        if (bossBodyHpBgSprite_) bossBodyHpBgSprite_->Draw();
+        if (bossBodyHpBarSprite_) bossBodyHpBarSprite_->Draw();
+    }
+
     if (isPaused_) {
         if (pauseMenuPanelSprite_) pauseMenuPanelSprite_->Draw();
         if (pauseResumeBtnSprite_) pauseResumeBtnSprite_->Draw();
@@ -1416,6 +1482,79 @@ void GamePlayScene::Draw2D()
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
         if (playerHpText_) playerHpText_->Draw();
+        if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
+            if (bossNameText_) bossNameText_->Draw();
+            if (bossHeadHpText_) bossHeadHpText_->Draw();
+            if (bossBodyHpText_) bossBodyHpText_->Draw();
+        }
+    }
+}
+
+void GamePlayScene::UpdateBossHpHud()
+{
+    if (!activeBoss_) {
+        return;
+    }
+
+    float headHpFraction = activeBoss_->GetHeadHpFraction();
+    if (headHpFraction < 0.0f) {
+        headHpFraction = 0.0f;
+    }
+    if (headHpFraction > 1.0f) {
+        headHpFraction = 1.0f;
+    }
+
+    float bodyHpFraction = activeBoss_->GetBodyHpFraction();
+    if (bodyHpFraction < 0.0f) {
+        bodyHpFraction = 0.0f;
+    }
+    if (bodyHpFraction > 1.0f) {
+        bodyHpFraction = 1.0f;
+    }
+
+    displayedBossHeadHpRatio_ = LerpFloat(
+        displayedBossHeadHpRatio_,
+        headHpFraction,
+        0.10f);
+    displayedBossBodyHpRatio_ = LerpFloat(
+        displayedBossBodyHpRatio_,
+        bodyHpFraction,
+        0.10f);
+
+    if (std::abs(displayedBossHeadHpRatio_ - headHpFraction) < 0.001f) {
+        displayedBossHeadHpRatio_ = headHpFraction;
+    }
+    if (std::abs(displayedBossBodyHpRatio_ - bodyHpFraction) < 0.001f) {
+        displayedBossBodyHpRatio_ = bodyHpFraction;
+    }
+
+    constexpr float kBossHpBarWidth = 340.0f;
+    if (bossHeadHpBarSprite_) {
+        bossHeadHpBarSprite_->SetSize({
+            kBossHpBarWidth * displayedBossHeadHpRatio_,
+            14.0f });
+        bossHeadHpBarSprite_->Update();
+    }
+    if (bossBodyHpBarSprite_) {
+        bossBodyHpBarSprite_->SetSize({
+            kBossHpBarWidth * displayedBossBodyHpRatio_,
+            14.0f });
+        bossBodyHpBarSprite_->Update();
+    }
+    if (bossHeadHpBgSprite_) {
+        bossHeadHpBgSprite_->Update();
+    }
+    if (bossBodyHpBgSprite_) {
+        bossBodyHpBgSprite_->Update();
+    }
+    if (bossNameText_) {
+        bossNameText_->Update();
+    }
+    if (bossHeadHpText_) {
+        bossHeadHpText_->Update();
+    }
+    if (bossBodyHpText_) {
+        bossBodyHpText_->Update();
     }
 }
 
@@ -1936,12 +2075,157 @@ void GamePlayScene::ResetGameplayPostEffects()
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
     SceneManager::GetInstance()->SetPostEffectKickStrength(0.0f);
+    SceneManager::GetInstance()->SetCameraShakeStrength(
+        SceneManager::kDefaultCameraShakeStrength);
 
     boostKickTimer_ = 0.0f;
     boostKickStrength_ = 0.0f;
     wasBoostingForKick_ = false;
     wasPlayerBoosting_ = false;
     smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
+    cameraShakeTime_ = 0.0f;
+    cameraShakeDuration_ = 0.0f;
+    cameraShakeStrength_ = 0.0f;
+}
+
+void GamePlayScene::UpdateCameraShakePostEffect()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (cameraShakeTime_ <= 0.0f ||
+        cameraShakeDuration_ <= 0.0f ||
+        cameraShakeStrength_ <= 0.0f) {
+        cameraShakeTime_ = 0.0f;
+        cameraShakeDuration_ = 0.0f;
+        cameraShakeStrength_ = 0.0f;
+        sceneManager->SetCameraShakeStrength(0.0f);
+        sceneManager->RemovePostEffect(PostEffectType::CameraShake);
+        return;
+    }
+
+    cameraShakeTime_ -= kCameraShakeFrameTime;
+    if (cameraShakeTime_ < 0.0f) {
+        cameraShakeTime_ = 0.0f;
+    }
+
+    float fadeDuration = cameraShakeDuration_;
+    if (fadeDuration > kCameraShakeFadeDuration) {
+        fadeDuration = kCameraShakeFadeDuration;
+    }
+
+    float fadeRatio = 1.0f;
+    if (cameraShakeTime_ < fadeDuration) {
+        fadeRatio = cameraShakeTime_ / fadeDuration;
+    }
+
+    float currentStrength = cameraShakeStrength_ * fadeRatio;
+    sceneManager->SetCameraShakeStrength(currentStrength);
+    if (currentStrength > 0.0f) {
+        sceneManager->AddPostEffect(PostEffectType::CameraShake);
+    } else {
+        cameraShakeDuration_ = 0.0f;
+        cameraShakeStrength_ = 0.0f;
+        sceneManager->RemovePostEffect(PostEffectType::CameraShake);
+    }
+}
+
+void GamePlayScene::StopPlayerEngineEffects()
+{
+    EffectManager* effectManager = EffectManager::GetInstance();
+
+    if (playerJetHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(playerJetHandle_);
+        playerJetHandle_ = kInvalidEffectHandle;
+    }
+
+    if (playerJetSparkHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(playerJetSparkHandle_);
+        playerJetSparkHandle_ = kInvalidEffectHandle;
+    }
+
+    if (boostLineHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(boostLineHandle_);
+        boostLineHandle_ = kInvalidEffectHandle;
+    }
+}
+
+void GamePlayScene::UpdateSwarmWaveSpawning()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+    if (player_->IsDead()) {
+        return;
+    }
+    if (isBossSpawned_) {
+        return;
+    }
+    if (nextSwarmWaveIndex_ >= kSwarmWaveCount) {
+        return;
+    }
+
+    float playerDistance = player_->GetTranslate().z;
+    while (nextSwarmWaveIndex_ + 1 < kSwarmWaveCount &&
+           playerDistance >= kSwarmWaveDistances[nextSwarmWaveIndex_ + 1]) {
+        nextSwarmWaveIndex_ += 1;
+    }
+
+    if (playerDistance < kSwarmWaveDistances[nextSwarmWaveIndex_]) {
+        return;
+    }
+
+    SwarmFormationType formationType = SwarmFormationType::Spiral;
+    size_t formationIndex = nextSwarmWaveIndex_ % 3;
+    if (formationIndex == 1) {
+        formationType = SwarmFormationType::Wall;
+    }
+    if (formationIndex == 2) {
+        formationType = SwarmFormationType::Glyph;
+    }
+
+    int32_t travelDirection = 1;
+    if (nextSwarmWaveIndex_ % 2 != 0) {
+        travelDirection = -1;
+    }
+
+    SpawnSwarmWave(formationType, travelDirection);
+    nextSwarmWaveIndex_ += 1;
+}
+
+void GamePlayScene::SpawnSwarmWave(
+    SwarmFormationType formationType,
+    int32_t travelDirection)
+{
+    if (enemyModel_ == nullptr) {
+        return;
+    }
+    if (enemyBulletModel_ == nullptr) {
+        return;
+    }
+    if (player_ == nullptr) {
+        return;
+    }
+
+    std::shared_ptr<SwarmGroupState> groupState =
+        std::make_shared<SwarmGroupState>();
+    groupState->totalCount = kSwarmMembersPerWave;
+    groupState->activeCount = kSwarmMembersPerWave;
+    groupState->escapeThreshold = 5;
+
+    for (int32_t slotIndex = 0;
+         slotIndex < kSwarmMembersPerWave;
+         slotIndex += 1) {
+        std::unique_ptr<SwarmEnemy> swarmEnemy =
+            std::make_unique<SwarmEnemy>();
+        swarmEnemy->Initialize(
+            enemyModel_,
+            enemyBulletModel_,
+            player_.get(),
+            groupState,
+            formationType,
+            slotIndex,
+            travelDirection);
+        enemies_.push_back(std::move(swarmEnemy));
+    }
 }
 
 void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
@@ -2158,6 +2442,7 @@ void GamePlayScene::HotReloadLevel()
 {
     ClearLevelObjects();
     enemies_.clear();
+    nextSwarmWaveIndex_ = 0;
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
     Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };

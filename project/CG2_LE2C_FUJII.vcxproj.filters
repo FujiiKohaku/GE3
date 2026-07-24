@@ -502,6 +502,7 @@
     <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Enemy\Bullet\SwarmPulseBullet.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -511,6 +512,7 @@
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -803,12 +805,14 @@
     <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Enemy\Bullet\SwarmPulseBullet.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h">
       <Filter>ヘッダー ファイル</Filter>

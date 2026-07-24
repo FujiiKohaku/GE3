@@ -180,3 +180,20 @@ float SceneManager::GetPostEffectKickStrength() const
 {
     return postEffectKickStrength_;
 }
+
+void SceneManager::SetCameraShakeStrength(float strength)
+{
+    cameraShakeStrength_ = strength;
+    if (cameraShakeStrength_ < 0.0f) {
+        cameraShakeStrength_ = 0.0f;
+    }
+
+    if (cameraShakeStrength_ > 0.05f) {
+        cameraShakeStrength_ = 0.05f;
+    }
+}
+
+float SceneManager::GetCameraShakeStrength() const
+{
+    return cameraShakeStrength_;
+}

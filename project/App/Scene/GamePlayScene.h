@@ -42,6 +42,7 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 
 #include "App/Game/Enemy/Types/NormalEnemy.h"
+#include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 
 struct LevelData;
@@ -77,9 +78,16 @@ private:
     void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
     void UpdateBoostKick(bool isPlayerBoosting);
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
+    void UpdateCameraShakePostEffect();
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
     void ResetGameplayPostEffects();
+    void StopPlayerEngineEffects();
     void ProcessPlayerShooting(Input* input);
+    void UpdateBossHpHud();
+    void UpdateSwarmWaveSpawning();
+    void SpawnSwarmWave(
+        SwarmFormationType formationType,
+        int32_t travelDirection);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
 
@@ -182,6 +190,7 @@ private:
     float followY_ = 0.35f;
     // エネミー配列
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
+    size_t nextSwarmWaveIndex_ = 0;
 
     // エイム用仮想カメラ
     std::unique_ptr<Camera> aimCamera_;
@@ -205,7 +214,7 @@ private:
 
     // カメラシェイク演出用
     float cameraShakeTime_ = 0.0f;
-    float cameraShakeIntensity_ = 0.0f;
+    float cameraShakeStrength_ = 0.0f;
     float cameraShakeDuration_ = 0.0f;
 
     // ペイントポストエフェクト用
@@ -225,9 +234,6 @@ private:
 
     // ボス撃破ディゾルブ用タイマー
     float bossDeathDissolveTimer_ = 0.0f;
-
-    // ボス無差別弾バラマキ衝撃波タイマー
-    float bossShockwaveTimer_ = 0.0f;
 
     // ブースト加速ソニックブーム衝撃音波タイマー
     float sonicBoomTimer_ = 0.0f;
@@ -249,6 +255,18 @@ private:
     std::unique_ptr<Sprite> playerHpBgSprite_;
     std::unique_ptr<Sprite> playerHpBarSprite_;
     std::unique_ptr<Text> playerHpText_;
+    float displayedPlayerHpRatio_ = 1.0f;
+
+    // Release構成でも表示するボスHP HUD
+    std::unique_ptr<Sprite> bossHeadHpBgSprite_;
+    std::unique_ptr<Sprite> bossHeadHpBarSprite_;
+    std::unique_ptr<Sprite> bossBodyHpBgSprite_;
+    std::unique_ptr<Sprite> bossBodyHpBarSprite_;
+    std::unique_ptr<Text> bossNameText_;
+    std::unique_ptr<Text> bossHeadHpText_;
+    std::unique_ptr<Text> bossBodyHpText_;
+    float displayedBossHeadHpRatio_ = 1.0f;
+    float displayedBossBodyHpRatio_ = 1.0f;
 
     const LevelData::ObjectData* cameraPointObject_ = nullptr;
     float cameraPointLerpTime_ = 0.0f;

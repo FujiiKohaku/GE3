@@ -14,6 +14,8 @@ struct PostEffectInfo {
 
 class SceneManager {
 public:
+    static constexpr float kDefaultCameraShakeStrength = 0.008f;
+
     static SceneManager* GetInstance()
     {
         static SceneManager instance;
@@ -53,6 +55,8 @@ public:
     const Vector2& GetPostEffectCenter() const;
     void SetPostEffectKickStrength(float strength);
     float GetPostEffectKickStrength() const;
+    void SetCameraShakeStrength(float strength);
+    float GetCameraShakeStrength() const;
     void SetPaintProgress(float progress) { paintProgress_ = progress; }
     float GetPaintProgress() const { return paintProgress_; }
     void SetPaintIntensity(float intensity) { paintIntensity_ = intensity; }
@@ -80,6 +84,7 @@ private:
     std::vector<PostEffectInfo> postEffects_;
     Vector2 postEffectCenter_ = { 0.5f, 0.5f };
     float postEffectKickStrength_ = 0.0f;
+    float cameraShakeStrength_ = kDefaultCameraShakeStrength;
     float vignetteStrength_ = 1.0f;
     float sonicBoomProgress_ = 0.0f;
     Vector2 sonicBoomCenter_ = { 0.5f, 0.5f };

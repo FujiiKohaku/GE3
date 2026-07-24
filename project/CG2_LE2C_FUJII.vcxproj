@@ -169,6 +169,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\SwarmPulseBullet.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.cpp" />
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp" />
     <ClCompile Include="Engine\math\Collision.cpp" />
@@ -288,6 +289,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
@@ -321,6 +323,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\PaintBullet.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\SwarmPulseBullet.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.h" />
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h" />
     <ClInclude Include="Engine\math\Collision.h" />
@@ -428,6 +431,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
     <ClInclude Include="App\Scene\GameOverScene.h" />
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />

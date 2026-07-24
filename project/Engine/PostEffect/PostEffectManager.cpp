@@ -86,7 +86,10 @@ void PostEffectManager::DrawImGui()
     ImGui::SliderFloat("Lens Distortion", &parameter.lensDistortionStrength, -1.0f, 1.0f);
     ImGui::SliderFloat("Film Grain", &parameter.filmGrainStrength, 0.0f, 0.5f);
     ImGui::SliderFloat("Lens Dirt", &parameter.lensDirtStrength, 0.0f, 3.0f);
-    ImGui::SliderFloat("Camera Shake", &parameter.cameraShakeStrength, 0.0f, 0.05f);
+    float cameraShakeStrength = SceneManager::GetInstance()->GetCameraShakeStrength();
+    if (ImGui::SliderFloat("Camera Shake", &cameraShakeStrength, 0.0f, 0.05f)) {
+        SceneManager::GetInstance()->SetCameraShakeStrength(cameraShakeStrength);
+    }
     ImGui::SliderFloat("Bokeh Radius", &parameter.bokehRadius, 0.0f, 32.0f);
     ImGui::SliderInt("Bokeh Sides", &parameter.bokehSides, 3, 12);
     ImGui::SliderFloat("Fisheye", &parameter.fisheyeStrength, 0.01f, 3.0f);
@@ -172,6 +175,7 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
 
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     postEffectParameter.radialBlurCenter = sceneManager->GetPostEffectCenter();
+    postEffectParameter.cameraShakeStrength = sceneManager->GetCameraShakeStrength();
     postEffectParameter.vignetteStrength = sceneManager->GetVignetteStrength();
     postEffectParameter.sonicBoomProgress = sceneManager->GetSonicBoomProgress();
     postEffectParameter.sonicBoomCenter = sceneManager->GetSonicBoomCenter();
