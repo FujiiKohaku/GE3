@@ -3,305 +3,660 @@
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
 #include "Engine/3D/Object3dManager.h"
-#include "Engine/ImGuiManager/ImGuiManager.h"
-#include "Engine/WinApp/WinApp.h"
 #include "Engine/input/Input.h"
-#include "GamePlayScene.h"
-#include "LoadingScene.h"
-#include "SpriteTestScene.h"
-#include "TestScene1.h"
-#include "TextTestScene.h"
+#include "SceneManager.h"
+
+#include <cmath>
+#include <string>
 
 namespace {
 constexpr const char* kWhiteTexture = "resources/Textures/white.png";
 constexpr const char* kDefaultFont =
     "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
-constexpr const char* kWaveVertexShader =
-    "resources/Shaders/Sprite/Wave/Render.VS.hlsl";
-constexpr const char* kWavePixelShader =
-    "resources/Shaders/Sprite/Wave/Render.PS.hlsl";
 
-constexpr float kButtonTop = 265.0f;
-constexpr float kButtonWidth = 300.0f;
-constexpr float kButtonHeight = 116.0f;
-constexpr float kGamePlayButtonLeft = 100.0f;
-constexpr float kTestButtonLeft = 490.0f;
-constexpr float kSpriteTestButtonLeft = 880.0f;
-constexpr float kTextTestButtonLeft = 1080.0f;
-constexpr float kTextTestButtonTop = 35.0f;
-constexpr float kTextTestButtonWidth = 170.0f;
-constexpr float kTextTestButtonHeight = 58.0f;
-constexpr float kButtonAnimationSpeed = 0.25f;
-constexpr float kHoverScale = 1.04f;
-constexpr float kPressedScale = 0.94f;
-constexpr float kPressedOffsetY = 7.0f;
+constexpr float kScreenWidth = 1280.0f;
+constexpr float kScreenHeight = 720.0f;
+constexpr int kMaxChargeTime = 120;
+constexpr int kBossAppearFrame = 25 * 60;
 
-constexpr Vector4 kBackgroundColor = { 0.02f, 0.025f, 0.05f, 1.0f };
-constexpr Vector4 kButtonColor = { 0.09f, 0.11f, 0.18f, 1.0f };
-constexpr Vector4 kButtonHoverColor = { 0.18f, 0.42f, 0.68f, 1.0f };
-constexpr Vector4 kButtonPressedColor = { 0.07f, 0.24f, 0.42f, 1.0f };
-constexpr Vector4 kButtonTextColor = { 0.78f, 0.92f, 1.0f, 1.0f };
-constexpr Vector4 kButtonPressedTextColor = { 0.55f, 0.78f, 0.92f, 1.0f };
-constexpr Vector4 kHeaderColor = { 0.20f, 0.72f, 1.0f, 1.0f };
+constexpr Vector4 kBackgroundColor = { 0.015f, 0.02f, 0.055f, 1.0f };
+constexpr Vector4 kPanelColor = { 0.04f, 0.08f, 0.16f, 0.94f };
+constexpr Vector4 kPlayerColor = { 0.15f, 0.9f, 1.0f, 1.0f };
+constexpr Vector4 kPlayerHitColor = { 1.0f, 1.0f, 1.0f, 0.35f };
+constexpr Vector4 kBulletColor = { 0.25f, 1.0f, 0.55f, 1.0f };
+constexpr Vector4 kChargedBulletColor = { 1.0f, 0.95f, 0.15f, 1.0f };
+constexpr Vector4 kEnemyColor = { 1.0f, 0.25f, 0.35f, 1.0f };
+constexpr Vector4 kEnemyBulletColor = { 1.0f, 0.55f, 0.15f, 1.0f };
+constexpr Vector4 kBossColor = { 0.75f, 0.2f, 1.0f, 1.0f };
+constexpr Vector4 kBossBulletColor = { 1.0f, 0.15f, 0.7f, 1.0f };
+constexpr Vector4 kGaugeBackColor = { 0.12f, 0.12f, 0.17f, 1.0f };
+constexpr Vector4 kPlayerHpColor = { 0.1f, 0.9f, 0.35f, 1.0f };
+constexpr Vector4 kBossHpColor = { 0.95f, 0.15f, 0.2f, 1.0f };
+constexpr Vector4 kChargeColor = { 0.15f, 0.65f, 1.0f, 1.0f };
 }
 
 void TitleScene::Initialize()
 {
-    SetMouseCursorVisible(true);
-    ClipCursor(nullptr);
     Object3dManager::GetInstance()->SetDefaultCamera(nullptr);
-
-    backgroundSprite_ = std::make_unique<Sprite>();
-    backgroundSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    backgroundSprite_->SetSize({ 1280.0f, 720.0f });
-    backgroundSprite_->SetColor(kBackgroundColor);
-
-    flagSprite_ = std::make_unique<Sprite>();
-    flagSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    flagSprite_->SetPosition({ 60.0f, 70.0f });
-    flagSprite_->SetSize({ 140.0f, 70.0f });
-    flagSprite_->SetAnchorPoint({ 0.0f, 0.5f });
-    flagSprite_->SetColor(kHeaderColor);
-    flagSprite_->SetShaderPaths(kWaveVertexShader, kWavePixelShader);
-    flagSprite_->SetGridMesh(24, 8);
-    flagSprite_->SetEffectAmplitude(10.0f);
-    flagSprite_->SetEffectFrequency(1.5f);
-    flagSprite_->SetEffectSpeed(3.0f);
-    flagSprite_->SetEffectDirection({ 0.0f, 1.0f });
-
-    headerLineSprite_ = std::make_unique<Sprite>();
-    headerLineSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    headerLineSprite_->SetPosition({ 220.0f, 105.0f });
-    headerLineSprite_->SetSize({ 840.0f, 8.0f });
-    headerLineSprite_->SetColor(kHeaderColor);
-
-    gamePlayButtonSprite_ = std::make_unique<Sprite>();
-    gamePlayButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    gamePlayButtonSprite_->SetPosition({ kGamePlayButtonLeft, kButtonTop });
-    gamePlayButtonSprite_->SetSize({ kButtonWidth, kButtonHeight });
-    gamePlayButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
-    gamePlayButtonSprite_->SetEffectAmplitude(0.04f);
-    gamePlayButtonSprite_->SetEffectSpeed(3.0f);
-    gamePlayButtonSprite_->SetEffectStrength(0.0f);
-
-    gamePlayButtonText_ = std::make_unique<Text>();
-    gamePlayButtonText_->Initialize(kDefaultFont);
-    gamePlayButtonText_->SetText("GamePlayScene");
-    gamePlayButtonText_->SetPosition({
-        kGamePlayButtonLeft + kButtonWidth * 0.5f,
-        kButtonTop + kButtonHeight * 0.5f
-    });
-    gamePlayButtonText_->SetAnchorPoint({ 0.5f, 0.5f });
-    gamePlayButtonText_->SetFontSize(32.0f);
-    gamePlayButtonText_->SetColor(kButtonTextColor);
-    gamePlayButtonText_->SetOutlineWidth(1.0f);
-
-    testButtonSprite_ = std::make_unique<Sprite>();
-    testButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    testButtonSprite_->SetPosition({ kTestButtonLeft, kButtonTop });
-    testButtonSprite_->SetSize({ kButtonWidth, kButtonHeight });
-    testButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
-    testButtonSprite_->SetEffectAmplitude(0.04f);
-    testButtonSprite_->SetEffectSpeed(3.0f);
-    testButtonSprite_->SetEffectStrength(0.0f);
-
-    testButtonText_ = std::make_unique<Text>();
-    testButtonText_->Initialize(kDefaultFont);
-    testButtonText_->SetText("TestScene1");
-    testButtonText_->SetPosition({
-        kTestButtonLeft + kButtonWidth * 0.5f,
-        kButtonTop + kButtonHeight * 0.5f
-    });
-    testButtonText_->SetAnchorPoint({ 0.5f, 0.5f });
-    testButtonText_->SetFontSize(32.0f);
-    testButtonText_->SetColor(kButtonTextColor);
-    testButtonText_->SetOutlineWidth(1.0f);
-
-    spriteTestButtonSprite_ = std::make_unique<Sprite>();
-    spriteTestButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    spriteTestButtonSprite_->SetPosition({ kSpriteTestButtonLeft, kButtonTop });
-    spriteTestButtonSprite_->SetSize({ kButtonWidth, kButtonHeight });
-    spriteTestButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
-    spriteTestButtonSprite_->SetEffectAmplitude(0.04f);
-    spriteTestButtonSprite_->SetEffectSpeed(3.0f);
-    spriteTestButtonSprite_->SetEffectStrength(0.0f);
-
-    spriteTestButtonText_ = std::make_unique<Text>();
-    spriteTestButtonText_->Initialize(kDefaultFont);
-    spriteTestButtonText_->SetText("SpriteTestScene");
-    spriteTestButtonText_->SetPosition({
-        kSpriteTestButtonLeft + kButtonWidth * 0.5f,
-        kButtonTop + kButtonHeight * 0.5f
-    });
-    spriteTestButtonText_->SetAnchorPoint({ 0.5f, 0.5f });
-    spriteTestButtonText_->SetFontSize(30.0f);
-    spriteTestButtonText_->SetColor(kButtonTextColor);
-    spriteTestButtonText_->SetOutlineWidth(1.0f);
-
-    textTestButtonSprite_ = std::make_unique<Sprite>();
-    textTestButtonSprite_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    textTestButtonSprite_->SetPosition({ kTextTestButtonLeft, kTextTestButtonTop });
-    textTestButtonSprite_->SetSize({ kTextTestButtonWidth, kTextTestButtonHeight });
-    textTestButtonSprite_->SetMaterial("resources/Shaders/Sprite/Border");
-    textTestButtonSprite_->SetEffectAmplitude(0.05f);
-    textTestButtonSprite_->SetEffectSpeed(3.0f);
-    textTestButtonSprite_->SetEffectStrength(0.0f);
-
-    textTestButtonText_ = std::make_unique<Text>();
-    textTestButtonText_->Initialize(kDefaultFont);
-    textTestButtonText_->SetText("TEXT TEST");
-    textTestButtonText_->SetPosition({
-        kTextTestButtonLeft + kTextTestButtonWidth * 0.5f,
-        kTextTestButtonTop + kTextTestButtonHeight * 0.5f
-    });
-    textTestButtonText_->SetAnchorPoint({ 0.5f, 0.5f });
-    textTestButtonText_->SetFontSize(22.0f);
-    textTestButtonText_->SetColor(kHeaderColor);
-
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
+
+    backgroundSprite_ = CreateSprite(
+        { kScreenWidth * 0.5f, kScreenHeight * 0.5f },
+        { kScreenWidth, kScreenHeight },
+        kBackgroundColor);
+    titlePanelSprite_ = CreateSprite(
+        { kScreenWidth * 0.5f, kScreenHeight * 0.5f },
+        { 760.0f, 300.0f },
+        kPanelColor);
+    playerSprite_ = CreateSprite({ 120.0f, 360.0f }, { 72.0f, 48.0f }, kPlayerColor);
+
+    for (int i = 0; i < kPlayerBulletCount; ++i) {
+        playerBulletSprites_[i] =
+            CreateSprite({ -100.0f, -100.0f }, { 24.0f, 12.0f }, kBulletColor);
+    }
+    for (int i = 0; i < kEnemyCount; ++i) {
+        enemySprites_[i] =
+            CreateSprite({ -100.0f, -100.0f }, { 64.0f, 64.0f }, kEnemyColor);
+    }
+    for (int i = 0; i < kEnemyBulletCount; ++i) {
+        enemyBulletSprites_[i] =
+            CreateSprite({ -100.0f, -100.0f }, { 16.0f, 16.0f }, kEnemyBulletColor);
+    }
+
+    bossSprite_ =
+        CreateSprite({ -200.0f, -200.0f }, { 128.0f, 128.0f }, kBossColor);
+    for (int i = 0; i < kBossBulletCount; ++i) {
+        bossBulletSprites_[i] =
+            CreateSprite({ -100.0f, -100.0f }, { 20.0f, 20.0f }, kBossBulletColor);
+    }
+
+    playerHpBackSprite_ =
+        CreateSprite({ 140.0f, 38.0f }, { 220.0f, 24.0f }, kGaugeBackColor);
+    playerHpSprite_ =
+        CreateSprite({ 140.0f, 38.0f }, { 200.0f, 14.0f }, kPlayerHpColor);
+    bossHpBackSprite_ =
+        CreateSprite({ 1040.0f, 38.0f }, { 420.0f, 24.0f }, kGaugeBackColor);
+    bossHpSprite_ =
+        CreateSprite({ 1040.0f, 38.0f }, { 400.0f, 14.0f }, kBossHpColor);
+    chargeBackSprite_ =
+        CreateSprite({ 140.0f, 68.0f }, { 220.0f, 14.0f }, kGaugeBackColor);
+    chargeSprite_ =
+        CreateSprite({ 140.0f, 68.0f }, { 0.0f, 8.0f }, kChargeColor);
+
+    titleText_ = std::make_unique<Text>();
+    titleText_->Initialize(kDefaultFont);
+    titleText_->SetPosition({ 640.0f, 250.0f });
+    titleText_->SetAnchorPoint({ 0.5f, 0.5f });
+    titleText_->SetFontSize(64.0f);
+    titleText_->SetColor({ 0.2f, 0.9f, 1.0f, 1.0f });
+    titleText_->SetText("AL SHOOTING");
+
+    guideText_ = std::make_unique<Text>();
+    guideText_->Initialize(kDefaultFont);
+    guideText_->SetPosition({ 640.0f, 360.0f });
+    guideText_->SetAnchorPoint({ 0.5f, 0.5f });
+    guideText_->SetFontSize(25.0f);
+    guideText_->SetColor({ 0.82f, 0.9f, 1.0f, 1.0f });
+    guideText_->SetText("WASD: MOVE   SHIFT: BOOST   HOLD E: CHARGE SHOT");
+
+    stateText_ = std::make_unique<Text>();
+    stateText_->Initialize(kDefaultFont);
+    stateText_->SetPosition({ 640.0f, 455.0f });
+    stateText_->SetAnchorPoint({ 0.5f, 0.5f });
+    stateText_->SetFontSize(34.0f);
+    stateText_->SetColor({ 1.0f, 0.9f, 0.25f, 1.0f });
+    stateText_->SetText("PRESS SPACE TO START");
+
+    ResetGame();
+    sceneState_ = SceneState::Title;
+    UpdateSprites();
+    UpdateTexts();
+}
+
+void TitleScene::ResetGame()
+{
+    player_.position = { 120.0f, 360.0f };
+    player_.velocity = { 0.0f, 0.0f };
+    player_.radius = 28.0f;
+    player_.active = true;
+    playerHp_ = 10;
+    playerInvincibleTimer_ = 0;
+    wasChargePressed_ = false;
+    chargeTime_ = 0;
+
+    for (int i = 0; i < kPlayerBulletCount; ++i) {
+        playerBullets_[i].actor = Actor();
+        playerBullets_[i].charged = false;
+    }
+    for (int i = 0; i < kEnemyCount; ++i) {
+        enemies_[i].actor = Actor();
+        enemies_[i].actor.radius = 30.0f;
+        enemies_[i].shotTimer = 0;
+    }
+    for (int i = 0; i < kEnemyBulletCount; ++i) {
+        enemyBullets_[i] = Actor();
+        enemyBullets_[i].radius = 8.0f;
+    }
+    for (int i = 0; i < kBossBulletCount; ++i) {
+        bossBullets_[i] = Actor();
+        bossBullets_[i].radius = 10.0f;
+    }
+
+    boss_ = Actor();
+    boss_.position = { 1100.0f, 360.0f };
+    boss_.radius = 62.0f;
+    bossHp_ = 20;
+    bossMoveDirection_ = 1;
+    bossShotTimer_ = 0;
+
+    gameTimer_ = 0;
+    enemySpawnTimer_ = 0;
+    nextEnemyIndex_ = 0;
 }
 
 void TitleScene::Update()
 {
+    if (sceneState_ == SceneState::Title) {
+        UpdateTitle();
+    } else if (sceneState_ == SceneState::Playing) {
+        UpdatePlaying();
+    } else {
+        if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE)) {
+            ResetGame();
+            sceneState_ = SceneState::Playing;
+        }
+    }
 
-    const bool isGamePlayHovered = IsMouseOver(
-        kGamePlayButtonLeft,
-        kButtonTop,
-        kButtonWidth,
-        kButtonHeight);
-    const bool isTestHovered = IsMouseOver(
-        kTestButtonLeft,
-        kButtonTop,
-        kButtonWidth,
-        kButtonHeight);
-    const bool isSpriteTestHovered = IsMouseOver(
-        kSpriteTestButtonLeft,
-        kButtonTop,
-        kButtonWidth,
-        kButtonHeight);
-    const bool isTextTestHovered = IsMouseOver(
-        kTextTestButtonLeft,
-        kTextTestButtonTop,
-        kTextTestButtonWidth,
-        kTextTestButtonHeight);
+    UpdateSprites();
+    UpdateTexts();
+}
 
+void TitleScene::UpdateTitle()
+{
+    if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE)) {
+        ResetGame();
+        sceneState_ = SceneState::Playing;
+    }
+}
+
+void TitleScene::UpdatePlaying()
+{
+    ++gameTimer_;
+    UpdatePlayer();
+    UpdatePlayerBullets();
+    UpdateEnemies();
+    UpdateEnemyBullets();
+    UpdateBoss();
+    UpdateBossBullets();
+    CheckCollisions();
+
+    if (playerInvincibleTimer_ > 0) {
+        --playerInvincibleTimer_;
+    }
+
+    if (playerHp_ <= 0) {
+        player_.active = false;
+        sceneState_ = SceneState::GameOver;
+    }
+    if (boss_.active && bossHp_ <= 0) {
+        boss_.active = false;
+        sceneState_ = SceneState::Clear;
+    }
+}
+
+void TitleScene::UpdatePlayer()
+{
     Input* input = Input::GetInstance();
-    const bool isMousePressed = input->IsMousePressed(0);
-    if (input->IsMouseTrigger(0)) {
-        if (isGamePlayHovered) {
-            pressedButtonIndex_ = 0;
-        } else if (isTestHovered) {
-            pressedButtonIndex_ = 1;
-        } else if (isSpriteTestHovered) {
-            pressedButtonIndex_ = 2;
-        } else if (isTextTestHovered) {
-            pressedButtonIndex_ = 3;
+    Vector2 direction = { 0.0f, 0.0f };
+
+    if (input->IsKeyPressed(DIK_W)) {
+        direction.y -= 1.0f;
+    }
+    if (input->IsKeyPressed(DIK_S)) {
+        direction.y += 1.0f;
+    }
+    if (input->IsKeyPressed(DIK_A)) {
+        direction.x -= 1.0f;
+    }
+    if (input->IsKeyPressed(DIK_D)) {
+        direction.x += 1.0f;
+    }
+
+    const float length =
+        std::sqrt(direction.x * direction.x + direction.y * direction.y);
+    if (length > 0.0f) {
+        direction.x /= length;
+        direction.y /= length;
+    }
+
+    float speed = 5.0f;
+    if (input->IsKeyPressed(DIK_LSHIFT)) {
+        speed = 10.0f;
+    }
+
+    player_.position.x += direction.x * speed;
+    player_.position.y += direction.y * speed;
+
+    if (player_.position.x < 36.0f) {
+        player_.position.x = 36.0f;
+    }
+    if (player_.position.x > kScreenWidth - 36.0f) {
+        player_.position.x = kScreenWidth - 36.0f;
+    }
+    if (player_.position.y < 90.0f) {
+        player_.position.y = 90.0f;
+    }
+    if (player_.position.y > kScreenHeight - 28.0f) {
+        player_.position.y = kScreenHeight - 28.0f;
+    }
+
+    const bool isChargePressed = input->IsKeyPressed(DIK_E);
+    if (isChargePressed) {
+        if (chargeTime_ < kMaxChargeTime) {
+            ++chargeTime_;
+        }
+    }
+    if (!isChargePressed && wasChargePressed_) {
+        bool isCharged = false;
+        if (chargeTime_ >= kMaxChargeTime) {
+            isCharged = true;
+        }
+        FirePlayerBullet(isCharged);
+        chargeTime_ = 0;
+    }
+    wasChargePressed_ = isChargePressed;
+}
+
+void TitleScene::FirePlayerBullet(bool charged)
+{
+    for (int i = 0; i < kPlayerBulletCount; ++i) {
+        if (!playerBullets_[i].actor.active) {
+            playerBullets_[i].actor.active = true;
+            playerBullets_[i].actor.position =
+                { player_.position.x + 48.0f, player_.position.y };
+            playerBullets_[i].actor.velocity = { 8.0f, 0.0f };
+            playerBullets_[i].actor.radius = 10.0f;
+            playerBullets_[i].charged = charged;
+            if (charged) {
+                playerBullets_[i].actor.velocity.x = 16.0f;
+                playerBullets_[i].actor.radius = 24.0f;
+            }
+            break;
+        }
+    }
+}
+
+void TitleScene::UpdatePlayerBullets()
+{
+    for (int i = 0; i < kPlayerBulletCount; ++i) {
+        Actor& bullet = playerBullets_[i].actor;
+        if (bullet.active) {
+            bullet.position.x += bullet.velocity.x;
+            bullet.position.y += bullet.velocity.y;
+            if (IsOutsideScreen(bullet.position, 80.0f)) {
+                bullet.active = false;
+            }
+        }
+    }
+}
+
+void TitleScene::UpdateEnemies()
+{
+    if (nextEnemyIndex_ < kEnemyCount) {
+        ++enemySpawnTimer_;
+        if (enemySpawnTimer_ >= 120) {
+            Enemy& enemy = enemies_[nextEnemyIndex_];
+            enemy.actor.active = true;
+            enemy.actor.position.x = kScreenWidth + 60.0f;
+            enemy.actor.position.y =
+                130.0f + static_cast<float>(nextEnemyIndex_ % 5) * 110.0f;
+            enemy.actor.velocity = { -2.5f, 0.0f };
+            enemy.shotTimer = 30 + (nextEnemyIndex_ % 3) * 30;
+            ++nextEnemyIndex_;
+            enemySpawnTimer_ = 0;
         }
     }
 
-    bool isGamePlayPressed = false;
-    bool isTestPressed = false;
-    bool isSpriteTestPressed = false;
-    bool isTextTestPressed = false;
-    if (isMousePressed && pressedButtonIndex_ == 0) {
-        isGamePlayPressed = true;
-    }
-    if (isMousePressed && pressedButtonIndex_ == 1) {
-        isTestPressed = true;
-    }
-    if (isMousePressed && pressedButtonIndex_ == 2) {
-        isSpriteTestPressed = true;
-    }
-    if (isMousePressed && pressedButtonIndex_ == 3) {
-        isTextTestPressed = true;
-    }
-
-    UpdateButtonVisual(
-        gamePlayButtonSprite_.get(),
-        gamePlayButtonText_.get(),
-        kGamePlayButtonLeft,
-        kButtonTop,
-        kButtonWidth,
-        kButtonHeight,
-        isGamePlayHovered,
-        isGamePlayPressed,
-        0);
-    UpdateButtonVisual(
-        testButtonSprite_.get(),
-        testButtonText_.get(),
-        kTestButtonLeft,
-        kButtonTop,
-        kButtonWidth,
-        kButtonHeight,
-        isTestHovered,
-        isTestPressed,
-        1);
-    UpdateButtonVisual(
-        spriteTestButtonSprite_.get(),
-        spriteTestButtonText_.get(),
-        kSpriteTestButtonLeft,
-        kButtonTop,
-        kButtonWidth,
-        kButtonHeight,
-        isSpriteTestHovered,
-        isSpriteTestPressed,
-        2);
-    UpdateButtonVisual(
-        textTestButtonSprite_.get(),
-        textTestButtonText_.get(),
-        kTextTestButtonLeft,
-        kTextTestButtonTop,
-        kTextTestButtonWidth,
-        kTextTestButtonHeight,
-        isTextTestHovered,
-        isTextTestPressed,
-        3);
-
-    const bool wasReleased = !isMousePressed && wasMousePressed_;
-    if (wasReleased) {
-        const int releasedButtonIndex = pressedButtonIndex_;
-        pressedButtonIndex_ = -1;
-        if (releasedButtonIndex == 0 && isGamePlayHovered) {
-            SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>();
-        } else if (releasedButtonIndex == 1 && isTestHovered) {
-            SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, TestScene1>();
-        } else if (releasedButtonIndex == 2 && isSpriteTestHovered) {
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<SpriteTestScene>());
-        } else if (releasedButtonIndex == 3 && isTextTestHovered) {
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<TextTestScene>());
+    for (int i = 0; i < kEnemyCount; ++i) {
+        Enemy& enemy = enemies_[i];
+        if (enemy.actor.active) {
+            enemy.actor.position.x += enemy.actor.velocity.x;
+            ++enemy.shotTimer;
+            if (enemy.shotTimer >= 120) {
+                FireEnemyBullet(enemy.actor.position);
+                enemy.shotTimer = 0;
+            }
+            if (enemy.actor.position.x < -80.0f) {
+                enemy.actor.active = false;
+            }
         }
     }
-    wasMousePressed_ = isMousePressed;
+}
 
+void TitleScene::FireEnemyBullet(const Vector2& position)
+{
+    for (int i = 0; i < kEnemyBulletCount; ++i) {
+        if (!enemyBullets_[i].active) {
+            enemyBullets_[i].active = true;
+            enemyBullets_[i].position = { position.x - 38.0f, position.y };
+            enemyBullets_[i].velocity = { -7.0f, 0.0f };
+            enemyBullets_[i].radius = 8.0f;
+            break;
+        }
+    }
+}
+
+void TitleScene::UpdateEnemyBullets()
+{
+    for (int i = 0; i < kEnemyBulletCount; ++i) {
+        Actor& bullet = enemyBullets_[i];
+        if (bullet.active) {
+            bullet.position.x += bullet.velocity.x;
+            bullet.position.y += bullet.velocity.y;
+            if (IsOutsideScreen(bullet.position, 40.0f)) {
+                bullet.active = false;
+            }
+        }
+    }
+}
+
+void TitleScene::UpdateBoss()
+{
+    if (!boss_.active && gameTimer_ >= kBossAppearFrame && bossHp_ > 0) {
+        boss_.active = true;
+        boss_.position = { 1100.0f, 360.0f };
+        bossShotTimer_ = 0;
+    }
+
+    if (!boss_.active) {
+        return;
+    }
+
+    boss_.position.y += static_cast<float>(bossMoveDirection_) * 2.0f;
+    if (boss_.position.y >= 620.0f) {
+        bossMoveDirection_ = -1;
+    }
+    if (boss_.position.y <= 140.0f) {
+        bossMoveDirection_ = 1;
+    }
+
+    ++bossShotTimer_;
+    if (bossShotTimer_ >= 60) {
+        FireBossBullet();
+        bossShotTimer_ = 0;
+    }
+}
+
+void TitleScene::FireBossBullet()
+{
+    for (int i = 0; i < kBossBulletCount; ++i) {
+        if (!bossBullets_[i].active) {
+            Vector2 direction = {
+                player_.position.x - boss_.position.x,
+                player_.position.y - boss_.position.y
+            };
+            const float length =
+                std::sqrt(direction.x * direction.x + direction.y * direction.y);
+            if (length > 0.0f) {
+                direction.x /= length;
+                direction.y /= length;
+            }
+
+            bossBullets_[i].active = true;
+            bossBullets_[i].position = { boss_.position.x - 72.0f, boss_.position.y };
+            bossBullets_[i].velocity =
+                { direction.x * 7.0f, direction.y * 7.0f };
+            bossBullets_[i].radius = 10.0f;
+            break;
+        }
+    }
+}
+
+void TitleScene::UpdateBossBullets()
+{
+    for (int i = 0; i < kBossBulletCount; ++i) {
+        Actor& bullet = bossBullets_[i];
+        if (bullet.active) {
+            bullet.position.x += bullet.velocity.x;
+            bullet.position.y += bullet.velocity.y;
+            if (IsOutsideScreen(bullet.position, 60.0f)) {
+                bullet.active = false;
+            }
+        }
+    }
+}
+
+void TitleScene::CheckCollisions()
+{
+    for (int bulletIndex = 0; bulletIndex < kPlayerBulletCount; ++bulletIndex) {
+        PlayerBullet& bullet = playerBullets_[bulletIndex];
+        if (!bullet.actor.active) {
+            continue;
+        }
+
+        for (int enemyIndex = 0; enemyIndex < kEnemyCount; ++enemyIndex) {
+            Enemy& enemy = enemies_[enemyIndex];
+            if (enemy.actor.active && IsCircleHit(bullet.actor, enemy.actor)) {
+                enemy.actor.active = false;
+                bullet.actor.active = false;
+                break;
+            }
+        }
+
+        if (bullet.actor.active && boss_.active &&
+            IsCircleHit(bullet.actor, boss_)) {
+            int damage = 1;
+            if (bullet.charged) {
+                damage = 3;
+            }
+            bossHp_ -= damage;
+            if (bossHp_ < 0) {
+                bossHp_ = 0;
+            }
+            bullet.actor.active = false;
+        }
+    }
+
+    for (int i = 0; i < kEnemyBulletCount; ++i) {
+        if (enemyBullets_[i].active && IsCircleHit(enemyBullets_[i], player_)) {
+            enemyBullets_[i].active = false;
+            DamagePlayer();
+        }
+    }
+    for (int i = 0; i < kBossBulletCount; ++i) {
+        if (bossBullets_[i].active && IsCircleHit(bossBullets_[i], player_)) {
+            bossBullets_[i].active = false;
+            DamagePlayer();
+        }
+    }
+    for (int i = 0; i < kEnemyCount; ++i) {
+        if (enemies_[i].actor.active &&
+            IsCircleHit(enemies_[i].actor, player_)) {
+            enemies_[i].actor.active = false;
+            DamagePlayer();
+        }
+    }
+    if (boss_.active && IsCircleHit(boss_, player_)) {
+        DamagePlayer();
+    }
+}
+
+void TitleScene::DamagePlayer()
+{
+    if (playerInvincibleTimer_ > 0) {
+        return;
+    }
+    --playerHp_;
+    playerInvincibleTimer_ = 60;
+}
+
+bool TitleScene::IsCircleHit(const Actor& first, const Actor& second) const
+{
+    const float differenceX = first.position.x - second.position.x;
+    const float differenceY = first.position.y - second.position.y;
+    const float radiusSum = first.radius + second.radius;
+    return differenceX * differenceX + differenceY * differenceY <=
+        radiusSum * radiusSum;
+}
+
+bool TitleScene::IsOutsideScreen(const Vector2& position, float margin) const
+{
+    if (position.x < -margin || position.x > kScreenWidth + margin) {
+        return true;
+    }
+    if (position.y < -margin || position.y > kScreenHeight + margin) {
+        return true;
+    }
+    return false;
+}
+
+std::unique_ptr<Sprite> TitleScene::CreateSprite(
+    const Vector2& position,
+    const Vector2& size,
+    const Vector4& color)
+{
+    std::unique_ptr<Sprite> sprite = std::make_unique<Sprite>();
+    sprite->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
+    sprite->SetPosition(position);
+    sprite->SetSize(size);
+    sprite->SetAnchorPoint({ 0.5f, 0.5f });
+    sprite->SetColor(color);
+    return sprite;
+}
+
+void TitleScene::UpdateSprites()
+{
     backgroundSprite_->Update();
-    flagSprite_->Update();
-    headerLineSprite_->Update();
-    gamePlayButtonSprite_->Update();
-    gamePlayButtonText_->Update();
-    testButtonSprite_->Update();
-    testButtonText_->Update();
-    spriteTestButtonSprite_->Update();
-    spriteTestButtonText_->Update();
-    textTestButtonSprite_->Update();
-    textTestButtonText_->Update();
+    titlePanelSprite_->Update();
+
+    playerSprite_->SetPosition(player_.position);
+    playerSprite_->SetColor(kPlayerColor);
+    if (playerInvincibleTimer_ > 0 && (playerInvincibleTimer_ / 5) % 2 == 0) {
+        playerSprite_->SetColor(kPlayerHitColor);
+    }
+    playerSprite_->Update();
+
+    for (int i = 0; i < kPlayerBulletCount; ++i) {
+        playerBulletSprites_[i]->SetPosition(playerBullets_[i].actor.position);
+        playerBulletSprites_[i]->SetSize({ 24.0f, 12.0f });
+        playerBulletSprites_[i]->SetColor(kBulletColor);
+        if (playerBullets_[i].charged) {
+            playerBulletSprites_[i]->SetSize({ 54.0f, 34.0f });
+            playerBulletSprites_[i]->SetColor(kChargedBulletColor);
+        }
+        playerBulletSprites_[i]->Update();
+    }
+    for (int i = 0; i < kEnemyCount; ++i) {
+        enemySprites_[i]->SetPosition(enemies_[i].actor.position);
+        enemySprites_[i]->Update();
+    }
+    for (int i = 0; i < kEnemyBulletCount; ++i) {
+        enemyBulletSprites_[i]->SetPosition(enemyBullets_[i].position);
+        enemyBulletSprites_[i]->Update();
+    }
+
+    bossSprite_->SetPosition(boss_.position);
+    bossSprite_->Update();
+    for (int i = 0; i < kBossBulletCount; ++i) {
+        bossBulletSprites_[i]->SetPosition(bossBullets_[i].position);
+        bossBulletSprites_[i]->Update();
+    }
+
+    float playerHpRate = static_cast<float>(playerHp_) / 10.0f;
+    if (playerHpRate < 0.0f) {
+        playerHpRate = 0.0f;
+    }
+    playerHpSprite_->SetSize({ 200.0f * playerHpRate, 14.0f });
+    playerHpSprite_->Update();
+    playerHpBackSprite_->Update();
+
+    float bossHpRate = static_cast<float>(bossHp_) / 20.0f;
+    if (bossHpRate < 0.0f) {
+        bossHpRate = 0.0f;
+    }
+    bossHpSprite_->SetSize({ 400.0f * bossHpRate, 14.0f });
+    bossHpSprite_->Update();
+    bossHpBackSprite_->Update();
+
+    float chargeRate = static_cast<float>(chargeTime_) /
+        static_cast<float>(kMaxChargeTime);
+    if (chargeRate > 1.0f) {
+        chargeRate = 1.0f;
+    }
+    chargeSprite_->SetSize({ 200.0f * chargeRate, 8.0f });
+    chargeSprite_->Update();
+    chargeBackSprite_->Update();
+}
+
+void TitleScene::UpdateTexts()
+{
+    if (sceneState_ == SceneState::Title) {
+        stateText_->SetText("PRESS SPACE TO START");
+    } else if (sceneState_ == SceneState::GameOver) {
+        titleText_->SetText("GAME OVER");
+        stateText_->SetText("PRESS SPACE TO RETRY");
+    } else if (sceneState_ == SceneState::Clear) {
+        titleText_->SetText("MISSION CLEAR");
+        stateText_->SetText("PRESS SPACE TO PLAY AGAIN");
+    } else {
+        titleText_->SetText("AL SHOOTING");
+    }
+
+    titleText_->Update();
+    guideText_->Update();
+    stateText_->Update();
 }
 
 void TitleScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     backgroundSprite_->Draw();
-    flagSprite_->Draw();
-    headerLineSprite_->Draw();
-    gamePlayButtonSprite_->Draw();
-    testButtonSprite_->Draw();
-    spriteTestButtonSprite_->Draw();
-    textTestButtonSprite_->Draw();
 
-    TextRenderer::GetInstance()->PreDraw();
-    gamePlayButtonText_->Draw();
-    testButtonText_->Draw();
-    spriteTestButtonText_->Draw();
-    textTestButtonText_->Draw();
+    if (sceneState_ == SceneState::Playing) {
+        playerHpBackSprite_->Draw();
+        playerHpSprite_->Draw();
+        chargeBackSprite_->Draw();
+        chargeSprite_->Draw();
+
+        if (boss_.active) {
+            bossHpBackSprite_->Draw();
+            bossHpSprite_->Draw();
+        }
+
+        if (player_.active) {
+            playerSprite_->Draw();
+        }
+        for (int i = 0; i < kPlayerBulletCount; ++i) {
+            if (playerBullets_[i].actor.active) {
+                playerBulletSprites_[i]->Draw();
+            }
+        }
+        for (int i = 0; i < kEnemyCount; ++i) {
+            if (enemies_[i].actor.active) {
+                enemySprites_[i]->Draw();
+            }
+        }
+        for (int i = 0; i < kEnemyBulletCount; ++i) {
+            if (enemyBullets_[i].active) {
+                enemyBulletSprites_[i]->Draw();
+            }
+        }
+        if (boss_.active) {
+            bossSprite_->Draw();
+        }
+        for (int i = 0; i < kBossBulletCount; ++i) {
+            if (bossBullets_[i].active) {
+                bossBulletSprites_[i]->Draw();
+            }
+        }
+    } else {
+        titlePanelSprite_->Draw();
+
+        TextRenderer::GetInstance()->PreDraw();
+        titleText_->Draw();
+        guideText_->Draw();
+        stateText_->Draw();
+    }
 }
 
 void TitleScene::Draw3D()
@@ -314,101 +669,8 @@ void TitleScene::DrawParticle()
 
 void TitleScene::DrawImGui()
 {
-#ifdef USE_IMGUI
-    ImGui::Begin("Title Scene");
-    ImGui::Text("GamePlayScene button");
-    ImGui::Text("TestScene1 button");
-    ImGui::Text("SpriteTestScene button");
-    ImGui::Text("TextTestScene button");
-    ImGui::End();
-#endif
 }
 
 void TitleScene::Finalize()
 {
-    SetMouseCursorVisible(true);
-    ClipCursor(nullptr);
-}
-
-bool TitleScene::IsMouseOver(float left, float top, float width, float height) const
-{
-    POINT mousePosition {};
-    if (!GetCursorPos(&mousePosition)) {
-        return false;
-    }
-    if (!ScreenToClient(WinApp::GetInstance()->GetHwnd(), &mousePosition)) {
-        return false;
-    }
-
-    return mousePosition.x >= left &&
-        mousePosition.x < left + width &&
-        mousePosition.y >= top &&
-        mousePosition.y < top + height;
-}
-
-void TitleScene::SetMouseCursorVisible(bool visible) const
-{
-    if (visible) {
-        while (ShowCursor(TRUE) < 0) {
-        }
-    } else {
-        while (ShowCursor(FALSE) >= 0) {
-        }
-    }
-}
-
-void TitleScene::UpdateButtonVisual(
-    Sprite* buttonSprite,
-    Text* buttonText,
-    float baseLeft,
-    float baseTop,
-    float baseWidth,
-    float baseHeight,
-    bool isHovered,
-    bool isPressed,
-    std::size_t animationIndex)
-{
-    float targetScale = 1.0f;
-    float targetOffsetY = 0.0f;
-    Vector4 targetButtonColor = kButtonColor;
-    Vector4 targetTextColor = kButtonTextColor;
-    float targetGlowStrength = 0.0f;
-
-    if (isHovered) {
-        targetScale = kHoverScale;
-        targetButtonColor = kButtonHoverColor;
-        targetGlowStrength = 1.0f;
-    }
-    if (isPressed) {
-        targetScale = kPressedScale;
-        targetOffsetY = kPressedOffsetY;
-        targetButtonColor = kButtonPressedColor;
-        targetTextColor = kButtonPressedTextColor;
-        targetGlowStrength = 1.5f;
-    }
-
-    buttonScales_[animationIndex] +=
-        (targetScale - buttonScales_[animationIndex]) * kButtonAnimationSpeed;
-    buttonOffsetsY_[animationIndex] +=
-        (targetOffsetY - buttonOffsetsY_[animationIndex]) * kButtonAnimationSpeed;
-    buttonGlowStrengths_[animationIndex] +=
-        (targetGlowStrength - buttonGlowStrengths_[animationIndex]) * kButtonAnimationSpeed;
-
-    const float animatedWidth = baseWidth * buttonScales_[animationIndex];
-    const float animatedHeight = baseHeight * buttonScales_[animationIndex];
-    const float animatedLeft =
-        baseLeft + (baseWidth - animatedWidth) * 0.5f;
-    const float animatedTop =
-        baseTop + (baseHeight - animatedHeight) * 0.5f +
-        buttonOffsetsY_[animationIndex];
-
-    buttonSprite->SetPosition({ animatedLeft, animatedTop });
-    buttonSprite->SetSize({ animatedWidth, animatedHeight });
-    buttonSprite->SetColor(targetButtonColor);
-    buttonSprite->SetEffectStrength(buttonGlowStrengths_[animationIndex]);
-    buttonText->SetPosition({
-        baseLeft + baseWidth * 0.5f,
-        baseTop + baseHeight * 0.5f + buttonOffsetsY_[animationIndex]
-    });
-    buttonText->SetColor(targetTextColor);
 }
