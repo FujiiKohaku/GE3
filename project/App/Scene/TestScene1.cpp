@@ -29,7 +29,7 @@ void TestScene1::Initialize()
     debugCameraController_->SetTargetCamera(camera_.get());
     debugCameraController_->SetArrowKeyRotationEnabled(false);
     debugCameraController_->SetRotationMouseButton(1);
-    debugCameraController_->SetDebugMode(true);
+    debugCameraController_->SetDebugMode(false);
 
     // 環境マップの設定
     TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
@@ -37,12 +37,25 @@ void TestScene1::Initialize()
     Object3dManager::GetInstance()->SetEnvironmentTexture(skyboxHandle);
     SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(skyboxHandle);
 
-    LightManager::GetInstance()->SetDirectional({ 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, -1.0f, 0.0f }, 1.0f);
+    LightManager* lightManager = LightManager::GetInstance();
+    lightManager->SetDirectional(
+        { 1.0f, 0.52f, 0.25f, 1.0f },
+        { 0.45f, -1.0f, 0.25f },
+        0.48f);
+    lightManager->SetAmbientColor({ 0.16f, 0.20f, 0.38f });
+    lightManager->SetAmbientIntensity(0.14f);
+    lightManager->SetPointColor({ 1.0f, 0.38f, 0.16f, 1.0f });
+    lightManager->SetPointIntensity(0.22f);
+    lightManager->SetPointRadius(12.0f);
+    lightManager->SetSpotLightColor({ 0.20f, 0.28f, 0.58f, 1.0f });
+    lightManager->SetSpotLightIntensity(0.55f);
+    lightManager->SetSpotLightDistance(10.0f);
 
     // floorの初期化
     Model* floorModel = ModelManager::GetInstance()->CreatePlane("resources/Textures/floor_dirt_gemini.jpg", 10.0f, 10.0f);
     floorObj_ = std::make_unique<Object3d>();
     floorObj_->Initialize(Object3dManager::GetInstance());
+    floorObj_->SetEnableLighting(true);
     floorObj_->SetModel(floorModel);
     floorObj_->SetTranslate({ 0.0f, -5.0f, 0.0f });
     floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
@@ -52,6 +65,7 @@ void TestScene1::Initialize()
     const std::string playerModelPath = "Characters/precision_robot_rigged_single_gltf/precision_robot_rigged_single.gltf";
     playerActor_ = std::make_unique<AnimationActor>();
     playerActor_->Initialize(playerModelPath);
+    playerActor_->GetObject()->SetEnableLighting(true);
 
     // アニメーションのロード
     idleAnimation_   = AnimationLoder::LoadAnimationFile("resources/Models", playerModelPath, 4); // Robot_Idle
@@ -72,6 +86,7 @@ void TestScene1::Initialize()
     Model* katanaModel = ModelManager::GetInstance()->Load("Characters/cyan_katana/cyan_katana.obj");
     katanaObj_ = std::make_unique<Object3d>();
     katanaObj_->Initialize(Object3dManager::GetInstance());
+    katanaObj_->SetEnableLighting(true);
     katanaObj_->SetModel(katanaModel);
 
     Model* recoveryCubeModel =
@@ -83,12 +98,13 @@ void TestScene1::Initialize()
     recoveryCubeObj_->SetTranslate(recoveryCubeBasePosition_);
     recoveryCubeObj_->SetScale({ 0.75f, 0.75f, 0.75f });
     recoveryCubeObj_->SetColor({ 0.20f, 1.0f, 0.35f, 1.0f });
-    recoveryCubeObj_->SetEnableLighting(false);
+    recoveryCubeObj_->SetEnableLighting(true);
     recoveryCubeObj_->Update();
 
     // Fixed SneakWalk model for skeleton debug display
     sneakWalkActor_ = std::make_unique<AnimationActor>();
     sneakWalkActor_->Initialize("Characters/Animation/SneakWalk/sneakWalk.gltf");
+    sneakWalkActor_->GetObject()->SetEnableLighting(true);
     sneakWalkActor_->SetTranslate({ 7.0f, -5.0f, 0.0f });
     sneakWalkActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
     sneakWalkActor_->SetScale({ 2.0f, 2.0f, 2.0f });
@@ -105,10 +121,25 @@ void TestScene1::Initialize()
     fieldDemoEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect(
         "FieldDemo",
         { -7.0f, -4.5f, 0.0f });
+    cyberSingularityEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect(
+        "CyberSingularity",
+        { 0.0f, -2.0f, 8.0f });
     recoveryEffectHandle_ =
         EffectManager::GetInstance()->PlayLoopEffect(
             "HealPickup",
             recoveryCubeBasePosition_);
+    const Vector3 groundGlyphPosition = {
+        playerPos_.x, playerPos_.y + 0.06f, playerPos_.z
+    };
+    groundLightningOuterHandle_ =
+        EffectManager::GetInstance()->PlayLoopEffect(
+            "GroundLightningOuter", groundGlyphPosition);
+    groundLightningInnerHandle_ =
+        EffectManager::GetInstance()->PlayLoopEffect(
+            "GroundLightningInner", groundGlyphPosition);
+    groundLightningMotesHandle_ =
+        EffectManager::GetInstance()->PlayLoopEffect(
+            "GroundLightningMotes", groundGlyphPosition);
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
 }
@@ -273,6 +304,7 @@ void TestScene1::Update()
                     if (currentAnimState_ != PlayerAnimState::Dashing) {
                         currentAnimState_ = PlayerAnimState::Dashing;
                         playerActor_->GetPlayAnimation()->SetAnimation(&dashAnimation_, 0.15f);
+                        PlayDashStartBurst();
                     }
                 } else {
                     if (currentAnimState_ != PlayerAnimState::Running) {
@@ -324,6 +356,7 @@ void TestScene1::Update()
                 if (isDashInput) {
                     currentAnimState_ = PlayerAnimState::Dashing;
                     playerActor_->GetPlayAnimation()->SetAnimation(&dashAnimation_, 0.2f);
+                    PlayDashStartBurst();
                 } else {
                     currentAnimState_ = PlayerAnimState::Running;
                     playerActor_->GetPlayAnimation()->SetAnimation(&runAnimation_, 0.2f);
@@ -339,8 +372,32 @@ void TestScene1::Update()
     playerActor_->SetTranslate(playerPos_);
     playerActor_->SetRotate(playerRot_);
     playerActor_->SetScale({ playerScale_, playerScale_, playerScale_ });
+    const Vector3 groundGlyphPosition = {
+        playerPos_.x, -4.94f, playerPos_.z
+    };
+    EffectManager* groundEffectManager = EffectManager::GetInstance();
+    if (groundLightningOuterHandle_ != kInvalidEffectHandle &&
+        !groundEffectManager->SetEffectPosition(
+            groundLightningOuterHandle_, groundGlyphPosition)) {
+        groundLightningOuterHandle_ = kInvalidEffectHandle;
+    }
+    if (groundLightningInnerHandle_ != kInvalidEffectHandle &&
+        !groundEffectManager->SetEffectPosition(
+            groundLightningInnerHandle_, groundGlyphPosition)) {
+        groundLightningInnerHandle_ = kInvalidEffectHandle;
+    }
+    if (groundLightningMotesHandle_ != kInvalidEffectHandle &&
+        !groundEffectManager->SetEffectPosition(
+            groundLightningMotesHandle_, groundGlyphPosition)) {
+        groundLightningMotesHandle_ = kInvalidEffectHandle;
+    }
 
     debugCameraController_->Update();
+    if (!debugCameraController_->GetDebugMode()) {
+        Vector3 cameraPos = camera_->GetTranslate();
+        cameraPos.x = playerPos_.x;
+        camera_->SetTranslate(cameraPos);
+    }
     camera_->Update();
 
     // 更新処理 (止まっている時はアニメーション時間を進めない。ただしブレンド更新中は進める)
@@ -471,10 +528,40 @@ void TestScene1::Finalize()
         EffectManager::GetInstance()->StopEffect(fieldDemoEffectHandle_);
         fieldDemoEffectHandle_ = kInvalidEffectHandle;
     }
+    if (cyberSingularityEffectHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(cyberSingularityEffectHandle_);
+        cyberSingularityEffectHandle_ = kInvalidEffectHandle;
+    }
     if (recoveryEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(recoveryEffectHandle_);
         recoveryEffectHandle_ = kInvalidEffectHandle;
     }
+    if (groundLightningOuterHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(groundLightningOuterHandle_);
+        groundLightningOuterHandle_ = kInvalidEffectHandle;
+    }
+    if (groundLightningInnerHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(groundLightningInnerHandle_);
+        groundLightningInnerHandle_ = kInvalidEffectHandle;
+    }
+    if (groundLightningMotesHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(groundLightningMotesHandle_);
+        groundLightningMotesHandle_ = kInvalidEffectHandle;
+    }
+
+    LightManager* lightManager = LightManager::GetInstance();
+    lightManager->SetDirectional(
+        { 1.0f, 1.0f, 1.0f, 1.0f },
+        { 0.0f, -1.0f, 0.0f },
+        1.0f);
+    lightManager->SetAmbientColor({ 1.0f, 1.0f, 1.0f });
+    lightManager->SetAmbientIntensity(0.25f);
+    lightManager->SetPointColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    lightManager->SetPointIntensity(1.0f);
+    lightManager->SetPointRadius(10.0f);
+    lightManager->SetSpotLightColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    lightManager->SetSpotLightIntensity(4.0f);
+    lightManager->SetSpotLightDistance(7.0f);
 }
 
 void TestScene1::UpdateKatanaAttachment()
@@ -539,6 +626,9 @@ void TestScene1::ProcessAnimationEvents()
                 EffectManager::GetInstance()->PlayEffect(
                     "NormalBulletImpactFlash",
                     eventPosition);
+                EffectManager::GetInstance()->PlayEffect(
+                    "GroundLightningPulse",
+                    { playerPos_.x, -4.92f, playerPos_.z });
             } else if (event.value == "ComboImpact2") {
                 EffectManager::GetInstance()->PlayEffect(
                     "NormalBulletImpactFlash",
@@ -549,6 +639,9 @@ void TestScene1::ProcessAnimationEvents()
                 EffectManager::GetInstance()->PlayEffect(
                     "ComboLightning",
                     eventPosition);
+                EffectManager::GetInstance()->PlayEffect(
+                    "GroundLightningPulse",
+                    { playerPos_.x, -4.90f, playerPos_.z });
             } else {
                 EffectManager::GetInstance()->PlayEffect(
                     event.value,
@@ -567,6 +660,9 @@ void TestScene1::ProcessAnimationEvents()
             EffectManager::GetInstance()->PlayEffect(
                 "UppercutLightning",
                 katanaPosition);
+            EffectManager::GetInstance()->PlayEffect(
+                "GroundLightningPulse",
+                { playerPos_.x, -4.88f, playerPos_.z });
             static std::mt19937 lightningRandom(std::random_device {}());
             std::uniform_real_distribution<float> angleDistribution(
                 0.0f,
@@ -669,6 +765,52 @@ void TestScene1::UpdateMovementEffects()
             backflipTrailEffectHandle_ = kInvalidEffectHandle;
         }
     }
+}
+
+void TestScene1::PlayDashStartBurst()
+{
+    EffectManager* effectManager = EffectManager::GetInstance();
+    Vector3 burstPosition = {
+        playerPos_.x,
+        playerPos_.y + 0.15f,
+        playerPos_.z
+    };
+    Vector3 backward = {
+        std::sin(playerRot_.y) * 4.5f,
+        0.7f,
+        -std::cos(playerRot_.y) * 4.5f
+    };
+    Vector3 right = {
+        std::cos(playerRot_.y),
+        0.0f,
+        std::sin(playerRot_.y)
+    };
+
+    for (int smokeIndex = -1; smokeIndex <= 1; ++smokeIndex) {
+        Vector3 smokePosition =
+            burstPosition + right * (static_cast<float>(smokeIndex) * 0.42f);
+        EffectHandle smokeHandle =
+            effectManager->PlayEffect("DashDust", smokePosition);
+        if (smokeHandle != kInvalidEffectHandle) {
+            Vector3 fanVelocity =
+                backward + right * (static_cast<float>(smokeIndex) * 2.2f);
+            effectManager->SetEffectVelocity(smokeHandle, fanVelocity);
+        }
+    }
+
+    EffectHandle sparkHandle =
+        effectManager->PlayEffect(
+            "DashStartSpark",
+            burstPosition + Vector3{ 0.0f, 0.32f, 0.0f });
+    if (sparkHandle != kInvalidEffectHandle) {
+        effectManager->SetEffectVelocity(
+            sparkHandle,
+            backward * 1.7f + Vector3{ 0.0f, 2.4f, 0.0f });
+    }
+    effectManager->PlayEffect("DashStartShockwave", burstPosition);
+    effectManager->PlayEffect(
+        "DashStartShockwaveCore",
+        burstPosition + Vector3{ 0.0f, 0.04f, 0.0f });
 }
 
 void TestScene1::StopMovementEffects()

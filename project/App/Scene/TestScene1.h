@@ -27,6 +27,7 @@ private:
     void UpdateKatanaAttachment();
     void ProcessAnimationEvents();
     void UpdateMovementEffects();
+    void PlayDashStartBurst();
     void StopMovementEffects();
     bool TryGetJointWorldPosition(
         const std::string& jointName,
@@ -74,8 +75,12 @@ private:
     float combatIdleTimer_ = 0.0f;
 
     EffectHandle fieldDemoEffectHandle_ = kInvalidEffectHandle;
+    EffectHandle cyberSingularityEffectHandle_ = kInvalidEffectHandle;
     EffectHandle bodySpeedLineEffectHandle_ = kInvalidEffectHandle;
     EffectHandle backflipTrailEffectHandle_ = kInvalidEffectHandle;
+    EffectHandle groundLightningOuterHandle_ = kInvalidEffectHandle;
+    EffectHandle groundLightningInnerHandle_ = kInvalidEffectHandle;
+    EffectHandle groundLightningMotesHandle_ = kInvalidEffectHandle;
     bool showFieldDebug_ = true;
 
     // TPS Camera
