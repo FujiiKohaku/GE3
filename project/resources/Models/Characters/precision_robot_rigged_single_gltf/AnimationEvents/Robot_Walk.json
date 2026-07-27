@@ -9,10 +9,22 @@
       "Bone": "foot.L"
     },
     {
+      "Time": 0.40,
+      "Name": "PlayEffect",
+      "Value": "FootstepDust",
+      "Bone": "foot.R"
+    },
+    {
       "Time": 0.72,
       "Name": "PlayEffect",
       "Value": "FootstepDust",
       "Bone": "foot.R"
+    },
+    {
+      "Time": 1.04,
+      "Name": "PlayEffect",
+      "Value": "FootstepDust",
+      "Bone": "foot.L"
     }
   ]
 }

@@ -1,0 +1,45 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+  "Emitter": { "Shape": "Sphere", "Count": 96, "Radius": 0.15, "Frequency": 0.001 },
+  "Particle": {
+    "LifeTime": 0.42,
+    "StartScale": 0.22,
+    "EndScale": 0.02,
+    "StartRotation": 0.0,
+    "RotationSpeed": 8.0,
+    "Velocity": [0.0, 8.0, 0.0],
+    "StartColor": [0.55, 0.85, 1.0, 1.0],
+    "EndColor": [0.08, 0.25, 1.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "EnableDrag": true,
+    "Drag": 0.93,
+    "EnableNoise": true,
+    "NoiseStrength": 12.0,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "resources/Particles/circle.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": false,
+    "Duration": 0.48
+  },
+  "Light": {
+    "Enabled": true,
+    "Color": [0.35, 0.65, 1.0, 1.0],
+    "Intensity": 5.0,
+    "Radius": 8.0,
+    "FadeDuration": 0.35
+  }
+}

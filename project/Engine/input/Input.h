@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/Winapp/WinApp.h"
 #include <dinput.h>
+#include <xinput.h>
 #include <memory>
 #include <wrl.h>
 
@@ -22,6 +23,12 @@ public:
     LONG GetMouseDeltaY() const;
     LONG GetMouseWheel() const;
     void ResetMouseDelta();
+
+    bool IsGamepadConnected() const;
+    bool IsGamepadButtonPressed(WORD button) const;
+    bool IsGamepadButtonTrigger(WORD button) const;
+    float GetGamepadLeftStickX() const;
+    float GetGamepadLeftStickY() const;
 
 public:
     class ConstructorKey {
@@ -52,6 +59,8 @@ private:
 
     BYTE keys_[256] = {};
     DIMOUSESTATE2 mouseState_ = {};
-
-
+    XINPUT_STATE preGamepadState_ = {};
+    XINPUT_STATE gamepadState_ = {};
+    bool isGamepadConnected_ = false;
+    DWORD gamepadIndex_ = XUSER_MAX_COUNT;
 };

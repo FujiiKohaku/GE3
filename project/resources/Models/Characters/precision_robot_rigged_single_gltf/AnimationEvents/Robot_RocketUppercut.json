@@ -4,9 +4,9 @@
   "Events": [
     {
       "Time": 0.28,
-      "Name": "PlayEffect",
+      "Name": "PlayKatanaEffect",
       "Bone": "hand.R",
-      "Value": "HandFlame"
+      "Value": "UppercutLightning"
     }
   ]
 }

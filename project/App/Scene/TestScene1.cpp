@@ -13,6 +13,7 @@
 #include <numbers>
 #include <algorithm>
 #include <cmath>
+#include <random>
 
 void TestScene1::Initialize()
 {
@@ -108,7 +109,6 @@ void TestScene1::Initialize()
         EffectManager::GetInstance()->PlayLoopEffect(
             "HealPickup",
             recoveryCubeBasePosition_);
-
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
 }
@@ -162,6 +162,10 @@ void TestScene1::Update()
         if (Input::GetInstance()->IsKeyPressed(DIK_RIGHT)) {
             moveDir.x += 1.0f;
         }
+
+        moveDir.x += Input::GetInstance()->GetGamepadLeftStickX();
+        moveDir.z += Input::GetInstance()->GetGamepadLeftStickY();
+
         hasMoveInput = (moveDir.x != 0.0f || moveDir.z != 0.0f);
     }
 
@@ -169,7 +173,12 @@ void TestScene1::Update()
     if (hasMoveInput) {
         bool isLeftShiftPressed = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
         bool isRightShiftPressed = Input::GetInstance()->IsKeyPressed(DIK_RSHIFT);
-        isDashInput = isLeftShiftPressed || isRightShiftPressed;
+        bool isGamepadDashPressed =
+            Input::GetInstance()->IsGamepadButtonPressed(XINPUT_GAMEPAD_B);
+        isDashInput =
+            isLeftShiftPressed ||
+            isRightShiftPressed ||
+            isGamepadDashPressed;
     }
 
     if (hasMoveInput) {
@@ -201,7 +210,8 @@ void TestScene1::Update()
     if (currentAnimState_ == PlayerAnimState::Attacking) {
         attackTimer_ += 1.0f / 60.0f;
 
-        if (Input::GetInstance()->IsMouseTrigger(0)) {
+        if (Input::GetInstance()->IsMouseTrigger(0) ||
+            Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_X)) {
             if (comboStep_ + queuedComboAttacks_ < 2) {
                 queuedComboAttacks_++;
             }
@@ -234,7 +244,8 @@ void TestScene1::Update()
     }
     else if (!isJumping_) {
         // 地上にいる場合
-        if (Input::GetInstance()->IsMouseTrigger(0)) {
+        if (Input::GetInstance()->IsMouseTrigger(0) ||
+            Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_X)) {
             // 攻撃開始 (両手ビームアニメーション)
             currentAnimState_ = PlayerAnimState::Attacking;
             attackTimer_ = 0.0f;
@@ -244,7 +255,8 @@ void TestScene1::Update()
             combatIdleTimer_ = 0.0f;
             playerActor_->GetPlayAnimation()->SetAnimation(&attackAnimation_, 0.1f);
         }
-        else if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE)) {
+        else if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE) ||
+                 Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
             // ジャンプ開始
             isJumping_ = true;
             jumpVelocity_ = 0.35f;
@@ -523,9 +535,76 @@ void TestScene1::ProcessAnimationEvents()
         }
 
         if (event.name == "PlayEffect") {
+            if (event.value == "ComboImpact1") {
+                EffectManager::GetInstance()->PlayEffect(
+                    "NormalBulletImpactFlash",
+                    eventPosition);
+            } else if (event.value == "ComboImpact2") {
+                EffectManager::GetInstance()->PlayEffect(
+                    "NormalBulletImpactFlash",
+                    eventPosition);
+                EffectManager::GetInstance()->PlayEffect(
+                    "LightningAfterglow",
+                    eventPosition);
+                EffectManager::GetInstance()->PlayEffect(
+                    "ComboLightning",
+                    eventPosition);
+            } else {
+                EffectManager::GetInstance()->PlayEffect(
+                    event.value,
+                    eventPosition);
+            }
+        } else if (event.name == "PlayKatanaEffect") {
+            Vector3 katanaPosition = eventPosition;
+            if (katanaObj_) {
+                const Matrix4x4& katanaWorld = katanaObj_->GetWorldMatrix();
+                katanaPosition = {
+                    katanaWorld.m[3][0],
+                    katanaWorld.m[3][1],
+                    katanaWorld.m[3][2]
+                };
+            }
             EffectManager::GetInstance()->PlayEffect(
-                event.value,
-                eventPosition);
+                "UppercutLightning",
+                katanaPosition);
+            static std::mt19937 lightningRandom(std::random_device {}());
+            std::uniform_real_distribution<float> angleDistribution(
+                0.0f,
+                2.0f * std::numbers::pi_v<float>);
+            std::uniform_real_distribution<float> radiusDistribution(
+                1.3f,
+                4.5f);
+
+            EffectManager::GetInstance()->PlayEffect(
+                "FinalStormAfterglow",
+                { playerPos_.x, playerPos_.y + 0.2f, playerPos_.z });
+            EffectManager::GetInstance()->PlayEffect(
+                "FinalStormLightning",
+                { playerPos_.x, playerPos_.y + 0.2f, playerPos_.z });
+            EffectManager::GetInstance()->PlayEffect(
+                "NormalBulletImpactFlash",
+                { playerPos_.x, playerPos_.y + 0.8f, playerPos_.z });
+            for (int lightningIndex = 0; lightningIndex < 4; ++lightningIndex) {
+                float angle = angleDistribution(lightningRandom);
+                float radius = radiusDistribution(lightningRandom);
+                Vector3 strikePosition = {
+                    playerPos_.x + std::cos(angle) * radius,
+                    playerPos_.y + 0.1f,
+                    playerPos_.z + std::sin(angle) * radius
+                };
+                EffectManager::GetInstance()->PlayEffect(
+                    "FinalStormAfterglow",
+                    strikePosition);
+                EffectManager::GetInstance()->PlayEffect(
+                    "FinalStormLightning",
+                    strikePosition);
+            }
+            EffectManager::GetInstance()->PlayEffect(
+                "MissileExplosionFlash",
+                katanaPosition);
+            EffectManager::GetInstance()->PlayEffect(
+                "MissileExplosionRing",
+                katanaPosition);
         } else if (event.name == "StartTrail") {
             if (backflipTrailEffectHandle_ != kInvalidEffectHandle) {
                 EffectManager::GetInstance()->StopEffect(backflipTrailEffectHandle_);
