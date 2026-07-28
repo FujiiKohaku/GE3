@@ -48,6 +48,7 @@ enum class PostEffectType {
     RainDrops,
     CyberScanline,
     HexShield,
+    BlackHoleDistortion,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

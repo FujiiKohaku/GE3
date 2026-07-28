@@ -60,6 +60,8 @@ struct EmitterSphere
     float frequency;
     float frequencyTime;
     uint32_t emit;
+    uint32_t maxParticles;
+    uint32_t3 padding2;
 };
 struct PerFrame
 {

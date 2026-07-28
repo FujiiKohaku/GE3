@@ -11,6 +11,7 @@
 #include "externals/json.hpp"
 
 #include <d3d12.h>
+#include <array>
 #include <functional>
 #include <memory>
 #include <string>
@@ -21,6 +22,13 @@
 using EffectHandle = uint32_t;
 inline constexpr EffectHandle kInvalidEffectHandle = 0xffffffffu;
 using EffectPositionProvider = std::function<Vector3()>;
+inline constexpr uint32_t kEffectSkeletonJointCount = 18;
+
+struct EffectSkeletonPose {
+    std::array<Vector4, kEffectSkeletonJointCount> jointPositions {};
+    uint32_t jointCount = 0;
+    float padding[3] {};
+};
 
 struct EffectData {
     std::string effectName;
@@ -103,6 +111,9 @@ public:
 
     bool SetEffectPosition(EffectHandle handle, const Vector3& position);
     bool SetEffectVelocity(EffectHandle handle, const Vector3& velocity);
+    bool SetEffectSkeletonPose(
+        EffectHandle handle,
+        const EffectSkeletonPose& skeletonPose);
     bool StopEffect(EffectHandle handle);
     // シーンに属する再生中エフェクトだけを停止する。
     // シェーダーやパイプラインなどの共通リソースは保持する。
@@ -120,6 +131,12 @@ public:
     void UpdatePerView();
 
     const std::vector<ActiveEffect>& GetActiveEffects() const { return activeEffects_; }
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    float GetParticleUpdateGpuTimeMs() const { return particleUpdateGpuTimeMs_; }
+    float GetParticleDrawGpuTimeMs() const { return particleDrawGpuTimeMs_; }
+    void ReportAndResetFramePerformance(double frameTimeMs);
+#endif
 
 private:
     enum class ParticleRenderType {
@@ -248,10 +265,12 @@ private:
         bool depthWrite = false;
         D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
         uint32_t emitCount = 128;
+        uint32_t maxParticles = 1024;
         float emitRadius = 0.2f;
         float emitFrequency = 0.05f;
         float duration = 1.5f;
         bool defaultLoop = false;
+        uint32_t resourcePoolReserve = 0;
         EffectSettings settings;
         ParticleRenderParameter renderParameter;
         EffectLightSettings lightSettings;
@@ -271,12 +290,14 @@ private:
         Microsoft::WRL::ComPtr<ID3D12Resource> effectSettingsResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> renderParameterResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> fieldResource;
+        Microsoft::WRL::ComPtr<ID3D12Resource> skeletonPoseResource;
 
         EmitterSphere* emitterData = nullptr;
         PerFrame* perFrameData = nullptr;
         EffectSettings* effectSettingsData = nullptr;
         ParticleRenderParameter* renderParameterData = nullptr;
         ParticleFieldCollection* fieldData = nullptr;
+        EffectSkeletonPose* skeletonPoseData = nullptr;
 
         uint32_t particleUavIndex = kInvalidDescriptorIndex;
         uint32_t particleSrvIndex = kInvalidDescriptorIndex;
@@ -293,6 +314,7 @@ private:
         D3D12_RESOURCE_STATES freeListState = D3D12_RESOURCE_STATE_COMMON;
 
         float age = 0.0f;
+        uint32_t maxParticles = 0;
         bool hasEmitted = false;
     };
 
@@ -315,6 +337,17 @@ private:
         float duration,
         EffectPositionProvider positionProvider);
     ActiveEffectResource CreateActiveEffectResource(const EffectRuntime& runtime, const Vector3& position);
+    bool TryAcquirePooledResource(
+        const EffectRuntime& runtime,
+        const Vector3& position,
+        ActiveEffectResource& resource);
+    void ResetActiveEffectResource(
+        ActiveEffectResource& resource,
+        const EffectRuntime& runtime,
+        const Vector3& position);
+    void ReturnActiveEffectResourceToPool(ActiveEffectResource&& resource);
+    void ReleaseActiveEffectResource(ActiveEffectResource& resource);
+    void EvictOnePooledResource();
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateUavBufferResource(size_t sizeInBytes, const wchar_t* name);
     D3D12_GPU_DESCRIPTOR_HANDLE CreateStructuredBufferUAV(
         ID3D12Resource* resource,
@@ -371,6 +404,21 @@ private:
         D3D12_RESOURCE_STATES nextState);
     void InsertUavBarrier(ID3D12Resource* resource);
 
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    void LogDebugEffectSummary();
+    void InitializePerformanceQueries();
+    void ReadbackPerformanceQueries();
+    void RecordEffectStartPerformance(
+        const std::string& effectName,
+        double totalTimeMs,
+        double resourceCreateTimeMs,
+        double fieldUpdateTimeMs,
+        double initializeDispatchTimeMs,
+        double lightCreateTimeMs,
+        double commitTimeMs,
+        bool reusedPooledResource);
+#endif
+
 private:
     static std::unique_ptr<EffectManager> instance_;
 
@@ -404,6 +452,7 @@ private:
     std::vector<ActiveEffect> activeEffects_;
     std::vector<ActiveEffectResource> activeResources_;
     std::vector<ActiveEffectResource> retiredResources_;
+    std::vector<ActiveEffectResource> pooledResources_;
     EffectHandle nextEffectHandle_ = 1;
 
     std::vector<std::string> warmUpEffectNames_;
@@ -411,6 +460,30 @@ private:
     bool isWarmUpComplete_ = false;
     bool isInitialized_ = false;
 
-    static constexpr uint32_t kMaxGPUParticle = 1024;
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    float debugLogElapsedTime_ = 0.0f;
+    Microsoft::WRL::ComPtr<ID3D12QueryHeap> performanceQueryHeap_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> performanceReadbackBuffer_;
+    uint64_t performanceTimestampFrequency_ = 1;
+    float particleUpdateGpuTimeMs_ = 0.0f;
+    float particleDrawGpuTimeMs_ = 0.0f;
+    bool performanceQueryPending_ = false;
+    bool performanceUpdateQueryWritten_ = false;
+    uint32_t performanceStartedEffectCount_ = 0;
+    double performanceStartEffectTotalTimeMs_ = 0.0;
+    double performanceStartEffectMaxTimeMs_ = 0.0;
+    double performanceResourceCreateTimeMs_ = 0.0;
+    double performanceFieldUpdateTimeMs_ = 0.0;
+    double performanceInitializeDispatchTimeMs_ = 0.0;
+    double performanceLightCreateTimeMs_ = 0.0;
+    double performanceCommitTimeMs_ = 0.0;
+    uint32_t performanceReusedResourceCount_ = 0;
+    uint32_t performanceCreatedResourceCount_ = 0;
+    std::string performanceSlowestEffectName_;
+    std::unordered_map<std::string, uint32_t> performanceStartedEffectCounts_;
+#endif
+
+    static constexpr uint32_t kMaxGPUParticleCapacity = 4096;
     static constexpr uint32_t kMaxTrailPoints = 64;
+    static constexpr size_t kMaxPooledResources = 80;
 };

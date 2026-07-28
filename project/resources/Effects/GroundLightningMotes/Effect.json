@@ -2,6 +2,7 @@
   "Shaders": { "Emit": "Emit.CS.hlsl", "Update": "Update.CS.hlsl", "Vertex": "Render.VS.hlsl", "Pixel": "Render.PS.hlsl" },
   "Emitter": { "Shape": "Ring", "Count": 4, "Radius": 3.7, "Frequency": 0.10 },
   "Particle": {
+    "MaxParticles": 64,
     "LifeTime": 1.35, "StartScale": 0.12, "EndScale": 0.025,
     "StartRotation": 0.0, "RotationSpeed": 4.0, "Velocity": [0.0, 1.7, 0.0],
     "StartColor": [0.38, 0.82, 1.0, 0.8], "EndColor": [0.05, 0.28, 1.0, 0.0]

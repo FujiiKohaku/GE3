@@ -12,6 +12,7 @@
     "Frequency": 0.001
   },
   "Particle": {
+    "MaxParticles": 1024,
     "LifeTime": 20.0,
     "StartScale": 0.10,
     "EndScale": 0.07,

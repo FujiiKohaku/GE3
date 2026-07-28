@@ -8,6 +8,7 @@
 #include "Engine/math/MatrixMath.h"
 #include "externals/json.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cmath>
@@ -246,6 +247,10 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
     CreateFieldRootSignature();
     CreateFieldPipelines();
 
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    InitializePerformanceQueries();
+#endif
+
 #ifdef _DEBUG
     Logger::Log(std::format(
         "[EffectInit] Common resources and root signatures: {} ms",
@@ -319,10 +324,10 @@ void EffectManager::BeginWarmUp()
         return;
     }
 
-    warmUpEffectNames_.reserve(effects_.size());
     for (const auto& [effectName, runtime] : effects_) {
-        (void)runtime;
-        warmUpEffectNames_.push_back(effectName);
+        for (uint32_t index = 0; index < runtime.resourcePoolReserve; ++index) {
+            warmUpEffectNames_.push_back(effectName);
+        }
     }
     warmUpEffectIndex_ = 0;
     isWarmUpComplete_ = warmUpEffectNames_.empty();
@@ -372,18 +377,23 @@ float EffectManager::GetWarmUpProgress() const
 bool EffectManager::WarmUpEffect(const std::string& effectName)
 {
     const Vector3 warmUpPosition = { 0.0f, -10000.0f, 0.0f };
-    const float warmUpDuration = deltaTime_ * 3.0f;
-    const EffectHandle handle = StartEffect(effectName, warmUpPosition, false, warmUpDuration, nullptr);
-    if (handle == kInvalidEffectHandle) {
+    std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
+        effects_.find(effectName);
+    if (runtimeIterator == effects_.end()) {
         return false;
     }
 
-    const size_t activeEffectIndex = FindActiveEffectIndex(handle);
-    if (activeEffectIndex == static_cast<size_t>(-1)) {
+    while (!srvManager_->CanAllocate(4) && !pooledResources_.empty()) {
+        EvictOnePooledResource();
+    }
+    if (!srvManager_->CanAllocate(4)) {
         return false;
     }
 
-    UpdateActiveEffect(activeEffectIndex);
+    ActiveEffectResource resource =
+        CreateActiveEffectResource(runtimeIterator->second, warmUpPosition);
+    DispatchInitialize(resource);
+    ReturnActiveEffectResourceToPool(std::move(resource));
     return true;
 }
 
@@ -451,6 +461,13 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
     const nlohmann::json& simulation = SelectJsonSection(config, "Simulation");
     const nlohmann::json& render = SelectJsonSection(config, "Render");
 
+    runtime.resourcePoolReserve = config.value(
+        "ResourcePoolReserve",
+        runtime.resourcePoolReserve);
+    if (runtime.resourcePoolReserve > 64u) {
+        runtime.resourcePoolReserve = 64u;
+    }
+
     if (config.contains("Shaders")) {
         const nlohmann::json& shaders = config.at("Shaders");
         if (shaders.contains("Emit")) {
@@ -491,6 +508,12 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
     runtime.emitCount = emitter.value("Count", emitter.value("EmitCount", runtime.emitCount));
     runtime.emitRadius = emitter.value("Radius", emitter.value("EmitRadius", runtime.emitRadius));
     runtime.emitFrequency = emitter.value("Frequency", emitter.value("EmitFrequency", runtime.emitFrequency));
+
+    runtime.maxParticles = particle.value("MaxParticles", runtime.maxParticles);
+    runtime.maxParticles = std::clamp(
+        runtime.maxParticles,
+        1u,
+        kMaxGPUParticleCapacity);
 
     runtime.settings.lifeTime = particle.value("LifeTime", runtime.settings.lifeTime);
     runtime.settings.startScale = particle.value("StartScale", runtime.settings.startScale);
@@ -886,15 +909,17 @@ EffectHandle EffectManager::StartEffect(
     float duration,
     EffectPositionProvider positionProvider)
 {
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point startEffectBeginTime =
+        std::chrono::steady_clock::now();
+#endif
+
     std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator = effects_.find(effectName);
     if (runtimeIterator == effects_.end()) {
         return kInvalidEffectHandle;
     }
 
     const EffectRuntime& runtime = runtimeIterator->second;
-    if (!srvManager_->CanAllocate(4)) {
-        return kInvalidEffectHandle;
-    }
 
     const EffectHandle handle = AllocateEffectHandle();
     if (handle == kInvalidEffectHandle) {
@@ -914,13 +939,87 @@ EffectHandle EffectManager::StartEffect(
     activeEffect.isLoop = isLoop || runtime.defaultLoop;
     activeEffect.isAlive = true;
 
-    ActiveEffectResource resource = CreateActiveEffectResource(runtime, position);
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point resourceCreateBeginTime =
+        std::chrono::steady_clock::now();
+#endif
+    ActiveEffectResource resource {};
+    const bool reusedPooledResource =
+        TryAcquirePooledResource(runtime, position, resource);
+    if (!reusedPooledResource) {
+        while (!srvManager_->CanAllocate(4) && !pooledResources_.empty()) {
+            EvictOnePooledResource();
+        }
+        if (!srvManager_->CanAllocate(4)) {
+            return kInvalidEffectHandle;
+        }
+        resource = CreateActiveEffectResource(runtime, position);
+    }
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point resourceCreateEndTime =
+        std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point fieldUpdateBeginTime =
+        resourceCreateEndTime;
+#endif
     UpdateEffectFields(runtime, activeEffect, resource);
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point fieldUpdateEndTime =
+        std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point initializeDispatchBeginTime =
+        fieldUpdateEndTime;
+#endif
     DispatchInitialize(resource);
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point initializeDispatchEndTime =
+        std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point lightCreateBeginTime =
+        initializeDispatchEndTime;
+#endif
     CreateEffectLight(runtime, activeEffect);
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point lightCreateEndTime =
+        std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point commitBeginTime =
+        lightCreateEndTime;
+#endif
 
     activeEffects_.push_back(std::move(activeEffect));
     activeResources_.push_back(std::move(resource));
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    const std::chrono::steady_clock::time_point commitEndTime =
+        std::chrono::steady_clock::now();
+    RecordEffectStartPerformance(
+        effectName,
+        std::chrono::duration<double, std::milli>(
+            commitEndTime - startEffectBeginTime).count(),
+        std::chrono::duration<double, std::milli>(
+            resourceCreateEndTime - resourceCreateBeginTime).count(),
+        std::chrono::duration<double, std::milli>(
+            fieldUpdateEndTime - fieldUpdateBeginTime).count(),
+        std::chrono::duration<double, std::milli>(
+            initializeDispatchEndTime - initializeDispatchBeginTime).count(),
+        std::chrono::duration<double, std::milli>(
+            lightCreateEndTime - lightCreateBeginTime).count(),
+        std::chrono::duration<double, std::milli>(
+            commitEndTime - commitBeginTime).count(),
+        reusedPooledResource);
+#endif
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[Effect] Start name={} handle={} loop={} duration={:.2f} "
+        "emitCount={} frequency={:.4f} lifeTime={:.2f} fields={} fixedCapacity={}",
+        effectName,
+        handle,
+        activeEffects_.back().isLoop,
+        activeEffects_.back().duration,
+        runtime.emitCount,
+        runtime.emitFrequency,
+        runtime.settings.lifeTime,
+        runtime.fieldCount,
+        runtime.maxParticles));
+#endif
 
     return handle;
 }
@@ -953,12 +1052,39 @@ bool EffectManager::SetEffectVelocity(EffectHandle handle, const Vector3& veloci
     return true;
 }
 
+bool EffectManager::SetEffectSkeletonPose(
+    EffectHandle handle,
+    const EffectSkeletonPose& skeletonPose)
+{
+    const size_t index = FindActiveEffectIndex(handle);
+    if (index == static_cast<size_t>(-1)) {
+        return false;
+    }
+
+    EffectSkeletonPose* poseData =
+        activeResources_[index].skeletonPoseData;
+    if (!poseData) {
+        return false;
+    }
+
+    *poseData = skeletonPose;
+    return true;
+}
+
 bool EffectManager::StopEffect(EffectHandle handle)
 {
     const size_t index = FindActiveEffectIndex(handle);
     if (index == static_cast<size_t>(-1)) {
         return false;
     }
+
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[Effect] Stop requested name={} handle={} age={:.2f}",
+        activeEffects_[index].effectName,
+        handle,
+        activeResources_[index].age));
+#endif
 
     std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
         effects_.find(activeEffects_[index].effectName);
@@ -992,13 +1118,11 @@ void EffectManager::StopAllEffects()
     }
 
     for (ActiveEffectResource& resource : activeResources_) {
-        UnmapActiveEffectResource(resource);
-        ReleaseActiveEffectDescriptors(resource);
+        ReturnActiveEffectResourceToPool(std::move(resource));
     }
 
     for (ActiveEffectResource& resource : retiredResources_) {
-        UnmapActiveEffectResource(resource);
-        ReleaseActiveEffectDescriptors(resource);
+        ReturnActiveEffectResourceToPool(std::move(resource));
     }
 
     activeEffects_.clear();
@@ -1156,8 +1280,9 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
 {
     ActiveEffectResource resource {};
     resource.renderType = runtime.renderType;
+    resource.maxParticles = runtime.maxParticles;
 
-    uint32_t particleCount = kMaxGPUParticle;
+    uint32_t particleCount = runtime.maxParticles;
     uint32_t particleStride = sizeof(ParticleCS);
     const wchar_t* particleResourceName = L"EffectManager::ParticleBuffer";
     if (runtime.renderType == ParticleRenderType::Trail) {
@@ -1170,7 +1295,9 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
         static_cast<size_t>(particleStride) * particleCount,
         particleResourceName);
     resource.freeListIndexResource = CreateUavBufferResource(sizeof(int32_t),L"EffectManager::FreeListIndex");
-    resource.freeListResource = CreateUavBufferResource(sizeof(uint32_t) * kMaxGPUParticle,L"EffectManager::FreeList");
+    resource.freeListResource = CreateUavBufferResource(
+        sizeof(uint32_t) * resource.maxParticles,
+        L"EffectManager::FreeList");
 
     resource.particleUavHandleGPU = CreateStructuredBufferUAV(
         resource.particleResource.Get(),
@@ -1189,13 +1316,70 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
         resource.freeListIndexUavIndex);
     resource.freeListUavHandleGPU = CreateStructuredBufferUAV(
         resource.freeListResource.Get(),
-        kMaxGPUParticle,
+        resource.maxParticles,
         sizeof(uint32_t),
         resource.freeListUavIndex);
 
     resource.emitterResource = dxCommon_->CreateBufferResource(sizeof(EmitterSphere));
     resource.emitterResource->SetName(L"EffectManager::EmitterSphere");
     resource.emitterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.emitterData));
+
+    resource.perFrameResource = dxCommon_->CreateBufferResource(sizeof(PerFrame));
+    resource.perFrameResource->SetName(L"EffectManager::PerFrame");
+    resource.perFrameResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.perFrameData));
+    resource.effectSettingsResource = dxCommon_->CreateBufferResource(sizeof(EffectSettings));
+    resource.effectSettingsResource->SetName(L"EffectManager::EffectSettings");
+    resource.effectSettingsResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.effectSettingsData));
+    resource.renderParameterResource = dxCommon_->CreateBufferResource(sizeof(ParticleRenderParameter));
+    resource.renderParameterResource->SetName(L"EffectManager::ParticleRenderParameter");
+    resource.renderParameterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.renderParameterData));
+    resource.fieldResource = dxCommon_->CreateBufferResource(sizeof(ParticleFieldCollection));
+    resource.fieldResource->SetName(L"EffectManager::ParticleFieldCollection");
+    resource.fieldResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.fieldData));
+    resource.skeletonPoseResource =
+        dxCommon_->CreateBufferResource(sizeof(EffectSkeletonPose));
+    resource.skeletonPoseResource->SetName(
+        L"EffectManager::EffectSkeletonPose");
+    resource.skeletonPoseResource->Map(
+        0,
+        nullptr,
+        reinterpret_cast<void**>(&resource.skeletonPoseData));
+    ResetActiveEffectResource(resource, runtime, position);
+
+    return resource;
+}
+
+bool EffectManager::TryAcquirePooledResource(
+    const EffectRuntime& runtime,
+    const Vector3& position,
+    ActiveEffectResource& resource)
+{
+    for (size_t index = 0; index < pooledResources_.size(); ++index) {
+        ActiveEffectResource& pooledResource = pooledResources_[index];
+        if (pooledResource.renderType != runtime.renderType ||
+            pooledResource.maxParticles != runtime.maxParticles) {
+            continue;
+        }
+
+        resource = std::move(pooledResource);
+        pooledResources_.erase(
+            pooledResources_.begin() + static_cast<std::ptrdiff_t>(index));
+        ResetActiveEffectResource(resource, runtime, position);
+        return true;
+    }
+
+    return false;
+}
+
+void EffectManager::ResetActiveEffectResource(
+    ActiveEffectResource& resource,
+    const EffectRuntime& runtime,
+    const Vector3& position)
+{
+    resource.renderType = runtime.renderType;
+    resource.maxParticles = runtime.maxParticles;
+    resource.age = 0.0f;
+    resource.hasEmitted = false;
 
     resource.emitterData->translate = position;
     resource.emitterData->radius = runtime.emitRadius;
@@ -1205,29 +1389,45 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     resource.emitterData->frequency = runtime.emitFrequency;
     resource.emitterData->frequencyTime = 0.0f;
     resource.emitterData->emit = 0;
+    resource.emitterData->maxParticles = resource.maxParticles;
+    resource.emitterData->padding2[0] = 0;
+    resource.emitterData->padding2[1] = 0;
+    resource.emitterData->padding2[2] = 0;
 
-    resource.perFrameResource = dxCommon_->CreateBufferResource(sizeof(PerFrame));
-    resource.perFrameResource->SetName(L"EffectManager::PerFrame");
-    resource.perFrameResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.perFrameData));
     resource.perFrameData->time = 0.0f;
     resource.perFrameData->deltaTime = deltaTime_;
-
-    resource.effectSettingsResource = dxCommon_->CreateBufferResource(sizeof(EffectSettings));
-    resource.effectSettingsResource->SetName(L"EffectManager::EffectSettings");
-    resource.effectSettingsResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.effectSettingsData));
     *resource.effectSettingsData = runtime.settings;
-
-    resource.renderParameterResource = dxCommon_->CreateBufferResource(sizeof(ParticleRenderParameter));
-    resource.renderParameterResource->SetName(L"EffectManager::ParticleRenderParameter");
-    resource.renderParameterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.renderParameterData));
     *resource.renderParameterData = runtime.renderParameter;
-
-    resource.fieldResource = dxCommon_->CreateBufferResource(sizeof(ParticleFieldCollection));
-    resource.fieldResource->SetName(L"EffectManager::ParticleFieldCollection");
-    resource.fieldResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.fieldData));
     *resource.fieldData = {};
+    *resource.skeletonPoseData = {};
+}
 
-    return resource;
+void EffectManager::ReturnActiveEffectResourceToPool(
+    ActiveEffectResource&& resource)
+{
+    if (pooledResources_.size() >= kMaxPooledResources) {
+        ReleaseActiveEffectResource(resource);
+        return;
+    }
+
+    pooledResources_.push_back(std::move(resource));
+}
+
+void EffectManager::ReleaseActiveEffectResource(
+    ActiveEffectResource& resource)
+{
+    UnmapActiveEffectResource(resource);
+    ReleaseActiveEffectDescriptors(resource);
+}
+
+void EffectManager::EvictOnePooledResource()
+{
+    if (pooledResources_.empty()) {
+        return;
+    }
+
+    ReleaseActiveEffectResource(pooledResources_.back());
+    pooledResources_.pop_back();
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource> EffectManager::CreateUavBufferResource(
@@ -1365,7 +1565,7 @@ void EffectManager::CreateInitializeRootSignature()
     freeListUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     freeListUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[3] {};
+    D3D12_ROOT_PARAMETER rootParameters[4] {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[0].DescriptorTable.pDescriptorRanges = &particleUavRange;
@@ -1380,6 +1580,12 @@ void EffectManager::CreateInitializeRootSignature()
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[2].DescriptorTable.pDescriptorRanges = &freeListUavRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].Constants.ShaderRegister = 0;
+    rootParameters[3].Constants.RegisterSpace = 0;
+    rootParameters[3].Constants.Num32BitValues = 1;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -1507,7 +1713,7 @@ void EffectManager::CreateUpdateRootSignature()
     freeListUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     freeListUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[6] {};
+    D3D12_ROOT_PARAMETER rootParameters[7] {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[0].DescriptorTable.pDescriptorRanges = &particleUavRange;
@@ -1534,6 +1740,10 @@ void EffectManager::CreateUpdateRootSignature()
     rootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[5].Descriptor.ShaderRegister = 2;
+
+    rootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[6].Descriptor.ShaderRegister = 3;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -1640,7 +1850,8 @@ void EffectManager::DispatchInitialize(ActiveEffectResource& resource)
     commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
     commandList->SetComputeRootDescriptorTable(1, resource.freeListIndexUavHandleGPU);
     commandList->SetComputeRootDescriptorTable(2, resource.freeListUavHandleGPU);
-    commandList->Dispatch((kMaxGPUParticle + 255) / 256, 1, 1);
+    commandList->SetComputeRoot32BitConstant(3, resource.maxParticles, 0);
+    commandList->Dispatch((resource.maxParticles + 255) / 256, 1, 1);
 
     InsertUavBarrier(resource.particleResource.Get());
     InsertUavBarrier(resource.freeListIndexResource.Get());
@@ -1676,6 +1887,9 @@ void EffectManager::DispatchUpdate(const EffectRuntime& runtime, ActiveEffectRes
     commandList->SetComputeRootSignature(updateRootSignature_.Get());
     commandList->SetPipelineState(runtime.updatePipelineState.Get());
     commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
+    commandList->SetComputeRootConstantBufferView(
+        6,
+        resource.skeletonPoseResource->GetGPUVirtualAddress());
     if (runtime.renderType == ParticleRenderType::Trail) {
         commandList->SetComputeRootConstantBufferView(3, resource.perFrameResource->GetGPUVirtualAddress());
         commandList->SetComputeRootConstantBufferView(4, resource.renderParameterResource->GetGPUVirtualAddress());
@@ -1689,7 +1903,7 @@ void EffectManager::DispatchUpdate(const EffectRuntime& runtime, ActiveEffectRes
     commandList->SetComputeRootConstantBufferView(3, resource.perFrameResource->GetGPUVirtualAddress());
     commandList->SetComputeRootConstantBufferView(4, resource.effectSettingsResource->GetGPUVirtualAddress());
     commandList->SetComputeRootConstantBufferView(5, resource.emitterResource->GetGPUVirtualAddress());
-    commandList->Dispatch((kMaxGPUParticle + 255) / 256, 1, 1);
+    commandList->Dispatch((resource.maxParticles + 255) / 256, 1, 1);
 }
 
 void EffectManager::DispatchFields(const EffectRuntime& runtime, ActiveEffectResource& resource)
@@ -1715,19 +1929,51 @@ void EffectManager::DispatchFields(const EffectRuntime& runtime, ActiveEffectRes
     if (runtime.renderType == ParticleRenderType::Trail) {
         commandList->Dispatch(1, 1, 1);
     } else {
-        commandList->Dispatch((kMaxGPUParticle + 255) / 256, 1, 1);
+        commandList->Dispatch((resource.maxParticles + 255) / 256, 1, 1);
     }
 }
 
 void EffectManager::Update()
 {
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    ReadbackPerformanceQueries();
+    performanceUpdateQueryWritten_ = false;
+    bool recordUpdateGpuTime =
+        performanceQueryHeap_ != nullptr &&
+        !activeEffects_.empty();
+    if (recordUpdateGpuTime) {
+        dxCommon_->GetCommandList()->EndQuery(
+            performanceQueryHeap_.Get(),
+            D3D12_QUERY_TYPE_TIMESTAMP,
+            0);
+    }
+#endif
+
     ReleaseRetiredResources();
 
     for (size_t i = 0; i < activeEffects_.size(); ++i) {
         UpdateActiveEffect(i);
     }
 
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    if (recordUpdateGpuTime) {
+        dxCommon_->GetCommandList()->EndQuery(
+            performanceQueryHeap_.Get(),
+            D3D12_QUERY_TYPE_TIMESTAMP,
+            1);
+        performanceUpdateQueryWritten_ = true;
+    }
+#endif
+
     RemoveDeadEffects();
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    debugLogElapsedTime_ += deltaTime_;
+    if (debugLogElapsedTime_ >= 1.0f) {
+        debugLogElapsedTime_ -= 1.0f;
+        LogDebugEffectSummary();
+    }
+#endif
 }
 
 EffectHandle EffectManager::AllocateEffectHandle()
@@ -1869,14 +2115,257 @@ void EffectManager::RemoveDeadEffects()
             continue;
         }
 
+#ifdef _DEBUG
+        Logger::Log(std::format(
+            "[Effect] End name={} handle={} age={:.2f}",
+            activeEffects_[i].effectName,
+            activeEffects_[i].handle,
+            activeResources_[i].age));
+#endif
+
         ReleaseEffectLight(activeEffects_[i]);
-        UnmapActiveEffectResource(activeResources_[i]);
         retiredResources_.push_back(std::move(activeResources_[i]));
 
         activeEffects_.erase(activeEffects_.begin() + static_cast<std::ptrdiff_t>(i));
         activeResources_.erase(activeResources_.begin() + static_cast<std::ptrdiff_t>(i));
     }
 }
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+void EffectManager::LogDebugEffectSummary()
+{
+    if (activeEffects_.empty()) {
+        return;
+    }
+
+    uint32_t meshEffectCount = 0;
+    uint32_t trailEffectCount = 0;
+    uint32_t emittingEffectCount = 0;
+    uint32_t fieldEffectCount = 0;
+    uint64_t fixedParticleSlots = 0;
+    std::unordered_map<std::string, uint32_t> effectCounts;
+
+    for (size_t index = 0; index < activeEffects_.size(); ++index) {
+        const ActiveEffect& activeEffect = activeEffects_[index];
+        const ActiveEffectResource& resource = activeResources_[index];
+
+        effectCounts[activeEffect.effectName]++;
+
+        if (resource.renderType == ParticleRenderType::Trail) {
+            trailEffectCount++;
+        } else {
+            meshEffectCount++;
+            fixedParticleSlots += resource.maxParticles;
+        }
+
+        if (resource.emitterData != nullptr && resource.emitterData->emit != 0) {
+            emittingEffectCount++;
+        }
+
+        if (resource.fieldData != nullptr && resource.fieldData->fieldCount > 0) {
+            fieldEffectCount++;
+        }
+    }
+
+    Logger::Log(std::format(
+        "[EffectStats] active={} mesh={} trail={} fixedParticleSlots={} "
+        "drawCalls={} emittingNow={} fieldEffects={}",
+        activeEffects_.size(),
+        meshEffectCount,
+        trailEffectCount,
+        fixedParticleSlots,
+        activeEffects_.size(),
+        emittingEffectCount,
+        fieldEffectCount));
+
+    std::string breakdown = "[EffectStats] breakdown";
+    for (const std::pair<const std::string, uint32_t>& effectCount : effectCounts) {
+        breakdown += std::format(" {}={}", effectCount.first, effectCount.second);
+    }
+    Logger::Log(breakdown);
+}
+
+void EffectManager::InitializePerformanceQueries()
+{
+    ID3D12Device* device = dxCommon_->GetDevice();
+    ID3D12CommandQueue* commandQueue = dxCommon_->GetCommandQueue();
+    if (device == nullptr || commandQueue == nullptr) {
+        return;
+    }
+
+    D3D12_QUERY_HEAP_DESC queryHeapDescription {};
+    queryHeapDescription.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+    queryHeapDescription.Count = 4;
+    queryHeapDescription.NodeMask = 0;
+    HRESULT hr = device->CreateQueryHeap(
+        &queryHeapDescription,
+        IID_PPV_ARGS(&performanceQueryHeap_));
+    if (FAILED(hr)) {
+        performanceQueryHeap_.Reset();
+        return;
+    }
+
+    D3D12_HEAP_PROPERTIES heapProperties {};
+    heapProperties.Type = D3D12_HEAP_TYPE_READBACK;
+    heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapProperties.CreationNodeMask = 1;
+    heapProperties.VisibleNodeMask = 1;
+
+    D3D12_RESOURCE_DESC resourceDescription {};
+    resourceDescription.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resourceDescription.Width = sizeof(uint64_t) * 4;
+    resourceDescription.Height = 1;
+    resourceDescription.DepthOrArraySize = 1;
+    resourceDescription.MipLevels = 1;
+    resourceDescription.SampleDesc.Count = 1;
+    resourceDescription.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    hr = device->CreateCommittedResource(
+        &heapProperties,
+        D3D12_HEAP_FLAG_NONE,
+        &resourceDescription,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        IID_PPV_ARGS(&performanceReadbackBuffer_));
+    if (FAILED(hr)) {
+        performanceQueryHeap_.Reset();
+        performanceReadbackBuffer_.Reset();
+        return;
+    }
+
+    commandQueue->GetTimestampFrequency(&performanceTimestampFrequency_);
+    if (performanceTimestampFrequency_ == 0) {
+        performanceTimestampFrequency_ = 1;
+    }
+}
+
+void EffectManager::ReadbackPerformanceQueries()
+{
+    if (!performanceQueryPending_ || performanceReadbackBuffer_ == nullptr) {
+        return;
+    }
+
+    void* mappedData = nullptr;
+    D3D12_RANGE readRange {
+        0,
+        sizeof(uint64_t) * 4
+    };
+    HRESULT hr = performanceReadbackBuffer_->Map(
+        0,
+        &readRange,
+        &mappedData);
+    if (FAILED(hr)) {
+        return;
+    }
+
+    const uint64_t* timestamps =
+        static_cast<const uint64_t*>(mappedData);
+    if (timestamps[1] >= timestamps[0]) {
+        particleUpdateGpuTimeMs_ =
+            static_cast<float>(timestamps[1] - timestamps[0]) /
+            static_cast<float>(performanceTimestampFrequency_) *
+            1000.0f;
+    }
+    if (timestamps[3] >= timestamps[2]) {
+        particleDrawGpuTimeMs_ =
+            static_cast<float>(timestamps[3] - timestamps[2]) /
+            static_cast<float>(performanceTimestampFrequency_) *
+            1000.0f;
+    }
+
+    D3D12_RANGE writeRange { 0, 0 };
+    performanceReadbackBuffer_->Unmap(0, &writeRange);
+    performanceQueryPending_ = false;
+}
+
+void EffectManager::RecordEffectStartPerformance(
+    const std::string& effectName,
+    double totalTimeMs,
+    double resourceCreateTimeMs,
+    double fieldUpdateTimeMs,
+    double initializeDispatchTimeMs,
+    double lightCreateTimeMs,
+    double commitTimeMs,
+    bool reusedPooledResource)
+{
+    performanceStartedEffectCount_++;
+    performanceStartEffectTotalTimeMs_ += totalTimeMs;
+    performanceResourceCreateTimeMs_ += resourceCreateTimeMs;
+    performanceFieldUpdateTimeMs_ += fieldUpdateTimeMs;
+    performanceInitializeDispatchTimeMs_ += initializeDispatchTimeMs;
+    performanceLightCreateTimeMs_ += lightCreateTimeMs;
+    performanceCommitTimeMs_ += commitTimeMs;
+    performanceStartedEffectCounts_[effectName]++;
+    if (reusedPooledResource) {
+        performanceReusedResourceCount_++;
+    } else {
+        performanceCreatedResourceCount_++;
+    }
+
+    if (totalTimeMs > performanceStartEffectMaxTimeMs_) {
+        performanceStartEffectMaxTimeMs_ = totalTimeMs;
+        performanceSlowestEffectName_ = effectName;
+    }
+}
+
+void EffectManager::ReportAndResetFramePerformance(double frameTimeMs)
+{
+    constexpr double kFrameSpikeThresholdMs = 25.0;
+    if (frameTimeMs >= kFrameSpikeThresholdMs) {
+        Logger::Log(std::format(
+            "[FrameSpike] FrameTime={:.2f}ms EffectsStarted={} "
+            "PoolReused={} ResourcesCreated={} "
+            "StartEffectCPU={:.3f}ms MaxStartEffect={:.3f}ms "
+            "SlowestEffect={} ResourceCreate={:.3f}ms "
+            "FieldUpdate={:.3f}ms InitializeDispatch={:.3f}ms "
+            "LightCreate={:.3f}ms Commit={:.3f}ms "
+            "ParticleUpdateGPU={:.3f}ms ParticleDrawGPU={:.3f}ms",
+            frameTimeMs,
+            performanceStartedEffectCount_,
+            performanceReusedResourceCount_,
+            performanceCreatedResourceCount_,
+            performanceStartEffectTotalTimeMs_,
+            performanceStartEffectMaxTimeMs_,
+            performanceSlowestEffectName_,
+            performanceResourceCreateTimeMs_,
+            performanceFieldUpdateTimeMs_,
+            performanceInitializeDispatchTimeMs_,
+            performanceLightCreateTimeMs_,
+            performanceCommitTimeMs_,
+            particleUpdateGpuTimeMs_,
+            particleDrawGpuTimeMs_));
+
+        std::string breakdown = "[FrameSpike] startedEffects";
+        if (performanceStartedEffectCounts_.empty()) {
+            breakdown += " none";
+        } else {
+            for (const std::pair<const std::string, uint32_t>& effectCount :
+                 performanceStartedEffectCounts_) {
+                breakdown += std::format(
+                    " {}={}",
+                    effectCount.first,
+                    effectCount.second);
+            }
+        }
+        Logger::Log(breakdown);
+        Logger::Flush();
+    }
+
+    performanceStartedEffectCount_ = 0;
+    performanceStartEffectTotalTimeMs_ = 0.0;
+    performanceStartEffectMaxTimeMs_ = 0.0;
+    performanceResourceCreateTimeMs_ = 0.0;
+    performanceFieldUpdateTimeMs_ = 0.0;
+    performanceInitializeDispatchTimeMs_ = 0.0;
+    performanceLightCreateTimeMs_ = 0.0;
+    performanceCommitTimeMs_ = 0.0;
+    performanceReusedResourceCount_ = 0;
+    performanceCreatedResourceCount_ = 0;
+    performanceSlowestEffectName_.clear();
+    performanceStartedEffectCounts_.clear();
+}
+#endif
 
 void EffectManager::UnmapActiveEffectResource(ActiveEffectResource& resource)
 {
@@ -1904,6 +2393,11 @@ void EffectManager::UnmapActiveEffectResource(ActiveEffectResource& resource)
         resource.fieldResource->Unmap(0, nullptr);
         resource.fieldData = nullptr;
     }
+
+    if (resource.skeletonPoseResource && resource.skeletonPoseData) {
+        resource.skeletonPoseResource->Unmap(0, nullptr);
+        resource.skeletonPoseData = nullptr;
+    }
 }
 
 void EffectManager::ReleaseActiveEffectDescriptors(ActiveEffectResource& resource)
@@ -1927,7 +2421,7 @@ void EffectManager::ReleaseActiveEffectDescriptor(uint32_t& descriptorIndex)
 void EffectManager::ReleaseRetiredResources()
 {
     for (ActiveEffectResource& resource : retiredResources_) {
-        ReleaseActiveEffectDescriptors(resource);
+        ReturnActiveEffectResourceToPool(std::move(resource));
     }
 
     retiredResources_.clear();
@@ -1946,6 +2440,16 @@ void EffectManager::Draw()
 
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
     ID3D12PipelineState* currentPipelineState = nullptr;
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    if (performanceQueryHeap_ != nullptr &&
+        performanceUpdateQueryWritten_) {
+        commandList->EndQuery(
+            performanceQueryHeap_.Get(),
+            D3D12_QUERY_TYPE_TIMESTAMP,
+            2);
+    }
+#endif
 
     for (size_t i = 0; i < activeEffects_.size(); ++i) {
         const ActiveEffect& activeEffect = activeEffects_[i];
@@ -1996,8 +2500,27 @@ void EffectManager::Draw()
         commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
         commandList->IASetIndexBuffer(&indexBufferView);
 
-        commandList->DrawIndexedInstanced(indexCount, kMaxGPUParticle, 0, 0, 0);
+        commandList->DrawIndexedInstanced(indexCount, resource.maxParticles, 0, 0, 0);
     }
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    if (performanceQueryHeap_ != nullptr &&
+        performanceUpdateQueryWritten_ &&
+        performanceReadbackBuffer_ != nullptr) {
+        commandList->EndQuery(
+            performanceQueryHeap_.Get(),
+            D3D12_QUERY_TYPE_TIMESTAMP,
+            3);
+        commandList->ResolveQueryData(
+            performanceQueryHeap_.Get(),
+            D3D12_QUERY_TYPE_TIMESTAMP,
+            0,
+            4,
+            performanceReadbackBuffer_.Get(),
+            0);
+        performanceQueryPending_ = true;
+    }
+#endif
 }
 
 void EffectManager::DrawFieldDebug() const
@@ -2212,9 +2735,15 @@ void EffectManager::Finalize()
         instance_->ReleaseActiveEffectDescriptors(resource);
     }
 
+    for (ActiveEffectResource& resource : instance_->pooledResources_) {
+        instance_->UnmapActiveEffectResource(resource);
+        instance_->ReleaseActiveEffectDescriptors(resource);
+    }
+
     instance_->activeEffects_.clear();
     instance_->activeResources_.clear();
     instance_->retiredResources_.clear();
+    instance_->pooledResources_.clear();
     instance_->effects_.clear();
 
     instance_->materialResource_.Reset();

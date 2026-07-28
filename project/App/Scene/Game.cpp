@@ -4,6 +4,8 @@
 #include "Engine/Debug/Profiler/ProfilerScope.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 
+#include <format>
+
 namespace {
 void CheckInitializeTime(const char* name, std::chrono::steady_clock::time_point& prevTime)
 {
@@ -14,6 +16,45 @@ void CheckInitializeTime(const char* name, std::chrono::steady_clock::time_point
 
     prevTime = nowTime;
 }
+
+BootProfiler* GetBootProfilerForGame()
+{
+    BootProfiler* bootProfiler =
+        Profiler::GetInstance()->GetBootProfiler();
+    if (bootProfiler != nullptr) {
+        return bootProfiler;
+    }
+
+    static BootProfiler dummyBootProfiler;
+    return &dummyBootProfiler;
+}
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+uint64_t FileTimeToUint64(const FILETIME& fileTime)
+{
+    return
+        (static_cast<uint64_t>(fileTime.dwHighDateTime) << 32) |
+        static_cast<uint64_t>(fileTime.dwLowDateTime);
+}
+
+uint64_t GetCurrentProcessCpuTime()
+{
+    FILETIME creationTime {};
+    FILETIME exitTime {};
+    FILETIME kernelTime {};
+    FILETIME userTime {};
+    if (!GetProcessTimes(
+            GetCurrentProcess(),
+            &creationTime,
+            &exitTime,
+            &kernelTime,
+            &userTime)) {
+        return 0;
+    }
+
+    return FileTimeToUint64(kernelTime) + FileTimeToUint64(userTime);
+}
+#endif
 }
 
 void Game::Initialize()
@@ -26,37 +67,37 @@ void Game::Initialize()
 
     // Profilerの初期化とBoot計測開始
     Profiler::GetInstance()->Initialize();
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Engine Initialize");
+    GetBootProfilerForGame()->Begin("Engine Initialize");
 
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Window");
+    GetBootProfilerForGame()->Begin("Window");
     WinApp::GetInstance()->initialize();
-    Profiler::GetInstance()->GetBootProfiler()->End("Window");
+    GetBootProfilerForGame()->End("Window");
 
     LockCursorToWindow();
 
     CheckInitializeTime("WinApp", prevTime);
 
-    Profiler::GetInstance()->GetBootProfiler()->Begin("DirectX");
+    GetBootProfilerForGame()->Begin("DirectX");
     DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
     WinApp::GetInstance()->Show();
-    Profiler::GetInstance()->GetBootProfiler()->End("DirectX");
+    GetBootProfilerForGame()->End("DirectX");
     CheckInitializeTime("DirectXCommon", prevTime);
 
     SrvManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
     CheckInitializeTime("SrvManager", prevTime);
 
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Texture");
+    GetBootProfilerForGame()->Begin("Texture");
     TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
-    Profiler::GetInstance()->GetBootProfiler()->End("Texture");
+    GetBootProfilerForGame()->End("Texture");
     CheckInitializeTime("TextureManager", prevTime);
 
 #ifdef USE_IMGUI
-    Profiler::GetInstance()->GetBootProfiler()->Begin("ImGui");
+    GetBootProfilerForGame()->Begin("ImGui");
     ImGuiManager::GetInstance()->Initialize(
         WinApp::GetInstance(),
         DirectXCommon::GetInstance(),
         SrvManager::GetInstance());
-    Profiler::GetInstance()->GetBootProfiler()->End("ImGui");
+    GetBootProfilerForGame()->End("ImGui");
     CheckInitializeTime("ImGuiManager", prevTime);
 #endif
 
@@ -66,15 +107,15 @@ void Game::Initialize()
     TextRenderer::GetInstance()->Initialize(DirectXCommon::GetInstance());
     CheckInitializeTime("TextRenderer", prevTime);
 
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Model");
+    GetBootProfilerForGame()->Begin("Model");
     ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
-    Profiler::GetInstance()->GetBootProfiler()->End("Model");
+    GetBootProfilerForGame()->End("Model");
     CheckInitializeTime("ModelManager", prevTime);
 
     // Shader初期化ダミー計測 (DirectXCommon等に含まれるが要件定義のため)
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Shader");
+    GetBootProfilerForGame()->Begin("Shader");
     modelCommon_.Initialize(DirectXCommon::GetInstance());
-    Profiler::GetInstance()->GetBootProfiler()->End("Shader");
+    GetBootProfilerForGame()->End("Shader");
 
     Input::GetInstance()->Initialize(WinApp::GetInstance());
 
@@ -83,20 +124,24 @@ void Game::Initialize()
 
     // エフェクトのシェーダーとパイプラインはゲーム起動時に一度だけ作成する。
     // 使用するカメラは各シーンのInitializeで設定する。
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Scene");
+    GetBootProfilerForGame()->Begin("Scene");
     SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
-    Profiler::GetInstance()->GetBootProfiler()->End("Scene");
+    GetBootProfilerForGame()->End("Scene");
 
     renderer_ = std::make_unique<Renderer>();
     renderer_->Initialize();
 
-    Profiler::GetInstance()->GetBootProfiler()->Begin("Audio");
+    GetBootProfilerForGame()->Begin("Audio");
     SoundManager::GetInstance()->Initialize();
-    Profiler::GetInstance()->GetBootProfiler()->End("Audio");
+    GetBootProfilerForGame()->End("Audio");
 
     // Boot計測完了
-    Profiler::GetInstance()->GetBootProfiler()->End("Engine Initialize");
-    Profiler::GetInstance()->GetBootProfiler()->FinalizeBootMeasure();
+    GetBootProfilerForGame()->End("Engine Initialize");
+    GetBootProfilerForGame()->FinalizeBootMeasure();
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    InitializePerformanceLog();
+#endif
 
     Logger::Log("Game Initialize End");
 }
@@ -106,6 +151,10 @@ void Game::Update()
     // フレーム全体の開始
     Profiler::GetInstance()->BeginFrame();
     Profiler::GetInstance()->Update();
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    UpdatePerformanceLog();
+#endif
 
     Input::GetInstance()->Update();
 
@@ -213,6 +262,84 @@ void Game::Finalize()
 
     Logger::Log("Game Finalize End");
 }
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+void Game::InitializePerformanceLog()
+{
+    SYSTEM_INFO systemInfo {};
+    GetSystemInfo(&systemInfo);
+    if (systemInfo.dwNumberOfProcessors > 0) {
+        performanceLogProcessorCount_ = systemInfo.dwNumberOfProcessors;
+    }
+
+    performanceLogStartTime_ = std::chrono::steady_clock::now();
+    performanceFrameStartTime_ = performanceLogStartTime_;
+    performanceLogProcessTime_ = GetCurrentProcessCpuTime();
+    performanceLogFrameCount_ = 0;
+}
+
+void Game::UpdatePerformanceLog()
+{
+    performanceLogFrameCount_++;
+
+    const std::chrono::steady_clock::time_point now =
+        std::chrono::steady_clock::now();
+    const double frameTimeMs =
+        std::chrono::duration<double, std::milli>(
+            now - performanceFrameStartTime_).count();
+    performanceFrameStartTime_ = now;
+
+    EffectManager* effectManager = EffectManager::GetInstance();
+    effectManager->ReportAndResetFramePerformance(frameTimeMs);
+
+    const double elapsedSeconds =
+        std::chrono::duration<double>(now - performanceLogStartTime_).count();
+    if (elapsedSeconds < 1.0) {
+        return;
+    }
+
+    const uint64_t currentProcessTime = GetCurrentProcessCpuTime();
+    uint64_t processTimeDelta = 0;
+    if (currentProcessTime >= performanceLogProcessTime_) {
+        processTimeDelta =
+            currentProcessTime - performanceLogProcessTime_;
+    }
+    const double availableProcessTime =
+        elapsedSeconds *
+        10000000.0 *
+        static_cast<double>(performanceLogProcessorCount_);
+
+    double processCpuUsage = 0.0;
+    if (availableProcessTime > 0.0) {
+        processCpuUsage =
+            static_cast<double>(processTimeDelta) /
+            availableProcessTime *
+            100.0;
+    }
+
+    const double fps =
+        static_cast<double>(performanceLogFrameCount_) /
+        elapsedSeconds;
+    const double averageFrameTimeMs =
+        elapsedSeconds *
+        1000.0 /
+        static_cast<double>(performanceLogFrameCount_);
+
+    Logger::Log(std::format(
+        "[Performance] FPS={:.2f} FrameTime={:.2f}ms ProcessCPU={:.2f}% "
+        "ParticleUpdateGPU={:.3f}ms ParticleDrawGPU={:.3f}ms",
+        fps,
+        averageFrameTimeMs,
+        processCpuUsage,
+        effectManager->GetParticleUpdateGpuTimeMs(),
+        effectManager->GetParticleDrawGpuTimeMs()));
+    Logger::Flush();
+
+    performanceLogStartTime_ = now;
+    performanceLogProcessTime_ = currentProcessTime;
+    performanceLogFrameCount_ = 0;
+}
+#endif
 
 void Game::LockCursorToWindow()
 {

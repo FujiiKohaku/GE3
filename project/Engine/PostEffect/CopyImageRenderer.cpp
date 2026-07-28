@@ -297,6 +297,8 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
         return L"resources/Shaders/PostEffect/CyberScanline.PS.hlsl";
     case PostEffectType::HexShield:
         return L"resources/Shaders/PostEffect/HexShield.PS.hlsl";
+    case PostEffectType::BlackHoleDistortion:
+        return L"resources/Shaders/PostEffect/BlackHoleDistortion.PS.hlsl";
     }
 
     return L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl";
@@ -381,6 +383,9 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->lightStrength = 1.0f;
     postEffectParameterData_->lightRadius = 0.2f;
     postEffectParameterData_->lightAngle = 0.0f;
+    postEffectParameterData_->blackHoleCenter = { 0.5f, 0.5f };
+    postEffectParameterData_->blackHoleRadius = 0.16f;
+    postEffectParameterData_->blackHoleStrength = 1.0f;
 }
 CopyImageRenderer::PostEffectParameter&CopyImageRenderer::GetPostEffectParameter()
 {

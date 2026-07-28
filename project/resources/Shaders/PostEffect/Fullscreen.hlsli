@@ -51,4 +51,7 @@ cbuffer PostEffectParameter : register(b0)
     float sonicBoomProgress;
     float2 sonicBoomCenter; // 自機の画面上位置(0.0〜1.0)を中心発生源として指定
     float2 paddingSonicBoom;
+    float2 blackHoleCenter;
+    float blackHoleRadius;
+    float blackHoleStrength;
 };

@@ -51,6 +51,13 @@ void Logger::Error(const std::string& message)
     Write("Error", message);
 }
 
+void Logger::Flush()
+{
+    if (logFile_.is_open()) {
+        logFile_.flush();
+    }
+}
+
 void Logger::Write(const std::string& level, const std::string& message)
 {
     std::string time = GetTimeString();

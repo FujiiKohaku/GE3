@@ -7,8 +7,6 @@ RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
-static const int32_t kMaxGPUParticle = 1024;
-
 class RandomGenerator
 {
     float32_t3 seed;
@@ -42,7 +40,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     int32_t freeListIndex;
     InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
 
-    if (freeListIndex < 0 || freeListIndex >= kMaxGPUParticle)
+    if (freeListIndex < 0 ||
+        freeListIndex >= int32_t(gEmitter.maxParticles))
     {
         InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
         return;
@@ -54,13 +53,32 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     generator.seed = ((float32_t3) DTid + gPerFrame.time) * 12.345f;
 
     float32_t3 random = generator.Generate3d();
+    float32_t3 emitterOffset =
+        MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius);
+    float32_t3 radialDirection = normalize(emitterOffset);
 
-    // Spawn randomly within the sphere emitter radius
-    gParticles[particleIndex].translate =
-        gEmitter.translate + MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius);
+    // Each particle receives a different orbital plane so the singularity
+    // surrounds the center in 360 degrees instead of forming one flat ring.
+    float32_t3 randomAxis = generator.Generate3d() * 2.0f - 1.0f;
+    float32_t3 tangentDirection = cross(randomAxis, radialDirection);
+    if (length(tangentDirection) <= 0.001f)
+    {
+        tangentDirection = cross(float32_t3(0.0f, 1.0f, 0.0f), radialDirection);
+    }
+    if (length(tangentDirection) <= 0.001f)
+    {
+        tangentDirection = cross(float32_t3(1.0f, 0.0f, 0.0f), radialDirection);
+    }
+    tangentDirection = normalize(tangentDirection);
 
-    // Initial velocity is set to 0 (or pure emitter velocity config) so fields dominate
-    gParticles[particleIndex].velocity = gEffectSettings.velocity;
+    float orbitSpeed = lerp(2.5f, 4.5f, generator.Generate1d());
+    float inwardSpeed = lerp(0.5f, 1.2f, generator.Generate1d());
+
+    gParticles[particleIndex].translate = gEmitter.translate + emitterOffset;
+    gParticles[particleIndex].velocity =
+        gEffectSettings.velocity +
+        tangentDirection * orbitSpeed -
+        radialDirection * inwardSpeed;
 
     float scale = max(gEffectSettings.startScale, 0.0f);
     gParticles[particleIndex].scale = float32_t3(scale, scale, scale);

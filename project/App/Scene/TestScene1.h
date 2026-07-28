@@ -24,6 +24,24 @@ public:
 
 private:
     void ApplySelectedPostEffect();
+    void UpdateSandGolemSkeletonPose();
+    void ApplyFootIK();
+    void SolveLegIK(
+        const std::string& upperLegName,
+        const std::string& lowerLegName,
+        const std::string& footName,
+        const Vector3& worldTarget,
+        const Vector3& worldNormal,
+        float ikWeight);
+    bool SampleTerrainSurface(
+        float worldX,
+        float worldZ,
+        float& worldHeight,
+        Vector3& worldNormal) const;
+    bool SampleFootSoleSurface(
+        const Vector3& footJointPosition,
+        float& worldHeight,
+        Vector3& worldNormal) const;
     void UpdateKatanaAttachment();
     void ProcessAnimationEvents();
     void UpdateMovementEffects();
@@ -45,6 +63,40 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<DebugCameraController> debugCameraController_;
     std::unique_ptr<Object3d> floorObj_;
+    std::unique_ptr<Object3d> ikTerrainObj_;
+    Model* ikTerrainModel_ = nullptr;
+    Vector3 ikTerrainPosition_ = { 0.0f, -5.0f, 0.0f };
+    Vector3 ikTerrainScale_ = { 1.0f, 0.35f, 1.0f };
+    static constexpr size_t kIkTestBlockCount = 7;
+    std::array<std::unique_ptr<Object3d>, kIkTestBlockCount>
+        ikTestBlockObjs_;
+    std::array<Vector3, kIkTestBlockCount> ikTestBlockPositions_ = {
+        Vector3 { -0.55f, -4.95f, 0.0f },
+        Vector3 { 0.55f, -4.88f, 0.0f },
+        Vector3 { -1.65f, -4.91f, 0.0f },
+        Vector3 { 1.65f, -4.84f, 0.0f },
+        Vector3 { -1.15f, -4.90f, 2.5f },
+        Vector3 { 0.0f, -4.86f, 2.5f },
+        Vector3 { 1.15f, -4.82f, 2.5f }
+    };
+    std::array<Vector3, kIkTestBlockCount> ikTestBlockScales_ = {
+        Vector3 { 0.90f, 0.18f, 2.20f },
+        Vector3 { 0.90f, 0.30f, 2.20f },
+        Vector3 { 0.90f, 0.24f, 2.20f },
+        Vector3 { 0.90f, 0.38f, 2.20f },
+        Vector3 { 1.00f, 0.20f, 2.00f },
+        Vector3 { 1.00f, 0.24f, 2.00f },
+        Vector3 { 1.00f, 0.28f, 2.00f }
+    };
+    std::array<Vector3, kIkTestBlockCount> ikTestBlockRotations_ = {
+        Vector3 { 0.0f, 0.0f, 0.0f },
+        Vector3 { 0.0f, 0.0f, 0.0f },
+        Vector3 { 0.0f, 0.0f, 0.0f },
+        Vector3 { 0.0f, 0.0f, 0.0f },
+        Vector3 { 0.0f, 0.0f, -0.10f },
+        Vector3 { 0.12f, 0.0f, 0.08f },
+        Vector3 { -0.10f, 0.0f, 0.12f }
+    };
     std::unique_ptr<Object3d> katanaObj_;
     std::unique_ptr<Object3d> recoveryCubeObj_;
     Vector3 recoveryCubeBasePosition_ = { -6.0f, -3.5f, -4.0f };
@@ -76,12 +128,21 @@ private:
 
     EffectHandle fieldDemoEffectHandle_ = kInvalidEffectHandle;
     EffectHandle cyberSingularityEffectHandle_ = kInvalidEffectHandle;
+    EffectHandle cyberSingularityDebrisHandle_ = kInvalidEffectHandle;
+    EffectHandle cyberSingularityJetsHandle_ = kInvalidEffectHandle;
+    EffectHandle sandstormGolemEffectHandle_ = kInvalidEffectHandle;
+    bool isSandGolemMode_ = false;
     EffectHandle bodySpeedLineEffectHandle_ = kInvalidEffectHandle;
     EffectHandle backflipTrailEffectHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningOuterHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningInnerHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningMotesHandle_ = kInvalidEffectHandle;
     bool showFieldDebug_ = false;
+    bool enableFootIK_ = true;
+    bool showFootIKDebug_ = true;
+    float leftFootIkWeight_ = 0.0f;
+    float rightFootIkWeight_ = 0.0f;
+    float footSoleGroundMargin_ = 0.08f;
 
     // TPS Camera
     float cameraYaw_ = 0.0f;
@@ -147,4 +208,20 @@ private:
     // Hinokami Kagura Effects
     EffectHandle hinokamiFlameHandle_ = kInvalidEffectHandle;
     EffectHandle hinokamiEmbersHandle_ = kInvalidEffectHandle;
+
+    // Delayed 6-Direction Firework Launch & Double Burst Sequence Triggers
+    float sixTrailTimer_ = 0.0f;
+    bool isSixTrailPending_ = false;
+    float sixBlastTimer_ = 0.0f;
+    bool isSixBlastPending_ = false;
+
+    // 二重破裂（2段階目爆発）用タイマー
+    float secondBlastTimer_ = 0.0f;
+    bool isSecondBlastPending_ = false;
+
+    // 一連の演出全体のクールダウン・連打防止ガード
+    float coolDownTimer_ = 0.0f;
+    bool isSequenceActive_ = false;
+
+    Vector3 sixSeqCenterPos_{};
 };

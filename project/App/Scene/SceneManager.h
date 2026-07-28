@@ -76,6 +76,12 @@ public:
     float GetSonicBoomProgress() const { return sonicBoomProgress_; }
     void SetSonicBoomCenter(const Vector2& center) { sonicBoomCenter_ = center; }
     const Vector2& GetSonicBoomCenter() const { return sonicBoomCenter_; }
+    void SetBlackHoleCenter(const Vector2& center) { blackHoleCenter_ = center; }
+    const Vector2& GetBlackHoleCenter() const { return blackHoleCenter_; }
+    void SetBlackHoleRadius(float radius) { blackHoleRadius_ = radius; }
+    float GetBlackHoleRadius() const { return blackHoleRadius_; }
+    void SetBlackHoleStrength(float strength) { blackHoleStrength_ = strength; }
+    float GetBlackHoleStrength() const { return blackHoleStrength_; }
 
 private:
     SceneManager() = default;
@@ -91,6 +97,9 @@ private:
     float vignetteStrength_ = 1.0f;
     float sonicBoomProgress_ = 0.0f;
     Vector2 sonicBoomCenter_ = { 0.5f, 0.5f };
+    Vector2 blackHoleCenter_ = { 0.5f, 0.5f };
+    float blackHoleRadius_ = 0.16f;
+    float blackHoleStrength_ = 1.0f;
     float paintProgress_ = 0.0f;
     float paintIntensity_ = 0.0f;
     float paintSeed_ = 0.0f;

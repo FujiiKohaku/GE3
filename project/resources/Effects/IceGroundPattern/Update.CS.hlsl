@@ -24,8 +24,9 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     float lifeRate = saturate(gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime);
 
-    // 徐々に拡大し、後半スッとフェードアウト
-    float currentScale = lerp(gEffectSettings.startScale, gEffectSettings.endScale, pow(lifeRate, 0.6f));
+    // 【EaseOutCubic イージング】スーッと優雅にゆっくり広がって停止する展開演出
+    float easeRate = 1.0f - pow(1.0f - lifeRate, 3.0f);
+    float currentScale = lerp(gEffectSettings.startScale, gEffectSettings.endScale, easeRate);
     gParticles[particleIndex].scale = float32_t3(currentScale, currentScale, currentScale);
 
     float alpha = 1.0f - pow(lifeRate, 2.0f);

@@ -7,13 +7,334 @@
 #include "externals/imgui/imgui.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Winapp/WinApp.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/Debug/DebugRenderer.h"
 #include <numbers>
 #include <algorithm>
 #include <cmath>
 #include <random>
+
+namespace {
+constexpr float kFootAnkleToSoleDistance = 0.16f;
+
+Vector3 CrossVector(const Vector3& first, const Vector3& second)
+{
+    return {
+        first.y * second.z - first.z * second.y,
+        first.z * second.x - first.x * second.z,
+        first.x * second.y - first.y * second.x
+    };
+}
+
+Vector3 TransformDirection(
+    const Vector3& direction,
+    const Matrix4x4& matrix)
+{
+    return {
+        direction.x * matrix.m[0][0] +
+            direction.y * matrix.m[1][0] +
+            direction.z * matrix.m[2][0],
+        direction.x * matrix.m[0][1] +
+            direction.y * matrix.m[1][1] +
+            direction.z * matrix.m[2][1],
+        direction.x * matrix.m[0][2] +
+            direction.y * matrix.m[1][2] +
+            direction.z * matrix.m[2][2]
+    };
+}
+
+Vector3 GetMatrixTranslation(const Matrix4x4& matrix)
+{
+    return {
+        matrix.m[3][0],
+        matrix.m[3][1],
+        matrix.m[3][2]
+    };
+}
+
+Quaternion MultiplyQuaternion(
+    const Quaternion& first,
+    const Quaternion& second)
+{
+    return {
+        first.w * second.x +
+            first.x * second.w +
+            first.y * second.z -
+            first.z * second.y,
+        first.w * second.y -
+            first.x * second.z +
+            first.y * second.w +
+            first.z * second.x,
+        first.w * second.z +
+            first.x * second.y -
+            first.y * second.x +
+            first.z * second.w,
+        first.w * second.w -
+            first.x * second.x -
+            first.y * second.y -
+            first.z * second.z
+    };
+}
+
+Quaternion QuaternionFromTo(
+    const Vector3& fromDirection,
+    const Vector3& toDirection)
+{
+    Vector3 from = NormalizeSafe(fromDirection);
+    Vector3 to = NormalizeSafe(toDirection);
+    float directionDot = std::clamp(Dot(from, to), -1.0f, 1.0f);
+
+    if (directionDot >= 0.9999f) {
+        return { 0.0f, 0.0f, 0.0f, 1.0f };
+    }
+
+    if (directionDot <= -0.9999f) {
+        Vector3 rotationAxis =
+            CrossVector(from, { 1.0f, 0.0f, 0.0f });
+        if (Vector3LengthSquared(rotationAxis) <= 0.0001f) {
+            rotationAxis =
+                CrossVector(from, { 0.0f, 1.0f, 0.0f });
+        }
+        rotationAxis = NormalizeSafe(rotationAxis);
+        return {
+            rotationAxis.x,
+            rotationAxis.y,
+            rotationAxis.z,
+            0.0f
+        };
+    }
+
+    Vector3 rotationAxis = CrossVector(from, to);
+    Quaternion rotation = {
+        rotationAxis.x,
+        rotationAxis.y,
+        rotationAxis.z,
+        1.0f + directionDot
+    };
+    return Normalize(rotation);
+}
+
+float MoveTowardFloat(
+    float currentValue,
+    float targetValue,
+    float maximumDelta)
+{
+    if (currentValue < targetValue) {
+        const float increasedValue =
+            currentValue + maximumDelta;
+        if (increasedValue > targetValue) {
+            return targetValue;
+        }
+        return increasedValue;
+    }
+    if (currentValue > targetValue) {
+        const float decreasedValue =
+            currentValue - maximumDelta;
+        if (decreasedValue < targetValue) {
+            return targetValue;
+        }
+        return decreasedValue;
+    }
+    return targetValue;
+}
+
+float CalculateFootContactWeight(
+    float footHeight,
+    float surfaceHeight)
+{
+    const float clearance = footHeight - surfaceHeight;
+    const float fullContactClearance = 0.10f;
+    const float releasedClearance = 0.45f;
+    if (clearance <= fullContactClearance) {
+        return 1.0f;
+    }
+    if (clearance >= releasedClearance) {
+        return 0.0f;
+    }
+
+    const float releaseRange =
+        releasedClearance - fullContactClearance;
+    return 1.0f -
+        (clearance - fullContactClearance) / releaseRange;
+}
+
+float CalculateAnimationFootContactWeight(float liftFromLowestFoot)
+{
+    const float fullContactLift = 0.04f;
+    const float fullReleaseLift = 0.24f;
+    if (liftFromLowestFoot <= fullContactLift) {
+        return 1.0f;
+    }
+    if (liftFromLowestFoot >= fullReleaseLift) {
+        return 0.0f;
+    }
+
+    return 1.0f -
+        (liftFromLowestFoot - fullContactLift) /
+        (fullReleaseLift - fullContactLift);
+}
+
+bool TrySampleTriangleSurface(
+    const Vector3& vertexA,
+    const Vector3& vertexB,
+    const Vector3& vertexC,
+    float worldX,
+    float worldZ,
+    float& surfaceHeight,
+    Vector3& surfaceNormal)
+{
+    const float denominator =
+        (vertexB.z - vertexC.z) *
+            (vertexA.x - vertexC.x) +
+        (vertexC.x - vertexB.x) *
+            (vertexA.z - vertexC.z);
+    if (std::abs(denominator) <= 0.000001f) {
+        return false;
+    }
+
+    const float weightA =
+        ((vertexB.z - vertexC.z) *
+             (worldX - vertexC.x) +
+         (vertexC.x - vertexB.x) *
+             (worldZ - vertexC.z)) /
+        denominator;
+    const float weightB =
+        ((vertexC.z - vertexA.z) *
+             (worldX - vertexC.x) +
+         (vertexA.x - vertexC.x) *
+             (worldZ - vertexC.z)) /
+        denominator;
+    const float weightC = 1.0f - weightA - weightB;
+    const float tolerance = -0.0001f;
+    if (weightA < tolerance ||
+        weightB < tolerance ||
+        weightC < tolerance) {
+        return false;
+    }
+
+    surfaceHeight =
+        vertexA.y * weightA +
+        vertexB.y * weightB +
+        vertexC.y * weightC;
+    surfaceNormal =
+        NormalizeSafe(
+            CrossVector(
+                vertexB - vertexA,
+                vertexC - vertexA));
+    if (surfaceNormal.y < 0.0f) {
+        surfaceNormal = surfaceNormal * -1.0f;
+    }
+    return true;
+}
+
+void RotateIkJointToward(
+    Skeleton& skeleton,
+    int32_t jointIndex,
+    int32_t effectorIndex,
+    const Vector3& targetPosition)
+{
+    Joint& joint = skeleton.joints[jointIndex];
+    const Vector3 jointPosition =
+        GetMatrixTranslation(joint.skeletonSpaceMatrix);
+    const Vector3 effectorPosition =
+        GetMatrixTranslation(
+            skeleton.joints[effectorIndex].skeletonSpaceMatrix);
+    Vector3 currentDirection = effectorPosition - jointPosition;
+    Vector3 targetDirection = targetPosition - jointPosition;
+    if (Vector3LengthSquared(currentDirection) <= 0.000001f ||
+        Vector3LengthSquared(targetDirection) <= 0.000001f) {
+        return;
+    }
+
+    Matrix4x4 parentInverse = MatrixMath::MakeIdentity4x4();
+    if (joint.parent.has_value()) {
+        parentInverse =
+            MatrixMath::Inverse(
+                skeleton.joints[joint.parent.value()]
+                    .skeletonSpaceMatrix);
+    }
+    currentDirection =
+        TransformDirection(currentDirection, parentInverse);
+    targetDirection =
+        TransformDirection(targetDirection, parentInverse);
+
+    const Quaternion rotationDelta =
+        QuaternionFromTo(currentDirection, targetDirection);
+    joint.transform.rotate =
+        Normalize(
+            MultiplyQuaternion(
+                rotationDelta,
+                joint.transform.rotate));
+    skeleton.UpdateSkeleton();
+}
+
+void ApplyKneePoleCorrection(
+    Skeleton& skeleton,
+    int32_t upperIndex,
+    int32_t lowerIndex,
+    int32_t footIndex,
+    const Vector3& animatedKneeDirection)
+{
+    const Vector3 hipPosition =
+        GetMatrixTranslation(
+            skeleton.joints[upperIndex].skeletonSpaceMatrix);
+    const Vector3 kneePosition =
+        GetMatrixTranslation(
+            skeleton.joints[lowerIndex].skeletonSpaceMatrix);
+    const Vector3 footPosition =
+        GetMatrixTranslation(
+            skeleton.joints[footIndex].skeletonSpaceMatrix);
+    Vector3 legAxis = footPosition - hipPosition;
+    if (Vector3LengthSquared(legAxis) <= 0.000001f) {
+        return;
+    }
+    legAxis = NormalizeSafe(legAxis);
+
+    Vector3 currentKneeDirection =
+        kneePosition - hipPosition;
+    currentKneeDirection =
+        currentKneeDirection -
+        legAxis * Dot(currentKneeDirection, legAxis);
+    Vector3 targetKneeDirection =
+        animatedKneeDirection -
+        legAxis * Dot(animatedKneeDirection, legAxis);
+    if (Vector3LengthSquared(currentKneeDirection) <= 0.000001f ||
+        Vector3LengthSquared(targetKneeDirection) <= 0.000001f) {
+        return;
+    }
+
+    Matrix4x4 parentInverse = MatrixMath::MakeIdentity4x4();
+    Joint& upperJoint = skeleton.joints[upperIndex];
+    if (upperJoint.parent.has_value()) {
+        parentInverse =
+            MatrixMath::Inverse(
+                skeleton.joints[upperJoint.parent.value()]
+                    .skeletonSpaceMatrix);
+    }
+    currentKneeDirection =
+        TransformDirection(
+            currentKneeDirection,
+            parentInverse);
+    targetKneeDirection =
+        TransformDirection(
+            targetKneeDirection,
+            parentInverse);
+
+    const Quaternion poleRotation =
+        QuaternionFromTo(
+            currentKneeDirection,
+            targetKneeDirection);
+    upperJoint.transform.rotate =
+        Normalize(
+            MultiplyQuaternion(
+                poleRotation,
+                upperJoint.transform.rotate));
+    skeleton.UpdateSkeleton();
+}
+}
 
 void TestScene1::Initialize()
 {
@@ -60,6 +381,41 @@ void TestScene1::Initialize()
     floorObj_->SetTranslate({ 0.0f, -5.0f, 0.0f });
     floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
     floorObj_->SetScale({ 100.0f, 100.0f, 1.0f });
+
+    ikTerrainModel_ =
+        ModelManager::GetInstance()->Load(
+            "Environment/Terrain/terrain.obj");
+    ikTerrainObj_ = std::make_unique<Object3d>();
+    ikTerrainObj_->Initialize(Object3dManager::GetInstance());
+    ikTerrainObj_->SetEnableLighting(true);
+    ikTerrainObj_->SetModel(ikTerrainModel_);
+    ikTerrainObj_->SetTranslate(ikTerrainPosition_);
+    ikTerrainObj_->SetScale(ikTerrainScale_);
+    ikTerrainObj_->Update();
+
+    Model* ikTestBlockModel =
+        ModelManager::GetInstance()->Load(
+            "Environment/Block/block.obj");
+    for (size_t blockIndex = 0;
+         blockIndex < kIkTestBlockCount;
+         ++blockIndex) {
+        ikTestBlockObjs_[blockIndex] =
+            std::make_unique<Object3d>();
+        ikTestBlockObjs_[blockIndex]->Initialize(
+            Object3dManager::GetInstance());
+        ikTestBlockObjs_[blockIndex]->SetModel(
+            ikTestBlockModel);
+        ikTestBlockObjs_[blockIndex]->SetTranslate(
+            ikTestBlockPositions_[blockIndex]);
+        ikTestBlockObjs_[blockIndex]->SetScale(
+            ikTestBlockScales_[blockIndex]);
+        ikTestBlockObjs_[blockIndex]->SetRotate(
+            ikTestBlockRotations_[blockIndex]);
+        ikTestBlockObjs_[blockIndex]->SetEnableLighting(true);
+        ikTestBlockObjs_[blockIndex]->SetColor(
+            { 0.34f, 0.43f, 0.52f, 1.0f });
+        ikTestBlockObjs_[blockIndex]->Update();
+    }
 
     // Robo Playerの初期化
     const std::string playerModelPath = "Characters/precision_robot_rigged_single_gltf/precision_robot_rigged_single.gltf";
@@ -124,6 +480,16 @@ void TestScene1::Initialize()
     cyberSingularityEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect(
         "CyberSingularity",
         { 0.0f, -2.0f, 8.0f });
+    cyberSingularityDebrisHandle_ =
+        EffectManager::GetInstance()->PlayLoopEffect(
+            "CyberSingularityDebris",
+            { 0.0f, -2.0f, 8.0f });
+    cyberSingularityJetsHandle_ =
+        EffectManager::GetInstance()->PlayLoopEffect(
+            "CyberSingularityJets",
+            { 0.0f, -2.0f, 8.0f });
+    sandstormGolemEffectHandle_ = kInvalidEffectHandle;
+    isSandGolemMode_ = false;
     recoveryEffectHandle_ =
         EffectManager::GetInstance()->PlayLoopEffect(
             "HealPickup",
@@ -161,10 +527,126 @@ void TestScene1::Update()
         return;
     }
 
-    // 【1キー発火】足元に床の氷結晶 ＋ バカみたいな量の青い花火を一気に大爆発発火！
-    if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
+    // 【1キー発火】演出終了まで再発動不可ガード（連打防止）
+    if (Input::GetInstance()->IsKeyTrigger(DIK_1) && !isSequenceActive_) {
+        isSequenceActive_ = true;
+        coolDownTimer_ = 2.4f; // 一連の二重破裂演出が完了するまでの時間（2.4秒ガード）
+
         EffectManager::GetInstance()->PlayEffect("IceGroundPattern", playerPos_);
-        EffectManager::GetInstance()->PlayEffect("BlueFireworkSparks", playerPos_);
+        EffectManager::GetInstance()->PlayEffect("IceSpikes", playerPos_);
+
+        sixSeqCenterPos_ = playerPos_;
+
+        // 0.28秒後に6方向へ花火が飛び出す
+        isSixTrailPending_ = true;
+        sixTrailTimer_ = 0.28f;
+
+        // 0.72秒後に1回目の大爆発！
+        isSixBlastPending_ = true;
+        sixBlastTimer_ = 0.72f;
+
+        // 0.98秒後に追っかけ2回目の【二重破裂】大爆発！
+        isSecondBlastPending_ = true;
+        secondBlastTimer_ = 0.98f;
+    }
+
+    // 【2キー発火】Field機能（Vortex 竜巻渦 ＋ Wind 上昇気流フィールド）の実戦デモ発動！
+    if (Input::GetInstance()->IsKeyTrigger(DIK_2)) {
+        EffectManager::GetInstance()->PlayEffect("VortexTornado", playerPos_);
+    }
+
+    if (Input::GetInstance()->IsKeyTrigger(DIK_3)) {
+        if (isSandGolemMode_) {
+            isSandGolemMode_ = false;
+            if (sandstormGolemEffectHandle_ != kInvalidEffectHandle) {
+                EffectManager::GetInstance()->StopEffect(
+                    sandstormGolemEffectHandle_);
+                sandstormGolemEffectHandle_ = kInvalidEffectHandle;
+            }
+        } else {
+            isSandGolemMode_ = true;
+            sandstormGolemEffectHandle_ =
+                EffectManager::GetInstance()->PlayEffect(
+                    "SandstormGolem",
+                    playerPos_);
+        }
+    }
+
+    // クールダウン・演出実行中ガードのタイマー更新
+    if (isSequenceActive_) {
+        coolDownTimer_ -= 1.0f / 60.0f;
+        if (coolDownTimer_ <= 0.0f) {
+            isSequenceActive_ = false;
+        }
+    }
+
+    // 1. 氷の中心から6方向への花火飛翔発射
+    if (isSixTrailPending_) {
+        sixTrailTimer_ -= 1.0f / 60.0f;
+        if (sixTrailTimer_ <= 0.0f) {
+            isSixTrailPending_ = false;
+            EffectManager::GetInstance()->PlayEffect("SixDirectionFireworkTrails", sixSeqCenterPos_);
+        }
+    }
+
+    // 2. 【第1弾爆発】6方向の到達地点（＋中央）の全7箇所での3重連動大爆発！
+    if (isSixBlastPending_) {
+        sixBlastTimer_ -= 1.0f / 60.0f;
+        if (sixBlastTimer_ <= 0.0f) {
+            isSixBlastPending_ = false;
+
+            // ① 中央大爆発
+            EffectManager::GetInstance()->PlayEffect("BlueSilverBlast", sixSeqCenterPos_);
+            EffectManager::GetInstance()->PlayEffect("DeepBlueCore", sixSeqCenterPos_);
+            EffectManager::GetInstance()->PlayEffect("OrangeEmberCore", sixSeqCenterPos_);
+
+            // ② 6方向到達地点での大爆発（距離11.5m・高度6.5m）
+            const float kPi = 3.14159265f;
+            const float dist = 11.5f;
+            const float height = 6.5f;
+
+            for (int i = 0; i < 6; ++i) {
+                float angle = (float)i * (kPi / 3.0f);
+                Vector3 blastPos = {
+                    sixSeqCenterPos_.x + cosf(angle) * dist,
+                    sixSeqCenterPos_.y + height,
+                    sixSeqCenterPos_.z + sinf(angle) * dist
+                };
+                EffectManager::GetInstance()->PlayEffect("BlueSilverBlast", blastPos);
+                EffectManager::GetInstance()->PlayEffect("DeepBlueCore", blastPos);
+                EffectManager::GetInstance()->PlayEffect("OrangeEmberCore", blastPos);
+            }
+        }
+    }
+
+    // 3. 【第2弾二重破裂】第1弾爆発の直後に追いかけてドガガガーン！と広範囲で2度目の二重破裂！
+    if (isSecondBlastPending_) {
+        secondBlastTimer_ -= 1.0f / 60.0f;
+        if (secondBlastTimer_ <= 0.0f) {
+            isSecondBlastPending_ = false;
+
+            // ① 中央の追っかけ二重破裂（上空高め）
+            Vector3 centerHigh = { sixSeqCenterPos_.x, sixSeqCenterPos_.y + 9.5f, sixSeqCenterPos_.z };
+            EffectManager::GetInstance()->PlayEffect("BlueSilverBlast", centerHigh);
+            EffectManager::GetInstance()->PlayEffect("OrangeEmberCore", centerHigh);
+
+            // ② 6方向の外側さらに広い範囲での追っかけ二重破裂（距離16.0m・高度10.5m）
+            const float kPi = 3.14159265f;
+            const float dist2 = 16.0f;
+            const float height2 = 10.5f;
+
+            for (int i = 0; i < 6; ++i) {
+                float angle = (float)i * (kPi / 3.0f) + 0.523598f; // 30度オフセットで交差破裂
+                Vector3 blastPos2 = {
+                    sixSeqCenterPos_.x + cosf(angle) * dist2,
+                    sixSeqCenterPos_.y + height2,
+                    sixSeqCenterPos_.z + sinf(angle) * dist2
+                };
+                EffectManager::GetInstance()->PlayEffect("BlueSilverBlast", blastPos2);
+                EffectManager::GetInstance()->PlayEffect("DeepBlueCore", blastPos2);
+                EffectManager::GetInstance()->PlayEffect("OrangeEmberCore", blastPos2);
+            }
+        }
     }
 
     LONG mouseWheel = Input::GetInstance()->GetMouseWheel();
@@ -253,6 +735,62 @@ void TestScene1::Update()
     }
 
     // 3. ジャンプ、攻撃、およびアニメーションステート制御
+    float playerGroundHeight = -5.0f;
+    const float facingYaw =
+        playerRot_.y - playerRotOffset_;
+    const Vector3 playerRight = {
+        std::cos(facingYaw),
+        0.0f,
+        std::sin(facingYaw)
+    };
+    const Vector3 leftGroundProbe =
+        playerPos_ - playerRight * 0.28f;
+    const Vector3 rightGroundProbe =
+        playerPos_ + playerRight * 0.28f;
+    float leftGroundHeight = 0.0f;
+    float rightGroundHeight = 0.0f;
+    Vector3 leftGroundNormal {};
+    Vector3 rightGroundNormal {};
+    const bool hasLeftGround =
+        SampleTerrainSurface(
+            leftGroundProbe.x,
+            leftGroundProbe.z,
+            leftGroundHeight,
+            leftGroundNormal);
+    const bool hasRightGround =
+        SampleTerrainSurface(
+            rightGroundProbe.x,
+            rightGroundProbe.z,
+            rightGroundHeight,
+            rightGroundNormal);
+    if (hasLeftGround && hasRightGround) {
+        playerGroundHeight =
+            (leftGroundHeight + rightGroundHeight) * 0.5f;
+    } else if (hasLeftGround) {
+        playerGroundHeight = leftGroundHeight;
+    } else if (hasRightGround) {
+        playerGroundHeight = rightGroundHeight;
+    } else {
+        Vector3 centerGroundNormal {};
+        SampleTerrainSurface(
+            playerPos_.x,
+            playerPos_.z,
+            playerGroundHeight,
+            centerGroundNormal);
+    }
+
+    if (!isJumping_) {
+        float groundFollowDelta = 0.10f;
+        if (playerGroundHeight > playerPos_.y) {
+            groundFollowDelta = 0.25f;
+        }
+        playerPos_.y =
+            MoveTowardFloat(
+                playerPos_.y,
+                playerGroundHeight,
+                groundFollowDelta);
+    }
+
     if (currentAnimState_ == PlayerAnimState::Attacking) {
         attackTimer_ += 1.0f / 60.0f;
 
@@ -358,13 +896,17 @@ void TestScene1::Update()
         jumpVelocity_ -= gravity_;
 
         // 着地判定 (床の高さは -5.0f)
-        if (playerPos_.y <= -5.0f) {
-            playerPos_.y = -5.0f;
+        if (playerPos_.y <= playerGroundHeight) {
+            playerPos_.y = playerGroundHeight;
             isJumping_ = false;
 
             EffectManager::GetInstance()->PlayEffect(
                 "LandingDust",
-                { playerPos_.x, -4.85f, playerPos_.z });
+                {
+                    playerPos_.x,
+                    playerGroundHeight + 0.15f,
+                    playerPos_.z
+                });
 
             // 着地後のステート変更
             if (hasMoveInput) {
@@ -388,7 +930,9 @@ void TestScene1::Update()
     playerActor_->SetRotate(playerRot_);
     playerActor_->SetScale({ playerScale_, playerScale_, playerScale_ });
     const Vector3 groundGlyphPosition = {
-        playerPos_.x, -4.94f, playerPos_.z
+        playerPos_.x,
+        playerGroundHeight + 0.06f,
+        playerPos_.z
     };
     EffectManager* groundEffectManager = EffectManager::GetInstance();
     if (groundLightningOuterHandle_ != kInvalidEffectHandle &&
@@ -413,7 +957,34 @@ void TestScene1::Update()
         cameraPos.x = playerPos_.x;
         camera_->SetTranslate(cameraPos);
     }
+
+    if (isSandGolemMode_) {
+        if (sandstormGolemEffectHandle_ != kInvalidEffectHandle &&
+            !EffectManager::GetInstance()->SetEffectPosition(
+                sandstormGolemEffectHandle_,
+                playerPos_)) {
+            sandstormGolemEffectHandle_ = kInvalidEffectHandle;
+        }
+    }
     camera_->Update();
+
+    const Vector3 blackHoleWorldPosition = { 0.0f, -2.0f, 8.0f };
+    const Vector2 blackHoleScreenPosition =
+        camera_->WorldToScreen(blackHoleWorldPosition);
+    float clientWidth =
+        static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    float clientHeight =
+        static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+    if (clientWidth <= 0.0f) {
+        clientWidth = static_cast<float>(WinApp::kClientWidth);
+    }
+    if (clientHeight <= 0.0f) {
+        clientHeight = static_cast<float>(WinApp::kClientHeight);
+    }
+    SceneManager::GetInstance()->SetBlackHoleCenter({
+        blackHoleScreenPosition.x / clientWidth,
+        blackHoleScreenPosition.y / clientHeight
+    });
 
     // 更新処理 (止まっている時はアニメーション時間を進めない。ただしブレンド更新中は進める)
     bool isBlending = playerActor_ && playerActor_->GetPlayAnimation() && playerActor_->GetPlayAnimation()->IsBlending();
@@ -422,6 +993,8 @@ void TestScene1::Update()
         animDeltaTime = 0.0f;
     }
     playerActor_->Update(animDeltaTime);
+    ApplyFootIK();
+    UpdateSandGolemSkeletonPose();
     ProcessAnimationEvents();
     UpdateMovementEffects();
     UpdateKatanaAttachment();
@@ -430,6 +1003,16 @@ void TestScene1::Update()
     }
     if (floorObj_) {
         floorObj_->Update();
+    }
+    if (ikTerrainObj_) {
+        ikTerrainObj_->Update();
+    }
+    for (size_t blockIndex = 0;
+         blockIndex < kIkTestBlockCount;
+         ++blockIndex) {
+        if (ikTestBlockObjs_[blockIndex]) {
+            ikTestBlockObjs_[blockIndex]->Update();
+        }
     }
     if (recoveryCubeObj_) {
         recoveryCubeAnimationTime_ += 0.035f;
@@ -497,7 +1080,17 @@ void TestScene1::Draw3D()
     if (floorObj_) {
         floorObj_->Draw();
     }
-    if (katanaObj_) {
+    if (ikTerrainObj_) {
+        ikTerrainObj_->Draw();
+    }
+    for (size_t blockIndex = 0;
+         blockIndex < kIkTestBlockCount;
+         ++blockIndex) {
+        if (ikTestBlockObjs_[blockIndex]) {
+            ikTestBlockObjs_[blockIndex]->Draw();
+        }
+    }
+    if (katanaObj_ && !isSandGolemMode_) {
         katanaObj_->Draw();
     }
     if (recoveryCubeObj_) {
@@ -507,7 +1100,7 @@ void TestScene1::Draw3D()
     // プレイヤー(Robo)の描画
     SkinningObject3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
-    if (playerActor_) {
+    if (playerActor_ && !isSandGolemMode_) {
         playerActor_->Draw();
     }
     if (sneakWalkActor_) {
@@ -529,6 +1122,24 @@ void TestScene1::DrawImGui()
     ImGui::Text("Arrow Keys: Move Robo");
     ImGui::Text("Shift + Arrow Keys: Dash");
     ImGui::Text("Left Click Repeatedly: Punch Combo");
+    ImGui::Text("3: Toggle Sand Golem Form");
+    if (isSandGolemMode_) {
+        ImGui::Text("Current Form: Sand Golem");
+    } else {
+        ImGui::Text("Current Form: Robot");
+    }
+    ImGui::Checkbox("Enable Foot IK", &enableFootIK_);
+    ImGui::Checkbox("Show Foot IK Debug", &showFootIKDebug_);
+    ImGui::Text(
+        "Foot IK Weight L: %.2f  R: %.2f",
+        leftFootIkWeight_,
+        rightFootIkWeight_);
+    ImGui::SliderFloat(
+        "Foot Sole Ground Margin",
+        &footSoleGroundMargin_,
+        0.0f,
+        0.30f,
+        "%.3f");
     ImGui::Text("WASD/QE: Move Debug Camera");
     ImGui::Text("Right Mouse Drag: Rotate Debug Camera");
     ImGui::Text("F1: Toggle Debug Camera");
@@ -594,6 +1205,21 @@ void TestScene1::Finalize()
     if (cyberSingularityEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(cyberSingularityEffectHandle_);
         cyberSingularityEffectHandle_ = kInvalidEffectHandle;
+    }
+    if (cyberSingularityDebrisHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(
+            cyberSingularityDebrisHandle_);
+        cyberSingularityDebrisHandle_ = kInvalidEffectHandle;
+    }
+    if (cyberSingularityJetsHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(
+            cyberSingularityJetsHandle_);
+        cyberSingularityJetsHandle_ = kInvalidEffectHandle;
+    }
+    if (sandstormGolemEffectHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(
+            sandstormGolemEffectHandle_);
+        sandstormGolemEffectHandle_ = kInvalidEffectHandle;
     }
     if (recoveryEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(recoveryEffectHandle_);
@@ -889,6 +1515,578 @@ void TestScene1::StopMovementEffects()
     }
 }
 
+bool TestScene1::SampleTerrainSurface(
+    float worldX,
+    float worldZ,
+    float& worldHeight,
+    Vector3& worldNormal) const
+{
+    if (!ikTerrainModel_) {
+        return false;
+    }
+
+    bool foundSurface = false;
+    float highestSurface = 0.0f;
+    Vector3 highestNormal = { 0.0f, 1.0f, 0.0f };
+    const ModelData& modelData = ikTerrainModel_->GetModelData();
+
+    for (const MeshPrimitive& primitive : modelData.primitives) {
+        if (primitive.mode != PrimitiveMode::Triangles) {
+            continue;
+        }
+
+        for (size_t indexOffset = 0;
+             indexOffset + 2 < primitive.indices.size();
+             indexOffset += 3) {
+            const uint32_t indexA = primitive.indices[indexOffset];
+            const uint32_t indexB = primitive.indices[indexOffset + 1];
+            const uint32_t indexC = primitive.indices[indexOffset + 2];
+            if (indexA >= primitive.vertices.size() ||
+                indexB >= primitive.vertices.size() ||
+                indexC >= primitive.vertices.size()) {
+                continue;
+            }
+
+            const Vector4& sourceA =
+                primitive.vertices[indexA].position;
+            const Vector4& sourceB =
+                primitive.vertices[indexB].position;
+            const Vector4& sourceC =
+                primitive.vertices[indexC].position;
+            const Vector3 vertexA = {
+                sourceA.x * ikTerrainScale_.x + ikTerrainPosition_.x,
+                sourceA.y * ikTerrainScale_.y + ikTerrainPosition_.y,
+                sourceA.z * ikTerrainScale_.z + ikTerrainPosition_.z
+            };
+            const Vector3 vertexB = {
+                sourceB.x * ikTerrainScale_.x + ikTerrainPosition_.x,
+                sourceB.y * ikTerrainScale_.y + ikTerrainPosition_.y,
+                sourceB.z * ikTerrainScale_.z + ikTerrainPosition_.z
+            };
+            const Vector3 vertexC = {
+                sourceC.x * ikTerrainScale_.x + ikTerrainPosition_.x,
+                sourceC.y * ikTerrainScale_.y + ikTerrainPosition_.y,
+                sourceC.z * ikTerrainScale_.z + ikTerrainPosition_.z
+            };
+
+            const float denominator =
+                (vertexB.z - vertexC.z) *
+                    (vertexA.x - vertexC.x) +
+                (vertexC.x - vertexB.x) *
+                    (vertexA.z - vertexC.z);
+            if (std::abs(denominator) <= 0.000001f) {
+                continue;
+            }
+
+            const float weightA =
+                ((vertexB.z - vertexC.z) *
+                     (worldX - vertexC.x) +
+                 (vertexC.x - vertexB.x) *
+                     (worldZ - vertexC.z)) /
+                denominator;
+            const float weightB =
+                ((vertexC.z - vertexA.z) *
+                     (worldX - vertexC.x) +
+                 (vertexA.x - vertexC.x) *
+                     (worldZ - vertexC.z)) /
+                denominator;
+            const float weightC = 1.0f - weightA - weightB;
+            const float tolerance = -0.0001f;
+            if (weightA < tolerance ||
+                weightB < tolerance ||
+                weightC < tolerance) {
+                continue;
+            }
+
+            const float surfaceHeight =
+                vertexA.y * weightA +
+                vertexB.y * weightB +
+                vertexC.y * weightC;
+            if (foundSurface && surfaceHeight <= highestSurface) {
+                continue;
+            }
+
+            Vector3 surfaceNormal =
+                NormalizeSafe(
+                    CrossVector(
+                        vertexB - vertexA,
+                        vertexC - vertexA));
+            if (surfaceNormal.y < 0.0f) {
+                surfaceNormal = surfaceNormal * -1.0f;
+            }
+            highestSurface = surfaceHeight;
+            highestNormal = surfaceNormal;
+            foundSurface = true;
+        }
+    }
+
+    for (size_t blockIndex = 0;
+         blockIndex < kIkTestBlockCount;
+         ++blockIndex) {
+        if (!ikTestBlockObjs_[blockIndex]) {
+            continue;
+        }
+
+        const Matrix4x4& blockWorldMatrix =
+            ikTestBlockObjs_[blockIndex]->GetWorldMatrix();
+        const Vector3 topCornerA =
+            MatrixMath::Transform(
+                { -0.5f, 0.5f, -0.5f },
+                blockWorldMatrix);
+        const Vector3 topCornerB =
+            MatrixMath::Transform(
+                { 0.5f, 0.5f, -0.5f },
+                blockWorldMatrix);
+        const Vector3 topCornerC =
+            MatrixMath::Transform(
+                { 0.5f, 0.5f, 0.5f },
+                blockWorldMatrix);
+        const Vector3 topCornerD =
+            MatrixMath::Transform(
+                { -0.5f, 0.5f, 0.5f },
+                blockWorldMatrix);
+
+        float blockHeight = 0.0f;
+        Vector3 blockNormal {};
+        bool foundBlockSurface =
+            TrySampleTriangleSurface(
+                topCornerA,
+                topCornerB,
+                topCornerC,
+                worldX,
+                worldZ,
+                blockHeight,
+                blockNormal);
+        if (!foundBlockSurface) {
+            foundBlockSurface =
+                TrySampleTriangleSurface(
+                    topCornerA,
+                    topCornerC,
+                    topCornerD,
+                    worldX,
+                    worldZ,
+                    blockHeight,
+                    blockNormal);
+        }
+        if (!foundBlockSurface) {
+            continue;
+        }
+        if (foundSurface && blockHeight <= highestSurface) {
+            continue;
+        }
+
+        highestSurface = blockHeight;
+        highestNormal = blockNormal;
+        foundSurface = true;
+    }
+
+    if (!foundSurface) {
+        return false;
+    }
+
+    worldHeight = highestSurface;
+    worldNormal = highestNormal;
+    return true;
+}
+
+bool TestScene1::SampleFootSoleSurface(
+    const Vector3& footJointPosition,
+    float& worldHeight,
+    Vector3& worldNormal) const
+{
+    const float facingYaw =
+        playerRot_.y - playerRotOffset_;
+    const Vector3 footForward = {
+        -std::sin(facingYaw),
+        0.0f,
+        std::cos(facingYaw)
+    };
+    const Vector3 footRight = {
+        std::cos(facingYaw),
+        0.0f,
+        std::sin(facingYaw)
+    };
+    const Vector3 heelPosition =
+        footJointPosition - footForward * 0.20f;
+    const Vector3 toePosition =
+        footJointPosition + footForward * 0.32f;
+
+    float heelHeight = 0.0f;
+    float toeHeight = 0.0f;
+    Vector3 heelNormal {};
+    Vector3 toeNormal {};
+    const bool hasHeelSurface =
+        SampleTerrainSurface(
+            heelPosition.x,
+            heelPosition.z,
+            heelHeight,
+            heelNormal);
+    const bool hasToeSurface =
+        SampleTerrainSurface(
+            toePosition.x,
+            toePosition.z,
+            toeHeight,
+            toeNormal);
+
+    if (hasHeelSurface && hasToeSurface) {
+        worldHeight = (heelHeight + toeHeight) * 0.5f;
+        const Vector3 forwardSlope =
+            NormalizeSafe({
+                toePosition.x - heelPosition.x,
+                toeHeight - heelHeight,
+                toePosition.z - heelPosition.z
+            });
+        Vector3 slopeNormal =
+            NormalizeSafe(
+                CrossVector(
+                    forwardSlope,
+                    footRight));
+        if (slopeNormal.y < 0.0f) {
+            slopeNormal = slopeNormal * -1.0f;
+        }
+        const Vector3 sampledNormal =
+            NormalizeSafe(heelNormal + toeNormal);
+        worldNormal =
+            NormalizeSafe(slopeNormal + sampledNormal);
+        return true;
+    }
+
+    if (hasHeelSurface) {
+        worldHeight = heelHeight;
+        worldNormal = heelNormal;
+        return true;
+    }
+    if (hasToeSurface) {
+        worldHeight = toeHeight;
+        worldNormal = toeNormal;
+        return true;
+    }
+    return false;
+}
+
+void TestScene1::SolveLegIK(
+    const std::string& upperLegName,
+    const std::string& lowerLegName,
+    const std::string& footName,
+    const Vector3& worldTarget,
+    const Vector3& worldNormal,
+    float ikWeight)
+{
+    if (!playerActor_ || !playerActor_->GetObject()) {
+        return;
+    }
+
+    Skeleton* skeleton = playerActor_->GetSkeleton();
+    if (!skeleton) {
+        return;
+    }
+
+    const std::map<std::string, int32_t>::const_iterator upperIterator =
+        skeleton->jointMap.find(upperLegName);
+    const std::map<std::string, int32_t>::const_iterator lowerIterator =
+        skeleton->jointMap.find(lowerLegName);
+    const std::map<std::string, int32_t>::const_iterator footIterator =
+        skeleton->jointMap.find(footName);
+    if (upperIterator == skeleton->jointMap.end() ||
+        lowerIterator == skeleton->jointMap.end() ||
+        footIterator == skeleton->jointMap.end()) {
+        return;
+    }
+
+    const int32_t upperIndex = upperIterator->second;
+    const int32_t lowerIndex = lowerIterator->second;
+    const int32_t footIndex = footIterator->second;
+    ikWeight = std::clamp(ikWeight, 0.0f, 1.0f);
+    if (ikWeight <= 0.0001f) {
+        return;
+    }
+
+    const Quaternion originalUpperRotation =
+        skeleton->joints[upperIndex].transform.rotate;
+    const Quaternion originalLowerRotation =
+        skeleton->joints[lowerIndex].transform.rotate;
+    const Quaternion originalFootRotation =
+        skeleton->joints[footIndex].transform.rotate;
+    const Vector3 originalHipPosition =
+        GetMatrixTranslation(
+            skeleton->joints[upperIndex].skeletonSpaceMatrix);
+    const Vector3 originalKneePosition =
+        GetMatrixTranslation(
+            skeleton->joints[lowerIndex].skeletonSpaceMatrix);
+    const Vector3 animatedKneeDirection =
+        originalKneePosition - originalHipPosition;
+    const Matrix4x4 inverseWorld =
+        MatrixMath::Inverse(
+            playerActor_->GetObject()->GetWorldMatrix());
+    const Vector3 skeletonTarget =
+        MatrixMath::Transform(worldTarget, inverseWorld);
+    const Vector3 skeletonNormal =
+        NormalizeSafe(
+            TransformDirection(worldNormal, inverseWorld));
+    const Vector3 skeletonWorldUp =
+        NormalizeSafe(
+            TransformDirection(
+                { 0.0f, 1.0f, 0.0f },
+                inverseWorld));
+
+    for (int iteration = 0; iteration < 3; ++iteration) {
+        RotateIkJointToward(
+            *skeleton,
+            lowerIndex,
+            footIndex,
+            skeletonTarget);
+        RotateIkJointToward(
+            *skeleton,
+            upperIndex,
+            footIndex,
+            skeletonTarget);
+    }
+    ApplyKneePoleCorrection(
+        *skeleton,
+        upperIndex,
+        lowerIndex,
+        footIndex,
+        animatedKneeDirection);
+
+    Joint& footJoint = skeleton->joints[footIndex];
+    Matrix4x4 parentInverse = MatrixMath::MakeIdentity4x4();
+    if (footJoint.parent.has_value()) {
+        parentInverse =
+            MatrixMath::Inverse(
+                skeleton->joints[footJoint.parent.value()]
+                    .skeletonSpaceMatrix);
+    }
+    const Vector3 currentFootUp =
+        TransformDirection(
+            skeletonWorldUp,
+            parentInverse);
+    Vector3 targetFootUp =
+        TransformDirection(skeletonNormal, parentInverse);
+    const Quaternion footRotationDelta =
+        QuaternionFromTo(currentFootUp, targetFootUp);
+    footJoint.transform.rotate =
+        Normalize(
+            MultiplyQuaternion(
+                footRotationDelta,
+                footJoint.transform.rotate));
+
+    const Quaternion solvedUpperRotation =
+        skeleton->joints[upperIndex].transform.rotate;
+    const Quaternion solvedLowerRotation =
+        skeleton->joints[lowerIndex].transform.rotate;
+    const Quaternion solvedFootRotation =
+        skeleton->joints[footIndex].transform.rotate;
+    skeleton->joints[upperIndex].transform.rotate =
+        Slerp(
+            originalUpperRotation,
+            solvedUpperRotation,
+            ikWeight);
+    skeleton->joints[lowerIndex].transform.rotate =
+        Slerp(
+            originalLowerRotation,
+            solvedLowerRotation,
+            ikWeight);
+    skeleton->joints[footIndex].transform.rotate =
+        Slerp(
+            originalFootRotation,
+            solvedFootRotation,
+            ikWeight * 0.75f);
+    skeleton->UpdateSkeleton();
+}
+
+void TestScene1::ApplyFootIK()
+{
+    if (!enableFootIK_ ||
+        isJumping_ ||
+        !playerActor_ ||
+        !playerActor_->GetObject() ||
+        !ikTerrainModel_) {
+        leftFootIkWeight_ = 0.0f;
+        rightFootIkWeight_ = 0.0f;
+        return;
+    }
+
+    Vector3 leftFootPosition {};
+    Vector3 rightFootPosition {};
+    if (!TryGetJointWorldPosition("foot.L", leftFootPosition) ||
+        !TryGetJointWorldPosition("foot.R", rightFootPosition)) {
+        return;
+    }
+
+    float leftHeight = 0.0f;
+    float rightHeight = 0.0f;
+    Vector3 leftNormal {};
+    Vector3 rightNormal {};
+    const bool hasLeftSurface =
+        SampleFootSoleSurface(
+            leftFootPosition,
+            leftHeight,
+            leftNormal);
+    const bool hasRightSurface =
+        SampleFootSoleSurface(
+            rightFootPosition,
+            rightHeight,
+            rightNormal);
+
+    float leftTargetWeight = 0.0f;
+    float rightTargetWeight = 0.0f;
+    const float ankleToGroundDistance =
+        kFootAnkleToSoleDistance +
+        footSoleGroundMargin_;
+    if (hasLeftSurface) {
+        leftTargetWeight =
+            CalculateFootContactWeight(
+                leftFootPosition.y -
+                    ankleToGroundDistance,
+                leftHeight);
+    }
+    if (hasRightSurface) {
+        rightTargetWeight =
+            CalculateFootContactWeight(
+                rightFootPosition.y -
+                    ankleToGroundDistance,
+                rightHeight);
+    }
+    if (currentAnimState_ == PlayerAnimState::Running ||
+        currentAnimState_ == PlayerAnimState::Dashing) {
+        float lowestAnimatedFootHeight =
+            leftFootPosition.y;
+        if (rightFootPosition.y < lowestAnimatedFootHeight) {
+            lowestAnimatedFootHeight = rightFootPosition.y;
+        }
+        const float leftAnimationContact =
+            CalculateAnimationFootContactWeight(
+                leftFootPosition.y -
+                lowestAnimatedFootHeight);
+        const float rightAnimationContact =
+            CalculateAnimationFootContactWeight(
+                rightFootPosition.y -
+                lowestAnimatedFootHeight);
+        leftTargetWeight *= leftAnimationContact;
+        rightTargetWeight *= rightAnimationContact;
+    }
+    leftFootIkWeight_ =
+        MoveTowardFloat(
+            leftFootIkWeight_,
+            leftTargetWeight,
+            0.18f);
+    rightFootIkWeight_ =
+        MoveTowardFloat(
+            rightFootIkWeight_,
+            rightTargetWeight,
+            0.18f);
+
+    float activeLeftWeight = 0.0f;
+    float activeRightWeight = 0.0f;
+    if (hasLeftSurface) {
+        activeLeftWeight = leftFootIkWeight_;
+    }
+    if (hasRightSurface) {
+        activeRightWeight = rightFootIkWeight_;
+    }
+    const float totalContactWeight =
+        activeLeftWeight + activeRightWeight;
+    if (totalContactWeight > 0.0001f) {
+        const float leftHeightDifference =
+            leftHeight +
+            ankleToGroundDistance -
+            leftFootPosition.y;
+        const float rightHeightDifference =
+            rightHeight +
+            ankleToGroundDistance -
+            rightFootPosition.y;
+        float pelvisWorldOffset =
+            (leftHeightDifference * activeLeftWeight +
+                rightHeightDifference * activeRightWeight) /
+            totalContactWeight;
+        pelvisWorldOffset =
+            std::clamp(pelvisWorldOffset, -0.35f, 0.35f);
+        pelvisWorldOffset *= 0.45f;
+
+        Skeleton* skeleton = playerActor_->GetSkeleton();
+        const std::map<std::string, int32_t>::const_iterator pelvisIterator =
+            skeleton->jointMap.find("pelvis");
+        if (pelvisIterator != skeleton->jointMap.end()) {
+            const Matrix4x4 inverseWorld =
+                MatrixMath::Inverse(
+                    playerActor_->GetObject()->GetWorldMatrix());
+            const Vector3 localPelvisOffset =
+                TransformDirection(
+                    { 0.0f, pelvisWorldOffset, 0.0f },
+                    inverseWorld);
+            skeleton->joints[pelvisIterator->second]
+                .transform.translate.y += localPelvisOffset.y;
+            skeleton->UpdateSkeleton();
+        }
+    }
+
+    if (hasLeftSurface) {
+        Vector3 leftTarget = leftFootPosition;
+        leftTarget.y =
+            leftHeight + ankleToGroundDistance;
+        SolveLegIK(
+            "upper_leg.L",
+            "lower_leg.L",
+            "foot.L",
+            leftTarget,
+            leftNormal,
+            leftFootIkWeight_);
+
+        if (showFootIKDebug_) {
+            const Vector3 rayStart = {
+                leftFootPosition.x,
+                leftFootPosition.y + 2.0f,
+                leftFootPosition.z
+            };
+            DebugRenderer::GetInstance()->AddLine(
+                rayStart,
+                leftTarget,
+                { 0.15f, 0.75f, 1.0f, 1.0f },
+                2.0f);
+            DebugRenderer::GetInstance()->AddLine(
+                leftTarget,
+                leftTarget + leftNormal * 0.8f,
+                { 0.15f, 1.0f, 0.30f, 1.0f },
+                3.0f);
+        }
+    }
+
+    if (hasRightSurface) {
+        Vector3 rightTarget = rightFootPosition;
+        rightTarget.y =
+            rightHeight + ankleToGroundDistance;
+        SolveLegIK(
+            "upper_leg.R",
+            "lower_leg.R",
+            "foot.R",
+            rightTarget,
+            rightNormal,
+            rightFootIkWeight_);
+
+        if (showFootIKDebug_) {
+            const Vector3 rayStart = {
+                rightFootPosition.x,
+                rightFootPosition.y + 2.0f,
+                rightFootPosition.z
+            };
+            DebugRenderer::GetInstance()->AddLine(
+                rayStart,
+                rightTarget,
+                { 1.0f, 0.35f, 0.15f, 1.0f },
+                2.0f);
+            DebugRenderer::GetInstance()->AddLine(
+                rightTarget,
+                rightTarget + rightNormal * 0.8f,
+                { 0.15f, 1.0f, 0.30f, 1.0f },
+                3.0f);
+        }
+    }
+
+    if (hasLeftSurface || hasRightSurface) {
+        playerActor_->GetObject()->Update();
+    }
+}
+
 bool TestScene1::TryGetJointWorldPosition(
     const std::string& jointName,
     Vector3& worldPosition) const
@@ -920,6 +2118,62 @@ bool TestScene1::TryGetJointWorldPosition(
     return true;
 }
 
+void TestScene1::UpdateSandGolemSkeletonPose()
+{
+    if (!isSandGolemMode_ ||
+        sandstormGolemEffectHandle_ == kInvalidEffectHandle) {
+        return;
+    }
+
+    const std::array<const char*, kEffectSkeletonJointCount> jointNames = {
+        "root",
+        "pelvis",
+        "spine",
+        "chest",
+        "neck",
+        "head",
+        "upper_arm.L",
+        "forearm.L",
+        "hand.L",
+        "upper_arm.R",
+        "forearm.R",
+        "hand.R",
+        "upper_leg.L",
+        "lower_leg.L",
+        "foot.L",
+        "upper_leg.R",
+        "lower_leg.R",
+        "foot.R",
+    };
+
+    EffectSkeletonPose skeletonPose {};
+    for (size_t jointIndex = 0;
+         jointIndex < jointNames.size();
+         ++jointIndex) {
+        Vector3 jointWorldPosition {};
+        if (!TryGetJointWorldPosition(
+                jointNames[jointIndex],
+                jointWorldPosition)) {
+            return;
+        }
+
+        skeletonPose.jointPositions[jointIndex] = {
+            jointWorldPosition.x - playerPos_.x,
+            jointWorldPosition.y - playerPos_.y,
+            jointWorldPosition.z - playerPos_.z,
+            1.0f
+        };
+    }
+    skeletonPose.jointCount =
+        static_cast<uint32_t>(jointNames.size());
+
+    if (!EffectManager::GetInstance()->SetEffectSkeletonPose(
+            sandstormGolemEffectHandle_,
+            skeletonPose)) {
+        sandstormGolemEffectHandle_ = kInvalidEffectHandle;
+    }
+}
+
 void TestScene1::ApplySelectedPostEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
@@ -927,4 +2181,9 @@ void TestScene1::ApplySelectedPostEffect()
     sceneManager->AddPostEffect(
         postEffectTypes_[selectedPostEffectIndex_],
         PostEffectStage::BeforeParticle);
+    sceneManager->AddPostEffect(
+        PostEffectType::BlackHoleDistortion,
+        PostEffectStage::BeforeParticle);
+    sceneManager->SetBlackHoleRadius(0.16f);
+    sceneManager->SetBlackHoleStrength(1.0f);
 }

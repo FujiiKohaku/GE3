@@ -2,7 +2,7 @@
   "Shaders": {
     "Emit": "Emit.CS.hlsl",
     "Update": "Update.CS.hlsl",
-    "Vertex": "resources/Shaders/Effects/Common/Particle.VS.hlsl",
+    "Vertex": "Render.VS.hlsl",
     "Pixel": "resources/Shaders/Effects/Common/Particle.PS.hlsl"
   },
   "Emitter": {
@@ -25,34 +25,16 @@
     "EnableGravity": false,
     "Gravity": 0.0,
     "EnableDrag": true,
-    "Drag": 0.94,
+    "Drag": 0.985,
     "EnableNoise": true,
-    "NoiseStrength": 2.0,
+    "NoiseStrength": 0.8,
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },
-  "Fields": [
-    {
-      "Type": "Attractor",
-      "Space": "Local",
-      "Position": [0.0, 0.0, 0.0],
-      "Radius": 8.0,
-      "Strength": 14.0,
-      "Falloff": 0.3
-    },
-    {
-      "Type": "Vortex",
-      "Space": "Local",
-      "Position": [0.0, 0.0, 0.0],
-      "Direction": [0.0, 1.0, 0.0],
-      "Radius": 6.0,
-      "Strength": 8.0,
-      "Falloff": 0.8
-    }
-  ],
+  "Fields": [],
   "Render": {
     "Texture": "resources/Particles/circle.png",
-    "MeshType": "Box",
+    "MeshType": "Board",
     "BlendMode": "Add",
     "DepthTest": true,
     "DepthWrite": false,

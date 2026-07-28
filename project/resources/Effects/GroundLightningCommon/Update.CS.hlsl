@@ -11,7 +11,7 @@ ConstantBuffer<EmitterSphere> gEmitter : register(b2);
 void main(uint32_t3 id : SV_DispatchThreadID)
 {
     uint32_t index = id.x;
-    if (index >= 1024 || gParticles[index].color.a <= 0.0f) return;
+    if (index >= gEmitter.maxParticles || gParticles[index].color.a <= 0.0f) return;
     gParticles[index].currentTime += gPerFrame.deltaTime;
     float rate = saturate(gParticles[index].currentTime / gParticles[index].lifeTime);
     float eased = 1.0f - pow(1.0f - rate, 3.0f);
@@ -27,7 +27,7 @@ void main(uint32_t3 id : SV_DispatchThreadID)
         gParticles[index].color.a = 0.0f;
         int32_t freeIndex;
         InterlockedAdd(gFreeListIndex[0], 1, freeIndex);
-        if (freeIndex + 1 < 1024) gFreeList[freeIndex + 1] = index;
+        if (freeIndex + 1 < gEmitter.maxParticles) gFreeList[freeIndex + 1] = index;
         else InterlockedAdd(gFreeListIndex[0], -1, freeIndex);
     }
 }

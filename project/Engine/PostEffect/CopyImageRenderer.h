@@ -65,6 +65,9 @@ public:
         float sonicBoomProgress;
         Vector2 sonicBoomCenter;
         Vector2 paddingSonicBoom;
+        Vector2 blackHoleCenter;
+        float blackHoleRadius;
+        float blackHoleStrength;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);

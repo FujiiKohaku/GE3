@@ -181,6 +181,12 @@ void PostEffectManager::UpdatePostEffectParameters(
         sceneManager->GetSonicBoomProgress();
     postEffectParameter.sonicBoomCenter =
         sceneManager->GetSonicBoomCenter();
+    postEffectParameter.blackHoleCenter =
+        sceneManager->GetBlackHoleCenter();
+    postEffectParameter.blackHoleRadius =
+        sceneManager->GetBlackHoleRadius();
+    postEffectParameter.blackHoleStrength =
+        sceneManager->GetBlackHoleStrength();
     postEffectParameter.paintProgress =
         sceneManager->GetPaintProgress();
     postEffectParameter.paintIntensity =
