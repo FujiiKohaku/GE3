@@ -545,6 +545,16 @@ void TestScene1::Update()
         return;
     }
 
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F4)) {
+        showSkeletonDebug_ = !showSkeletonDebug_;
+        if (playerActor_) {
+            playerActor_->SetSkeletonDebugVisible(showSkeletonDebug_);
+        }
+        if (sneakWalkActor_) {
+            sneakWalkActor_->SetSkeletonDebugVisible(showSkeletonDebug_);
+        }
+    }
+
     // 【1キー発火】演出終了まで再発動不可ガード（連打防止）
     if (Input::GetInstance()->IsKeyTrigger(DIK_1) && !isSequenceActive_) {
         isSequenceActive_ = true;
@@ -1089,6 +1099,10 @@ void TestScene1::Update()
 
 void TestScene1::Draw2D()
 {
+    if (!showSkeletonDebug_) {
+        return;
+    }
+
     // 骨の名前テキストを描画
     TextRenderer::GetInstance()->PreDraw();
     for (auto& text : jointNameTexts_) {
@@ -1167,6 +1181,7 @@ void TestScene1::DrawImGui()
     ImGui::Text("WASD/QE: Move Debug Camera");
     ImGui::Text("Right Mouse Drag: Rotate Debug Camera");
     ImGui::Text("F1: Toggle Debug Camera");
+    ImGui::Text("F4: Toggle Skeleton Debug");
     ImGui::Text("SPACE: Jump");
     ImGui::Text("Fixed SneakWalk: skeleton debug display");
     ImGui::Text("Left-side cyan particles: GPU Particle Field demo");
@@ -2214,6 +2229,10 @@ void TestScene1::ApplySelectedPostEffect()
 
 void TestScene1::UpdateBoneNames()
 {
+    if (!showSkeletonDebug_) {
+        return;
+    }
+
     Skeleton* skeleton = playerActor_ ? playerActor_->GetSkeleton() : nullptr;
     if (!skeleton || jointNameTexts_.size() < skeleton->joints.size()) {
         return;

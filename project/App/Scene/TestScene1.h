@@ -140,6 +140,7 @@ private:
     EffectHandle groundLightningInnerHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningMotesHandle_ = kInvalidEffectHandle;
     bool showFieldDebug_ = false;
+    bool showSkeletonDebug_ = true;
     bool enableFootIK_ = true;
     bool showFootIKDebug_ = true;
     float leftFootIkWeight_ = 0.0f;
