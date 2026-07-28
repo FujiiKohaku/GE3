@@ -199,6 +199,30 @@ void DebugRenderer::AddSkeleton(
     const Vector4& color,
     float thickness)
 {
+    // Draw local axes for all joints
+    for (const Joint& joint : skeleton.joints) {
+        Matrix4x4 jointWorldMatrix = MatrixMath::Multiply(joint.skeletonSpaceMatrix, worldMatrix);
+        Vector3 jointPosition = {
+            jointWorldMatrix.m[3][0],
+            jointWorldMatrix.m[3][1],
+            jointWorldMatrix.m[3][2]
+        };
+
+        // Extract local axes (row 0, 1, 2) and normalize
+        Vector3 localX = NormalizeSafe({ jointWorldMatrix.m[0][0], jointWorldMatrix.m[0][1], jointWorldMatrix.m[0][2] });
+        Vector3 localY = NormalizeSafe({ jointWorldMatrix.m[1][0], jointWorldMatrix.m[1][1], jointWorldMatrix.m[1][2] });
+        Vector3 localZ = NormalizeSafe({ jointWorldMatrix.m[2][0], jointWorldMatrix.m[2][1], jointWorldMatrix.m[2][2] });
+
+        float axisLength = 0.25f;
+        float axisThickness = 2.0f;
+
+        // Draw axes lines (X: Red, Y: Green, Z: Blue)
+        AddOverlayLine(jointPosition, jointPosition + localX * axisLength, { 1.0f, 0.0f, 0.0f, 1.0f }, axisThickness);
+        AddOverlayLine(jointPosition, jointPosition + localY * axisLength, { 0.0f, 1.0f, 0.0f, 1.0f }, axisThickness);
+        AddOverlayLine(jointPosition, jointPosition + localZ * axisLength, { 0.0f, 0.0f, 1.0f, 1.0f }, axisThickness);
+    }
+
+    // Draw connection bones
     for (const Joint& joint : skeleton.joints) {
         if (!joint.parent.has_value()) {
             continue;
@@ -235,7 +259,6 @@ void DebugRenderer::AddSkeleton(
 
 void DebugRenderer::Draw()
 {
-    // Drawで何をしているか
     // ------------------------------------------------------------
     // Draw() は AddLine() で登録された DebugLine をまとめてGPUへ送り、
     // ライン描画専用パイプラインで一括描画します。

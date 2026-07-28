@@ -408,7 +408,9 @@ std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)
     }
 
     case kWeaponMinigun:
+        [[fallthrough]];
     case kWeaponNormalBullet:
+        [[fallthrough]];
     default: {
         shotSpeed = bulletSpeed_;
         return std::make_unique<NormalBullet>();
@@ -471,9 +473,6 @@ void Player::ApplyTransform()
 
 void Player::UpdateKeyboardMove(Input* input)
 {
-    if (isRolling_) {
-        return;
-    }
 
     Vector3 nextRailOffset = railOffset_;
 
