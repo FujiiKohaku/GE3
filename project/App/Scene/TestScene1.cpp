@@ -161,6 +161,12 @@ void TestScene1::Update()
         return;
     }
 
+    // 【1キー発火】足元に床の氷結晶 ＋ バカみたいな量の青い花火を一気に大爆発発火！
+    if (Input::GetInstance()->IsKeyTrigger(DIK_1)) {
+        EffectManager::GetInstance()->PlayEffect("IceGroundPattern", playerPos_);
+        EffectManager::GetInstance()->PlayEffect("BlueFireworkSparks", playerPos_);
+    }
+
     LONG mouseWheel = Input::GetInstance()->GetMouseWheel();
     bool canSwitchPostEffect = true;
 #ifdef USE_IMGUI
