@@ -140,6 +140,12 @@ void TestScene1::Initialize()
     groundLightningMotesHandle_ =
         EffectManager::GetInstance()->PlayLoopEffect(
             "GroundLightningMotes", groundGlyphPosition);
+
+    snowEffectHandle_ = EffectManager::GetInstance()->PlayLoopEffect("Snow", playerPos_);
+
+    leftHandFlameHandle_ = EffectManager::GetInstance()->PlayLoopEffect("HandFlame", playerPos_);
+    rightHandFlameHandle_ = EffectManager::GetInstance()->PlayLoopEffect("HandFlame", playerPos_);
+
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
 }
@@ -436,10 +442,30 @@ void TestScene1::Update()
                 recoveryPosition);
         }
     }
+
+    if (snowEffectHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->SetEffectPosition(snowEffectHandle_, playerPos_);
+    }
+
+    // 左右の手先Joint位置へ炎パーティクルをリアルタイム更新追従
+    Vector3 leftHandPos, rightHandPos;
+    if (TryGetJointWorldPosition("hand.L", leftHandPos)) {
+        if (leftHandFlameHandle_ != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(leftHandFlameHandle_, leftHandPos);
+        }
+    }
+    if (TryGetJointWorldPosition("hand.R", rightHandPos)) {
+        if (rightHandFlameHandle_ != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(rightHandFlameHandle_, rightHandPos);
+        }
+    }
+
     EffectManager::GetInstance()->Update();
+#if defined(_DEBUG) || defined(USE_IMGUI)
     if (showFieldDebug_) {
         EffectManager::GetInstance()->DrawFieldDebug();
     }
+#endif
 }
 
 void TestScene1::Draw2D()
@@ -524,6 +550,18 @@ void TestScene1::DrawImGui()
 void TestScene1::Finalize()
 {
     StopMovementEffects();
+    if (leftHandFlameHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(leftHandFlameHandle_);
+        leftHandFlameHandle_ = kInvalidEffectHandle;
+    }
+    if (rightHandFlameHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(rightHandFlameHandle_);
+        rightHandFlameHandle_ = kInvalidEffectHandle;
+    }
+    if (snowEffectHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(snowEffectHandle_);
+        snowEffectHandle_ = kInvalidEffectHandle;
+    }
     if (fieldDemoEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(fieldDemoEffectHandle_);
         fieldDemoEffectHandle_ = kInvalidEffectHandle;

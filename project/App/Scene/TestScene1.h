@@ -81,7 +81,7 @@ private:
     EffectHandle groundLightningOuterHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningInnerHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningMotesHandle_ = kInvalidEffectHandle;
-    bool showFieldDebug_ = true;
+    bool showFieldDebug_ = false;
 
     // TPS Camera
     float cameraYaw_ = 0.0f;
@@ -136,4 +136,11 @@ private:
         PostEffectType::FocusLine,
     };
     std::size_t selectedPostEffectIndex_ = 0;
+
+    // Snow Effect
+    EffectHandle snowEffectHandle_ = kInvalidEffectHandle;
+
+    // Hand Joint Flame Tracking Effects
+    EffectHandle leftHandFlameHandle_ = kInvalidEffectHandle;
+    EffectHandle rightHandFlameHandle_ = kInvalidEffectHandle;
 };
