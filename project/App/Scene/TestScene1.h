@@ -143,4 +143,8 @@ private:
     // Hand Joint Flame Tracking Effects
     EffectHandle leftHandFlameHandle_ = kInvalidEffectHandle;
     EffectHandle rightHandFlameHandle_ = kInvalidEffectHandle;
+
+    // Hinokami Kagura Effects
+    EffectHandle hinokamiFlameHandle_ = kInvalidEffectHandle;
+    EffectHandle hinokamiEmbersHandle_ = kInvalidEffectHandle;
 };

@@ -146,6 +146,9 @@ void TestScene1::Initialize()
     leftHandFlameHandle_ = EffectManager::GetInstance()->PlayLoopEffect("HandFlame", playerPos_);
     rightHandFlameHandle_ = EffectManager::GetInstance()->PlayLoopEffect("HandFlame", playerPos_);
 
+    hinokamiFlameHandle_ = EffectManager::GetInstance()->PlayLoopEffect("HinokamiFlame", playerPos_);
+    hinokamiEmbersHandle_ = EffectManager::GetInstance()->PlayLoopEffect("HinokamiEmbers", playerPos_);
+
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
 }
@@ -458,6 +461,14 @@ void TestScene1::Update()
         if (rightHandFlameHandle_ != kInvalidEffectHandle) {
             EffectManager::GetInstance()->SetEffectPosition(rightHandFlameHandle_, rightHandPos);
         }
+
+        // ヒノカミ神楽（炎の龍・火の粉）を右手の刀位置にリアルタイム追従
+        if (hinokamiFlameHandle_ != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(hinokamiFlameHandle_, rightHandPos);
+        }
+        if (hinokamiEmbersHandle_ != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(hinokamiEmbersHandle_, rightHandPos);
+        }
     }
 
     EffectManager::GetInstance()->Update();
@@ -557,6 +568,14 @@ void TestScene1::Finalize()
     if (rightHandFlameHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(rightHandFlameHandle_);
         rightHandFlameHandle_ = kInvalidEffectHandle;
+    }
+    if (hinokamiFlameHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(hinokamiFlameHandle_);
+        hinokamiFlameHandle_ = kInvalidEffectHandle;
+    }
+    if (hinokamiEmbersHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(hinokamiEmbersHandle_);
+        hinokamiEmbersHandle_ = kInvalidEffectHandle;
     }
     if (snowEffectHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(snowEffectHandle_);
