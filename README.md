@@ -1,85 +1,76 @@
 # ポストエフェクト（PostEffect）課題提出資料 - ReadMe
 
-## 1. 概要・提出者情報
+## 1. 必須内容
 
-| 項目 | 内容 |
+### Grayscale（グレースケール描画）
+- **ゲーム内組込**: TABキーによるポーズメニュー時にゲーム画面をモノクロ白黒化。さらに GaussianFilter（背景ぼかし）と CyberScanline（SF走査線）とトリプル合成してUIの視認性とゲームデザイン性を向上。
+
+---
+
+## 2. 指定加点要素
+
+| 加点要素 | ゲーム内での組み込み・演出 |
 |---|---|
-| **作品名** | KohakuEngine 3Dレールシューティング |
-| **学校名** | 日本工学院専門学校 デザインカレッジ |
-| **学籍番号** | [学籍番号を入力してください] |
-| **氏名** | 藤井 琥白 |
-| **開発環境** | Windows 10/11, DirectX 12, C++20, HLSL (Shader Model 6.0) |
+| **Vignetting** | ダメージ被弾時の暗赤色フラッシュ、HP3以下で画面四隅が脈動（鼓動パルス） |
+| **BoxFilter** | 3x3カーネル平滑化。敵インク（Paint）被弾時に目眩・ぼやけ演出として適用 |
+| **GaussianFilter** | ポーズ画面（TABキー）表示時に背景画面へ被写界深度ぼかしを付与 |
+| **LuminanceBasedOutline** | ボス戦中に自動発動し、ボスや高輝度部分の輪郭線を強調 |
+| **DepthBasedOutline** | 通常ゲームプレイ時に常時適用するZバッファ幾何学アウトライン |
+| **Radial Blur** | Shiftキー保持ブースト時の消失点・自機中心の高速放射状ブラー |
+| **Dissolve** | ボス撃破時および自機死亡時に2秒間かけて消滅するクリア/ゲームオーバー演出 |
+| **Random** | ボス登場直前の予兆ノイズ・撃破後フェードアウトノイズ、Lキー切り替え |
 
 ---
 
-## 2. 必須内容（61点）
+## 3. 独自追加ポストエフェクト
 
-###  Grayscale（グレースケール描画）
-- **HLSLファイル**: [`resources/Shaders/PostEffect/GrayScale.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/GrayScale.PS.hlsl)
-- **ゲーム内での組み込み・利用方法**:
-  - **ポーズ画面（TABキー押下時）** にてゲームプレイ処理を一時停止する際、背景画面を白黒・モノクロ表示化するために適用。
-  - 単なるモノクロ化にとどまらず、ガウスぼかし（`GaussianFilter`）およびSF風ホログラム走査線（`CyberScanline`）と**トリプルスタック合成**することで、ポーズメニュー時の視認性と演出デザイン性を高めています。
+### ゲーム内で使用されているポストエフェクト
 
----
-
-## 3. 加点要素対応一覧表
-
-すべての指定加点要素をゲーム内に組み込み済みです。
-
-| 加点項目 | 最高点 | 実装ファイル | ゲーム内での組み込み・演出用途 |
-|---|:---:|---|---|
-| **Vignetting** | 3点 | [`Vignette.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/Vignette.PS.hlsl) | ボス撃破時の演出および被弾ダメージ時に、画面外周部を暗く落とし込んで臨場感・危機感を強調。 |
-| **BoxFilter** | 3点 | [`BoxFilter.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/BoxFilter.PS.hlsl) | 3x3カーネルによる画像平滑化フィルター。マルチパス描画および画面平坦化演出に使用。 |
-| **GaussianFilter** | 5点 | [`GaussianFilter.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/GaussianFilter.PS.hlsl) | ポーズ画面（TABキー）表示時に背景画面へ被写界深度ぼかしを付与。また各種ブラー合成のベースとして活用。 |
-| **LuminanceBasedOutline** | 5点 | [`LuminanceBasedOutline.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl) | **ボス戦中**に自動発動。Sobelフィルタを用いてボス敵や高輝度オブジェクトの輝度境界線を輪郭線として鮮明に強調描画。 |
-| **DepthBasedOutline** | 8点 | [`DepthBasedOutline.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl) | **通常ゲームプレイ時のメインポストエフェクト**として常時適用。深度バッファ（Zバッファ）から空間幾何境界を検出し、セル調のアウトラインを描画。 |
-| **Radial Blur** | 5点 | [`RadialBlur.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/RadialBlur.PS.hlsl) | **自機ブースト移動中（Shiftキー保持時）**に発動。自機および消失点を中心とする放射状ブラーを適用し、超高速移動感を演出。 |
-| **Dissolve** | 4点 | [`Dissolve.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/Dissolve.PS.hlsl) | **ボス撃破クリア時**に発動。2秒間かけてボスおよび背景画面をノイズ状にディゾルブ消滅させてクリア画面へシームレスに遷移。 |
-| **Random** | 4点 | [`Random.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/Random.PS.hlsl) | **Lキー押下**による動的デバッグトグル。擬似乱数を用いたノイズ・グリッチエフェクト画面の切り替えに対応。 |
-| **その他（独自拡張）** | 20点 | 下記セクション参照 | 20種類以上の独自PostEffectを自作・パイプライン化し、ゲームの各種アクション・演出へ動的適用。 |
-
----
-
-## 4. その他（独自追加PostEffect・20点加点枠）
-
-項目リストにない独自PostEffectを多数開発し、ゲームの演出強化に組み込んでいます。
-
-| PostEffect名 | HLSLファイル | ゲーム内での用途・演出効果 |
+| PostEffect名 | エフェクト表現内容 | 使用場面・用途 |
 |---|---|---|
-| **CyberScanline** | [`CyberScanline.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/CyberScanline.PS.hlsl) | ポーズ画面（TABキー）時にレトロ・SFホログラムの走査線を表示。 |
-| **SonicBoom** | [`SonicBoom.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/SonicBoom.PS.hlsl) | ブースト開始（Shift押下）の瞬間に発動。プレイヤーの3D座標を画面UVに変換し、自機を中心とする衝撃音波リングの空間歪みを発生。 |
-| **FocusLine** | [`FocusLine.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/FocusLine.PS.hlsl) | ブースト移動中にアニメ風の集中線を画面周辺に生成し、スピード感を強調。 |
-| **ChromaticAberration** | [`ChromaticAberration.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/ChromaticAberration.PS.hlsl) | ブースト時や強力な攻撃の被弾時にRGBの色ズレ（色収差）を発生させ、衝撃を表現。 |
-| **Fog** | [`Fog/Fog.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/Fog/Fog.PS.hlsl) | 奥行きに応じた環境フォグを適用し、3D空間の空気感と距離感を表現。 |
-| **Bloom** | [`Bloom/Bloom.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/Bloom/Bloom.PS.hlsl) | 高輝度部分を抽出してガウスブラーでぼかし、加算合成することで発光体を表現。 |
-| **Shockwave** | [`Shockwave.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/Shockwave.PS.hlsl) | 爆発や強力な攻撃発生時に画面を屈折・歪ませる衝撃波リング演出。 |
-| **HeatHaze** | [`HeatHaze.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/HeatHaze.PS.hlsl) | エンジン噴射口や爆発の熱気による画面ゆらぎ（陽炎）をシミュレート。 |
-| **GlassCrack** | [`GlassCrack.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/GlassCrack.PS.hlsl) | ピンチ時やガラス破損演出時、画面全体にひび割れパターンと屈折を適用。 |
-| **HexShield** | [`HexShield.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/HexShield.PS.hlsl) | バリア・シールド展開時に六角形（ヘキサゴン）グリッドのエネルギー波を表示。 |
-| **RainDrops** | [`RainDrops.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/RainDrops.PS.hlsl) | レンズに付着した水滴と流れる水滴による屈折効果を表現。 |
-| **BlackHoleDistortion** | [`BlackHoleDistortion.PS.hlsl`](file:///c:/Projects/KohakuEngine/project/resources/Shaders/PostEffect/BlackHoleDistortion.PS.hlsl) | ブラックホール状の強力な空間引き込み歪みを生成。 |
+| **CyberScanline** | SFホログラム走査線 | ポーズ画面（TABキー）表示時 |
+| **SonicBoom** | 衝撃音波リング空間歪み | ブースト始動時（Shift押下） |
+| **FocusLine** | アニメ風スピード集中線 | ブースト移動中 |
+| **ChromaticAberration** | RGB色収差（色ズレ） | ブースト移動中・ダメージ被弾時 |
+| **Paint** | 滴るインク着弾 | 敵インク攻撃被弾時 |
+| **HeatHaze** | 熱気・陽炎空間ゆらぎ | ミニガン連射時 |
+| **GlassCrack** | ガラスのビキビキひび割れ | HP ≦ 5（ピンチ時） |
+| **Fog** | 奥行き距離フォグ | 常時適用（3D空間表現） |
+| **Bloom** | 高輝度発光抽出・ブラー加算 | 常時適用 |
+| **CameraShake** | 画面振動・シェイク | 被弾時・爆発発生時 |
 
----
+### その他実装済みポストエフェクト（マウスホイール回転で切替表示可能）
 
-## 5. ゲーム操作方法と確認手順
-
-ゲームを起動後、以下の操作で各種ポストエフェクトの動作を確認できます。
-
-| 操作キー | アクション | 発動するPostEffect演出 |
+| PostEffect名 | エフェクト表現内容 | 使用・切替方法 |
 |---|---|---|
-| **通常走行時** | - | `DepthBasedOutline` + `Bloom` （幾何学セル調アウトライン常時適用） |
-| **Shift** (保持) | 加速ブースト | `SonicBoom`（始動時歪み） + `RadialBlur` + `FocusLine` + `ChromaticAberration` + `Fog` |
-| **ボス戦進入** | 自動切り替え | `LuminanceBasedOutline` （ボス・高輝度輪郭強調） |
-| **ボス撃破時** | 自動演出 | `Dissolve` + `Vignette` （2秒かけてノイズ状消滅・クリア画面遷移） |
-| **TAB** | ポーズ切替 | `GrayScale` + `GaussianFilter` + `CyberScanline` （トリプル合成ポーズ画面） |
-| **L** | デバッグ切替 | `Random` ノイズエフェクトのON/OFF |
-| **V** | デバッグワープ | ボス出現ポイント（Z = 1450.0f）まで一瞬で移動 |
+| **HexShield** | 六角形エネルギーバリア格子 | マウスホイール回転で順次切り替え表示可能 |
+| **BlackHoleDistortion** | ブラックホール空間引き込み歪み | マウスホイール回転で順次切り替え表示可能 |
+| **RainDrops** | レンズ水滴・流れる雨粒屈折 | マウスホイール回転で順次切り替え表示可能 |
+| **Shockwave** | 同心円状衝撃波歪み | マウスホイール回転で順次切り替え表示可能 |
+| **DepthOfField** | 被写界深度ぼかし | マウスホイール回転で順次切り替え表示可能 |
+| **MotionBlur** | 残像モーションブラー | マウスホイール回転で順次切り替え表示可能 |
+| **LensDistortion / Fisheye** | 魚眼・広角レンズ歪み | マウスホイール回転で順次切り替え表示可能 |
+| **FilmGrain** | アナログフィルムノイズ | マウスホイール回転で順次切り替え表示可能 |
+| **LensDirt** | レンズ汚れ・ほこり光反射 | マウスホイール回転で順次切り替え表示可能 |
+| **Pixelate** | モザイク・ドット絵化 | マウスホイール回転で順次切り替え表示可能 |
+| **ColorAdjust** | トーンカーブ・色調補正 | マウスホイール回転で順次切り替え表示可能 |
+| **LightShafts / VolumetricLight** | 太陽光・大気光線散乱 | マウスホイール回転で順次切り替え表示可能 |
+| **LensFlare / Glare / Halo / LightStreak / NeonGlow** | レンズフレア・ネオン発光 | マウスホイール回転で順次切り替え表示可能 |
 
 ---
 
-## 6. ポストエフェクト技術システム構成
+## 4. 操作方法
 
-- **マルチステージ・パイプライン構造**:
-  - `PostEffectStage::BeforeParticle` / `AfterParticle` のステージ分離により、パーティクル描画前後の適切な順序でポストエフェクトを加算・乗算・置換可能。
-- **動的パラメータ連動**:
-  - 3D世界座標から画面UV座標への自動変換（`WorldToScreen`）により、プレイヤーの位置を中心とした衝撃波（`SonicBoom`）やブーストブラーの中心点がリアルタイムに追従。
+| 操作キー | 発動・機能 |
+|---|---|
+| **TAB** | ポーズ（GrayScale + GaussianFilter + CyberScanline） |
+| **Shift** (保持) | ブースト（SonicBoom + RadialBlur + FocusLine + ChromaticAberration + Fog） |
+| **左クリック** (保持) | ミニガン射撃（HeatHaze） |
+| **敵インク被弾** | Paint + BoxFilter |
+| **HP ≦ 5** | GlassCrack |
+| **ダメージ被弾 / HP ≦ 3** | Vignette |
+| **ボス戦進入** | LuminanceBasedOutline |
+| **ボス撃破 / HP 0** | Dissolve + Vignette |
+| **L** | Random ノイズトグル |
+| **V** | ボス位置へワープ |
+| **マウスホイール** | その他実装済みポストエフェクトの順次切り替えプレビュー |
