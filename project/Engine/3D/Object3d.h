@@ -135,8 +135,8 @@ private:
     //  DirectionalLight* directionalLightData = nullptr;
     Material* materialData_ = nullptr;
     // Transform
-    EulerTransform transform;
-    EulerTransform cameraTransform;
+    EulerTransform transform {};
+    EulerTransform cameraTransform {};
 
     Quaternion quaternionRotation_ = { 0.0f, 0.0f, 0.0f, 1.0f };
     bool useQuaternionRotation_ = false;
@@ -151,7 +151,7 @@ private:
     PlayAnimation* animation_ = nullptr;
 
     // World
-    Matrix4x4 worldMatrix_;
+    Matrix4x4 worldMatrix_ {};
     //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
     std::string name_ = "Object[nameNull]";

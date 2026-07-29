@@ -217,7 +217,9 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
 {
     switch (type) {
     case PostEffectType::Copy:
+        [[fallthrough]];
     case PostEffectType::Bloom:
+        [[fallthrough]];
     case PostEffectType::Fog:
         return L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl";
     case PostEffectType::GrayScale:
@@ -253,6 +255,7 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
     case PostEffectType::LuminanceBasedOutline:
         return L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl";
     case PostEffectType::DepthOutline:
+        [[fallthrough]];
     case PostEffectType::Outline:
         return L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl";
     case PostEffectType::RadialBlur:

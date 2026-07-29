@@ -12,6 +12,7 @@
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Debug/DebugRenderer.h"
+#include "Engine/2D/Text/TextRenderer.h"
 #include <numbers>
 #include <algorithm>
 #include <cmath>
@@ -19,6 +20,8 @@
 
 namespace {
 constexpr float kFootAnkleToSoleDistance = 0.16f;
+constexpr const char* kDefaultFont =
+    "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
 
 Vector3 CrossVector(const Vector3& first, const Vector3& second)
 {
@@ -517,6 +520,21 @@ void TestScene1::Initialize()
 
     selectedPostEffectIndex_ = 0;
     ApplySelectedPostEffect();
+
+    // ジョイント名テキストの初期化
+    Skeleton* skeleton = playerActor_->GetSkeleton();
+    if (skeleton) {
+        for (const Joint& joint : skeleton->joints) {
+            auto text = std::make_unique<Text>();
+            text->Initialize(kDefaultFont);
+            text->SetText(joint.name);
+            text->SetFontSize(14.0f);
+            text->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+            text->SetOutlineColor({ 0.0f, 0.0f, 0.0f, 1.0f });
+            text->SetOutlineWidth(1.0f);
+            jointNameTexts_.push_back(std::move(text));
+        }
+    }
 }
 
 void TestScene1::Update()
@@ -525,6 +543,16 @@ void TestScene1::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
         return;
+    }
+
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F4)) {
+        showSkeletonDebug_ = !showSkeletonDebug_;
+        if (playerActor_) {
+            playerActor_->SetSkeletonDebugVisible(showSkeletonDebug_);
+        }
+        if (sneakWalkActor_) {
+            sneakWalkActor_->SetSkeletonDebugVisible(showSkeletonDebug_);
+        }
     }
 
     // 【1キー発火】演出終了まで再発動不可ガード（連打防止）
@@ -998,6 +1026,7 @@ void TestScene1::Update()
     ProcessAnimationEvents();
     UpdateMovementEffects();
     UpdateKatanaAttachment();
+    UpdateBoneNames();
     if (sneakWalkActor_) {
         sneakWalkActor_->Update(1.0f / 60.0f);
     }
@@ -1070,6 +1099,15 @@ void TestScene1::Update()
 
 void TestScene1::Draw2D()
 {
+    if (!showSkeletonDebug_) {
+        return;
+    }
+
+    // 骨の名前テキストを描画
+    TextRenderer::GetInstance()->PreDraw();
+    for (auto& text : jointNameTexts_) {
+        text->Draw();
+    }
 }
 
 void TestScene1::Draw3D()
@@ -1143,6 +1181,7 @@ void TestScene1::DrawImGui()
     ImGui::Text("WASD/QE: Move Debug Camera");
     ImGui::Text("Right Mouse Drag: Rotate Debug Camera");
     ImGui::Text("F1: Toggle Debug Camera");
+    ImGui::Text("F4: Toggle Skeleton Debug");
     ImGui::Text("SPACE: Jump");
     ImGui::Text("Fixed SneakWalk: skeleton debug display");
     ImGui::Text("Left-side cyan particles: GPU Particle Field demo");
@@ -2186,4 +2225,29 @@ void TestScene1::ApplySelectedPostEffect()
         PostEffectStage::BeforeParticle);
     sceneManager->SetBlackHoleRadius(0.16f);
     sceneManager->SetBlackHoleStrength(1.0f);
+}
+
+void TestScene1::UpdateBoneNames()
+{
+    if (!showSkeletonDebug_) {
+        return;
+    }
+
+    Skeleton* skeleton = playerActor_ ? playerActor_->GetSkeleton() : nullptr;
+    if (!skeleton || jointNameTexts_.size() < skeleton->joints.size()) {
+        return;
+    }
+
+    for (size_t i = 0; i < skeleton->joints.size(); ++i) {
+        const Joint& joint = skeleton->joints[i];
+        Vector3 worldPos {};
+        if (TryGetJointWorldPosition(joint.name, worldPos)) {
+            // 3D 座標を 2D スクリーン座標に変換
+            Vector2 screenPos = camera_->WorldToScreen(worldPos);
+            
+            // テキストの位置を設定して更新
+            jointNameTexts_[i]->SetPosition(screenPos);
+            jointNameTexts_[i]->Update();
+        }
+    }
 }

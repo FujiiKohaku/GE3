@@ -8,9 +8,11 @@
 #include "Engine/Animation/AnimationActor.h"
 #include "Engine/Animation/Animation.h"
 #include "Engine/Math/MathStruct.h"
+#include "Engine/2D/Text/Text.h"
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <vector>
 
 class TestScene1 : public BaseScene {
 public:
@@ -138,6 +140,7 @@ private:
     EffectHandle groundLightningInnerHandle_ = kInvalidEffectHandle;
     EffectHandle groundLightningMotesHandle_ = kInvalidEffectHandle;
     bool showFieldDebug_ = false;
+    bool showSkeletonDebug_ = true;
     bool enableFootIK_ = true;
     bool showFootIKDebug_ = true;
     float leftFootIkWeight_ = 0.0f;
@@ -224,4 +227,6 @@ private:
     bool isSequenceActive_ = false;
 
     Vector3 sixSeqCenterPos_{};
+    std::vector<std::unique_ptr<Text>> jointNameTexts_;
+    void UpdateBoneNames();
 };
