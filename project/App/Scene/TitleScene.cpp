@@ -158,7 +158,7 @@ void TitleScene::Initialize()
     textTestButtonText_->SetFontSize(22.0f);
     textTestButtonText_->SetColor(kHeaderColor);
 
-    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
+    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::NeonGlow);
 }
 
 void TitleScene::Update()
