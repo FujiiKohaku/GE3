@@ -65,6 +65,10 @@ void Object3d::Update()
         }
     }
 
+    if (collider_ != nullptr) {
+        collider_->SetCenter(transform.translate + colliderOffset_);
+    }
+
     Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
     if (model_) {

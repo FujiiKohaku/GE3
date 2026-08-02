@@ -44,6 +44,11 @@ struct LevelData {
             Vector3 range;
         } gimmick;
 
+        struct DestructibleData {
+            bool exists = false;
+            float hp = 1.0f;
+        } destructible;
+
         struct CameraPointData {
             bool exists = false;
             std::string name;

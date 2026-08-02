@@ -179,14 +179,26 @@ void Game::Update()
         DebugRenderer::GetInstance()->SetVisible(showDebugUI_);
     }
 
+    if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
+        Logger::Log("Escape exit confirmation opened");
+        const int result = MessageBoxW(
+            WinApp::GetInstance()->GetHwnd(),
+            L"本当にゲームを終了しますか？",
+            L"終了確認",
+            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+        if (result == IDYES) {
+            Logger::Log("Exit confirmed");
+            endRequest_ = true;
+        } else {
+            Logger::Log("Exit canceled");
+        }
+        Profiler::GetInstance()->EndFrame();
+        return;
+    }
+
 #ifdef USE_IMGUI
     ImGuiManager::GetInstance()->Begin();
 #endif
-
-    if (Input::GetInstance()->IsKeyPressed(DIK_ESCAPE)) {
-        Logger::Log("Escape Pressed");
-        endRequest_ = true;
-    }
 
     {
         ProfilerScope scope("SceneUpdate");

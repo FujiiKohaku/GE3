@@ -164,6 +164,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="App\Scene\LoadingScene.cpp" />
+    <ClCompile Include="App\Scene\StageSelectScene.cpp" />
+    <ClCompile Include="App\Game\Stage\StageCatalog.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
@@ -294,6 +296,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
+    <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
@@ -368,6 +371,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
+    <ClInclude Include="App\Scene\StageSelectScene.h" />
+    <ClInclude Include="App\Game\Stage\StageCatalog.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
     <ClInclude Include="App\Scene\Game.h" />
     <ClInclude Include="Engine\Debug\Profiler\Profiler.h" />
@@ -436,6 +441,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
+    <ClInclude Include="App\Game\Boss\StageBoss.h" />
+    <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
   </ItemGroup>

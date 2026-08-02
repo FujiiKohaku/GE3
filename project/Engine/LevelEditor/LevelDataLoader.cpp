@@ -190,6 +190,14 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
         }
     }
 
+    if (objectJson.contains("destructible")) {
+        const nlohmann::json& destructible = objectJson["destructible"];
+        objectData.destructible.exists = true;
+        if (destructible.contains("hp")) {
+            objectData.destructible.hp = destructible["hp"].get<float>();
+        }
+    }
+
     if (objectJson.contains("camera_point")) {
         const nlohmann::json& cam = objectJson["camera_point"];
         objectData.cameraPoint.exists = true;

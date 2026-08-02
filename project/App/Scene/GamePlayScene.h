@@ -29,10 +29,12 @@
 #include "Engine/Animation/AnimationActor.h"
 
 #include "App/Game/Player/Player.h"
+#include "App/Game/Stage/StageCatalog.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Engine/EditorManager/EditorManager.h"
@@ -45,11 +47,16 @@
 #include "App/Game/Enemy/Types/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
+#include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
+#include "App/Game/Boss/StageBoss.h"
 
 struct LevelData;
 
 class GamePlayScene : public BaseScene {
 public:
+    explicit GamePlayScene(const std::string& stageId = "stage01")
+        : stageId_(stageId) {}
+
     void Initialize() override;
 
     void Finalize() override;
@@ -62,6 +69,15 @@ public:
     void DrawImGui() override;
 
 private:
+    struct DestructibleLevelObject {
+        Object3d* object = nullptr;
+        float hp = 1.0f;
+        bool destroyed = false;
+    };
+
+    std::string stageId_ = "stage01";
+    StageSettings stageSettings_;
+
     void CreateLevelObjects(const LevelData& levelData);
     void ClearLevelObjects();
     void HotReloadLevel();
@@ -118,6 +134,7 @@ private:
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
+    std::vector<DestructibleLevelObject> destructibleLevelObjects_;
 
     struct RecoveryItem {
         std::unique_ptr<Object3d> object;
@@ -212,6 +229,7 @@ private:
     Model* enemyModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
     Model* fearWormEnemyModel_ = nullptr;
+    Model* angerBlockModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
@@ -220,9 +238,11 @@ private:
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;
     float cameraLookUpFactor_ = 0.7f;
+    float cameraHorizontalFollowFactor_ = 0.2f;
+    float cameraLookHorizontalFactor_ = 0.35f;
 
     // ボス戦用
-    std::unique_ptr<FearWormEnemy> activeBoss_;
+    std::unique_ptr<StageBoss> activeBoss_;
     bool isBossSpawned_ = false;
 
     // カメラシェイク演出用
@@ -257,12 +277,15 @@ private:
     std::unique_ptr<Sprite> pauseResumeBtnSprite_;
     std::unique_ptr<Sprite> pauseRetryBtnSprite_;
     std::unique_ptr<Sprite> pauseTitleBtnSprite_;
+    std::unique_ptr<Sprite> pauseControlBtnSprite_;
 
     // ポーズ用日本語テキストUI（Textクラス）
     std::unique_ptr<Text> pauseTitleText_;
     std::unique_ptr<Text> pauseResumeText_;
     std::unique_ptr<Text> pauseRetryText_;
     std::unique_ptr<Text> pauseTitleBtnText_;
+    std::unique_ptr<Text> pauseControlText_;
+    std::unique_ptr<Text> pauseSensitivityText_;
 
     // 画面右側のプレイヤーHPゲージUI
     std::unique_ptr<Sprite> playerHpBgSprite_;

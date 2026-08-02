@@ -16,6 +16,11 @@ struct Ray;
 
 class Player {
 public:
+    enum class ControlMode {
+        KeyboardAndMouse,
+        StarFox,
+    };
+
     void Initialize(Model* model);
     void Update();
     void Draw();
@@ -117,6 +122,17 @@ public:
     void DrawImGui();
     void FireBullet(const Camera& activeCamera);
     Camera* GetCamera() const { return camera_; }
+    void SetControlMode(ControlMode mode)
+    {
+        if (controlMode_ != mode) {
+            starFoxSteeringInput_ = { 0.0f, 0.0f };
+        }
+        controlMode_ = mode;
+    }
+    ControlMode GetControlMode() const { return controlMode_; }
+    void SetMouseSensitivity(float sensitivity);
+    float GetMouseSensitivity() const { return mouseSensitivity_; }
+    const Vector2& GetStarFoxSteeringInput() const { return starFoxSteeringInput_; }
 
 
 private:
@@ -143,6 +159,9 @@ private:
 
     bool isDebugMode = false;
     bool isBoosting_ = false;
+    ControlMode controlMode_ = ControlMode::KeyboardAndMouse;
+    float mouseSensitivity_ = 1.0f;
+    Vector2 starFoxSteeringInput_ = { 0.0f, 0.0f };
 
     // ローリング（バレルロール）用
     bool isRolling_ = false;
@@ -204,6 +223,7 @@ private:
     void ApplyTransform();
 
     void UpdateKeyboardMove(Input* input);
+    void UpdateStarFoxMove();
     void UpdateRolling(Input* input);
     void UpdateMouseAim();
     void ClampAimScreenPosition();

@@ -28,9 +28,13 @@
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
+#include <algorithm>
 #include <cmath>
 
 namespace {
+Player::ControlMode gControlMode = Player::ControlMode::KeyboardAndMouse;
+float gMouseSensitivity = 1.0f;
+
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
 constexpr float kBoostPostEffectBaseWeight = 0.40f;
@@ -57,15 +61,6 @@ constexpr float kRecoveryItemBobSpeed = 0.045f;
 constexpr float kRecoveryItemBobHeight = 0.65f;
 constexpr int32_t kRecoveryItemHealAmount = 5;
 constexpr int32_t kSwarmMembersPerWave = 18;
-constexpr size_t kSwarmWaveCount = 6;
-constexpr float kSwarmWaveDistances[kSwarmWaveCount] = {
-    260.0f,
-    620.0f,
-    980.0f,
-    1340.0f,
-    1560.0f,
-    1740.0f,
-};
 
 float ClampFloat(float value, float minValue, float maxValue)
 {
@@ -129,14 +124,47 @@ Vector3 Cross(const Vector3& a, const Vector3& b)
 
 void GamePlayScene::Initialize()
 {
+    StageCatalog* stageCatalog = StageCatalog::GetInstance();
+    if (!stageCatalog->Load()) {
+        Logger::Log(stageCatalog->GetLastError());
+    }
+    const StageSettings* selectedStage = stageCatalog->Find(stageId_);
+    if (selectedStage == nullptr) {
+        selectedStage = stageCatalog->Find("stage01");
+    }
+    if (selectedStage != nullptr) {
+        stageSettings_ = *selectedStage;
+        stageId_ = stageSettings_.id;
+    } else {
+        stageSettings_.id = "stage01";
+        stageSettings_.layoutFile = "resources/Scenes/stage01.json";
+        stageSettings_.swarmWaveDistances = {
+            260.0f, 620.0f, 980.0f, 1340.0f, 1560.0f, 1740.0f };
+        stageSettings_.recoveryItemPositions = {
+            { -5.0f, 1.5f, 410.0f },
+            { 5.0f, 1.5f, 1040.0f },
+            { 0.0f, 5.0f, 1700.0f } };
+    }
+    railSpeed_ = stageSettings_.railSpeed;
 
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
-    for (float z = 0.0f; z <= 4600.0f; z += 50.0f) {
-        rail_->AddPoint({ 0.0f, 0.0f, z });
+    if (!stageSettings_.railControlPoints.empty()) {
+        for (const Vector3& point : stageSettings_.railControlPoints) {
+            rail_->AddPoint(point);
+        }
+    } else {
+        for (float z = 0.0f;
+             z < stageSettings_.railLength;
+             z += stageSettings_.railPointInterval) {
+            rail_->AddPoint({ 0.0f, 0.0f, z });
+        }
+        if (stageSettings_.railLength > 0.0f) {
+            rail_->AddPoint({ 0.0f, 0.0f, stageSettings_.railLength });
+        }
     }
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
@@ -184,8 +212,7 @@ void GamePlayScene::Initialize()
 
     TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/rostock_laage_airport_4k.dds");
+    TextureManager::GetInstance()->LoadTexture(stageSettings_.skybox);
     TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png"); // AiMスプライチE
 
     // nodeLoad
@@ -198,6 +225,7 @@ void GamePlayScene::Initialize()
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
     fearWormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
+    angerBlockModel_ = ModelManager::GetInstance()->Load("Environment/Block/block.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
@@ -259,7 +287,7 @@ void GamePlayScene::Initialize()
     // 1. 縦長背景パネル (280x380)
     pauseMenuPanelSprite_ = std::make_unique<Sprite>();
     pauseMenuPanelSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    pauseMenuPanelSprite_->SetSize({ 280.0f, 380.0f });
+    pauseMenuPanelSprite_->SetSize({ 400.0f, 520.0f });
     pauseMenuPanelSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseMenuPanelSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
     pauseMenuPanelSprite_->SetColor({ 0.06f, 0.06f, 0.09f, 0.92f });
@@ -290,6 +318,17 @@ void GamePlayScene::Initialize()
     pauseTitleBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
     pauseTitleBtnSprite_->SetColor({ 0.75f, 0.22f, 0.22f, 0.90f });
+    pauseTitleBtnSprite_->Update();
+
+    pauseControlBtnSprite_ = std::make_unique<Sprite>();
+    pauseControlBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseControlBtnSprite_->SetSize({ 300.0f, 44.0f });
+    pauseControlBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseControlBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseControlBtnSprite_->SetColor({ 0.25f, 0.55f, 0.45f, 0.90f });
+    pauseControlBtnSprite_->Update();
+
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 190.0f });
     pauseTitleBtnSprite_->Update();
 
     // -------------------------------------------------
@@ -326,12 +365,29 @@ void GamePlayScene::Initialize()
 
     pauseTitleBtnText_ = std::make_unique<Text>();
     pauseTitleBtnText_->Initialize(kDefaultFont);
-    pauseTitleBtnText_->SetText("タイトルに戻る [ESC]");
+    pauseTitleBtnText_->SetText("タイトルに戻る [T]");
     pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
     pauseTitleBtnText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseTitleBtnText_->SetFontSize(22.0f);
     pauseTitleBtnText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     pauseTitleBtnText_->Update();
+
+    pauseControlText_ = std::make_unique<Text>();
+    pauseControlText_->Initialize(kDefaultFont);
+    pauseControlText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseControlText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseControlText_->SetFontSize(19.0f);
+    pauseControlText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 190.0f });
+    pauseTitleBtnText_->Update();
+
+    pauseSensitivityText_ = std::make_unique<Text>();
+    pauseSensitivityText_->Initialize(kDefaultFont);
+    pauseSensitivityText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 125.0f });
+    pauseSensitivityText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseSensitivityText_->SetFontSize(18.0f);
+    pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
 
     // -------------------------------------------------
     // 画面右側に表示するプレイヤーHPゲージUIの初期化
@@ -402,7 +458,8 @@ void GamePlayScene::Initialize()
 
     bossNameText_ = std::make_unique<Text>();
     bossNameText_->Initialize(kDefaultFont);
-    bossNameText_->SetText("BOSS: FEAR WORM");
+    bossNameText_->SetText(
+        stageSettings_.bossType == "AngerBlock" ? "BOSS: ANGER" : "BOSS: FEAR WORM");
     bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
     bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
     bossNameText_->SetFontSize(20.0f);
@@ -411,7 +468,8 @@ void GamePlayScene::Initialize()
 
     bossHeadHpText_ = std::make_unique<Text>();
     bossHeadHpText_->Initialize(kDefaultFont);
-    bossHeadHpText_->SetText("HEAD CORE");
+    bossHeadHpText_->SetText(
+        stageSettings_.bossType == "AngerBlock" ? "ANGER CORE" : "HEAD CORE");
     bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
     bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossHeadHpText_->SetFontSize(14.0f);
@@ -420,7 +478,8 @@ void GamePlayScene::Initialize()
 
     bossBodyHpText_ = std::make_unique<Text>();
     bossBodyHpText_->Initialize(kDefaultFont);
-    bossBodyHpText_->SetText("BODY SHIELD");
+    bossBodyHpText_->SetText(
+        stageSettings_.bossType == "AngerBlock" ? "FISTS" : "BODY SHIELD");
     bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
     bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossBodyHpText_->SetFontSize(14.0f);
@@ -434,7 +493,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Initializing skyBox");
     skyBox_->Initialize(DirectXCommon::GetInstance());
     Logger::Log("GamePlayScene::Initialize: Setting skyBox texture");
-    skyBox_->SetTexture("resources/Textures/skybox.dds");
+    skyBox_->SetTexture(stageSettings_.skybox);
     Logger::Log("GamePlayScene::Initialize: skyBox initialization finished");
 
     // =================================================
@@ -445,13 +504,15 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
+    player_->SetControlMode(gControlMode);
+    player_->SetMouseSensitivity(gMouseSensitivity);
     lastPlayerHp_ = player_->GetMaxHp();
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
     Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
 
     LevelDataLoader levelDataLoader;
-    LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");
+    LevelData levelData = levelDataLoader.Load(stageSettings_.layoutFile);
 
     if (!levelData.playerSpawns.empty()) {
         const LevelData::PlayerSpawnData& spawn = levelData.playerSpawns[0];
@@ -464,6 +525,13 @@ void GamePlayScene::Initialize()
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
 
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
+    if (!stageSettings_.recoveryItemDistances.empty()) {
+        stageSettings_.recoveryItemPositions.clear();
+        for (float distance : stageSettings_.recoveryItemDistances) {
+            stageSettings_.recoveryItemPositions.push_back(
+                rail_->GetPositionByDistance(distance));
+        }
+    }
     InitializeRecoveryItems(recoveryItemModel);
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
     playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect("JetSpark", player_);
@@ -472,12 +540,17 @@ void GamePlayScene::Initialize()
     CreateLevelObjects(levelData);
 
     // ペイント弾を撃ってくるエネミーをコース上に5体配置（視認しやすくインクを連射する位置）
-    for (int i = 0; i < 5; ++i) {
+    for (size_t i = 0; i < stageSettings_.paintEnemyDistances.size(); ++i) {
         std::unique_ptr<PaintShooterEnemy> paintEnemy = std::make_unique<PaintShooterEnemy>();
         paintEnemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-        float zPos = 200.0f + i * 300.0f;
-        float xPos = (i % 2 == 0) ? -8.0f : 8.0f;
-        paintEnemy->SetPosition({ xPos, 2.0f, zPos });
+        float distance = stageSettings_.paintEnemyDistances[i];
+        Vector3 railPosition = rail_->GetPositionByDistance(distance);
+        Vector3 forward = CalculateRailForward(distance, railPosition);
+        Vector3 right {};
+        Vector3 up {};
+        CalculateRailBasis(forward, right, up);
+        float sideOffset = (i % 2 == 0) ? -8.0f : 8.0f;
+        paintEnemy->SetPosition(railPosition + right * sideOffset + up * 2.0f);
         enemies_.push_back(std::move(paintEnemy));
     }
 
@@ -487,13 +560,19 @@ void GamePlayScene::Initialize()
     CollisionManager::GetInstance()->SetBoss(nullptr);
 
     // floorの初期化
-    Model* floorModel = ModelManager::GetInstance()->CreatePlane("resources/Textures/floor_dirt_gemini.jpg", 100.0f, 360.0f);
-    floorObj_ = std::make_unique<Object3d>();
-    floorObj_->Initialize(Object3dManager::GetInstance());
-    floorObj_->SetModel(floorModel);
-    floorObj_->SetTranslate({ 0.0f, -30.0f, 2300.0f });
-    floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
-    floorObj_->SetScale({ 1000.0f, 4600.0f, 1.0f });
+    if (stageSettings_.floorEnabled) {
+        Model* floorModel = ModelManager::GetInstance()->CreatePlane(
+            stageSettings_.floorTexture, 100.0f, 360.0f);
+        floorObj_ = std::make_unique<Object3d>();
+        floorObj_->Initialize(Object3dManager::GetInstance());
+        floorObj_->SetModel(floorModel);
+        floorObj_->SetTranslate({
+            0.0f,
+            stageSettings_.floorHeight,
+            stageSettings_.railLength * 0.5f });
+        floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
+        floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
+    }
 
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 }
@@ -588,9 +667,43 @@ void GamePlayScene::Update()
         if (pauseResumeText_) pauseResumeText_->Update();
         if (pauseRetryText_) pauseRetryText_->Update();
         if (pauseTitleBtnText_) pauseTitleBtnText_->Update();
+        if (input != nullptr && input->IsKeyTrigger(DIK_C)) {
+            gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
+                ? Player::ControlMode::StarFox
+                : Player::ControlMode::KeyboardAndMouse;
+            if (player_) {
+                player_->SetControlMode(gControlMode);
+            }
+        }
+        if (pauseControlText_) {
+            pauseControlText_->SetText(
+                gControlMode == Player::ControlMode::StarFox
+                    ? "CONTROL: STARFOX [C]"
+                    : "CONTROL: WASD + MOUSE [C]");
+            pauseControlText_->Update();
+        }
+        if (input != nullptr && input->IsKeyTrigger(DIK_LBRACKET)) {
+            gMouseSensitivity = ClampFloat(
+                gMouseSensitivity - 0.1f, 0.5f, 2.0f);
+            if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
+        }
+        if (input != nullptr && input->IsKeyTrigger(DIK_RBRACKET)) {
+            gMouseSensitivity = ClampFloat(
+                gMouseSensitivity + 0.1f, 0.5f, 2.0f);
+            if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
+        }
+        if (pauseSensitivityText_) {
+            int sensitivityPercent = static_cast<int>(
+                gMouseSensitivity * 100.0f + 0.5f);
+            pauseSensitivityText_->SetText(
+                "MOUSE SENSITIVITY: " +
+                std::to_string(sensitivityPercent) +
+                "%  [[ / ]] ");
+            pauseSensitivityText_->Update();
+        }
 
-        // ESCキーでタイトル画面へ戻る
-        if (input != nullptr && input->IsKeyTrigger(DIK_ESCAPE)) {
+        // Tキーでタイトル画面へ戻る
+        if (input != nullptr && input->IsKeyTrigger(DIK_T)) {
             ResetGameplayPostEffects();
             SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
             return;
@@ -599,7 +712,8 @@ void GamePlayScene::Update()
         // Rキーでステージリトライ
         if (input != nullptr && input->IsKeyTrigger(DIK_R)) {
             ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
+            SceneManager::GetInstance()->SetNextScene(
+                std::make_unique<GamePlayScene>(stageId_));
             return;
         }
 
@@ -611,10 +725,12 @@ void GamePlayScene::Update()
     }
     // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
     if (Input::GetInstance()->IsKeyTrigger(DIK_V)) {
-        railDistance_ = 1450.0f;
+        railDistance_ = (std::max)(
+            0.0f,
+            stageSettings_.bossSpawnDistance - 400.0f);
         if (player_) {
             Vector3 pPos = player_->GetTranslate();
-            player_->SetTranslate({ pPos.x, pPos.y, 1450.0f });
+            player_->SetTranslate({ pPos.x, pPos.y, railDistance_ });
         }
     }
     // レール自体の更新
@@ -626,17 +742,23 @@ void GamePlayScene::Update()
     }
 
     // プレイヤーのZ座標を取得
-    float playerZ = player_->GetTranslate().z;
     UpdateSwarmWaveSpawning();
 
     // ボス出現処理
-    if (!isBossSpawned_ && playerZ >= 1850.0f) {
-        activeBoss_ = std::make_unique<FearWormEnemy>();
-        activeBoss_->Initialize(
-            fearWormEnemyModel_,
-            enemyBulletModel_,
-            player_.get());
-        activeBoss_->SetPosition({ 0.0f, 2.0f, 1850.0f });
+    if (!isBossSpawned_ && railDistance_ >= stageSettings_.bossSpawnDistance) {
+        if (stageSettings_.bossType == "AngerBlock") {
+            auto angerBoss = std::make_unique<AngerBlockBoss>();
+            angerBoss->Initialize(angerBlockModel_, enemyBulletModel_, player_.get());
+            activeBoss_ = std::move(angerBoss);
+        } else {
+            auto fearWorm = std::make_unique<FearWormEnemy>();
+            fearWorm->Initialize(
+                fearWormEnemyModel_,
+                enemyBulletModel_,
+                player_.get());
+            activeBoss_ = std::move(fearWorm);
+        }
+        activeBoss_->SetPosition(stageSettings_.bossPosition);
         CollisionManager::GetInstance()->SetBoss(activeBoss_.get());
         isBossSpawned_ = true;
 
@@ -765,11 +887,13 @@ void GamePlayScene::Update()
 #endif
 
     // デバッグ用の進行方向ライン描画 (緑色)
+#ifdef _DEBUG
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,
         currentPosition + forward * 20.0f,
         { 0.0f, 1.0f, 0.0f, 1.0f },
         3.0f);
+#endif
 
     // プレイヤーのブースト状態に応じたエフェクト制御
     Vector3 boostLinePosition = player_->GetTranslate();
@@ -1002,9 +1126,16 @@ void GamePlayScene::Update()
     float noiseIntensity = 0.0f;
 
     // (A) ボス登場前予兆ノイズ (Z = 1450 〜 1850)
-    if (!isBossSpawned_ && player_ && player_->GetTranslate().z >= 1450.0f) {
-        float pZ = player_->GetTranslate().z;
-        float progress = (pZ - 1450.0f) / (1850.0f - 1450.0f);
+    const float bossWarningStart = (std::max)(
+        0.0f,
+        stageSettings_.bossSpawnDistance - 400.0f);
+    if (!isBossSpawned_ && player_ && railDistance_ >= bossWarningStart) {
+        float playerDistance = railDistance_;
+        float warningLength =
+            stageSettings_.bossSpawnDistance - bossWarningStart;
+        float progress = warningLength > 0.0f
+            ? (playerDistance - bossWarningStart) / warningLength
+            : 1.0f;
         if (progress > 1.0f) progress = 1.0f;
         noiseIntensity = 0.30f + 0.70f * progress;
     }
@@ -1314,6 +1445,28 @@ void GamePlayScene::UpdatePlayerTransform(
         playerRotate.x = -std::atan2(forward.y, horizontalLength);
         playerRotate.y = -std::atan2(forward.x, forward.z);
         playerRotate.z = 0.0f;
+
+        if (player_->GetControlMode() == Player::ControlMode::StarFox) {
+            const float screenWidth = static_cast<float>(
+                WinApp::GetInstance()->GetClientWidth());
+            const float screenHeight = static_cast<float>(
+                WinApp::GetInstance()->GetClientHeight());
+            if (screenWidth > 0.0f && screenHeight > 0.0f) {
+                const Vector2& steering =
+                    player_->GetStarFoxSteeringInput();
+                float aimX = steering.x;
+                float aimY = steering.y;
+
+                // Point the nose toward the reticle and bank into horizontal
+                // movement, while preserving the rail's base orientation.
+                constexpr float kMaxAimYaw = 0.42f;
+                constexpr float kMaxAimPitch = 0.34f;
+                constexpr float kMaxAimBank = 0.30f;
+                playerRotate.y -= aimX * kMaxAimYaw;
+                playerRotate.x += aimY * kMaxAimPitch;
+                playerRotate.z = -aimX * kMaxAimBank;
+            }
+        }
         player_->SetRotate(playerRotate);
     }
 
@@ -1401,10 +1554,14 @@ void GamePlayScene::UpdateCamera(
 
         Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
         targetDrawCameraPosition += railUp * (kCameraUpwardOffset + playerRailOffset.y * cameraHeightFollowFactor_);
+        targetDrawCameraPosition += railRight *
+            (playerRailOffset.x * cameraHorizontalFollowFactor_);
 
         // 描画用カメラのターゲット注視点（Lerp前）
         Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
         targetLookAheadPositionDraw += railUp * (playerRailOffset.y * cameraLookUpFactor_);
+        targetLookAheadPositionDraw += railRight *
+            (playerRailOffset.x * cameraLookHorizontalFactor_);
 
         // 遅延追従（Lerp）の適用
         if (hasCameraFollowState_) {
@@ -1483,9 +1640,8 @@ void GamePlayScene::Draw3D()
         activeBoss_->Draw();
     }
 
-    rail_->DrawDebug();
-
 #ifdef _DEBUG
+    rail_->DrawDebug();
     DrawCollisionDebug();
 #endif
 
@@ -1510,16 +1666,10 @@ void GamePlayScene::InitializeRecoveryItems(Model* model)
         return;
     }
 
-    const Vector3 positions[] = {
-        { -4.0f, 1.5f, 430.0f },
-        { 5.0f, 1.5f, 1030.0f },
-        { 0.0f, 1.5f, 1580.0f },
-    };
-
     recoveryItems_.clear();
-    recoveryItems_.reserve(3);
+    recoveryItems_.reserve(stageSettings_.recoveryItemPositions.size());
 
-    for (const Vector3& position : positions) {
+    for (const Vector3& position : stageSettings_.recoveryItemPositions) {
         RecoveryItem recoveryItem {};
         recoveryItem.object = std::make_unique<Object3d>();
         recoveryItem.object->Initialize(Object3dManager::GetInstance());
@@ -1621,6 +1771,7 @@ void GamePlayScene::Draw2D()
         if (pauseResumeBtnSprite_) pauseResumeBtnSprite_->Draw();
         if (pauseRetryBtnSprite_) pauseRetryBtnSprite_->Draw();
         if (pauseTitleBtnSprite_) pauseTitleBtnSprite_->Draw();
+        if (pauseControlBtnSprite_) pauseControlBtnSprite_->Draw();
 
         // 独自TextRendererによるRelease構成対応の超高画質日本語テキスト描画
         TextRenderer::GetInstance()->PreDraw();
@@ -1628,6 +1779,8 @@ void GamePlayScene::Draw2D()
         if (pauseResumeText_) pauseResumeText_->Draw();
         if (pauseRetryText_) pauseRetryText_->Draw();
         if (pauseTitleBtnText_) pauseTitleBtnText_->Draw();
+        if (pauseControlText_) pauseControlText_->Draw();
+        if (pauseSensitivityText_) pauseSensitivityText_->Draw();
     } else {
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
@@ -1713,7 +1866,7 @@ void GamePlayScene::DrawImGui()
 #ifdef USE_IMGUI
     if (isPaused_) {
         ImGui::SetNextWindowPos(ImVec2(WinApp::kClientWidth * 0.5f, WinApp::kClientHeight * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(280.0f, 380.0f));
+        ImGui::SetNextWindowSize(ImVec2(400.0f, 520.0f));
 
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
                                  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
@@ -1747,11 +1900,39 @@ void GamePlayScene::DrawImGui()
             if (ImGui::Button("RETRY (R)", ImVec2(-1, 44.0f))) {
                 isPaused_ = false;
                 ResetGameplayPostEffects();
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>());
+                SceneManager::GetInstance()->SetNextScene(
+                    std::make_unique<GamePlayScene>(stageId_));
             }
 
-            // 3. TITLE (ESC)
+            // 3. CONTROL MODE
             ImGui::SetCursorPosY(250.0f);
+            const char* controlLabel =
+                gControlMode == Player::ControlMode::StarFox
+                    ? "CONTROL: STARFOX (C)"
+                    : "CONTROL: WASD + MOUSE (C)";
+            if (ImGui::Button(controlLabel, ImVec2(-1, 44.0f))) {
+                gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
+                    ? Player::ControlMode::StarFox
+                    : Player::ControlMode::KeyboardAndMouse;
+                if (player_) {
+                    player_->SetControlMode(gControlMode);
+                }
+            }
+
+            ImGui::SetCursorPosY(315.0f);
+            if (ImGui::SliderFloat(
+                    "MOUSE SENSITIVITY",
+                    &gMouseSensitivity,
+                    0.5f,
+                    2.0f,
+                    "%.1fx")) {
+                if (player_) {
+                    player_->SetMouseSensitivity(gMouseSensitivity);
+                }
+            }
+
+            // 5. TITLE (ESC)
+            ImGui::SetCursorPosY(390.0f);
             if (ImGui::Button("TITLE (ESC)", ImVec2(-1, 44.0f))) {
                 isPaused_ = false;
                 ResetGameplayPostEffects();
@@ -1786,7 +1967,7 @@ void GamePlayScene::DrawImGui()
         if (ImGui::Begin("Boss HP HUD", nullptr, windowFlags)) {
             // ボス名称
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-            ImGui::Text("BOSS: FEAR WORM");
+            ImGui::Text("BOSS: %s", stageSettings_.bossType == "AngerBlock" ? "ANGER" : "FEAR WORM");
             ImGui::PopStyleColor();
 
             // 1. 頭部HPバー (ネオンブルー)
@@ -1883,6 +2064,37 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::CheckCollision()
 {
+    constexpr float kPlayerObstacleRadius = 1.0f;
+    for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        BoxCollider* collider = levelObject->GetCollider();
+        if (collider == nullptr) {
+            continue;
+        }
+
+        const Vector3& center = collider->GetCenter();
+        const Vector3& size = collider->GetSize();
+        const Vector3 halfSize = {
+            std::abs(size.x) * 0.5f,
+            std::abs(size.y) * 0.5f,
+            std::abs(size.z) * 0.5f
+        };
+        const Vector3 playerPosition = player_->GetTranslate();
+        const Vector3 closestPoint = {
+            ClampFloat(playerPosition.x, center.x - halfSize.x, center.x + halfSize.x),
+            ClampFloat(playerPosition.y, center.y - halfSize.y, center.y + halfSize.y),
+            ClampFloat(playerPosition.z, center.z - halfSize.z, center.z + halfSize.z)
+        };
+        const Vector3 difference = playerPosition - closestPoint;
+        if (Vector3LengthSquared(difference) <=
+            kPlayerObstacleRadius * kPlayerObstacleRadius) {
+            if (player_->ApplyDamage(1)) {
+                EffectManager::GetInstance()->PlayEffect(
+                    "DamageHit",
+                    playerPosition);
+            }
+        }
+    }
+
     std::vector<EnemyCollisionPart> enemyCollisionParts;
 
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
@@ -2000,6 +2212,50 @@ void GamePlayScene::CheckCollision()
 
     // プレイヤーの弾と床の当たり判定
     for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+        if (!bullet->IsAlive()) {
+            continue;
+        }
+
+        for (DestructibleLevelObject& destructible : destructibleLevelObjects_) {
+            if (destructible.destroyed || destructible.object == nullptr) {
+                continue;
+            }
+
+            BoxCollider* collider = destructible.object->GetCollider();
+            if (collider == nullptr) {
+                continue;
+            }
+
+            const Vector3 center = collider->GetCenter();
+            const Vector3 size = collider->GetSize();
+            const Vector3 halfSize = { size.x * 0.5f, size.y * 0.5f, size.z * 0.5f };
+            const Vector3 bulletPosition = bullet->GetPosition();
+            const Vector3 closest = {
+                ClampFloat(bulletPosition.x, center.x - halfSize.x, center.x + halfSize.x),
+                ClampFloat(bulletPosition.y, center.y - halfSize.y, center.y + halfSize.y),
+                ClampFloat(bulletPosition.z, center.z - halfSize.z, center.z + halfSize.z)
+            };
+            const Vector3 difference = bulletPosition - closest;
+            const float collisionRadius = bullet->GetCollisionRadius();
+            if (Dot(difference, difference) > collisionRadius * collisionRadius) {
+                continue;
+            }
+
+            destructible.hp -= static_cast<float>(bullet->GetDamage());
+            bullet->SetDead();
+            EffectManager::GetInstance()->PlayEffect("HitEffect", closest);
+
+            if (destructible.hp <= 0.0f) {
+                destructible.destroyed = true;
+                EffectManager::GetInstance()->PlayEffect("Explosion", center);
+                CollisionManager::GetInstance()->UnregisterCollider(collider);
+                destructible.object->SetCollider(nullptr);
+                destructible.object->SetScale({ 0.0f, 0.0f, 0.0f });
+                destructible.object->Update();
+            }
+            break;
+        }
+
         if (!bullet->IsAlive()) {
             continue;
         }
@@ -2313,17 +2569,19 @@ void GamePlayScene::UpdateSwarmWaveSpawning()
     if (isBossSpawned_) {
         return;
     }
-    if (nextSwarmWaveIndex_ >= kSwarmWaveCount) {
+    const std::vector<float>& waveDistances =
+        stageSettings_.swarmWaveDistances;
+    if (nextSwarmWaveIndex_ >= waveDistances.size()) {
         return;
     }
 
-    float playerDistance = player_->GetTranslate().z;
-    while (nextSwarmWaveIndex_ + 1 < kSwarmWaveCount &&
-           playerDistance >= kSwarmWaveDistances[nextSwarmWaveIndex_ + 1]) {
+    float playerDistance = railDistance_;
+    while (nextSwarmWaveIndex_ + 1 < waveDistances.size() &&
+           playerDistance >= waveDistances[nextSwarmWaveIndex_ + 1]) {
         nextSwarmWaveIndex_ += 1;
     }
 
-    if (playerDistance < kSwarmWaveDistances[nextSwarmWaveIndex_]) {
+    if (playerDistance < waveDistances[nextSwarmWaveIndex_]) {
         return;
     }
 
@@ -2561,6 +2819,15 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 levelObject->SetGimmick(objData.gimmick);
             }
 
+            if (objData.destructible.exists) {
+                levelObject->SetColor({ 0.30f, 0.20f, 0.14f, 1.0f });
+                destructibleLevelObjects_.push_back({
+                    levelObject.get(),
+                    (std::max)(objData.destructible.hp, 1.0f),
+                    false
+                });
+            }
+
             if (objData.collider.exists) {
                 if (objData.collider.type == "BOX") {
                     std::unique_ptr<BoxCollider> collider = std::make_unique<BoxCollider>();
@@ -2637,7 +2904,8 @@ void GamePlayScene::HotReloadLevel()
     Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
 
     LevelDataLoader levelDataLoader;
-    LevelData newLevelData = levelDataLoader.Load("resources/Scenes/stage01.json");
+    LevelData newLevelData =
+        levelDataLoader.Load(stageSettings_.layoutFile);
 
     if (!newLevelData.playerSpawns.empty()) {
         const LevelData::PlayerSpawnData& spawn = newLevelData.playerSpawns[0];
@@ -2654,6 +2922,7 @@ void GamePlayScene::HotReloadLevel()
 
 void GamePlayScene::ClearLevelObjects()
 {
+    destructibleLevelObjects_.clear();
     for (std::unique_ptr<Object3d>& obj : levelObjects_) {
         if (obj->GetCollider() != nullptr) {
             CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider());
