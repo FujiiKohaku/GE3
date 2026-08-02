@@ -29,6 +29,7 @@
 #include "Engine/Animation/AnimationActor.h"
 
 #include "App/Game/Player/Player.h"
+#include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Stage/StageCatalog.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -69,12 +70,6 @@ public:
     void DrawImGui() override;
 
 private:
-    struct DestructibleLevelObject {
-        Object3d* object = nullptr;
-        float hp = 1.0f;
-        bool destroyed = false;
-    };
-
     std::string stageId_ = "stage01";
     StageSettings stageSettings_;
 
@@ -83,6 +78,7 @@ private:
     void HotReloadLevel();
     void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
+    void StartPaintHitEffect();
 #ifdef _DEBUG
     void DrawCollisionDebug();
 #endif
@@ -109,6 +105,7 @@ private:
     void UpdateRecoveryItems();
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
+    std::unique_ptr<GameplayCollisionSystem> gameplayCollisionSystem_;
 
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
@@ -135,6 +132,7 @@ private:
     std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
     std::vector<DestructibleLevelObject> destructibleLevelObjects_;
+    std::vector<StageTrigger> stageTriggers_;
 
     struct RecoveryItem {
         std::unique_ptr<Object3d> object;

@@ -25,6 +25,10 @@ public:
     {
         return transform_.translate;
     }
+    const Vector3& GetPreviousPosition() const
+    {
+        return previousPosition_;
+    }
     void SetVelocity(const Vector3& velocity)
     {
         velocity_ = velocity;
@@ -65,6 +69,7 @@ protected:
     EulerTransform transform_;
 
     Vector3 velocity_;
+    Vector3 previousPosition_ = { 0.0f, 0.0f, 0.0f };
     // 移動処理
     virtual void Move();
     bool isAlive_ = true;

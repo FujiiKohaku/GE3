@@ -119,6 +119,7 @@ public:
         collider_ = collider;
         if (collider_ != nullptr) {
             colliderOffset_ = collider_->GetCenter() - transform.translate;
+            collider_->SetRotation(transform.rotate);
         }
     }
     BoxCollider* GetCollider() const { return collider_; }

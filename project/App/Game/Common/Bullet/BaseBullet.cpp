@@ -24,6 +24,7 @@ void BaseBullet::Update()
         return; // 弾が生存していない場合は更新処理を行わない
     }
 
+    previousPosition_ = transform_.translate;
     Move(); // 弾の移動処理を行う
 
     lifeTime_ += 1.0f / 60.0f; // 60FPSを想定して、1フレームあたりの時間を加算
@@ -73,6 +74,7 @@ void BaseBullet::SetColor(const Vector4& color)
 void BaseBullet::SetTranslate(const Vector3& translate)
 {
     transform_.translate = translate;
+    previousPosition_ = translate;
 
     if (object_ == nullptr) {
         return;

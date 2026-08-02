@@ -150,6 +150,7 @@ void GamePlayScene::Initialize()
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
+    gameplayCollisionSystem_ = std::make_unique<GameplayCollisionSystem>();
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
     if (!stageSettings_.railControlPoints.empty()) {
@@ -556,9 +557,6 @@ void GamePlayScene::Initialize()
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
-    CollisionManager::GetInstance()->SetEnemies(&enemies_);
-    CollisionManager::GetInstance()->SetBoss(nullptr);
-
     // floorの初期化
     if (stageSettings_.floorEnabled) {
         Model* floorModel = ModelManager::GetInstance()->CreatePlane(
@@ -759,7 +757,6 @@ void GamePlayScene::Update()
             activeBoss_ = std::move(fearWorm);
         }
         activeBoss_->SetPosition(stageSettings_.bossPosition);
-        CollisionManager::GetInstance()->SetBoss(activeBoss_.get());
         isBossSpawned_ = true;
 
         // ボス登場後の余韻フェードアウトノイズ（たっぷり4.5秒間かけて非常にゆっくり滑らかに消えていく）
@@ -805,7 +802,6 @@ void GamePlayScene::Update()
 
     // ボス撃破でディゾルブ消滅演出の完了後にクリアシーンへ遷移
     if (activeBoss_ && activeBoss_->IsDead()) {
-        CollisionManager::GetInstance()->SetBoss(nullptr);
         cameraShakeTime_ = 0.0f;
         cameraShakeDuration_ = 0.0f;
         cameraShakeStrength_ = 0.0f;
@@ -864,6 +860,10 @@ void GamePlayScene::Update()
         Logger::Log("GamePlayScene::Update: First frame start");
     }
 #endif
+
+    gameplayCollisionSystem_->SyncRaycastTargets(
+        enemies_,
+        activeBoss_.get());
 
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
@@ -2064,321 +2064,73 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::CheckCollision()
 {
-    constexpr float kPlayerObstacleRadius = 1.0f;
-    for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-        BoxCollider* collider = levelObject->GetCollider();
-        if (collider == nullptr) {
-            continue;
-        }
+    if (gameplayCollisionSystem_ != nullptr) {
+        gameplayCollisionSystem_->UpdateStageCollisions(
+            *player_,
+            levelObjects_,
+            destructibleLevelObjects_,
+            floorObj_.get());
+    }
 
-        const Vector3& center = collider->GetCenter();
-        const Vector3& size = collider->GetSize();
-        const Vector3 halfSize = {
-            std::abs(size.x) * 0.5f,
-            std::abs(size.y) * 0.5f,
-            std::abs(size.z) * 0.5f
-        };
-        const Vector3 playerPosition = player_->GetTranslate();
-        const Vector3 closestPoint = {
-            ClampFloat(playerPosition.x, center.x - halfSize.x, center.x + halfSize.x),
-            ClampFloat(playerPosition.y, center.y - halfSize.y, center.y + halfSize.y),
-            ClampFloat(playerPosition.z, center.z - halfSize.z, center.z + halfSize.z)
-        };
-        const Vector3 difference = playerPosition - closestPoint;
-        if (Vector3LengthSquared(difference) <=
-            kPlayerObstacleRadius * kPlayerObstacleRadius) {
-            if (player_->ApplyDamage(1)) {
-                EffectManager::GetInstance()->PlayEffect(
-                    "DamageHit",
-                    playerPosition);
-            }
+    if (gameplayCollisionSystem_ != nullptr) {
+        const GameplayCollisionEvents events =
+            gameplayCollisionSystem_->UpdateCombatCollisions(
+                *player_,
+                enemies_,
+                activeBoss_.get());
+        if (events.paintBulletHitPlayer) {
+            StartPaintHitEffect();
         }
     }
 
-    std::vector<EnemyCollisionPart> enemyCollisionParts;
-
-    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-        if (enemy->IsDead()) {
-            continue;
-        }
-
-        enemyCollisionParts.clear();
-        enemy->GetCollisionParts(enemyCollisionParts);
-
-        for (const EnemyCollisionPart& part : enemyCollisionParts) {
-            Vector3 difference = part.position - player_->GetTranslate();
-
-            float distance = Vector3Length(difference);
-
-            float collisionRadius = part.radius + kPlayerEnemyCollisionRadius * 0.5f;
-
-            if (distance <= collisionRadius) {
-
-                OutputDebugStringA("Player Hit Enemy\n");
-            }
-        }
+    if (gameplayCollisionSystem_ != nullptr) {
+        gameplayCollisionSystem_->UpdateTriggers(*player_, stageTriggers_);
     }
 
-    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-        if (!bullet->IsAlive()) {
-            continue;
-        }
-
-        bool bulletHit = false;
-
-        for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-
-            if (enemy->IsDead()) {
-                continue;
-            }
-
-            enemyCollisionParts.clear();
-            enemy->GetCollisionParts(enemyCollisionParts);
-
-            for (const EnemyCollisionPart& part : enemyCollisionParts) {
-                Vector3 difference = part.position - bullet->GetPosition();
-
-                float distance = Vector3Length(difference);
-
-                float collisionRadius = part.radius + bullet->GetCollisionRadius();
-
-                if (distance <= collisionRadius) {
-
-                    OutputDebugStringA("PlayerBullet Hit Enemy\n");
-
-                    if (enemy->IsCollisionPartDamageable(part.partIndex)) {
-                        bullet->OnHitEnemy(part.position);
-                        enemy->ApplyDamageToPart(
-                            part.partIndex,
-                            static_cast<float>(bullet->GetDamage()));
-                    } else {
-                        enemy->OnCollisionPartGuarded(
-                            part.partIndex,
-                            part.position);
-                    }
-
-                    bullet->SetDead();
-                    bulletHit = true;
-
-                    break;
-                }
-            }
-
-            if (bulletHit) {
-                break;
-            }
-        }
-    }
-
-    // プレイヤーの弾とボスの当たり判定
-    if (activeBoss_ && !activeBoss_->IsDead()) {
-        // ボスのパーツ一覧をループ外で一度だけ取得し、弾ごとのメモリアロケーションを回避
-        enemyCollisionParts.clear();
-        activeBoss_->GetCollisionParts(enemyCollisionParts);
-
-        for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-            if (!bullet->IsAlive()) {
-                continue;
-            }
-
-            for (const EnemyCollisionPart& part : enemyCollisionParts) {
-                // コライダーのワールド座標を計算
-                Vector3 difference = part.position - bullet->GetPosition();
-                float distance = Vector3Length(difference);
-
-                // 判定半径
-                float collisionRadius = part.radius + bullet->GetCollisionRadius();
-
-                if (distance <= collisionRadius) {
-                    OutputDebugStringA("PlayerBullet Hit Boss\n");
-
-                    if (activeBoss_->IsCollisionPartDamageable(part.partIndex)) {
-                        bullet->OnHitEnemy(part.position);
-                        activeBoss_->ApplyDamageToPart(
-                            part.partIndex,
-                            static_cast<float>(bullet->GetDamage()));
-                    } else {
-                        activeBoss_->OnCollisionPartGuarded(
-                            part.partIndex,
-                            part.position);
-                    }
-
-                    bullet->SetDead();
-                    break;
-                }
-            }
-        }
-    }
-
-    // プレイヤーの弾と床の当たり判定
-    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-        if (!bullet->IsAlive()) {
-            continue;
-        }
-
-        for (DestructibleLevelObject& destructible : destructibleLevelObjects_) {
-            if (destructible.destroyed || destructible.object == nullptr) {
-                continue;
-            }
-
-            BoxCollider* collider = destructible.object->GetCollider();
-            if (collider == nullptr) {
-                continue;
-            }
-
-            const Vector3 center = collider->GetCenter();
-            const Vector3 size = collider->GetSize();
-            const Vector3 halfSize = { size.x * 0.5f, size.y * 0.5f, size.z * 0.5f };
-            const Vector3 bulletPosition = bullet->GetPosition();
-            const Vector3 closest = {
-                ClampFloat(bulletPosition.x, center.x - halfSize.x, center.x + halfSize.x),
-                ClampFloat(bulletPosition.y, center.y - halfSize.y, center.y + halfSize.y),
-                ClampFloat(bulletPosition.z, center.z - halfSize.z, center.z + halfSize.z)
-            };
-            const Vector3 difference = bulletPosition - closest;
-            const float collisionRadius = bullet->GetCollisionRadius();
-            if (Dot(difference, difference) > collisionRadius * collisionRadius) {
-                continue;
-            }
-
-            destructible.hp -= static_cast<float>(bullet->GetDamage());
-            bullet->SetDead();
-            EffectManager::GetInstance()->PlayEffect("HitEffect", closest);
-
-            if (destructible.hp <= 0.0f) {
-                destructible.destroyed = true;
-                EffectManager::GetInstance()->PlayEffect("Explosion", center);
-                CollisionManager::GetInstance()->UnregisterCollider(collider);
-                destructible.object->SetCollider(nullptr);
-                destructible.object->SetScale({ 0.0f, 0.0f, 0.0f });
-                destructible.object->Update();
-            }
-            break;
-        }
-
-        if (!bullet->IsAlive()) {
-            continue;
-        }
-
-        float floorY = -30.0f;
-        if (floorObj_) {
-            floorY = floorObj_->GetTranslate().y;
-        }
-
-        if (bullet->GetPosition().y <= floorY) {
-            Vector3 hitPosition = bullet->GetPosition();
-            hitPosition.y = floorY;
-
-            EffectManager::GetInstance()->PlayEffect("HitEffect", hitPosition);
-            bullet->SetDead();
-        }
-    }
-
-    // 死んだ敵の中から「NormalEnemy」だけを選んで安Eに削除する
     std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
         return enemy->IsDead();
     });
 
-    // 敵の弾とプレイヤーの当たり判定
-    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-        if (enemy->IsDead()) {
-            continue;
-        }
+}
 
-        for (const std::unique_ptr<EnemyBullet>& enemyBullet : enemy->GetBullets()) {
-            if (!enemyBullet->IsAlive()) {
-                continue;
-            }
-
-            Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
-            float distance = Vector3Length(difference);
-            // 球同士の当たり判定として、敵弾とプレイヤー両方の半径を加算する。
-            float collisionRadius =
-                enemyBullet->GetCollisionRadius() * 0.5f +
-                kPlayerEnemyCollisionRadius * 0.5f;
-
-            if (distance <= collisionRadius) {
-                OutputDebugStringA("EnemyBullet Hit Player\n");
-
-                enemyBullet->OnHitPlayer(player_->GetTranslate());
-
-                if (dynamic_cast<PaintBullet*>(enemyBullet.get())) {
-                    if (!isPaintEffectActive_) {
-                        isPaintEffectActive_ = true;
-                        paintEffectTimer_ = 0.0f;
-
-                        // 鮮やかなカラーからランダム抽出
-                        static const Vector3 kPaintColors[] = {
-                            { 0.98f, 0.12f, 0.60f }, // ネオンピンク
-                            { 0.10f, 0.88f, 0.95f }, // エレクトリックシアン
-                            { 0.98f, 0.88f, 0.10f }, // ポップイエロー
-                            { 0.20f, 0.95f, 0.35f }, // ライムグリーン
-                            { 0.98f, 0.42f, 0.10f }, // サンセットオレンジ
-                            { 0.72f, 0.15f, 0.98f }  // バイオレットパープル
-                        };
-                        int colorIndex = rand() % 6;
-                        float randomSeed = static_cast<float>(rand() % 10000) * 0.137f;
-
-                        // シルエット形状の確率選出
-                        int patternType = 0;
-                        int roll = rand() % 10;
-                        if (roll < 3) {
-                            patternType = 1; // 30%の確率でキュートな【ハート型】！
-                        } else if (roll < 5) {
-                            patternType = 2; // 20%の確率でインパクトのある【星型】！
-                        } else if (roll < 7) {
-                            patternType = 3; // 20%の確率でスタイリッシュな【リング型】！
-                        } else {
-                            patternType = 0; // 30%の確率でダイナミックな【通常スプラッター】
-                        }
-
-                        SceneManager::GetInstance()->SetPaintColor(kPaintColors[colorIndex]);
-                        SceneManager::GetInstance()->SetPaintSeed(randomSeed);
-                        SceneManager::GetInstance()->SetPaintPatternType(patternType);
-
-                        SceneManager::GetInstance()->AddPostEffect(
-                            PostEffectType::Paint,
-                            PostEffectStage::AfterParticle);
-                        SceneManager::GetInstance()->SetPaintProgress(0.0f);
-                        SceneManager::GetInstance()->SetPaintIntensity(1.0f);
-                    }
-                }
-
-                if (player_->ApplyDamage(enemyBullet->GetDamage())) {
-                    EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-                }
-                enemyBullet->SetDead();
-                // 1発の弾で複数回ダメージを受けないように、当たったらすぐに弾を無効化する
-            }
-        }
+void GamePlayScene::StartPaintHitEffect()
+{
+    if (isPaintEffectActive_) {
+        return;
     }
 
-    // ボスの弾とプレイヤーの当たり判定
-    if (activeBoss_ && !activeBoss_->IsDead()) {
-        for (const std::unique_ptr<EnemyBullet>& enemyBullet : activeBoss_->GetBullets()) {
-            if (!enemyBullet->IsAlive()) {
-                continue;
-            }
+    isPaintEffectActive_ = true;
+    paintEffectTimer_ = 0.0f;
+    static const Vector3 kPaintColors[] = {
+        { 0.98f, 0.12f, 0.60f },
+        { 0.10f, 0.88f, 0.95f },
+        { 0.98f, 0.88f, 0.10f },
+        { 0.20f, 0.95f, 0.35f },
+        { 0.98f, 0.42f, 0.10f },
+        { 0.72f, 0.15f, 0.98f }
+    };
+    const int colorIndex = rand() % 6;
+    const float randomSeed =
+        static_cast<float>(rand() % 10000) * 0.137f;
 
-            Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
-            float distance = Vector3Length(difference);
-            // 球同士の当たり判定として、ボス弾とプレイヤー両方の半径を加算する。
-            float collisionRadius =
-                enemyBullet->GetCollisionRadius() * 0.5f +
-                kPlayerEnemyCollisionRadius * 0.5f;
-
-            if (distance <= collisionRadius) {
-                OutputDebugStringA("BossBullet Hit Player\n");
-
-                enemyBullet->OnHitPlayer(player_->GetTranslate());
-
-                if (player_->ApplyDamage(enemyBullet->GetDamage())) {
-                    EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-                }
-                enemyBullet->SetDead();
-            }
-        }
+    int patternType = 0;
+    const int roll = rand() % 10;
+    if (roll < 3) {
+        patternType = 1;
+    } else if (roll < 5) {
+        patternType = 2;
+    } else if (roll < 7) {
+        patternType = 3;
     }
+
+    SceneManager::GetInstance()->SetPaintColor(kPaintColors[colorIndex]);
+    SceneManager::GetInstance()->SetPaintSeed(randomSeed);
+    SceneManager::GetInstance()->SetPaintPatternType(patternType);
+    SceneManager::GetInstance()->AddPostEffect(
+        PostEffectType::Paint,
+        PostEffectStage::AfterParticle);
+    SceneManager::GetInstance()->SetPaintProgress(0.0f);
+    SceneManager::GetInstance()->SetPaintIntensity(1.0f);
 }
 
 #ifdef _DEBUG
@@ -2389,6 +2141,7 @@ void GamePlayScene::DrawCollisionDebug()
     constexpr Vector4 kEnemyColor = { 1.0f, 0.15f, 0.15f, 1.0f };
     constexpr Vector4 kPlayerBulletColor = { 0.0f, 0.8f, 1.0f, 1.0f };
     constexpr Vector4 kEnemyBulletColor = { 1.0f, 0.85f, 0.0f, 1.0f };
+    constexpr Vector4 kStageColliderColor = { 1.0f, 0.0f, 1.0f, 1.0f };
     constexpr float kLineThickness = 2.0f;
 
     debugRenderer->AddWireSphere(
@@ -2405,6 +2158,25 @@ void GamePlayScene::DrawCollisionDebug()
                 kPlayerBulletColor,
                 kLineThickness);
         }
+    }
+
+    for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        const BoxCollider* collider = levelObject->GetCollider();
+        if (collider == nullptr) {
+            continue;
+        }
+        const OBB box = CollisionManager::MakeOBB(
+            collider->GetCenter(),
+            collider->GetSize(),
+            collider->GetRotation());
+        debugRenderer->AddWireOBB(
+            box.center,
+            box.size,
+            box.orientation[0],
+            box.orientation[1],
+            box.orientation[2],
+            kStageColliderColor,
+            kLineThickness);
     }
 
     std::vector<EnemyCollisionPart> collisionParts;
@@ -2462,8 +2234,7 @@ void GamePlayScene::DrawCollisionDebug()
 
 void GamePlayScene::Finalize()
 {
-    CollisionManager::GetInstance()->SetEnemies(nullptr);
-    CollisionManager::GetInstance()->SetBoss(nullptr);
+    CollisionManager::GetInstance()->ClearRaycastSphereTargets();
     ClearLevelObjects();
     ResetGameplayPostEffects();
 
@@ -2828,6 +2599,17 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 });
             }
 
+            if (objData.trigger.exists) {
+                stageTriggers_.push_back({
+                    levelObject.get(),
+                    objData.trigger.type,
+                    objData.trigger.name,
+                    objData.trigger.center,
+                    objData.trigger.size,
+                    false
+                });
+            }
+
             if (objData.collider.exists) {
                 if (objData.collider.type == "BOX") {
                     std::unique_ptr<BoxCollider> collider = std::make_unique<BoxCollider>();
@@ -2922,6 +2704,7 @@ void GamePlayScene::HotReloadLevel()
 
 void GamePlayScene::ClearLevelObjects()
 {
+    stageTriggers_.clear();
     destructibleLevelObjects_.clear();
     for (std::unique_ptr<Object3d>& obj : levelObjects_) {
         if (obj->GetCollider() != nullptr) {
