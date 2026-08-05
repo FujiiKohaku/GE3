@@ -130,7 +130,7 @@ void GameplayCollisionSystem::UpdateStageCollisions(
             collider->GetSize(),
             collider->GetRotation());
         if (CollisionManager::Intersect(playerSphere, obstacleBox).isHit) {
-            if (player.ApplyDamage(1)) {
+            if (player.ApplyDamage(levelObject->GetCollisionDamage())) {
                 EffectManager::GetInstance()->PlayEffect(
                     "DamageHit",
                     playerPosition);
@@ -243,7 +243,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
 }
 
 GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
-    const Player& player,
+    Player& player,
     std::vector<StageTrigger>& triggers)
 {
     GameplayCollisionEvents events {};
@@ -261,6 +261,10 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
             trigger.object->GetRotate());
         const bool isInside =
             CollisionManager::Intersect(playerSphere, triggerBox).isHit;
+        if (isInside &&
+            (trigger.type == "WIND" || trigger.type == "GRAVITY")) {
+            player.ApplyRailAreaForce(trigger.force);
+        }
         if (isInside && !trigger.wasInside) {
             events.enteredTriggers.push_back(trigger.name);
         } else if (!isInside && trigger.wasInside) {

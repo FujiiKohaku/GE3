@@ -558,7 +558,14 @@ void GamePlayScene::Initialize()
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
     // floorの初期化
-    if (stageSettings_.floorEnabled) {
+    if (stageSettings_.floorEnabled && stageId_ == "stage01") {
+        oceanSurface_ = std::make_unique<OceanSurface>();
+        oceanSurface_->Initialize(
+            camera_.get(),
+            1000.0f,
+            stageSettings_.railLength,
+            stageSettings_.floorHeight);
+    } else if (stageSettings_.floorEnabled) {
         Model* floorModel = ModelManager::GetInstance()->CreatePlane(
             stageSettings_.floorTexture, 100.0f, 360.0f);
         floorObj_ = std::make_unique<Object3d>();
@@ -1215,6 +1222,9 @@ void GamePlayScene::Update()
     if (floorObj_) {
         floorObj_->Update();
     }
+    if (oceanSurface_) {
+        oceanSurface_->Update(1.0f / 60.0f);
+    }
 
     animationActor_->Update(1.0f / 60.0f);
     
@@ -1611,6 +1621,12 @@ void GamePlayScene::Draw3D()
     SkyBoxManager::GetInstance()->PreDraw();
     skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
 
+    // OceanSurface owns a dedicated root signature and PSO, so draw it
+    // before restoring the regular Object3d pipeline for gameplay objects.
+    if (oceanSurface_) {
+        oceanSurface_->Draw();
+    }
+
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
@@ -1631,7 +1647,6 @@ void GamePlayScene::Draw3D()
     if (floorObj_) {
         floorObj_->Draw();
     }
-
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
@@ -2599,6 +2614,21 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 });
             }
 
+            if (objData.hazard.exists) {
+                levelObject->SetCollisionDamage(objData.hazard.damage);
+                if (objData.hazard.type == "LASER") {
+                    levelObject->SetColor({ 1.0f, 0.03f, 0.02f, 1.0f });
+                    levelObject->SetEnableLighting(false);
+                }
+            }
+
+            if (objData.trigger.exists &&
+                (objData.trigger.type == "WIND" ||
+                 objData.trigger.type == "GRAVITY")) {
+                levelObject->SetColor({ 0.15f, 0.75f, 1.0f, 0.65f });
+                levelObject->SetEnableLighting(false);
+            }
+
             if (objData.trigger.exists) {
                 stageTriggers_.push_back({
                     levelObject.get(),
@@ -2606,6 +2636,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                     objData.trigger.name,
                     objData.trigger.center,
                     objData.trigger.size,
+                    objData.trigger.force,
                     false
                 });
             }

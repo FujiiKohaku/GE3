@@ -54,6 +54,13 @@ public:
         return railOffset_;
     }
 
+    void ApplyRailAreaForce(const Vector3& force)
+    {
+        railOffset_.x += force.x;
+        railOffset_.y += force.y;
+        railOffset_ = ClampRailOffsetToScreen(railOffset_);
+    }
+
     void SetTranslate(const Vector3& translate)
     {
         transform_.translate = translate;

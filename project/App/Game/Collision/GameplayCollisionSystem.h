@@ -28,6 +28,7 @@ struct StageTrigger {
     std::string name;
     Vector3 centerOffset = { 0.0f, 0.0f, 0.0f };
     Vector3 size = { 1.0f, 1.0f, 1.0f };
+    Vector3 force = { 0.0f, 0.0f, 0.0f };
     bool wasInside = false;
 };
 
@@ -45,7 +46,7 @@ public:
         BaseEnemy* boss);
 
     GameplayCollisionEvents UpdateTriggers(
-        const Player& player,
+        Player& player,
         std::vector<StageTrigger>& triggers);
 
     void SyncRaycastTargets(

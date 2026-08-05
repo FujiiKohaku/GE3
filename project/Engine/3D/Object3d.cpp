@@ -54,7 +54,9 @@ void Object3d::Update()
     if (gimmick_.exists) {
         float deltaTime = 1.0f / 60.0f;
         if (gimmick_.type == "ROTATION") {
-            transform.rotate.y += gimmick_.speed * deltaTime;
+            transform.rotate.x += gimmick_.axis.x * gimmick_.speed * deltaTime;
+            transform.rotate.y += gimmick_.axis.y * gimmick_.speed * deltaTime;
+            transform.rotate.z += gimmick_.axis.z * gimmick_.speed * deltaTime;
         }
         else if (gimmick_.type == "MOVE") {
             gimmickTime_ += gimmick_.speed * deltaTime;

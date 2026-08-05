@@ -15,6 +15,7 @@
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/3D/OceanSurface.h"
 
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Rail/Rail.h"
@@ -126,6 +127,7 @@ private:
     // std::unique_ptr<Object3d> terrain_;
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;
+    std::unique_ptr<OceanSurface> oceanSurface_;
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
@@ -231,7 +233,10 @@ private:
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
-    static constexpr float kCameraUpwardOffset = 6.0f;
+    // EXZODIAC-like low chase view: keep the eye slightly below the rail
+    // center so the player is framed against the horizon instead of seen
+    // from above.
+    static constexpr float kCameraUpwardOffset = 1.0f;
 
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;
