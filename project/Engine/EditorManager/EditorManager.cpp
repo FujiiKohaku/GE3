@@ -1,4 +1,4 @@
-﻿#include "EditorManager.h"
+#include "EditorManager.h"
 #include "../3D/Object3d.h"
 
 #include "../Camera/Camera.h"
@@ -22,22 +22,22 @@ void EditorManager::Update(Camera* camera)
 {
 #ifdef USE_IMGUI
 
-    // 繝槭え繧ｹ繧ｯ繝ｪ繝・け縺ｧ繧ｪ繝悶ず繧ｧ繧ｯ繝磯∈謚・
+
     if (ImGui::IsMouseClicked(0)) {
 
-        // 繧ｫ繝｡繝ｩ縺九ｉ繝槭え繧ｹ菴咲ｽｮ縺ｸ縺ｮ繝ｬ繧､繧剃ｽ懈・
+
         Ray ray = CreateMouseRay(camera);
 
-        // 隱ｭ縺ｿ霎ｼ縺ｾ繧後◆繧ｪ繝悶ず繧ｧ繧ｯ繝医・荳ｭ霄ｫ繧弛bjects_縺ｫ蜈･繧後ｋ
+
         for (const std::unique_ptr<Object3d>& object : sceneObjectManager_->GetObjects()) {
 
-            // object縺ｯstd::unique_ptr縺ｪ縺ｮ縺ｧ縲“et()縺ｧObject3d*繧貞叙蠕・
+
             Object3d* currentObject = object.get();
 
             
             Sphere sphere;
             sphere.center = currentObject->GetTranslate();
-            sphere.radius = 1.0f; // 逅・・蜊雁ｾ・・莉ｮ縺ｮ蛟､縺ｧ縺吶ゅが繝悶ず繧ｧ繧ｯ繝医・繧ｵ繧､繧ｺ縺ｫ蠢懊§縺ｦ驕ｩ蛻・↑蛟､繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲・
+            sphere.radius = 1.0f;
 
             if (RaySphereIntersect(ray, sphere)) {
 
@@ -231,7 +231,7 @@ void EditorManager::DrawGizmo(Camera* camera)
 
     const Matrix4x4& viewMatrix = camera->GetViewMatrix();
     const Matrix4x4& projectionMatrix = camera->GetProjectionMatrix();
-    // 謫堺ｽ懊Δ繝ｼ繝峨↓蠢懊§縺ｦImGuizmo縺ｮ謫堺ｽ懊ｒ蛻・ｊ譖ｿ縺医ｋ
+
     ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
     if (gizmoMode_ == GizmoMode::Rotate) {

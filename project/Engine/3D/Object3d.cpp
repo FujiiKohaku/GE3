@@ -15,7 +15,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
     camera_ = object3dManager_->GetDefaultCamera();
     // ================================
-    // Transformバッファ初期匁E
+    // Transformバッファ初化
     // ================================
     transformationMatrixResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix));
     transformationMatrixResource->SetName(L"Object3d::TransformCB");
@@ -23,15 +23,15 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
     transformationMatrixData->World = MatrixMath::MakeIdentity4x4();
 
-    // マテリアルリソース作�E
+
     materialResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(Material));
     materialResource->SetName(L"Object3d::MaterialCB");
 
-    // マテリアル初期匁E
-    // 書き込み用アドレス取征E
+    // マテリアル初期化
+    // 書き込み用アドレス取得
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
 
-    // チE��ォルト値設定（白・ライチE��ング無効�E�E
+
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
@@ -39,7 +39,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // ================================
-    // Transform初期値設宁E
+    // Transform初期値設定
     // ================================
     transform = { { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
     cameraTransform = { { 1.0f, 1.0f, 1.0f }, { 0.3f, 0.0f, 0.0f }, { 0.0f, 4.0f, -10.0f } };
@@ -114,13 +114,13 @@ void Object3d::Draw()
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
     
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    // Transform定数バッファをセチE��
+
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
 
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
 
     commandList->SetGraphicsRootDescriptorTable(8,Object3dManager::GetInstance()->GetEnvironmentTexture());
-    // モチE��が設定されてぁE��ば描画
+
     if (model_) {
         model_->Draw();
     }
@@ -276,7 +276,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
                 materialData.textureFilePath = embeddedTextureKey;
             }
 
-            // "*0" みたいな埋め込み表記�EファイルじゃなぁE
+
             else if (!tex.empty()) {
 
                 std::filesystem::path fullPath = modelDirectory / tex; // Model Path
@@ -288,9 +288,9 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         }
     }
 
-    // ここで刁E��すめE
+
     // -------------------------
-    // Node�E�既存�E処琁E��E
+
     // -------------------------
     modelData.rootNode = ReadNode(scene->mRootNode);
 
@@ -300,7 +300,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
 void Object3d::SetModel(const std::string& filePath)
 {
-    // モチE��を検索してセチE��する
+
     model_ = ModelManager::GetInstance()->FindModel(filePath);
     modelFilePath_ = filePath;
 }
@@ -313,10 +313,10 @@ Node Object3d::ReadNode(aiNode* node)
 
     node->mTransformation.Decompose(scale, rotate, translate);
 
-    // scale�E�E
+
     result.transform.scale = { scale.x, scale.y, scale.z };
 
-    // 回転�E�右扁EↁE左扁E
+
     result.transform.rotate = {
         rotate.x,
         -rotate.y,
@@ -331,7 +331,7 @@ Node Object3d::ReadNode(aiNode* node)
         translate.z
     };
 
-    // SRTから localMatrix を�E構篁E
+
     result.localMatrix = MatrixMath::MakeAffineMatrix(
         result.transform.scale,
         result.transform.rotate,

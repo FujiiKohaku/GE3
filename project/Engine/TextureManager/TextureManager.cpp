@@ -1,13 +1,13 @@
-﻿#include "TextureManager.h"
+#include "TextureManager.h"
 #include <chrono>
 #include <cstring>
 #include <format>
 
 std::unique_ptr<TextureManager> TextureManager::instance = nullptr;
-// ImGui縺ｧ0逡ｪ繧剃ｽｿ逕ｨ縺吶ｋ縺溘ａ縲・逡ｪ縺九ｉ菴ｿ逕ｨ
+
 
 //=================================================================
-// 繧､繝ｳ繧ｹ繧ｿ繝ｳ繧ｹ蜿門ｾ暦ｼ医す繝ｳ繧ｰ繝ｫ繝医Φ・・
+
 //=================================================================
 TextureManager* TextureManager::GetInstance()
 {
@@ -37,35 +37,35 @@ void TextureManager::Finalize()
 }
 
 //=================================================================
-// 蛻晄悄蛹門・逅・
+
 //=================================================================
 void TextureManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager)
 {
     dxCommon_ = dxCommon;
     srvManager_ = srvManager;
-    // SRV縺ｮ謨ｰ繧偵≠繧峨°縺倥ａ遒ｺ菫・
+
     textureDatas.reserve(SrvManager::kMaxSRVCount);
 }
 
 //=================================================================
-// 繝・け繧ｹ繝√Ε縺ｮ隱ｭ縺ｿ霎ｼ縺ｿ
+
 //=================================================================
 void TextureManager::LoadTexture(const std::string& filePath)
 {
-    // 遨ｺ譁・ｭ励メ繧ｧ繝・け・・nimation_Skin 逕ｨ・・
+
     if (filePath.empty()) {
         return;
     }
 
-    // 隱ｭ縺ｿ霎ｼ縺ｿ貂医∩繝・け繧ｹ繝√Ε繧呈､懃ｴ｢
+
     if (textureDatas.contains(filePath)) {
-        return; // 縺吶〒縺ｫ隱ｭ縺ｿ霎ｼ縺ｾ繧後※縺・ｋ縺ｪ繧我ｽ輔ｂ縺励↑縺・
+        return;
     }
 
-    // 繝・け繧ｹ繝√Ε荳企剞繝√ぉ繝・け
+
     assert(srvManager_->CanAllocate());
 
-    // WIC邨檎罰縺ｧ逕ｻ蜒上ｒ隱ｭ縺ｿ霎ｼ繧
+
     DirectX::ScratchImage image {};
     std::wstring filePathW = StringUtility::ConvertString(filePath);
 
@@ -343,7 +343,7 @@ void TextureManager::FlushUploads()
 }
 
 //=================================================================
-// 繝輔ぃ繧､繝ｫ繝代せ縺九ｉ繝・け繧ｹ繝√Ε繧､繝ｳ繝・ャ繧ｯ繧ｹ繧貞叙蠕・
+
 //=================================================================
 uint32_t TextureManager::GetTextureIndexByFilePath(const std::string& filePath)
 {
@@ -359,7 +359,7 @@ uint32_t TextureManager::GetTextureIndexByFilePath(const std::string& filePath)
 }
 
 //=================================================================
-// GPU繝上Φ繝峨Ν蜿門ｾ・
+
 //=================================================================
 D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(const std::string& filePath)
 {
@@ -374,7 +374,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE TextureManager::GetSrvHandleGPU(const std::string& f
     return textureDatas.at("resources/Textures/white.png").srvHandleGPU;
 }
 //=================================================================
-// 繝｡繧ｿ繝・・繧ｿ蜿門ｾ・
+
 //=================================================================
 const DirectX::TexMetadata& TextureManager::GetMetaData(const std::string& filePath)
 {

@@ -214,7 +214,7 @@ void GamePlayScene::Initialize()
     TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
     TextureManager::GetInstance()->LoadTexture(stageSettings_.skybox);
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png"); // AiMスプライチE
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png");
 
     // nodeLoad
     ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
@@ -1664,7 +1664,7 @@ void GamePlayScene::Draw3D()
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしなぁE��ぁE��なぁE
+    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
                                                                                         // animationSkin00_->Draw();
     animationActor_->Draw();
 }
