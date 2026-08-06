@@ -32,6 +32,7 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Hazard/WaterPillarHazard.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
@@ -104,6 +105,9 @@ private:
         int32_t travelDirection);
     void InitializeRecoveryItems(Model* model);
     void UpdateRecoveryItems();
+    void InitializeOceanLife();
+    void InitializeWaterPillars();
+    void UpdateOceanLife(const Vector3& railPosition, const Vector3& forward, const Vector3& railRight);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
     std::unique_ptr<GameplayCollisionSystem> gameplayCollisionSystem_;
@@ -128,6 +132,14 @@ private:
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;
     std::unique_ptr<OceanSurface> oceanSurface_;
+    std::vector<std::unique_ptr<Object3d>> oceanFish_;
+    std::vector<std::unique_ptr<Object3d>> oceanBirds_;
+    std::vector<std::unique_ptr<WaterPillarHazard>> waterPillars_;
+    float oceanLifeTime_ = 0.0f;
+    float fishSchoolTimer_ = 0.0f;
+    float fishSchoolCooldown_ = 5.0f;
+    bool isFishSchoolActive_ = false;
+    bool fishSchoolFromLeft_ = true;
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;

@@ -275,6 +275,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="Engine\Winapp\WinApp.cpp" />
     <ClCompile Include="App\Game\Player\Player.cpp" />
+    <ClCompile Include="App\Game\Hazard\WaterPillarHazard.cpp" />
     <ClCompile Include="App\Game\Boss\BaseBoss.cpp" />
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
@@ -325,6 +326,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <ItemGroup>
     <ClInclude Include="App\Game\Collision\GameplayCollisionSystem.h" />
     <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h" />
+    <ClInclude Include="App\Game\Hazard\WaterPillarHazard.h" />
     <ClInclude Include="App\Scene\ClearScene.h" />
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h" />

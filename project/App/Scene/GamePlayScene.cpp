@@ -565,6 +565,8 @@ void GamePlayScene::Initialize()
             1000.0f,
             stageSettings_.railLength,
             stageSettings_.floorHeight);
+        InitializeOceanLife();
+        InitializeWaterPillars();
     } else if (stageSettings_.floorEnabled) {
         Model* floorModel = ModelManager::GetInstance()->CreatePlane(
             stageSettings_.floorTexture, 100.0f, 360.0f);
@@ -882,6 +884,7 @@ void GamePlayScene::Update()
 
     // 3. 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
+    UpdateOceanLife(currentPosition, forward, railRight);
 
     // 4. マウス左クリックによる弾の発射処理
     ProcessPlayerShooting(input);
@@ -1217,6 +1220,16 @@ void GamePlayScene::Update()
     sceneObjectManager_->Update();
     for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
         levelObject->Update();
+    }
+    if (isFishSchoolActive_) {
+        for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Update();
+    }
+    for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Update();
+    for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) {
+        pillar->Update(railDistance_, 1.0f / 60.0f);
+        if (pillar->CheckCollision(player_->GetTranslate())) {
+            player_->ApplyDamage(2);
+        }
     }
     UpdateRecoveryItems();
     if (floorObj_) {
@@ -1605,6 +1618,124 @@ void GamePlayScene::UpdateCamera(
     aimCamera_->Update();
 }
 
+void GamePlayScene::InitializeWaterPillars()
+{
+    Model* planeModel = ModelManager::GetInstance()->CreatePlane(
+        "resources/Textures/white.png", 1.0f, 1.0f);
+
+    auto addPillar = [this, planeModel](float triggerDistance, float sideOffset, float delay) {
+        const float pillarDistance = triggerDistance + 140.0f + delay * railSpeed_ * 60.0f;
+        const Vector3 railPosition = rail_->GetPositionByDistance(pillarDistance);
+        const Vector3 forward = CalculateRailForward(pillarDistance, railPosition);
+        Vector3 right {};
+        Vector3 up {};
+        CalculateRailBasis(forward, right, up);
+        Vector3 position = railPosition + right * sideOffset;
+        position.y = stageSettings_.floorHeight;
+
+        auto pillar = std::make_unique<WaterPillarHazard>();
+        pillar->Initialize(planeModel, position, triggerDistance, delay);
+        waterPillars_.push_back(std::move(pillar));
+    };
+
+    addPillar(520.0f, 0.0f, 0.0f);
+    addPillar(820.0f, -10.0f, 0.0f);
+    addPillar(820.0f, 10.0f, 0.55f);
+    addPillar(1130.0f, -13.0f, 0.0f);
+    addPillar(1130.0f, 0.0f, 0.45f);
+    addPillar(1130.0f, 13.0f, 0.90f);
+    addPillar(1480.0f, 9.0f, 0.0f);
+    addPillar(1480.0f, -9.0f, 0.65f);
+}
+
+void GamePlayScene::InitializeOceanLife()
+{
+    Model* fishModel = ModelManager::GetInstance()->Load("fish/fish.obj");
+    Model* birdModel = ModelManager::GetInstance()->CreateBeamCross("resources/Textures/white.png");
+
+    constexpr size_t kFishCount = 18;
+    oceanFish_.reserve(kFishCount);
+    for (size_t index = 0; index < kFishCount; ++index) {
+        auto fish = std::make_unique<Object3d>();
+        fish->Initialize(Object3dManager::GetInstance());
+        fish->SetModel(fishModel);
+        fish->SetScale({ 0.22f, 0.22f, 0.22f });
+        fish->SetEnableLighting(true);
+        oceanFish_.push_back(std::move(fish));
+    }
+
+    constexpr size_t kBirdCount = 10;
+    oceanBirds_.reserve(kBirdCount);
+    for (size_t index = 0; index < kBirdCount; ++index) {
+        auto bird = std::make_unique<Object3d>();
+        bird->Initialize(Object3dManager::GetInstance());
+        bird->SetModel(birdModel);
+        bird->SetScale({ 1.8f, 0.12f, 0.45f });
+        bird->SetColor({ 0.92f, 0.96f, 1.0f, 1.0f });
+        bird->SetEnableLighting(false);
+        oceanBirds_.push_back(std::move(bird));
+    }
+}
+
+void GamePlayScene::UpdateOceanLife(
+    const Vector3& railPosition,
+    const Vector3& forward,
+    const Vector3& railRight)
+{
+    if (!oceanSurface_ || !player_) {
+        return;
+    }
+
+    oceanLifeTime_ += 1.0f / 60.0f;
+    const float seaHeight = stageSettings_.floorHeight;
+    const float yaw = -std::atan2(forward.x, forward.z);
+
+    constexpr float kFishSchoolDuration = 5.5f;
+    if (!isFishSchoolActive_) {
+        fishSchoolCooldown_ -= 1.0f / 60.0f;
+        if (fishSchoolCooldown_ <= 0.0f) {
+            isFishSchoolActive_ = true;
+            fishSchoolTimer_ = 0.0f;
+        }
+    } else {
+        fishSchoolTimer_ += 1.0f / 60.0f;
+        const float progress = std::clamp(fishSchoolTimer_ / kFishSchoolDuration, 0.0f, 1.0f);
+        const float travel = fishSchoolFromLeft_ ? (-52.0f + progress * 104.0f) : (52.0f - progress * 104.0f);
+        const float crossYaw = yaw + (fishSchoolFromLeft_ ? -std::numbers::pi_v<float> * 0.5f : std::numbers::pi_v<float> * 0.5f);
+
+        for (size_t index = 0; index < oceanFish_.size(); ++index) {
+            const float phase = fishSchoolTimer_ * 3.2f + static_cast<float>(index) * 1.37f;
+            const float formationSide = (static_cast<float>(index % 6) - 2.5f) * 1.7f;
+            const float ahead = 34.0f + static_cast<float>(index % 6) * 7.0f +
+                static_cast<float>(index / 6) * 4.0f;
+            Vector3 position = railPosition + forward * ahead +
+                railRight * (travel + formationSide);
+            position.y = seaHeight + 0.45f + (std::max)(0.0f, std::sin(phase)) * 2.4f +
+                static_cast<float>(index % 3) * 0.18f;
+            oceanFish_[index]->SetTranslate(position);
+            oceanFish_[index]->SetRotate({ -std::sin(phase) * 0.32f, crossYaw, 0.0f });
+        }
+
+        if (fishSchoolTimer_ >= kFishSchoolDuration) {
+            isFishSchoolActive_ = false;
+            fishSchoolFromLeft_ = !fishSchoolFromLeft_;
+            fishSchoolCooldown_ = 12.0f + std::fmod(oceanLifeTime_ * 1.73f, 10.0f);
+        }
+    }
+
+    for (size_t index = 0; index < oceanBirds_.size(); ++index) {
+        const float phase = oceanLifeTime_ * (0.32f + static_cast<float>(index % 3) * 0.035f) +
+            static_cast<float>(index) * 2.17f;
+        const float side = (static_cast<float>(index % 5) - 2.0f) * 24.0f + std::sin(phase) * 12.0f;
+        const float ahead = 95.0f + static_cast<float>(index % 5) * 34.0f;
+        Vector3 position = railPosition + forward * ahead + railRight * side;
+        position.y = seaHeight + 30.0f + static_cast<float>(index % 4) * 6.0f + std::sin(phase * 1.7f) * 2.0f;
+        oceanBirds_[index]->SetTranslate(position);
+        oceanBirds_[index]->SetRotate({ 0.0f, yaw, std::sin(phase * 3.2f) * 0.18f });
+    }
+
+}
+
 void GamePlayScene::ProcessPlayerShooting(Input* input)
 {
     if (input != nullptr) {
@@ -1647,6 +1778,11 @@ void GamePlayScene::Draw3D()
     if (floorObj_) {
         floorObj_->Draw();
     }
+    if (isFishSchoolActive_) {
+        for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Draw();
+    }
+    for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Draw();
+    for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) pillar->Draw();
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
@@ -2342,6 +2478,7 @@ void GamePlayScene::StopPlayerEngineEffects()
         effectManager->StopEffect(boostLineHandle_);
         boostLineHandle_ = kInvalidEffectHandle;
     }
+
 }
 
 void GamePlayScene::UpdateSwarmWaveSpawning()
