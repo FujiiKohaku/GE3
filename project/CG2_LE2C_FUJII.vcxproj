@@ -250,6 +250,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3D\Object3dManager.cpp" />
     <ClCompile Include="Engine\3D\Object3d.cpp" />
     <ClCompile Include="Engine\3D\OceanSurface.cpp" />
+    <ClCompile Include="Engine\3D\WaterPillarRenderer.cpp" />
     <ClCompile Include="Engine\3D\ModelCommon.cpp" />
     <ClCompile Include="Engine\3D\ModelManager.cpp" />
     <ClCompile Include="Engine\3D\SphereObject.cpp" />
@@ -405,6 +406,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3D\Object3dManager.h" />
     <ClInclude Include="Engine\3D\Object3d.h" />
     <ClInclude Include="Engine\3D\OceanSurface.h" />
+    <ClInclude Include="Engine\3D\WaterPillarRenderer.h" />
     <ClInclude Include="Engine\3D\ModelCommon.h" />
     <ClInclude Include="Engine\3D\ModelManager.h" />
     <ClInclude Include="Engine\3D\SphereObject.h" />

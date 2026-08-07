@@ -16,6 +16,7 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/OceanSurface.h"
+#include "Engine/3D/WaterPillarRenderer.h"
 
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Rail/Rail.h"
@@ -132,6 +133,7 @@ private:
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;
     std::unique_ptr<OceanSurface> oceanSurface_;
+    std::unique_ptr<WaterPillarRenderer> waterPillarRenderer_;
     std::vector<std::unique_ptr<Object3d>> oceanFish_;
     std::vector<std::unique_ptr<Object3d>> oceanBirds_;
     std::vector<std::unique_ptr<WaterPillarHazard>> waterPillars_;

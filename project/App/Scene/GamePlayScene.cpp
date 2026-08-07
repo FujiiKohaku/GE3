@@ -565,6 +565,8 @@ void GamePlayScene::Initialize()
             1000.0f,
             stageSettings_.railLength,
             stageSettings_.floorHeight);
+        waterPillarRenderer_ = std::make_unique<WaterPillarRenderer>();
+        waterPillarRenderer_->Initialize(camera_.get());
         InitializeOceanLife();
         InitializeWaterPillars();
     } else if (stageSettings_.floorEnabled) {
@@ -1225,6 +1227,9 @@ void GamePlayScene::Update()
         for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Update();
     }
     for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Update();
+    if (waterPillarRenderer_) {
+        waterPillarRenderer_->Update(1.0f / 60.0f);
+    }
     for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) {
         pillar->Update(railDistance_, 1.0f / 60.0f);
         if (pillar->CheckCollision(player_->GetTranslate())) {
@@ -1620,12 +1625,7 @@ void GamePlayScene::UpdateCamera(
 
 void GamePlayScene::InitializeWaterPillars()
 {
-    Model* planeModel = ModelManager::GetInstance()->CreatePlane(
-        "resources/Textures/white.png", 1.0f, 1.0f);
-    Model* cylinderModel = ModelManager::GetInstance()->CreateCylinder(
-        "resources/Textures/white.png", 32);
-
-    auto addPillar = [this, planeModel, cylinderModel](float triggerDistance, float sideOffset, float delay) {
+    auto addPillar = [this](float triggerDistance, float sideOffset, float delay) {
         const float pillarDistance = triggerDistance + 200.0f + delay * railSpeed_ * 60.0f;
         const Vector3 railPosition = rail_->GetPositionByDistance(pillarDistance);
         const Vector3 forward = CalculateRailForward(pillarDistance, railPosition);
@@ -1636,7 +1636,7 @@ void GamePlayScene::InitializeWaterPillars()
         position.y = stageSettings_.floorHeight;
 
         auto pillar = std::make_unique<WaterPillarHazard>();
-        pillar->Initialize(planeModel, cylinderModel, position, triggerDistance, delay);
+        pillar->Initialize(waterPillarRenderer_.get(), position, triggerDistance, delay);
         waterPillars_.push_back(std::move(pillar));
     };
 
@@ -1784,7 +1784,12 @@ void GamePlayScene::Draw3D()
         for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Draw();
     }
     for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Draw();
-    for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) pillar->Draw();
+    if (waterPillarRenderer_) {
+        waterPillarRenderer_->PreDraw();
+        for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) pillar->DrawPillar();
+        Object3dManager::GetInstance()->PreDraw();
+        LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
+    }
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
