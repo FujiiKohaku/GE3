@@ -8,7 +8,7 @@ class Object3d;
 
 class WaterPillarHazard {
 public:
-    void Initialize(Model* planeModel, const Vector3& position, float triggerDistance, float delay);
+    void Initialize(Model* planeModel, Model* cylinderModel, const Vector3& position, float triggerDistance, float delay);
     void Update(float railDistance, float deltaTime);
     void Draw();
     bool CheckCollision(const Vector3& playerPosition) const;
@@ -19,8 +19,7 @@ private:
     void ApplyVisuals();
 
     std::unique_ptr<Object3d> warning_;
-    std::unique_ptr<Object3d> pillarFront_;
-    std::unique_ptr<Object3d> pillarSide_;
+    std::unique_ptr<Object3d> pillar_;
     Vector3 position_ {};
     State state_ = State::Waiting;
     float triggerDistance_ = 0.0f;

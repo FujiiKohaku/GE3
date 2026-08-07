@@ -1622,9 +1622,11 @@ void GamePlayScene::InitializeWaterPillars()
 {
     Model* planeModel = ModelManager::GetInstance()->CreatePlane(
         "resources/Textures/white.png", 1.0f, 1.0f);
+    Model* cylinderModel = ModelManager::GetInstance()->CreateCylinder(
+        "resources/Textures/white.png", 32);
 
-    auto addPillar = [this, planeModel](float triggerDistance, float sideOffset, float delay) {
-        const float pillarDistance = triggerDistance + 140.0f + delay * railSpeed_ * 60.0f;
+    auto addPillar = [this, planeModel, cylinderModel](float triggerDistance, float sideOffset, float delay) {
+        const float pillarDistance = triggerDistance + 200.0f + delay * railSpeed_ * 60.0f;
         const Vector3 railPosition = rail_->GetPositionByDistance(pillarDistance);
         const Vector3 forward = CalculateRailForward(pillarDistance, railPosition);
         Vector3 right {};
@@ -1634,7 +1636,7 @@ void GamePlayScene::InitializeWaterPillars()
         position.y = stageSettings_.floorHeight;
 
         auto pillar = std::make_unique<WaterPillarHazard>();
-        pillar->Initialize(planeModel, position, triggerDistance, delay);
+        pillar->Initialize(planeModel, cylinderModel, position, triggerDistance, delay);
         waterPillars_.push_back(std::move(pillar));
     };
 

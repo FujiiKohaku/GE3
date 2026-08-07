@@ -8,16 +8,16 @@
 #include <numbers>
 
 namespace {
-constexpr float kWarningDuration = 2.4f;
-constexpr float kRisingDuration = 0.8f;
+constexpr float kWarningDuration = 3.0f;
+constexpr float kRisingDuration = 1.1f;
 constexpr float kActiveDuration = 1.5f;
 constexpr float kFadingDuration = 0.75f;
+constexpr float kPreviewHeightRatio = 0.16f;
 
-float EaseOutCubic(float t)
+float EaseInQuart(float t)
 {
     t = std::clamp(t, 0.0f, 1.0f);
-    const float inverse = 1.0f - t;
-    return 1.0f - inverse * inverse * inverse;
+    return t * t * t * t;
 }
 
 float EaseInCubic(float t)
@@ -35,6 +35,7 @@ float SmoothStep(float t)
 
 void WaterPillarHazard::Initialize(
     Model* planeModel,
+    Model* cylinderModel,
     const Vector3& position,
     float triggerDistance,
     float delay)
@@ -43,19 +44,17 @@ void WaterPillarHazard::Initialize(
     triggerDistance_ = triggerDistance;
     activationDelay_ = delay;
 
-    auto createObject = [planeModel]() {
+    auto createObject = [](Model* model) {
         auto object = std::make_unique<Object3d>();
         object->Initialize(Object3dManager::GetInstance());
-        object->SetModel(planeModel);
+        object->SetModel(model);
         object->SetEnableLighting(false);
         return object;
     };
 
-    warning_ = createObject();
-    pillarFront_ = createObject();
-    pillarSide_ = createObject();
+    warning_ = createObject(planeModel);
+    pillar_ = createObject(cylinderModel);
     warning_->SetRotate({ std::numbers::pi_v<float> * 0.5f, 0.0f, 0.0f });
-    pillarSide_->SetRotate({ 0.0f, std::numbers::pi_v<float> * 0.5f, 0.0f });
     ApplyVisuals();
 }
 
@@ -84,8 +83,7 @@ void WaterPillarHazard::Update(float railDistance, float deltaTime)
 
     ApplyVisuals();
     warning_->Update();
-    pillarFront_->Update();
-    pillarSide_->Update();
+    pillar_->Update();
 }
 
 void WaterPillarHazard::ApplyVisuals()
@@ -99,12 +97,12 @@ void WaterPillarHazard::ApplyVisuals()
         const float pulse = 0.75f + std::sin(timer_ * 18.0f) * 0.18f;
         warningScale = (2.0f + warningProgress * 5.5f) * pulse;
         const float previewProgress = SmoothStep((timer_ / kWarningDuration - 0.42f) / 0.58f);
-        pillarRatio = previewProgress * 0.16f;
+        pillarRatio = previewProgress * kPreviewHeightRatio;
         alpha = previewProgress * 0.20f;
     } else if (state_ == State::Rising) {
-        const float riseProgress = EaseOutCubic(timer_ / kRisingDuration);
+        const float riseProgress = EaseInQuart(timer_ / kRisingDuration);
         warningScale = 7.5f + riseProgress * 1.5f;
-        pillarRatio = riseProgress;
+        pillarRatio = kPreviewHeightRatio + (1.0f - kPreviewHeightRatio) * riseProgress;
         alpha = SmoothStep(timer_ / kRisingDuration) * 0.86f;
     } else if (state_ == State::Active) {
         pillarRatio = 1.0f;
@@ -123,29 +121,27 @@ void WaterPillarHazard::ApplyVisuals()
     warning_->SetColor({ 0.65f, 0.94f, 1.0f, warningAlpha });
 
     const float visibleHeight = height_ * pillarRatio;
-    const Vector3 pillarPosition = { position_.x, position_.y + visibleHeight * 0.5f, position_.z };
-    const Vector3 pillarScale = { radius_ * 2.0f, visibleHeight, 1.0f };
-    pillarFront_->SetTranslate(pillarPosition);
-    pillarSide_->SetTranslate(pillarPosition);
-    pillarFront_->SetScale(pillarScale);
-    pillarSide_->SetScale(pillarScale);
+    const Vector3 pillarPosition = { position_.x, position_.y, position_.z };
+    const Vector3 pillarScale = { radius_, visibleHeight, radius_ };
+    pillar_->SetTranslate(pillarPosition);
+    pillar_->SetScale(pillarScale);
     const Vector4 color = { 0.48f, 0.86f, 1.0f, alpha };
-    pillarFront_->SetColor(color);
-    pillarSide_->SetColor(color);
+    pillar_->SetColor(color);
 }
 
 void WaterPillarHazard::Draw()
 {
     if (state_ == State::Finished || state_ == State::Waiting) return;
     warning_->Draw();
-    pillarFront_->Draw();
-    pillarSide_->Draw();
+    pillar_->Draw();
 }
 
 bool WaterPillarHazard::CheckCollision(const Vector3& playerPosition) const
 {
+    const float risingHeightRatio = kPreviewHeightRatio +
+        (1.0f - kPreviewHeightRatio) * EaseInQuart(timer_ / kRisingDuration);
     if (state_ != State::Active &&
-        !(state_ == State::Rising && EaseOutCubic(timer_ / kRisingDuration) >= 0.62f)) return false;
+        !(state_ == State::Rising && risingHeightRatio >= 0.62f)) return false;
     const float dx = playerPosition.x - position_.x;
     const float dz = playerPosition.z - position_.z;
     const bool insideRadius = dx * dx + dz * dz <= radius_ * radius_;
