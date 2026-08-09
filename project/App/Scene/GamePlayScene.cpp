@@ -558,17 +558,19 @@ void GamePlayScene::Initialize()
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
     // floorの初期化
-    if (stageSettings_.floorEnabled && stageId_ == "stage01") {
+    if (stageSettings_.floorEnabled && (stageId_ == "stage01" || stageId_ == "stage03")) {
         oceanSurface_ = std::make_unique<OceanSurface>();
         oceanSurface_->Initialize(
             camera_.get(),
             1000.0f,
             stageSettings_.railLength,
             stageSettings_.floorHeight);
-        waterPillarRenderer_ = std::make_unique<WaterPillarRenderer>();
-        waterPillarRenderer_->Initialize(camera_.get());
-        InitializeOceanLife();
-        InitializeWaterPillars();
+        if (stageId_ == "stage01") {
+            waterPillarRenderer_ = std::make_unique<WaterPillarRenderer>();
+            waterPillarRenderer_->Initialize(camera_.get());
+            InitializeOceanLife();
+            InitializeWaterPillars();
+        }
     } else if (stageSettings_.floorEnabled) {
         Model* floorModel = ModelManager::GetInstance()->CreatePlane(
             stageSettings_.floorTexture, 100.0f, 360.0f);
@@ -750,6 +752,16 @@ void GamePlayScene::Update()
         enemy->Update();
     }
 
+    if (stageId_ == "stage03" && !isPirateShipMidBossSpawned_ && railDistance_ >= 1250.0f) {
+        auto pirateShip = std::make_unique<PirateShipMidBoss>();
+        pirateShip->Initialize(angerBlockModel_, enemyBulletModel_, player_.get());
+        Vector3 spawnPosition = rail_->GetPositionByDistance(1340.0f);
+        spawnPosition.y = stageSettings_.floorHeight;
+        pirateShip->SetPosition(spawnPosition);
+        enemies_.push_back(std::move(pirateShip));
+        isPirateShipMidBossSpawned_ = true;
+    }
+
     // プレイヤーのZ座標を取得
     UpdateSwarmWaveSpawning();
 
@@ -908,10 +920,6 @@ void GamePlayScene::Update()
 #endif
 
     // プレイヤーのブースト状態に応じたエフェクト制御
-    Vector3 boostLinePosition = player_->GetTranslate();
-    boostLinePosition.y += 0.2f;
-    boostLinePosition.z += 2.4f;
-
     if (isPlayerBoosting != wasPlayerBoosting_) {
         EffectManager::GetInstance()->StopEffect(playerJetHandle_);
         EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
@@ -925,18 +933,7 @@ void GamePlayScene::Update()
         playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(jetEffectName, player_);
         playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(sparkEffectName, player_);
 
-        if (isPlayerBoosting) {
-            boostLineHandle_ = EffectManager::GetInstance()->AttachEffect("BoostLine", player_);
-            EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
-        } else {
-            EffectManager::GetInstance()->StopEffect(boostLineHandle_);
-            boostLineHandle_ = kInvalidEffectHandle;
-        }
         wasPlayerBoosting_ = isPlayerBoosting;
-    }
-
-    if (isPlayerBoosting && boostLineHandle_ != kInvalidEffectHandle) {
-        EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
     }
 
     UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
@@ -2402,7 +2399,6 @@ void GamePlayScene::Finalize()
     EffectManager::GetInstance()->SetCamera(nullptr);
     playerJetHandle_ = kInvalidEffectHandle;
     playerJetSparkHandle_ = kInvalidEffectHandle;
-    boostLineHandle_ = kInvalidEffectHandle;
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
@@ -2479,11 +2475,6 @@ void GamePlayScene::StopPlayerEngineEffects()
     if (playerJetSparkHandle_ != kInvalidEffectHandle) {
         effectManager->StopEffect(playerJetSparkHandle_);
         playerJetSparkHandle_ = kInvalidEffectHandle;
-    }
-
-    if (boostLineHandle_ != kInvalidEffectHandle) {
-        effectManager->StopEffect(boostLineHandle_);
-        boostLineHandle_ = kInvalidEffectHandle;
     }
 
 }

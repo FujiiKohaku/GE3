@@ -53,6 +53,7 @@
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
 #include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
 
 struct LevelData;
 
@@ -206,7 +207,6 @@ private:
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
-    EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
     bool wasBoostingForKick_ = false;
     bool isRandomPostEffect_ = false;
@@ -261,6 +261,7 @@ private:
     // ボス戦用
     std::unique_ptr<StageBoss> activeBoss_;
     bool isBossSpawned_ = false;
+    bool isPirateShipMidBossSpawned_ = false;
 
     // カメラシェイク演出用
     float cameraShakeTime_ = 0.0f;
