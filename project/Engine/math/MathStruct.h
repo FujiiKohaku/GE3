@@ -49,6 +49,7 @@ Quaternion operator*(const Quaternion& q, float s);
 
 float Vector3LengthSquared(const Vector3& v);
 float Vector3Length(const Vector3& v);
+bool IsNearlyZero(const Vector3& v, float epsilon = 0.000001f);
 float Norm(const Quaternion& q);
 
 Vector3 Normalize(const Vector3& v);
@@ -57,6 +58,8 @@ Quaternion Normalize(const Quaternion& q);
 
 float Dot(const Vector3& v1, const Vector3& v2);
 float Dot(const Quaternion& a, const Quaternion& b);
+Vector3 Cross(const Vector3& a, const Vector3& b);
 
+Vector2 Lerp(const Vector2& a, const Vector2& b, float t);
 Vector3 Lerp(const Vector3& a, const Vector3& b, float t);
 Quaternion Slerp(const Quaternion& q0, const Quaternion& q1, float t);

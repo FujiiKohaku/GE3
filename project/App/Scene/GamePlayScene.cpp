@@ -63,32 +63,6 @@ constexpr int32_t kRecoveryItemHealAmount = 5;
 constexpr int32_t kSwarmMembersPerWave = 18;
 constexpr float kBossRailExtensionBuffer = 1200.0f;
 
-float ClampFloat(float value, float minValue, float maxValue)
-{
-    if (value < minValue) {
-        value = minValue;
-    }
-
-    if (value > maxValue) {
-        value = maxValue;
-    }
-
-    return value;
-}
-
-Vector2 LerpVector2(const Vector2& start, const Vector2& end, float rate)
-{
-    Vector2 result {};
-    result.x = start.x + (end.x - start.x) * rate;
-    result.y = start.y + (end.y - start.y) * rate;
-    return result;
-}
-
-float LerpFloat(float start, float end, float rate)
-{
-    return start + (end - start) * rate;
-}
-
 Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
 {
     Vector2 center {};
@@ -108,19 +82,6 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
     return center;
 }
 
-bool IsZeroVector(const Vector3& value)
-{
-    return Vector3LengthSquared(value) < 0.000001f;
-}
-
-Vector3 Cross(const Vector3& a, const Vector3& b)
-{
-    Vector3 result {};
-    result.x = a.y * b.z - a.z * b.y;
-    result.y = a.z * b.x - a.x * b.z;
-    result.z = a.x * b.y - a.y * b.x;
-    return result;
-}
 }
 
 void GamePlayScene::Initialize()
@@ -623,15 +584,15 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
     Vector3 nextPosition = rail_->GetPositionByDistance(nextDistance);
     Vector3 forward = Normalize(nextPosition - previousPosition);
 
-    if (IsZeroVector(forward)) {
+    if (IsNearlyZero(forward)) {
         forward = Normalize(nextPosition - railPosition);
     }
 
-    if (IsZeroVector(forward)) {
+    if (IsNearlyZero(forward)) {
         forward = Normalize(railPosition - previousPosition);
     }
 
-    if (IsZeroVector(forward)) {
+    if (IsNearlyZero(forward)) {
         forward = { 0.0f, 0.0f, 1.0f };
     }
 
@@ -649,25 +610,25 @@ StageBoss* GamePlayScene::GetActiveBoss() const
 void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const
 {
     Vector3 normalizedForward = Normalize(forward);
-    if (IsZeroVector(normalizedForward)) {
+    if (IsNearlyZero(normalizedForward)) {
         normalizedForward = { 0.0f, 0.0f, 1.0f };
     }
 
     Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
     right = Normalize(Cross(referenceUp, normalizedForward));
 
-    if (IsZeroVector(right)) {
+    if (IsNearlyZero(right)) {
         Vector3 referenceForward = { 0.0f, 0.0f, 1.0f };
         right = Normalize(Cross(normalizedForward, referenceForward));
     }
 
-    if (IsZeroVector(right)) {
+    if (IsNearlyZero(right)) {
         right = { 1.0f, 0.0f, 0.0f };
     }
 
     up = Normalize(Cross(normalizedForward, right));
 
-    if (IsZeroVector(up)) {
+    if (IsNearlyZero(up)) {
         up = referenceUp;
     }
 }
@@ -684,16 +645,10 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
         SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
 
-        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用！
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::GaussianFilter,
-            PostEffectStage::BeforeParticle);
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::GrayScale,
-            PostEffectStage::BeforeParticle);
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::CyberScanline,
-            PostEffectStage::BeforeParticle);
+        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter,PostEffectStage::BeforeParticle);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale,PostEffectStage::BeforeParticle);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::CyberScanline,PostEffectStage::BeforeParticle);
 
         // ポーズテキストオブジェクトの更新
         if (pauseTitleText_) pauseTitleText_->Update();
@@ -716,22 +671,17 @@ void GamePlayScene::Update()
             pauseControlText_->Update();
         }
         if (input != nullptr && input->IsKeyTrigger(DIK_LBRACKET)) {
-            gMouseSensitivity = ClampFloat(
+            gMouseSensitivity = std::clamp(
                 gMouseSensitivity - 0.1f, 0.5f, 2.0f);
             if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
         }
         if (input != nullptr && input->IsKeyTrigger(DIK_RBRACKET)) {
-            gMouseSensitivity = ClampFloat(
+            gMouseSensitivity = std::clamp(
                 gMouseSensitivity + 0.1f, 0.5f, 2.0f);
             if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
         }
         if (pauseSensitivityText_) {
-            int sensitivityPercent = static_cast<int>(
-                gMouseSensitivity * 100.0f + 0.5f);
-            pauseSensitivityText_->SetText(
-                "MOUSE SENSITIVITY: " +
-                std::to_string(sensitivityPercent) +
-                "%  [[ / ]] ");
+            int sensitivityPercent = static_cast<int>(gMouseSensitivity * 100.0f + 0.5f);pauseSensitivityText_->SetText("MOUSE SENSITIVITY: " +std::to_string(sensitivityPercent) +"%  [[ / ]] ");
             pauseSensitivityText_->Update();
         }
 
@@ -1187,7 +1137,7 @@ void GamePlayScene::Update()
         if (hpRatio > 1.0f) hpRatio = 1.0f;
 
         // 残りHP割合に合わせてゲージの横幅を滑らかに変更
-        displayedPlayerHpRatio_ = LerpFloat(
+        displayedPlayerHpRatio_ = std::lerp(
             displayedPlayerHpRatio_,
             hpRatio,
             0.12f);
@@ -1574,7 +1524,7 @@ void GamePlayScene::UpdateCamera(
 
         if (hasCameraFollowState_) {
             Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
-            if (!IsZeroVector(lerpedForward)) {
+            if (!IsNearlyZero(lerpedForward)) {
                 cameraForward = Normalize(lerpedForward);
             }
         }
@@ -1978,11 +1928,11 @@ void GamePlayScene::UpdateBossHpHud()
         bodyHpFraction = 1.0f;
     }
 
-    displayedBossHeadHpRatio_ = LerpFloat(
+    displayedBossHeadHpRatio_ = std::lerp(
         displayedBossHeadHpRatio_,
         headHpFraction,
         0.10f);
-    displayedBossBodyHpRatio_ = LerpFloat(
+    displayedBossBodyHpRatio_ = std::lerp(
         displayedBossBodyHpRatio_,
         bodyHpFraction,
         0.10f);
@@ -2651,7 +2601,7 @@ void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isP
 
     if (isPlayerBoosting) {
         targetCenter = CalculateBoostPostEffectCenter(nextRailDistance);
-        smoothedBoostPostEffectCenter_ = LerpVector2(smoothedBoostPostEffectCenter_, targetCenter, kBoostPostEffectCenterLerpRate);
+        smoothedBoostPostEffectCenter_ = Lerp(smoothedBoostPostEffectCenter_, targetCenter, kBoostPostEffectCenterLerpRate);
     } else {
         smoothedBoostPostEffectCenter_ = targetCenter;
     }
@@ -2710,8 +2660,8 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
         vanishPointCenter.y * kBoostPostEffectVanishPointWeight +
         playerCenter.y * kBoostPostEffectPlayerWeight;
 
-    center.x = ClampFloat(center.x, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
-    center.y = ClampFloat(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
+    center.x = std::clamp(center.x, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
+    center.y = std::clamp(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
 
     return center;
 }

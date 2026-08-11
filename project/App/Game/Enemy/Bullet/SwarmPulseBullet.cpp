@@ -3,22 +3,6 @@
 #include "Engine/math/MathStruct.h"
 #include <cmath>
 
-namespace {
-Vector3 CrossVector(const Vector3& left, const Vector3& right)
-{
-    Vector3 result {};
-    result.x = left.y * right.z - left.z * right.y;
-    result.y = left.z * right.x - left.x * right.z;
-    result.z = left.x * right.y - left.y * right.x;
-    return result;
-}
-
-bool IsNearlyZero(const Vector3& value)
-{
-    return Vector3LengthSquared(value) < 0.000001f;
-}
-}
-
 void SwarmPulseBullet::Initialize(Model* model)
 {
     transform_.scale = { 0.22f, 0.22f, 0.22f };
@@ -43,12 +27,12 @@ void SwarmPulseBullet::SetSwarmVelocity(const Vector3& velocity)
 
     Vector3 forward = Normalize(velocity_);
     Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
-    waveSide_ = Normalize(CrossVector(referenceUp, forward));
+    waveSide_ = Normalize(Cross(referenceUp, forward));
     if (IsNearlyZero(waveSide_)) {
         waveSide_ = { 1.0f, 0.0f, 0.0f };
     }
 
-    waveUp_ = Normalize(CrossVector(forward, waveSide_));
+    waveUp_ = Normalize(Cross(forward, waveSide_));
     if (IsNearlyZero(waveUp_)) {
         waveUp_ = referenceUp;
     }

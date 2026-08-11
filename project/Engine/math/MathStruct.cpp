@@ -79,6 +79,11 @@ float Vector3Length(const Vector3& v)
     return std::sqrt(Vector3LengthSquared(v));
 }
 
+bool IsNearlyZero(const Vector3& v, float epsilon)
+{
+    return Vector3LengthSquared(v) < epsilon;
+}
+
 float Norm(const Quaternion& q)
 {
     return std::sqrt(q.w * q.w + q.x * q.x + q.y * q.y + q.z * q.z);
@@ -122,6 +127,23 @@ Quaternion Normalize(const Quaternion& q)
 float Dot(const Vector3& v1, const Vector3& v2)
 {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
+Vector3 Cross(const Vector3& a, const Vector3& b)
+{
+    return {
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    };
+}
+
+Vector2 Lerp(const Vector2& a, const Vector2& b, float t)
+{
+    return {
+        a.x + (b.x - a.x) * t,
+        a.y + (b.y - a.y) * t
+    };
 }
 
 float Dot(const Quaternion& a, const Quaternion& b)
