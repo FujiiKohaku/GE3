@@ -303,6 +303,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
     <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp" />
+    <ClCompile Include="App\Game\Boss\BossEncounterController.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
@@ -454,6 +455,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
     <ClInclude Include="App\Game\Boss\StageBoss.h" />
     <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h" />
+    <ClInclude Include="App\Game\Boss\BossEncounterController.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
   </ItemGroup>

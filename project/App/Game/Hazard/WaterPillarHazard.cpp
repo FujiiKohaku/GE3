@@ -7,7 +7,7 @@
 namespace {
 constexpr float kWarningDuration = 3.0f;
 constexpr float kRisingDuration = 0.7f;
-constexpr float kActiveDuration = 1.5f;
+constexpr float kActiveDuration = 3.0f;
 constexpr float kFadingDuration = 0.75f;
 constexpr float kPreviewHeightRatio = 0.16f;
 

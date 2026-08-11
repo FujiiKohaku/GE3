@@ -50,8 +50,7 @@
 #include "App/Game/Enemy/Types/NormalEnemy.h"
 #include "App/Game/Enemy/Types/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
-#include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
-#include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
+#include "App/Game/Boss/BossEncounterController.h"
 #include "App/Game/Boss/StageBoss.h"
 #include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
 
@@ -88,6 +87,7 @@ private:
 #endif
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
+    StageBoss* GetActiveBoss() const;
 
     // Updateメソッドの処理分割用ヘルパー関数
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
@@ -259,8 +259,7 @@ private:
     float cameraLookHorizontalFactor_ = 0.35f;
 
     // ボス戦用
-    std::unique_ptr<StageBoss> activeBoss_;
-    bool isBossSpawned_ = false;
+    std::unique_ptr<BossEncounterController> bossController_;
     bool isPirateShipMidBossSpawned_ = false;
 
     // カメラシェイク演出用

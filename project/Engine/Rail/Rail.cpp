@@ -12,6 +12,8 @@ void Rail::Initialize()
     controlPoints_.clear();
     cumulativeDistances_.clear();
     totalLength_ = 0.0f;
+    autoExtensionMinimumRemainingDistance_ = 0.0f;
+    isAutoExtensionActive_ = false;
 }
 
 void Rail::Update()
@@ -50,6 +52,57 @@ void Rail::AddPoint(const Vector3& point)
 {
     controlPoints_.push_back(point);
     RebuildDistanceTable();
+}
+
+void Rail::StartAutoExtension(float minimumRemainingDistance)
+{
+    autoExtensionMinimumRemainingDistance_ = minimumRemainingDistance;
+    if (autoExtensionMinimumRemainingDistance_ < 0.0f) {
+        autoExtensionMinimumRemainingDistance_ = 0.0f;
+    }
+    isAutoExtensionActive_ = true;
+}
+
+void Rail::StopAutoExtension()
+{
+    isAutoExtensionActive_ = false;
+}
+
+bool Rail::UpdateAutoExtension(float currentDistance)
+{
+    if (!isAutoExtensionActive_) {
+        return false;
+    }
+
+    bool wasExtended = false;
+    while (totalLength_ - currentDistance < autoExtensionMinimumRemainingDistance_) {
+        if (controlPoints_.size() < 2) {
+            StopAutoExtension();
+            return wasExtended;
+        }
+
+        const Vector3 previousPoint = controlPoints_[controlPoints_.size() - 2];
+        const Vector3 lastPoint = controlPoints_.back();
+        const Vector3 extension = lastPoint - previousPoint;
+        const float extensionLengthSquared =
+            extension.x * extension.x +
+            extension.y * extension.y +
+            extension.z * extension.z;
+        if (extensionLengthSquared <= 0.0001f) {
+            StopAutoExtension();
+            return wasExtended;
+        }
+
+        AddPoint(lastPoint + extension);
+        wasExtended = true;
+    }
+
+    return wasExtended;
+}
+
+bool Rail::IsAutoExtensionActive() const
+{
+    return isAutoExtensionActive_;
 }
 
 Vector3 Rail::GetPosition(float progress) const

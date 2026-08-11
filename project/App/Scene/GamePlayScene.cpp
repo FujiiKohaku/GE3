@@ -61,6 +61,7 @@ constexpr float kRecoveryItemBobSpeed = 0.045f;
 constexpr float kRecoveryItemBobHeight = 0.65f;
 constexpr int32_t kRecoveryItemHealAmount = 5;
 constexpr int32_t kSwarmMembersPerWave = 18;
+constexpr float kBossRailExtensionBuffer = 1200.0f;
 
 float ClampFloat(float value, float minValue, float maxValue)
 {
@@ -525,6 +526,19 @@ void GamePlayScene::Initialize()
     player_->SetRotate(playerStartRot);
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
 
+    bossController_ = std::make_unique<BossEncounterController>();
+    bossController_->Initialize(
+        stageSettings_.bossType,
+        stageSettings_.bossSpawnDistance,
+        stageSettings_.bossPosition,
+        fearWormEnemyModel_,
+        angerBlockModel_,
+        enemyBulletModel_,
+        player_.get(),
+        rail_.get(),
+        stageId_ == "stage01",
+        kBossRailExtensionBuffer);
+
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     if (!stageSettings_.recoveryItemDistances.empty()) {
         stageSettings_.recoveryItemPositions.clear();
@@ -622,6 +636,14 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
     }
 
     return forward;
+}
+
+StageBoss* GamePlayScene::GetActiveBoss() const
+{
+    if (bossController_ == nullptr) {
+        return nullptr;
+    }
+    return bossController_->GetActiveBoss();
 }
 
 void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const
@@ -766,24 +788,12 @@ void GamePlayScene::Update()
     UpdateSwarmWaveSpawning();
 
     // ボス出現処理
-    if (!isBossSpawned_ && railDistance_ >= stageSettings_.bossSpawnDistance) {
-        if (stageSettings_.bossType == "AngerBlock") {
-            auto angerBoss = std::make_unique<AngerBlockBoss>();
-            angerBoss->Initialize(angerBlockModel_, enemyBulletModel_, player_.get());
-            activeBoss_ = std::move(angerBoss);
-        } else {
-            auto fearWorm = std::make_unique<FearWormEnemy>();
-            fearWorm->Initialize(
-                fearWormEnemyModel_,
-                enemyBulletModel_,
-                player_.get());
-            activeBoss_ = std::move(fearWorm);
-        }
-        activeBoss_->SetPosition(stageSettings_.bossPosition);
-        isBossSpawned_ = true;
-
-        // ボス登場後の余韻フェードアウトノイズ（たっぷり4.5秒間かけて非常にゆっくり滑らかに消えていく）
+    bossController_->Update(railDistance_);
+    if (bossController_->DidSpawnThisFrame()) {
         bossNoiseFadeTimer_ = 4.5f;
+    }
+    if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
+        oceanSurface_->SetLength(rail_->GetTotalLength());
     }
 
     // プレイヤーのHP減少検知による被弾カメラシェイク
@@ -799,21 +809,19 @@ void GamePlayScene::Update()
     }
 
     // ボスの更新
-    if (activeBoss_) {
-        bool wasMadMode = activeBoss_->IsMadModeActive();
-
-        activeBoss_->Update();
+    StageBoss* activeBoss = GetActiveBoss();
+    if (activeBoss != nullptr) {
         UpdateBossHpHud();
 
         // 発狂モードに入った瞬間を検知してカメラシェイクを開始する
-        if (activeBoss_->IsMadModeActive() && !wasMadMode) {
+        if (bossController_->DidEnterMadModeThisFrame()) {
             cameraShakeTime_ = kBossMadShakeDuration;
             cameraShakeDuration_ = kBossMadShakeDuration;
             cameraShakeStrength_ = kBossMadShakeStrength;
         }
 
         // ビーム被弾中のカメラ微振動
-        if (activeBoss_->IsBeamHittingPlayer()) {
+        if (bossController_->IsBeamHittingPlayer()) {
             if (cameraShakeTime_ < kBossBeamShakeDuration ||
                 cameraShakeStrength_ < kBossBeamShakeStrength) {
                 cameraShakeTime_ = kBossBeamShakeDuration;
@@ -824,7 +832,7 @@ void GamePlayScene::Update()
     }
 
     // ボス撃破でディゾルブ消滅演出の完了後にクリアシーンへ遷移
-    if (activeBoss_ && activeBoss_->IsDead()) {
+    if (activeBoss != nullptr && activeBoss->IsDead()) {
         cameraShakeTime_ = 0.0f;
         cameraShakeDuration_ = 0.0f;
         cameraShakeStrength_ = 0.0f;
@@ -832,10 +840,10 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
 
         // 死亡演出(頭部の落下回転)が完了するまでボスのUpdateを回し続ける
-        activeBoss_->Update();
+        bossController_->UpdateDeathSequence();
         EffectManager::GetInstance()->Update();
 
-        if (activeBoss_->IsDeathSequenceFinished()) {
+        if (activeBoss->IsDeathSequenceFinished()) {
             StopPlayerEngineEffects();
             bossDeathDissolveTimer_ += 1.0f / 60.0f;
             float dissolveProgress = bossDeathDissolveTimer_ / 2.0f;
@@ -886,7 +894,7 @@ void GamePlayScene::Update()
 
     gameplayCollisionSystem_->SyncRaycastTargets(
         enemies_,
-        activeBoss_.get());
+        GetActiveBoss());
 
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
@@ -966,7 +974,7 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->AddPostEffect(
                 PostEffectType::Bloom,
                 PostEffectStage::BeforeParticle);
-        } else if (activeBoss_ && !activeBoss_->IsDead()) {
+        } else if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDead()) {
             // ボス戦中: 3Dボスの輝度境界を強調する LuminanceBasedOutline (5点加点) を適用！
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
             SceneManager::GetInstance()->AddPostEffect(
@@ -1138,7 +1146,7 @@ void GamePlayScene::Update()
     const float bossWarningStart = (std::max)(
         0.0f,
         stageSettings_.bossSpawnDistance - 400.0f);
-    if (!isBossSpawned_ && player_ && railDistance_ >= bossWarningStart) {
+    if (!bossController_->IsSpawned() && player_ && railDistance_ >= bossWarningStart) {
         float playerDistance = railDistance_;
         float warningLength =
             stageSettings_.bossSpawnDistance - bossWarningStart;
@@ -1791,8 +1799,8 @@ void GamePlayScene::Draw3D()
         enemy->Draw();
     }
 
-    if (activeBoss_) {
-        activeBoss_->Draw();
+    if (GetActiveBoss() != nullptr) {
+        GetActiveBoss()->Draw();
     }
 
 #ifdef _DEBUG
@@ -1906,7 +1914,7 @@ void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
-    if (!activeBoss_ || !activeBoss_->IsDead()) {
+    if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
         aimSprite_->Draw();
     }
 
@@ -1914,7 +1922,7 @@ void GamePlayScene::Draw2D()
     if (playerHpBgSprite_) playerHpBgSprite_->Draw();
     if (playerHpBarSprite_) playerHpBarSprite_->Draw();
 
-    if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
+    if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
         if (bossHeadHpBgSprite_) bossHeadHpBgSprite_->Draw();
         if (bossHeadHpBarSprite_) bossHeadHpBarSprite_->Draw();
         if (bossBodyHpBgSprite_) bossBodyHpBgSprite_->Draw();
@@ -1940,7 +1948,7 @@ void GamePlayScene::Draw2D()
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
         if (playerHpText_) playerHpText_->Draw();
-        if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
+        if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
             if (bossNameText_) bossNameText_->Draw();
             if (bossHeadHpText_) bossHeadHpText_->Draw();
             if (bossBodyHpText_) bossBodyHpText_->Draw();
@@ -1950,11 +1958,11 @@ void GamePlayScene::Draw2D()
 
 void GamePlayScene::UpdateBossHpHud()
 {
-    if (!activeBoss_) {
+    if (GetActiveBoss() == nullptr) {
         return;
     }
 
-    float headHpFraction = activeBoss_->GetHeadHpFraction();
+    float headHpFraction = GetActiveBoss()->GetHeadHpFraction();
     if (headHpFraction < 0.0f) {
         headHpFraction = 0.0f;
     }
@@ -1962,7 +1970,7 @@ void GamePlayScene::UpdateBossHpHud()
         headHpFraction = 1.0f;
     }
 
-    float bodyHpFraction = activeBoss_->GetBodyHpFraction();
+    float bodyHpFraction = GetActiveBoss()->GetBodyHpFraction();
     if (bodyHpFraction < 0.0f) {
         bodyHpFraction = 0.0f;
     }
@@ -2104,7 +2112,7 @@ void GamePlayScene::DrawImGui()
 #endif
 #ifdef USE_IMGUI
     // ボス出現時、画面上部中央にスタイリッシュな2本の横長HPバーをHUD風にオーバーレイ表示する
-    if (activeBoss_ && !activeBoss_->IsDeathSequenceFinished()) {
+    if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
         ImGuiViewport* viewport = ImGui::GetMainViewport();
         // 画面上部中央付近に横幅550pxで表示
         ImVec2 windowPos = ImVec2(viewport->Pos.x + viewport->Size.x * 0.5f - 275.0f, viewport->Pos.y + 40.0f);
@@ -2126,7 +2134,7 @@ void GamePlayScene::DrawImGui()
             ImGui::PopStyleColor();
 
             // 1. 頭部HPバー (ネオンブルー)
-            float headFraction = activeBoss_->GetHeadHpFraction();
+            float headFraction = GetActiveBoss()->GetHeadHpFraction();
             ImGui::Text("HEAD CORE  ");
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 1.0f, 1.0f)); // ネオンブルー
@@ -2135,7 +2143,7 @@ void GamePlayScene::DrawImGui()
             ImGui::PopStyleColor(2);
 
             // 2. 胴体HPバー (ネオンレッド + 胴体数に応じた9分割の区切り線)
-            float bodyFraction = activeBoss_->GetBodyHpFraction();
+            float bodyFraction = GetActiveBoss()->GetBodyHpFraction();
             ImGui::Text("BODY SHIELD");
             ImGui::SameLine();
             
@@ -2198,10 +2206,10 @@ void GamePlayScene::DrawImGui()
     ImGui::End();
 
     ImGui::Begin("Debug Teleport Menu");
-    if (activeBoss_) {
-        ImGui::Text("Boss Z: %.2f", activeBoss_->GetPosition().z);
+    if (GetActiveBoss() != nullptr) {
+        ImGui::Text("Boss Z: %.2f", GetActiveBoss()->GetPosition().z);
         if (ImGui::Button("Teleport to Boss")) {
-            float bossZ = activeBoss_->GetPosition().z;
+            float bossZ = GetActiveBoss()->GetPosition().z;
             railDistance_ = bossZ - 130.0f;
             if (railDistance_ < 0.0f) {
                 railDistance_ = 0.0f;
@@ -2232,7 +2240,7 @@ void GamePlayScene::CheckCollision()
             gameplayCollisionSystem_->UpdateCombatCollisions(
                 *player_,
                 enemies_,
-                activeBoss_.get());
+                GetActiveBoss());
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
@@ -2361,12 +2369,12 @@ void GamePlayScene::DrawCollisionDebug()
         }
     }
 
-    if (!activeBoss_ || activeBoss_->IsDead()) {
+    if (GetActiveBoss() == nullptr || GetActiveBoss()->IsDead()) {
         return;
     }
 
     collisionParts.clear();
-    activeBoss_->GetCollisionParts(collisionParts);
+    GetActiveBoss()->GetCollisionParts(collisionParts);
     for (const EnemyCollisionPart& part : collisionParts) {
         debugRenderer->AddWireSphere(
             part.position,
@@ -2375,7 +2383,7 @@ void GamePlayScene::DrawCollisionDebug()
             kLineThickness);
     }
 
-    for (const std::unique_ptr<EnemyBullet>& bullet : activeBoss_->GetBullets()) {
+    for (const std::unique_ptr<EnemyBullet>& bullet : GetActiveBoss()->GetBullets()) {
         if (bullet->IsAlive()) {
             debugRenderer->AddWireSphere(
                 bullet->GetPosition(),
@@ -2487,7 +2495,7 @@ void GamePlayScene::UpdateSwarmWaveSpawning()
     if (player_->IsDead()) {
         return;
     }
-    if (isBossSpawned_) {
+    if (bossController_->IsSpawned()) {
         return;
     }
     const std::vector<float>& waveDistances =

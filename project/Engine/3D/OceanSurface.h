@@ -16,6 +16,7 @@ public:
 
     void SetWaveAmplitude(float amplitude) { waveAmplitude_ = amplitude; }
     void SetWaveFrequency(float frequency) { waveFrequency_ = frequency; }
+    void SetLength(float length) { length_ = length; }
 
 private:
     struct Vertex {
