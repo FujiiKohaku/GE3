@@ -10,13 +10,13 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     CreatePostEffectParameterResource();
 
 #if 0
-    maskTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png"); // 繝槭せ繧ｯ繝・け繧ｹ繝√Ε縺ｨ縺励※縲・resources/noise.png"繧剃ｽｿ逕ｨ縺励※縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶る←螳懷､画峩縺励※縺上□縺輔＞縲・
+    maskTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png");
 
-    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl"); // Copy逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲∝腰邏斐↓繝・け繧ｹ繝√Ε繧呈緒逕ｻ縺吶ｋ縺縺代・繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
 
-    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GrayScale.PS.hlsl"); // GrayScale逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε繧偵げ繝ｬ繝ｼ繧ｹ繧ｱ繝ｼ繝ｫ縺ｧ謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GrayScale.PS.hlsl");
 
-    pipelineStates_[PostEffectType::Vignette] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Vignette.PS.hlsl"); // Vignette逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ繝薙ロ繝・ヨ蜉ｹ譫懊ｒ驕ｩ逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::Vignette] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Vignette.PS.hlsl");
 
 #if 0
     pipelineStates_[PostEffectType::DepthOfField] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthOfField.PS.hlsl");
@@ -33,10 +33,10 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 
     pipelineStates_[PostEffectType::ColorAdjust] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/ColorAdjust.PS.hlsl");
 
-    pipelineStates_[PostEffectType::smoothing] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BoxFilter.PS.hlsl"); // smoothing逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ蜊倡ｴ斐↑繝懊ャ繧ｯ繧ｹ繝輔ぅ繝ｫ繧ｿ繧帝←逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::smoothing] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BoxFilter.PS.hlsl");
 
-    pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl"); // GaussianFilter逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ繧ｬ繧ｦ繧ｷ繧｢繝ｳ繝輔ぅ繝ｫ繧ｿ繧帝←逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
-    pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｮ霈晏ｺｦ縺ｫ蝓ｺ縺･縺・※霈ｪ驛ｭ繧呈緒逕ｻ縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl");
+    pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl");
     pipelineStates_[PostEffectType::Bloom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
     pipelineStates_[PostEffectType::LensFlare] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LensFlare.PS.hlsl");
     pipelineStates_[PostEffectType::Glare] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Glare.PS.hlsl");
@@ -350,11 +350,11 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->vignetteStrength = 1.0f;
     postEffectParameterData_->outlineScale = 1000.0f;
     postEffectParameterData_->time = 0.0f;
-    // radialBlur縺ｮ繝代Λ繝｡繝ｼ繧ｿ縺ｮ蛻晄悄蛟､繧りｨｭ螳・
+
     postEffectParameterData_->radialBlurCenter = { 0.5f, 0.5f };
     postEffectParameterData_->radialBlurSampleCount = 32;
     postEffectParameterData_->radialBlurWidth = 0.08f;
-    // Dissolve繧ｨ繝輔ぉ繧ｯ繝医・繝代Λ繝｡繝ｼ繧ｿ縺ｮ蛻晄悄蛟､繧りｨｭ螳・
+
     postEffectParameterData_->dissolveThreshold = 0.5f;
     postEffectParameterData_->dissolveEdgeWidth = 0.05f;
     postEffectParameterData_->dissolveEdgeStrength = 2.0f;

@@ -1,7 +1,6 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Player/Bullet/MissileBullet.h"
 #include "App/Game/Player/Bullet/NormalBullet.h"
-#include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -113,7 +112,11 @@ void Player::Update()
     if (!isDebugMode) {
         UpdateMouseAim();
         UpdateRolling(input);
-        UpdateKeyboardMove(input);
+        if (controlMode_ == ControlMode::StarFox) {
+            UpdateStarFoxMove();
+        } else {
+            UpdateKeyboardMove(input);
+        }
         ClampAimScreenPosition();
     }
 
@@ -377,6 +380,11 @@ void Player::CreateAimRay(Ray& aimRay, const Camera& activeCamera) const
     aimRay.direction = Normalize(farPoint - nearPoint);
 }
 
+void Player::SetMouseSensitivity(float sensitivity)
+{
+    mouseSensitivity_ = std::clamp(sensitivity, 0.5f, 2.0f);
+}
+
 Vector3 Player::CreateConvergencePoint(const Ray& aimRay) const
 {
     return aimRay.origin + aimRay.direction * kAimConvergenceDistance;
@@ -492,6 +500,53 @@ void Player::UpdateKeyboardMove(Input* input)
         nextRailOffset.y -= moveSpeed_;
     }
 
+    railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
+}
+
+void Player::UpdateStarFoxMove()
+{
+    const float screenWidth =
+        static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    const float screenHeight =
+        static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+    if (screenWidth <= 0.0f || screenHeight <= 0.0f) {
+        return;
+    }
+
+    // The cursor behaves like an analog stick: the center is neutral and the
+    // ship moves faster as the cursor gets farther from the center.
+    float inputX = (aimScreenPosition_.x - screenWidth * 0.5f) /
+        (screenWidth * 0.5f);
+    float inputY = (screenHeight * 0.5f - aimScreenPosition_.y) /
+        (screenHeight * 0.5f);
+
+    constexpr float kDeadZone = 0.05f;
+    constexpr float kStarFoxResponse = 2.75f;
+    auto applyDeadZone = [](float value) {
+        const float magnitude = std::abs(value);
+        if (magnitude <= kDeadZone) {
+            return 0.0f;
+        }
+        const float scaled = (magnitude - kDeadZone) / (1.0f - kDeadZone);
+        return std::copysign(scaled, value);
+    };
+
+    inputX = applyDeadZone(std::clamp(
+        inputX * mouseSensitivity_, -1.0f, 1.0f));
+    inputY = applyDeadZone(std::clamp(
+        inputY * mouseSensitivity_, -1.0f, 1.0f));
+
+    constexpr float kSteeringLerpRate = 0.20f;
+    starFoxSteeringInput_.x +=
+        (inputX - starFoxSteeringInput_.x) * kSteeringLerpRate;
+    starFoxSteeringInput_.y +=
+        (inputY - starFoxSteeringInput_.y) * kSteeringLerpRate;
+
+    Vector3 nextRailOffset = railOffset_;
+    nextRailOffset.x +=
+        starFoxSteeringInput_.x * moveSpeed_ * kStarFoxResponse;
+    nextRailOffset.y +=
+        starFoxSteeringInput_.y * moveSpeed_ * kStarFoxResponse;
     railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
 }
 

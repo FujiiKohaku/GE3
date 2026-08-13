@@ -1,17 +1,17 @@
-﻿#include "SphereObject.h"
+#include "SphereObject.h"
 #include "Engine/math/MatrixMath.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
 #include <numbers>
 // ================================
-// 蛻晄悄蛹・
+
 // ================================
 void SphereObject::Initialize(DirectXCommon* dxCommon, int subdivision, float radius)
 {
     dxCommon_ = dxCommon;
 
     // ----------------
-    // 鬆らせ逕滓・
+
     // ----------------
     vertexCount_ = subdivision * subdivision * 6;
     vertices_.resize(vertexCount_);
@@ -50,12 +50,12 @@ void SphereObject::Initialize(DirectXCommon* dxCommon, int subdivision, float ra
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
 
   
-    // 繝・け繧ｹ繝√Ε隱ｭ縺ｿ霎ｼ縺ｿ(繝・ヵ繧ｩ繝ｫ繝医ユ繧ｯ繧ｹ繝√Ε)
+
     SetTexture("resources/Textures/uvChecker.png");
 }
 
 // ================================
-// 譖ｴ譁ｰ・・VP險育ｮ暦ｼ・
+
 // ================================
 void SphereObject::Update(Camera* camera)
 {
@@ -79,7 +79,7 @@ void SphereObject::Update(Camera* camera)
 // ================================
 void SphereObject::Draw(ID3D12GraphicsCommandList* cmd)
 {
-    // Object3d 縺ｨ蜷後§荳ｦ縺ｳ
+
     cmd->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
     cmd->SetGraphicsRootConstantBufferView(1, transformResource_->GetGPUVirtualAddress());
     //  cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
@@ -93,7 +93,7 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
 {
     // 邨悟ｺｦ(360)
     const float kLonEvery = static_cast<float>(std::numbers::pi_v<float> * 2.0f) / kSubdivision;
-    // 邱ｯ蠎ｦ(180)
+
     const float kLatEvery = static_cast<float>(std::numbers::pi_v<float>) / kSubdivision;
 
     for (int latIndex = 0; latIndex < kSubdivision; ++latIndex) {
@@ -104,7 +104,7 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
 
             float lon = kLonEvery * lonIndex;
 
-            // --------- 豕慕ｷ夲ｼ亥濠蠕・縺ｮ逅・ｼ・--------
+
             Vector3 nA {
                 cosf(lat) * cosf(lon),
                 sinf(lat),
@@ -129,7 +129,7 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
                 cosf(lat + kLatEvery) * sinf(lon + kLonEvery)
             };
 
-            // --------- 鬆らせ ---------
+
             VertexData vertA {
                 radius * nA.x, radius * nA.y, radius * nA.z, 1.0f,
                 { float(lonIndex) / kSubdivision,
@@ -158,7 +158,7 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
                 nD
             };
 
-            // --------- 譖ｸ縺崎ｾｼ縺ｿ ---------
+
             uint32_t startIndex = (latIndex * kSubdivision + lonIndex) * 6;
 
             vertices[startIndex + 0] = vertA;
@@ -173,10 +173,10 @@ void SphereObject::GenerateSphereVertices(VertexData* vertices, int kSubdivision
 
 void SphereObject::SetTexture(const std::string& filePath)
 {
-    // 縺吶〒縺ｫ隱ｭ縺ｿ霎ｼ縺ｾ繧後※縺・↑縺代ｌ縺ｰ繝ｭ繝ｼ繝・
+
     TextureManager::GetInstance()->LoadTexture(filePath);
 
-    // GPU逕ｨSRV繝上Φ繝峨Ν繧貞叙蠕励＠縺ｦ菫晄戟
+
     textureSrvHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU(filePath);
 }
 SphereObject::~SphereObject()

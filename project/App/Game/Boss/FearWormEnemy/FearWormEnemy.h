@@ -1,12 +1,12 @@
 #pragma once
 
-#include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Boss/StageBoss.h"
 
 class Model;
 class Object3d;
 class Player;
 
-class FearWormEnemy : public BaseEnemy {
+class FearWormEnemy : public StageBoss {
 public:
     enum class BossState {
         Wait,    // プレイヤーを待つ待機状態
@@ -27,7 +27,7 @@ public:
     void Draw() override;
 
     // 撃破演出が完了してシーン遷移可能かを返す。
-    bool IsDeathSequenceFinished() const;
+    bool IsDeathSequenceFinished() const override;
 
     // 頭部をボスの代表位置として返す。
     Vector3 GetPosition() const override;
@@ -49,12 +49,12 @@ public:
 
     // 現在の状態を取得する
     BossState GetBossState() const { return state_; }
-    bool IsMadModeActive() const { return isMadModeActive_; }
-    bool IsBeamHittingPlayer() const { return isBeamHittingPlayer_; }
+    bool IsMadModeActive() const override { return isMadModeActive_; }
+    bool IsBeamHittingPlayer() const override { return isBeamHittingPlayer_; }
 
     // HP割合のGetter
-    float GetHeadHpFraction() const;
-    float GetBodyHpFraction() const;
+    float GetHeadHpFraction() const override;
+    float GetBodyHpFraction() const override;
 
 private:
     enum class MovementPattern {

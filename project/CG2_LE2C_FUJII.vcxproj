@@ -163,7 +163,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\CollisionManager\CollisionLayer.h" />
+    <ClCompile Include="App\Game\Collision\GameplayCollisionSystem.cpp" />
     <ClCompile Include="App\Scene\LoadingScene.cpp" />
+    <ClCompile Include="App\Scene\StageSelectScene.cpp" />
+    <ClCompile Include="App\Game\Stage\StageCatalog.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
@@ -245,6 +249,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\2D\Text\Utf8Utility.cpp" />
     <ClCompile Include="Engine\3D\Object3dManager.cpp" />
     <ClCompile Include="Engine\3D\Object3d.cpp" />
+    <ClCompile Include="Engine\3D\OceanSurface.cpp" />
+    <ClCompile Include="Engine\3D\WaterPillarRenderer.cpp" />
     <ClCompile Include="Engine\3D\ModelCommon.cpp" />
     <ClCompile Include="Engine\3D\ModelManager.cpp" />
     <ClCompile Include="Engine\3D\SphereObject.cpp" />
@@ -270,6 +276,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="Engine\Winapp\WinApp.cpp" />
     <ClCompile Include="App\Game\Player\Player.cpp" />
+    <ClCompile Include="App\Game\Hazard\WaterPillarHazard.cpp" />
+    <ClCompile Include="App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.cpp" />
     <ClCompile Include="App\Game\Boss\BaseBoss.cpp" />
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
@@ -294,6 +302,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
+    <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp" />
+    <ClCompile Include="App\Game\Boss\BossEncounterController.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
@@ -317,7 +327,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="App\Game\Collision\GameplayCollisionSystem.h" />
     <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h" />
+    <ClInclude Include="App\Game\Hazard\WaterPillarHazard.h" />
+    <ClInclude Include="App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.h" />
     <ClInclude Include="App\Scene\ClearScene.h" />
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h" />
@@ -368,6 +381,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
+    <ClInclude Include="App\Scene\StageSelectScene.h" />
+    <ClInclude Include="App\Game\Stage\StageCatalog.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
     <ClInclude Include="App\Scene\Game.h" />
     <ClInclude Include="Engine\Debug\Profiler\Profiler.h" />
@@ -393,6 +408,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\2D\Text\Utf8Utility.h" />
     <ClInclude Include="Engine\3D\Object3dManager.h" />
     <ClInclude Include="Engine\3D\Object3d.h" />
+    <ClInclude Include="Engine\3D\OceanSurface.h" />
+    <ClInclude Include="Engine\3D\WaterPillarRenderer.h" />
     <ClInclude Include="Engine\3D\ModelCommon.h" />
     <ClInclude Include="Engine\3D\ModelManager.h" />
     <ClInclude Include="Engine\3D\SphereObject.h" />
@@ -436,6 +453,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
+    <ClInclude Include="App\Game\Boss\StageBoss.h" />
+    <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h" />
+    <ClInclude Include="App\Game\Boss\BossEncounterController.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
   </ItemGroup>

@@ -1,7 +1,9 @@
 #include "ModelManager.h"
 #include "Engine/Animation/Event/AnimationEventLoader.h"
 #include "Engine/math/MatrixMath.h"
+#include <cmath>
 #include <filesystem>
+#include <numbers>
 #include <utility>
 
 namespace {
@@ -55,6 +57,44 @@ ModelData CreatePlaneModelData(const std::string& texturePath, float tilingX, fl
     modelData.materials.push_back(material);
     SetupDefaultRootNode(modelData, "Plane");
 
+    return modelData;
+}
+
+ModelData CreateCylinderModelData(const std::string& texturePath, uint32_t divisions)
+{
+    if (divisions < 3u) {
+        divisions = 3u;
+    }
+
+    ModelData modelData {};
+    MeshPrimitive primitive {};
+    primitive.mode = PrimitiveMode::Triangles;
+
+    const float angleStep = 2.0f * std::numbers::pi_v<float> / static_cast<float>(divisions);
+    for (uint32_t index = 0; index <= divisions; ++index) {
+        const float angle = static_cast<float>(index) * angleStep;
+        const float x = std::sin(angle);
+        const float z = std::cos(angle);
+        const float u = static_cast<float>(index) / static_cast<float>(divisions);
+
+        primitive.vertices.push_back({ { x, 1.0f, z, 1.0f }, { u, 0.0f }, { x, 0.0f, z } });
+        primitive.vertices.push_back({ { x, 0.0f, z, 1.0f }, { u, 1.0f }, { x, 0.0f, z } });
+    }
+
+    for (uint32_t index = 0; index < divisions; ++index) {
+        const uint32_t top0 = index * 2;
+        const uint32_t bottom0 = top0 + 1;
+        const uint32_t top1 = top0 + 2;
+        const uint32_t bottom1 = top0 + 3;
+        primitive.indices.insert(primitive.indices.end(), {
+            top0, top1, bottom0,
+            bottom0, top1, bottom1
+        });
+    }
+
+    modelData.primitives.push_back(std::move(primitive));
+    modelData.materials.push_back({ texturePath });
+    SetupDefaultRootNode(modelData, "Cylinder");
     return modelData;
 }
 }
@@ -117,6 +157,23 @@ Model* ModelManager::CreatePlane(const std::string& texturePath, float tilingX, 
     ModelData modelData = CreatePlaneModelData(actualTexturePath, tilingX, tilingY);
     auto model = std::make_unique<Model>();
     model->Initialize(modelCommon_.get(), modelData);
+
+    Model* raw = model.get();
+    models_.emplace(key, std::move(model));
+    return raw;
+}
+
+Model* ModelManager::CreateCylinder(const std::string& texturePath, uint32_t divisions)
+{
+    const std::string actualTexturePath = texturePath.empty() ? kDefaultPlaneTexture : texturePath;
+    const std::string key = "Primitive/Cylinder/" + actualTexturePath + "_" + std::to_string(divisions);
+    const auto it = models_.find(key);
+    if (it != models_.end()) {
+        return it->second.get();
+    }
+
+    auto model = std::make_unique<Model>();
+    model->Initialize(modelCommon_.get(), CreateCylinderModelData(actualTexturePath, divisions));
 
     Model* raw = model.get();
     models_.emplace(key, std::move(model));

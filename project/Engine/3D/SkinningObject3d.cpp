@@ -20,7 +20,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     // Manager を保持
     skinningObject3dManager_ = skinningObject3DManager;
 
-    // チE��ォルトカメラ取征E
+
     camera_ = skinningObject3dManager_->GetDefaultCamera();
 
     // ================================
@@ -88,7 +88,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     };
 
     skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData());
-    // すきんぐりんぐ�Eリソースを作�E
+
     CreateSkinningResources();
 
    // TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
@@ -113,7 +113,7 @@ void SkinningObject3d::Update()
     }
 
     // ================================
-    // 吁E��行�Eを作�E
+
     // ================================
 
     Matrix4x4 baseMatrix = MatrixMath::MakeAffineMatrix(
@@ -138,15 +138,15 @@ void SkinningObject3d::Update()
     }
 
     // ================================
-    // WVP行�Eを計算して転送E
+
     // ================================
     transformationMatrixData->WVP = worldViewProjectionMatrix;
 
-    // ワールド行�Eも送る�E�ライチE��ングなどで使用�E�E
-    // ワールド行�Eも送る�E�ライチE��ングなどで使用�E�E
+
+
     transformationMatrixData->World = worldMatrix_;
 
-    //  ここが重要E��World の送E��置
+
     Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
     transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
 
@@ -252,7 +252,7 @@ void SkinningObject3d::CreateSkinningResources()
     paletteResource_ = skinClusterData_.paletteResource;
 
     // =====================================================
-    // 入力頂点バッファを�E前で作る
+
     // 全 primitive の頂点めE本にまとめる
     // =====================================================
     inputVertexResource_ = skinningObject3dManager_->GetDxCommon()->CreateBufferResource(bufferSize);
@@ -280,7 +280,7 @@ void SkinningObject3d::CreateSkinningResources()
     assert(copyOffset == vertexCount);
 
     // =====================================================
-    // Skinning結果を書き込む出力バチE��ァ
+
     // =====================================================
     D3D12_HEAP_PROPERTIES heapProperties = {};
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -431,7 +431,7 @@ void SkinningObject3d::DispatchSkinning()
     ID3D12DescriptorHeap* descriptorHeaps[] = { SrvManager::GetInstance()->GetDescriptorHeap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
     // =========================================
-    // SRV / UAV セチE��
+
     // t0 : input vertex
     // t1 : influence
     // t2 : palette

@@ -172,6 +172,22 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
             objectData.trigger.size.y = trigger["size"][2].get<float>();
             objectData.trigger.size.z = trigger["size"][1].get<float>();
         }
+        if (trigger.contains("force")) {
+            objectData.trigger.force.x = trigger["force"][0].get<float>();
+            objectData.trigger.force.y = trigger["force"][2].get<float>();
+            objectData.trigger.force.z = trigger["force"][1].get<float>();
+        }
+    }
+
+    if (objectJson.contains("hazard")) {
+        const nlohmann::json& hazard = objectJson["hazard"];
+        objectData.hazard.exists = true;
+        if (hazard.contains("type")) {
+            objectData.hazard.type = hazard["type"].get<std::string>();
+        }
+        if (hazard.contains("damage")) {
+            objectData.hazard.damage = hazard["damage"].get<int>();
+        }
     }
 
     if (objectJson.contains("gimmick")) {
@@ -187,6 +203,19 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
             objectData.gimmick.range.x = gimmick["range"][0].get<float>();
             objectData.gimmick.range.y = gimmick["range"][2].get<float>();
             objectData.gimmick.range.z = gimmick["range"][1].get<float>();
+        }
+        if (gimmick.contains("axis")) {
+            objectData.gimmick.axis.x = gimmick["axis"][0].get<float>();
+            objectData.gimmick.axis.y = gimmick["axis"][2].get<float>();
+            objectData.gimmick.axis.z = gimmick["axis"][1].get<float>();
+        }
+    }
+
+    if (objectJson.contains("destructible")) {
+        const nlohmann::json& destructible = objectJson["destructible"];
+        objectData.destructible.exists = true;
+        if (destructible.contains("hp")) {
+            objectData.destructible.hp = destructible["hp"].get<float>();
         }
     }
 

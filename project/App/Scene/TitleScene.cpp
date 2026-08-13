@@ -8,6 +8,7 @@
 #include "Engine/input/Input.h"
 #include "GamePlayScene.h"
 #include "LoadingScene.h"
+#include "StageSelectScene.h"
 #include "SpriteTestScene.h"
 #include "TestScene1.h"
 #include "TextTestScene.h"
@@ -86,7 +87,7 @@ void TitleScene::Initialize()
 
     gamePlayButtonText_ = std::make_unique<Text>();
     gamePlayButtonText_->Initialize(kDefaultFont);
-    gamePlayButtonText_->SetText("GamePlayScene");
+    gamePlayButtonText_->SetText("STAGE SELECT");
     gamePlayButtonText_->SetPosition({
         kGamePlayButtonLeft + kButtonWidth * 0.5f,
         kButtonTop + kButtonHeight * 0.5f
@@ -262,7 +263,8 @@ void TitleScene::Update()
         const int releasedButtonIndex = pressedButtonIndex_;
         pressedButtonIndex_ = -1;
         if (releasedButtonIndex == 0 && isGamePlayHovered) {
-            SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>();
+            SceneManager::GetInstance()->SetNextScene(
+                std::make_unique<StageSelectScene>());
         } else if (releasedButtonIndex == 1 && isTestHovered) {
             SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, TestScene1>();
         } else if (releasedButtonIndex == 2 && isSpriteTestHovered) {

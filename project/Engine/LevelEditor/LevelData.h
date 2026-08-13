@@ -35,14 +35,27 @@ struct LevelData {
             std::string name;
             Vector3 center;
             Vector3 size;
+            Vector3 force;
         } trigger;
+
+        struct HazardData {
+            bool exists = false;
+            std::string type;
+            int damage = 1;
+        } hazard;
 
         struct GimmickData {
             bool exists = false;
             std::string type;
             float speed = 0.0f;
             Vector3 range;
+            Vector3 axis = { 0.0f, 1.0f, 0.0f };
         } gimmick;
+
+        struct DestructibleData {
+            bool exists = false;
+            float hp = 1.0f;
+        } destructible;
 
         struct CameraPointData {
             bool exists = false;

@@ -15,6 +15,8 @@
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/3D/OceanSurface.h"
+#include "Engine/3D/WaterPillarRenderer.h"
 
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Rail/Rail.h"
@@ -29,10 +31,14 @@
 #include "Engine/Animation/AnimationActor.h"
 
 #include "App/Game/Player/Player.h"
+#include "App/Game/Collision/GameplayCollisionSystem.h"
+#include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Hazard/WaterPillarHazard.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Engine/EditorManager/EditorManager.h"
@@ -44,12 +50,17 @@
 #include "App/Game/Enemy/Types/NormalEnemy.h"
 #include "App/Game/Enemy/Types/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
-#include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
+#include "App/Game/Boss/BossEncounterController.h"
+#include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
 
 struct LevelData;
 
 class GamePlayScene : public BaseScene {
 public:
+    explicit GamePlayScene(const std::string& stageId = "stage01")
+        : stageId_(stageId) {}
+
     void Initialize() override;
 
     void Finalize() override;
@@ -62,16 +73,21 @@ public:
     void DrawImGui() override;
 
 private:
+    std::string stageId_ = "stage01";
+    StageSettings stageSettings_;
+
     void CreateLevelObjects(const LevelData& levelData);
     void ClearLevelObjects();
     void HotReloadLevel();
     void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
+    void StartPaintHitEffect();
 #ifdef _DEBUG
     void DrawCollisionDebug();
 #endif
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
+    StageBoss* GetActiveBoss() const;
 
     // Updateメソッドの処理分割用ヘルパー関数
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
@@ -91,8 +107,12 @@ private:
         int32_t travelDirection);
     void InitializeRecoveryItems(Model* model);
     void UpdateRecoveryItems();
+    void InitializeOceanLife();
+    void InitializeWaterPillars();
+    void UpdateOceanLife(const Vector3& railPosition, const Vector3& forward, const Vector3& railRight);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
+    std::unique_ptr<GameplayCollisionSystem> gameplayCollisionSystem_;
 
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
@@ -113,11 +133,23 @@ private:
     // std::unique_ptr<Object3d> terrain_;
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;
+    std::unique_ptr<OceanSurface> oceanSurface_;
+    std::unique_ptr<WaterPillarRenderer> waterPillarRenderer_;
+    std::vector<std::unique_ptr<Object3d>> oceanFish_;
+    std::vector<std::unique_ptr<Object3d>> oceanBirds_;
+    std::vector<std::unique_ptr<WaterPillarHazard>> waterPillars_;
+    float oceanLifeTime_ = 0.0f;
+    float fishSchoolTimer_ = 0.0f;
+    float fishSchoolCooldown_ = 5.0f;
+    bool isFishSchoolActive_ = false;
+    bool fishSchoolFromLeft_ = true;
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
+    std::vector<DestructibleLevelObject> destructibleLevelObjects_;
+    std::vector<StageTrigger> stageTriggers_;
 
     struct RecoveryItem {
         std::unique_ptr<Object3d> object;
@@ -175,7 +207,6 @@ private:
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
-    EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
     bool wasBoostingForKick_ = false;
     bool isRandomPostEffect_ = false;
@@ -212,18 +243,24 @@ private:
     Model* enemyModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
     Model* fearWormEnemyModel_ = nullptr;
+    Model* angerBlockModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
-    static constexpr float kCameraUpwardOffset = 6.0f;
+    // EXZODIAC-like low chase view: keep the eye slightly below the rail
+    // center so the player is framed against the horizon instead of seen
+    // from above.
+    static constexpr float kCameraUpwardOffset = 1.0f;
 
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;
     float cameraLookUpFactor_ = 0.7f;
+    float cameraHorizontalFollowFactor_ = 0.2f;
+    float cameraLookHorizontalFactor_ = 0.35f;
 
     // ボス戦用
-    std::unique_ptr<FearWormEnemy> activeBoss_;
-    bool isBossSpawned_ = false;
+    std::unique_ptr<BossEncounterController> bossController_;
+    bool isPirateShipMidBossSpawned_ = false;
 
     // カメラシェイク演出用
     float cameraShakeTime_ = 0.0f;
@@ -257,12 +294,15 @@ private:
     std::unique_ptr<Sprite> pauseResumeBtnSprite_;
     std::unique_ptr<Sprite> pauseRetryBtnSprite_;
     std::unique_ptr<Sprite> pauseTitleBtnSprite_;
+    std::unique_ptr<Sprite> pauseControlBtnSprite_;
 
     // ポーズ用日本語テキストUI（Textクラス）
     std::unique_ptr<Text> pauseTitleText_;
     std::unique_ptr<Text> pauseResumeText_;
     std::unique_ptr<Text> pauseRetryText_;
     std::unique_ptr<Text> pauseTitleBtnText_;
+    std::unique_ptr<Text> pauseControlText_;
+    std::unique_ptr<Text> pauseSensitivityText_;
 
     // 画面右側のプレイヤーHPゲージUI
     std::unique_ptr<Sprite> playerHpBgSprite_;

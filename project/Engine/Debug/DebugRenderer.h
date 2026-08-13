@@ -62,6 +62,15 @@ public:
         float thickness = 1.0f,
         uint32_t segmentCount = 24);
 
+    void AddWireOBB(
+        const Vector3& center,
+        const Vector3& size,
+        const Vector3& axisX,
+        const Vector3& axisY,
+        const Vector3& axisZ,
+        const Vector4& color,
+        float thickness = 1.0f);
+
     void AddSkeleton(
         const Skeleton& skeleton,
         const Matrix4x4& worldMatrix);

@@ -1,0 +1,21 @@
+{
+  "id": "stage01",
+  "name": "FIRST FLIGHT",
+  "description": "Fly through the block gates and defeat Fear Worm.",
+  "layout": "resources/Scenes/stage01.json",
+  "rail": { "length": 4600.0, "point_interval": 50.0, "speed": 0.5 },
+  "boss": {
+    "type": "FearWorm",
+    "spawn_distance": 1850.0,
+    "position": [0.0, 2.0, 1850.0]
+  },
+  "environment": {
+    "skybox": "resources/Textures/skybox.dds",
+    "bgm": "resources/Sounds/BGM.wav",
+    "floor_texture": "resources/Textures/floor_dirt_gemini.jpg",
+    "floor_height": -30.0
+  },
+  "swarm_wave_distances": [260.0, 620.0, 980.0, 1340.0, 1560.0, 1740.0],
+  "recovery_items": [[-5.0, 1.5, 410.0], [5.0, 1.5, 1040.0], [0.0, 5.0, 1700.0]],
+  "paint_enemy_distances": [170.0, 420.0, 660.0, 1210.0, 1530.0]
+}

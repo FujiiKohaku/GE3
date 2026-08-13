@@ -1,0 +1,44 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Cylinder",
+    "Count": 6,
+    "Radius": 3.2,
+    "Frequency": 0.08
+  },
+  "Particle": {
+    "LifeTime": 1.15,
+    "StartScale": 0.19,
+    "EndScale": 0.055,
+    "StartRotation": 0.0,
+    "RotationSpeed": 0.0,
+    "Velocity": [0.0, 1.0, 0.0],
+    "StartColor": [0.58, 0.91, 1.0, 0.82],
+    "EndColor": [0.78, 0.97, 1.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+    "EnableDrag": true,
+    "Drag": 0.965,
+    "EnableNoise": false,
+    "NoiseStrength": 0.0,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "../../Textures/white.png",
+    "MeshType": "Sphere",
+    "BlendMode": "Alpha",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": true,
+    "Duration": -1.0
+  }
+}

@@ -185,6 +185,38 @@ void DebugRenderer::AddWireSphere(
     }
 }
 
+void DebugRenderer::AddWireOBB(
+    const Vector3& center,
+    const Vector3& size,
+    const Vector3& axisX,
+    const Vector3& axisY,
+    const Vector3& axisZ,
+    const Vector4& color,
+    float thickness)
+{
+    const Vector3 halfAxisX = axisX * (std::abs(size.x) * 0.5f);
+    const Vector3 halfAxisY = axisY * (std::abs(size.y) * 0.5f);
+    const Vector3 halfAxisZ = axisZ * (std::abs(size.z) * 0.5f);
+    const Vector3 corners[8] = {
+        center - halfAxisX - halfAxisY - halfAxisZ,
+        center + halfAxisX - halfAxisY - halfAxisZ,
+        center + halfAxisX + halfAxisY - halfAxisZ,
+        center - halfAxisX + halfAxisY - halfAxisZ,
+        center - halfAxisX - halfAxisY + halfAxisZ,
+        center + halfAxisX - halfAxisY + halfAxisZ,
+        center + halfAxisX + halfAxisY + halfAxisZ,
+        center - halfAxisX + halfAxisY + halfAxisZ
+    };
+    static constexpr uint32_t kEdges[12][2] = {
+        { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 },
+        { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 },
+        { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 }
+    };
+    for (const auto& edge : kEdges) {
+        AddLine(corners[edge[0]], corners[edge[1]], color, thickness);
+    }
+}
+
 void DebugRenderer::AddSkeleton(
     const Skeleton& skeleton,
     const Matrix4x4& worldMatrix)

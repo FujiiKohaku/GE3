@@ -10,6 +10,7 @@
 #include <vector>
 #include <wrl.h>
 #include "Engine/LevelEditor/LevelData.h"
+#include "Engine/CollisionManager/BoxCollider.h"
 
 #include "../Animation/PlayAnimation.h"
 #include "Engine/math/object3Dstruct.h"
@@ -113,7 +114,17 @@ public:
     }
     const LevelData::ObjectData::GimmickData& GetGimmick() const { return gimmick_; }
 
-    void SetCollider(BoxCollider* collider) { collider_ = collider; }
+    void SetCollisionDamage(int damage) { collisionDamage_ = damage > 0 ? damage : 1; }
+    int GetCollisionDamage() const { return collisionDamage_; }
+
+    void SetCollider(BoxCollider* collider)
+    {
+        collider_ = collider;
+        if (collider_ != nullptr) {
+            colliderOffset_ = collider_->GetCenter() - transform.translate;
+            collider_->SetRotation(transform.rotate);
+        }
+    }
     BoxCollider* GetCollider() const { return collider_; }
 
 private:
@@ -160,5 +171,7 @@ private:
     LevelData::ObjectData::GimmickData gimmick_ {};
     Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };
     float gimmickTime_ = 0.0f;
+    int collisionDamage_ = 1;
     BoxCollider* collider_ = nullptr;
+    Vector3 colliderOffset_ = { 0.0f, 0.0f, 0.0f };
 };
