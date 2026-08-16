@@ -1383,16 +1383,6 @@ Vector3 FearWormEnemy::SpiralTargetPosition(const Vector3& playerPosition) const
 }
 
 namespace {
-// プレイヤー狙い補正用の外積ヘルパー関数
-Vector3 Cross(const Vector3& a, const Vector3& b)
-{
-    return {
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x
-    };
-}
-
 // 任意軸まわりの回転行列を生成する関数 (ロドリゲスの回転公式)
 Matrix4x4 MakeRotateAxisAngleMatrix(const Vector3& axis, float angle)
 {

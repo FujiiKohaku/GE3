@@ -89,9 +89,10 @@ void BaseBullet::SetTranslate(const Vector3& translate)
 
 void BaseBullet::Move()
 {
-    transform_.translate.x += velocity_.x;
-    transform_.translate.y += velocity_.y;
-    transform_.translate.z += velocity_.z;
+    const float timeScale = GetTimeScale();
+    transform_.translate.x += velocity_.x * timeScale;
+    transform_.translate.y += velocity_.y * timeScale;
+    transform_.translate.z += velocity_.z * timeScale;
 }
 
 void BaseBullet::SetDead()
