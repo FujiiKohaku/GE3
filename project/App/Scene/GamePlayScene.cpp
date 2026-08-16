@@ -35,6 +35,28 @@ namespace {
 Player::ControlMode gControlMode = Player::ControlMode::KeyboardAndMouse;
 float gMouseSensitivity = 1.0f;
 
+struct DemoTourShot {
+    const char* title;
+    Vector3 eye;
+    Vector3 target;
+};
+
+constexpr DemoTourShot kDemoTourShots[] = {
+    { "01  LOADER / OBJECT PLACEMENT", { 0.0f, 18.0f, -35.0f }, { 0.0f, 1.0f, 3.0f } },
+    { "02  BOX COLLIDER", { -3.0f, 8.0f, -12.0f }, { -3.0f, 1.0f, 5.0f } },
+    { "03  HOT RELOAD (EDIT IN BLENDER, THEN F5)", { -9.0f, 8.0f, -22.0f }, { -9.0f, 1.0f, -5.0f } },
+    { "04  DISABLED FLAG (OBJECT IS NOT RENDERED)", { 3.0f, 8.0f, -12.0f }, { 3.0f, 1.0f, 5.0f } },
+    { "05  PLAYER / ENEMY SPAWN POINTS", { 1.0f, 8.0f, -22.0f }, { 1.0f, 0.0f, -5.0f } },
+    { "06  EVENT TRIGGER / WIND FORCE", { 0.0f, 8.0f, -32.0f }, { 0.0f, 1.0f, -15.0f } },
+    { "07  MOVE / ROTATION GIMMICKS", { 0.0f, 12.0f, -30.0f }, { 0.0f, 1.0f, 3.0f } },
+    { "08  CAMERA POINT / FOV", { 0.0f, 20.0f, -30.0f }, { 0.0f, 0.0f, 4.0f } },
+    { "09  ENEMY PATROL ROUTE", { 0.0f, 12.0f, -24.0f }, { 0.0f, 0.0f, 0.0f } },
+    { "10  TERRAIN / OBJ EXPORT", { 0.0f, 10.0f, 0.0f }, { 0.0f, -2.0f, 20.0f } },
+    { "11  MESH SYNC FLAG", { -7.0f, 8.0f, -32.0f }, { -7.0f, 1.0f, -15.0f } },
+};
+constexpr size_t kDemoTourShotCount =
+    sizeof(kDemoTourShots) / sizeof(kDemoTourShots[0]);
+
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
 constexpr float kBoostPostEffectBaseWeight = 0.40f;
@@ -383,6 +405,24 @@ void GamePlayScene::Initialize()
     playerHpText_->SetFontSize(20.0f);
     playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     playerHpText_->Update();
+
+    if (stageId_ == "demo_stage") {
+        demoFeatureText_ = std::make_unique<Text>();
+        demoFeatureText_->Initialize(kDefaultFont);
+        demoFeatureText_->SetText(kDemoTourShots[0].title);
+        demoFeatureText_->SetPosition({ 40.0f, 105.0f });
+        demoFeatureText_->SetFontSize(30.0f);
+        demoFeatureText_->SetColor({ 0.30f, 0.90f, 1.0f, 1.0f });
+        demoFeatureText_->Update();
+
+        demoFeatureHelpText_ = std::make_unique<Text>();
+        demoFeatureHelpText_->Initialize(kDefaultFont);
+        demoFeatureHelpText_->SetText("P: PREVIOUS    N: NEXT    F5: HOT RELOAD");
+        demoFeatureHelpText_->SetPosition({ 40.0f, 145.0f });
+        demoFeatureHelpText_->SetFontSize(20.0f);
+        demoFeatureHelpText_->SetColor({ 1.0f, 1.0f, 1.0f, 0.90f });
+        demoFeatureHelpText_->Update();
+    }
 
     const float bossHudCenterX = WinApp::GetInstance()->kClientWidth / 2.0f;
     const float bossHpBarLeft = bossHudCenterX - 170.0f;
@@ -1472,18 +1512,61 @@ void GamePlayScene::UpdateCamera(
     float nextRailDistance,
     Input* input)
 {
+    if (stageId_ == "demo_stage") {
+        if (input != nullptr && input->IsKeyTrigger(DIK_P)) {
+            if (demoFeatureIndex_ == 0) {
+                demoFeatureIndex_ = kDemoTourShotCount - 1;
+            } else {
+                demoFeatureIndex_ -= 1;
+            }
+        }
+        if (input != nullptr && input->IsKeyTrigger(DIK_N)) {
+            demoFeatureIndex_ += 1;
+            if (demoFeatureIndex_ >= kDemoTourShotCount) {
+                demoFeatureIndex_ = 0;
+            }
+        }
+
+        const DemoTourShot& shot = kDemoTourShots[demoFeatureIndex_];
+        Vector3 eye = shot.eye;
+        Vector3 target = shot.target;
+        float fovY = normalFovY_;
+
+        if (demoFeatureIndex_ == 7 && hasCameraPoint_) {
+            eye = cameraPointObject_.translation;
+            target = cameraPointObject_.cameraPoint.target;
+            if (cameraPointObject_.cameraFovPoint.exists) {
+                fovY = cameraPointObject_.cameraFovPoint.fov *
+                    std::numbers::pi_v<float> / 180.0f;
+            }
+        }
+
+        camera_->SetFovY(fovY);
+        camera_->LookAt(eye, target);
+        camera_->Update();
+        if (demoFeatureText_) {
+            demoFeatureText_->SetText(shot.title);
+            demoFeatureText_->Update();
+        }
+        return;
+    }
+
     // カメラポイント補間の適用
-    if (cameraPointObject_) {
+    if (hasCameraPoint_) {
         float deltaTime = 1.0f / 60.0f;
         cameraPointLerpTime_ += deltaTime;
-        float t = cameraPointLerpTime_ / cameraPointObject_->cameraPoint.moveTime;
+        float moveTime = cameraPointObject_.cameraPoint.moveTime;
+        if (moveTime <= 0.0f) {
+            moveTime = 1.0f;
+        }
+        float t = cameraPointLerpTime_ / moveTime;
         if (t > 1.0f) {
             t = 1.0f;
         }
 
         // カメラ位置の補間
         Vector3 currentEye = camera_->GetTranslate();
-        Vector3 targetEye = cameraPointObject_->translation;
+        Vector3 targetEye = cameraPointObject_.translation;
         Vector3 eye = {
             currentEye.x + (targetEye.x - currentEye.x) * t,
             currentEye.y + (targetEye.y - currentEye.y) * t,
@@ -1492,7 +1575,7 @@ void GamePlayScene::UpdateCamera(
 
         // カメラ注視点の補間
         Vector3 currentTarget = smoothedLookAheadPosition_;
-        Vector3 targetTarget = cameraPointObject_->cameraPoint.target;
+        Vector3 targetTarget = cameraPointObject_.cameraPoint.target;
         Vector3 target = {
             currentTarget.x + (targetTarget.x - currentTarget.x) * t,
             currentTarget.y + (targetTarget.y - currentTarget.y) * t,
@@ -1500,6 +1583,7 @@ void GamePlayScene::UpdateCamera(
         };
 
         camera_->LookAt(eye, target);
+        camera_->Update();
         return;
     }
 
@@ -1901,6 +1985,8 @@ void GamePlayScene::Draw2D()
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
         if (playerHpText_) playerHpText_->Draw();
+        if (demoFeatureText_) demoFeatureText_->Draw();
+        if (demoFeatureHelpText_) demoFeatureHelpText_->Draw();
         if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
             if (bossNameText_) bossNameText_->Draw();
             if (bossHeadHpText_) bossHeadHpText_->Draw();
@@ -2702,7 +2788,8 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
 
 void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 {
-    cameraPointObject_ = nullptr;
+    hasCameraPoint_ = false;
+    cameraPointObject_ = {};
     cameraPointLerpTime_ = 0.0f;
 
     for (const LevelData::ObjectData& objData : levelData.objects) {
@@ -2711,7 +2798,8 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
         }
 
         if (objData.cameraPoint.exists) {
-            cameraPointObject_ = &objData;
+            cameraPointObject_ = objData;
+            hasCameraPoint_ = true;
             cameraPointLerpTime_ = 0.0f;
         }
 
