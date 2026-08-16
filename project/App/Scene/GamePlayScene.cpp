@@ -61,7 +61,8 @@ constexpr float kRecoveryItemBobSpeed = 0.045f;
 constexpr float kRecoveryItemBobHeight = 0.65f;
 constexpr int32_t kRecoveryItemHealAmount = 5;
 constexpr int32_t kSwarmMembersPerWave = 18;
-constexpr float kBossRailExtensionBuffer = 1200.0f;
+constexpr float kJustDodgeSlowDuration = 1.0f;
+constexpr float kJustDodgeEnemyBulletTimeScale = 0.35f;
 
 Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
 {
@@ -86,6 +87,7 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 
 void GamePlayScene::Initialize()
 {
+    EnemyBullet::SetTimeScale(1.0f);
     StageCatalog* stageCatalog = StageCatalog::GetInstance();
     if (!stageCatalog->Load()) {
         Logger::Log(stageCatalog->GetLastError());
@@ -100,6 +102,7 @@ void GamePlayScene::Initialize()
     } else {
         stageSettings_.id = "stage01";
         stageSettings_.layoutFile = "resources/Scenes/stage01.json";
+        stageSettings_.bossRailAutoExtension = true;
         stageSettings_.swarmWaveDistances = {
             260.0f, 620.0f, 980.0f, 1340.0f, 1560.0f, 1740.0f };
         stageSettings_.recoveryItemPositions = {
@@ -497,8 +500,8 @@ void GamePlayScene::Initialize()
         enemyBulletModel_,
         player_.get(),
         rail_.get(),
-        stageId_ == "stage01",
-        kBossRailExtensionBuffer);
+        stageSettings_.bossRailAutoExtension,
+        stageSettings_.bossRailExtensionBuffer);
 
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     if (!stageSettings_.recoveryItemDistances.empty()) {
@@ -2177,6 +2180,8 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::CheckCollision()
 {
+    bool justDodgedEnemyBullet = false;
+
     if (gameplayCollisionSystem_ != nullptr) {
         gameplayCollisionSystem_->UpdateStageCollisions(
             *player_,
@@ -2194,6 +2199,7 @@ void GamePlayScene::CheckCollision()
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
+        justDodgedEnemyBullet = events.justDodgedEnemyBullet;
     }
 
     if (gameplayCollisionSystem_ != nullptr) {
@@ -2204,6 +2210,32 @@ void GamePlayScene::CheckCollision()
         return enemy->IsDead();
     });
 
+    UpdateJustDodgeSlowMotion(justDodgedEnemyBullet);
+}
+
+void GamePlayScene::UpdateJustDodgeSlowMotion(bool justDodged)
+{
+    if (justDodged) {
+        justDodgeSlowTimer_ = kJustDodgeSlowDuration;
+    } else if (justDodgeSlowTimer_ > 0.0f) {
+        justDodgeSlowTimer_ -= 1.0f / 60.0f;
+        if (justDodgeSlowTimer_ < 0.0f) {
+            justDodgeSlowTimer_ = 0.0f;
+        }
+    }
+
+    if (justDodgeSlowTimer_ > 0.0f) {
+        EnemyBullet::SetTimeScale(kJustDodgeEnemyBulletTimeScale);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::GrayScale,
+            PostEffectStage::BeforeParticle);
+    } else {
+        EnemyBullet::SetTimeScale(1.0f);
+        if (!isPaused_) {
+            SceneManager::GetInstance()->RemovePostEffect(
+                PostEffectType::GrayScale);
+        }
+    }
 }
 
 void GamePlayScene::StartPaintHitEffect()
@@ -2363,6 +2395,8 @@ void GamePlayScene::Finalize()
 
 void GamePlayScene::ResetGameplayPostEffects()
 {
+    EnemyBullet::SetTimeScale(1.0f);
+    justDodgeSlowTimer_ = 0.0f;
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
     SceneManager::GetInstance()->SetPostEffectKickStrength(0.0f);

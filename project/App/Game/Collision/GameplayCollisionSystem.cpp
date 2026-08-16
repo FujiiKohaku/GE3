@@ -15,6 +15,7 @@
 namespace {
 constexpr float kPlayerObstacleRadius = 1.0f;
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
+constexpr float kJustDodgePlayerRadius = 3.5f;
 
 float VectorLength(const Vector3& value)
 {
@@ -78,6 +79,10 @@ void CheckEnemyBulletsAgainstPlayer(
         player.GetTranslate(),
         kPlayerEnemyCollisionRadius * 0.5f
     };
+    const Sphere justDodgeSphere {
+        player.GetTranslate(),
+        kJustDodgePlayerRadius
+    };
     for (const std::unique_ptr<EnemyBullet>& bullet : enemy.GetBullets()) {
         if (!bullet->IsAlive()) {
             continue;
@@ -89,10 +94,20 @@ void CheckEnemyBulletsAgainstPlayer(
         };
         const Vector3 movement =
             bullet->GetPosition() - bullet->GetPreviousPosition();
-        if (!CollisionManager::SweepSphere(
+        const bool hitPlayer = CollisionManager::SweepSphere(
+            bulletSphere,
+            movement,
+            playerSphere).isHit;
+        if (!hitPlayer) {
+            const bool isNearPlayer = CollisionManager::SweepSphere(
                 bulletSphere,
                 movement,
-                playerSphere).isHit) {
+                justDodgeSphere).isHit;
+            if (isNearPlayer && player.IsRolling()) {
+                bullet->MarkJustDodgeCandidate();
+            } else if (bullet->ResolveJustDodge()) {
+                events.justDodgedEnemyBullet = true;
+            }
             continue;
         }
 

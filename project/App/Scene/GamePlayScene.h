@@ -82,6 +82,7 @@ private:
     void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
     void StartPaintHitEffect();
+    void UpdateJustDodgeSlowMotion(bool justDodged);
 #ifdef _DEBUG
     void DrawCollisionDebug();
 #endif
@@ -275,6 +276,7 @@ private:
     // 被弾フラッシュ演出用
     float damageFlashTimer_ = 0.0f;
     int lastPlayerHp_ = 20;
+    float justDodgeSlowTimer_ = 0.0f;
 
     // ボス登場時電波障害ノイズ用フェードアウトタイマー
     float bossNoiseFadeTimer_ = 0.0f;

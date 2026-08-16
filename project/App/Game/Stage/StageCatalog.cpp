@@ -120,6 +120,10 @@ bool StageCatalog::LoadStageSettings(
         settings.bossType = boss.value("type", settings.bossType);
         settings.bossSpawnDistance =
             boss.value("spawn_distance", settings.bossSpawnDistance);
+        settings.bossRailAutoExtension =
+            boss.value("rail_auto_extension", settings.bossRailAutoExtension);
+        settings.bossRailExtensionBuffer =
+            boss.value("rail_extension_buffer", settings.bossRailExtensionBuffer);
         if (boss.contains("position")) {
             settings.bossPosition =
                 ReadVector3(boss["position"], settings.bossPosition);
@@ -170,6 +174,10 @@ bool StageCatalog::LoadStageSettings(
     }
     if (settings.bossSpawnDistance > settings.railLength) {
         lastError_ = "Boss distance exceeds rail length: " + settings.id;
+        return false;
+    }
+    if (settings.bossRailExtensionBuffer < 0.0f) {
+        lastError_ = "Boss rail extension buffer is negative: " + settings.id;
         return false;
     }
     if (!std::filesystem::exists(settings.layoutFile)) {

@@ -18,6 +18,7 @@ struct DestructibleLevelObject {
 
 struct GameplayCollisionEvents {
     bool paintBulletHitPlayer = false;
+    bool justDodgedEnemyBullet = false;
     std::vector<std::string> enteredTriggers;
     std::vector<std::string> exitedTriggers;
 };

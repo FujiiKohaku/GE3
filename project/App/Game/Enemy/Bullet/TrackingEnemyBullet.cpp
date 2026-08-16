@@ -43,8 +43,9 @@ void TrackingEnemyBullet::Update()
 
 void TrackingEnemyBullet::Move()
 {
+    const float timeScale = GetTimeScale();
     if (launchTimer_ < kLaunchDuration) {
-        launchTimer_ += 1.0f / 60.0f;
+        launchTimer_ += (1.0f / 60.0f) * timeScale;
         // 1. 打ち上げフェーズ（EaseOutの減速上昇）
         float t = launchTimer_ / kLaunchDuration;
         float easeOut = 1.0f - (t * t); // イージング（後半ほど減速）
@@ -60,7 +61,7 @@ void TrackingEnemyBullet::Move()
 
             // プレイヤーを通り過ぎたか、あるいは追尾制限時間を過ぎた場合に追尾終了
             if (isTracking_ && !isPassed_) {
-                trackingTimer_ += 1.0f / 60.0f;
+                trackingTimer_ += (1.0f / 60.0f) * timeScale;
 
                 float dot = Dot(NormalizeSafe(toPlayer), NormalizeSafe(velocity_));
                 // 打ち上げ直後の上向き速度を「通過した」と誤判定しないよう、
@@ -81,11 +82,12 @@ void TrackingEnemyBullet::Move()
                 Vector3 targetDirection = NormalizeSafe(toPlayer);
                 Vector3 targetVelocity = targetDirection * currentSpeed;
 
-                velocity_ = Lerp(velocity_, targetVelocity, kTrackingRate);
+                velocity_ = Lerp(
+                    velocity_, targetVelocity, kTrackingRate * timeScale);
             }
         }
     }
 
     // 座標更新
-    transform_.translate += velocity_;
+    transform_.translate += velocity_ * timeScale;
 }

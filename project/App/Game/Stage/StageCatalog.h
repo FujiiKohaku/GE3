@@ -22,6 +22,8 @@ struct StageSettings {
     std::string bossType = "FearWorm";
     float bossSpawnDistance = 1850.0f;
     Vector3 bossPosition = { 0.0f, 2.0f, 1850.0f };
+    bool bossRailAutoExtension = false;
+    float bossRailExtensionBuffer = 1200.0f;
     std::vector<float> swarmWaveDistances;
     std::vector<Vector3> recoveryItemPositions;
     std::vector<float> recoveryItemDistances;

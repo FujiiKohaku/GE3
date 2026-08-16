@@ -7,7 +7,9 @@
   "boss": {
     "type": "FearWorm",
     "spawn_distance": 1850.0,
-    "position": [0.0, 2.0, 1850.0]
+    "position": [0.0, 2.0, 1850.0],
+    "rail_auto_extension": true,
+    "rail_extension_buffer": 1200.0
   },
   "environment": {
     "skybox": "resources/Textures/skybox.dds",

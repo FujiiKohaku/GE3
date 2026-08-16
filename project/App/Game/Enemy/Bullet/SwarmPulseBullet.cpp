@@ -46,11 +46,12 @@ void SwarmPulseBullet::SetWavePhase(float phase)
 void SwarmPulseBullet::Move()
 {
     constexpr float kDeltaTime = 1.0f / 60.0f;
-    waveTime_ += kDeltaTime;
+    const float timeScale = GetTimeScale();
+    waveTime_ += kDeltaTime * timeScale;
 
-    pathPosition_.x += velocity_.x;
-    pathPosition_.y += velocity_.y;
-    pathPosition_.z += velocity_.z;
+    pathPosition_.x += velocity_.x * timeScale;
+    pathPosition_.y += velocity_.y * timeScale;
+    pathPosition_.z += velocity_.z * timeScale;
 
     float waveAngle = waveTime_ * waveFrequency_ + wavePhase_;
     float sideOffset = std::sin(waveAngle) * waveAmplitude_;
@@ -59,5 +60,5 @@ void SwarmPulseBullet::Move()
     transform_.translate = pathPosition_;
     transform_.translate += waveSide_ * sideOffset;
     transform_.translate += waveUp_ * upOffset;
-    transform_.rotate.z += 0.22f;
+    transform_.rotate.z += 0.22f * timeScale;
 }

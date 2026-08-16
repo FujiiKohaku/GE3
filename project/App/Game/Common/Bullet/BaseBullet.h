@@ -72,6 +72,7 @@ protected:
     Vector3 previousPosition_ = { 0.0f, 0.0f, 0.0f };
     // 移動処理
     virtual void Move();
+    virtual float GetTimeScale() const { return 1.0f; }
     bool isAlive_ = true;
     float lifeTime_ = 0.0f;
     float maxLifeTime_ = 5.0f; // 最大寿命時間（秒）
