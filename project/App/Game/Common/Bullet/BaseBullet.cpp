@@ -1,5 +1,6 @@
 #include "App/Game/Common/Bullet/BaseBullet.h"
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/Time/TimeManager.h"
 #include <cassert>
 void BaseBullet::Initialize(Model* model)
 {
@@ -27,7 +28,7 @@ void BaseBullet::Update()
     previousPosition_ = transform_.translate;
     Move(); // 弾の移動処理を行う
 
-    lifeTime_ += 1.0f / 60.0f; // 60FPSを想定して、1フレームあたりの時間を加算
+    lifeTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
     if (lifeTime_ >= maxLifeTime_) { // 最大寿命時間を超えた場合は弾を消滅させる
         SetDead();
@@ -89,7 +90,8 @@ void BaseBullet::SetTranslate(const Vector3& translate)
 
 void BaseBullet::Move()
 {
-    const float timeScale = GetTimeScale();
+    const float timeScale =
+        GetTimeScale() * TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
     transform_.translate.x += velocity_.x * timeScale;
     transform_.translate.y += velocity_.y * timeScale;
     transform_.translate.z += velocity_.z * timeScale;

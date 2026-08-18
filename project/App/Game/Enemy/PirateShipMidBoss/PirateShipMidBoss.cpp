@@ -5,11 +5,11 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/Time/TimeManager.h"
 #include <algorithm>
 #include <cmath>
 
 namespace {
-constexpr float kDeltaTime = 1.0f / 60.0f;
 
 float SmoothStep(float t)
 {
@@ -53,7 +53,8 @@ void PirateShipMidBoss::SetPosition(const Vector3& position)
 
 void PirateShipMidBoss::Update()
 {
-    stateTimer_ += kDeltaTime;
+    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+    stateTimer_ += deltaTime;
     if (state_ == State::Emerging) {
         const float rise = SmoothStep(stateTimer_ / 3.2f);
         const float startX = surfacePosition_.x - 62.0f;
@@ -70,14 +71,14 @@ void PirateShipMidBoss::Update()
             stateTimer_ = 0.0f;
         }
     } else if (state_ == State::Battle) {
-        battleTimer_ += kDeltaTime;
-        shotTimer_ += kDeltaTime;
+        battleTimer_ += deltaTime;
+        shotTimer_ += deltaTime;
         if (player_ != nullptr) {
             const Vector3 playerPosition = player_->GetTranslate();
             const float targetZ = playerPosition.z + 92.0f;
             shipPosition_.z += (targetZ - shipPosition_.z) * 0.055f;
         }
-        shipPosition_.x += horizontalVelocity_ * kDeltaTime;
+        shipPosition_.x += horizontalVelocity_ * deltaTime;
         const float minX = surfacePosition_.x - 65.0f;
         const float maxX = surfacePosition_.x + 65.0f;
         if (shipPosition_.x <= minX) {
@@ -98,9 +99,9 @@ void PirateShipMidBoss::Update()
             FireCannons();
         }
     } else {
-        shipPosition_.y -= 7.0f * kDeltaTime;
-        shipPosition_.z += 5.0f * kDeltaTime;
-        shipPosition_.x += 1.5f * kDeltaTime;
+        shipPosition_.y -= 7.0f * deltaTime;
+        shipPosition_.z += 5.0f * deltaTime;
+        shipPosition_.x += 1.5f * deltaTime;
         if (stateTimer_ >= 3.0f) SetDead(true);
     }
 

@@ -28,41 +28,13 @@
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
+#include "Engine/Time/TimeManager.h"
 #include <algorithm>
 #include <cmath>
 
 namespace {
 Player::ControlMode gControlMode = Player::ControlMode::KeyboardAndMouse;
 float gMouseSensitivity = 1.0f;
-
-constexpr float kPlayerEnemyCollisionRadius = 2.0f;
-constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
-constexpr float kBoostPostEffectBaseWeight = 0.40f;
-constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
-constexpr float kBoostPostEffectPlayerWeight = 0.30f;
-constexpr float kBoostPostEffectCenterMin = 0.28f;
-constexpr float kBoostPostEffectCenterMax = 0.72f;
-constexpr float kBoostPostEffectVanishPointDistance = 150.0f;
-constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
-constexpr float kBoostKickDuration = 0.2f;
-constexpr float kBoostKickFrameTime = 1.0f / 60.0f;
-constexpr float kBoostKickFovAdd = 0.1f;
-constexpr float kCameraShakeFrameTime = 1.0f / 60.0f;
-constexpr float kCameraShakeFadeDuration = 5.0f;
-constexpr float kPlayerDamageShakeDuration = 0.35f;
-constexpr float kPlayerDamageShakeStrength = 0.006f;
-constexpr float kBossMadShakeDuration = 7.0f;
-constexpr float kBossMadShakeStrength = 0.008f;
-constexpr float kBossBeamShakeDuration = 0.1f;
-constexpr float kBossBeamShakeStrength = 0.0015f;
-constexpr float kRecoveryItemCollisionRadius = 3.0f;
-constexpr float kRecoveryItemRotationSpeed = 0.035f;
-constexpr float kRecoveryItemBobSpeed = 0.045f;
-constexpr float kRecoveryItemBobHeight = 0.65f;
-constexpr int32_t kRecoveryItemHealAmount = 5;
-constexpr int32_t kSwarmMembersPerWave = 18;
-constexpr float kJustDodgeSlowDuration = 1.0f;
-constexpr float kJustDodgeEnemyBulletTimeScale = 0.35f;
 
 Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
 {
@@ -709,6 +681,12 @@ void GamePlayScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
         HotReloadLevel();
     }
+
+    // 時間停止中はゲーム世界を更新しない。
+    // チュートリアルUIは、今後この判定より前でUnscaledDeltaTimeを使って更新する。
+    if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
+        return;
+    }
     // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
     if (Input::GetInstance()->IsKeyTrigger(DIK_V)) {
         railDistance_ = (std::max)(
@@ -798,7 +776,7 @@ void GamePlayScene::Update()
 
         if (activeBoss->IsDeathSequenceFinished()) {
             StopPlayerEngineEffects();
-            bossDeathDissolveTimer_ += 1.0f / 60.0f;
+            bossDeathDissolveTimer_ += TimeManager::GetInstance()->GetDeltaTime();
             float dissolveProgress = bossDeathDissolveTimer_ / 2.0f;
             if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
 
@@ -965,7 +943,7 @@ void GamePlayScene::Update()
     prevBoostingState = isPlayerBoosting;
 
     if (sonicBoomTimer_ > 0.0f) {
-        sonicBoomTimer_ -= 1.0f / 60.0f;
+        sonicBoomTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (sonicBoomTimer_ < 0.0f) sonicBoomTimer_ = 0.0f;
 
         float boomProgress = 1.0f - (sonicBoomTimer_ / 0.85f);
@@ -988,7 +966,7 @@ void GamePlayScene::Update()
     // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
     // ★加点要素: BoxFilter (3点) をインク付着時の油分視界ぼやけとして同時適用し、時間経過で徐々に減衰フェードアウト！
     if (isPaintEffectActive_) {
-        paintEffectTimer_ += 1.0f / 60.0f;
+        paintEffectTimer_ += TimeManager::GetInstance()->GetDeltaTime();
         float progress = paintEffectTimer_ / paintEffectDuration_;
         if (progress >= 1.0f) {
             isPaintEffectActive_ = false;
@@ -1013,6 +991,8 @@ void GamePlayScene::Update()
         }
     }
 
+    UpdateWaterDropEffect();
+
     // -------------------------------------------------
     // 加点要素: Vignetting (3点)
     // 1. ダメージを受けた瞬間は一瞬だけ暗く赤くフラッシュ
@@ -1029,7 +1009,7 @@ void GamePlayScene::Update()
 
         // ダメージフラッシュタイマー消化
         if (damageFlashTimer_ > 0.0f) {
-            damageFlashTimer_ -= 1.0f / 60.0f;
+            damageFlashTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
             if (damageFlashTimer_ < 0.0f) damageFlashTimer_ = 0.0f;
         }
 
@@ -1044,7 +1024,7 @@ void GamePlayScene::Update()
         // (B) HP ≦ 3 時の常時ドクンドクン脈動演出 (小さめの四隅赤色鼓動)
         else if (currentHp <= 3) {
             static float vignettePulseTimer = 0.0f;
-            vignettePulseTimer += 1.0f / 60.0f;
+            vignettePulseTimer += TimeManager::GetInstance()->GetDeltaTime();
 
             float pulseFactor = 0.45f + 0.25f * std::sin(vignettePulseTimer * 8.5f);
             SceneManager::GetInstance()->SetVignetteStrength(pulseFactor);
@@ -1061,7 +1041,7 @@ void GamePlayScene::Update()
     // -------------------------------------------------
     if (player_ && player_->GetCurrentHp() <= 0) {
         StopPlayerEngineEffects();
-        playerDeathDissolveTimer_ += 1.0f / 60.0f;
+        playerDeathDissolveTimer_ += TimeManager::GetInstance()->GetDeltaTime();
         float dissolveProgress = playerDeathDissolveTimer_ / 2.0f;
         if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
 
@@ -1111,7 +1091,7 @@ void GamePlayScene::Update()
     }
     // (B) ボス登場後のロングフェードアウトノイズ (たっぷり4.5秒間かけて非常にゆっくり消えていく)
     else if (bossNoiseFadeTimer_ > 0.0f) {
-        bossNoiseFadeTimer_ -= 1.0f / 60.0f;
+        bossNoiseFadeTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (bossNoiseFadeTimer_ < 0.0f) bossNoiseFadeTimer_ = 0.0f;
 
         float fadeProgress = bossNoiseFadeTimer_ / 4.5f;
@@ -1186,12 +1166,14 @@ void GamePlayScene::Update()
     }
     for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Update();
     if (waterPillarRenderer_) {
-        waterPillarRenderer_->Update(1.0f / 60.0f);
+        waterPillarRenderer_->Update(TimeManager::GetInstance()->GetDeltaTime());
     }
     for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) {
-        pillar->Update(railDistance_, 1.0f / 60.0f);
+        pillar->Update(railDistance_, TimeManager::GetInstance()->GetDeltaTime());
         if (pillar->CheckCollision(player_->GetTranslate())) {
-            player_->ApplyDamage(2);
+            if (player_->ApplyDamage(2)) {
+                StartWaterDropEffect();
+            }
         }
     }
     UpdateRecoveryItems();
@@ -1199,10 +1181,10 @@ void GamePlayScene::Update()
         floorObj_->Update();
     }
     if (oceanSurface_) {
-        oceanSurface_->Update(1.0f / 60.0f);
+        oceanSurface_->Update(TimeManager::GetInstance()->GetDeltaTime());
     }
 
-    animationActor_->Update(1.0f / 60.0f);
+    animationActor_->Update(TimeManager::GetInstance()->GetDeltaTime());
     
     // コリジョン判定の実行
     CheckCollision();
@@ -1399,7 +1381,8 @@ void GamePlayScene::UpdateRailMovement(
     float& outNextDistance)
 {
     // 次フレームのレール上の進行距離を計算
-    outNextDistance = railDistance_ + railSpeed_;
+    const float frameScale = TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
+    outNextDistance = railDistance_ + railSpeed_ * frameScale;
     if (outNextDistance > rail_->GetTotalLength()) {
         outNextDistance = rail_->GetTotalLength();
     }
@@ -1474,7 +1457,7 @@ void GamePlayScene::UpdateCamera(
 {
     // カメラポイント補間の適用
     if (hasCameraPoint_) {
-        float deltaTime = 1.0f / 60.0f;
+        float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
         cameraPointLerpTime_ += deltaTime;
         float moveTime = cameraPointObject_.cameraPoint.moveTime;
         if (moveTime <= 0.0f) {
@@ -1651,19 +1634,19 @@ void GamePlayScene::UpdateOceanLife(
         return;
     }
 
-    oceanLifeTime_ += 1.0f / 60.0f;
+    oceanLifeTime_ += TimeManager::GetInstance()->GetDeltaTime();
     const float seaHeight = stageSettings_.floorHeight;
     const float yaw = -std::atan2(forward.x, forward.z);
 
     constexpr float kFishSchoolDuration = 5.5f;
     if (!isFishSchoolActive_) {
-        fishSchoolCooldown_ -= 1.0f / 60.0f;
+        fishSchoolCooldown_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (fishSchoolCooldown_ <= 0.0f) {
             isFishSchoolActive_ = true;
             fishSchoolTimer_ = 0.0f;
         }
     } else {
-        fishSchoolTimer_ += 1.0f / 60.0f;
+        fishSchoolTimer_ += TimeManager::GetInstance()->GetDeltaTime();
         const float progress = std::clamp(fishSchoolTimer_ / kFishSchoolDuration, 0.0f, 1.0f);
         const float travel = fishSchoolFromLeft_ ? (-52.0f + progress * 104.0f) : (52.0f - progress * 104.0f);
         const float crossYaw = yaw + (fishSchoolFromLeft_ ? -std::numbers::pi_v<float> * 0.5f : std::numbers::pi_v<float> * 0.5f);
@@ -2223,7 +2206,7 @@ void GamePlayScene::UpdateJustDodgeSlowMotion(bool justDodged)
     if (justDodged) {
         justDodgeSlowTimer_ = kJustDodgeSlowDuration;
     } else if (justDodgeSlowTimer_ > 0.0f) {
-        justDodgeSlowTimer_ -= 1.0f / 60.0f;
+        justDodgeSlowTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (justDodgeSlowTimer_ < 0.0f) {
             justDodgeSlowTimer_ = 0.0f;
         }
@@ -2281,6 +2264,39 @@ void GamePlayScene::StartPaintHitEffect()
         PostEffectStage::AfterParticle);
     SceneManager::GetInstance()->SetPaintProgress(0.0f);
     SceneManager::GetInstance()->SetPaintIntensity(1.0f);
+}
+
+void GamePlayScene::StartWaterDropEffect()
+{
+    waterDropEffectTimer_ = kWaterDropEffectDuration;
+    SceneManager::GetInstance()->SetWaterEffectIntensity(1.0f);
+}
+
+void GamePlayScene::UpdateWaterDropEffect()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (waterDropEffectTimer_ <= 0.0f) {
+        waterDropEffectTimer_ = 0.0f;
+        sceneManager->SetWaterEffectIntensity(0.0f);
+        sceneManager->RemovePostEffect(PostEffectType::RainDrops);
+        return;
+    }
+
+    waterDropEffectTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+    if (waterDropEffectTimer_ < 0.0f) {
+        waterDropEffectTimer_ = 0.0f;
+    }
+
+    const float fadeDuration = 2.0f;
+    float intensity = 1.0f;
+    if (waterDropEffectTimer_ < fadeDuration) {
+        intensity = waterDropEffectTimer_ / fadeDuration;
+    }
+    sceneManager->SetWaterEffectIntensity(intensity);
+
+    sceneManager->AddPostEffect(
+        PostEffectType::RainDrops,
+        PostEffectStage::AfterParticle);
 }
 
 #ifdef _DEBUG
@@ -2416,6 +2432,8 @@ void GamePlayScene::ResetGameplayPostEffects()
     cameraShakeTime_ = 0.0f;
     cameraShakeDuration_ = 0.0f;
     cameraShakeStrength_ = 0.0f;
+    waterDropEffectTimer_ = 0.0f;
+    SceneManager::GetInstance()->SetWaterEffectIntensity(0.0f);
 }
 
 void GamePlayScene::UpdateCameraShakePostEffect()
@@ -2432,7 +2450,7 @@ void GamePlayScene::UpdateCameraShakePostEffect()
         return;
     }
 
-    cameraShakeTime_ -= kCameraShakeFrameTime;
+    cameraShakeTime_ -= TimeManager::GetInstance()->GetDeltaTime();
     if (cameraShakeTime_ < 0.0f) {
         cameraShakeTime_ = 0.0f;
     }
@@ -2623,7 +2641,7 @@ void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
     if (boostKickTimer_ > 0.0f) {
         float normalizedTime = boostKickTimer_ / kBoostKickDuration;
         boostKickStrength_ = normalizedTime * normalizedTime;
-        boostKickTimer_ -= kBoostKickFrameTime;
+        boostKickTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (boostKickTimer_ < 0.0f) {
             boostKickTimer_ = 0.0f;
         }

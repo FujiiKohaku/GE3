@@ -1,6 +1,7 @@
 #include "App/Game/Enemy/Bullet/TrackingEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/Time/TimeManager.h"
 #include <cmath>
 
 namespace {
@@ -45,7 +46,7 @@ void TrackingEnemyBullet::Move()
 {
     const float timeScale = GetTimeScale();
     if (launchTimer_ < kLaunchDuration) {
-        launchTimer_ += (1.0f / 60.0f) * timeScale;
+        launchTimer_ += TimeManager::GetInstance()->GetDeltaTime() * timeScale;
         // 1. 打ち上げフェーズ（EaseOutの減速上昇）
         float t = launchTimer_ / kLaunchDuration;
         float easeOut = 1.0f - (t * t); // イージング（後半ほど減速）
@@ -61,7 +62,7 @@ void TrackingEnemyBullet::Move()
 
             // プレイヤーを通り過ぎたか、あるいは追尾制限時間を過ぎた場合に追尾終了
             if (isTracking_ && !isPassed_) {
-                trackingTimer_ += (1.0f / 60.0f) * timeScale;
+                trackingTimer_ += TimeManager::GetInstance()->GetDeltaTime() * timeScale;
 
                 float dot = Dot(NormalizeSafe(toPlayer), NormalizeSafe(velocity_));
                 // 打ち上げ直後の上向き速度を「通過した」と誤判定しないよう、

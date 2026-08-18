@@ -50,6 +50,7 @@
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Time/TimeManager.h"
 #include "Engine/Winapp/Utility.h"
 #include "Engine/Winapp/WinApp.h"
 #include "Engine/audio/SoundManager.h"

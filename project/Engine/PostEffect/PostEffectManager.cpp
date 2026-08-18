@@ -7,6 +7,7 @@
 #include "Engine/PostEffect/Fog/FogRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Winapp/WinApp.h"
+#include "Engine/Time/TimeManager.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
@@ -140,7 +141,7 @@ void PostEffectManager::SetBoostRadialBlurParameters(bool isBoosting)
 {
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
     if (isAnimationEnabled_) {
-        postEffectParameter.time += 1.0f / 60.0f;
+        postEffectParameter.time += TimeManager::GetInstance()->GetDeltaTime();
     }
     if (postEffectParameter.time > 1000.0f) {
         postEffectParameter.time = 0.0f;
@@ -187,6 +188,8 @@ void PostEffectManager::UpdatePostEffectParameters(
         sceneManager->GetBlackHoleRadius();
     postEffectParameter.blackHoleStrength =
         sceneManager->GetBlackHoleStrength();
+    postEffectParameter.waterEffectIntensity =
+        sceneManager->GetWaterEffectIntensity();
     postEffectParameter.paintProgress =
         sceneManager->GetPaintProgress();
     postEffectParameter.paintIntensity =

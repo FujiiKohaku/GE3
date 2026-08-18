@@ -178,6 +178,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp" />
     <ClCompile Include="Engine\math\Collision.cpp" />
     <ClCompile Include="Engine\CollisionManager\CollisionManager.cpp" />
+    <ClCompile Include="Engine\Time\TimeManager.cpp" />
     <ClCompile Include="Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
     <ClCompile Include="Engine\Effect\EffectManager.cpp" />
@@ -429,6 +430,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Winapp\Utility.h" />
     <ClInclude Include="Engine\math\MatrixMath.h" />
     <ClInclude Include="Engine\Winapp\WinApp.h" />
+    <ClInclude Include="Engine\Time\TimeManager.h" />
     <ClInclude Include="App\Game\Player\Player.h" />
     <ClInclude Include="App\Game\Boss\BaseBoss.h" />
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h" />

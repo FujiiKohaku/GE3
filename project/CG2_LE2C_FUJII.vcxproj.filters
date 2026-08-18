@@ -878,6 +878,8 @@
     <None Include="resources\Shaders\PostEffect\Vignette.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Engine\Time\TimeManager.cpp" />
+    <ClInclude Include="Engine\Time\TimeManager.h" />
     <ClCompile Include="Engine\PostEffect\Bloom\BloomRenderer.cpp" />
     <ClInclude Include="Engine\PostEffect\Bloom\BloomRenderer.h" />
     <ClCompile Include="Engine\PostEffect\PostEffectManager.cpp" />

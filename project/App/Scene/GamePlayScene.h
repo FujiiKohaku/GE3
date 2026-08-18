@@ -73,6 +73,45 @@ public:
     void DrawImGui() override;
 
 private:
+    // プレイヤーと敵の当たり判定
+    static constexpr float kPlayerEnemyCollisionRadius = 2.0f;
+    static constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
+
+    // ブースト演出
+    static constexpr float kBoostPostEffectBaseWeight = 0.40f;
+    static constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
+    static constexpr float kBoostPostEffectPlayerWeight = 0.30f;
+    static constexpr float kBoostPostEffectCenterMin = 0.28f;
+    static constexpr float kBoostPostEffectCenterMax = 0.72f;
+    static constexpr float kBoostPostEffectVanishPointDistance = 150.0f;
+    static constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
+    static constexpr float kBoostKickDuration = 0.2f;
+    static constexpr float kBoostKickFovAdd = 0.1f;
+
+    // カメラシェイク
+    static constexpr float kCameraShakeFadeDuration = 5.0f;
+    static constexpr float kPlayerDamageShakeDuration = 0.35f;
+    static constexpr float kPlayerDamageShakeStrength = 0.006f;
+    static constexpr float kBossMadShakeDuration = 7.0f;
+    static constexpr float kBossMadShakeStrength = 0.008f;
+    static constexpr float kBossBeamShakeDuration = 0.1f;
+    static constexpr float kBossBeamShakeStrength = 0.0015f;
+
+    // 回復アイテム
+    static constexpr float kRecoveryItemCollisionRadius = 3.0f;
+    static constexpr float kRecoveryItemRotationSpeed = 0.035f;
+    static constexpr float kRecoveryItemBobSpeed = 0.045f;
+    static constexpr float kRecoveryItemBobHeight = 0.65f;
+    static constexpr int32_t kRecoveryItemHealAmount = 5;
+
+    // スウォームとジャスト回避
+    static constexpr int32_t kSwarmMembersPerWave = 18;
+    static constexpr float kJustDodgeSlowDuration = 1.0f;
+    static constexpr float kJustDodgeEnemyBulletTimeScale = 0.35f;
+
+    // 水柱ヒット時の画面水滴
+    static constexpr float kWaterDropEffectDuration = 4.0f;
+
     std::string stageId_ = "stage01";
     StageSettings stageSettings_;
 
@@ -82,6 +121,8 @@ private:
     void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
     void StartPaintHitEffect();
+    void StartWaterDropEffect();
+    void UpdateWaterDropEffect();
     void UpdateJustDodgeSlowMotion(bool justDodged);
 #ifdef _DEBUG
     void DrawCollisionDebug();
@@ -272,6 +313,9 @@ private:
     bool isPaintEffectActive_ = false;
     float paintEffectTimer_ = 0.0f;
     float paintEffectDuration_ = 5.5f;
+
+    // 水柱ヒット時の画面水滴用
+    float waterDropEffectTimer_ = 0.0f;
 
     // 被弾フラッシュ演出用
     float damageFlashTimer_ = 0.0f;

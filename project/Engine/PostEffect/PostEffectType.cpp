@@ -66,6 +66,8 @@ const char* GetPostEffectTypeName(PostEffectType type)
         return "Paint";
     case PostEffectType::GlassCrack:
         return "GlassCrack";
+    case PostEffectType::RainDrops:
+        return "RainDrops";
     case PostEffectType::BlackHoleDistortion:
         return "BlackHoleDistortion";
     }

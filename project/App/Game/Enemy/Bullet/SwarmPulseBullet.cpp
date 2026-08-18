@@ -1,6 +1,7 @@
 #include "App/Game/Enemy/Bullet/SwarmPulseBullet.h"
 
 #include "Engine/math/MathStruct.h"
+#include "Engine/Time/TimeManager.h"
 #include <cmath>
 
 void SwarmPulseBullet::Initialize(Model* model)
@@ -45,9 +46,8 @@ void SwarmPulseBullet::SetWavePhase(float phase)
 
 void SwarmPulseBullet::Move()
 {
-    constexpr float kDeltaTime = 1.0f / 60.0f;
     const float timeScale = GetTimeScale();
-    waveTime_ += kDeltaTime * timeScale;
+    waveTime_ += TimeManager::GetInstance()->GetDeltaTime() * timeScale;
 
     pathPosition_.x += velocity_.x * timeScale;
     pathPosition_.y += velocity_.y * timeScale;

@@ -7,6 +7,7 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/Time/TimeManager.h"
 #include "Engine/math/MathStruct.h"
 #include "Engine/3D/ModelManager.h"
 
@@ -16,7 +17,6 @@
 
 namespace {
 constexpr int32_t kWormSegmentCount = 10;
-constexpr float kFrameTime = 1.0f / 60.0f;
 constexpr float kHeadHp = 20.0f;
 constexpr float kBodyHp = 6.0f;
 constexpr float kAttackRange = 240.0f;
@@ -216,7 +216,7 @@ void FearWormEnemy::Update()
         OnDeath();
     }
 
-    moveTime_ += kFrameTime;
+    moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
     // 状態に応じた処理を実行
     switch (state_) {
@@ -288,7 +288,7 @@ void FearWormEnemy::UpdateEntry()
     Vector3 playerPosition = player_->GetTranslate();
 
     // 回転角度の更新
-    orbitAngle_ += kFrameTime * kOrbitAngularSpeed * movementSpeedRate;
+    orbitAngle_ += TimeManager::GetInstance()->GetDeltaTime() * kOrbitAngularSpeed * movementSpeedRate;
 
     // 登場目的地を計算
     Vector3 target = EntryTarget(playerPosition);
@@ -331,7 +331,7 @@ void FearWormEnemy::UpdateBattle()
 
     // 発狂モードタイマー更新 (7秒制限: 2秒威嚇 + 5秒大暴れ)
     if (isMadModeActive_) {
-        madModeTimer_ += kFrameTime;
+        madModeTimer_ += TimeManager::GetInstance()->GetDeltaTime();
         if (madModeTimer_ >= 7.0f) {
             isMadModeActive_ = false;
             isMadModeFinished_ = true; // 終了フラグを立てて、再度発狂しないようにする
@@ -344,17 +344,17 @@ void FearWormEnemy::UpdateBattle()
     bool isMadMode = isMadModeActive_;
 
     // 回転角度の更新
-    orbitAngle_ += kFrameTime * kOrbitAngularSpeed * movementSpeedRate;
+    orbitAngle_ += TimeManager::GetInstance()->GetDeltaTime() * kOrbitAngularSpeed * movementSpeedRate;
 
     if (isMadMode) {
-        spiralAngle_ += kFrameTime * 2.5f * movementSpeedRate;
-        barrageAngle_ += kFrameTime * 4.0f;
+        spiralAngle_ += TimeManager::GetInstance()->GetDeltaTime() * 2.5f * movementSpeedRate;
+        barrageAngle_ += TimeManager::GetInstance()->GetDeltaTime() * 4.0f;
     }
 
     // ミサイル攻撃の進行管理（発狂モード中は行わない）
     if (!isMadMode) {
         if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
-            missileAttackTimer_ += kFrameTime;
+            missileAttackTimer_ += TimeManager::GetInstance()->GetDeltaTime();
             if (missileAttackTimer_ >= kMissileAttackInterval) {
                 isMissileAttackActive_ = true;
                 hasFiredMissiles_ = false;
@@ -368,7 +368,7 @@ void FearWormEnemy::UpdateBattle()
             }
         } else if (isMissileAttackActive_) {
             // Line状態（前準備・チャージ警告演出）
-            missilePhaseTimer_ += kFrameTime;
+            missilePhaseTimer_ += TimeManager::GetInstance()->GetDeltaTime();
             if (missilePhaseTimer_ >= kMissileAimWaitDuration) {
                 // Line準備完了！発射シーケンスを開始する（Line状態・移動パターンは維持）
                 isMissileAttackActive_ = false;
@@ -400,7 +400,7 @@ void FearWormEnemy::UpdateBattle()
 
         // 時間差ミサイル発射シーケンスの実行（Line状態のまま実行される）
         if (isFiringMissilesSequence_ && player_ != nullptr && bulletModel_ != nullptr) {
-            missileFireTimer_ += kFrameTime;
+            missileFireTimer_ += TimeManager::GetInstance()->GetDeltaTime();
             int32_t maxShots = static_cast<int32_t>(missileTargetIndices_.size());
 
             if (missileShotCount_ < maxShots) {
@@ -472,7 +472,7 @@ Vector3 FearWormEnemy::FallbackTarget()
 
 Vector3 FearWormEnemy::EntryTarget(const Vector3& playerPosition)
 {
-    enterTimer_ += kFrameTime;
+    enterTimer_ += TimeManager::GetInstance()->GetDeltaTime();
     float enterRate = enterTimer_ / enterDuration_;
     if (enterRate > 1.0f) {
         enterRate = 1.0f;
@@ -620,7 +620,7 @@ void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
         return;
     }
 
-    movementPatternTimer_ += kFrameTime * movementSpeedRate;
+    movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime() * movementSpeedRate;
 
     if (movementPatternTimer_ < movementPatternDuration_) { // 時間に達していない場合はリターンする
         return;
@@ -672,7 +672,7 @@ void FearWormEnemy::UpdateSegments()
     // 通常状態 (Line以外) では 0.0f にすることで、元通りの完全な縦並び挙動にします
     float blendT = 0.0f;
     if (movementPattern_ == MovementPattern::Line) {
-        lineTransitionTimer_ += kFrameTime;
+        lineTransitionTimer_ += TimeManager::GetInstance()->GetDeltaTime();
         blendT = std::min(lineTransitionTimer_ / 1.0f, 1.0f);
     } else {
         lineTransitionTimer_ = 0.0f;
@@ -723,7 +723,7 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         if (segment.hitFlashTimer > 0.0f) {
-            segment.hitFlashTimer -= kFrameTime;
+            segment.hitFlashTimer -= TimeManager::GetInstance()->GetDeltaTime();
             if (segment.hitFlashTimer < 0.0f) {
                 segment.hitFlashTimer = 0.0f;
             }
@@ -967,7 +967,7 @@ void FearWormEnemy::Attack()
 
 void FearWormEnemy::UpdateHeadChargeAttack(float attackSpeedRate)
 {
-    float deltaTime = kFrameTime * attackSpeedRate;
+    float deltaTime = TimeManager::GetInstance()->GetDeltaTime() * attackSpeedRate;
 
     if (!isHeadChargeActive_) {
         if (headChargeCooldownTimer_ > 0.0f) {
@@ -1202,21 +1202,22 @@ void FearWormEnemy::UpdateDeathSequence()
         return;
     }
 
-    deathSequenceTimer_ += kFrameTime;
+    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+    deathSequenceTimer_ += deltaTime;
 
     // 1. 重力を適用して落下速度を下方向（Yマイナス）に引っ張る
     constexpr float kGravity = 26.0f; // ゲーム的な落下速度に合わせた重力加速度
-    deathVelocity_.y -= kGravity * kFrameTime;
+    deathVelocity_.y -= kGravity * deltaTime;
 
     // 2. 速度を頭部座標に適用
-    segments_[0].position.x += deathVelocity_.x * kFrameTime;
-    segments_[0].position.y += deathVelocity_.y * kFrameTime;
-    segments_[0].position.z += deathVelocity_.z * kFrameTime;
+    segments_[0].position.x += deathVelocity_.x * deltaTime;
+    segments_[0].position.y += deathVelocity_.y * deltaTime;
+    segments_[0].position.z += deathVelocity_.z * deltaTime;
 
     // 3. 回転速度を頭部回転角に適用
-    currentDeathRotation_.x += deathRotation_.x * kFrameTime;
-    currentDeathRotation_.y += deathRotation_.y * kFrameTime;
-    currentDeathRotation_.z += deathRotation_.z * kFrameTime;
+    currentDeathRotation_.x += deathRotation_.x * deltaTime;
+    currentDeathRotation_.y += deathRotation_.y * deltaTime;
+    currentDeathRotation_.z += deathRotation_.z * deltaTime;
     segments_[0].object->SetRotate(currentDeathRotation_);
 
     // 4. 頭部の座標だけを更新するため、Object3dの更新を呼ぶ
@@ -1502,7 +1503,7 @@ void FearWormEnemy::UpdateBeamAttack()
         return;
     }
 
-    float deltaTime = kFrameTime;
+    float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
     beamTimer_ += deltaTime;
 
     // UVスクロールオフセットを更新

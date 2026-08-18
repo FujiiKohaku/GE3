@@ -68,6 +68,8 @@ public:
         Vector2 blackHoleCenter;
         float blackHoleRadius;
         float blackHoleStrength;
+        float waterEffectIntensity;
+        Vector3 paddingWaterEffect;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);

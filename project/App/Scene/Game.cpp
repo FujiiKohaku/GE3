@@ -143,11 +143,15 @@ void Game::Initialize()
     InitializePerformanceLog();
 #endif
 
+    TimeManager::GetInstance()->Initialize();
+
     Logger::Log("Game Initialize End");
 }
 
 void Game::Update()
 {
+    TimeManager::GetInstance()->Update();
+
     // フレーム全体の開始
     Profiler::GetInstance()->BeginFrame();
     Profiler::GetInstance()->Update();

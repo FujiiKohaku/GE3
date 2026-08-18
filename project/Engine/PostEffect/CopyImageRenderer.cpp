@@ -69,6 +69,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 #endif
 #endif
 
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
     maskTextureHandle_ =
         TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png");
     pipelineStates_[PostEffectType::Copy] =
@@ -323,7 +324,8 @@ void CopyImageRenderer::Draw(
 
     D3D12_GPU_DESCRIPTOR_HANDLE secondTextureHandle = depthTextureHandle;
 
-    if (currentPostEffectType_ == PostEffectType::Dissolve) {
+    if (currentPostEffectType_ == PostEffectType::Dissolve ||
+        currentPostEffectType_ == PostEffectType::RainDrops) {
         secondTextureHandle = maskTextureHandle_;
     }
 
@@ -389,6 +391,8 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->blackHoleCenter = { 0.5f, 0.5f };
     postEffectParameterData_->blackHoleRadius = 0.16f;
     postEffectParameterData_->blackHoleStrength = 1.0f;
+    postEffectParameterData_->waterEffectIntensity = 0.0f;
+    postEffectParameterData_->paddingWaterEffect = {};
 }
 CopyImageRenderer::PostEffectParameter&CopyImageRenderer::GetPostEffectParameter()
 {

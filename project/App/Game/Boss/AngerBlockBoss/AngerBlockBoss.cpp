@@ -5,6 +5,7 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/Time/TimeManager.h"
 #include <algorithm>
 #include <cmath>
 
@@ -61,7 +62,7 @@ void AngerBlockBoss::SetPosition(const Vector3& position)
 
 void AngerBlockBoss::Update()
 {
-    constexpr float deltaTime = 1.0f / 60.0f;
+    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
     if (isDead_) {
         deathTimer_ += deltaTime;
         bodyPosition_.y -= 8.0f * deltaTime;

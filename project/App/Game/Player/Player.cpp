@@ -6,6 +6,7 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Input/Input.h"
+#include "Engine/Time/TimeManager.h"
 #include "Engine/debugcamera/DebugCameraController.h"
 #include <algorithm>
 #include <cassert>
@@ -56,6 +57,10 @@ void Player::Initialize(Model* model)
 void Player::Update()
 {
     if (object_ == nullptr) {
+        return;
+    }
+
+    if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
         return;
     }
 

@@ -3,6 +3,7 @@
 #include "Model.h"
 #include "ModelManager.h"
 #include "Object3dManager.h"
+#include "Engine/Time/TimeManager.h"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -52,7 +53,7 @@ void Object3d::Update()
 {
     // ギミックの更新
     if (gimmick_.exists) {
-        float deltaTime = 1.0f / 60.0f;
+        float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
         if (gimmick_.type == "ROTATION") {
             transform.rotate.x += gimmick_.axis.x * gimmick_.speed * deltaTime;
             transform.rotate.y += gimmick_.axis.y * gimmick_.speed * deltaTime;

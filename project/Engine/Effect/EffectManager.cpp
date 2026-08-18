@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include "Engine/Time/TimeManager.h"
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
@@ -1935,6 +1936,8 @@ void EffectManager::DispatchFields(const EffectRuntime& runtime, ActiveEffectRes
 
 void EffectManager::Update()
 {
+    deltaTime_ = TimeManager::GetInstance()->GetDeltaTime();
+
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
     ReadbackPerformanceQueries();
     performanceUpdateQueryWritten_ = false;

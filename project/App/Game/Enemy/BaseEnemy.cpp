@@ -1,6 +1,7 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/Time/TimeManager.h"
 #include <cmath>
 
 void BaseEnemy::Initialize(Model* model)
@@ -78,7 +79,7 @@ void BaseEnemy::Draw()
 void BaseEnemy::Move()
 {
     if (!waypoints_.empty()) {
-        float deltaTime = 1.0f / 60.0f;
+        float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
         Vector3 target = waypoints_[currentWaypointIndex_];
         Vector3 currentPos = GetPosition();
 

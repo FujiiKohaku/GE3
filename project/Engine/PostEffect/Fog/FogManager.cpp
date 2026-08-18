@@ -1,6 +1,7 @@
 #include "Engine/PostEffect/Fog/FogManager.h"
 
 #include "Engine/Winapp/WinApp.h"
+#include "Engine/Time/TimeManager.h"
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
@@ -55,7 +56,7 @@ void FogManager::Update()
         fogData_->aspectRatio = 0.001f;
     }
 
-    fogData_->time += 1.0f / 60.0f;
+    fogData_->time += TimeManager::GetInstance()->GetDeltaTime();
 }
 
 void FogManager::DrawImGui()

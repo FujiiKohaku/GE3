@@ -32,12 +32,23 @@ float Fbm(float2 p)
 float4 main(WaterPillarVertexOutput input) : SV_TARGET
 {
     const float time = gPillar.cameraPositionAndTime.w;
-    const float angle = input.texcoord.x * 6.28318530718f;
-    const float2 circularUv = float2(cos(angle), sin(angle));
-    const float verticalFlow = input.texcoord.y * 7.0f - time * 2.8f;
-    float2 flowUv = circularUv * 2.35f + float2(verticalFlow * 0.71f, verticalFlow * 1.13f);
+
+    // 内部の球形バブルは円として見えるため描画せず、表面ノイズへ統一する。
+    if (input.kind >= 0.5f) {
+        discard;
+    }
+
+    const float radius = max(gPillar.pillarPositionAndRadius.w, 0.001f);
+    const float height = max(gPillar.heightAndShape.x, 0.001f);
+    const float3 localPosition = input.worldPosition - gPillar.pillarPositionAndRadius.xyz;
+    const float2 horizontalPosition = localPosition.xz / radius;
+    const float normalizedHeight = localPosition.y / height;
+    const float verticalFlow = normalizedHeight * 7.0f - time * 2.8f;
+
+    // メッシュのUV段ではなく、連続したワールド位置から流れを生成する。
+    float2 flowUv = horizontalPosition * 2.35f + float2(verticalFlow * 0.71f, verticalFlow * 1.13f);
     float broadFlow = Fbm(flowUv);
-    float2 fineUv = circularUv * 5.4f + float2(verticalFlow * -1.37f, verticalFlow * 0.83f);
+    float2 fineUv = horizontalPosition * 5.4f + float2(verticalFlow * -1.37f, verticalFlow * 0.83f);
     float fineFlow = Fbm(fineUv + float2(time * 0.45f, -time * 1.6f));
     float stream = smoothstep(0.48f, 0.78f, broadFlow * 0.65f + fineFlow * 0.55f);
     float foam = smoothstep(0.68f, 0.88f, fineFlow + broadFlow * 0.32f);
@@ -45,14 +56,7 @@ float4 main(WaterPillarVertexOutput input) : SV_TARGET
     float3 viewDirection = normalize(gPillar.cameraPositionAndTime.xyz - input.worldPosition);
     float fresnel = pow(1.0f - saturate(abs(dot(normalize(input.normal), viewDirection))), 2.2f);
 
-    if (input.kind >= 0.5f) {
-        float bubbleLight = saturate(dot(normalize(input.normal), normalize(float3(-0.35f, 0.8f, -0.25f)))) * 0.35f;
-        float sparkle = pow(fresnel, 0.7f);
-        float3 bubbleColor = lerp(float3(0.18f, 0.58f, 0.78f), float3(0.88f, 0.98f, 1.0f), sparkle + bubbleLight);
-        float bubbleAlpha = gPillar.color.a * saturate(0.58f + sparkle * 0.38f);
-        return float4(bubbleColor, bubbleAlpha);
-    }
-    float verticalShade = lerp(0.72f, 1.08f, saturate(1.0f - input.texcoord.y));
+    float verticalShade = lerp(0.72f, 1.08f, saturate(1.0f - normalizedHeight));
 
     float3 deepWater = float3(0.004f, 0.075f, 0.22f);
     float3 clearWater = gPillar.color.rgb * float3(0.48f, 0.62f, 0.72f);

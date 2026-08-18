@@ -54,4 +54,6 @@ cbuffer PostEffectParameter : register(b0)
     float2 blackHoleCenter;
     float blackHoleRadius;
     float blackHoleStrength;
+    float waterEffectIntensity;
+    float3 paddingWaterEffect;
 };

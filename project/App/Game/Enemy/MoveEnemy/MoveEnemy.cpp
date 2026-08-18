@@ -3,6 +3,7 @@
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/Time/TimeManager.h"
 #include "externals/imgui/imgui.h"
 #include <cmath>
 
@@ -36,7 +37,7 @@ void MoveEnemy::Move()
         isStartPositionInitialized_ = true;
     }
 
-    moveTime_ = moveTime_ + (1.0f / 60.0f);
+    moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
     // 各移動パターンによる座標計算 (累積誤差が発生しないよう startPosition_ を基準に計算)
     if (movePattern_ == MovePattern::LeftRight) {

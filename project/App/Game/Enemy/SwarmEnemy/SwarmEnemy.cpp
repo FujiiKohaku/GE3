@@ -4,6 +4,7 @@
 #include "App/Game/Player/Player.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/Time/TimeManager.h"
 #include <cmath>
 #include <numbers>
 
@@ -14,7 +15,6 @@ constexpr float kSwarmBulletSpeed = 1.15f;
 constexpr float kFadeOutDuration = 0.70f;
 constexpr float kAttackIntervalBase = 0.90f;
 constexpr int32_t kMaximumShots = 2;
-constexpr float kDeltaTime = 1.0f / 60.0f;
 }
 
 void SwarmEnemy::Initialize(
@@ -98,7 +98,7 @@ void SwarmEnemy::Move()
     }
 
     if (isFading_) {
-        fadeTimer_ += kDeltaTime;
+        fadeTimer_ += TimeManager::GetInstance()->GetDeltaTime();
         float fadeRatio = 1.0f - fadeTimer_ / kFadeOutDuration;
         if (fadeRatio < 0.0f) {
             fadeRatio = 0.0f;
@@ -117,7 +117,7 @@ void SwarmEnemy::Move()
         return;
     }
 
-    moveTime_ += kDeltaTime;
+    moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
     float centerX = centerStartX_;
     centerX += static_cast<float>(travelDirection_) * crossingSpeed_ * moveTime_;
@@ -159,7 +159,7 @@ void SwarmEnemy::Attack()
         return;
     }
 
-    attackTimer_ -= kDeltaTime;
+    attackTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
     if (attackTimer_ > 0.0f) {
         return;
     }

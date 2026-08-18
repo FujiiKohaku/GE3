@@ -82,6 +82,8 @@ public:
     float GetBlackHoleRadius() const { return blackHoleRadius_; }
     void SetBlackHoleStrength(float strength) { blackHoleStrength_ = strength; }
     float GetBlackHoleStrength() const { return blackHoleStrength_; }
+    void SetWaterEffectIntensity(float intensity) { waterEffectIntensity_ = intensity; }
+    float GetWaterEffectIntensity() const { return waterEffectIntensity_; }
 
 private:
     SceneManager() = default;
@@ -100,6 +102,7 @@ private:
     Vector2 blackHoleCenter_ = { 0.5f, 0.5f };
     float blackHoleRadius_ = 0.16f;
     float blackHoleStrength_ = 1.0f;
+    float waterEffectIntensity_ = 0.0f;
     float paintProgress_ = 0.0f;
     float paintIntensity_ = 0.0f;
     float paintSeed_ = 0.0f;
