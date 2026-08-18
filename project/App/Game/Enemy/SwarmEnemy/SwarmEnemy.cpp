@@ -210,7 +210,7 @@ void SwarmEnemy::FireMovingBullet()
     bullet->SetSwarmVelocity(velocity);
     bullet->SetWavePhase(static_cast<float>(slotIndex_) * 0.72f);
 
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
     EffectManager::GetInstance()->PlayEffect("ShotBullet", transform_.translate);
 }
 

@@ -46,6 +46,7 @@
 #include "Engine/SceneObjectManager/SceneObjectManager.h"
 
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 
 #include "App/Game/Enemy/Types/NormalEnemy.h"
 #include "App/Game/Enemy/Types/ArmoredEnemy.h"
@@ -276,6 +277,7 @@ private:
     float followY_ = 0.35f;
     // エネミー配列
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
+    EnemyBulletManager enemyBulletManager_;
     size_t nextSwarmWaveIndex_ = 0;
 
     // エイム用仮想カメラ

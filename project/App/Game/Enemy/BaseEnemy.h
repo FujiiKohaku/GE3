@@ -9,6 +9,7 @@
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
 class Camera;
 class Model;
+class EnemyBulletManager;
 
 struct EnemyCollisionPart {
     Vector3 position = { 0.0f, 0.0f, 0.0f };
@@ -30,10 +31,7 @@ public:
     bool IsDead() const;
 
     virtual Vector3 GetPosition() const;
-    std::vector<std::unique_ptr<EnemyBullet>>& GetBullets()
-    {
-        return enemyBullets_;
-    }
+    static void SetBulletManager(EnemyBulletManager* bulletManager);
     virtual void SetPosition(const Vector3& position);
     virtual void SetRotate(const Vector3& rotate);
     void SetPatrolWaypoints(const std::vector<Vector3>& waypoints)
@@ -50,6 +48,7 @@ public:
     virtual void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position);
 
 protected:
+    void AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet);
     virtual void UpdateAnimation();
     virtual void OnDamage(float damage);
     virtual void OnDeath();
@@ -64,7 +63,7 @@ protected:
 
     float moveSpeed_ = 0.1f;
 
-    std::vector<std::unique_ptr<EnemyBullet>> enemyBullets_;
+    static EnemyBulletManager* bulletManager_;
 
     std::vector<Vector3> waypoints_;
     size_t currentWaypointIndex_ = 0;

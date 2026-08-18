@@ -68,13 +68,9 @@ void CheckPlayerBulletsAgainstEnemy(
 
 void CheckEnemyBulletsAgainstPlayer(
     Player& player,
-    BaseEnemy& enemy,
+    std::vector<std::unique_ptr<EnemyBullet>>& bullets,
     GameplayCollisionEvents& events)
 {
-    if (enemy.IsDead()) {
-        return;
-    }
-
     const Sphere playerSphere {
         player.GetTranslate(),
         kPlayerEnemyCollisionRadius * 0.5f
@@ -83,7 +79,7 @@ void CheckEnemyBulletsAgainstPlayer(
         player.GetTranslate(),
         kJustDodgePlayerRadius
     };
-    for (const std::unique_ptr<EnemyBullet>& bullet : enemy.GetBullets()) {
+    for (const std::unique_ptr<EnemyBullet>& bullet : bullets) {
         if (!bullet->IsAlive()) {
             continue;
         }
@@ -222,7 +218,8 @@ void GameplayCollisionSystem::UpdateStageCollisions(
 GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     Player& player,
     std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    BaseEnemy* boss)
+    BaseEnemy* boss,
+    std::vector<std::unique_ptr<EnemyBullet>>& independentBullets)
 {
     GameplayCollisionEvents events {};
     const Sphere playerSphere {
@@ -231,29 +228,29 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     };
 
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies) {
-        if (enemy->IsDead()) {
-            continue;
-        }
-
-        std::vector<EnemyCollisionPart> collisionParts;
-        enemy->GetCollisionParts(collisionParts);
-        for (const EnemyCollisionPart& part : collisionParts) {
-            if (CollisionManager::Intersect(
-                    playerSphere,
-                    Sphere { part.position, part.radius }).isHit) {
-                OutputDebugStringA("Player Hit Enemy\n");
-                break;
+        if (!enemy->IsDead()) {
+            std::vector<EnemyCollisionPart> collisionParts;
+            enemy->GetCollisionParts(collisionParts);
+            for (const EnemyCollisionPart& part : collisionParts) {
+                if (CollisionManager::Intersect(
+                        playerSphere,
+                        Sphere { part.position, part.radius }).isHit) {
+                    OutputDebugStringA("Player Hit Enemy\n");
+                    break;
+                }
             }
+
+            CheckPlayerBulletsAgainstEnemy(player, *enemy);
         }
 
-        CheckPlayerBulletsAgainstEnemy(player, *enemy);
-        CheckEnemyBulletsAgainstPlayer(player, *enemy, events);
     }
 
-    if (boss != nullptr && !boss->IsDead()) {
-        CheckPlayerBulletsAgainstEnemy(player, *boss);
-        CheckEnemyBulletsAgainstPlayer(player, *boss, events);
+    if (boss != nullptr) {
+        if (!boss->IsDead()) {
+            CheckPlayerBulletsAgainstEnemy(player, *boss);
+        }
     }
+    CheckEnemyBulletsAgainstPlayer(player, independentBullets, events);
     return events;
 }
 

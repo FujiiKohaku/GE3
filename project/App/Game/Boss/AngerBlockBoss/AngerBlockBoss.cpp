@@ -200,10 +200,6 @@ void AngerBlockBoss::UpdateCoreBehavior(float deltaTime)
     if (corePattern_ == 1) UpdateCoreBurst();
     if (corePattern_ == 2) UpdateCoreStrafe();
 
-    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) bullet->Update();
-    std::erase_if(enemyBullets_, [](const std::unique_ptr<EnemyBullet>& bullet) {
-        return !bullet->IsAlive();
-    });
 }
 
 void AngerBlockBoss::UpdateCoreRush()
@@ -297,7 +293,7 @@ void AngerBlockBoss::FireCoreBurst(bool spread)
         bullet->SetVelocity(direction * 0.85f);
         bullet->SetColor({ 1.0f, 0.12f, 0.02f, 1.0f });
         bullet->SetDamage(1);
-        enemyBullets_.push_back(std::move(bullet));
+        AddEnemyBullet(std::move(bullet));
     }
 }
 
@@ -350,7 +346,6 @@ void AngerBlockBoss::Draw()
     if (core_) core_->Draw();
     if (leftHand_ && leftHandHp_ > 0.0f) leftHand_->Draw();
     if (rightHand_ && rightHandHp_ > 0.0f) rightHand_->Draw();
-    for (const std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) bullet->Draw();
 }
 
 void AngerBlockBoss::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const

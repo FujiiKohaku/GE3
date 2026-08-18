@@ -13,15 +13,7 @@ void PaintShooterEnemy::Initialize(Model* model, Model* bulletModel, Player* pla
 
 void PaintShooterEnemy::Update()
 {
-    if (isDead_) {
-        return;
-    }
-
     BaseEnemy::Update();
-
-    if (player_) {
-        Attack();
-    }
 }
 
 void PaintShooterEnemy::Attack()
@@ -53,5 +45,5 @@ void PaintShooterEnemy::FirePaintBullet()
     bullet->SetTranslate(transform_.translate);
     bullet->SetVelocity(velocity);
 
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 }

@@ -105,8 +105,6 @@ void PirateShipMidBoss::Update()
         if (stateTimer_ >= 3.0f) SetDead(true);
     }
 
-    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) bullet->Update();
-    std::erase_if(enemyBullets_, [](const std::unique_ptr<EnemyBullet>& bullet) { return !bullet->IsAlive(); });
     UpdateParts();
 }
 
@@ -123,7 +121,7 @@ void PirateShipMidBoss::FireCannons()
         bullet->SetVelocity(direction * 0.72f);
         bullet->SetColor({ 0.95f, 0.45f, 0.08f, 1.0f });
         bullet->SetDamage(1);
-        enemyBullets_.push_back(std::move(bullet));
+        AddEnemyBullet(std::move(bullet));
         EffectManager::GetInstance()->PlayEffect("NormalBulletImpactFlash", muzzle);
     }
 }
@@ -156,7 +154,6 @@ void PirateShipMidBoss::Draw()
     sail_->Draw();
     leftCannons_->Draw();
     rightCannons_->Draw();
-    for (const std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) bullet->Draw();
 }
 
 void PirateShipMidBoss::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const

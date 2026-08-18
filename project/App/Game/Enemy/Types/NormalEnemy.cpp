@@ -76,5 +76,5 @@ void NormalEnemy::FireBullet()
 
     bullet->SetVelocity(velocity);
 
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 }

@@ -97,10 +97,8 @@ private:
     void UpdateSegmentObjects();
 
     // ボスが発射した全弾を更新する。
-    void UpdateBullets();
 
     // 寿命切れまたは命中済みの弾をリストから削除する。
-    void RemoveDeadBullets();
 
     // プレイヤーを基準に登場開始位置を計算する。
     Vector3 EntryStartPosition(const Vector3& playerPosition) const;

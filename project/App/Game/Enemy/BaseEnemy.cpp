@@ -2,7 +2,10 @@
 
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Time/TimeManager.h"
+#include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include <cmath>
+
+EnemyBulletManager* BaseEnemy::bulletManager_ = nullptr;
 
 void BaseEnemy::Initialize(Model* model)
 {
@@ -26,16 +29,6 @@ void BaseEnemy::Initialize(Model* model)
 void BaseEnemy::Update()
 {
     if (isDead_) {
-        for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
-            bullet->Update();
-        }
-        for (size_t index = 0; index < enemyBullets_.size();) {
-            if (enemyBullets_[index]->IsAlive() == false) {
-                enemyBullets_.erase(enemyBullets_.begin() + index);
-            } else {
-                index = index + 1;
-            }
-        }
         return;
     }
 
@@ -44,19 +37,6 @@ void BaseEnemy::Update()
     Attack();
 
     UpdateAnimation();
-
-    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
-        bullet->Update();
-    }
-
-    // 死んだ敵の弾を配列から削除してクリーンアップ
-    for (size_t index = 0; index < enemyBullets_.size();) {
-        if (enemyBullets_[index]->IsAlive() == false) {
-            enemyBullets_.erase(enemyBullets_.begin() + index);
-        } else {
-            index = index + 1;
-        }
-    }
 
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
@@ -70,9 +50,17 @@ void BaseEnemy::Draw()
         object_->Draw();
     }
 
-    for (std::unique_ptr<EnemyBullet>& bullet :enemyBullets_) {
+}
 
-        bullet->Draw();
+void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
+{
+    bulletManager_ = bulletManager;
+}
+
+void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet)
+{
+    if (bulletManager_ != nullptr) {
+        bulletManager_->Add(std::move(bullet));
     }
 }
 

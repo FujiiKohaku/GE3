@@ -60,6 +60,8 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 void GamePlayScene::Initialize()
 {
     EnemyBullet::SetTimeScale(1.0f);
+    BaseEnemy::SetBulletManager(&enemyBulletManager_);
+    enemyBulletManager_.Clear();
     StageCatalog* stageCatalog = StageCatalog::GetInstance();
     if (!stageCatalog->Load()) {
         Logger::Log(stageCatalog->GetLastError());
@@ -704,6 +706,11 @@ void GamePlayScene::Update()
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Update();
     }
+
+    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
+        return enemy->IsDead();
+    });
+    enemyBulletManager_.Update();
 
     if (stageId_ == "stage03" && !isPirateShipMidBossSpawned_ && railDistance_ >= 1250.0f) {
         auto pirateShip = std::make_unique<PirateShipMidBoss>();
@@ -1739,6 +1746,7 @@ void GamePlayScene::Draw3D()
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
+    enemyBulletManager_.Draw();
 
     if (GetActiveBoss() != nullptr) {
         GetActiveBoss()->Draw();
@@ -2183,7 +2191,8 @@ void GamePlayScene::CheckCollision()
             gameplayCollisionSystem_->UpdateCombatCollisions(
                 *player_,
                 enemies_,
-                GetActiveBoss());
+                GetActiveBoss(),
+                enemyBulletManager_.GetBullets());
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
@@ -2193,10 +2202,6 @@ void GamePlayScene::CheckCollision()
     if (gameplayCollisionSystem_ != nullptr) {
         gameplayCollisionSystem_->UpdateTriggers(*player_, stageTriggers_);
     }
-
-    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        return enemy->IsDead();
-    });
 
     UpdateJustDodgeSlowMotion(justDodgedEnemyBullet);
 }
@@ -2360,15 +2365,15 @@ void GamePlayScene::DrawCollisionDebug()
                 kEnemyColor,
                 kLineThickness);
         }
+    }
 
-        for (const std::unique_ptr<EnemyBullet>& bullet : enemy->GetBullets()) {
-            if (bullet->IsAlive()) {
-                debugRenderer->AddWireSphere(
-                    bullet->GetPosition(),
-                    bullet->GetCollisionRadius() * 0.5f,
-                    kEnemyBulletColor,
-                    kLineThickness);
-            }
+    for (const std::unique_ptr<EnemyBullet>& bullet : enemyBulletManager_.GetBullets()) {
+        if (bullet->IsAlive()) {
+            debugRenderer->AddWireSphere(
+                bullet->GetPosition(),
+                bullet->GetCollisionRadius() * 0.5f,
+                kEnemyBulletColor,
+                kLineThickness);
         }
     }
 
@@ -2386,20 +2391,13 @@ void GamePlayScene::DrawCollisionDebug()
             kLineThickness);
     }
 
-    for (const std::unique_ptr<EnemyBullet>& bullet : GetActiveBoss()->GetBullets()) {
-        if (bullet->IsAlive()) {
-            debugRenderer->AddWireSphere(
-                bullet->GetPosition(),
-                bullet->GetCollisionRadius() * 0.5f,
-                kEnemyBulletColor,
-                kLineThickness);
-        }
-    }
 }
 #endif
 
 void GamePlayScene::Finalize()
 {
+    BaseEnemy::SetBulletManager(nullptr);
+    enemyBulletManager_.Clear();
     CollisionManager::GetInstance()->ClearRaycastSphereTargets();
     ClearLevelObjects();
     ResetGameplayPostEffects();
@@ -2863,6 +2861,7 @@ void GamePlayScene::HotReloadLevel()
 {
     ClearLevelObjects();
     enemies_.clear();
+    enemyBulletManager_.Clear();
     nextSwarmWaveIndex_ = 0;
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };

@@ -9,6 +9,7 @@
 class Object3d;
 class Player;
 class BaseEnemy;
+class EnemyBullet;
 
 struct DestructibleLevelObject {
     Object3d* object = nullptr;
@@ -44,7 +45,8 @@ public:
     GameplayCollisionEvents UpdateCombatCollisions(
         Player& player,
         std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        BaseEnemy* boss);
+        BaseEnemy* boss,
+        std::vector<std::unique_ptr<EnemyBullet>>& independentBullets);
 
     GameplayCollisionEvents UpdateTriggers(
         Player& player,

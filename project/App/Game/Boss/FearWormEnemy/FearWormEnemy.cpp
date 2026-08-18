@@ -241,8 +241,6 @@ void FearWormEnemy::Update()
 
     // 弾の更新と削除 (Wait状態以外のみ実行して負荷軽減)
     if (state_ != BossState::Wait) {
-        UpdateBullets();
-        RemoveDeadBullets();
     }
 
     // 全胴体破壊時の頭部弱点化チェック
@@ -801,10 +799,6 @@ void FearWormEnemy::Draw()
         }
     }
 
-    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
-        bullet->Draw();
-    }
-
     DrawBeam();
 }
 
@@ -1086,7 +1080,7 @@ void FearWormEnemy::FireBullet(const Vector3& position)
     bullet->SetVelocity(velocity);
 
     // 管理リストへ追加して発射エフェクトを再生する。
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 
     EffectManager::GetInstance()->PlayEffect(
         "WormShotFlash",
@@ -1129,7 +1123,7 @@ void FearWormEnemy::FireChargedBullet()
     bullet->SetVelocity(velocity);
 
     // 管理リストへ追加して発射エフェクトを再生する。
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 
     EffectManager::GetInstance()->PlayEffect(
         "WormShotFlash",
@@ -1161,24 +1155,6 @@ Vector3 FearWormEnemy::HeadLookRotation() const
     rotate.z = 0.0f;
 
     return rotate;
-}
-
-void FearWormEnemy::UpdateBullets()
-{
-    for (std::unique_ptr<EnemyBullet>& bullet : enemyBullets_) {
-        bullet->Update();
-    }
-}
-
-void FearWormEnemy::RemoveDeadBullets()
-{
-    for (size_t index = 0; index < enemyBullets_.size();) {
-        if (!enemyBullets_[index]->IsAlive()) {
-            enemyBullets_.erase(enemyBullets_.begin() + index);
-        } else {
-            index = index + 1;
-        }
-    }
 }
 
 void FearWormEnemy::PlayBodyBreakEffect(const Vector3& position)
@@ -1309,8 +1285,7 @@ bool FearWormEnemy::IsValidSegmentIndex(int32_t partIndex) const
 
 void FearWormEnemy::OnDeath()
 {
-    // 弾と攻撃状態をクリア (ビームも強制消去)
-    enemyBullets_.clear();
+    // 攻撃状態をクリア（発射済みの弾はManager側で飛び続ける）
     isHeadChargeActive_ = false;
     isHeadChargeFiring_ = false;
     beamState_ = BeamState::Wait;
@@ -1352,7 +1327,7 @@ void FearWormEnemy::FireSingleMissile(size_t segmentIndex)
     EffectManager::GetInstance()->PlayEffect("WormShotFlash", segments_[segmentIndex].position);
 
     // ボスの弾リストに追加
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 }
 
 Vector3 FearWormEnemy::SpiralTargetPosition(const Vector3& playerPosition) const
@@ -1472,7 +1447,7 @@ void FearWormEnemy::FireDirectionalBullet(const Vector3& position, const Vector3
     bullet->SetTranslate(position);
     bullet->SetVelocity(velocity);
 
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 
     EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
 }
