@@ -96,11 +96,19 @@ void Player::Update()
         minigunHeat_ += 1.0f / 80.0f;
         if (minigunHeat_ > 1.0f) minigunHeat_ = 1.0f;
 
-        // ミニガンモード時: 3フレームに1発(通常弾の4倍レート)のガトリング連射！
+        // ミニガンは高速連射、通常弾はそれより遅い連射にする
         if (currentWeapon_ == kWeaponMinigun) {
             minigunFireCooldown_++;
-            if (minigunFireCooldown_ >= 3) {
+            if (minigunFireCooldown_ >= kMinigunFireIntervalFrames) {
                 minigunFireCooldown_ = 0;
+                if (camera_) {
+                    FireBullet(*camera_);
+                }
+            }
+        } else if (currentWeapon_ == kWeaponNormalBullet) {
+            normalFireCooldown_++;
+            if (normalFireCooldown_ >= kNormalFireIntervalFrames) {
+                normalFireCooldown_ = 0;
                 if (camera_) {
                     FireBullet(*camera_);
                 }
@@ -308,6 +316,13 @@ void Player::FireBullet(const Camera& activeCamera)
 
     bullet->Initialize(bulletModel_);
     bullet->SetCamera(camera_);
+    if (currentWeapon_ == kWeaponMinigun) {
+        bullet->SetDamage(kMinigunDamage);
+        minigunFireCooldown_ = 0;
+    } else if (currentWeapon_ == kWeaponNormalBullet) {
+        bullet->SetDamage(kNormalBulletDamage);
+        normalFireCooldown_ = 0;
+    }
 
     Vector3 muzzlePosition = CalculateMuzzlePosition();
     EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzlePosition);

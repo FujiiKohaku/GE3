@@ -8,9 +8,6 @@
     },
     {
       "settings": "resources/Stages/Stage03/settings.json"
-    },
-    {
-      "settings": "resources/Stages/DemoStage/settings.json"
     }
   ]
 }

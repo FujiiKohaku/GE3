@@ -312,10 +312,6 @@ private:
     std::unique_ptr<Text> playerHpText_;
     float displayedPlayerHpRatio_ = 1.0f;
 
-    std::unique_ptr<Text> demoFeatureText_;
-    std::unique_ptr<Text> demoFeatureHelpText_;
-    size_t demoFeatureIndex_ = 0;
-
     // Release構成でも表示するボスHP HUD
     std::unique_ptr<Sprite> bossHeadHpBgSprite_;
     std::unique_ptr<Sprite> bossHeadHpBarSprite_;

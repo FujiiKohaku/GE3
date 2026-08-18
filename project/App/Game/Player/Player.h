@@ -209,10 +209,15 @@ private:
     float bulletSpawnOffsetZ_ = 4.0f;
     float bulletSpeed_ = 5.8f; // 爆速化！照準を動かしても一瞬で即座に着弾！
     int currentWeapon_ = kWeaponNormalBullet;
+    static constexpr int kNormalBulletDamage = 3;
+    static constexpr int kNormalFireIntervalFrames = 10;
+    int normalFireCooldown_ = 0;
     static constexpr int kMissileFireIntervalFrames = 120;
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
     // ミニガン（超高速連射＆熱気蓄積）用
+    static constexpr int kMinigunDamage = 1;
+    static constexpr int kMinigunFireIntervalFrames = 3;
     float minigunHeat_ = 0.0f;
     int minigunFireCooldown_ = 0;
 
