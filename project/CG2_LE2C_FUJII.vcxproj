@@ -308,6 +308,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
+    <ClCompile Include="App\Game\Player\Bullet\HomingMissileBullet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\Shaders\Object3D\Object3d.PS.hlsl">
@@ -460,6 +461,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="App\Game\Boss\BossEncounterController.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
+    <ClInclude Include="App\Game\Player\Bullet\HomingMissileBullet.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="externals\imgui\imgui.vcxproj">

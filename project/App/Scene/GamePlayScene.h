@@ -211,6 +211,7 @@ private:
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
+    std::vector<std::unique_ptr<Sprite>> homingLockSprites_;
     // ------------------------------
     // BGM / SE
     // ------------------------------

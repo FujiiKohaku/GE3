@@ -1,6 +1,8 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Player/Bullet/MissileBullet.h"
+#include "App/Game/Player/Bullet/HomingMissileBullet.h"
 #include "App/Game/Player/Bullet/NormalBullet.h"
+#include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -88,6 +90,7 @@ void Player::Update()
     }
 
     UpdateWeaponSwitch(input);
+    UpdateHomingTarget();
     if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
         ++missileFireCooldownFrames_;
     }
@@ -119,6 +122,13 @@ void Player::Update()
                 }
             }
         }
+    }
+
+    if ((currentWeapon_ == kWeaponMissileBullet ||
+         currentWeapon_ == kWeaponHomingMissile) &&
+        (input->IsKeyTrigger(DIK_SPACE) || input->IsMouseTrigger(0)) &&
+        camera_ != nullptr) {
+        FireBullet(*camera_);
     }
 
     // デバッグカメラモードでないときは、マウスで照準を動かし、キーボードでプレイヤーを動かす
@@ -309,12 +319,27 @@ void Player::FireBullet(const Camera& activeCamera)
         return;
     }
 
-    if (currentWeapon_ == kWeaponMissileBullet) {
+    if (currentWeapon_ == kWeaponMissileBullet ||
+        currentWeapon_ == kWeaponHomingMissile) {
         if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
             return;
         }
         missileFireCooldownFrames_ = 0;
     }
+
+    if (currentWeapon_ == kWeaponHomingMissile &&
+        !lockedHomingTargets_.empty()) {
+        for (BaseEnemy* target : lockedHomingTargets_) {
+            FireSingleBullet(activeCamera, target);
+        }
+        return;
+    }
+
+    FireSingleBullet(activeCamera, nullptr);
+}
+
+void Player::FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget)
+{
 
     float shotSpeed = bulletSpeed_;
     std::unique_ptr<PlayerBullet> bullet = CreateBullet(shotSpeed);
@@ -338,6 +363,10 @@ void Player::FireBullet(const Camera& activeCamera)
     CreateAimRay(aimRay, activeCamera);
 
     Vector3 aimPoint = ResolveAimPoint(aimRay, muzzlePosition);
+
+    if (HomingMissileBullet* missile = dynamic_cast<HomingMissileBullet*>(bullet.get())) {
+        missile->SetTarget(homingTarget, homingTargets_);
+    }
 
 #ifdef _DEBUG
     drawDebugLines_ = true;
@@ -430,7 +459,15 @@ std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)
     switch (currentWeapon_) {
 
     case kWeaponMissileBullet: {
-        std::unique_ptr<MissileBullet> missileBullet = std::make_unique<MissileBullet>();
+        std::unique_ptr<MissileBullet> missileBullet =
+            std::make_unique<MissileBullet>();
+        shotSpeed = missileBullet->GetSpeed() / 60.0f;
+        return missileBullet;
+    }
+
+    case kWeaponHomingMissile: {
+        std::unique_ptr<HomingMissileBullet> missileBullet =
+            std::make_unique<HomingMissileBullet>();
         shotSpeed = missileBullet->GetSpeed() / 60.0f;
         return missileBullet;
     }
@@ -458,7 +495,70 @@ void Player::UpdateWeaponSwitch(Input* input)
 
     if (input->IsKeyTrigger(DIK_1)) currentWeapon_ = kWeaponNormalBullet;
     if (input->IsKeyTrigger(DIK_2)) currentWeapon_ = kWeaponMissileBullet;
-    if (input->IsKeyTrigger(DIK_3)) currentWeapon_ = kWeaponMinigun;
+    if (input->IsKeyTrigger(DIK_3)) currentWeapon_ = kWeaponHomingMissile;
+    if (input->IsKeyTrigger(DIK_4)) currentWeapon_ = kWeaponMinigun;
+}
+
+void Player::SetHomingTargets(const std::vector<BaseEnemy*>& targets)
+{
+    *homingTargets_ = targets;
+}
+
+void Player::UpdateHomingTarget()
+{
+    lockedHomingTargets_.clear();
+    if (currentWeapon_ != kWeaponHomingMissile || camera_ == nullptr) {
+        return;
+    }
+
+    constexpr float kLockRadiusPixels = 120.0f;
+    struct LockCandidate {
+        BaseEnemy* enemy;
+        float screenDistanceSquared;
+    };
+    std::vector<LockCandidate> candidates;
+    for (BaseEnemy* enemy : *homingTargets_) {
+        if (enemy == nullptr || enemy->IsDead()) {
+            continue;
+        }
+        const Vector3 toEnemy = enemy->GetPosition() - transform_.translate;
+        const float forwardDistance = Dot(toEnemy, railForward_);
+        if (forwardDistance <= 0.0f ||
+            forwardDistance > kHomingLockMaxForwardDistance) {
+            continue;
+        }
+        const Vector2 screenPosition = camera_->WorldToScreen(enemy->GetPosition());
+        const float differenceX = screenPosition.x - aimScreenPosition_.x;
+        const float differenceY = screenPosition.y - aimScreenPosition_.y;
+        const float distanceSquared = differenceX * differenceX + differenceY * differenceY;
+        if (distanceSquared <= kLockRadiusPixels * kLockRadiusPixels) {
+            candidates.push_back({ enemy, distanceSquared });
+        }
+    }
+
+    std::sort(
+        candidates.begin(),
+        candidates.end(),
+        [](const LockCandidate& left, const LockCandidate& right) {
+            return left.screenDistanceSquared < right.screenDistanceSquared;
+        });
+    const size_t lockCount = (std::min)(candidates.size(), kMaxHomingLockCount);
+    for (size_t index = 0; index < lockCount; ++index) {
+        lockedHomingTargets_.push_back(candidates[index].enemy);
+    }
+}
+
+void Player::GetHomingLockPositions(std::vector<Vector3>& positions) const
+{
+    positions.clear();
+    if (currentWeapon_ != kWeaponHomingMissile) {
+        return;
+    }
+    for (BaseEnemy* target : lockedHomingTargets_) {
+        if (target != nullptr && !target->IsDead()) {
+            positions.push_back(target->GetPosition());
+        }
+    }
 }
 
 const char* Player::GetCurrentWeaponName() const
@@ -466,6 +566,8 @@ const char* Player::GetCurrentWeaponName() const
     switch (currentWeapon_) {
     case kWeaponMissileBullet:
         return "Missile";
+    case kWeaponHomingMissile:
+        return "Homing Missile";
     case kWeaponMinigun:
         return "Minigun";
     case kWeaponNormalBullet:
@@ -490,6 +592,7 @@ void Player::RemoveDeadBullets()
             ++i;
         }
     }
+
 }
 
 void Player::ApplyTransform()

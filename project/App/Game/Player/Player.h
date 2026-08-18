@@ -12,6 +12,7 @@
 
 class Camera;
 class Input;
+class BaseEnemy;
 struct Ray;
 
 class Player {
@@ -128,6 +129,8 @@ public:
 
     void DrawImGui();
     void FireBullet(const Camera& activeCamera);
+    void SetHomingTargets(const std::vector<BaseEnemy*>& targets);
+    void GetHomingLockPositions(std::vector<Vector3>& positions) const;
     Camera* GetCamera() const { return camera_; }
     void SetControlMode(ControlMode mode)
     {
@@ -146,6 +149,7 @@ private:
     enum WeaponType {
         kWeaponNormalBullet = 0,
         kWeaponMissileBullet,
+        kWeaponHomingMissile,
         kWeaponMinigun, // 新武器: 超高速連射ミニガン
         kWeaponCount
     };
@@ -157,6 +161,8 @@ private:
 
     std::unique_ptr<Object3d> object_;
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
+    std::shared_ptr<std::vector<BaseEnemy*>> homingTargets_ = std::make_shared<std::vector<BaseEnemy*>>();
+    std::vector<BaseEnemy*> lockedHomingTargets_;
 
     Model* bulletModel_ = nullptr;
     Camera* camera_ = nullptr;
@@ -213,6 +219,8 @@ private:
     static constexpr int kNormalFireIntervalFrames = 10;
     int normalFireCooldown_ = 0;
     static constexpr int kMissileFireIntervalFrames = 120;
+    static constexpr float kHomingLockMaxForwardDistance = 250.0f;
+    static constexpr size_t kMaxHomingLockCount = 6;
     int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
 
     // ミニガン（超高速連射＆熱気蓄積）用
@@ -228,6 +236,8 @@ private:
         const Ray& aimRay,
         const Vector3& muzzlePosition) const;
     std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
+    void FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget);
+    void UpdateHomingTarget();
     void UpdateWeaponSwitch(Input* input);
     const char* GetCurrentWeaponName() const;
     void UpdateBullets();

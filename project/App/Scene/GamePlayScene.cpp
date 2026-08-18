@@ -221,6 +221,18 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
 
+    constexpr size_t kHomingMarkerCount = 6;
+    homingLockSprites_.reserve(kHomingMarkerCount);
+    for (size_t index = 0; index < kHomingMarkerCount; ++index) {
+        auto marker = std::make_unique<Sprite>();
+        marker->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+        marker->SetSize({ 84.0f, 84.0f });
+        marker->SetAnchorPoint({ 0.5f, 0.5f });
+        marker->SetColor({ 1.0f, 0.15f, 0.05f, 0.95f });
+        marker->Update();
+        homingLockSprites_.push_back(std::move(marker));
+    }
+
     // ホワイトPNG (resources/Textures/white.png) を使用した縦長ポーズUIスプライトの初期化
     TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
 
@@ -1158,6 +1170,15 @@ void GamePlayScene::Update()
     // レティクル（AimSprite）のスクリーン位置更新
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
+    std::vector<Vector3> homingLockPositions;
+    player_->GetHomingLockPositions(homingLockPositions);
+    const size_t markerCount =
+        (std::min)(homingLockPositions.size(), homingLockSprites_.size());
+    for (size_t index = 0; index < markerCount; ++index) {
+        homingLockSprites_[index]->SetPosition(
+            camera_->WorldToScreen(homingLockPositions[index]));
+        homingLockSprites_[index]->Update();
+    }
 
     // スカイボックスの更新
     skyBox_->Update(camera_.get());
@@ -1408,6 +1429,18 @@ void GamePlayScene::UpdatePlayerTransform(
     const Vector3& railUp,
     const Vector3& forward)
 {
+    std::vector<BaseEnemy*> homingTargets;
+    homingTargets.reserve(enemies_.size() + 1);
+    for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (!enemy->IsDead()) {
+            homingTargets.push_back(enemy.get());
+        }
+    }
+    if (BaseEnemy* boss = GetActiveBoss(); boss != nullptr && !boss->IsDead()) {
+        homingTargets.push_back(boss);
+    }
+    player_->SetHomingTargets(homingTargets);
+
     // プレイヤーにレール情報の最新のフレーム（座標、右方向、上方向、前方向）を伝える
     player_->SetRailFrame(currentPosition, railRight, railUp, forward);
     
@@ -1865,6 +1898,13 @@ void GamePlayScene::Draw2D()
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
         aimSprite_->Draw();
+        std::vector<Vector3> homingLockPositions;
+        player_->GetHomingLockPositions(homingLockPositions);
+        const size_t markerCount =
+            (std::min)(homingLockPositions.size(), homingLockSprites_.size());
+        for (size_t index = 0; index < markerCount; ++index) {
+            homingLockSprites_[index]->Draw();
+        }
     }
 
     // 画面右側のプレイヤーHPゲージ（背景スプライト＆HPバー）の描画
