@@ -6,8 +6,8 @@
   "rail": { "length": 4600.0, "point_interval": 50.0, "speed": 0.5 },
   "boss": {
     "type": "FearWorm",
-    "spawn_distance": 1850.0,
-    "position": [0.0, 2.0, 1850.0],
+    "spawn_distance": 2700.0,
+    "position": [0.0, 2.0, 2700.0],
     "rail_auto_extension": true,
     "rail_extension_buffer": 1200.0
   },
@@ -17,7 +17,7 @@
     "floor_texture": "resources/Textures/floor_dirt_gemini.jpg",
     "floor_height": -30.0
   },
-  "swarm_wave_distances": [260.0, 620.0, 980.0, 1340.0, 1560.0, 1740.0],
-  "recovery_items": [[-5.0, 1.5, 410.0], [5.0, 1.5, 1040.0], [0.0, 5.0, 1700.0]],
-  "paint_enemy_distances": [170.0, 420.0, 660.0, 1210.0, 1530.0]
+  "swarm_wave_distances": [260.0, 620.0, 980.0, 1340.0, 1560.0, 1740.0, 2050.0],
+  "recovery_items": [[-5.0, 1.5, 410.0], [5.0, 1.5, 1040.0], [0.0, 5.0, 1700.0], [-6.0, 2.0, 2200.0]],
+  "paint_enemy_distances": [170.0, 420.0, 660.0, 1210.0, 1530.0, 1980.0]
 }

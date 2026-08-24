@@ -212,6 +212,9 @@ private:
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
     std::vector<std::unique_ptr<Sprite>> homingLockSprites_;
+    std::unique_ptr<Sprite> weaponHudBgSprite_;
+    std::unique_ptr<Text> weaponHudLabelText_;
+    std::unique_ptr<Text> weaponHudNameText_;
     // ------------------------------
     // BGM / SE
     // ------------------------------

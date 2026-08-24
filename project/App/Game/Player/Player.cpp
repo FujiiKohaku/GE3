@@ -90,7 +90,22 @@ void Player::Update()
     }
 
     UpdateWeaponSwitch(input);
-    UpdateHomingTarget();
+    const bool isHomingFireHeld =
+        input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0);
+    if (currentWeapon_ == kWeaponHomingMissile) {
+        if (isHomingFireHeld && !wasHomingFireHeld_) {
+            lockedHomingTargets_.clear();
+        }
+        UpdateHomingTarget(isHomingFireHeld);
+        if (!isHomingFireHeld && wasHomingFireHeld_ && camera_ != nullptr) {
+            FireBullet(*camera_);
+            lockedHomingTargets_.clear();
+        }
+        wasHomingFireHeld_ = isHomingFireHeld;
+    } else {
+        wasHomingFireHeld_ = false;
+        lockedHomingTargets_.clear();
+    }
     if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
         ++missileFireCooldownFrames_;
     }
@@ -124,8 +139,7 @@ void Player::Update()
         }
     }
 
-    if ((currentWeapon_ == kWeaponMissileBullet ||
-         currentWeapon_ == kWeaponHomingMissile) &&
+    if (currentWeapon_ == kWeaponMissileBullet &&
         (input->IsKeyTrigger(DIK_SPACE) || input->IsMouseTrigger(0)) &&
         camera_ != nullptr) {
         FireBullet(*camera_);
@@ -502,12 +516,17 @@ void Player::UpdateWeaponSwitch(Input* input)
 void Player::SetHomingTargets(const std::vector<BaseEnemy*>& targets)
 {
     *homingTargets_ = targets;
+    std::erase_if(
+        lockedHomingTargets_,
+        [&targets](BaseEnemy* target) {
+            return std::find(targets.begin(), targets.end(), target) == targets.end();
+        });
 }
 
-void Player::UpdateHomingTarget()
+void Player::UpdateHomingTarget(bool isLocking)
 {
-    lockedHomingTargets_.clear();
-    if (currentWeapon_ != kWeaponHomingMissile || camera_ == nullptr) {
+    if (!isLocking || currentWeapon_ != kWeaponHomingMissile ||
+        camera_ == nullptr || lockedHomingTargets_.size() >= kMaxHomingLockCount) {
         return;
     }
 
@@ -542,9 +561,17 @@ void Player::UpdateHomingTarget()
         [](const LockCandidate& left, const LockCandidate& right) {
             return left.screenDistanceSquared < right.screenDistanceSquared;
         });
-    const size_t lockCount = (std::min)(candidates.size(), kMaxHomingLockCount);
-    for (size_t index = 0; index < lockCount; ++index) {
-        lockedHomingTargets_.push_back(candidates[index].enemy);
+    for (const LockCandidate& candidate : candidates) {
+        if (std::find(
+                lockedHomingTargets_.begin(),
+                lockedHomingTargets_.end(),
+                candidate.enemy) != lockedHomingTargets_.end()) {
+            continue;
+        }
+        lockedHomingTargets_.push_back(candidate.enemy);
+        if (lockedHomingTargets_.size() >= kMaxHomingLockCount) {
+            break;
+        }
     }
 }
 
@@ -734,6 +761,11 @@ Vector3 Player::CalculateRailWorldPosition(const Vector3& railOffset) const
 Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
 {
     Vector3 correctedRailOffset = railOffset;
+    correctedRailOffset.x = std::clamp(
+        correctedRailOffset.x, -railMoveLimitX_, railMoveLimitX_);
+    correctedRailOffset.y = std::clamp(
+        correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
+    correctedRailOffset.z = 0.0f;
 
     if (camera_ == nullptr) {
         return correctedRailOffset;
@@ -784,6 +816,10 @@ Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
             }
         }
 
+        correctedRailOffset.x = std::clamp(
+            correctedRailOffset.x, -railMoveLimitX_, railMoveLimitX_);
+        correctedRailOffset.y = std::clamp(
+            correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
         correctedRailOffset.z = 0.0f;
     }
 

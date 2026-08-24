@@ -131,6 +131,8 @@ public:
     void FireBullet(const Camera& activeCamera);
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets);
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;
+    bool IsHomingMissileSelected() const { return currentWeapon_ == kWeaponHomingMissile; }
+    const char* GetCurrentWeaponDisplayName() const { return GetCurrentWeaponName(); }
     Camera* GetCamera() const { return camera_; }
     void SetControlMode(ControlMode mode)
     {
@@ -163,6 +165,7 @@ private:
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
     std::shared_ptr<std::vector<BaseEnemy*>> homingTargets_ = std::make_shared<std::vector<BaseEnemy*>>();
     std::vector<BaseEnemy*> lockedHomingTargets_;
+    bool wasHomingFireHeld_ = false;
 
     Model* bulletModel_ = nullptr;
     Camera* camera_ = nullptr;
@@ -206,6 +209,8 @@ private:
     Vector3 railUp_ = { 0.0f, 1.0f, 0.0f };
     Vector3 railForward_ = { 0.0f, 0.0f, 1.0f };
     Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
+    float railMoveLimitX_ = 20.0f;
+    float railMoveLimitY_ = 12.0f;
     float playerClampMarginX_ = 100.0f;
     float playerClampMarginY_ = 100.0f;
     float playerBoundsHalfWidth_ = 1.5f;
@@ -237,7 +242,7 @@ private:
         const Vector3& muzzlePosition) const;
     std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
     void FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget);
-    void UpdateHomingTarget();
+    void UpdateHomingTarget(bool isLocking);
     void UpdateWeaponSwitch(Input* input);
     const char* GetCurrentWeaponName() const;
     void UpdateBullets();

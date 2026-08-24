@@ -341,6 +341,32 @@ void GamePlayScene::Initialize()
     pauseSensitivityText_->SetFontSize(18.0f);
     pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
 
+    // 画面左下に表示する現在武器HUD
+    weaponHudBgSprite_ = std::make_unique<Sprite>();
+    weaponHudBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    weaponHudBgSprite_->SetSize({ 280.0f, 76.0f });
+    weaponHudBgSprite_->SetAnchorPoint({ 0.0f, 1.0f });
+    weaponHudBgSprite_->SetPosition({ 24.0f, WinApp::GetInstance()->kClientHeight - 24.0f });
+    weaponHudBgSprite_->SetColor({ 0.04f, 0.07f, 0.12f, 0.82f });
+    weaponHudBgSprite_->Update();
+
+    weaponHudLabelText_ = std::make_unique<Text>();
+    weaponHudLabelText_->Initialize(kDefaultFont);
+    weaponHudLabelText_->SetText("WEAPON");
+    weaponHudLabelText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 92.0f });
+    weaponHudLabelText_->SetFontSize(16.0f);
+    weaponHudLabelText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+    weaponHudLabelText_->Update();
+
+    weaponHudNameText_ = std::make_unique<Text>();
+    weaponHudNameText_->Initialize(kDefaultFont);
+    weaponHudNameText_->SetText("Normal");
+    weaponHudNameText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 68.0f });
+    weaponHudNameText_->SetFontSize(27.0f);
+    weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    weaponHudNameText_->SetOutlineWidth(1.0f);
+    weaponHudNameText_->Update();
+
     // -------------------------------------------------
     // 画面右側に表示するプレイヤーHPゲージUIの初期化
     // -------------------------------------------------
@@ -1446,6 +1472,10 @@ void GamePlayScene::UpdatePlayerTransform(
     
     // プレイヤーの内部座標（移動制限など）を更新
     player_->Update();
+    if (weaponHudNameText_) {
+        weaponHudNameText_->SetText(player_->GetCurrentWeaponDisplayName());
+        weaponHudNameText_->Update();
+    }
 
     // 進行方向に合わせてプレイヤーの回転を適用
     if (forward.x != 0.0f || forward.y != 0.0f || forward.z != 0.0f) {
@@ -1727,7 +1757,7 @@ void GamePlayScene::UpdateOceanLife(
 void GamePlayScene::ProcessPlayerShooting(Input* input)
 {
     if (input != nullptr) {
-        if (input->IsMouseTrigger(0)) {
+        if (input->IsMouseTrigger(0) && !player_->IsHomingMissileSelected()) {
             // 最新の描画用カメラを渡して、高精度な射撃用Rayから弾を発射する
             player_->FireBullet(*camera_);
         }
@@ -1908,6 +1938,7 @@ void GamePlayScene::Draw2D()
     }
 
     // 画面右側のプレイヤーHPゲージ（背景スプライト＆HPバー）の描画
+    if (weaponHudBgSprite_) weaponHudBgSprite_->Draw();
     if (playerHpBgSprite_) playerHpBgSprite_->Draw();
     if (playerHpBarSprite_) playerHpBarSprite_->Draw();
 
@@ -1936,6 +1967,8 @@ void GamePlayScene::Draw2D()
     } else {
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
+        if (weaponHudLabelText_) weaponHudLabelText_->Draw();
+        if (weaponHudNameText_) weaponHudNameText_->Draw();
         if (playerHpText_) playerHpText_->Draw();
         if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
             if (bossNameText_) bossNameText_->Draw();
