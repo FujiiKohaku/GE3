@@ -200,7 +200,19 @@ void SwarmEnemy::FireMovingBullet()
         return;
     }
 
-    Vector3 direction = Normalize(player_->GetTranslate() - transform_.translate);
+    Vector3 targetPosition = player_->GetTranslate();
+
+    // 群れ全体が正確になりすぎないよう、通常弾より控えめに45%先読みする。
+    constexpr float kPredictionRatio = 0.45f;
+    const float distance = Vector3Length(
+        targetPosition - transform_.translate);
+    if (kSwarmBulletSpeed > 0.0f) {
+        const float flightFrames = distance / kSwarmBulletSpeed;
+        targetPosition += player_->GetAutomaticWorldVelocity() *
+            (flightFrames * kPredictionRatio);
+    }
+
+    Vector3 direction = Normalize(targetPosition - transform_.translate);
     Vector3 velocity = direction * kSwarmBulletSpeed;
 
     std::unique_ptr<SwarmPulseBullet> bullet =

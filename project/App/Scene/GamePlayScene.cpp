@@ -727,6 +727,63 @@ void GamePlayScene::Update()
     if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
         return;
     }
+
+    // HPが尽きた後は通常のゲーム進行を止め、落下と爆発だけを更新する。
+    if (player_ && player_->IsDead()) {
+        StopPlayerEngineEffects();
+        player_->Update();
+
+        // 落下するPlayerとの距離を保ちながら、カメラも滑らかに追従する。
+        if (camera_) {
+            const Vector3 playerPosition = player_->GetTranslate();
+            if (!hasPlayerDeathCameraState_) {
+                hasPlayerDeathCameraState_ = true;
+                playerDeathCameraOffset_ =
+                    camera_->GetTranslate() - playerPosition;
+                playerDeathCameraLookTarget_ = smoothedLookAheadPosition_;
+            }
+
+            const Vector3 targetCameraPosition =
+                playerPosition + playerDeathCameraOffset_;
+            const Vector3 cameraPosition = Lerp(
+                camera_->GetTranslate(),
+                targetCameraPosition,
+                0.15f);
+            playerDeathCameraLookTarget_ = Lerp(
+                playerDeathCameraLookTarget_,
+                playerPosition,
+                0.15f);
+            camera_->LookAt(
+                cameraPosition,
+                playerDeathCameraLookTarget_);
+            camera_->Update();
+        }
+
+        if (player_->IsDeathExplosionReady()) {
+            if (!playerDeathExplosionPlayed_) {
+                playerDeathExplosionPlayed_ = true;
+                EffectManager::GetInstance()->PlayEffect(
+                    "Explosion",
+                    player_->GetTranslate());
+                cameraShakeTime_ = 0.45f;
+                cameraShakeDuration_ = 0.45f;
+                cameraShakeStrength_ = 0.018f;
+            }
+
+            playerDeathAfterExplosionTimer_ +=
+                TimeManager::GetInstance()->GetDeltaTime();
+            if (playerDeathAfterExplosionTimer_ >= 0.8f) {
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(
+                    std::make_unique<GameOverScene>(stageId_));
+                return;
+            }
+        }
+
+        EffectManager::GetInstance()->Update();
+        UpdateCameraShakePostEffect();
+        return;
+    }
     // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
     if (Input::GetInstance()->IsKeyTrigger(DIK_V)) {
         railDistance_ = (std::max)(
@@ -750,10 +807,22 @@ void GamePlayScene::Update()
     });
     enemyBulletManager_.Update();
 
-    if (stageId_ == "stage03" && !isPirateShipMidBossSpawned_ && railDistance_ >= 1250.0f) {
+    float pirateShipSpawnDistance = -1.0f;
+    float pirateShipPositionDistance = 0.0f;
+    if (stageId_ == "stage01") {
+        pirateShipSpawnDistance = 1750.0f;
+        pirateShipPositionDistance = 1840.0f;
+    } else if (stageId_ == "stage03") {
+        pirateShipSpawnDistance = 1250.0f;
+        pirateShipPositionDistance = 1340.0f;
+    }
+
+    if (pirateShipSpawnDistance >= 0.0f &&
+        !isPirateShipMidBossSpawned_ &&
+        railDistance_ >= pirateShipSpawnDistance) {
         auto pirateShip = std::make_unique<PirateShipMidBoss>();
         pirateShip->Initialize(angerBlockModel_, enemyBulletModel_, player_.get());
-        Vector3 spawnPosition = rail_->GetPositionByDistance(1340.0f);
+        Vector3 spawnPosition = rail_->GetPositionByDistance(pirateShipPositionDistance);
         spawnPosition.y = stageSettings_.floorHeight;
         pirateShip->SetPosition(spawnPosition);
         enemies_.push_back(std::move(pirateShip));
@@ -935,15 +1004,9 @@ void GamePlayScene::Update()
     } else {
         if (isPlayerBoosting) {
             SceneManager::GetInstance()->ClearPostEffects();
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Fog,
-                PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::RadialBlur,
-                PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::FocusLine,
-                PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog,PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur,PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine,PostEffectStage::BeforeParticle);
             SceneManager::GetInstance()->AddPostEffect(
                 PostEffectType::ChromaticAberration,
                 PostEffectStage::BeforeParticle);
@@ -1077,32 +1140,6 @@ void GamePlayScene::Update()
                 PostEffectType::Vignette,
                 PostEffectStage::BeforeParticle);
         }
-    }
-
-    // -------------------------------------------------
-    // 加点要素: Dissolve (4点)
-    // プレイヤーやられ（死亡/HP 0）時の燃え広がり焼き切り消滅ディゾルブ演出
-    // 2.0秒かけてディゾルブ消滅が完了した後にゲームオーバー画面へ移行！
-    // -------------------------------------------------
-    if (player_ && player_->GetCurrentHp() <= 0) {
-        StopPlayerEngineEffects();
-        playerDeathDissolveTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-        float dissolveProgress = playerDeathDissolveTimer_ / 2.0f;
-        if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
-
-        SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::Dissolve,
-            PostEffectStage::BeforeParticle);
-
-        // たっぷり2.0秒かけて画面全体が粒子状に焼き切れた後に GameOverScene へ移行！
-        if (dissolveProgress >= 1.0f) {
-            ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-            return;
-        }
-    } else {
-        playerDeathDissolveTimer_ = 0.0f;
     }
 
     // -------------------------------------------------

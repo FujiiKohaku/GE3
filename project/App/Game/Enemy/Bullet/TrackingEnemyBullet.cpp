@@ -10,7 +10,7 @@ constexpr float kLaunchUpSpeed = 0.55f;      // ボスの体から見える程�
 constexpr float kMissileStartSpeed = 0.15f;  // 追尾開始時の初速
 constexpr float kMissileMaxSpeed = 1.35f;    // 追尾時の最高速度
 constexpr float kAccelDuration = 1.50f;      // 最高速度に達するまでの加速時間（秒）
-constexpr float kTrackingRate = 0.050f;      // 追尾旋回率
+constexpr float kTrackingRate = 0.060f;      // 従来値から20%上げた追尾旋回率
 constexpr float kTrackingDuration = 1.50f;   // 追尾する最大時間（秒）
 constexpr float kPassCheckDelay = 0.25f;     // プレイヤー方向へ向き直るまで通過判定を待つ
 }

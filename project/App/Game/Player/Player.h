@@ -55,6 +55,14 @@ public:
         return railOffset_;
     }
 
+    Vector3 GetAutomaticWorldVelocity() const
+    {
+        if (IsDead()) {
+            return { 0.0f, 0.0f, 0.0f };
+        }
+        return railForward_ * normalMaxSpeed_;
+    }
+
     void ApplyRailAreaForce(const Vector3& force)
     {
         railOffset_.x += force.x;
@@ -118,6 +126,10 @@ public:
     {
         return currentHp_ <= 0;
     }
+    bool IsDeathExplosionReady() const
+    {
+        return deathState_ == DeathState::Exploded;
+    }
     int GetCurrentHp() const
     {
         return currentHp_;
@@ -148,6 +160,12 @@ public:
 
 
 private:
+    enum class DeathState {
+        Alive,
+        Falling,
+        Exploded,
+    };
+
     enum WeaponType {
         kWeaponNormalBullet = 0,
         kWeaponMissileBullet,
@@ -195,6 +213,10 @@ private:
     int currentHp_ = maxHp_;
     int invincibleTimer_ = 0;
     static constexpr int kInvincibleFrames = 60;
+    DeathState deathState_ = DeathState::Alive;
+    float deathTimer_ = 0.0f;
+    float deathFallVelocity_ = 0.0f;
+    static constexpr float kDeathFallDuration = 1.2f;
 
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
 
@@ -248,6 +270,7 @@ private:
     void UpdateBullets();
     void RemoveDeadBullets();
     void ApplyTransform();
+    void UpdateDeathAnimation();
 
     void UpdateKeyboardMove(Input* input);
     void UpdateStarFoxMove();

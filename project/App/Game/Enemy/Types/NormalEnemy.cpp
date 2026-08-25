@@ -61,6 +61,17 @@ void NormalEnemy::FireBullet()
 
     Vector3 playerPosition = player_->GetTranslate();
 
+    // 弾の到達時間からPlayerの自動前進位置を予測する。
+    // 65%だけ先読みし、上下左右へ動けば避けられる余地は残す。
+    constexpr float kPredictionRatio = 0.65f;
+    const float distance = Vector3Length(
+        playerPosition - transform_.translate);
+    if (bulletSpeed_ > 0.0f) {
+        const float flightFrames = distance / bulletSpeed_;
+        playerPosition += player_->GetAutomaticWorldVelocity() *
+            (flightFrames * kPredictionRatio);
+    }
+
     Vector3 direction = Normalize(
         playerPosition - transform_.translate);
 

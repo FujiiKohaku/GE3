@@ -66,6 +66,14 @@ void Player::Update()
         return;
     }
 
+    if (deathState_ != DeathState::Alive) {
+        UpdateDeathAnimation();
+        UpdateBullets();
+        RemoveDeadBullets();
+        object_->Update();
+        return;
+    }
+
     Input* input = Input::GetInstance();
 
     if (input == nullptr) {
@@ -197,7 +205,12 @@ void Player::Draw()
     for (std::unique_ptr<PlayerBullet>& bullet : bullets_) {
         bullet->Draw();
     }
-    if (invincibleTimer_ <= 0 || (invincibleTimer_ / 4) % 2 == 0) {
+    const bool isVisibleWhileAlive =
+        invincibleTimer_ <= 0 || (invincibleTimer_ / 4) % 2 == 0;
+    const bool shouldDrawPlayer =
+        deathState_ == DeathState::Falling ||
+        (deathState_ == DeathState::Alive && isVisibleWhileAlive);
+    if (shouldDrawPlayer) {
         object_->Draw();
     }
 }
@@ -226,8 +239,36 @@ bool Player::ApplyDamage(int damage)
     if (currentHp_ < 0) {
         currentHp_ = 0;
     }
+    if (currentHp_ == 0) {
+        deathState_ = DeathState::Falling;
+        deathTimer_ = 0.0f;
+        deathFallVelocity_ = 0.0f;
+        isBoosting_ = false;
+        isRolling_ = false;
+        lockedHomingTargets_.clear();
+        wasHomingFireHeld_ = false;
+    }
     invincibleTimer_ = kInvincibleFrames;
     return true;
+}
+
+void Player::UpdateDeathAnimation()
+{
+    if (deathState_ != DeathState::Falling) {
+        return;
+    }
+
+    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+    deathTimer_ += deltaTime;
+    deathFallVelocity_ += 18.0f * deltaTime;
+    transform_.translate.y -= deathFallVelocity_ * deltaTime;
+    transform_.rotate.x += 1.4f * deltaTime;
+    transform_.rotate.z += 3.2f * deltaTime;
+    ApplyTransform();
+
+    if (deathTimer_ >= kDeathFallDuration) {
+        deathState_ = DeathState::Exploded;
+    }
 }
 
 bool Player::Heal(int amount)

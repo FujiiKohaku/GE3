@@ -331,8 +331,12 @@ private:
     // ボス登場時電波障害ノイズ用フェードアウトタイマー
     float bossNoiseFadeTimer_ = 0.0f;
 
-    // プレイヤー死亡ディゾルブ用タイマー
-    float playerDeathDissolveTimer_ = 0.0f;
+    // プレイヤー爆発後、ゲームオーバー画面へ移るまでの待機時間
+    float playerDeathAfterExplosionTimer_ = 0.0f;
+    bool playerDeathExplosionPlayed_ = false;
+    bool hasPlayerDeathCameraState_ = false;
+    Vector3 playerDeathCameraOffset_ {};
+    Vector3 playerDeathCameraLookTarget_ {};
 
     // ボス撃破ディゾルブ用タイマー
     float bossDeathDissolveTimer_ = 0.0f;
