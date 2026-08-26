@@ -34,6 +34,7 @@ private:
     std::unique_ptr<Text> titleText_;
     std::unique_ptr<Text> descriptionText_;
     std::unique_ptr<Text> helpText_;
+    std::unique_ptr<Text> toolsText_;
     size_t selectedIndex_ = 0;
     size_t currentPage_ = 0;
 };

@@ -54,6 +54,10 @@ void LightManager::Finalize()
 
 void LightManager::Initialize(DirectXCommon* dxCommon)
 {
+    if (dxCommon_ != nullptr) {
+        return;
+    }
+
     dxCommon_ = dxCommon;
 
     lightResource_ = dxCommon_->CreateBufferResource(sizeof(DirectionalLight));

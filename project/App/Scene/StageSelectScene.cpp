@@ -8,6 +8,9 @@
 #include "GamePlayScene.h"
 #include "LoadingScene.h"
 #include "SceneManager.h"
+#include "SpriteTestScene.h"
+#include "TestScene1.h"
+#include "TextTestScene.h"
 #include "TitleScene.h"
 #include <algorithm>
 #include <format>
@@ -65,6 +68,15 @@ void StageSelectScene::Initialize()
     helpText_->SetFontSize(18.0f);
     helpText_->SetColor({ 0.55f, 0.70f, 0.82f, 1.0f });
 
+    toolsText_ = std::make_unique<Text>();
+    toolsText_->Initialize(kFont);
+    toolsText_->SetText(
+        "TEST TOOLS    F1: GAME TEST    F2: SPRITE TEST    F3: TEXT TEST");
+    toolsText_->SetPosition({ 640.0f, 625.0f });
+    toolsText_->SetAnchorPoint({ 0.5f, 0.5f });
+    toolsText_->SetFontSize(17.0f);
+    toolsText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+
     cards_.reserve(stages_.size());
     for (size_t index = 0; index < stages_.size(); ++index) {
         StageCard card;
@@ -91,11 +103,29 @@ void StageSelectScene::Initialize()
 void StageSelectScene::Update()
 {
     Input* input = Input::GetInstance();
-    if (input == nullptr || stages_.empty()) {
+    if (input == nullptr) {
+        return;
+    }
+    if (input->IsKeyTrigger(DIK_F1)) {
+        SceneManager::GetInstance()->SetNextSceneWithLoading<
+            LoadingScene, TestScene1>();
+        return;
+    }
+    if (input->IsKeyTrigger(DIK_F2)) {
+        SceneManager::GetInstance()->SetNextScene(
+            std::make_unique<SpriteTestScene>());
+        return;
+    }
+    if (input->IsKeyTrigger(DIK_F3)) {
+        SceneManager::GetInstance()->SetNextScene(
+            std::make_unique<TextTestScene>());
         return;
     }
     if (input->IsKeyTrigger(DIK_BACK)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        return;
+    }
+    if (stages_.empty()) {
         return;
     }
 
@@ -140,6 +170,7 @@ void StageSelectScene::Update()
     titleText_->Update();
     descriptionText_->Update();
     helpText_->Update();
+    toolsText_->Update();
     for (StageCard& card : cards_) {
         card.background->Update();
         card.numberText->Update();
@@ -208,6 +239,7 @@ void StageSelectScene::Draw2D()
     titleText_->Draw();
     descriptionText_->Draw();
     helpText_->Draw();
+    toolsText_->Draw();
     for (size_t index = pageStart; index < pageEnd; ++index) {
         cards_[index].numberText->Draw();
         cards_[index].nameText->Draw();

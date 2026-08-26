@@ -15,6 +15,9 @@ Object3dManager* Object3dManager::GetInstance()
 #pragma region
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
+    if (dxCommon_ != nullptr) {
+        return;
+    }
 
     dxCommon_ = dxCommon;
 

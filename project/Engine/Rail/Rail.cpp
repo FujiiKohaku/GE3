@@ -14,6 +14,7 @@ void Rail::Initialize()
     totalLength_ = 0.0f;
     autoExtensionMinimumRemainingDistance_ = 0.0f;
     isAutoExtensionActive_ = false;
+    isLooping_ = false;
 }
 
 void Rail::Update()
@@ -29,7 +30,8 @@ void Rail::DrawDebug()
     const float step = 0.02f;
     const uint32_t pointCount = static_cast<uint32_t>(controlPoints_.size());
 
-    for (uint32_t segmentIndex = 0; segmentIndex < pointCount - 1; segmentIndex++) {
+    const uint32_t segmentCount = isLooping_ ? pointCount : pointCount - 1;
+    for (uint32_t segmentIndex = 0; segmentIndex < segmentCount; segmentIndex++) {
         for (float t = 0.0f; t < 1.0f; t += step) {
             float nextT = t + step;
             if (nextT > 1.0f) {
@@ -51,6 +53,15 @@ void Rail::DrawDebug()
 void Rail::AddPoint(const Vector3& point)
 {
     controlPoints_.push_back(point);
+    RebuildDistanceTable();
+}
+
+void Rail::SetLooping(bool looping)
+{
+    if (isLooping_ == looping) {
+        return;
+    }
+    isLooping_ = looping;
     RebuildDistanceTable();
 }
 
@@ -120,7 +131,7 @@ Vector3 Rail::GetPosition(float progress) const
     }
 
     const uint32_t pointCount = static_cast<uint32_t>(controlPoints_.size());
-    const uint32_t segmentCount = pointCount - 1;
+    const uint32_t segmentCount = isLooping_ ? pointCount : pointCount - 1;
     const float scaledProgress = clampedProgress * static_cast<float>(segmentCount);
 
     uint32_t segmentIndex = static_cast<uint32_t>(scaledProgress);
@@ -147,18 +158,25 @@ Vector3 Rail::GetPositionByDistance(float distance) const
     }
 
     float clampedDistance = distance;
-    if (clampedDistance < 0.0f) {
-        clampedDistance = 0.0f;
-    }
-    if (clampedDistance > totalLength_) {
-        clampedDistance = totalLength_;
+    if (isLooping_) {
+        clampedDistance = std::fmod(clampedDistance, totalLength_);
+        if (clampedDistance < 0.0f) {
+            clampedDistance += totalLength_;
+        }
+    } else {
+        if (clampedDistance < 0.0f) {
+            clampedDistance = 0.0f;
+        }
+        if (clampedDistance > totalLength_) {
+            clampedDistance = totalLength_;
+        }
     }
 
     if (clampedDistance <= 0.0f) {
         return EvaluateSegment(0, 0.0f);
     }
 
-    if (clampedDistance >= totalLength_) {
+    if (!isLooping_ && clampedDistance >= totalLength_) {
         uint32_t lastSegmentIndex = static_cast<uint32_t>(controlPoints_.size()) - 2;
         return EvaluateSegment(lastSegmentIndex, 1.0f);
     }
@@ -266,6 +284,14 @@ void Rail::GetSegmentIndices(
     uint32_t& p2Index,
     uint32_t& p3Index) const
 {
+    if (isLooping_) {
+        p0Index = (segmentIndex + pointCount - 1) % pointCount;
+        p1Index = segmentIndex % pointCount;
+        p2Index = (segmentIndex + 1) % pointCount;
+        p3Index = (segmentIndex + 2) % pointCount;
+        return;
+    }
+
     p0Index = segmentIndex;
     if (segmentIndex > 0) {
         p0Index = segmentIndex - 1;
@@ -294,7 +320,9 @@ void Rail::GetSampleParameter(
     uint32_t sampleNumber = sampleIndex - 1;
     segmentIndex = sampleNumber / kDistanceSamplesPerSegment;
 
-    uint32_t segmentCount = static_cast<uint32_t>(controlPoints_.size()) - 1;
+    uint32_t segmentCount = isLooping_
+        ? static_cast<uint32_t>(controlPoints_.size())
+        : static_cast<uint32_t>(controlPoints_.size()) - 1;
     if (segmentIndex >= segmentCount) {
         segmentIndex = segmentCount - 1;
         t = 1.0f;
@@ -317,7 +345,7 @@ void Rail::RebuildDistanceTable()
     cumulativeDistances_.push_back(0.0f);
 
     uint32_t pointCount = static_cast<uint32_t>(controlPoints_.size());
-    uint32_t segmentCount = pointCount - 1;
+    uint32_t segmentCount = isLooping_ ? pointCount : pointCount - 1;
     Vector3 previousPosition = EvaluateSegment(0, 0.0f);
 
     for (uint32_t segmentIndex = 0; segmentIndex < segmentCount; ++segmentIndex) {
