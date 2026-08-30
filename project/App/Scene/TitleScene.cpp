@@ -134,8 +134,7 @@ void TitleScene::Update()
     Input* input = Input::GetInstance();
     if (input != nullptr &&
         (input->IsKeyTrigger(DIK_RETURN) ||
-         input->IsKeyTrigger(DIK_SPACE) ||
-         input->IsMouseTrigger(0))) {
+         input->IsKeyTrigger(DIK_SPACE))) {
         SceneManager::GetInstance()->SetNextScene(
             std::make_unique<StageSelectScene>());
         return;

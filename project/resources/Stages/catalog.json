@@ -8,6 +8,9 @@
     },
     {
       "settings": "resources/Stages/Stage03/settings.json"
+    },
+    {
+      "settings": "resources/Stages/GimmickTest/settings.json"
     }
   ]
 }

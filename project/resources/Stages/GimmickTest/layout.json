@@ -1,0 +1,701 @@
+{
+  "scene": [
+    {
+      "name": "LabStart_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -24.0,
+          250.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          8.0,
+          18.0,
+          42.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          8.0,
+          18.0,
+          42.0
+        ]
+      }
+    },
+    {
+      "name": "LabStart_Right",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          24.0,
+          250.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          8.0,
+          18.0,
+          42.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          8.0,
+          18.0,
+          42.0
+        ]
+      }
+    },
+    {
+      "name": "Test_MoveHorizontal",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          500.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          12.0,
+          10.0,
+          12.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          12.0,
+          10.0,
+          12.0
+        ]
+      },
+      "gimmick": {
+        "type": "MOVE",
+        "speed": 0.9,
+        "range": [
+          24.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "Test_MoveVertical",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          750.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          12.0,
+          10.0,
+          12.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          12.0,
+          10.0,
+          12.0
+        ]
+      },
+      "gimmick": {
+        "type": "MOVE",
+        "speed": 1.1,
+        "range": [
+          0.0,
+          0.0,
+          20.0
+        ]
+      }
+    },
+    {
+      "name": "LaserGate_BarA",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1050.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          46.0,
+          6.0,
+          2.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          46.0,
+          6.0,
+          2.0
+        ]
+      },
+      "gimmick": {
+        "type": "ROTATION",
+        "speed": 0.9,
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hazard": {
+        "type": "LASER",
+        "damage": 2
+      }
+    },
+    {
+      "name": "LaserGate_BarB",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1050.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          1.5708,
+          0.0
+        ],
+        "scale": [
+          46.0,
+          6.0,
+          2.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          46.0,
+          6.0,
+          2.0
+        ]
+      },
+      "gimmick": {
+        "type": "ROTATION",
+        "speed": 0.9,
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hazard": {
+        "type": "LASER",
+        "damage": 2
+      }
+    },
+    {
+      "name": "WindArea_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -44.0,
+          1850.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          2.0,
+          120.0,
+          30.0
+        ]
+      },
+      "trigger": {
+        "type": "WIND",
+        "name": "WindArea_Left",
+        "center": [
+          44.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          50.0,
+          120.0,
+          35.0
+        ],
+        "force": [
+          0.08,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "GravityArea_Up",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          44.0,
+          2050.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          2.0,
+          120.0,
+          30.0
+        ]
+      },
+      "trigger": {
+        "type": "GRAVITY",
+        "name": "GravityArea_Up",
+        "center": [
+          -44.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          50.0,
+          120.0,
+          35.0
+        ],
+        "force": [
+          0.0,
+          0.0,
+          0.065
+        ]
+      }
+    },
+    {
+      "name": "Test_Rock_A",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          10.0,
+          1320.0,
+          8.0
+        ],
+        "rotation": [
+          0.2,
+          -0.25,
+          0.16
+        ],
+        "scale": [
+          14.0,
+          13.0,
+          15.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          14.0,
+          13.0,
+          15.0
+        ]
+      },
+      "destructible": {
+        "hp": 1.0
+      }
+    },
+    {
+      "name": "Test_Rock_B",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          22.0,
+          1325.0,
+          16.0
+        ],
+        "rotation": [
+          -0.18,
+          0.3,
+          -0.22
+        ],
+        "scale": [
+          17.0,
+          14.0,
+          16.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          17.0,
+          14.0,
+          16.0
+        ]
+      },
+      "destructible": {
+        "hp": 3.0
+      }
+    },
+    {
+      "name": "Test_Rock_C",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          33.0,
+          1318.0,
+          7.0
+        ],
+        "rotation": [
+          0.26,
+          0.12,
+          0.24
+        ],
+        "scale": [
+          13.0,
+          11.0,
+          14.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          13.0,
+          11.0,
+          14.0
+        ]
+      },
+      "destructible": {
+        "hp": 5.0
+      }
+    },
+    {
+      "name": "Test_CrusherTop",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -18.0,
+          1650.0,
+          20.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          24.0,
+          12.0,
+          12.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          24.0,
+          12.0,
+          12.0
+        ]
+      },
+      "gimmick": {
+        "type": "MOVE",
+        "speed": 1.25,
+        "range": [
+          0.0,
+          0.0,
+          18.0
+        ]
+      }
+    },
+    {
+      "name": "Test_CrusherBottom",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -18.0,
+          1650.0,
+          -20.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          24.0,
+          12.0,
+          12.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          24.0,
+          12.0,
+          12.0
+        ]
+      },
+      "gimmick": {
+        "type": "MOVE",
+        "speed": 1.25,
+        "range": [
+          0.0,
+          0.0,
+          -18.0
+        ]
+      }
+    },
+    {
+      "name": "Test_CrossingFast",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1950.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          10.0,
+          14.0,
+          24.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          10.0,
+          14.0,
+          24.0
+        ]
+      },
+      "gimmick": {
+        "type": "MOVE",
+        "speed": 1.8,
+        "range": [
+          32.0,
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "name": "Test_FinalGateLeft",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -28.0,
+          2600.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          10.0,
+          16.0,
+          50.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          10.0,
+          16.0,
+          50.0
+        ]
+      }
+    },
+    {
+      "name": "Test_FinalGateRight",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          28.0,
+          2600.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          10.0,
+          16.0,
+          50.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          10.0,
+          16.0,
+          50.0
+        ]
+      }
+    },
+    {
+      "name": "Test_FinalGateTop",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2600.0,
+          24.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          46.0,
+          16.0,
+          8.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          46.0,
+          16.0,
+          8.0
+        ]
+      }
+    }
+  ]
+}

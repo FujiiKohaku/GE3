@@ -20,14 +20,14 @@ constexpr const char* kWhiteTexture = "resources/Textures/white.png";
 constexpr const char* kFont =
     "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
 constexpr size_t kColumns = 3;
-constexpr size_t kRows = 2;
+constexpr size_t kRows = 3;
 constexpr size_t kCardsPerPage = kColumns * kRows;
 constexpr float kCardWidth = 320.0f;
-constexpr float kCardHeight = 150.0f;
+constexpr float kCardHeight = 110.0f;
 constexpr float kCardStartX = 120.0f;
-constexpr float kCardStartY = 180.0f;
+constexpr float kCardStartY = 150.0f;
 constexpr float kCardGapX = 40.0f;
-constexpr float kCardGapY = 35.0f;
+constexpr float kCardGapY = 20.0f;
 }
 
 void StageSelectScene::Initialize()
@@ -39,6 +39,26 @@ void StageSelectScene::Initialize()
     StageCatalog* catalog = StageCatalog::GetInstance();
     catalog->Load();
     stages_ = catalog->GetStages();
+    entries_.clear();
+    cards_.clear();
+    selectedIndex_ = 0;
+    currentPage_ = 0;
+    GetCursorPos(&lastMousePosition_);
+    size_t stageNumber = 0;
+    for (size_t index = 0; index < stages_.size(); ++index) {
+        const auto& stage = stages_[index];
+        if (stage.id == "gimmick_test") continue;
+        entries_.push_back({ Destination::Stage, std::format("STAGE {:02}", ++stageNumber),
+            stage.name, stage.description, stage.id });
+    }
+    entries_.push_back({ Destination::GameTest, "TEST / F1", "GAME TEST", "Open the gameplay test scene.", {} });
+    entries_.push_back({ Destination::SpriteTest, "TEST / F2", "SPRITE TEST", "Open the sprite test scene.", {} });
+    entries_.push_back({ Destination::TextTest, "TEST / F3", "TEXT TEST", "Open the text test scene.", {} });
+    if (const auto* gimmickStage = catalog->Find("gimmick_test")) {
+        entries_.push_back({ Destination::Stage, "TEST", "GIMMICK TEST",
+            gimmickStage->description, gimmickStage->id });
+    }
+    entries_.push_back({ Destination::Title, "BACK / BACKSPACE", "TITLE", "Return to the title screen.", {} });
 
     background_ = std::make_unique<Sprite>();
     background_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
@@ -62,7 +82,7 @@ void StageSelectScene::Initialize()
 
     helpText_ = std::make_unique<Text>();
     helpText_->Initialize(kFont);
-    helpText_->SetText("ARROW / WASD: SELECT    ENTER: START    BACKSPACE: BACK");
+    helpText_->SetText("ARROW / WASD: SELECT    ENTER / SPACE: CONFIRM    CLICK: OPEN");
     helpText_->SetPosition({ 640.0f, 665.0f });
     helpText_->SetAnchorPoint({ 0.5f, 0.5f });
     helpText_->SetFontSize(18.0f);
@@ -77,8 +97,8 @@ void StageSelectScene::Initialize()
     toolsText_->SetFontSize(17.0f);
     toolsText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
 
-    cards_.reserve(stages_.size());
-    for (size_t index = 0; index < stages_.size(); ++index) {
+    cards_.reserve(entries_.size());
+    for (size_t index = 0; index < entries_.size(); ++index) {
         StageCard card;
         card.background = std::make_unique<Sprite>();
         card.background->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
@@ -86,13 +106,13 @@ void StageSelectScene::Initialize()
 
         card.numberText = std::make_unique<Text>();
         card.numberText->Initialize(kFont);
-        card.numberText->SetText(std::format("STAGE {:02}", index + 1));
+        card.numberText->SetText(entries_[index].label);
         card.numberText->SetFontSize(20.0f);
         card.numberText->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
 
         card.nameText = std::make_unique<Text>();
         card.nameText->Initialize(kFont);
-        card.nameText->SetText(stages_[index].name);
+        card.nameText->SetText(entries_[index].name);
         card.nameText->SetFontSize(26.0f);
         card.nameText->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
         cards_.push_back(std::move(card));
@@ -125,7 +145,7 @@ void StageSelectScene::Update()
         SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
         return;
     }
-    if (stages_.empty()) {
+    if (entries_.empty()) {
         return;
     }
 
@@ -140,17 +160,23 @@ void StageSelectScene::Update()
     if (input->IsKeyTrigger(DIK_UP) || input->IsKeyTrigger(DIK_W)) {
         next = next >= kColumns ? next - kColumns : 0;
     }
-    if (next >= stages_.size()) next = stages_.size() - 1;
+    if (next >= entries_.size()) next = entries_.size() - 1;
+
+    POINT mousePosition {};
+    GetCursorPos(&mousePosition);
+    const bool mouseMoved = mousePosition.x != lastMousePosition_.x ||
+        mousePosition.y != lastMousePosition_.y;
+    lastMousePosition_ = mousePosition;
 
     const size_t pageStart = currentPage_ * kCardsPerPage;
     for (size_t visible = 0; visible < kCardsPerPage; ++visible) {
         const size_t index = pageStart + visible;
-        if (index >= stages_.size()) break;
+        if (index >= entries_.size()) break;
         if (IsMouseOverCard(visible)) {
-            next = index;
+            if (mouseMoved && next == selectedIndex_) next = index;
             if (input->IsMouseTrigger(0)) {
-                selectedIndex_ = next;
-                StartSelectedStage();
+                selectedIndex_ = index;
+                ActivateSelectedEntry();
                 return;
             }
         }
@@ -162,7 +188,7 @@ void StageSelectScene::Update()
         RefreshCards();
     }
     if (input->IsKeyTrigger(DIK_RETURN) || input->IsKeyTrigger(DIK_SPACE)) {
-        StartSelectedStage();
+        ActivateSelectedEntry();
         return;
     }
 
@@ -200,8 +226,8 @@ void StageSelectScene::RefreshCards()
             y + kCardHeight * 0.58f });
         cards_[index].nameText->SetAnchorPoint({ 0.5f, 0.5f });
     }
-    if (!stages_.empty()) {
-        descriptionText_->SetText(stages_[selectedIndex_].description);
+    if (selectedIndex_ < entries_.size()) {
+        descriptionText_->SetText(entries_[selectedIndex_].description);
     }
 }
 
@@ -218,12 +244,28 @@ bool StageSelectScene::IsMouseOverCard(size_t visibleIndex) const
         mouse.y >= y && mouse.y <= y + kCardHeight;
 }
 
-void StageSelectScene::StartSelectedStage()
+void StageSelectScene::ActivateSelectedEntry()
 {
-    if (selectedIndex_ >= stages_.size()) return;
-    SceneManager::GetInstance()->SetNextSceneWithLoading<
-        LoadingScene,
-        GamePlayScene>(stages_[selectedIndex_].id);
+    if (selectedIndex_ >= entries_.size()) return;
+    const auto& entry = entries_[selectedIndex_];
+    auto* manager = SceneManager::GetInstance();
+    switch (entry.destination) {
+    case Destination::Stage:
+        manager->SetNextSceneWithLoading<LoadingScene, GamePlayScene>(entry.stageId);
+        break;
+    case Destination::GameTest:
+        manager->SetNextSceneWithLoading<LoadingScene, TestScene1>();
+        break;
+    case Destination::SpriteTest:
+        manager->SetNextScene(std::make_unique<SpriteTestScene>());
+        break;
+    case Destination::TextTest:
+        manager->SetNextScene(std::make_unique<TextTestScene>());
+        break;
+    case Destination::Title:
+        manager->SetNextScene(std::make_unique<TitleScene>());
+        break;
+    }
 }
 
 void StageSelectScene::Draw2D()
