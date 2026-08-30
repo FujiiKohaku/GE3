@@ -41,6 +41,10 @@ void BossEncounterController::Update(float railDistance)
     isBeamHittingPlayer_ = false;
     didExtendRailThisFrame_ = false;
 
+    if (bossType_ == "None") {
+        return;
+    }
+
     if (!isSpawned_ && railDistance >= spawnDistance_) {
         SpawnBoss();
     }

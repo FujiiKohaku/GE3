@@ -351,6 +351,10 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->grayScaleStrength = 1.0f;
     postEffectParameterData_->vignetteStrength = 1.0f;
     postEffectParameterData_->outlineScale = 1000.0f;
+    postEffectParameterData_->outlineNearClip = 0.1f;
+    postEffectParameterData_->outlineFarClip = 1000.0f;
+    postEffectParameterData_->outlineThreshold = 0.02f;
+    postEffectParameterData_->outlineSoftness = 0.04f;
     postEffectParameterData_->time = 0.0f;
 
     postEffectParameterData_->radialBlurCenter = { 0.5f, 0.5f };

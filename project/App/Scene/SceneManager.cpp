@@ -35,10 +35,6 @@ void SceneManager::Update()
         scene_->Update();
     }
 
-    // Keep the old scene alive until its last frame has finished rendering.
-    if (ChangeScene(scene_, nextScene_, retiredScene_) && scene_) {
-        scene_->Update();
-    }
 }
 
 void SceneManager::Finalize()

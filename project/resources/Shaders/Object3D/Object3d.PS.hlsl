@@ -25,7 +25,16 @@ PixelShaderOutput main(VertexShaderOutput input)
     float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
     float32_t4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
 
-    if (gMaterial.enableLighting != 0)
+    if (gMaterial.enableLighting == 2)
+    {
+        // Fixed diffuse shading keeps ice silhouettes readable as the camera moves.
+        float3 N = normalize(input.normal);
+        float faceLight = saturate(dot(N, normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);
+        float3 faceTint = lerp(float3(0.30f, 0.55f, 0.78f), float3(1.0f, 1.0f, 1.0f), faceLight);
+        float3 iceTexture = lerp(float3(1.0f, 1.0f, 1.0f), textureColor.rgb, 0.25f);
+        output.color = float4(gMaterial.color.rgb * iceTexture * faceTint, gMaterial.color.a * textureColor.a);
+    }
+    else if (gMaterial.enableLighting != 0)
     {
         float3 baseColor = gMaterial.color.rgb * textureColor.rgb;
         float3 N = normalize(input.normal);
@@ -39,7 +48,9 @@ PixelShaderOutput main(VertexShaderOutput input)
 
         float3 Hd = normalize(Ld + V);
         float NdotHd = saturate(dot(N, Hd));
-        float3 dirSpec = gDirectionalLight.color.rgb * gDirectionalLight.intensity * pow(NdotHd, gMaterial.shininess);
+        // A zero shininess value disables highlights while keeping diffuse lighting.
+        float3 dirSpec = gMaterial.shininess > 0.0f
+            ? gDirectionalLight.color.rgb * gDirectionalLight.intensity * pow(NdotHd, gMaterial.shininess) : float3(0, 0, 0);
 
         float3 pointDiffuse = float32_t3(0.0f, 0.0f, 0.0f);
         float3 pointSpec = float32_t3(0.0f, 0.0f, 0.0f);
@@ -61,7 +72,9 @@ PixelShaderOutput main(VertexShaderOutput input)
 
             float3 Hp = normalize(Lp + V);
             float NdotHp = saturate(dot(N, Hp));
-            pointSpec += pointColor * pow(NdotHp, gMaterial.shininess);
+            if (gMaterial.shininess > 0.0f) {
+                pointSpec += pointColor * pow(NdotHp, gMaterial.shininess);
+            }
         }
 
         float3 spotDiffuse = float32_t3(0.0f, 0.0f, 0.0f);
@@ -88,7 +101,9 @@ PixelShaderOutput main(VertexShaderOutput input)
 
             float3 Hs = normalize(spotLightDirectionOnSurface + V);
             float NdotHs = saturate(dot(N, Hs));
-            spotSpec += spotLightColor * pow(NdotHs, gMaterial.shininess);
+            if (gMaterial.shininess > 0.0f) {
+                spotSpec += spotLightColor * pow(NdotHs, gMaterial.shininess);
+            }
         }
 
         output.color.rgb = ambient + dirDiffuse + dirSpec + pointDiffuse + pointSpec + spotDiffuse + spotSpec;

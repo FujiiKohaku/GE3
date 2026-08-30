@@ -25,34 +25,44 @@ static const float kPrewittVerticalKernel[3][3] =
     { 1.0f / 6.0f, 1.0f / 6.0f, 1.0f / 6.0f },
 };
 
+// Standard perspective depth is nonlinear. Recover view-space Z before comparing it.
+float RestoreViewDepth(float depth)
+{
+    float nearClip = max(outlineNearClip, 0.0001f);
+    float farClip = max(outlineFarClip, nearClip + 0.0001f);
+    return nearClip * farClip / max(farClip - saturate(depth) * (farClip - nearClip), 0.0001f);
+}
+
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
     uint width;
     uint height;
 
-    gTexture.GetDimensions(width, height);
-
-    float2 uvStepSize;
-    uvStepSize.x = 1.0f / float(width);
-    uvStepSize.y = 1.0f / float(height);
+    gDepthTexture.GetDimensions(width, height);
+    int2 lastPixel = int2(width, height) - 1;
+    int2 centerPixel = clamp(int2(input.texcoord * float2(width, height)), int2(0, 0), lastPixel);
 
     float2 difference = float2(0.0f, 0.0f);
+    float nearestDepth = max(outlineFarClip, 0.0001f);
 
     for (int x = 0; x < 3; x++)
     {
         for (int y = 0; y < 3; y++)
         {
-            float2 texcoord = input.texcoord + kIndex3x3[x][y] * uvStepSize;
-
-            float depth = gDepthTexture.Sample(gSampler, texcoord);
+            // Point loads avoid blending foreground/background depths before reconstruction.
+            int2 pixel = clamp(centerPixel + int2(kIndex3x3[x][y]), int2(0, 0), lastPixel);
+            float depth = RestoreViewDepth(gDepthTexture.Load(int3(pixel, 0)));
+            nearestDepth = min(nearestDepth, depth);
 
             difference.x += depth * kPrewittHorizontalKernel[x][y];
             difference.y += depth * kPrewittVerticalKernel[x][y];
         }
     }
 
-    float weight = length(difference);
-    weight = saturate(weight * outlineScale);
+    // The same relative depth step now has the same strength near and far.
+    float relativeDifference = length(difference) / max(nearestDepth, 0.0001f);
+    float weight = smoothstep(outlineThreshold,
+        outlineThreshold + max(outlineSoftness, 0.0001f), relativeDifference);
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 

@@ -548,7 +548,7 @@ void GamePlayScene::Initialize()
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
     // floorの初期化
-    if (stageSettings_.floorEnabled && (stageId_ == "stage01" || stageId_ == "stage03")) {
+    if (stageSettings_.floorEnabled && stageId_ == "stage01") {
         oceanSurface_ = std::make_unique<OceanSurface>();
         oceanSurface_->Initialize(
             camera_.get(),
@@ -573,6 +573,11 @@ void GamePlayScene::Initialize()
             stageSettings_.railLength * 0.5f });
         floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
         floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
+        if (stageId_ == "stage03") {
+            floorObj_->SetColor({ 0.10f, 0.24f, 0.36f, 1.0f });
+            floorObj_->GetMaterial()->shininess = 0.0f;
+            floorObj_->SetEnableEnvironmentMap(false);
+        }
     }
 
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
@@ -785,7 +790,7 @@ void GamePlayScene::Update()
         return;
     }
     // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
-    if (Input::GetInstance()->IsKeyTrigger(DIK_V)) {
+    if (stageSettings_.bossType != "None" && Input::GetInstance()->IsKeyTrigger(DIK_V)) {
         railDistance_ = (std::max)(
             0.0f,
             stageSettings_.bossSpawnDistance - 400.0f);
@@ -805,14 +810,17 @@ void GamePlayScene::Update()
     std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
         return enemy->IsDead();
     });
-    enemyBulletManager_.Update();
+    const Vector3 currentRailPosition =
+        rail_->GetPositionByDistance(railDistance_);
+    const Vector3 currentRailForward =
+        CalculateRailForward(railDistance_, currentRailPosition);
+    enemyBulletManager_.Update(
+        player_->GetTranslate(),
+        currentRailForward);
 
     float pirateShipSpawnDistance = -1.0f;
     float pirateShipPositionDistance = 0.0f;
-    if (stageId_ == "stage01") {
-        pirateShipSpawnDistance = 1750.0f;
-        pirateShipPositionDistance = 1840.0f;
-    } else if (stageId_ == "stage03") {
+    if (stageId_ == "stage03" && stageSettings_.bossType != "None") {
         pirateShipSpawnDistance = 1250.0f;
         pirateShipPositionDistance = 1340.0f;
     }
@@ -1161,7 +1169,7 @@ void GamePlayScene::Update()
     const float bossWarningStart = (std::max)(
         0.0f,
         stageSettings_.bossSpawnDistance - 400.0f);
-    if (!bossController_->IsSpawned() && player_ && railDistance_ >= bossWarningStart) {
+    if (stageSettings_.bossType != "None" && !bossController_->IsSpawned() && player_ && railDistance_ >= bossWarningStart) {
         float playerDistance = railDistance_;
         float warningLength =
             stageSettings_.bossSpawnDistance - bossWarningStart;
@@ -2860,6 +2868,14 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             levelObject->SetTranslate(objData.translation);
             levelObject->SetRotate(objData.rotation);
             levelObject->SetScale(objData.scale);
+
+            if (stageId_ == "stage03" && objData.fileName.starts_with("Environment/Ice/")) {
+                levelObject->SetColor({ 0.90f, 0.96f, 1.0f, 1.0f });
+                // Diffuse ice facets: white lit faces and blue side faces, without glare.
+                levelObject->GetMaterial()->enableLighting = 2;
+                levelObject->GetMaterial()->shininess = 0.0f;
+                levelObject->SetEnableEnvironmentMap(false);
+            }
 
             if (objData.gimmick.exists) {
                 levelObject->SetGimmick(objData.gimmick);

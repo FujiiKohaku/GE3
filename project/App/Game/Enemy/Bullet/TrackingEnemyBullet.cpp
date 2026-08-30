@@ -18,7 +18,8 @@ constexpr float kPassCheckDelay = 0.25f;     // プレイヤー方向へ向き�
 void TrackingEnemyBullet::Initialize(Model* model)
 {
     transform_.scale = { 0.45f, 0.45f, 0.45f }; // ミサイルらしく少し目立たせる
-    maxLifeTime_ = 6.5f;                        // 追尾時間を与えるために長めに設定
+    // 追尾終了後もプレイヤー後方へ抜けるまでは飛び続ける。
+    maxLifeTime_ = 20.0f;
     collisionRadius_ = 1.8f;
     damage_ = 2;                                // 追尾ミサイルなので通常弾より少し高ダメージ
 

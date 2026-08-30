@@ -43,6 +43,23 @@
     { "name": "RotatingLaser_BarA", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 2350.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [46.0, 6.0, 2.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [46.0, 6.0, 2.0] }, "gimmick": { "type": "ROTATION", "speed": 0.9, "axis": [0.0, 1.0, 0.0], "range": [0.0, 0.0, 0.0] }, "hazard": { "type": "LASER", "damage": 2 } },
     { "name": "RotatingLaser_BarB", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 2350.0, 0.0], "rotation": [0.0, 1.5708, 0.0], "scale": [46.0, 6.0, 2.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [46.0, 6.0, 2.0] }, "gimmick": { "type": "ROTATION", "speed": 0.9, "axis": [0.0, 1.0, 0.0], "range": [0.0, 0.0, 0.0] }, "hazard": { "type": "LASER", "damage": 2 } },
 
+    { "name": "SecondActGate_Left", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [-16.0, 2680.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [12.0, 10.0, 24.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [12.0, 10.0, 24.0] } },
+    { "name": "SecondActGate_Right", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [16.0, 2680.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [12.0, 10.0, 24.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [12.0, 10.0, 24.0] } },
+    { "name": "SecondActGate_Bottom", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 2680.0, -12.0], "rotation": [0.0, 0.0, 0.0], "scale": [44.0, 10.0, 7.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [44.0, 10.0, 7.0] } },
+
+    { "name": "SecondSlalom_Left", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [-14.0, 3100.0, 1.0], "rotation": [0.0, 0.0, 0.0], "scale": [22.0, 12.0, 28.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [22.0, 12.0, 28.0] } },
+    { "name": "SecondSlalom_Right", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [14.0, 3290.0, -1.0], "rotation": [0.0, 0.0, 0.0], "scale": [22.0, 12.0, 28.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [22.0, 12.0, 28.0] } },
+
+    { "name": "SecondTunnel_Floor", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 3700.0, -10.0], "rotation": [0.0, 0.0, 0.0], "scale": [40.0, 22.0, 10.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [40.0, 22.0, 10.0] } },
+    { "name": "SecondTunnel_Ceiling", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 3700.0, 11.0], "rotation": [0.0, 0.0, 0.0], "scale": [40.0, 22.0, 9.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [40.0, 22.0, 9.0] } },
+
+    { "name": "SecondDestructibleRock_A", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [-19.0, 4140.0, 5.0], "rotation": [0.14, 0.28, -0.18], "scale": [15.0, 14.0, 16.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [15.0, 14.0, 16.0] }, "destructible": { "hp": 3.0 } },
+    { "name": "SecondDestructibleRock_B", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [5.0, 4150.0, -7.0], "rotation": [-0.20, 0.16, 0.22], "scale": [18.0, 15.0, 14.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [18.0, 15.0, 14.0] }, "destructible": { "hp": 5.0 } },
+    { "name": "SecondDestructibleRock_C", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [27.0, 4145.0, 8.0], "rotation": [0.24, -0.20, 0.12], "scale": [14.0, 13.0, 17.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [14.0, 13.0, 17.0] }, "destructible": { "hp": 3.0 } },
+
+    { "name": "FinalDefenseLaser_A", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 4620.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [48.0, 6.0, 2.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [48.0, 6.0, 2.0] }, "gimmick": { "type": "ROTATION", "speed": -1.05, "axis": [0.0, 1.0, 0.0], "range": [0.0, 0.0, 0.0] }, "hazard": { "type": "LASER", "damage": 2 } },
+    { "name": "FinalDefenseLaser_B", "type": "MESH", "file_name": "Environment/Block/block.obj", "transform": { "translation": [0.0, 4620.0, 0.0], "rotation": [0.0, 1.5708, 0.0], "scale": [48.0, 6.0, 2.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 0.0], "size": [48.0, 6.0, 2.0] }, "gimmick": { "type": "ROTATION", "speed": -1.05, "axis": [0.0, 1.0, 0.0], "range": [0.0, 0.0, 0.0] }, "hazard": { "type": "LASER", "damage": 2 } },
+
     { "name": "Enemy_Intro01", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [8.0, 120.0, 2.0], "rotation": [0.0, 0.0, 0.0] } },
     { "name": "Enemy_AfterGate01", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [-10.0, 360.0, -2.0], "rotation": [0.0, 0.0, 0.0] } },
     { "name": "Enemy_AfterGate02", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [9.0, 650.0, 3.0], "rotation": [0.0, 0.0, 0.0] } },
@@ -50,6 +67,30 @@
     { "name": "Enemy_Slalom02", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [-9.0, 980.0, -2.0], "rotation": [0.0, 0.0, 0.0] } },
     { "name": "Enemy_AfterTunnel", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [0.0, 1240.0, 3.0], "rotation": [0.0, 0.0, 0.0] } },
     { "name": "Enemy_BossApproach01", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [-8.0, 1490.0, 1.0], "rotation": [0.0, 0.0, 0.0] } },
-    { "name": "Enemy_BossApproach02", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [8.0, 1760.0, 2.0], "rotation": [0.0, 0.0, 0.0] } }
+    { "name": "Enemy_BossApproach02", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [8.0, 1760.0, 2.0], "rotation": [0.0, 0.0, 0.0] } },
+
+    { "name": "Enemy_SecondAct01_Left", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [-11.0, 2420.0, 2.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct01_Center", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [0.0, 2445.0, 5.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct01_Right", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [11.0, 2420.0, -1.0], "rotation": [0.0, 0.0, 0.0] } },
+
+    { "name": "Enemy_SecondAct02_Left", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [-13.0, 2820.0, -2.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct02_Center", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [0.0, 2850.0, 4.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct02_Right", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [13.0, 2820.0, -2.0], "rotation": [0.0, 0.0, 0.0] } },
+
+    { "name": "Enemy_SecondAct03_Left", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [-9.0, 3350.0, 3.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct03_Right", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [9.0, 3380.0, -3.0], "rotation": [0.0, 0.0, 0.0] } },
+
+    { "name": "Enemy_SecondAct04_Left", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [-12.0, 3820.0, 2.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct04_Center", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [0.0, 3850.0, 6.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct04_Right", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [12.0, 3820.0, 2.0], "rotation": [0.0, 0.0, 0.0] } },
+
+    { "name": "Enemy_SecondAct05_FarLeft", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [-16.0, 4300.0, -3.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct05_Left", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [-6.0, 4330.0, 3.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct05_Right", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [6.0, 4330.0, 3.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_SecondAct05_FarRight", "type": "EnemySpawn", "file_name": "NormalEnemy", "transform": { "translation": [16.0, 4300.0, -3.0], "rotation": [0.0, 0.0, 0.0] } },
+
+    { "name": "Enemy_FinalDefense_Left", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [-12.0, 4820.0, 1.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_FinalDefense_Center", "type": "EnemySpawn", "file_name": "MoveEnemy", "transform": { "translation": [0.0, 4860.0, 6.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Enemy_FinalDefense_Right", "type": "EnemySpawn", "file_name": "ArmoredEnemy", "transform": { "translation": [12.0, 4820.0, 1.0], "rotation": [0.0, 0.0, 0.0] } }
   ]
 }

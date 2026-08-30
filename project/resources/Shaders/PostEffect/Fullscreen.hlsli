@@ -56,4 +56,8 @@ cbuffer PostEffectParameter : register(b0)
     float blackHoleStrength;
     float waterEffectIntensity;
     float3 paddingWaterEffect;
+    float outlineNearClip;
+    float outlineFarClip;
+    float outlineThreshold;
+    float outlineSoftness;
 };

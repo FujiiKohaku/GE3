@@ -45,6 +45,9 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 void PostEffectManager::Update(Camera* camera)
 {
     if (camera != nullptr) {
+        auto& parameter = copyImageRenderer_->GetPostEffectParameter();
+        parameter.outlineNearClip = camera->GetNearClip();
+        parameter.outlineFarClip = camera->GetFarClip();
         fogManager_->SetCameraInfo(
             camera->GetNearClip(),
             camera->GetFarClip(),
