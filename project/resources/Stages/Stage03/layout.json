@@ -3,7 +3,7 @@
     {
       "name": "Ice_Spire_00_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -65,
@@ -25,7 +25,7 @@
     {
       "name": "Ice_Spire_00_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           65,
@@ -69,7 +69,7 @@
     {
       "name": "Ice_Spire_01_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -77,
@@ -91,7 +91,7 @@
     {
       "name": "Ice_Spire_01_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           77,
@@ -135,7 +135,7 @@
     {
       "name": "Ice_Spire_02_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -89,
@@ -201,7 +201,7 @@
     {
       "name": "Ice_Spire_03_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -65,
@@ -223,7 +223,7 @@
     {
       "name": "Ice_Spire_03_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           65,
@@ -267,7 +267,7 @@
     {
       "name": "Ice_Spire_04_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -77,
@@ -289,7 +289,7 @@
     {
       "name": "Ice_Spire_04_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           77,
@@ -333,7 +333,7 @@
     {
       "name": "Ice_Spire_05_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -89,
@@ -355,7 +355,7 @@
     {
       "name": "Ice_Spire_05_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           89,
@@ -421,7 +421,7 @@
     {
       "name": "Ice_Spire_06_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           65,
@@ -465,7 +465,7 @@
     {
       "name": "Ice_Spire_07_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -77,
@@ -487,7 +487,7 @@
     {
       "name": "Ice_Spire_07_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           77,
@@ -531,7 +531,7 @@
     {
       "name": "Ice_Spire_08_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -89,
@@ -553,7 +553,7 @@
     {
       "name": "Ice_Spire_08_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           89,
@@ -597,7 +597,7 @@
     {
       "name": "Ice_Spire_09_L",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           -65,
@@ -619,7 +619,7 @@
     {
       "name": "Ice_Spire_09_R",
       "type": "MESH",
-      "file_name": "Environment/Ice/crystal.obj",
+      "file_name": "Environment/Ice/IceSpike.obj",
       "transform": {
         "translation": [
           65,
@@ -680,6 +680,266 @@
           90,
           72
         ]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_01_L",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [-56, 390, -35.2],
+        "rotation": [0, 0, 0.2],
+        "scale": [14, 16, 18]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_02_R",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [56, 685, -35.2],
+        "rotation": [0, 0, -0.4],
+        "scale": [16, 15, 22]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_03_L",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [-58, 1060, -35.2],
+        "rotation": [0, 0, 0.65],
+        "scale": [12, 14, 17]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_04_R",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [58, 1360, -35.2],
+        "rotation": [0, 0, -0.8],
+        "scale": [16, 14, 21]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_05_L",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [-60, 1660, -35.2],
+        "rotation": [0, 0, 1.1],
+        "scale": [16, 17, 24]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_06_R",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [58, 1970, -35.2],
+        "rotation": [0, 0, -1.35],
+        "scale": [15, 16, 22]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_07_L",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [-59, 2290, -35.2],
+        "rotation": [0, 0, 1.6],
+        "scale": [14, 16, 20]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_08_R",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [60, 2580, -35.2],
+        "rotation": [0, 0, -1.85],
+        "scale": [15, 16, 19]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_09_L",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [-82, 2860, -35.2],
+        "rotation": [0, 0, 2.1],
+        "scale": [13, 14, 18]
+      }
+    },
+    {
+      "name": "IceSpike_Accent_10_R",
+      "type": "MESH",
+      "file_name": "IceSpike.obj",
+      "transform": {
+        "translation": [85, 3250, -35.2],
+        "rotation": [0, 0, -2.35],
+        "scale": [12, 14, 16]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_01_L_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-72, 415, -35.2],
+        "rotation": [0, 0, 0.3],
+        "scale": [25, 24, 32]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_01_L_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-50, 445, -35.2],
+        "rotation": [0, 0, -0.4],
+        "scale": [16, 18, 22]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_02_R_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [84, 675, -35.2],
+        "rotation": [0, 0, -0.6],
+        "scale": [27, 22, 36]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_02_R_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [54, 650, -35.2],
+        "rotation": [0, 0, 0.7],
+        "scale": [17, 16, 23]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_03_L_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-78, 1030, -35.2],
+        "rotation": [0, 0, 0.9],
+        "scale": [26, 24, 38]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_03_L_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-49, 1000, -35.2],
+        "rotation": [0, 0, -0.2],
+        "scale": [16, 18, 24]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_04_R_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [80, 1390, -35.2],
+        "rotation": [0, 0, -1.1],
+        "scale": [28, 26, 34]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_04_R_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [51, 1420, -35.2],
+        "rotation": [0, 0, 0.5],
+        "scale": [18, 18, 24]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_05_L_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-84, 1690, -35.2],
+        "rotation": [0, 0, 1.3],
+        "scale": [26, 24, 40]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_05_L_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-54, 1720, -35.2],
+        "rotation": [0, 0, -0.7],
+        "scale": [17, 17, 26]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_06_R_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [80, 1940, -35.2],
+        "rotation": [0, 0, -1.5],
+        "scale": [28, 22, 38]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_06_R_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [50, 1910, -35.2],
+        "rotation": [0, 0, 0.8],
+        "scale": [16, 17, 24]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_07_L_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-79, 2260, -35.2],
+        "rotation": [0, 0, 1.7],
+        "scale": [26, 24, 36]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_07_L_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [-51, 2230, -35.2],
+        "rotation": [0, 0, -0.9],
+        "scale": [17, 18, 23]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_08_R_Main",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [82, 2610, -35.2],
+        "rotation": [0, 0, -1.9],
+        "scale": [28, 24, 35]
+      }
+    },
+    {
+      "name": "IceCrystal_Cluster_08_R_Small",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [54, 2640, -35.2],
+        "rotation": [0, 0, 1],
+        "scale": [17, 16, 24]
       }
     },
     {

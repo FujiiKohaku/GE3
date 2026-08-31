@@ -72,6 +72,17 @@ void CollisionManager::ClearRaycastSphereTargets()
     raycastSphereTargets_.clear();
 }
 
+void CollisionManager::ClearRaycastObbTargets()
+{
+    raycastObbTargets_.clear();
+}
+
+void CollisionManager::RegisterRaycastObbTarget(
+    CollisionObjectId objectId, const OBB& box, CollisionLayer category)
+{
+    raycastObbTargets_.push_back({ objectId, box, category });
+}
+
 void CollisionManager::RegisterRaycastSphereTarget(
     CollisionObjectId objectId,
     const Sphere& sphere,
@@ -113,6 +124,23 @@ bool CollisionManager::Raycast(
             nearestCollider = nullptr;
             nearestPosition =
                 normalizedRay.origin + normalizedRay.direction * distance;
+        }
+    }
+
+    for (const RaycastObbTarget& target : raycastObbTargets_) {
+        if ((target.category & queryMask) == 0) {
+            continue;
+        }
+        float distance = 0.0f;
+        if (!RayObbIntersect(normalizedRay, target.box, distance)) {
+            continue;
+        }
+        if (!isHit || distance < nearestDistance) {
+            isHit = true;
+            nearestDistance = distance;
+            nearestObjectId = target.objectId;
+            nearestCollider = nullptr;
+            nearestPosition = normalizedRay.origin + normalizedRay.direction * distance;
         }
     }
 

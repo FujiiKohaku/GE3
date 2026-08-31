@@ -52,6 +52,7 @@
 #include "App/Game/Enemy/Types/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "App/Game/Boss/BossEncounterController.h"
+#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Boss/StageBoss.h"
 #include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
 
@@ -308,6 +309,8 @@ private:
 
     // ボス戦用
     std::unique_ptr<BossEncounterController> bossController_;
+    std::unique_ptr<IceJellyfish> iceJellyfish_;
+    bool showIceJellyfishCollision_ = false;
     bool isPirateShipMidBossSpawned_ = false;
 
     // カメラシェイク演出用

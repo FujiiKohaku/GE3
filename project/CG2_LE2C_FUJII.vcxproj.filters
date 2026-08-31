@@ -530,6 +530,7 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\BossEncounterController.cpp" />
+    <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfish.cpp" />
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -842,6 +843,8 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\BossEncounterController.h" />
+    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfish.h" />
+    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.h" />
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

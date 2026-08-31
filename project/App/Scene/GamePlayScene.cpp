@@ -530,6 +530,11 @@ void GamePlayScene::Initialize()
 
     CreateLevelObjects(levelData);
 
+    if (stageId_ == "stage03") {
+        iceJellyfish_ = std::make_unique<IceJellyfish>();
+        iceJellyfish_->Initialize(camera_.get(), stageSettings_.bossPosition);
+    }
+
     // ペイント弾を撃ってくるエネミーをコース上に5体配置（視認しやすくインクを連射する位置）
     for (size_t i = 0; i < stageSettings_.paintEnemyDistances.size(); ++i) {
         std::unique_ptr<PaintShooterEnemy> paintEnemy = std::make_unique<PaintShooterEnemy>();
@@ -945,9 +950,13 @@ void GamePlayScene::Update()
     }
 #endif
 
+    if (iceJellyfish_ != nullptr) {
+        iceJellyfish_->Update(TimeManager::GetInstance()->GetDeltaTime(), currentPosition.z);
+    }
     gameplayCollisionSystem_->SyncRaycastTargets(
         enemies_,
-        GetActiveBoss());
+        GetActiveBoss(),
+        iceJellyfish_.get());
 
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
@@ -960,6 +969,9 @@ void GamePlayScene::Update()
     // 3. 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
     UpdateOceanLife(currentPosition, forward, railRight);
+    if (iceJellyfish_ != nullptr) {
+        iceJellyfish_->UpdateDrawMatrices();
+    }
 
     // 4. マウス左クリックによる弾の発射処理
     ProcessPlayerShooting(input);
@@ -1859,6 +1871,9 @@ void GamePlayScene::Draw3D()
     if (GetActiveBoss() != nullptr) {
         GetActiveBoss()->Draw();
     }
+    if (iceJellyfish_ != nullptr) {
+        iceJellyfish_->Draw();
+    }
 
 #ifdef _DEBUG
     rail_->DrawDebug();
@@ -2273,6 +2288,13 @@ void GamePlayScene::DrawImGui()
     ImGui::End();
 
     ImGui::Begin("Debug Teleport Menu");
+    if (iceJellyfish_ != nullptr) {
+        ImGui::Text("Ice Jellyfish core HP: %.0f / %.0f", iceJellyfish_->GetHp(), IceJellyfish::kMaxHp);
+        ImGui::Checkbox("Show Ice Jellyfish collision", &showIceJellyfishCollision_);
+        if (ImGui::Button("Teleport to Ice Jellyfish")) {
+            railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
+        }
+    }
     if (GetActiveBoss() != nullptr) {
         ImGui::Text("Boss Z: %.2f", GetActiveBoss()->GetPosition().z);
         if (ImGui::Button("Teleport to Boss")) {
@@ -2310,7 +2332,8 @@ void GamePlayScene::CheckCollision()
                 *player_,
                 enemies_,
                 GetActiveBoss(),
-                enemyBulletManager_.GetBullets());
+                enemyBulletManager_.GetBullets(),
+                iceJellyfish_.get());
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
@@ -2425,6 +2448,9 @@ void GamePlayScene::UpdateWaterDropEffect()
 #ifdef _DEBUG
 void GamePlayScene::DrawCollisionDebug()
 {
+    if (iceJellyfish_ != nullptr && showIceJellyfishCollision_) {
+        iceJellyfish_->DrawCollisionDebug();
+    }
     DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
     constexpr Vector4 kPlayerColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     constexpr Vector4 kEnemyColor = { 1.0f, 0.15f, 0.15f, 1.0f };
@@ -2514,9 +2540,11 @@ void GamePlayScene::DrawCollisionDebug()
 
 void GamePlayScene::Finalize()
 {
+    iceJellyfish_.reset();
     BaseEnemy::SetBulletManager(nullptr);
     enemyBulletManager_.Clear();
     CollisionManager::GetInstance()->ClearRaycastSphereTargets();
+    CollisionManager::GetInstance()->ClearRaycastObbTargets();
     ClearLevelObjects();
     ResetGameplayPostEffects();
 
@@ -2869,7 +2897,9 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             levelObject->SetRotate(objData.rotation);
             levelObject->SetScale(objData.scale);
 
-            if (stageId_ == "stage03" && objData.fileName.starts_with("Environment/Ice/")) {
+            const bool isIceModel = objData.fileName.starts_with("Environment/Ice/") ||
+                objData.fileName == "IceSpike.obj";
+            if (stageId_ == "stage03" && isIceModel) {
                 levelObject->SetColor({ 0.90f, 0.96f, 1.0f, 1.0f });
                 // Diffuse ice facets: white lit faces and blue side faces, without glare.
                 levelObject->GetMaterial()->enableLighting = 2;
