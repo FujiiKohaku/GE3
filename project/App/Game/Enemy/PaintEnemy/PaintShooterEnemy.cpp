@@ -18,10 +18,34 @@ void PaintShooterEnemy::Update()
 
 void PaintShooterEnemy::Attack()
 {
-    fireTimer_++;
-    if (fireTimer_ >= fireInterval_) {
-        fireTimer_ = 0;
-        FirePaintBullet();
+    if (player_ == nullptr) {
+        return;
+    }
+
+    Vector3 playerPosition = player_->GetTranslate();
+    Vector3 toEnemy = transform_.translate - playerPosition;
+
+    Vector3 playerVelocity = player_->GetAutomaticWorldVelocity();
+    Vector3 forward = { 0.0f, 0.0f, 1.0f };
+    float speedLength = Vector3Length(playerVelocity);
+    if (speedLength > 0.001f) {
+        forward = Normalize(playerVelocity);
+    }
+
+    float dot = toEnemy.x * forward.x + toEnemy.y * forward.y + toEnemy.z * forward.z;
+
+    if (dot <= 0.0f) {
+        return;
+    }
+
+    float distance = Vector3Length(toEnemy);
+
+    if (distance <= 120.0f) {
+        fireTimer_++;
+        if (fireTimer_ >= fireInterval_) {
+            fireTimer_ = 0;
+            FirePaintBullet();
+        }
     }
 }
 

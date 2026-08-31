@@ -1,7 +1,7 @@
 {
   "id": "stage03",
   "name": "FROZEN PASSAGE",
-  "description": "A quiet flight above an ice field lined with glacial crystals. No enemies or bosses.",
+  "description": "A scenic flight above a freezing glacier field, now guarded by hostile remnants.",
   "layout": "resources/Stages/Stage03/layout.json",
   "rail": {
     "length": 3400.0,
@@ -73,7 +73,7 @@
     "floor_enabled": true,
     "floor_height": -35.0
   },
-  "swarm_wave_distances": [],
-  "recovery_item_distances": [],
-  "paint_enemy_distances": []
+  "swarm_wave_distances": [450.0, 950.0, 1450.0, 1950.0, 2450.0],
+  "recovery_item_distances": [600.0, 1600.0, 2600.0],
+  "paint_enemy_distances": [300.0, 800.0, 1300.0, 1800.0, 2300.0]
 }

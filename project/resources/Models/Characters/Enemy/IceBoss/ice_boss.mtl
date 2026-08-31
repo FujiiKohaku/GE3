@@ -1,0 +1,42 @@
+# Ice Burial Knight Glacia materials
+
+newmtl BlackIron
+Ka 0.015 0.020 0.028
+Kd 0.055 0.075 0.100
+Ks 0.420 0.520 0.620
+Ns 120.000
+d 1.000
+illum 2
+
+newmtl GlacierIce
+Ka 0.030 0.095 0.135
+Kd 0.210 0.680 0.900
+Ks 0.900 0.970 1.000
+Ns 220.000
+d 0.820
+illum 9
+
+newmtl DeepIce
+Ka 0.010 0.055 0.095
+Kd 0.055 0.320 0.540
+Ks 0.760 0.930 1.000
+Ns 180.000
+d 0.920
+illum 2
+
+newmtl CyanGlow
+Ka 0.000 0.650 0.950
+Kd 0.000 0.900 1.000
+Ks 0.700 1.000 1.000
+Ke 0.000 0.750 1.000
+Ns 250.000
+d 1.000
+illum 2
+
+newmtl FrostCloth
+Ka 0.015 0.025 0.040
+Kd 0.045 0.085 0.130
+Ks 0.120 0.180 0.240
+Ns 32.000
+d 1.000
+illum 2
