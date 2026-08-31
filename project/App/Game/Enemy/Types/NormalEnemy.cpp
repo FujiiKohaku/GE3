@@ -3,6 +3,7 @@
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 
 #include "App/Game/Player/Player.h"
+#include "Engine/math/MathStruct.h"
 #include <cmath>
 
 void NormalEnemy::Initialize(
@@ -30,7 +31,7 @@ void NormalEnemy::Attack()
 
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 difference = playerPosition - transform_.translate;
-    float distance = std::sqrt(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+    float distance = Vector3Length(difference);
 
     if (distance <= 100.0f) {
         fireTimer_++;
@@ -60,6 +61,17 @@ void NormalEnemy::FireBullet()
 
     Vector3 playerPosition = player_->GetTranslate();
 
+    // 弾の到達時間からPlayerの自動前進位置を予測する。
+    // 65%だけ先読みし、上下左右へ動けば避けられる余地は残す。
+    constexpr float kPredictionRatio = 0.65f;
+    const float distance = Vector3Length(
+        playerPosition - transform_.translate);
+    if (bulletSpeed_ > 0.0f) {
+        const float flightFrames = distance / bulletSpeed_;
+        playerPosition += player_->GetAutomaticWorldVelocity() *
+            (flightFrames * kPredictionRatio);
+    }
+
     Vector3 direction = Normalize(
         playerPosition - transform_.translate);
 
@@ -75,5 +87,5 @@ void NormalEnemy::FireBullet()
 
     bullet->SetVelocity(velocity);
 
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 }

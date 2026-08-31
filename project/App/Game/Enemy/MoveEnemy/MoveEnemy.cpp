@@ -2,6 +2,8 @@
 
 #include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
+#include "Engine/math/MathStruct.h"
+#include "Engine/Time/TimeManager.h"
 #include "externals/imgui/imgui.h"
 #include <cmath>
 
@@ -35,7 +37,7 @@ void MoveEnemy::Move()
         isStartPositionInitialized_ = true;
     }
 
-    moveTime_ = moveTime_ + (1.0f / 60.0f);
+    moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
     // 各移動パターンによる座標計算 (累積誤差が発生しないよう startPosition_ を基準に計算)
     if (movePattern_ == MovePattern::LeftRight) {
@@ -73,7 +75,7 @@ void MoveEnemy::Attack()
 
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 difference = playerPosition - transform_.translate;
-    float distance = std::sqrt(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+    float distance = Vector3Length(difference);
 
     if (distance <= 100.0f) {
         fireTimer_ = fireTimer_ + 1;
@@ -109,7 +111,7 @@ void MoveEnemy::FireBullet()
     bullet->SetTranslate(transform_.translate);
     bullet->SetVelocity(velocity);
 
-    enemyBullets_.push_back(std::move(bullet));
+    AddEnemyBullet(std::move(bullet));
 }
 
 void MoveEnemy::DrawImGui()

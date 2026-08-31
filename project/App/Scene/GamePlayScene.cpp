@@ -1,12 +1,15 @@
 #include "GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
-#include "App/Game/Boss/FearBoss.h"
-#include "Engine/3D/SphereObject.h"
+#include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
+#include "App/Game/Enemy/Bullet/PaintBullet.h"
+#include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
+#include "Engine/math/MathStruct.h"
 #include "Engine/audio/SoundManager.h"
+#include <cstdlib>
 #include <numbers>
 
 #include "SceneManager.h"
@@ -17,48 +20,21 @@
 #include <string_view>
 
 #include "../../Engine/LevelEditor/LevelDataLoader.h"
+#include "../../Engine/CollisionManager/BoxCollider.h"
 
 #include "ClearScene.h"
 #include "GameOverScene.h"
+#include "TitleScene.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
+#include "Engine/Time/TimeManager.h"
+#include <algorithm>
 #include <cmath>
 
 namespace {
-constexpr float kPlayerEnemyCollisionRadius = 4.0f;
-constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
-constexpr float kBoostPostEffectBaseWeight = 0.40f;
-constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
-constexpr float kBoostPostEffectPlayerWeight = 0.30f;
-constexpr float kBoostPostEffectCenterMin = 0.28f;
-constexpr float kBoostPostEffectCenterMax = 0.72f;
-constexpr float kBoostPostEffectVanishPointDistance = 150.0f;
-constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
-constexpr float kBoostKickDuration = 0.2f;
-constexpr float kBoostKickFrameTime = 1.0f / 60.0f;
-constexpr float kBoostKickFovAdd = 0.1f;
-
-float ClampFloat(float value, float minValue, float maxValue)
-{
-    if (value < minValue) {
-        value = minValue;
-    }
-
-    if (value > maxValue) {
-        value = maxValue;
-    }
-
-    return value;
-}
-
-Vector2 LerpVector2(const Vector2& start, const Vector2& end, float rate)
-{
-    Vector2 result {};
-    result.x = start.x + (end.x - start.x) * rate;
-    result.y = start.y + (end.y - start.y) * rate;
-    return result;
-}
+Player::ControlMode gControlMode = Player::ControlMode::KeyboardAndMouse;
+float gMouseSensitivity = 1.0f;
 
 Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
 {
@@ -79,40 +55,62 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
     return center;
 }
 
-float LengthSquared(const Vector3& value)
-{
-    return value.x * value.x + value.y * value.y + value.z * value.z;
-}
-
-bool IsZeroVector(const Vector3& value)
-{
-    return LengthSquared(value) < 0.000001f;
-}
-
-Vector3 Cross(const Vector3& a, const Vector3& b)
-{
-    Vector3 result {};
-    result.x = a.y * b.z - a.z * b.y;
-    result.y = a.z * b.x - a.x * b.z;
-    result.z = a.x * b.y - a.y * b.x;
-    return result;
-}
 }
 
 void GamePlayScene::Initialize()
 {
+    EnemyBullet::SetTimeScale(1.0f);
+    BaseEnemy::SetBulletManager(&enemyBulletManager_);
+    enemyBulletManager_.Clear();
+    StageCatalog* stageCatalog = StageCatalog::GetInstance();
+    if (!stageCatalog->Load()) {
+        Logger::Log(stageCatalog->GetLastError());
+    }
+    const StageSettings* selectedStage = stageCatalog->Find(stageId_);
+    if (selectedStage == nullptr) {
+        selectedStage = stageCatalog->Find("stage01");
+    }
+    if (selectedStage != nullptr) {
+        stageSettings_ = *selectedStage;
+        stageId_ = stageSettings_.id;
+    } else {
+        stageSettings_.id = "stage01";
+        stageSettings_.layoutFile = "resources/Scenes/stage01.json";
+        stageSettings_.bossRailAutoExtension = true;
+        stageSettings_.swarmWaveDistances = {
+            260.0f, 620.0f, 980.0f, 1340.0f, 1560.0f, 1740.0f };
+        stageSettings_.recoveryItemPositions = {
+            { -5.0f, 1.5f, 410.0f },
+            { 5.0f, 1.5f, 1040.0f },
+            { 0.0f, 5.0f, 1700.0f } };
+    }
+    railSpeed_ = stageSettings_.railSpeed;
 
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
     sceneObjectManager_ = std::make_unique<SceneObjectManager>();
+    gameplayCollisionSystem_ = std::make_unique<GameplayCollisionSystem>();
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
-    for (float z = 0.0f; z <= 3600.0f; z += 50.0f) {
-        rail_->AddPoint({ 0.0f, 0.0f, z });
+    if (!stageSettings_.railControlPoints.empty()) {
+        for (const Vector3& point : stageSettings_.railControlPoints) {
+            rail_->AddPoint(point);
+        }
+    } else {
+        for (float z = 0.0f;
+             z < stageSettings_.railLength;
+             z += stageSettings_.railPointInterval) {
+            rail_->AddPoint({ 0.0f, 0.0f, z });
+        }
+        if (stageSettings_.railLength > 0.0f) {
+            rail_->AddPoint({ 0.0f, 0.0f, stageSettings_.railLength });
+        }
     }
     /// ポストエフェクト初期化
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-    SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+    SceneManager::GetInstance()->AddPostEffect(
+        PostEffectType::Bloom,
+        PostEffectStage::BeforeParticle);
     // =================================================
     // Camera
     // =================================================
@@ -145,26 +143,29 @@ void GamePlayScene::Initialize()
     // =================================================
     // Managers
     // =================================================
-    EffectManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance(), camera_.get());
+    // EffectManager本体はゲーム起動時に初期化済みなので、
+    // このシーンで使用するカメラだけを設定する。
+    EffectManager::GetInstance()->SetCamera(camera_.get());
     // =================================================
     // SkinningObject3d
     // =================================================
 
     TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/rostock_laage_airport_4k.dds");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png"); // AiMスプライチE
+    TextureManager::GetInstance()->LoadTexture(stageSettings_.skybox);
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/aim.png");
 
     // nodeLoad
     ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
     ModelManager::GetInstance()->Load("Characters/Animation/SneakWalk/sneakWalk.gltf");
-    ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
+    Model* recoveryItemModel = ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("fish/fish.obj");
 
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
+    fearWormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
+    angerBlockModel_ = ModelManager::GetInstance()->Load("Environment/Block/block.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
@@ -219,6 +220,250 @@ void GamePlayScene::Initialize()
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
+
+    constexpr size_t kHomingMarkerCount = 6;
+    homingLockSprites_.reserve(kHomingMarkerCount);
+    for (size_t index = 0; index < kHomingMarkerCount; ++index) {
+        auto marker = std::make_unique<Sprite>();
+        marker->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+        marker->SetSize({ 84.0f, 84.0f });
+        marker->SetAnchorPoint({ 0.5f, 0.5f });
+        marker->SetColor({ 1.0f, 0.15f, 0.05f, 0.95f });
+        marker->Update();
+        homingLockSprites_.push_back(std::move(marker));
+    }
+
+    // ホワイトPNG (resources/Textures/white.png) を使用した縦長ポーズUIスプライトの初期化
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
+
+    // 1. 縦長背景パネル (280x380)
+    pauseMenuPanelSprite_ = std::make_unique<Sprite>();
+    pauseMenuPanelSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseMenuPanelSprite_->SetSize({ 400.0f, 520.0f });
+    pauseMenuPanelSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseMenuPanelSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseMenuPanelSprite_->SetColor({ 0.06f, 0.06f, 0.09f, 0.92f });
+    pauseMenuPanelSprite_->Update();
+
+    // 2. 「再開」ボタン用枠
+    pauseResumeBtnSprite_ = std::make_unique<Sprite>();
+    pauseResumeBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseResumeBtnSprite_->SetSize({ 220.0f, 44.0f });
+    pauseResumeBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseResumeBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 70.0f });
+    pauseResumeBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
+    pauseResumeBtnSprite_->Update();
+
+    // 3. 「リトライ」ボタン用枠
+    pauseRetryBtnSprite_ = std::make_unique<Sprite>();
+    pauseRetryBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseRetryBtnSprite_->SetSize({ 220.0f, 44.0f });
+    pauseRetryBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseRetryBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseRetryBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
+    pauseRetryBtnSprite_->Update();
+
+    // 4. 「タイトルに戻る」ボタン用枠
+    pauseTitleBtnSprite_ = std::make_unique<Sprite>();
+    pauseTitleBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseTitleBtnSprite_->SetSize({ 220.0f, 44.0f });
+    pauseTitleBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseTitleBtnSprite_->SetColor({ 0.75f, 0.22f, 0.22f, 0.90f });
+    pauseTitleBtnSprite_->Update();
+
+    pauseControlBtnSprite_ = std::make_unique<Sprite>();
+    pauseControlBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    pauseControlBtnSprite_->SetSize({ 300.0f, 44.0f });
+    pauseControlBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseControlBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseControlBtnSprite_->SetColor({ 0.25f, 0.55f, 0.45f, 0.90f });
+    pauseControlBtnSprite_->Update();
+
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 190.0f });
+    pauseTitleBtnSprite_->Update();
+
+    // -------------------------------------------------
+    // ポーズ用日本語テキストUI（Release構成対応 Text描画システム）
+    // -------------------------------------------------
+    constexpr const char* kDefaultFont = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
+
+    pauseTitleText_ = std::make_unique<Text>();
+    pauseTitleText_->Initialize(kDefaultFont);
+    pauseTitleText_->SetText("PAUSE MENU");
+    pauseTitleText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 135.0f });
+    pauseTitleText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseTitleText_->SetFontSize(34.0f);
+    pauseTitleText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+    pauseTitleText_->Update();
+
+    pauseResumeText_ = std::make_unique<Text>();
+    pauseResumeText_->Initialize(kDefaultFont);
+    pauseResumeText_->SetText("ゲーム再開 [TAB]");
+    pauseResumeText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 70.0f });
+    pauseResumeText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseResumeText_->SetFontSize(22.0f);
+    pauseResumeText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    pauseResumeText_->Update();
+
+    pauseRetryText_ = std::make_unique<Text>();
+    pauseRetryText_->Initialize(kDefaultFont);
+    pauseRetryText_->SetText("リトライ [R]");
+    pauseRetryText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseRetryText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseRetryText_->SetFontSize(22.0f);
+    pauseRetryText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    pauseRetryText_->Update();
+
+    pauseTitleBtnText_ = std::make_unique<Text>();
+    pauseTitleBtnText_->Initialize(kDefaultFont);
+    pauseTitleBtnText_->SetText("タイトルに戻る [T]");
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseTitleBtnText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseTitleBtnText_->SetFontSize(22.0f);
+    pauseTitleBtnText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    pauseTitleBtnText_->Update();
+
+    pauseControlText_ = std::make_unique<Text>();
+    pauseControlText_->Initialize(kDefaultFont);
+    pauseControlText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseControlText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseControlText_->SetFontSize(19.0f);
+    pauseControlText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 190.0f });
+    pauseTitleBtnText_->Update();
+
+    pauseSensitivityText_ = std::make_unique<Text>();
+    pauseSensitivityText_->Initialize(kDefaultFont);
+    pauseSensitivityText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 125.0f });
+    pauseSensitivityText_->SetAnchorPoint({ 0.5f, 0.5f });
+    pauseSensitivityText_->SetFontSize(18.0f);
+    pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
+
+    // 画面左下に表示する現在武器HUD
+    weaponHudBgSprite_ = std::make_unique<Sprite>();
+    weaponHudBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    weaponHudBgSprite_->SetSize({ 280.0f, 76.0f });
+    weaponHudBgSprite_->SetAnchorPoint({ 0.0f, 1.0f });
+    weaponHudBgSprite_->SetPosition({ 24.0f, WinApp::GetInstance()->kClientHeight - 24.0f });
+    weaponHudBgSprite_->SetColor({ 0.04f, 0.07f, 0.12f, 0.82f });
+    weaponHudBgSprite_->Update();
+
+    weaponHudLabelText_ = std::make_unique<Text>();
+    weaponHudLabelText_->Initialize(kDefaultFont);
+    weaponHudLabelText_->SetText("WEAPON");
+    weaponHudLabelText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 92.0f });
+    weaponHudLabelText_->SetFontSize(16.0f);
+    weaponHudLabelText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+    weaponHudLabelText_->Update();
+
+    weaponHudNameText_ = std::make_unique<Text>();
+    weaponHudNameText_->Initialize(kDefaultFont);
+    weaponHudNameText_->SetText("Normal");
+    weaponHudNameText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 68.0f });
+    weaponHudNameText_->SetFontSize(27.0f);
+    weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    weaponHudNameText_->SetOutlineWidth(1.0f);
+    weaponHudNameText_->Update();
+
+    // -------------------------------------------------
+    // 画面右側に表示するプレイヤーHPゲージUIの初期化
+    // -------------------------------------------------
+    playerHpBgSprite_ = std::make_unique<Sprite>();
+    playerHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    playerHpBgSprite_->SetSize({ 220.0f, 22.0f });
+    playerHpBgSprite_->SetAnchorPoint({ 1.0f, 0.0f });
+    playerHpBgSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
+    playerHpBgSprite_->SetColor({ 0.08f, 0.08f, 0.12f, 0.85f });
+    playerHpBgSprite_->Update();
+
+    playerHpBarSprite_ = std::make_unique<Sprite>();
+    playerHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    playerHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
+    playerHpBarSprite_->SetSize({ 220.0f, 22.0f });
+    playerHpBarSprite_->SetAnchorPoint({ 1.0f, 0.0f });
+    playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
+    playerHpBarSprite_->SetColor({ 0.20f, 0.85f, 0.40f, 0.95f });
+    playerHpBarSprite_->Update();
+
+    playerHpText_ = std::make_unique<Text>();
+    playerHpText_->Initialize(kDefaultFont);
+    playerHpText_->SetText("HP 20 / 20");
+    playerHpText_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 12.0f });
+    playerHpText_->SetAnchorPoint({ 1.0f, 0.0f });
+    playerHpText_->SetFontSize(20.0f);
+    playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    playerHpText_->Update();
+
+    const float bossHudCenterX = WinApp::GetInstance()->kClientWidth / 2.0f;
+    const float bossHpBarLeft = bossHudCenterX - 170.0f;
+    const float bossHpBarWidth = 340.0f;
+
+    bossHeadHpBgSprite_ = std::make_unique<Sprite>();
+    bossHeadHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossHeadHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossHeadHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossHeadHpBgSprite_->SetPosition({ bossHpBarLeft, 65.0f });
+    bossHeadHpBgSprite_->SetColor({ 0.06f, 0.12f, 0.18f, 0.90f });
+    bossHeadHpBgSprite_->Update();
+
+    bossHeadHpBarSprite_ = std::make_unique<Sprite>();
+    bossHeadHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossHeadHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
+    bossHeadHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossHeadHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossHeadHpBarSprite_->SetPosition({ bossHpBarLeft, 65.0f });
+    bossHeadHpBarSprite_->SetColor({ 0.20f, 0.60f, 1.00f, 0.95f });
+    bossHeadHpBarSprite_->Update();
+
+    bossBodyHpBgSprite_ = std::make_unique<Sprite>();
+    bossBodyHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossBodyHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossBodyHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossBodyHpBgSprite_->SetPosition({ bossHpBarLeft, 91.0f });
+    bossBodyHpBgSprite_->SetColor({ 0.18f, 0.06f, 0.06f, 0.90f });
+    bossBodyHpBgSprite_->Update();
+
+    bossBodyHpBarSprite_ = std::make_unique<Sprite>();
+    bossBodyHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossBodyHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
+    bossBodyHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossBodyHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
+    bossBodyHpBarSprite_->SetPosition({ bossHpBarLeft, 91.0f });
+    bossBodyHpBarSprite_->SetColor({ 1.00f, 0.20f, 0.20f, 0.95f });
+    bossBodyHpBarSprite_->Update();
+
+    bossNameText_ = std::make_unique<Text>();
+    bossNameText_->Initialize(kDefaultFont);
+    bossNameText_->SetText(
+        stageSettings_.bossType == "AngerBlock" ? "BOSS: ANGER" : "BOSS: FEAR WORM");
+    bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
+    bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
+    bossNameText_->SetFontSize(20.0f);
+    bossNameText_->SetColor({ 1.0f, 0.25f, 0.25f, 1.0f });
+    bossNameText_->Update();
+
+    bossHeadHpText_ = std::make_unique<Text>();
+    bossHeadHpText_->Initialize(kDefaultFont);
+    bossHeadHpText_->SetText(
+        stageSettings_.bossType == "AngerBlock" ? "ANGER CORE" : "HEAD CORE");
+    bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
+    bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
+    bossHeadHpText_->SetFontSize(14.0f);
+    bossHeadHpText_->SetColor({ 0.55f, 0.80f, 1.0f, 1.0f });
+    bossHeadHpText_->Update();
+
+    bossBodyHpText_ = std::make_unique<Text>();
+    bossBodyHpText_->Initialize(kDefaultFont);
+    bossBodyHpText_->SetText(
+        stageSettings_.bossType == "AngerBlock" ? "FISTS" : "BODY SHIELD");
+    bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
+    bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
+    bossBodyHpText_->SetFontSize(14.0f);
+    bossBodyHpText_->SetColor({ 1.0f, 0.55f, 0.55f, 1.0f });
+    bossBodyHpText_->Update();
+
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
     Logger::Log("GamePlayScene::Initialize: Allocating skyBox");
@@ -226,7 +471,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Initializing skyBox");
     skyBox_->Initialize(DirectXCommon::GetInstance());
     Logger::Log("GamePlayScene::Initialize: Setting skyBox texture");
-    skyBox_->SetTexture("resources/Textures/skybox.dds");
+    skyBox_->SetTexture(stageSettings_.skybox);
     Logger::Log("GamePlayScene::Initialize: skyBox initialization finished");
 
     // =================================================
@@ -237,50 +482,103 @@ void GamePlayScene::Initialize()
     player_->Initialize(playerModel);
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
-    player_->SetTranslate({ 0.0f, 0.0f, 0.0f });
+    player_->SetControlMode(gControlMode);
+    player_->SetMouseSensitivity(gMouseSensitivity);
+    lastPlayerHp_ = player_->GetMaxHp();
+
+    Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
+    Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
+
+    LevelDataLoader levelDataLoader;
+    LevelData levelData = levelDataLoader.Load(stageSettings_.layoutFile);
+
+    if (!levelData.playerSpawns.empty()) {
+        const LevelData::PlayerSpawnData& spawn = levelData.playerSpawns[0];
+        playerStartPos = spawn.translation;
+        playerStartRot = spawn.rotation;
+    }
+
+    player_->SetTranslate(playerStartPos);
+    player_->SetRotate(playerStartRot);
+    player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+
+    bossController_ = std::make_unique<BossEncounterController>();
+    bossController_->Initialize(
+        stageSettings_.bossType,
+        stageSettings_.bossSpawnDistance,
+        stageSettings_.bossPosition,
+        fearWormEnemyModel_,
+        angerBlockModel_,
+        enemyBulletModel_,
+        player_.get(),
+        rail_.get(),
+        stageSettings_.bossRailAutoExtension,
+        stageSettings_.bossRailExtensionBuffer);
+
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
+    if (!stageSettings_.recoveryItemDistances.empty()) {
+        stageSettings_.recoveryItemPositions.clear();
+        for (float distance : stageSettings_.recoveryItemDistances) {
+            stageSettings_.recoveryItemPositions.push_back(
+                rail_->GetPositionByDistance(distance));
+        }
+    }
+    InitializeRecoveryItems(recoveryItemModel);
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
     playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect("JetSpark", player_);
     wasPlayerBoosting_ = false;
 
-    /*LevelDataLoader levelDataLoader;
-    LevelData levelData = levelDataLoader.Load("resources/Scenes/stage01.json");*/
+    CreateLevelObjects(levelData);
 
-    /* for (const LevelData::ObjectData& objectData : levelData.objects) {
-         if (objectData.type != "MESH") {
-             continue;
-         }
-
-         if (objectData.fileName.empty()) {
-             continue;
-         }
-
-         ModelManager::GetInstance()->Load(objectData.fileName);
-
-         std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
-         levelObject->Initialize(Object3dManager::GetInstance());
-         levelObject->SetModel(objectData.fileName);
-         levelObject->SetTranslate(objectData.translation);
-         levelObject->SetRotate(objectData.rotation);
-         levelObject->SetScale(objectData.scale);
-         levelObjects_.push_back(std::move(levelObject));
-     }*/
-    // editorManager_->SetSelectedObject(terrain_);
+    // ペイント弾を撃ってくるエネミーをコース上に5体配置（視認しやすくインクを連射する位置）
+    for (size_t i = 0; i < stageSettings_.paintEnemyDistances.size(); ++i) {
+        std::unique_ptr<PaintShooterEnemy> paintEnemy = std::make_unique<PaintShooterEnemy>();
+        paintEnemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+        float distance = stageSettings_.paintEnemyDistances[i];
+        Vector3 railPosition = rail_->GetPositionByDistance(distance);
+        Vector3 forward = CalculateRailForward(distance, railPosition);
+        Vector3 right {};
+        Vector3 up {};
+        CalculateRailBasis(forward, right, up);
+        float sideOffset = (i % 2 == 0) ? -8.0f : 8.0f;
+        paintEnemy->SetPosition(railPosition + right * sideOffset + up * 2.0f);
+        enemies_.push_back(std::move(paintEnemy));
+    }
 
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
-    LoadEnemyPopData();
-
-    CollisionManager::GetInstance()->SetEnemies(&enemies_);
-
     // floorの初期化
-    Model* floorModel = ModelManager::GetInstance()->CreatePlane("resources/Textures/floor_dirt_gemini.jpg", 100.0f, 360.0f);
-    floorObj_ = std::make_unique<Object3d>();
-    floorObj_->Initialize(Object3dManager::GetInstance());
-    floorObj_->SetModel(floorModel);
-    floorObj_->SetTranslate({ 0.0f, -30.0f, 1800.0f });
-    floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
-    floorObj_->SetScale({ 1000.0f, 3600.0f, 1.0f });
+    if (stageSettings_.floorEnabled && stageId_ == "stage01") {
+        oceanSurface_ = std::make_unique<OceanSurface>();
+        oceanSurface_->Initialize(
+            camera_.get(),
+            1000.0f,
+            stageSettings_.railLength,
+            stageSettings_.floorHeight);
+        if (stageId_ == "stage01") {
+            waterPillarRenderer_ = std::make_unique<WaterPillarRenderer>();
+            waterPillarRenderer_->Initialize(camera_.get());
+            InitializeOceanLife();
+            InitializeWaterPillars();
+        }
+    } else if (stageSettings_.floorEnabled) {
+        Model* floorModel = ModelManager::GetInstance()->CreatePlane(
+            stageSettings_.floorTexture, 100.0f, 360.0f);
+        floorObj_ = std::make_unique<Object3d>();
+        floorObj_->Initialize(Object3dManager::GetInstance());
+        floorObj_->SetModel(floorModel);
+        floorObj_->SetTranslate({
+            0.0f,
+            stageSettings_.floorHeight,
+            stageSettings_.railLength * 0.5f });
+        floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
+        floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
+        if (stageId_ == "stage03") {
+            floorObj_->SetColor({ 0.10f, 0.24f, 0.36f, 1.0f });
+            floorObj_->GetMaterial()->shininess = 0.0f;
+            floorObj_->SetEnableEnvironmentMap(false);
+        }
+    }
 
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 }
@@ -306,49 +604,201 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
     Vector3 nextPosition = rail_->GetPositionByDistance(nextDistance);
     Vector3 forward = Normalize(nextPosition - previousPosition);
 
-    if (IsZeroVector(forward)) {
+    if (IsNearlyZero(forward)) {
         forward = Normalize(nextPosition - railPosition);
     }
 
-    if (IsZeroVector(forward)) {
+    if (IsNearlyZero(forward)) {
         forward = Normalize(railPosition - previousPosition);
     }
 
-    if (IsZeroVector(forward)) {
+    if (IsNearlyZero(forward)) {
         forward = { 0.0f, 0.0f, 1.0f };
     }
 
     return forward;
 }
 
+StageBoss* GamePlayScene::GetActiveBoss() const
+{
+    if (bossController_ == nullptr) {
+        return nullptr;
+    }
+    return bossController_->GetActiveBoss();
+}
+
 void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const
 {
     Vector3 normalizedForward = Normalize(forward);
-    if (IsZeroVector(normalizedForward)) {
+    if (IsNearlyZero(normalizedForward)) {
         normalizedForward = { 0.0f, 0.0f, 1.0f };
     }
 
     Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
     right = Normalize(Cross(referenceUp, normalizedForward));
 
-    if (IsZeroVector(right)) {
+    if (IsNearlyZero(right)) {
         Vector3 referenceForward = { 0.0f, 0.0f, 1.0f };
         right = Normalize(Cross(normalizedForward, referenceForward));
     }
 
-    if (IsZeroVector(right)) {
+    if (IsNearlyZero(right)) {
         right = { 1.0f, 0.0f, 0.0f };
     }
 
     up = Normalize(Cross(normalizedForward, right));
 
-    if (IsZeroVector(up)) {
+    if (IsNearlyZero(up)) {
         up = referenceUp;
     }
 }
 
 void GamePlayScene::Update()
 {
+    // TABキーによるポーズメニュー（Pause Menu）切り替え
+    Input* input = Input::GetInstance();
+    if (input != nullptr && input->IsKeyTrigger(DIK_TAB)) {
+        isPaused_ = !isPaused_;
+    }
+
+    if (isPaused_) {
+        SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
+        SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
+
+        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter,PostEffectStage::BeforeParticle);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale,PostEffectStage::BeforeParticle);
+        SceneManager::GetInstance()->AddPostEffect(PostEffectType::CyberScanline,PostEffectStage::BeforeParticle);
+
+        // ポーズテキストオブジェクトの更新
+        if (pauseTitleText_) pauseTitleText_->Update();
+        if (pauseResumeText_) pauseResumeText_->Update();
+        if (pauseRetryText_) pauseRetryText_->Update();
+        if (pauseTitleBtnText_) pauseTitleBtnText_->Update();
+        if (input != nullptr && input->IsKeyTrigger(DIK_C)) {
+            gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
+                ? Player::ControlMode::StarFox
+                : Player::ControlMode::KeyboardAndMouse;
+            if (player_) {
+                player_->SetControlMode(gControlMode);
+            }
+        }
+        if (pauseControlText_) {
+            pauseControlText_->SetText(
+                gControlMode == Player::ControlMode::StarFox
+                    ? "CONTROL: STARFOX [C]"
+                    : "CONTROL: WASD + MOUSE [C]");
+            pauseControlText_->Update();
+        }
+        if (input != nullptr && input->IsKeyTrigger(DIK_LBRACKET)) {
+            gMouseSensitivity = std::clamp(
+                gMouseSensitivity - 0.1f, 0.5f, 2.0f);
+            if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
+        }
+        if (input != nullptr && input->IsKeyTrigger(DIK_RBRACKET)) {
+            gMouseSensitivity = std::clamp(
+                gMouseSensitivity + 0.1f, 0.5f, 2.0f);
+            if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
+        }
+        if (pauseSensitivityText_) {
+            int sensitivityPercent = static_cast<int>(gMouseSensitivity * 100.0f + 0.5f);pauseSensitivityText_->SetText("MOUSE SENSITIVITY: " +std::to_string(sensitivityPercent) +"%  [[ / ]] ");
+            pauseSensitivityText_->Update();
+        }
+
+        // Tキーでタイトル画面へ戻る
+        if (input != nullptr && input->IsKeyTrigger(DIK_T)) {
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+            return;
+        }
+
+        // Rキーでステージリトライ
+        if (input != nullptr && input->IsKeyTrigger(DIK_R)) {
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(
+                std::make_unique<GamePlayScene>(stageId_));
+            return;
+        }
+
+        // ポーズ中はゲームオブジェクトの更新を停止
+        return;
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
+        HotReloadLevel();
+    }
+
+    // 時間停止中はゲーム世界を更新しない。
+    // チュートリアルUIは、今後この判定より前でUnscaledDeltaTimeを使って更新する。
+    if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
+        return;
+    }
+
+    // HPが尽きた後は通常のゲーム進行を止め、落下と爆発だけを更新する。
+    if (player_ && player_->IsDead()) {
+        StopPlayerEngineEffects();
+        player_->Update();
+
+        // 落下するPlayerとの距離を保ちながら、カメラも滑らかに追従する。
+        if (camera_) {
+            const Vector3 playerPosition = player_->GetTranslate();
+            if (!hasPlayerDeathCameraState_) {
+                hasPlayerDeathCameraState_ = true;
+                playerDeathCameraOffset_ =
+                    camera_->GetTranslate() - playerPosition;
+                playerDeathCameraLookTarget_ = smoothedLookAheadPosition_;
+            }
+
+            const Vector3 targetCameraPosition =
+                playerPosition + playerDeathCameraOffset_;
+            const Vector3 cameraPosition = Lerp(
+                camera_->GetTranslate(),
+                targetCameraPosition,
+                0.15f);
+            playerDeathCameraLookTarget_ = Lerp(
+                playerDeathCameraLookTarget_,
+                playerPosition,
+                0.15f);
+            camera_->LookAt(
+                cameraPosition,
+                playerDeathCameraLookTarget_);
+            camera_->Update();
+        }
+
+        if (player_->IsDeathExplosionReady()) {
+            if (!playerDeathExplosionPlayed_) {
+                playerDeathExplosionPlayed_ = true;
+                EffectManager::GetInstance()->PlayEffect(
+                    "Explosion",
+                    player_->GetTranslate());
+                cameraShakeTime_ = 0.45f;
+                cameraShakeDuration_ = 0.45f;
+                cameraShakeStrength_ = 0.018f;
+            }
+
+            playerDeathAfterExplosionTimer_ +=
+                TimeManager::GetInstance()->GetDeltaTime();
+            if (playerDeathAfterExplosionTimer_ >= 0.8f) {
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(
+                    std::make_unique<GameOverScene>(stageId_));
+                return;
+            }
+        }
+
+        EffectManager::GetInstance()->Update();
+        UpdateCameraShakePostEffect();
+        return;
+    }
+    // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
+    if (stageSettings_.bossType != "None" && Input::GetInstance()->IsKeyTrigger(DIK_V)) {
+        railDistance_ = (std::max)(
+            0.0f,
+            stageSettings_.bossSpawnDistance - 400.0f);
+        if (player_) {
+            Vector3 pPos = player_->GetTranslate();
+            player_->SetTranslate({ pPos.x, pPos.y, railDistance_ });
+        }
+    }
     // レール自体の更新
     rail_->Update();
 
@@ -357,24 +807,114 @@ void GamePlayScene::Update()
         enemy->Update();
     }
 
+    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
+        return enemy->IsDead();
+    });
+    const Vector3 currentRailPosition =
+        rail_->GetPositionByDistance(railDistance_);
+    const Vector3 currentRailForward =
+        CalculateRailForward(railDistance_, currentRailPosition);
+    enemyBulletManager_.Update(
+        player_->GetTranslate(),
+        currentRailForward);
+
+    float pirateShipSpawnDistance = -1.0f;
+    float pirateShipPositionDistance = 0.0f;
+    if (stageId_ == "stage03" && stageSettings_.bossType != "None") {
+        pirateShipSpawnDistance = 1250.0f;
+        pirateShipPositionDistance = 1340.0f;
+    }
+
+    if (pirateShipSpawnDistance >= 0.0f &&
+        !isPirateShipMidBossSpawned_ &&
+        railDistance_ >= pirateShipSpawnDistance) {
+        auto pirateShip = std::make_unique<PirateShipMidBoss>();
+        pirateShip->Initialize(angerBlockModel_, enemyBulletModel_, player_.get());
+        Vector3 spawnPosition = rail_->GetPositionByDistance(pirateShipPositionDistance);
+        spawnPosition.y = stageSettings_.floorHeight;
+        pirateShip->SetPosition(spawnPosition);
+        enemies_.push_back(std::move(pirateShip));
+        isPirateShipMidBossSpawned_ = true;
+    }
+
     // プレイヤーのZ座標を取得
-    float playerZ = player_->GetTranslate().z;
+    UpdateSwarmWaveSpawning();
 
     // ボス出現処理
-    if (!isBossSpawned_ && playerZ >= 1850.0f) {
-        activeBoss_ = std::make_unique<FearBoss>();
-        activeBoss_->Initialize(enemyModel_);
-        isBossSpawned_ = true;
+    bossController_->Update(railDistance_);
+    if (bossController_->DidSpawnThisFrame()) {
+        bossNoiseFadeTimer_ = 4.5f;
+    }
+    if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
+        oceanSurface_->SetLength(rail_->GetTotalLength());
+    }
+
+    // プレイヤーのHP減少検知による被弾カメラシェイク
+    if (player_) {
+        static int lastPlayerHp = player_->GetCurrentHp();
+        int currentPlayerHp = player_->GetCurrentHp();
+        if (currentPlayerHp < lastPlayerHp) {
+            cameraShakeTime_ = kPlayerDamageShakeDuration;
+            cameraShakeDuration_ = kPlayerDamageShakeDuration;
+            cameraShakeStrength_ = kPlayerDamageShakeStrength;
+        }
+        lastPlayerHp = currentPlayerHp;
     }
 
     // ボスの更新
-    if (activeBoss_ && !activeBoss_->IsDead()) {
-        activeBoss_->Update(player_->GetTranslate());
+    StageBoss* activeBoss = GetActiveBoss();
+    if (activeBoss != nullptr) {
+        UpdateBossHpHud();
+
+        // 発狂モードに入った瞬間を検知してカメラシェイクを開始する
+        if (bossController_->DidEnterMadModeThisFrame()) {
+            cameraShakeTime_ = kBossMadShakeDuration;
+            cameraShakeDuration_ = kBossMadShakeDuration;
+            cameraShakeStrength_ = kBossMadShakeStrength;
+        }
+
+        // ビーム被弾中のカメラ微振動
+        if (bossController_->IsBeamHittingPlayer()) {
+            if (cameraShakeTime_ < kBossBeamShakeDuration ||
+                cameraShakeStrength_ < kBossBeamShakeStrength) {
+                cameraShakeTime_ = kBossBeamShakeDuration;
+                cameraShakeDuration_ = kBossBeamShakeDuration;
+                cameraShakeStrength_ = kBossBeamShakeStrength;
+            }
+        }
     }
 
-    // ボス撃破でクリアシーンへ遷移
-    if (activeBoss_ && activeBoss_->IsDead()) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    // ボス撃破でディゾルブ消滅演出の完了後にクリアシーンへ遷移
+    if (activeBoss != nullptr && activeBoss->IsDead()) {
+        cameraShakeTime_ = 0.0f;
+        cameraShakeDuration_ = 0.0f;
+        cameraShakeStrength_ = 0.0f;
+        SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
+        SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
+
+        // 死亡演出(頭部の落下回転)が完了するまでボスのUpdateを回し続ける
+        bossController_->UpdateDeathSequence();
+        EffectManager::GetInstance()->Update();
+
+        if (activeBoss->IsDeathSequenceFinished()) {
+            StopPlayerEngineEffects();
+            bossDeathDissolveTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+            float dissolveProgress = bossDeathDissolveTimer_ / 2.0f;
+            if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
+
+            // 撃破ディゾルブポストエフェクトの適用
+            SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Dissolve,
+                PostEffectStage::BeforeParticle);
+
+            // たっぷり2.0秒かけてディゾルブ消滅が100%完了してからクリア画面へ遷移！
+            if (dissolveProgress >= 1.0f) {
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+            }
+        }
+
         return;
     }
 
@@ -390,7 +930,6 @@ void GamePlayScene::Update()
     UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
 
     // 入力インスタンスの取得
-    Input* input = Input::GetInstance();
     if (input != nullptr) {
         if (input->IsKeyTrigger(DIK_L)) {
             isRandomPostEffect_ = !isRandomPostEffect_;
@@ -406,6 +945,10 @@ void GamePlayScene::Update()
     }
 #endif
 
+    gameplayCollisionSystem_->SyncRaycastTargets(
+        enemies_,
+        GetActiveBoss());
+
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
     const bool isPlayerBoosting = player_->IsBoosting();
@@ -416,6 +959,7 @@ void GamePlayScene::Update()
 
     // 3. 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
+    UpdateOceanLife(currentPosition, forward, railRight);
 
     // 4. マウス左クリックによる弾の発射処理
     ProcessPlayerShooting(input);
@@ -428,17 +972,15 @@ void GamePlayScene::Update()
 #endif
 
     // デバッグ用の進行方向ライン描画 (緑色)
+#ifdef _DEBUG
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,
         currentPosition + forward * 20.0f,
         { 0.0f, 1.0f, 0.0f, 1.0f },
         3.0f);
+#endif
 
     // プレイヤーのブースト状態に応じたエフェクト制御
-    Vector3 boostLinePosition = player_->GetTranslate();
-    boostLinePosition.y += 0.2f;
-    boostLinePosition.z += 2.4f;
-
     if (isPlayerBoosting != wasPlayerBoosting_) {
         EffectManager::GetInstance()->StopEffect(playerJetHandle_);
         EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
@@ -452,18 +994,7 @@ void GamePlayScene::Update()
         playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(jetEffectName, player_);
         playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(sparkEffectName, player_);
 
-        if (isPlayerBoosting) {
-            boostLineHandle_ = EffectManager::GetInstance()->AttachEffect("BoostLine", player_);
-            EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
-        } else {
-            EffectManager::GetInstance()->StopEffect(boostLineHandle_);
-            boostLineHandle_ = kInvalidEffectHandle;
-        }
         wasPlayerBoosting_ = isPlayerBoosting;
-    }
-
-    if (isPlayerBoosting && boostLineHandle_ != kInvalidEffectHandle) {
-        EffectManager::GetInstance()->SetEffectPosition(boostLineHandle_, boostLinePosition);
     }
 
     UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
@@ -474,24 +1005,251 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
         } else {
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         }
     } else {
         if (isPlayerBoosting) {
             SceneManager::GetInstance()->ClearPostEffects();
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog,PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur,PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine,PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::ChromaticAberration,
+                PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
+        } else if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDead()) {
+            // ボス戦中: 3Dボスの輝度境界を強調する LuminanceBasedOutline (5点加点) を適用！
+            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         } else {
+            // 通常時: 深度ベースのアウトライン (DepthOutline: 8点加点)
             SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Bloom);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Bloom,
+                PostEffectStage::BeforeParticle);
         }
+    }
+
+    // -------------------------------------------------
+    // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
+    // -------------------------------------------------
+    static bool prevBoostingState = false;
+    bool isShiftPressed = Input::GetInstance()->IsKeyTrigger(DIK_LSHIFT) || Input::GetInstance()->IsKeyTrigger(DIK_RSHIFT);
+
+    // シフトキーを押した瞬間、またはブースト未開始から開始に切り替わった瞬間に100%確実に発動！
+    if (isShiftPressed || (isPlayerBoosting && !prevBoostingState)) {
+        sonicBoomTimer_ = 0.85f;
+
+        // プレイヤーの現在位置を中心発生源として画面UV座標(0.0〜1.0)へ変換
+        if (player_ && camera_) {
+            Vector3 playerWorldPos = player_->GetTranslate();
+            Vector2 screenPos = camera_->WorldToScreen(playerWorldPos);
+            float screenW = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+            float screenH = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+            Vector2 playerUV = { screenPos.x / screenW, screenPos.y / screenH };
+            SceneManager::GetInstance()->SetSonicBoomCenter(playerUV);
+        }
+    }
+    prevBoostingState = isPlayerBoosting;
+
+    if (sonicBoomTimer_ > 0.0f) {
+        sonicBoomTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+        if (sonicBoomTimer_ < 0.0f) sonicBoomTimer_ = 0.0f;
+
+        float boomProgress = 1.0f - (sonicBoomTimer_ / 0.85f);
+        SceneManager::GetInstance()->SetSonicBoomProgress(boomProgress);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::SonicBoom,
+            PostEffectStage::BeforeParticle);
+    }
+
+    // -------------------------------------------------
+    // ミニガン連射時の「銃身熱気カゲロウ (HeatHaze)」演出
+    // -------------------------------------------------
+    if (player_ && player_->GetHeatRatio() > 0.01f) {
+        SceneManager::GetInstance()->SetVignetteStrength(player_->GetHeatRatio());
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::HeatHaze,
+            PostEffectStage::BeforeParticle);
+    }
+
+    // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
+    // ★加点要素: BoxFilter (3点) をインク付着時の油分視界ぼやけとして同時適用し、時間経過で徐々に減衰フェードアウト！
+    if (isPaintEffectActive_) {
+        paintEffectTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+        float progress = paintEffectTimer_ / paintEffectDuration_;
+        if (progress >= 1.0f) {
+            isPaintEffectActive_ = false;
+            paintEffectTimer_ = 0.0f;
+            SceneManager::GetInstance()->RemovePostEffect(PostEffectType::Paint);
+            SceneManager::GetInstance()->RemovePostEffect(PostEffectType::smoothing);
+            SceneManager::GetInstance()->SetPaintProgress(0.0f);
+            SceneManager::GetInstance()->SetPaintIntensity(0.0f);
+        } else {
+            // 時間経過に伴い 1.0f -> 0.0f へ徐々にフェードアウトする BoxFilter ブラー強度
+            float boxFilterFade = 1.0f - progress;
+            SceneManager::GetInstance()->SetVignetteStrength(boxFilterFade);
+
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Paint,
+                PostEffectStage::AfterParticle);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::smoothing,
+                PostEffectStage::AfterParticle);
+            SceneManager::GetInstance()->SetPaintProgress(progress);
+            SceneManager::GetInstance()->SetPaintIntensity(1.0f);
+        }
+    }
+
+    UpdateWaterDropEffect();
+
+    // -------------------------------------------------
+    // 加点要素: Vignetting (3点)
+    // 1. ダメージを受けた瞬間は一瞬だけ暗く赤くフラッシュ
+    // 2. HPが3以下になったら常時ドクンドクンと脈動（鼓動パルス）
+    // -------------------------------------------------
+    if (player_) {
+        int currentHp = player_->GetCurrentHp();
+
+        // ダメージ検知
+        if (currentHp < lastPlayerHp_) {
+            damageFlashTimer_ = 0.35f;
+        }
+        lastPlayerHp_ = currentHp;
+
+        // ダメージフラッシュタイマー消化
+        if (damageFlashTimer_ > 0.0f) {
+            damageFlashTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+            if (damageFlashTimer_ < 0.0f) damageFlashTimer_ = 0.0f;
+        }
+
+        // (A) 被弾瞬間の一瞬暗赤色フラッシュ (小さめでスタイリッシュな範囲)
+        if (damageFlashTimer_ > 0.0f) {
+            float flashRatio = damageFlashTimer_ / 0.35f;
+            SceneManager::GetInstance()->SetVignetteStrength(0.35f + 0.35f * flashRatio);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Vignette,
+                PostEffectStage::BeforeParticle);
+        }
+        // (B) HP ≦ 3 時の常時ドクンドクン脈動演出 (小さめの四隅赤色鼓動)
+        else if (currentHp <= 3) {
+            static float vignettePulseTimer = 0.0f;
+            vignettePulseTimer += TimeManager::GetInstance()->GetDeltaTime();
+
+            float pulseFactor = 0.45f + 0.25f * std::sin(vignettePulseTimer * 8.5f);
+            SceneManager::GetInstance()->SetVignetteStrength(pulseFactor);
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::Vignette,
+                PostEffectStage::BeforeParticle);
+        }
+    }
+
+    // -------------------------------------------------
+    // HP ≦ 5 ピンチ時: 画面端の不規則ビキビキガラスひび割れ (GlassCrack)
+    // -------------------------------------------------
+    if (player_ && player_->GetCurrentHp() <= 5) {
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::GlassCrack,
+            PostEffectStage::BeforeParticle);
+    }
+
+    // -------------------------------------------------
+    // 加点要素: Random (4点)
+    // 途切れ一切無しの完全シームレスノイズ＆たっぷり4.5秒間のロングフェードアウト
+    // -------------------------------------------------
+    float noiseIntensity = 0.0f;
+
+    // (A) ボス登場前予兆ノイズ (Z = 1450 〜 1850)
+    const float bossWarningStart = (std::max)(
+        0.0f,
+        stageSettings_.bossSpawnDistance - 400.0f);
+    if (stageSettings_.bossType != "None" && !bossController_->IsSpawned() && player_ && railDistance_ >= bossWarningStart) {
+        float playerDistance = railDistance_;
+        float warningLength =
+            stageSettings_.bossSpawnDistance - bossWarningStart;
+        float progress = warningLength > 0.0f
+            ? (playerDistance - bossWarningStart) / warningLength
+            : 1.0f;
+        if (progress > 1.0f) progress = 1.0f;
+        noiseIntensity = 0.30f + 0.70f * progress;
+    }
+    // (B) ボス登場後のロングフェードアウトノイズ (たっぷり4.5秒間かけて非常にゆっくり消えていく)
+    else if (bossNoiseFadeTimer_ > 0.0f) {
+        bossNoiseFadeTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+        if (bossNoiseFadeTimer_ < 0.0f) bossNoiseFadeTimer_ = 0.0f;
+
+        float fadeProgress = bossNoiseFadeTimer_ / 4.5f;
+        noiseIntensity = fadeProgress;
+    }
+
+    // 途切れが絶対に発生しないよう、ノイズ強度がわずかでもある場合は100%確実に適用！
+    if (noiseIntensity > 0.001f) {
+        SceneManager::GetInstance()->SetVignetteStrength(noiseIntensity);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::Random,
+            PostEffectStage::BeforeParticle);
+    }
+
+    // -------------------------------------------------
+    // 画面右側のプレイヤーHPゲージのリアルタイム更新
+    // -------------------------------------------------
+    if (player_ && playerHpBarSprite_ && playerHpText_) {
+        int currentHp = player_->GetCurrentHp();
+        int maxHp = player_->GetMaxHp();
+        float hpRatio = 0.0f;
+        if (maxHp > 0) {
+            hpRatio = static_cast<float>(currentHp) / static_cast<float>(maxHp);
+        }
+        if (hpRatio < 0.0f) hpRatio = 0.0f;
+        if (hpRatio > 1.0f) hpRatio = 1.0f;
+
+        // 残りHP割合に合わせてゲージの横幅を滑らかに変更
+        displayedPlayerHpRatio_ = std::lerp(
+            displayedPlayerHpRatio_,
+            hpRatio,
+            0.12f);
+        if (std::abs(displayedPlayerHpRatio_ - hpRatio) < 0.001f) {
+            displayedPlayerHpRatio_ = hpRatio;
+        }
+
+        float barWidth = 220.0f * displayedPlayerHpRatio_;
+        playerHpBarSprite_->SetSize({ barWidth, 22.0f });
+
+        // 残りHP量に応じてバーの色を変化（緑 -> 黄色 -> 赤）
+        if (currentHp <= 3) {
+            playerHpBarSprite_->SetColor({ 0.95f, 0.15f, 0.15f, 0.95f });
+        } else if (hpRatio < 0.45f) {
+            playerHpBarSprite_->SetColor({ 0.95f, 0.70f, 0.15f, 0.95f });
+        } else {
+            playerHpBarSprite_->SetColor({ 0.20f, 0.85f, 0.40f, 0.95f });
+        }
+
+        playerHpBarSprite_->Update();
+        if (playerHpBgSprite_) playerHpBgSprite_->Update();
+
+        // HP数値テキストの更新
+        playerHpText_->SetText("HP " + std::to_string(currentHp) + " / " + std::to_string(maxHp));
+        playerHpText_->Update();
     }
 
     // レティクル（AimSprite）のスクリーン位置更新
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
+    std::vector<Vector3> homingLockPositions;
+    player_->GetHomingLockPositions(homingLockPositions);
+    const size_t markerCount =
+        (std::min)(homingLockPositions.size(), homingLockSprites_.size());
+    for (size_t index = 0; index < markerCount; ++index) {
+        homingLockSprites_[index]->SetPosition(
+            camera_->WorldToScreen(homingLockPositions[index]));
+        homingLockSprites_[index]->Update();
+    }
 
     // スカイボックスの更新
     skyBox_->Update(camera_.get());
@@ -499,14 +1257,37 @@ void GamePlayScene::Update()
     // 各種マネージャー、オブジェクト、コリジョンの更新
     EffectManager::GetInstance()->Update();
     sceneObjectManager_->Update();
+    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        levelObject->Update();
+    }
+    if (isFishSchoolActive_) {
+        for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Update();
+    }
+    for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Update();
+    if (waterPillarRenderer_) {
+        waterPillarRenderer_->Update(TimeManager::GetInstance()->GetDeltaTime());
+    }
+    for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) {
+        pillar->Update(railDistance_, TimeManager::GetInstance()->GetDeltaTime());
+        if (pillar->CheckCollision(player_->GetTranslate())) {
+            if (player_->ApplyDamage(2)) {
+                StartWaterDropEffect();
+            }
+        }
+    }
+    UpdateRecoveryItems();
     if (floorObj_) {
         floorObj_->Update();
     }
+    if (oceanSurface_) {
+        oceanSurface_->Update(TimeManager::GetInstance()->GetDeltaTime());
+    }
 
-    animationActor_->Update(1.0f / 60.0f);
+    animationActor_->Update(TimeManager::GetInstance()->GetDeltaTime());
     
     // コリジョン判定の実行
     CheckCollision();
+    UpdateCameraShakePostEffect();
 
 #pragma region
 #ifdef USE_IMGUI
@@ -699,7 +1480,8 @@ void GamePlayScene::UpdateRailMovement(
     float& outNextDistance)
 {
     // 次フレームのレール上の進行距離を計算
-    outNextDistance = railDistance_ + railSpeed_;
+    const float frameScale = TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
+    outNextDistance = railDistance_ + railSpeed_ * frameScale;
     if (outNextDistance > rail_->GetTotalLength()) {
         outNextDistance = rail_->GetTotalLength();
     }
@@ -718,11 +1500,27 @@ void GamePlayScene::UpdatePlayerTransform(
     const Vector3& railUp,
     const Vector3& forward)
 {
+    std::vector<BaseEnemy*> homingTargets;
+    homingTargets.reserve(enemies_.size() + 1);
+    for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (!enemy->IsDead()) {
+            homingTargets.push_back(enemy.get());
+        }
+    }
+    if (BaseEnemy* boss = GetActiveBoss(); boss != nullptr && !boss->IsDead()) {
+        homingTargets.push_back(boss);
+    }
+    player_->SetHomingTargets(homingTargets);
+
     // プレイヤーにレール情報の最新のフレーム（座標、右方向、上方向、前方向）を伝える
     player_->SetRailFrame(currentPosition, railRight, railUp, forward);
     
     // プレイヤーの内部座標（移動制限など）を更新
     player_->Update();
+    if (weaponHudNameText_) {
+        weaponHudNameText_->SetText(player_->GetCurrentWeaponDisplayName());
+        weaponHudNameText_->Update();
+    }
 
     // 進行方向に合わせてプレイヤーの回転を適用
     if (forward.x != 0.0f || forward.y != 0.0f || forward.z != 0.0f) {
@@ -731,6 +1529,28 @@ void GamePlayScene::UpdatePlayerTransform(
         playerRotate.x = -std::atan2(forward.y, horizontalLength);
         playerRotate.y = -std::atan2(forward.x, forward.z);
         playerRotate.z = 0.0f;
+
+        if (player_->GetControlMode() == Player::ControlMode::StarFox) {
+            const float screenWidth = static_cast<float>(
+                WinApp::GetInstance()->GetClientWidth());
+            const float screenHeight = static_cast<float>(
+                WinApp::GetInstance()->GetClientHeight());
+            if (screenWidth > 0.0f && screenHeight > 0.0f) {
+                const Vector2& steering =
+                    player_->GetStarFoxSteeringInput();
+                float aimX = steering.x;
+                float aimY = steering.y;
+
+                // Point the nose toward the reticle and bank into horizontal
+                // movement, while preserving the rail's base orientation.
+                constexpr float kMaxAimYaw = 0.42f;
+                constexpr float kMaxAimPitch = 0.34f;
+                constexpr float kMaxAimBank = 0.30f;
+                playerRotate.y -= aimX * kMaxAimYaw;
+                playerRotate.x += aimY * kMaxAimPitch;
+                playerRotate.z = -aimX * kMaxAimBank;
+            }
+        }
         player_->SetRotate(playerRotate);
     }
 
@@ -750,6 +1570,42 @@ void GamePlayScene::UpdateCamera(
     float nextRailDistance,
     Input* input)
 {
+    // カメラポイント補間の適用
+    if (hasCameraPoint_) {
+        float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+        cameraPointLerpTime_ += deltaTime;
+        float moveTime = cameraPointObject_.cameraPoint.moveTime;
+        if (moveTime <= 0.0f) {
+            moveTime = 1.0f;
+        }
+        float t = cameraPointLerpTime_ / moveTime;
+        if (t > 1.0f) {
+            t = 1.0f;
+        }
+
+        // カメラ位置の補間
+        Vector3 currentEye = camera_->GetTranslate();
+        Vector3 targetEye = cameraPointObject_.translation;
+        Vector3 eye = {
+            currentEye.x + (targetEye.x - currentEye.x) * t,
+            currentEye.y + (targetEye.y - currentEye.y) * t,
+            currentEye.z + (targetEye.z - currentEye.z) * t
+        };
+
+        // カメラ注視点の補間
+        Vector3 currentTarget = smoothedLookAheadPosition_;
+        Vector3 targetTarget = cameraPointObject_.cameraPoint.target;
+        Vector3 target = {
+            currentTarget.x + (targetTarget.x - currentTarget.x) * t,
+            currentTarget.y + (targetTarget.y - currentTarget.y) * t,
+            currentTarget.z + (targetTarget.z - currentTarget.z) * t
+        };
+
+        camera_->LookAt(eye, target);
+        camera_->Update();
+        return;
+    }
+
     // ブースト中かどうかで視野角（FOV）を切り替える
     bool isBoostingForCamera = false;
     if (input != nullptr) {
@@ -774,7 +1630,7 @@ void GamePlayScene::UpdateCamera(
 
         if (hasCameraFollowState_) {
             Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
-            if (!IsZeroVector(lerpedForward)) {
+            if (!IsNearlyZero(lerpedForward)) {
                 cameraForward = Normalize(lerpedForward);
             }
         }
@@ -787,10 +1643,14 @@ void GamePlayScene::UpdateCamera(
 
         Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
         targetDrawCameraPosition += railUp * (kCameraUpwardOffset + playerRailOffset.y * cameraHeightFollowFactor_);
+        targetDrawCameraPosition += railRight *
+            (playerRailOffset.x * cameraHorizontalFollowFactor_);
 
         // 描画用カメラのターゲット注視点（Lerp前）
         Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
         targetLookAheadPositionDraw += railUp * (playerRailOffset.y * cameraLookUpFactor_);
+        targetLookAheadPositionDraw += railRight *
+            (playerRailOffset.x * cameraLookHorizontalFactor_);
 
         // 遅延追従（Lerp）の適用
         if (hasCameraFollowState_) {
@@ -824,10 +1684,125 @@ void GamePlayScene::UpdateCamera(
     aimCamera_->Update();
 }
 
+void GamePlayScene::InitializeWaterPillars()
+{
+    auto addPillar = [this](float triggerDistance, float sideOffset, float delay) {
+        const float pillarDistance = triggerDistance + 200.0f + delay * railSpeed_ * 60.0f;
+        const Vector3 railPosition = rail_->GetPositionByDistance(pillarDistance);
+        const Vector3 forward = CalculateRailForward(pillarDistance, railPosition);
+        Vector3 right {};
+        Vector3 up {};
+        CalculateRailBasis(forward, right, up);
+        Vector3 position = railPosition + right * sideOffset;
+        position.y = stageSettings_.floorHeight;
+
+        auto pillar = std::make_unique<WaterPillarHazard>();
+        pillar->Initialize(waterPillarRenderer_.get(), position, triggerDistance, delay);
+        waterPillars_.push_back(std::move(pillar));
+    };
+
+    addPillar(520.0f, 0.0f, 0.0f);
+    addPillar(820.0f, -10.0f, 0.0f);
+    addPillar(820.0f, 10.0f, 0.55f);
+    addPillar(1130.0f, -13.0f, 0.0f);
+    addPillar(1130.0f, 0.0f, 0.45f);
+    addPillar(1130.0f, 13.0f, 0.90f);
+    addPillar(1480.0f, 9.0f, 0.0f);
+    addPillar(1480.0f, -9.0f, 0.65f);
+}
+
+void GamePlayScene::InitializeOceanLife()
+{
+    Model* fishModel = ModelManager::GetInstance()->Load("fish/fish.obj");
+    Model* birdModel = ModelManager::GetInstance()->CreateBeamCross("resources/Textures/white.png");
+
+    constexpr size_t kFishCount = 18;
+    oceanFish_.reserve(kFishCount);
+    for (size_t index = 0; index < kFishCount; ++index) {
+        auto fish = std::make_unique<Object3d>();
+        fish->Initialize(Object3dManager::GetInstance());
+        fish->SetModel(fishModel);
+        fish->SetScale({ 0.22f, 0.22f, 0.22f });
+        fish->SetEnableLighting(true);
+        oceanFish_.push_back(std::move(fish));
+    }
+
+    constexpr size_t kBirdCount = 10;
+    oceanBirds_.reserve(kBirdCount);
+    for (size_t index = 0; index < kBirdCount; ++index) {
+        auto bird = std::make_unique<Object3d>();
+        bird->Initialize(Object3dManager::GetInstance());
+        bird->SetModel(birdModel);
+        bird->SetScale({ 1.8f, 0.12f, 0.45f });
+        bird->SetColor({ 0.92f, 0.96f, 1.0f, 1.0f });
+        bird->SetEnableLighting(false);
+        oceanBirds_.push_back(std::move(bird));
+    }
+}
+
+void GamePlayScene::UpdateOceanLife(
+    const Vector3& railPosition,
+    const Vector3& forward,
+    const Vector3& railRight)
+{
+    if (!oceanSurface_ || !player_) {
+        return;
+    }
+
+    oceanLifeTime_ += TimeManager::GetInstance()->GetDeltaTime();
+    const float seaHeight = stageSettings_.floorHeight;
+    const float yaw = -std::atan2(forward.x, forward.z);
+
+    constexpr float kFishSchoolDuration = 5.5f;
+    if (!isFishSchoolActive_) {
+        fishSchoolCooldown_ -= TimeManager::GetInstance()->GetDeltaTime();
+        if (fishSchoolCooldown_ <= 0.0f) {
+            isFishSchoolActive_ = true;
+            fishSchoolTimer_ = 0.0f;
+        }
+    } else {
+        fishSchoolTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+        const float progress = std::clamp(fishSchoolTimer_ / kFishSchoolDuration, 0.0f, 1.0f);
+        const float travel = fishSchoolFromLeft_ ? (-52.0f + progress * 104.0f) : (52.0f - progress * 104.0f);
+        const float crossYaw = yaw + (fishSchoolFromLeft_ ? -std::numbers::pi_v<float> * 0.5f : std::numbers::pi_v<float> * 0.5f);
+
+        for (size_t index = 0; index < oceanFish_.size(); ++index) {
+            const float phase = fishSchoolTimer_ * 3.2f + static_cast<float>(index) * 1.37f;
+            const float formationSide = (static_cast<float>(index % 6) - 2.5f) * 1.7f;
+            const float ahead = 34.0f + static_cast<float>(index % 6) * 7.0f +
+                static_cast<float>(index / 6) * 4.0f;
+            Vector3 position = railPosition + forward * ahead +
+                railRight * (travel + formationSide);
+            position.y = seaHeight + 0.45f + (std::max)(0.0f, std::sin(phase)) * 2.4f +
+                static_cast<float>(index % 3) * 0.18f;
+            oceanFish_[index]->SetTranslate(position);
+            oceanFish_[index]->SetRotate({ -std::sin(phase) * 0.32f, crossYaw, 0.0f });
+        }
+
+        if (fishSchoolTimer_ >= kFishSchoolDuration) {
+            isFishSchoolActive_ = false;
+            fishSchoolFromLeft_ = !fishSchoolFromLeft_;
+            fishSchoolCooldown_ = 12.0f + std::fmod(oceanLifeTime_ * 1.73f, 10.0f);
+        }
+    }
+
+    for (size_t index = 0; index < oceanBirds_.size(); ++index) {
+        const float phase = oceanLifeTime_ * (0.32f + static_cast<float>(index % 3) * 0.035f) +
+            static_cast<float>(index) * 2.17f;
+        const float side = (static_cast<float>(index % 5) - 2.0f) * 24.0f + std::sin(phase) * 12.0f;
+        const float ahead = 95.0f + static_cast<float>(index % 5) * 34.0f;
+        Vector3 position = railPosition + forward * ahead + railRight * side;
+        position.y = seaHeight + 30.0f + static_cast<float>(index % 4) * 6.0f + std::sin(phase * 1.7f) * 2.0f;
+        oceanBirds_[index]->SetTranslate(position);
+        oceanBirds_[index]->SetRotate({ 0.0f, yaw, std::sin(phase * 3.2f) * 0.18f });
+    }
+
+}
+
 void GamePlayScene::ProcessPlayerShooting(Input* input)
 {
     if (input != nullptr) {
-        if (input->IsMouseTrigger(0)) {
+        if (input->IsMouseTrigger(0) && !player_->IsHomingMissileSelected()) {
             // 最新の描画用カメラを渡して、高精度な射撃用Rayから弾を発射する
             player_->FireBullet(*camera_);
         }
@@ -840,6 +1815,12 @@ void GamePlayScene::Draw3D()
     SkyBoxManager::GetInstance()->PreDraw();
     skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
 
+    // OceanSurface owns a dedicated root signature and PSO, so draw it
+    // before restoring the regular Object3d pipeline for gameplay objects.
+    if (oceanSurface_) {
+        oceanSurface_->Draw();
+    }
+
     Object3dManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
@@ -847,30 +1828,48 @@ void GamePlayScene::Draw3D()
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     // terrain_->Draw();
-    // for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-    //     levelObject->Draw();
-    // }
+    for (std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        levelObject->Draw();
+    }
+    for (RecoveryItem& recoveryItem : recoveryItems_) {
+        if (!recoveryItem.collected && recoveryItem.object != nullptr) {
+            recoveryItem.object->Draw();
+        }
+    }
     player_->Draw();
     sceneObjectManager_->Draw();
     if (floorObj_) {
         floorObj_->Draw();
     }
-
+    if (isFishSchoolActive_) {
+        for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Draw();
+    }
+    for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Draw();
+    if (waterPillarRenderer_) {
+        waterPillarRenderer_->PreDraw();
+        for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) pillar->DrawPillar();
+        Object3dManager::GetInstance()->PreDraw();
+        LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
+    }
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
+    enemyBulletManager_.Draw();
 
-    if (activeBoss_ && !activeBoss_->IsDead()) {
-        activeBoss_->Draw();
+    if (GetActiveBoss() != nullptr) {
+        GetActiveBoss()->Draw();
     }
 
+#ifdef _DEBUG
     rail_->DrawDebug();
+    DrawCollisionDebug();
+#endif
 
     //----------------------
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList()); // ここでもう一回バインドしなぁE��ぁE��なぁE
+    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
                                                                                         // animationSkin00_->Draw();
     animationActor_->Draw();
 }
@@ -881,16 +1880,367 @@ void GamePlayScene::DrawParticle()
     EffectManager::GetInstance()->Draw();
 }
 
+void GamePlayScene::InitializeRecoveryItems(Model* model)
+{
+    if (model == nullptr) {
+        return;
+    }
+
+    recoveryItems_.clear();
+    recoveryItems_.reserve(stageSettings_.recoveryItemPositions.size());
+
+    for (const Vector3& position : stageSettings_.recoveryItemPositions) {
+        RecoveryItem recoveryItem {};
+        recoveryItem.object = std::make_unique<Object3d>();
+        recoveryItem.object->Initialize(Object3dManager::GetInstance());
+        recoveryItem.object->SetModel(model);
+        recoveryItem.object->SetTranslate(position);
+        recoveryItem.object->SetScale({ 0.75f, 0.75f, 0.75f });
+        recoveryItem.object->SetColor({ 0.20f, 1.0f, 0.35f, 1.0f });
+        recoveryItem.object->SetEnableLighting(false);
+        recoveryItem.basePosition = position;
+        recoveryItem.object->Update();
+        recoveryItem.effectHandle =
+            EffectManager::GetInstance()->PlayLoopEffect(
+                "HealPickup",
+                position);
+        recoveryItems_.push_back(std::move(recoveryItem));
+    }
+}
+
+void GamePlayScene::UpdateRecoveryItems()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+
+    const Vector3 playerPosition = player_->GetTranslate();
+    const float collisionRadiusSquared =
+        kRecoveryItemCollisionRadius * kRecoveryItemCollisionRadius;
+
+    for (RecoveryItem& recoveryItem : recoveryItems_) {
+        if (recoveryItem.collected || recoveryItem.object == nullptr) {
+            continue;
+        }
+
+        recoveryItem.animationTime += kRecoveryItemBobSpeed;
+
+        Vector3 itemPosition = recoveryItem.basePosition;
+        itemPosition.y +=
+            std::sin(recoveryItem.animationTime) * kRecoveryItemBobHeight;
+
+        Vector3 itemRotation = recoveryItem.object->GetRotate();
+        itemRotation.x += kRecoveryItemRotationSpeed * 0.65f;
+        itemRotation.y += kRecoveryItemRotationSpeed;
+        recoveryItem.object->SetTranslate(itemPosition);
+        recoveryItem.object->SetRotate(itemRotation);
+        recoveryItem.object->Update();
+        if (recoveryItem.effectHandle != kInvalidEffectHandle) {
+            EffectManager::GetInstance()->SetEffectPosition(
+                recoveryItem.effectHandle,
+                itemPosition);
+        }
+
+        const float differenceX = playerPosition.x - itemPosition.x;
+        const float differenceY = playerPosition.y - itemPosition.y;
+        const float differenceZ = playerPosition.z - itemPosition.z;
+        const float distanceSquared =
+            differenceX * differenceX +
+            differenceY * differenceY +
+            differenceZ * differenceZ;
+
+        if (distanceSquared > collisionRadiusSquared) {
+            continue;
+        }
+
+        if (!player_->Heal(kRecoveryItemHealAmount)) {
+            continue;
+        }
+
+        recoveryItem.collected = true;
+        EffectManager::GetInstance()->StopEffect(
+            recoveryItem.effectHandle);
+        recoveryItem.effectHandle = kInvalidEffectHandle;
+        EffectManager::GetInstance()->PlayEffect(
+            "HealPickup",
+            itemPosition);
+    }
+}
+
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
-    aimSprite_->Draw();
+    if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
+        aimSprite_->Draw();
+        std::vector<Vector3> homingLockPositions;
+        player_->GetHomingLockPositions(homingLockPositions);
+        const size_t markerCount =
+            (std::min)(homingLockPositions.size(), homingLockSprites_.size());
+        for (size_t index = 0; index < markerCount; ++index) {
+            homingLockSprites_[index]->Draw();
+        }
+    }
+
+    // 画面右側のプレイヤーHPゲージ（背景スプライト＆HPバー）の描画
+    if (weaponHudBgSprite_) weaponHudBgSprite_->Draw();
+    if (playerHpBgSprite_) playerHpBgSprite_->Draw();
+    if (playerHpBarSprite_) playerHpBarSprite_->Draw();
+
+    if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
+        if (bossHeadHpBgSprite_) bossHeadHpBgSprite_->Draw();
+        if (bossHeadHpBarSprite_) bossHeadHpBarSprite_->Draw();
+        if (bossBodyHpBgSprite_) bossBodyHpBgSprite_->Draw();
+        if (bossBodyHpBarSprite_) bossBodyHpBarSprite_->Draw();
+    }
+
+    if (isPaused_) {
+        if (pauseMenuPanelSprite_) pauseMenuPanelSprite_->Draw();
+        if (pauseResumeBtnSprite_) pauseResumeBtnSprite_->Draw();
+        if (pauseRetryBtnSprite_) pauseRetryBtnSprite_->Draw();
+        if (pauseTitleBtnSprite_) pauseTitleBtnSprite_->Draw();
+        if (pauseControlBtnSprite_) pauseControlBtnSprite_->Draw();
+
+        // 独自TextRendererによるRelease構成対応の超高画質日本語テキスト描画
+        TextRenderer::GetInstance()->PreDraw();
+        if (pauseTitleText_) pauseTitleText_->Draw();
+        if (pauseResumeText_) pauseResumeText_->Draw();
+        if (pauseRetryText_) pauseRetryText_->Draw();
+        if (pauseTitleBtnText_) pauseTitleBtnText_->Draw();
+        if (pauseControlText_) pauseControlText_->Draw();
+        if (pauseSensitivityText_) pauseSensitivityText_->Draw();
+    } else {
+        // 通常プレイ中の画面右上HP数値テキストの描画
+        TextRenderer::GetInstance()->PreDraw();
+        if (weaponHudLabelText_) weaponHudLabelText_->Draw();
+        if (weaponHudNameText_) weaponHudNameText_->Draw();
+        if (playerHpText_) playerHpText_->Draw();
+        if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
+            if (bossNameText_) bossNameText_->Draw();
+            if (bossHeadHpText_) bossHeadHpText_->Draw();
+            if (bossBodyHpText_) bossBodyHpText_->Draw();
+        }
+    }
+}
+
+void GamePlayScene::UpdateBossHpHud()
+{
+    if (GetActiveBoss() == nullptr) {
+        return;
+    }
+
+    float headHpFraction = GetActiveBoss()->GetHeadHpFraction();
+    if (headHpFraction < 0.0f) {
+        headHpFraction = 0.0f;
+    }
+    if (headHpFraction > 1.0f) {
+        headHpFraction = 1.0f;
+    }
+
+    float bodyHpFraction = GetActiveBoss()->GetBodyHpFraction();
+    if (bodyHpFraction < 0.0f) {
+        bodyHpFraction = 0.0f;
+    }
+    if (bodyHpFraction > 1.0f) {
+        bodyHpFraction = 1.0f;
+    }
+
+    displayedBossHeadHpRatio_ = std::lerp(
+        displayedBossHeadHpRatio_,
+        headHpFraction,
+        0.10f);
+    displayedBossBodyHpRatio_ = std::lerp(
+        displayedBossBodyHpRatio_,
+        bodyHpFraction,
+        0.10f);
+
+    if (std::abs(displayedBossHeadHpRatio_ - headHpFraction) < 0.001f) {
+        displayedBossHeadHpRatio_ = headHpFraction;
+    }
+    if (std::abs(displayedBossBodyHpRatio_ - bodyHpFraction) < 0.001f) {
+        displayedBossBodyHpRatio_ = bodyHpFraction;
+    }
+
+    constexpr float kBossHpBarWidth = 340.0f;
+    if (bossHeadHpBarSprite_) {
+        bossHeadHpBarSprite_->SetSize({
+            kBossHpBarWidth * displayedBossHeadHpRatio_,
+            14.0f });
+        bossHeadHpBarSprite_->Update();
+    }
+    if (bossBodyHpBarSprite_) {
+        bossBodyHpBarSprite_->SetSize({
+            kBossHpBarWidth * displayedBossBodyHpRatio_,
+            14.0f });
+        bossBodyHpBarSprite_->Update();
+    }
+    if (bossHeadHpBgSprite_) {
+        bossHeadHpBgSprite_->Update();
+    }
+    if (bossBodyHpBgSprite_) {
+        bossBodyHpBgSprite_->Update();
+    }
+    if (bossNameText_) {
+        bossNameText_->Update();
+    }
+    if (bossHeadHpText_) {
+        bossHeadHpText_->Update();
+    }
+    if (bossBodyHpText_) {
+        bossBodyHpText_->Update();
+    }
 }
 
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
+    if (isPaused_) {
+        ImGui::SetNextWindowPos(ImVec2(WinApp::kClientWidth * 0.5f, WinApp::kClientHeight * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(400.0f, 520.0f));
+
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                                 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
+                                 ImGuiWindowFlags_NoBackground;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.25f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 1.0f, 1.0f, 0.40f));
+
+        if (ImGui::Begin("VerticalPauseWindow", nullptr, flags)) {
+            ImGui::SetWindowFontScale(1.4f);
+            ImGui::Spacing();
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("PAUSE MENU").x * 1.4f) * 0.5f);
+            ImGui::TextColored(ImVec4(0.35f, 0.85f, 1.0f, 1.0f), "PAUSE MENU");
+            ImGui::Separator();
+
+            ImGui::SetWindowFontScale(1.25f);
+
+            // 1. RESUME (TAB)
+            ImGui::SetCursorPosY(110.0f);
+            if (ImGui::Button("RESUME (TAB)", ImVec2(-1, 44.0f))) {
+                isPaused_ = false;
+            }
+
+            // 2. RETRY (R)
+            ImGui::SetCursorPosY(180.0f);
+            if (ImGui::Button("RETRY (R)", ImVec2(-1, 44.0f))) {
+                isPaused_ = false;
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(
+                    std::make_unique<GamePlayScene>(stageId_));
+            }
+
+            // 3. CONTROL MODE
+            ImGui::SetCursorPosY(250.0f);
+            const char* controlLabel =
+                gControlMode == Player::ControlMode::StarFox
+                    ? "CONTROL: STARFOX (C)"
+                    : "CONTROL: WASD + MOUSE (C)";
+            if (ImGui::Button(controlLabel, ImVec2(-1, 44.0f))) {
+                gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
+                    ? Player::ControlMode::StarFox
+                    : Player::ControlMode::KeyboardAndMouse;
+                if (player_) {
+                    player_->SetControlMode(gControlMode);
+                }
+            }
+
+            ImGui::SetCursorPosY(315.0f);
+            if (ImGui::SliderFloat(
+                    "MOUSE SENSITIVITY",
+                    &gMouseSensitivity,
+                    0.5f,
+                    2.0f,
+                    "%.1fx")) {
+                if (player_) {
+                    player_->SetMouseSensitivity(gMouseSensitivity);
+                }
+            }
+
+            // 5. TITLE (ESC)
+            ImGui::SetCursorPosY(390.0f);
+            if (ImGui::Button("TITLE (ESC)", ImVec2(-1, 44.0f))) {
+                isPaused_ = false;
+                ResetGameplayPostEffects();
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+            }
+
+            ImGui::End();
+        }
+
+        ImGui::PopStyleColor(6);
+        ImGui::PopStyleVar(1);
+        return;
+    }
+#endif
+#ifdef USE_IMGUI
+    // ボス出現時、画面上部中央にスタイリッシュな2本の横長HPバーをHUD風にオーバーレイ表示する
+    if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        // 画面上部中央付近に横幅550pxで表示
+        ImVec2 windowPos = ImVec2(viewport->Pos.x + viewport->Size.x * 0.5f - 275.0f, viewport->Pos.y + 40.0f);
+        ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(550.0f, 95.0f), ImGuiCond_Always);
+        
+        // 背景・タイトルバー・枠線などを非表示にして、HUDスプライトのように見せる
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | 
+                                       ImGuiWindowFlags_NoResize | 
+                                       ImGuiWindowFlags_NoMove | 
+                                       ImGuiWindowFlags_NoScrollbar | 
+                                       ImGuiWindowFlags_NoSavedSettings | 
+                                       ImGuiWindowFlags_NoBackground;
+
+        if (ImGui::Begin("Boss HP HUD", nullptr, windowFlags)) {
+            // ボス名称
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+            ImGui::Text("BOSS: %s", stageSettings_.bossType == "AngerBlock" ? "ANGER" : "FEAR WORM");
+            ImGui::PopStyleColor();
+
+            // 1. 頭部HPバー (ネオンブルー)
+            float headFraction = GetActiveBoss()->GetHeadHpFraction();
+            ImGui::Text("HEAD CORE  ");
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 1.0f, 1.0f)); // ネオンブルー
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.2f, 0.3f, 0.4f));       // 暗い青背景
+            ImGui::ProgressBar(headFraction, ImVec2(-1, 14.0f), "");
+            ImGui::PopStyleColor(2);
+
+            // 2. 胴体HPバー (ネオンレッド + 胴体数に応じた9分割の区切り線)
+            float bodyFraction = GetActiveBoss()->GetBodyHpFraction();
+            ImGui::Text("BODY SHIELD");
+            ImGui::SameLine();
+            
+            ImVec2 barPosMin = ImGui::GetCursorScreenPos();
+            
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // ネオンレッド
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.1f, 0.1f, 0.4f));       // 暗い赤背景
+            ImGui::ProgressBar(bodyFraction, ImVec2(-1, 14.0f), "");
+            ImGui::PopStyleColor(2);
+
+            // 直前に描画したProgressBarの領域を取得して、9分割(8本の縦線)で区切る
+            ImVec2 barPosMax = ImGui::GetItemRectMax();
+            float barWidth = barPosMax.x - barPosMin.x;
+            constexpr int kSegmentDivisions = 9;
+            ImDrawList* drawList = ImGui::GetWindowDrawList();
+            ImU32 lineColor = IM_COL32(10, 10, 10, 255); // ほぼ黒のシャープな区切り線
+
+            for (int i = 1; i < kSegmentDivisions; ++i) {
+                float splitX = barPosMin.x + (barWidth * i / static_cast<float>(kSegmentDivisions));
+                drawList->AddLine(
+                    ImVec2(splitX, barPosMin.y),
+                    ImVec2(splitX, barPosMax.y),
+                    lineColor,
+                    2.0f // 2pxの太さでしっかり区切る
+                );
+            }
+        }
+        ImGui::End();
+    }
+
     camera_->DrawImGui();
     editorManager_->DrawImGui();
     editorManager_->DrawGizmo(camera_.get());
@@ -921,279 +2271,469 @@ void GamePlayScene::DrawImGui()
     ImGui::DragFloat("Height Follow Factor", &cameraHeightFollowFactor_, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Look Up Factor", &cameraLookUpFactor_, 0.01f, 0.0f, 2.0f);
     ImGui::End();
+
+    ImGui::Begin("Debug Teleport Menu");
+    if (GetActiveBoss() != nullptr) {
+        ImGui::Text("Boss Z: %.2f", GetActiveBoss()->GetPosition().z);
+        if (ImGui::Button("Teleport to Boss")) {
+            float bossZ = GetActiveBoss()->GetPosition().z;
+            railDistance_ = bossZ - 130.0f;
+            if (railDistance_ < 0.0f) {
+                railDistance_ = 0.0f;
+            }
+        }
+    } else {
+        ImGui::Text("Boss has not spawned yet.");
+        if (ImGui::Button("Warp to Boss Area (Trigger Spawn)")) {
+            railDistance_ = 1750.0f;
+        }
+    }
+    ImGui::End();
 #endif
 }
 
 void GamePlayScene::CheckCollision()
 {
-    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+    bool justDodgedEnemyBullet = false;
 
-        Vector3 difference = enemy->GetPosition() - player_->GetTranslate();
+    if (gameplayCollisionSystem_ != nullptr) {
+        gameplayCollisionSystem_->UpdateStageCollisions(
+            *player_,
+            levelObjects_,
+            destructibleLevelObjects_,
+            floorObj_.get());
+    }
 
-        float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
+    if (gameplayCollisionSystem_ != nullptr) {
+        const GameplayCollisionEvents events =
+            gameplayCollisionSystem_->UpdateCombatCollisions(
+                *player_,
+                enemies_,
+                GetActiveBoss(),
+                enemyBulletManager_.GetBullets());
+        if (events.paintBulletHitPlayer) {
+            StartPaintHitEffect();
+        }
+        justDodgedEnemyBullet = events.justDodgedEnemyBullet;
+    }
 
-        float collisionRadius = kPlayerEnemyCollisionRadius;
+    if (gameplayCollisionSystem_ != nullptr) {
+        gameplayCollisionSystem_->UpdateTriggers(*player_, stageTriggers_);
+    }
 
-        if (distance <= collisionRadius) {
+    UpdateJustDodgeSlowMotion(justDodgedEnemyBullet);
+}
 
-            OutputDebugStringA("Player Hit Enemy\n");
+void GamePlayScene::UpdateJustDodgeSlowMotion(bool justDodged)
+{
+    if (justDodged) {
+        justDodgeSlowTimer_ = kJustDodgeSlowDuration;
+    } else if (justDodgeSlowTimer_ > 0.0f) {
+        justDodgeSlowTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+        if (justDodgeSlowTimer_ < 0.0f) {
+            justDodgeSlowTimer_ = 0.0f;
         }
     }
+
+    if (justDodgeSlowTimer_ > 0.0f) {
+        EnemyBullet::SetTimeScale(kJustDodgeEnemyBulletTimeScale);
+        SceneManager::GetInstance()->AddPostEffect(
+            PostEffectType::GrayScale,
+            PostEffectStage::BeforeParticle);
+    } else {
+        EnemyBullet::SetTimeScale(1.0f);
+        if (!isPaused_) {
+            SceneManager::GetInstance()->RemovePostEffect(
+                PostEffectType::GrayScale);
+        }
+    }
+}
+
+void GamePlayScene::StartPaintHitEffect()
+{
+    if (isPaintEffectActive_) {
+        return;
+    }
+
+    isPaintEffectActive_ = true;
+    paintEffectTimer_ = 0.0f;
+    static const Vector3 kPaintColors[] = {
+        { 0.98f, 0.12f, 0.60f },
+        { 0.10f, 0.88f, 0.95f },
+        { 0.98f, 0.88f, 0.10f },
+        { 0.20f, 0.95f, 0.35f },
+        { 0.98f, 0.42f, 0.10f },
+        { 0.72f, 0.15f, 0.98f }
+    };
+    const int colorIndex = rand() % 6;
+    const float randomSeed =
+        static_cast<float>(rand() % 10000) * 0.137f;
+
+    int patternType = 0;
+    const int roll = rand() % 10;
+    if (roll < 3) {
+        patternType = 1;
+    } else if (roll < 5) {
+        patternType = 2;
+    } else if (roll < 7) {
+        patternType = 3;
+    }
+
+    SceneManager::GetInstance()->SetPaintColor(kPaintColors[colorIndex]);
+    SceneManager::GetInstance()->SetPaintSeed(randomSeed);
+    SceneManager::GetInstance()->SetPaintPatternType(patternType);
+    SceneManager::GetInstance()->AddPostEffect(
+        PostEffectType::Paint,
+        PostEffectStage::AfterParticle);
+    SceneManager::GetInstance()->SetPaintProgress(0.0f);
+    SceneManager::GetInstance()->SetPaintIntensity(1.0f);
+}
+
+void GamePlayScene::StartWaterDropEffect()
+{
+    waterDropEffectTimer_ = kWaterDropEffectDuration;
+    SceneManager::GetInstance()->SetWaterEffectIntensity(1.0f);
+}
+
+void GamePlayScene::UpdateWaterDropEffect()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (waterDropEffectTimer_ <= 0.0f) {
+        waterDropEffectTimer_ = 0.0f;
+        sceneManager->SetWaterEffectIntensity(0.0f);
+        sceneManager->RemovePostEffect(PostEffectType::RainDrops);
+        return;
+    }
+
+    waterDropEffectTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+    if (waterDropEffectTimer_ < 0.0f) {
+        waterDropEffectTimer_ = 0.0f;
+    }
+
+    const float fadeDuration = 2.0f;
+    float intensity = 1.0f;
+    if (waterDropEffectTimer_ < fadeDuration) {
+        intensity = waterDropEffectTimer_ / fadeDuration;
+    }
+    sceneManager->SetWaterEffectIntensity(intensity);
+
+    sceneManager->AddPostEffect(
+        PostEffectType::RainDrops,
+        PostEffectStage::AfterParticle);
+}
+
+#ifdef _DEBUG
+void GamePlayScene::DrawCollisionDebug()
+{
+    DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
+    constexpr Vector4 kPlayerColor = { 0.0f, 1.0f, 0.0f, 1.0f };
+    constexpr Vector4 kEnemyColor = { 1.0f, 0.15f, 0.15f, 1.0f };
+    constexpr Vector4 kPlayerBulletColor = { 0.0f, 0.8f, 1.0f, 1.0f };
+    constexpr Vector4 kEnemyBulletColor = { 1.0f, 0.85f, 0.0f, 1.0f };
+    constexpr Vector4 kStageColliderColor = { 1.0f, 0.0f, 1.0f, 1.0f };
+    constexpr float kLineThickness = 2.0f;
+
+    debugRenderer->AddWireSphere(
+        player_->GetTranslate(),
+        kPlayerEnemyCollisionRadius * 0.5f,
+        kPlayerColor,
+        kLineThickness);
 
     for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-
-        for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-
-            if (enemy->IsDead()) {
-                continue;
-            }
-
-            Vector3 difference = enemy->GetPosition() - bullet->GetPosition();
-
-            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
-
-            float collisionRadius = kPlayerBulletEnemyCollisionRadius;
-
-            if (distance <= collisionRadius) {
-
-                OutputDebugStringA("PlayerBullet Hit Enemy\n");
-
-                bullet->OnHitEnemy(enemy->GetPosition());
-
-                enemy->ApplyDamage(static_cast<float>(bullet->GetDamage()));
-
-                bullet->SetDead();
-
-                break;
-            }
+        if (bullet->IsAlive()) {
+            debugRenderer->AddWireSphere(
+                bullet->GetPosition(),
+                bullet->GetCollisionRadius(),
+                kPlayerBulletColor,
+                kLineThickness);
         }
     }
 
-    // プレイヤーの弾とボスの当たり判定
-    if (activeBoss_ && !activeBoss_->IsDead()) {
-        for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-            if (!bullet->IsAlive()) {
-                continue;
-            }
-
-            for (BossCollider& collider : activeBoss_->GetColliders()) {
-                if (collider.isDestroyed) {
-                    continue;
-                }
-
-                // コライダーのワールド座標を計算
-                Vector3 colliderWorldPos = activeBoss_->GetPosition() + collider.offset;
-                Vector3 difference = colliderWorldPos - bullet->GetPosition();
-                float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
-
-                // 判定半径
-                float collisionRadius = collider.radius + kPlayerBulletEnemyCollisionRadius;
-
-                if (distance <= collisionRadius) {
-                    OutputDebugStringA("PlayerBullet Hit Boss\n");
-
-                    bullet->OnHitEnemy(colliderWorldPos);
-
-                    activeBoss_->ApplyDamage(1.0f);
-
-                    bullet->SetDead();
-                    break;
-                }
-            }
-        }
-    }
-
-    // プレイヤーの弾と床の当たり判定
-    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-        if (!bullet->IsAlive()) {
+    for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+        const BoxCollider* collider = levelObject->GetCollider();
+        if (collider == nullptr) {
             continue;
         }
-
-        float floorY = -30.0f;
-        if (floorObj_) {
-            floorY = floorObj_->GetTranslate().y;
-        }
-
-        if (bullet->GetPosition().y <= floorY) {
-            Vector3 hitPosition = bullet->GetPosition();
-            hitPosition.y = floorY;
-
-            EffectManager::GetInstance()->PlayEffect("HitEffect", hitPosition);
-            bullet->SetDead();
-        }
+        const OBB box = CollisionManager::MakeOBB(
+            collider->GetCenter(),
+            collider->GetSize(),
+            collider->GetRotation());
+        debugRenderer->AddWireOBB(
+            box.center,
+            box.size,
+            box.orientation[0],
+            box.orientation[1],
+            box.orientation[2],
+            kStageColliderColor,
+            kLineThickness);
     }
 
-    // 死んだ敵の中から「NormalEnemy」だけを選んで安Eに削除する
-    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        return enemy->IsDead();
-    });
-
-    // 敵の弾とプレイヤーの当たり判定
-    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+    std::vector<EnemyCollisionPart> collisionParts;
+    for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (enemy->IsDead()) {
             continue;
         }
 
-        for (const std::unique_ptr<EnemyBullet>& enemyBullet : enemy->GetBullets()) {
-            if (!enemyBullet->IsAlive()) {
-                continue;
-            }
-
-            Vector3 difference = enemyBullet->GetPosition() - player_->GetTranslate();
-            float distance = sqrtf(difference.x * difference.x + difference.y * difference.y + difference.z * difference.z);
-            float collisionRadius = enemyBullet->GetCollisionRadius();
-
-            if (distance <= collisionRadius) {
-                OutputDebugStringA("EnemyBullet Hit Player\n");
-
-                enemyBullet->OnHitPlayer(player_->GetTranslate());
-
-                if (player_->ApplyDamage(enemyBullet->GetDamage())) {
-                    EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-
-                    if (player_->IsDead()) {
-                        SceneManager::GetInstance()->SetNextScene(std::make_unique<GameOverScene>());
-                    }
-                }
-                enemyBullet->SetDead();
-                // 1発の弾で複数回ダメージを受けないように、当たったらすぐに弾を無効化する
-            }
+        collisionParts.clear();
+        enemy->GetCollisionParts(collisionParts);
+        for (const EnemyCollisionPart& part : collisionParts) {
+            debugRenderer->AddWireSphere(
+                part.position,
+                part.radius,
+                kEnemyColor,
+                kLineThickness);
         }
     }
+
+    for (const std::unique_ptr<EnemyBullet>& bullet : enemyBulletManager_.GetBullets()) {
+        if (bullet->IsAlive()) {
+            debugRenderer->AddWireSphere(
+                bullet->GetPosition(),
+                bullet->GetCollisionRadius() * 0.5f,
+                kEnemyBulletColor,
+                kLineThickness);
+        }
+    }
+
+    if (GetActiveBoss() == nullptr || GetActiveBoss()->IsDead()) {
+        return;
+    }
+
+    collisionParts.clear();
+    GetActiveBoss()->GetCollisionParts(collisionParts);
+    for (const EnemyCollisionPart& part : collisionParts) {
+        debugRenderer->AddWireSphere(
+            part.position,
+            part.radius,
+            kEnemyColor,
+            kLineThickness);
+    }
+
 }
+#endif
 
 void GamePlayScene::Finalize()
 {
-    CollisionManager::GetInstance()->SetEnemies(nullptr);
+    BaseEnemy::SetBulletManager(nullptr);
+    enemyBulletManager_.Clear();
+    CollisionManager::GetInstance()->ClearRaycastSphereTargets();
+    ClearLevelObjects();
+    ResetGameplayPostEffects();
 
-    EffectManager::GetInstance()->StopEffect(playerJetHandle_);
+    // シーン内で再生していたエフェクトだけを停止する。
+    // シェーダーやパイプラインは次回のゲームシーンで再利用する。
+    EffectManager::GetInstance()->StopAllEffects();
+    EffectManager::GetInstance()->SetCamera(nullptr);
     playerJetHandle_ = kInvalidEffectHandle;
-    EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
     playerJetSparkHandle_ = kInvalidEffectHandle;
-    EffectManager::GetInstance()->StopEffect(boostLineHandle_);
-    boostLineHandle_ = kInvalidEffectHandle;
-    EffectManager::Finalize();
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
 
-void GamePlayScene::LoadEnemyPopData()
+void GamePlayScene::ResetGameplayPostEffects()
 {
-    std::string filePath = "resources/Data/enemyPop.json";
-    std::ifstream file(filePath);
+    EnemyBullet::SetTimeScale(1.0f);
+    justDodgeSlowTimer_ = 0.0f;
+    SceneManager::GetInstance()->ClearPostEffects();
+    SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
+    SceneManager::GetInstance()->SetPostEffectKickStrength(0.0f);
+    SceneManager::GetInstance()->SetCameraShakeStrength(
+        SceneManager::kDefaultCameraShakeStrength);
 
-    if (file.is_open() == false) {
-        Logger::Log("Warning: Could not open " + filePath + ". Using default enemy layout.");
-        
-        const Vector3 enemyPositions[] = {
-            { -14.0f, -3.0f, 384.0f },
-            { 10.0f, 5.0f, 512.0f },
-            { 18.0f, -6.0f, 672.0f },
-            { -7.0f, 7.0f, 832.0f },
-            { 14.0f, 0.0f, 992.0f },
-            { -18.0f, 4.0f, 1152.0f },
-            { 4.0f, -7.0f, 1312.0f },
-            { 17.0f, 6.0f, 1472.0f },
-            { -12.0f, 1.0f, 1632.0f },
-            { 7.0f, -5.0f, 1792.0f },
-            { -19.0f, 0.0f, 1440.0f },
-        };
+    boostKickTimer_ = 0.0f;
+    boostKickStrength_ = 0.0f;
+    wasBoostingForKick_ = false;
+    wasPlayerBoosting_ = false;
+    smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
+    cameraShakeTime_ = 0.0f;
+    cameraShakeDuration_ = 0.0f;
+    cameraShakeStrength_ = 0.0f;
+    waterDropEffectTimer_ = 0.0f;
+    SceneManager::GetInstance()->SetWaterEffectIntensity(0.0f);
+}
 
-        int32_t enemyIndex = 0;
-        for (const Vector3& enemyPosition : enemyPositions) {
-            if (enemyIndex % 2 == 0) {
-                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(enemyPosition);
-
-                if (enemyIndex % 8 == 0) {
-                    enemy->SetMovePattern(MovePattern::LeftRight);
-                    enemy->SetAmplitude(8.0f);
-                    enemy->SetMoveSpeed(2.0f);
-                }
-                if (enemyIndex % 8 == 2) {
-                    enemy->SetMovePattern(MovePattern::UpDown);
-                    enemy->SetAmplitude(6.0f);
-                    enemy->SetMoveSpeed(2.0f);
-                }
-                if (enemyIndex % 8 == 4) {
-                    enemy->SetMovePattern(MovePattern::ZigZag);
-                    enemy->SetAmplitude(8.0f);
-                    enemy->SetMoveSpeed(2.5f);
-                }
-                if (enemyIndex % 8 == 6) {
-                    enemy->SetMovePattern(MovePattern::SineWave);
-                    enemy->SetAmplitude(5.0f);
-                    enemy->SetFrequency(3.0f);
-                    enemy->SetMoveSpeed(1.5f);
-                }
-
-                enemies_.push_back(std::move(enemy));
-            } else {
-                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(enemyPosition);
-                enemies_.push_back(std::move(enemy));
-            }
-            enemyIndex = enemyIndex + 1;
-        }
+void GamePlayScene::UpdateCameraShakePostEffect()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (cameraShakeTime_ <= 0.0f ||
+        cameraShakeDuration_ <= 0.0f ||
+        cameraShakeStrength_ <= 0.0f) {
+        cameraShakeTime_ = 0.0f;
+        cameraShakeDuration_ = 0.0f;
+        cameraShakeStrength_ = 0.0f;
+        sceneManager->SetCameraShakeStrength(0.0f);
+        sceneManager->RemovePostEffect(PostEffectType::CameraShake);
         return;
     }
 
-    nlohmann::json root;
-    file >> root;
-    file.close();
+    cameraShakeTime_ -= TimeManager::GetInstance()->GetDeltaTime();
+    if (cameraShakeTime_ < 0.0f) {
+        cameraShakeTime_ = 0.0f;
+    }
 
-    if (root.contains("enemies") && root["enemies"].is_array()) {
-        nlohmann::json enemiesArray = root["enemies"];
+    float fadeDuration = cameraShakeDuration_;
+    if (fadeDuration > kCameraShakeFadeDuration) {
+        fadeDuration = kCameraShakeFadeDuration;
+    }
 
-        for (size_t i = 0; i < enemiesArray.size(); i = i + 1) {
-            nlohmann::json enemyData = enemiesArray[i];
+    float fadeRatio = 1.0f;
+    if (cameraShakeTime_ < fadeDuration) {
+        fadeRatio = cameraShakeTime_ / fadeDuration;
+    }
 
-            std::string type = enemyData["type"].get<std::string>();
-            std::vector<float> positionArray = enemyData["position"].get<std::vector<float>>();
-            Vector3 position = { positionArray[0], positionArray[1], positionArray[2] };
+    float currentStrength = cameraShakeStrength_ * fadeRatio;
+    sceneManager->SetCameraShakeStrength(currentStrength);
+    if (currentStrength > 0.0f) {
+        sceneManager->AddPostEffect(
+            PostEffectType::CameraShake,
+            PostEffectStage::BeforeParticle);
+    } else {
+        cameraShakeDuration_ = 0.0f;
+        cameraShakeStrength_ = 0.0f;
+        sceneManager->RemovePostEffect(PostEffectType::CameraShake);
+    }
+}
 
-            if (type == "NormalEnemy") {
-                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(position);
-                enemies_.push_back(std::move(enemy));
-            }
+void GamePlayScene::StopPlayerEngineEffects()
+{
+    EffectManager* effectManager = EffectManager::GetInstance();
 
-            if (type == "MoveEnemy") {
-                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
-                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
-                enemy->SetPosition(position);
+    if (playerJetHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(playerJetHandle_);
+        playerJetHandle_ = kInvalidEffectHandle;
+    }
 
-                if (enemyData.contains("movePattern")) {
-                    std::string patternStr = enemyData["movePattern"].get<std::string>();
-                    if (patternStr == "LeftRight") {
-                        enemy->SetMovePattern(MovePattern::LeftRight);
-                    }
-                    if (patternStr == "UpDown") {
-                        enemy->SetMovePattern(MovePattern::UpDown);
-                    }
-                    if (patternStr == "ZigZag") {
-                        enemy->SetMovePattern(MovePattern::ZigZag);
-                    }
-                    if (patternStr == "SineWave") {
-                        enemy->SetMovePattern(MovePattern::SineWave);
-                    }
-                }
+    if (playerJetSparkHandle_ != kInvalidEffectHandle) {
+        effectManager->StopEffect(playerJetSparkHandle_);
+        playerJetSparkHandle_ = kInvalidEffectHandle;
+    }
 
-                if (enemyData.contains("moveSpeed")) {
-                    enemy->SetMoveSpeed(enemyData["moveSpeed"].get<float>());
-                }
-                if (enemyData.contains("amplitude")) {
-                    enemy->SetAmplitude(enemyData["amplitude"].get<float>());
-                }
-                if (enemyData.contains("frequency")) {
-                    enemy->SetFrequency(enemyData["frequency"].get<float>());
-                }
+}
 
-                enemies_.push_back(std::move(enemy));
-            }
+void GamePlayScene::UpdateSwarmWaveSpawning()
+{
+    if (player_ == nullptr) {
+        return;
+    }
+    if (player_->IsDead()) {
+        return;
+    }
+    if (bossController_->IsSpawned()) {
+        return;
+    }
+    const std::vector<float>& waveDistances =
+        stageSettings_.swarmWaveDistances;
+    if (nextSwarmWaveIndex_ >= waveDistances.size()) {
+        return;
+    }
+
+    float playerDistance = railDistance_;
+    while (nextSwarmWaveIndex_ + 1 < waveDistances.size() &&
+           playerDistance >= waveDistances[nextSwarmWaveIndex_ + 1]) {
+        nextSwarmWaveIndex_ += 1;
+    }
+
+    if (playerDistance < waveDistances[nextSwarmWaveIndex_]) {
+        return;
+    }
+
+    SwarmFormationType formationType = SwarmFormationType::Spiral;
+    size_t formationIndex = nextSwarmWaveIndex_ % 6;
+    if (formationIndex == 1) {
+        formationType = SwarmFormationType::Wall;
+    }
+    if (formationIndex == 2) {
+        formationType = SwarmFormationType::Glyph;
+    }
+    if (formationIndex == 3) {
+        formationType = SwarmFormationType::Diamond;
+    }
+    if (formationIndex == 4) {
+        formationType = SwarmFormationType::Wave;
+    }
+    if (formationIndex == 5) {
+        formationType = SwarmFormationType::Arrow;
+    }
+
+    int32_t travelDirection = 1;
+    if (nextSwarmWaveIndex_ % 2 != 0) {
+        travelDirection = -1;
+    }
+
+    SpawnSwarmWave(formationType, travelDirection);
+    nextSwarmWaveIndex_ += 1;
+}
+
+void GamePlayScene::SpawnSwarmWave(
+    SwarmFormationType formationType,
+    int32_t travelDirection)
+{
+    if (enemyModel_ == nullptr) {
+        return;
+    }
+    if (enemyBulletModel_ == nullptr) {
+        return;
+    }
+    if (player_ == nullptr) {
+        return;
+    }
+
+    std::shared_ptr<SwarmGroupState> groupState =
+        std::make_shared<SwarmGroupState>();
+    groupState->totalCount = kSwarmMembersPerWave;
+    groupState->activeCount = kSwarmMembersPerWave;
+
+    for (int32_t slotIndex = 0;
+         slotIndex < kSwarmMembersPerWave;
+         slotIndex += 1) {
+        std::unique_ptr<SwarmEnemy> swarmEnemy =
+            std::make_unique<SwarmEnemy>();
+        swarmEnemy->Initialize(
+            enemyModel_,
+            enemyBulletModel_,
+            player_.get(),
+            groupState,
+            formationType,
+            slotIndex,
+            travelDirection);
+        enemies_.push_back(std::move(swarmEnemy));
+    }
+}
+
+void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
+{
+    // レベルデータから敵を生成、配置
+    for (const auto& enemyData : levelData.enemies) {
+        if (enemyData.fileName == "MoveEnemy") {
+            std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
+            enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+            enemy->SetPosition(enemyData.translation);
+            enemy->SetRotate(enemyData.rotation);
+
+            // デフォルトの移動パターンを設定
+            enemy->SetMovePattern(MovePattern::LeftRight);
+            enemy->SetAmplitude(8.0f);
+            enemy->SetMoveSpeed(2.0f);
+
+            enemies_.push_back(std::move(enemy));
+        } else if (enemyData.fileName == "ArmoredEnemy") {
+            std::unique_ptr<ArmoredEnemy> enemy =
+                std::make_unique<ArmoredEnemy>();
+            enemy->Initialize(
+                enemyModel_,
+                enemyBulletModel_,
+                player_.get());
+            enemy->SetPosition(enemyData.translation);
+            enemy->SetRotate(enemyData.rotation);
+
+            enemies_.push_back(std::move(enemy));
+        } else {
+            std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+            enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+            enemy->SetPosition(enemyData.translation);
+            enemy->SetRotate(enemyData.rotation);
+
+            enemies_.push_back(std::move(enemy));
         }
     }
 }
@@ -1217,7 +2757,7 @@ void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
     if (boostKickTimer_ > 0.0f) {
         float normalizedTime = boostKickTimer_ / kBoostKickDuration;
         boostKickStrength_ = normalizedTime * normalizedTime;
-        boostKickTimer_ -= kBoostKickFrameTime;
+        boostKickTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (boostKickTimer_ < 0.0f) {
             boostKickTimer_ = 0.0f;
         }
@@ -1234,7 +2774,7 @@ void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isP
 
     if (isPlayerBoosting) {
         targetCenter = CalculateBoostPostEffectCenter(nextRailDistance);
-        smoothedBoostPostEffectCenter_ = LerpVector2(smoothedBoostPostEffectCenter_, targetCenter, kBoostPostEffectCenterLerpRate);
+        smoothedBoostPostEffectCenter_ = Lerp(smoothedBoostPostEffectCenter_, targetCenter, kBoostPostEffectCenterLerpRate);
     } else {
         smoothedBoostPostEffectCenter_ = targetCenter;
     }
@@ -1293,8 +2833,192 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
         vanishPointCenter.y * kBoostPostEffectVanishPointWeight +
         playerCenter.y * kBoostPostEffectPlayerWeight;
 
-    center.x = ClampFloat(center.x, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
-    center.y = ClampFloat(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
+    center.x = std::clamp(center.x, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
+    center.y = std::clamp(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
 
     return center;
+}
+
+void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
+{
+    hasCameraPoint_ = false;
+    cameraPointObject_ = {};
+    cameraPointLerpTime_ = 0.0f;
+
+    for (const LevelData::ObjectData& objData : levelData.objects) {
+        if (objData.disabled) {
+            continue;
+        }
+
+        if (objData.cameraPoint.exists) {
+            cameraPointObject_ = objData;
+            hasCameraPoint_ = true;
+            cameraPointLerpTime_ = 0.0f;
+        }
+
+        if (objData.type == "MESH") {
+            if (objData.fileName.empty()) {
+                continue;
+            }
+            ModelManager::GetInstance()->Load(objData.fileName);
+
+            std::unique_ptr<Object3d> levelObject = std::make_unique<Object3d>();
+            levelObject->Initialize(Object3dManager::GetInstance());
+            levelObject->SetModel(objData.fileName);
+            levelObject->SetTranslate(objData.translation);
+            levelObject->SetRotate(objData.rotation);
+            levelObject->SetScale(objData.scale);
+
+            if (stageId_ == "stage03" && objData.fileName.starts_with("Environment/Ice/")) {
+                levelObject->SetColor({ 0.90f, 0.96f, 1.0f, 1.0f });
+                // Diffuse ice facets: white lit faces and blue side faces, without glare.
+                levelObject->GetMaterial()->enableLighting = 2;
+                levelObject->GetMaterial()->shininess = 0.0f;
+                levelObject->SetEnableEnvironmentMap(false);
+            }
+
+            if (objData.gimmick.exists) {
+                levelObject->SetGimmick(objData.gimmick);
+            }
+
+            if (objData.destructible.exists) {
+                levelObject->SetColor({ 0.30f, 0.20f, 0.14f, 1.0f });
+                destructibleLevelObjects_.push_back({
+                    levelObject.get(),
+                    (std::max)(objData.destructible.hp, 1.0f),
+                    false
+                });
+            }
+
+            if (objData.hazard.exists) {
+                levelObject->SetCollisionDamage(objData.hazard.damage);
+                if (objData.hazard.type == "LASER") {
+                    levelObject->SetColor({ 1.0f, 0.03f, 0.02f, 1.0f });
+                    levelObject->SetEnableLighting(false);
+                }
+            }
+
+            if (objData.trigger.exists &&
+                (objData.trigger.type == "WIND" ||
+                 objData.trigger.type == "GRAVITY")) {
+                levelObject->SetColor({ 0.15f, 0.75f, 1.0f, 0.65f });
+                levelObject->SetEnableLighting(false);
+            }
+
+            if (objData.trigger.exists) {
+                stageTriggers_.push_back({
+                    levelObject.get(),
+                    objData.trigger.type,
+                    objData.trigger.name,
+                    objData.trigger.center,
+                    objData.trigger.size,
+                    objData.trigger.force,
+                    false
+                });
+            }
+
+            if (objData.collider.exists) {
+                if (objData.collider.type == "BOX") {
+                    std::unique_ptr<BoxCollider> collider = std::make_unique<BoxCollider>();
+                    Vector3 center = {
+                        objData.translation.x + objData.collider.center.x,
+                        objData.translation.y + objData.collider.center.y,
+                        objData.translation.z + objData.collider.center.z
+                    };
+                    collider->SetCenter(center);
+                    collider->SetSize(objData.collider.size);
+
+                    BoxCollider* registeredCollider = CollisionManager::GetInstance()->RegisterCollider(std::move(collider));
+                    levelObject->SetCollider(registeredCollider);
+                }
+            }
+
+            levelObjects_.push_back(std::move(levelObject));
+        }
+        else if (objData.type == "EnemySpawn") {
+            if (objData.fileName == "MoveEnemy") {
+                std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(objData.translation);
+                enemy->SetRotate(objData.rotation);
+
+                enemy->SetMovePattern(MovePattern::LeftRight);
+                enemy->SetAmplitude(8.0f);
+                enemy->SetMoveSpeed(2.0f);
+
+                if (objData.patrolRoute.exists) {
+                    enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            } else if (objData.fileName == "ArmoredEnemy") {
+                std::unique_ptr<ArmoredEnemy> enemy =
+                    std::make_unique<ArmoredEnemy>();
+                enemy->Initialize(
+                    enemyModel_,
+                    enemyBulletModel_,
+                    player_.get());
+                enemy->SetPosition(objData.translation);
+                enemy->SetRotate(objData.rotation);
+
+                if (objData.patrolRoute.exists) {
+                    enemy->SetPatrolWaypoints(
+                        objData.patrolRoute.waypoints);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            } else {
+                std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
+                enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->SetPosition(objData.translation);
+                enemy->SetRotate(objData.rotation);
+
+                if (objData.patrolRoute.exists) {
+                    enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
+                }
+
+                enemies_.push_back(std::move(enemy));
+            }
+        }
+    }
+}
+
+void GamePlayScene::HotReloadLevel()
+{
+    ClearLevelObjects();
+    enemies_.clear();
+    enemyBulletManager_.Clear();
+    nextSwarmWaveIndex_ = 0;
+
+    Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
+    Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
+
+    LevelDataLoader levelDataLoader;
+    LevelData newLevelData =
+        levelDataLoader.Load(stageSettings_.layoutFile);
+
+    if (!newLevelData.playerSpawns.empty()) {
+        const LevelData::PlayerSpawnData& spawn = newLevelData.playerSpawns[0];
+        playerStartPos = spawn.translation;
+        playerStartRot = spawn.rotation;
+    }
+
+    player_->SetTranslate(playerStartPos);
+    player_->SetRotate(playerStartRot);
+    player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+
+    CreateLevelObjects(newLevelData);
+}
+
+void GamePlayScene::ClearLevelObjects()
+{
+    stageTriggers_.clear();
+    destructibleLevelObjects_.clear();
+    for (std::unique_ptr<Object3d>& obj : levelObjects_) {
+        if (obj->GetCollider() != nullptr) {
+            CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider());
+            obj->SetCollider(nullptr);
+        }
+    }
+    levelObjects_.clear();
 }

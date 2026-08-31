@@ -1,0 +1,16 @@
+{
+  "stages": [
+    {
+      "settings": "resources/Stages/Stage01/settings.json"
+    },
+    {
+      "settings": "resources/Stages/Stage02/settings.json"
+    },
+    {
+      "settings": "resources/Stages/Stage03/settings.json"
+    },
+    {
+      "settings": "resources/Stages/GimmickTest/settings.json"
+    }
+  ]
+}

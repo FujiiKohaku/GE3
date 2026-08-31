@@ -5,9 +5,12 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Math/MatrixMath.h"
+#include "Engine/Skeleton/Skeleton.h"
 #include "Engine/WinApp/WinApp.h"
 #include "Engine/blend/BlendUtil.h"
 #include <cassert>
+#include <cmath>
+#include <numbers>
 
 std::unique_ptr<DebugRenderer> DebugRenderer::instance_ = nullptr;
 
@@ -121,9 +124,173 @@ void DebugRenderer::AddLine(
     lines_.push_back(line);
 }
 
+void DebugRenderer::AddOverlayLine(
+    const Vector3& start,
+    const Vector3& end,
+    const Vector4& color,
+    float thickness)
+{
+    DebugLine line {};
+    line.start = start;
+    line.end = end;
+    line.color = color;
+    line.thickness = thickness;
+
+    if (line.thickness <= 0.0f) {
+        line.thickness = 1.0f;
+    }
+
+    overlayLines_.push_back(line);
+}
+
+void DebugRenderer::AddWireSphere(
+    const Vector3& center,
+    float radius,
+    const Vector4& color,
+    float thickness,
+    uint32_t segmentCount)
+{
+    if (radius <= 0.0f || segmentCount < 3) {
+        return;
+    }
+
+    const float angleStep = 2.0f * std::numbers::pi_v<float> /
+        static_cast<float>(segmentCount);
+
+    for (uint32_t segment = 0; segment < segmentCount; ++segment) {
+        const float angle = angleStep * static_cast<float>(segment);
+        const float nextAngle = angleStep * static_cast<float>(segment + 1);
+
+        const float cosAngle = std::cos(angle);
+        const float sinAngle = std::sin(angle);
+        const float cosNextAngle = std::cos(nextAngle);
+        const float sinNextAngle = std::sin(nextAngle);
+
+        // XY、XZ、YZの3平面に円を描き、判定球の立体形状を確認できるようにする。
+        AddLine(
+            { center.x + radius * cosAngle, center.y + radius * sinAngle, center.z },
+            { center.x + radius * cosNextAngle, center.y + radius * sinNextAngle, center.z },
+            color,
+            thickness);
+        AddLine(
+            { center.x + radius * cosAngle, center.y, center.z + radius * sinAngle },
+            { center.x + radius * cosNextAngle, center.y, center.z + radius * sinNextAngle },
+            color,
+            thickness);
+        AddLine(
+            { center.x, center.y + radius * cosAngle, center.z + radius * sinAngle },
+            { center.x, center.y + radius * cosNextAngle, center.z + radius * sinNextAngle },
+            color,
+            thickness);
+    }
+}
+
+void DebugRenderer::AddWireOBB(
+    const Vector3& center,
+    const Vector3& size,
+    const Vector3& axisX,
+    const Vector3& axisY,
+    const Vector3& axisZ,
+    const Vector4& color,
+    float thickness)
+{
+    const Vector3 halfAxisX = axisX * (std::abs(size.x) * 0.5f);
+    const Vector3 halfAxisY = axisY * (std::abs(size.y) * 0.5f);
+    const Vector3 halfAxisZ = axisZ * (std::abs(size.z) * 0.5f);
+    const Vector3 corners[8] = {
+        center - halfAxisX - halfAxisY - halfAxisZ,
+        center + halfAxisX - halfAxisY - halfAxisZ,
+        center + halfAxisX + halfAxisY - halfAxisZ,
+        center - halfAxisX + halfAxisY - halfAxisZ,
+        center - halfAxisX - halfAxisY + halfAxisZ,
+        center + halfAxisX - halfAxisY + halfAxisZ,
+        center + halfAxisX + halfAxisY + halfAxisZ,
+        center - halfAxisX + halfAxisY + halfAxisZ
+    };
+    static constexpr uint32_t kEdges[12][2] = {
+        { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 },
+        { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 },
+        { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 }
+    };
+    for (const auto& edge : kEdges) {
+        AddLine(corners[edge[0]], corners[edge[1]], color, thickness);
+    }
+}
+
+void DebugRenderer::AddSkeleton(
+    const Skeleton& skeleton,
+    const Matrix4x4& worldMatrix)
+{
+    const Vector4 defaultColor = { 0.0f, 1.0f, 1.0f, 1.0f };
+    AddSkeleton(skeleton, worldMatrix, defaultColor, 2.0f);
+}
+
+void DebugRenderer::AddSkeleton(
+    const Skeleton& skeleton,
+    const Matrix4x4& worldMatrix,
+    const Vector4& color,
+    float thickness)
+{
+    // Draw local axes for all joints
+    for (const Joint& joint : skeleton.joints) {
+        Matrix4x4 jointWorldMatrix = MatrixMath::Multiply(joint.skeletonSpaceMatrix, worldMatrix);
+        Vector3 jointPosition = {
+            jointWorldMatrix.m[3][0],
+            jointWorldMatrix.m[3][1],
+            jointWorldMatrix.m[3][2]
+        };
+
+        // Extract local axes (row 0, 1, 2) and normalize
+        Vector3 localX = NormalizeSafe({ jointWorldMatrix.m[0][0], jointWorldMatrix.m[0][1], jointWorldMatrix.m[0][2] });
+        Vector3 localY = NormalizeSafe({ jointWorldMatrix.m[1][0], jointWorldMatrix.m[1][1], jointWorldMatrix.m[1][2] });
+        Vector3 localZ = NormalizeSafe({ jointWorldMatrix.m[2][0], jointWorldMatrix.m[2][1], jointWorldMatrix.m[2][2] });
+
+        float axisLength = 0.25f;
+        float axisThickness = 2.0f;
+
+        // Draw axes lines (X: Red, Y: Green, Z: Blue)
+        AddOverlayLine(jointPosition, jointPosition + localX * axisLength, { 1.0f, 0.0f, 0.0f, 1.0f }, axisThickness);
+        AddOverlayLine(jointPosition, jointPosition + localY * axisLength, { 0.0f, 1.0f, 0.0f, 1.0f }, axisThickness);
+        AddOverlayLine(jointPosition, jointPosition + localZ * axisLength, { 0.0f, 0.0f, 1.0f, 1.0f }, axisThickness);
+    }
+
+    // Draw connection bones
+    for (const Joint& joint : skeleton.joints) {
+        if (!joint.parent.has_value()) {
+            continue;
+        }
+
+        const int32_t parentIndex = joint.parent.value();
+        if (parentIndex < 0) {
+            continue;
+        }
+
+        const size_t parentArrayIndex = static_cast<size_t>(parentIndex);
+        if (parentArrayIndex >= skeleton.joints.size()) {
+            continue;
+        }
+
+        const Joint& parent = skeleton.joints[parentArrayIndex];
+        Vector3 jointPosition = {
+            joint.skeletonSpaceMatrix.m[3][0],
+            joint.skeletonSpaceMatrix.m[3][1],
+            joint.skeletonSpaceMatrix.m[3][2]
+        };
+        Vector3 parentPosition = {
+            parent.skeletonSpaceMatrix.m[3][0],
+            parent.skeletonSpaceMatrix.m[3][1],
+            parent.skeletonSpaceMatrix.m[3][2]
+        };
+
+        jointPosition = MatrixMath::Transform(jointPosition, worldMatrix);
+        parentPosition = MatrixMath::Transform(parentPosition, worldMatrix);
+
+        AddOverlayLine(parentPosition, jointPosition, color, thickness);
+    }
+}
+
 void DebugRenderer::Draw()
 {
-    // Drawで何をしているか
     // ------------------------------------------------------------
     // Draw() は AddLine() で登録された DebugLine をまとめてGPUへ送り、
     // ライン描画専用パイプラインで一括描画します。
@@ -137,10 +304,11 @@ void DebugRenderer::Draw()
 
     if (!isVisible_) {
         lines_.clear();
+        overlayLines_.clear();
         return;
     }
 
-    if (lines_.empty()) {
+    if (lines_.empty() && overlayLines_.empty()) {
         return;
     }
 
@@ -149,6 +317,7 @@ void DebugRenderer::Draw()
         // カメラが無い状態ではワールド座標の線を画面に投影できません。
         // 描けなかった線を次フレームへ持ち越すと、古いデバッグ線が急に出る原因になるため破棄します。
         lines_.clear();
+        overlayLines_.clear();
         return;
     }
 
@@ -158,14 +327,15 @@ void DebugRenderer::Draw()
         static_cast<float>(WinApp::kClientHeight)
     };
 
-    const std::size_t vertexCount = lines_.size() * 2;
+    const std::size_t depthVertexCount = lines_.size() * 2;
+    const std::size_t overlayVertexCount = overlayLines_.size() * 2;
+    const std::size_t vertexCount = depthVertexCount + overlayVertexCount;
     EnsureVertexCapacity(vertexCount);
     UploadLineVertices();
 
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
-    commandList->SetPipelineState(pipelineState_.Get());
 
     // GPUへ送る頂点データ
     // ------------------------------------------------------------
@@ -176,7 +346,19 @@ void DebugRenderer::Draw()
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
     commandList->SetGraphicsRootConstantBufferView(0, viewProjectionResource_->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, screenResource_->GetGPUVirtualAddress());
-    commandList->DrawInstanced(static_cast<UINT>(vertexCount), 1, 0, 0);
+    if (depthVertexCount > 0) {
+        commandList->SetPipelineState(pipelineState_.Get());
+        commandList->DrawInstanced(static_cast<UINT>(depthVertexCount), 1, 0, 0);
+    }
+
+    if (overlayVertexCount > 0) {
+        commandList->SetPipelineState(overlayPipelineState_.Get());
+        commandList->DrawInstanced(
+            static_cast<UINT>(overlayVertexCount),
+            1,
+            static_cast<UINT>(depthVertexCount),
+            0);
+    }
 
     // なぜDraw後にlines_をクリアするのか
     // ------------------------------------------------------------
@@ -186,6 +368,7 @@ void DebugRenderer::Draw()
     // こうすると、レイキャストや当たり判定のように毎フレーム変わる情報が古く残りません。
     // また、不要になったデバッグ線を消すための個別管理も不要になります。
     lines_.clear();
+    overlayLines_.clear();
 }
 
 void DebugRenderer::CreateRootSignature()
@@ -271,11 +454,11 @@ void DebugRenderer::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/Debug/DebugLine.VS.hlsl", L"vs_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/Debug/DebugLine.VS.hlsl");
     Microsoft::WRL::ComPtr<IDxcBlob> geometryShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/Debug/DebugLine.GS.hlsl", L"gs_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/Debug/DebugLine.GS.hlsl");
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob =
-        dxCommon_->CompileShader(L"resources/Shaders/Debug/DebugLine.PS.hlsl", L"ps_6_0");
+        dxCommon_->LoadCompiledShader(L"resources/Shaders/Debug/DebugLine.PS.hlsl");
     assert(vertexShaderBlob && geometryShaderBlob && pixelShaderBlob);
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC desc {};
@@ -297,6 +480,13 @@ void DebugRenderer::CreateGraphicsPipeline()
     HRESULT hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
         &desc,
         IID_PPV_ARGS(&pipelineState_));
+    assert(SUCCEEDED(hr));
+
+    depthStencilDesc.DepthEnable = FALSE;
+    desc.DepthStencilState = depthStencilDesc;
+    hr = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
+        &desc,
+        IID_PPV_ARGS(&overlayPipelineState_));
     assert(SUCCEEDED(hr));
 }
 
@@ -338,6 +528,20 @@ void DebugRenderer::UploadLineVertices()
 
     for (std::size_t lineIndex = 0; lineIndex < lines_.size(); ++lineIndex) {
         const DebugLine& line = lines_[lineIndex];
+
+        vertexData_[vertexIndex].position = line.start;
+        vertexData_[vertexIndex].color = line.color;
+        vertexData_[vertexIndex].thickness = line.thickness;
+        ++vertexIndex;
+
+        vertexData_[vertexIndex].position = line.end;
+        vertexData_[vertexIndex].color = line.color;
+        vertexData_[vertexIndex].thickness = line.thickness;
+        ++vertexIndex;
+    }
+
+    for (std::size_t lineIndex = 0; lineIndex < overlayLines_.size(); ++lineIndex) {
+        const DebugLine& line = overlayLines_[lineIndex];
 
         vertexData_[vertexIndex].position = line.start;
         vertexData_[vertexIndex].color = line.color;

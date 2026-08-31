@@ -1,5 +1,5 @@
 #include "Object3dManager.h"
-// 実体をここで作�E　staticだとクラス冁E��宣言しただけでは実体ができなぁE��ら、ここで作る
+
 std::unique_ptr<Object3dManager> Object3dManager::instance_ = nullptr;
 
 Object3dManager::Object3dManager(ConstructorKey)
@@ -15,13 +15,16 @@ Object3dManager* Object3dManager::GetInstance()
 #pragma region
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
-    // DirectX共通部刁E��受け取り、保孁E
+    if (dxCommon_ != nullptr) {
+        return;
+    }
+
     dxCommon_ = dxCommon;
 
-    // ルートシグネチャを作�E
+
     CreateRootSignature();
 
-    // グラフィチE��スパイプラインを作�E
+
     CreateGraphicsPipeline();
 
 
@@ -35,7 +38,7 @@ void Object3dManager::PreDraw()
 {
     auto* commandList = dxCommon_->GetCommandList();
 
-    // プリミティブ形状�E�三角形リスト！E
+
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     // RootSignature 設宁E
@@ -68,17 +71,17 @@ void Object3dManager::CreateRootSignature()
     // ====== RootParameterの設宁E======
     D3D12_ROOT_PARAMETER rootParameters[9] = {};
 
-    // [0] Material�E�ピクセルシェーダ用�E�E
+
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[0].Descriptor.ShaderRegister = 0;
 
-    // [1] Transform�E�頂点シェーダ用�E�E
+
     rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     rootParameters[1].Descriptor.ShaderRegister = 0;
 
-    // [2] Texture�E�ERV: チE��スチャ用�E�E
+
     D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
     descriptorRange[0].BaseShaderRegister = 0;
     descriptorRange[0].NumDescriptors = 1;
@@ -90,11 +93,11 @@ void Object3dManager::CreateRootSignature()
     rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
     rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
 
-    // [3] DirectionalLight�E�ライト情報�E�E
+
     rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[3].Descriptor.ShaderRegister = 1;
-    // [4] Camera�E�視点惁E���E�E
+
     rootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[4].Descriptor.ShaderRegister = 2; // b2
@@ -140,7 +143,7 @@ void Object3dManager::CreateRootSignature()
     desc.pStaticSamplers = &staticSampler;
     desc.NumStaticSamplers = 1;
 
-    // ====== シリアライズ & 作�E ======
+
     hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
         signatureBlob.GetAddressOf(), errorBlob.GetAddressOf());
 
@@ -151,7 +154,7 @@ void Object3dManager::CreateRootSignature()
         assert(false);
     }
 
-    // 実際にルートシグネチャ作�E
+
     hr = dxCommon_->GetDevice()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature));
     assert(SUCCEEDED(hr));
 }
@@ -160,7 +163,7 @@ void Object3dManager::CreateRootSignature()
 void Object3dManager::CreateGraphicsPipeline()
 {
 
-    // ====== 入力レイアウチE======
+
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
 
     // POSITION
@@ -188,7 +191,7 @@ void Object3dManager::CreateGraphicsPipeline()
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 
-    // ====== チE�EススチE��シル設宁E======
+
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;
     depthStencilDesc.StencilEnable = FALSE;
@@ -197,16 +200,16 @@ void Object3dManager::CreateGraphicsPipeline()
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
     // ====== シェーダーのコンパイル ======
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.VS.hlsl", L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Object3d.PS.hlsl", L"ps_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/Object3D/Glow.PS.hlsl", L"ps_6_0"); // グロウ
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Object3D/Object3d.VS.hlsl");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Object3D/Object3d.PS.hlsl");
+    Microsoft::WRL::ComPtr<IDxcBlob> glowPixelShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/Object3D/Glow.PS.hlsl"); // グロウ
     assert(vertexShaderBlob && pixelShaderBlob && glowPixelShaderBlob);
 
     // ====== PSO設宁E======
     D3D12_GRAPHICS_PIPELINE_STATE_DESC baseDesc {};
     baseDesc.pRootSignature = rootSignature.Get();
     baseDesc.InputLayout = inputLayoutDesc;
-    // baseDescPSはFor斁E�E中に移動しました
+
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;

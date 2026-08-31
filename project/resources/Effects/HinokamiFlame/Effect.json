@@ -1,0 +1,44 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 32,
+    "Radius": 0.25,
+    "Frequency": 0.001
+  },
+  "Particle": {
+    "LifeTime": 0.42,
+    "StartScale": 0.18,
+    "EndScale": 0.85,
+    "StartRotation": 0.0,
+    "RotationSpeed": 8.0,
+    "Velocity": [0.0, 1.2, 0.0],
+    "StartColor": [1.0, 0.9, 0.4, 0.95],
+    "EndColor": [0.95, 0.15, 0.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": true,
+    "Gravity": 3.0,
+    "EnableDrag": true,
+    "Drag": 0.9,
+    "EnableNoise": true,
+    "NoiseStrength": 2.2,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "../../Textures/flame_dragon.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": true,
+    "Duration": -1.0
+  }
+}

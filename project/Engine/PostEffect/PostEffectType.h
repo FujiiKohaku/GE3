@@ -1,8 +1,25 @@
 #pragma once
+
+enum class PostEffectStage {
+    BeforeParticle,
+    AfterParticle,
+};
+
 enum class PostEffectType {
     Copy,
     GrayScale,
     Vignette,
+    DepthOfField,
+    MotionBlur,
+    ChromaticAberration,
+    LensDistortion,
+    FilmGrain,
+    LensDirt,
+    CameraShake,
+    BokehShape,
+    Fisheye,
+    Pixelate,
+    ColorAdjust,
     smoothing,
     GaussianFilter,
     LuminanceBasedOutline,
@@ -11,9 +28,27 @@ enum class PostEffectType {
     Dissolve,
     Random,
     Bloom,
+    LensFlare,
+    Glare,
+    LightShafts,
+    VolumetricLight,
+    AnamorphicFlare,
+    Halo,
+    LightStreak,
+    NeonGlow,
+    GhostImage,
     Outline,
     Fog,
     FocusLine,
+    Paint,
+    GlassCrack,
+    Shockwave,
+    HeatHaze,
+    SonicBoom,
+    RainDrops,
+    CyberScanline,
+    HexShield,
+    BlackHoleDistortion,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

@@ -1,0 +1,42 @@
+{
+  "Animation": "Robot_Dash",
+  "Duration": 1.0416666,
+  "Events": [
+    {
+      "Time": 0.05,
+      "Name": "PlayEffect",
+      "Value": "DashDust",
+      "Bone": "foot.L"
+    },
+    {
+      "Time": 0.21,
+      "Name": "PlayEffect",
+      "Value": "DashDust",
+      "Bone": "foot.R"
+    },
+    {
+      "Time": 0.37,
+      "Name": "PlayEffect",
+      "Value": "DashDust",
+      "Bone": "foot.L"
+    },
+    {
+      "Time": 0.52,
+      "Name": "PlayEffect",
+      "Value": "DashDust",
+      "Bone": "foot.R"
+    },
+    {
+      "Time": 0.68,
+      "Name": "PlayEffect",
+      "Value": "DashDust",
+      "Bone": "foot.L"
+    },
+    {
+      "Time": 0.84,
+      "Name": "PlayEffect",
+      "Value": "DashDust",
+      "Bone": "foot.R"
+    }
+  ]
+}

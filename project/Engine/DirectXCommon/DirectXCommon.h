@@ -8,6 +8,7 @@
 #include <d3d12.h>
 #include <dxcapi.h>
 #include <dxgi1_6.h>
+#include <filesystem>
 #include <wrl.h>
 #pragma comment(lib, "dxcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -48,7 +49,8 @@ public:
         return kSwapChainBufferCount;
     }
 
-    Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& filepath, const wchar_t* profile);
+    // HLSLのパスから対応するコンパイル済みDXILを読み込む。
+    Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShader(const std::wstring& hlslPath);
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, const DirectX::TexMetadata& metadata);
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages);
@@ -88,6 +90,9 @@ private:
     void InitializeViewport();
     void InitializeScissorRect();
     void InitializeDxcCompiler();
+    Microsoft::WRL::ComPtr<IDxcBlob> CompileShaderAndSaveCache(
+        const std::filesystem::path& sourcePath,
+        const std::filesystem::path& compiledPath);
 
 private:
     Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = nullptr;
@@ -120,5 +125,5 @@ private:
 
     Microsoft::WRL::ComPtr<IDxcUtils> dxcUtils;
     Microsoft::WRL::ComPtr<IDxcCompiler3> dxcCompiler;
-    Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler;
+    Microsoft::WRL::ComPtr<IDxcIncludeHandler> dxcIncludeHandler;
 };

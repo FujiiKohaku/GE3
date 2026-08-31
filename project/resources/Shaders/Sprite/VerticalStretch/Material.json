@@ -1,0 +1,25 @@
+{
+  "Name": "Vertical Stretch VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 12,
+    "DivisionY": 12
+  },
+  "Effect": {
+    "Amplitude": 0.24,
+    "Frequency": 1,
+    "Speed": 2.2,
+    "Phase": 0,
+    "Direction": [
+      1,
+      1
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

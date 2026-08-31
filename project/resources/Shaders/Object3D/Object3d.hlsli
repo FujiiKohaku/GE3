@@ -44,10 +44,21 @@ struct PointLight
     float32_t4 color;
     float32_t3 position;
     float intensity;
-    float radius; // ƒ‰ƒCƒg‚Ì“Í‚­Å‘å‹——£
-    float decay; // Œ¸Š—¦
+    float radius; // ãƒ©ã‚¤ãƒˆã®å±Šãæœ€å¤§è·é›¢
+    float decay; // æ¸›è¡°ç‡
+    int32_t isActive;
+    float padding;
 };
-//ƒXƒ|ƒbƒgƒ‰ƒCƒg
+
+static const uint32_t kMaxPointLights = 32;
+
+struct PointLightCollection
+{
+    PointLight lights[kMaxPointLights];
+    uint32_t activeCount;
+    float32_t3 padding;
+};
+//ã‚¹ãƒãƒƒãƒˆãƒ©ã‚¤ãƒˆ
 struct SpotLight
 {
     float4 color;
@@ -57,5 +68,15 @@ struct SpotLight
     float distance;
     float decay;
     float cosAngle;
-    float padding[2];
+    int32_t isActive;
+    float padding;
+};
+
+static const uint32_t kMaxSpotLights = 8;
+
+struct SpotLightCollection
+{
+    SpotLight lights[kMaxSpotLights];
+    uint32_t activeCount;
+    float32_t3 padding;
 };

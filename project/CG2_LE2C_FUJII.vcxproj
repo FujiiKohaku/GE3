@@ -58,20 +58,23 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <Target Name="CompileProjectShaders" BeforeTargets="ClCompile">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)tools\CompileShaders.ps1&quot; -ProjectRoot &quot;$(ProjectDir).&quot; -DxcPath &quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxc.exe&quot;" />
+  </Target>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IntDir>$(SolutionDir)..\generated\obj\$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)..\generated\outputs\$(Configuration)\</OutDir>
-    <IncludePath>$(SolutionDir)imgui;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)externals;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Development|x64'">
-    <IntDir>$(SolutionDir)..\generated\obj\$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <OutDir>$(SolutionDir)..\generated\outputs\$(Configuration)\</OutDir>
-    <IncludePath>$(SolutionDir)imgui;$(IncludePath)</IncludePath>
+    <IntDir>$(SolutionDir)..\generated\obj\$(ShortProjectName)\$(Platform)\Develop\</IntDir>
+    <OutDir>$(SolutionDir)..\generated\outputs\Develop\</OutDir>
+    <IncludePath>$(ProjectDir)externals;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)..\generated\obj\$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)..\generated\outputs\$(Configuration)\</OutDir>
-    <IncludePath>$(SolutionDir)imgui;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)externals;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -84,12 +87,11 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectsDir)externals\assimp\include;%(AdditionalIncludeDirectories);$($(ProjectDir)externals\imgui;$(ProjectDir)externals\ImGuiGuizmo</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>imgui.lib;assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;$(ProjectDir)externals\assimp\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -112,14 +114,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories);$($(ProjectDir)externals\imgui;$(ProjectDir)externals\ImGuiGuizmo</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>imgui.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;$(ProjectDir)externals\assimp\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -135,25 +136,24 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;ENABLE_PERFORMANCE_LOG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <Optimization>Disabled</Optimization>
-      <WholeProgramOptimization>false</WholeProgramOptimization>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;Particle;ImGuiManager;$(ProjectsDir)externals\assimp\include;blend;Animation;$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>audio;debugcamera;math;input;Winapp;externals;Logger;StringUtility;D3DResourceLeakChecker;2D;DirectXCommon;TextureManager;3D;Camera;SrvManager;Particle;ImGuiManager;$(ProjectsDir)externals\assimp\include;blend;Animation;$(ProjectDir);$(ProjectDir)App;$(ProjectDir)Engine;$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories);$(ProjectDir);$(ProjectDir);$($(ProjectDir)externals\imgui;$(ProjectDir)externals\ImGuiGuizmo</AdditionalIncludeDirectories>
+      <Optimization>MaxSpeed</Optimization>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)externals;$(ProjectDir)externals\assimp\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <LinkTimeCodeGeneration />
-      <AdditionalDependencies>imgui.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <AdditionalDependencies>assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\generated\outputs\$(Configuration)\;$(ProjectDir)externals\assimp\lib\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxcompiler.dll" "$(TargetDir)dxcompiler.dll"
@@ -163,18 +163,25 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\CollisionManager\CollisionLayer.h" />
+    <ClCompile Include="App\Game\Collision\GameplayCollisionSystem.cpp" />
+    <ClCompile Include="App\Scene\LoadingScene.cpp" />
+    <ClCompile Include="App\Scene\StageSelectScene.cpp" />
+    <ClCompile Include="App\Game\Stage\StageCatalog.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\SwarmPulseBullet.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.cpp" />
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp" />
     <ClCompile Include="Engine\math\Collision.cpp" />
     <ClCompile Include="Engine\CollisionManager\CollisionManager.cpp" />
+    <ClCompile Include="Engine\Time\TimeManager.cpp" />
     <ClCompile Include="Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
     <ClCompile Include="Engine\Effect\EffectManager.cpp" />
-    <ClCompile Include="Engine\Particle\ParticleManager.cpp" />
     <ClCompile Include="Engine\PostEffect\Bloom\BloomRenderer.cpp" />
     <ClCompile Include="Engine\PostEffect\Fog\FogManager.cpp" />
     <ClCompile Include="Engine\PostEffect\Fog\FogRenderer.cpp" />
@@ -187,6 +194,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\3D\SkyBox\SkyBoxManager.cpp" />
     <ClCompile Include="Engine\Animation\AnimationActor.cpp" />
     <ClCompile Include="Engine\Animation\AnimationLoder.cpp" />
+    <ClCompile Include="Engine\Animation\Event\AnimationEventLoader.cpp" />
     <ClCompile Include="Engine\Animation\Animation.cpp" />
     <ClCompile Include="Engine\Animation\KeyFrame.cpp" />
     <ClCompile Include="Engine\debugcamera\DebugCameraController.cpp" />
@@ -206,10 +214,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\blend\BlendUtil.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
     <ClCompile Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.cpp" />
-    <ClCompile Include="Engine\debugcamera\DebugCamera.cpp">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
-      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
-    </ClCompile>
     <ClCompile Include="Engine\DirectXCommon\DirectXCommon.cpp" />
     <ClCompile Include="App\Scene\GamePlayScene.cpp" />
     <ClCompile Include="Engine\ImGuiManager\ImGuiManager.cpp" />
@@ -236,9 +240,18 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
     </ClCompile>
     <ClCompile Include="Engine\2D\Sprite.cpp" />
+    <ClCompile Include="Engine\2D\SpriteMaterialManager.cpp" />
+    <ClCompile Include="Engine\2D\SpriteMeshManager.cpp" />
     <ClCompile Include="Engine\2D\SpriteManager.cpp" />
+    <ClCompile Include="Engine\2D\SpriteRenderManager.cpp" />
+    <ClCompile Include="Engine\2D\Text\FontManager.cpp" />
+    <ClCompile Include="Engine\2D\Text\Text.cpp" />
+    <ClCompile Include="Engine\2D\Text\TextRenderer.cpp" />
+    <ClCompile Include="Engine\2D\Text\Utf8Utility.cpp" />
     <ClCompile Include="Engine\3D\Object3dManager.cpp" />
     <ClCompile Include="Engine\3D\Object3d.cpp" />
+    <ClCompile Include="Engine\3D\OceanSurface.cpp" />
+    <ClCompile Include="Engine\3D\WaterPillarRenderer.cpp" />
     <ClCompile Include="Engine\3D\ModelCommon.cpp" />
     <ClCompile Include="Engine\3D\ModelManager.cpp" />
     <ClCompile Include="Engine\3D\SphereObject.cpp" />
@@ -251,6 +264,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\StringUtility\StringUtility.cpp" />
     <ClCompile Include="Engine\TextureManager\TextureManager.cpp" />
     <ClCompile Include="App\Scene\TitleScene.cpp" />
+    <ClCompile Include="App\Scene\SpriteTestScene.cpp" />
+    <ClCompile Include="App\Scene\TextTestScene.cpp" />
+    <ClCompile Include="App\Scene\TestScene1.cpp" />
     <ClCompile Include="Engine\Winapp\Utility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
@@ -261,8 +277,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="Engine\Winapp\WinApp.cpp" />
     <ClCompile Include="App\Game\Player\Player.cpp" />
+    <ClCompile Include="App\Game\Hazard\WaterPillarHazard.cpp" />
+    <ClCompile Include="App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.cpp" />
     <ClCompile Include="App\Game\Boss\BaseBoss.cpp" />
-    <ClCompile Include="App\Game\Boss\FearBoss.cpp" />
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleBoxMesh.cpp" />
@@ -276,22 +293,22 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\PostEffect\PostEffectType.cpp" />
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp" />
     <ClCompile Include="Engine\LevelEditor\LevelDataLoader.cpp" />
-    <ClCompile Include="externals\imgui\imgui.cpp" />
-    <ClCompile Include="externals\imgui\ImGuizmo.cpp" />
-    <ClCompile Include="externals\imgui\imgui_demo.cpp" />
-    <ClCompile Include="externals\imgui\imgui_draw.cpp" />
-    <ClCompile Include="externals\imgui\imgui_impl_dx12.cpp" />
-    <ClCompile Include="externals\imgui\imgui_impl_win32.cpp" />
-    <ClCompile Include="externals\imgui\imgui_tables.cpp" />
-    <ClCompile Include="externals\imgui\imgui_widgets.cpp" />
     <ClCompile Include="Engine\math\Ray.cpp" />
     <ClCompile Include="Engine\math\Sphere.cpp" />
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
     <ClCompile Include="App\Scene\GameOverScene.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\Types\ArmoredEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
+    <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp" />
+    <ClCompile Include="App\Game\Boss\BossEncounterController.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp" />
+    <ClCompile Include="App\Game\Player\Bullet\HomingMissileBullet.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\Shaders\Object3D\Object3d.PS.hlsl">
@@ -312,18 +329,24 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="App\Game\Collision\GameplayCollisionSystem.h" />
     <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h" />
+    <ClInclude Include="App\Game\Hazard\WaterPillarHazard.h" />
+    <ClInclude Include="App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.h" />
     <ClInclude Include="App\Scene\ClearScene.h" />
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h" />
+    <ClInclude Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\PaintBullet.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\SwarmPulseBullet.h" />
+    <ClInclude Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.h" />
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h" />
     <ClInclude Include="Engine\math\Collision.h" />
     <ClInclude Include="Engine\CollisionManager\CollisionManager.h" />
     <ClInclude Include="Engine\EditorManager\EditorManager.h" />
     <ClInclude Include="Engine\math\EngineStruct.h" />
     <ClInclude Include="Engine\Effect\EffectManager.h" />
-    <ClInclude Include="Engine\Particle\ParticleManager.h" />
     <ClInclude Include="Engine\PostEffect\Bloom\BloomRenderer.h" />
     <ClInclude Include="Engine\PostEffect\Fog\FogData.h" />
     <ClInclude Include="Engine\PostEffect\Fog\FogManager.h" />
@@ -337,6 +360,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\3D\SkyBox\SkyBoxManager.h" />
     <ClInclude Include="Engine\Animation\AnimationActor.h" />
     <ClInclude Include="Engine\Animation\AnimationLoder.h" />
+    <ClInclude Include="Engine\Animation\Event\AnimationEvent.h" />
+    <ClInclude Include="Engine\Animation\Event\AnimationEventLoader.h" />
     <ClInclude Include="Engine\Animation\Animation.h" />
     <ClInclude Include="Engine\Animation\KeyFrame.h" />
     <ClInclude Include="Engine\debugcamera\DebugCameraController.h" />
@@ -356,9 +381,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\blend\BlendUtil.h" />
     <ClInclude Include="Engine\Camera\Camera.h" />
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
-    <ClInclude Include="Engine\debugcamera\DebugCamera.h" />
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
+    <ClInclude Include="App\Scene\StageSelectScene.h" />
+    <ClInclude Include="App\Game\Stage\StageCatalog.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
     <ClInclude Include="App\Scene\Game.h" />
     <ClInclude Include="Engine\Debug\Profiler\Profiler.h" />
@@ -373,9 +399,19 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Logger\Logger.h" />
     <ClInclude Include="Engine\audio\SoundManager.h" />
     <ClInclude Include="Engine\2D\Sprite.h" />
+    <ClInclude Include="Engine\2D\SpriteMaterialManager.h" />
+    <ClInclude Include="Engine\2D\SpriteMeshManager.h" />
     <ClInclude Include="Engine\2D\SpriteManager.h" />
+    <ClInclude Include="Engine\2D\SpriteRenderManager.h" />
+    <ClInclude Include="Engine\2D\Text\FontManager.h" />
+    <ClInclude Include="Engine\2D\Text\Text.h" />
+    <ClInclude Include="Engine\2D\Text\TextRenderer.h" />
+    <ClInclude Include="Engine\2D\Text\TextStruct.h" />
+    <ClInclude Include="Engine\2D\Text\Utf8Utility.h" />
     <ClInclude Include="Engine\3D\Object3dManager.h" />
     <ClInclude Include="Engine\3D\Object3d.h" />
+    <ClInclude Include="Engine\3D\OceanSurface.h" />
+    <ClInclude Include="Engine\3D\WaterPillarRenderer.h" />
     <ClInclude Include="Engine\3D\ModelCommon.h" />
     <ClInclude Include="Engine\3D\ModelManager.h" />
     <ClInclude Include="Engine\3D\SphereObject.h" />
@@ -388,12 +424,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\StringUtility\StringUtility.h" />
     <ClInclude Include="Engine\TextureManager\TextureManager.h" />
     <ClInclude Include="App\Scene\TitleScene.h" />
+    <ClInclude Include="App\Scene\SpriteTestScene.h" />
+    <ClInclude Include="App\Scene\TextTestScene.h" />
+    <ClInclude Include="App\Scene\TestScene1.h" />
+    <ClInclude Include="App\Scene\LoadingScene.h" />
     <ClInclude Include="Engine\Winapp\Utility.h" />
     <ClInclude Include="Engine\math\MatrixMath.h" />
     <ClInclude Include="Engine\Winapp\WinApp.h" />
+    <ClInclude Include="Engine\Time\TimeManager.h" />
     <ClInclude Include="App\Game\Player\Player.h" />
     <ClInclude Include="App\Game\Boss\BaseBoss.h" />
-    <ClInclude Include="App\Game\Boss\FearBoss.h" />
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleBoardMesh.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleBoxMesh.h" />
@@ -407,30 +447,49 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\PostEffect\PostEffectType.h" />
     <ClInclude Include="Engine\LevelEditor\LevelData.h" />
     <ClInclude Include="Engine\LevelEditor\LevelDataLoader.h" />
-    <ClInclude Include="externals\imgui\imconfig.h" />
-    <ClInclude Include="externals\imgui\imgui.h" />
-    <ClInclude Include="externals\imgui\ImGuizmo.h" />
-    <ClInclude Include="externals\imgui\imgui_impl_dx12.h" />
-    <ClInclude Include="externals\imgui\imgui_impl_win32.h" />
-    <ClInclude Include="externals\imgui\imgui_internal.h" />
-    <ClInclude Include="externals\imgui\imstb_rectpack.h" />
-    <ClInclude Include="externals\imgui\imstb_textedit.h" />
-    <ClInclude Include="externals\imgui\imstb_truetype.h" />
     <ClInclude Include="Engine\math\Ray.h" />
     <ClInclude Include="Engine\math\Sphere.h" />
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
     <ClInclude Include="App\Scene\GameOverScene.h" />
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\Types\ArmoredEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
+    <ClInclude Include="App\Game\Boss\StageBoss.h" />
+    <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h" />
+    <ClInclude Include="App\Game\Boss\BossEncounterController.h" />
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h" />
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h" />
+    <ClInclude Include="App\Game\Player\Bullet\HomingMissileBullet.h" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="externals\imgui\imgui.vcxproj">
+      <Project>{dab7df7c-5aa7-4179-9aef-a0f34fc521b5}</Project>
+    </ProjectReference>
     <ProjectReference Include="externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">
       <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="resources\Shaders\PostEffect\BokehShape.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\LensFlare.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Glare.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\LightShafts.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\VolumetricLight.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\AnamorphicFlare.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Halo.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\LightStreak.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\NeonGlow.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\GhostImage.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\CameraShake.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\ChromaticAberration.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\DepthOfField.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\FilmGrain.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\Fisheye.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\LensDirt.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\LensDistortion.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\MotionBlur.PS.hlsl" />
     <None Include="resources\Shaders\Debug\DebugLine.GS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -477,12 +536,42 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="resources\Shaders\Object3D\Object3d.hlsli">
+    <None Include="resources\Shaders\PostEffect\BoxFilter.PS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </None>
-    <None Include="resources\Shaders\PostEffect\BoxFilter.PS.hlsl">
+    <None Include="resources\Shaders\PostEffect\GlassCrack.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\Shockwave.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\HeatHaze.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\SonicBoom.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\RainDrops.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\CyberScanline.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\ColorAdjust.PS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
@@ -528,6 +617,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
     </None>
     <None Include="resources\Shaders\PostEffect\LuminanceBasedOutline.PS.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="resources\Shaders\PostEffect\Pixelate.PS.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</ExcludedFromBuild>

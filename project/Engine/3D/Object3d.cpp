@@ -3,6 +3,7 @@
 #include "Model.h"
 #include "ModelManager.h"
 #include "Object3dManager.h"
+#include "Engine/Time/TimeManager.h"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -10,12 +11,12 @@
 #pragma region
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
-    // Object3dManager と DebugCamera を受け取って保持
+    // Object3dManagerを保持
     object3dManager_ = object3DManager;
 
     camera_ = object3dManager_->GetDefaultCamera();
     // ================================
-    // Transformバッファ初期匁E
+    // Transformバッファ初化
     // ================================
     transformationMatrixResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(TransformationMatrix));
     transformationMatrixResource->SetName(L"Object3d::TransformCB");
@@ -23,15 +24,15 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     transformationMatrixData->WVP = MatrixMath::MakeIdentity4x4();
     transformationMatrixData->World = MatrixMath::MakeIdentity4x4();
 
-    // マテリアルリソース作�E
+
     materialResource = object3dManager_->GetDxCommon()->CreateBufferResource(sizeof(Material));
     materialResource->SetName(L"Object3d::MaterialCB");
 
-    // マテリアル初期匁E
-    // 書き込み用アドレス取征E
+    // マテリアル初期化
+    // 書き込み用アドレス取得
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
 
-    // チE��ォルト値設定（白・ライチE��ング無効�E�E
+
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
@@ -39,7 +40,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // ================================
-    // Transform初期値設宁E
+    // Transform初期値設定
     // ================================
     transform = { { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
     cameraTransform = { { 1.0f, 1.0f, 1.0f }, { 0.3f, 0.0f, 0.0f }, { 0.0f, 4.0f, -10.0f } };
@@ -50,6 +51,28 @@ void Object3d::Initialize(Object3dManager* object3DManager)
 
 void Object3d::Update()
 {
+    // ギミックの更新
+    if (gimmick_.exists) {
+        float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+        if (gimmick_.type == "ROTATION") {
+            transform.rotate.x += gimmick_.axis.x * gimmick_.speed * deltaTime;
+            transform.rotate.y += gimmick_.axis.y * gimmick_.speed * deltaTime;
+            transform.rotate.z += gimmick_.axis.z * gimmick_.speed * deltaTime;
+        }
+        else if (gimmick_.type == "MOVE") {
+            gimmickTime_ += gimmick_.speed * deltaTime;
+            float factor = std::sin(gimmickTime_);
+            transform.translate.x = baseTranslate_.x + gimmick_.range.x * factor;
+            transform.translate.y = baseTranslate_.y + gimmick_.range.y * factor;
+            transform.translate.z = baseTranslate_.z + gimmick_.range.z * factor;
+        }
+    }
+
+    if (collider_ != nullptr) {
+        collider_->SetCenter(transform.translate + colliderOffset_);
+        collider_->SetRotation(transform.rotate);
+    }
+
     Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
     if (model_) {
@@ -60,7 +83,13 @@ void Object3d::Update()
         localMatrix = animation_->GetLocalMatrix(model_->GetModelData().rootNode.name);
     }
 
-    worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
+    if (useCustomWorldMatrix_) {
+        worldMatrix_ = customWorldMatrix_;
+    } else if (useQuaternionRotation_) {
+        worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, quaternionRotation_, transform.translate));
+    } else {
+        worldMatrix_ = MatrixMath::Multiply(localMatrix, MatrixMath::MakeAffineMatrix(transform.scale, transform.rotate, transform.translate));
+    }
 
     Matrix4x4 worldViewProjectionMatrix;
 
@@ -86,16 +115,13 @@ void Object3d::Draw()
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
     
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    // Transform定数バッファをセチE��
+
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
 
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
 
-    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
-    commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
-
     commandList->SetGraphicsRootDescriptorTable(8,Object3dManager::GetInstance()->GetEnvironmentTexture());
-    // モチE��が設定されてぁE��ば描画
+
     if (model_) {
         model_->Draw();
     }
@@ -138,11 +164,13 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
     // -------------------------
     // Mesh -> MeshPrimitive
     // -------------------------
+    uint32_t globalVertexOffset = 0;
     for (uint32_t meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
         aiMesh* mesh = scene->mMeshes[meshIndex];
 
         MeshPrimitive primitive;
-        primitive.mode = PrimitiveMode::Triangles; // 今�E固定でOK
+        primitive.materialIndex = mesh->mMaterialIndex;
+        primitive.mode = PrimitiveMode::Triangles; // 今E固定でOK
 
         // ---- vertices ----
         for (uint32_t v = 0; v < mesh->mNumVertices; ++v) {
@@ -157,7 +185,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
                 ? mesh->mTextureCoords[0][v]
                 : aiVector3D(0, 0, 0);
 
-            // 右扁EↁE左手！E反転�E�E
+            // 右扁EↁE左手！E反転EE
             vertex.position = { -pos.x, pos.y, pos.z, 1.0f };
             vertex.normal = { -nrm.x, nrm.y, nrm.z };
             vertex.texcoord = { uv.x, uv.y };
@@ -169,13 +197,13 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
         if (mesh->HasFaces()) {
             for (uint32_t f = 0; f < mesh->mNumFaces; ++f) {
                 aiFace& face = mesh->mFaces[f];
-                // Triangulate してる�Eで 3 のはぁE
+                // Triangulate してるEで 3 のはぁE
                 for (uint32_t i = 0; i < face.mNumIndices; ++i) {
                     primitive.indices.push_back(face.mIndices[i]);
                 }
             }
         }
-        // indices が空なめEdrawArrays 扱ぁE��OK
+        // indices が空なめEdrawArrays 扱ぁEOK
 
         for (uint32_t boneIndex = 0; boneIndex < mesh->mNumBones; ++boneIndex) {
             aiBone* bone = mesh->mBones[boneIndex];
@@ -200,46 +228,70 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
                 ++weightIndex) {
 
                 jointWeightData.vertexWeights.push_back({ bone->mWeights[weightIndex].mWeight,
-                    bone->mWeights[weightIndex].mVertexId });
+                    globalVertexOffset + bone->mWeights[weightIndex].mVertexId });
             }
         }
 
+        globalVertexOffset += mesh->mNumVertices;
         modelData.primitives.push_back(primitive);
     }
-    bool hasTexture = false;
+    modelData.materials.resize(scene->mNumMaterials);
+    if (modelData.materials.empty()) {
+        modelData.materials.push_back(MaterialData {});
+    }
 
     for (uint32_t materialIndex = 0; materialIndex < scene->mNumMaterials; ++materialIndex) {
         aiMaterial* material = scene->mMaterials[materialIndex];
+        MaterialData& materialData = modelData.materials[materialIndex];
+        materialData.textureFilePath = "resources/Textures/BaseColor_Cube.png";
 
-        if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+        aiTextureType textureType = aiTextureType_BASE_COLOR;
+        if (material->GetTextureCount(textureType) == 0) {
+            textureType = aiTextureType_DIFFUSE;
+        }
+
+        if (material->GetTextureCount(textureType) > 0) {
             aiString textureFilePath;
-            material->GetTexture(aiTextureType_DIFFUSE, 0, &textureFilePath);
+            material->GetTexture(textureType, 0, &textureFilePath);
 
             std::string tex = textureFilePath.C_Str();
+            const aiTexture* embeddedTexture = scene->GetEmbeddedTexture(textureFilePath.C_Str());
+            if (embeddedTexture != nullptr) {
+                std::string embeddedTextureKey = "embedded://";
+                embeddedTextureKey += modelFilePath.lexically_normal().generic_string();
+                embeddedTextureKey += "/";
+                embeddedTextureKey += tex;
 
-            // "*0" みたいな埋め込み表記�EファイルじゃなぁE
-            if (!tex.empty() && tex[0] != '*') {
+                if (embeddedTexture->mHeight == 0) {
+                    TextureManager::GetInstance()->LoadTextureFromMemory(
+                        embeddedTextureKey,
+                        reinterpret_cast<const uint8_t*>(embeddedTexture->pcData),
+                        embeddedTexture->mWidth);
+                } else {
+                    TextureManager::GetInstance()->LoadTextureFromBGRA(
+                        embeddedTextureKey,
+                        reinterpret_cast<const uint8_t*>(embeddedTexture->pcData),
+                        embeddedTexture->mWidth,
+                        embeddedTexture->mHeight);
+                }
+                materialData.textureFilePath = embeddedTextureKey;
+            }
+
+
+            else if (!tex.empty()) {
 
                 std::filesystem::path fullPath = modelDirectory / tex; // Model Path
 
                 if (std::filesystem::exists(fullPath)) {
-                    modelData.material.textureFilePath = fullPath.lexically_normal().string();
-                    hasTexture = true;
-                    break;
+                    materialData.textureFilePath = fullPath.lexically_normal().string();
                 }
             }
         }
     }
 
-    // ここで刁E��すめE
-    if (hasTexture) {
-        TextureManager::GetInstance()->LoadTexture(modelData.material.textureFilePath);
-    } else {
-        TextureManager::GetInstance()->LoadTexture("resources/Textures/BaseColor_Cube.png");
-        modelData.material.textureFilePath = "resources/Textures/BaseColor_Cube.png";
-    }
+
     // -------------------------
-    // Node�E�既存�E処琁E��E
+
     // -------------------------
     modelData.rootNode = ReadNode(scene->mRootNode);
 
@@ -249,8 +301,9 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
 void Object3d::SetModel(const std::string& filePath)
 {
-    // モチE��を検索してセチE��する
+
     model_ = ModelManager::GetInstance()->FindModel(filePath);
+    modelFilePath_ = filePath;
 }
 Node Object3d::ReadNode(aiNode* node)
 {
@@ -261,10 +314,10 @@ Node Object3d::ReadNode(aiNode* node)
 
     node->mTransformation.Decompose(scale, rotate, translate);
 
-    // scale�E�E
+
     result.transform.scale = { scale.x, scale.y, scale.z };
 
-    // 回転�E�右扁EↁE左扁E
+
     result.transform.rotate = {
         rotate.x,
         -rotate.y,
@@ -279,7 +332,7 @@ Node Object3d::ReadNode(aiNode* node)
         translate.z
     };
 
-    // SRTから localMatrix を�E構篁E
+
     result.localMatrix = MatrixMath::MakeAffineMatrix(
         result.transform.scale,
         result.transform.rotate,

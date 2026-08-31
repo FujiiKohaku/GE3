@@ -1,6 +1,8 @@
 #pragma once
 #include "Engine/math/MathStruct.h"
 
+#include <cstdint>
+
 struct Particle {
     EulerTransform transform;
     Vector3 velocity;
@@ -23,6 +25,8 @@ struct EmitterSphere {
     float frequency;
     float frequencyTime;
     uint32_t emit;
+    uint32_t maxParticles;
+    uint32_t padding2[3];
 };
 struct PerFrame {
     float time;

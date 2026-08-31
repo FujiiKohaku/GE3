@@ -1,0 +1,45 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Box",
+    "Count": 160,
+    "Radius": 22.0,
+    "Frequency": 0.001
+  },
+  "Particle": {
+    "MaxParticles": 1024,
+    "LifeTime": 20.0,
+    "StartScale": 0.10,
+    "EndScale": 0.07,
+    "StartRotation": 0.0,
+    "RotationSpeed": 1.5,
+    "Velocity": [-0.15, -1.8, 0.08],
+    "StartColor": [0.95, 0.98, 1.0, 0.9],
+    "EndColor": [0.9, 0.95, 1.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+    "EnableDrag": true,
+    "Drag": 0.98,
+    "EnableNoise": true,
+    "NoiseStrength": 1.5,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "../../Textures/snowflake.png",
+    "MeshType": "Board",
+    "BlendMode": "Alpha",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": true,
+    "Duration": -1.0
+  }
+}

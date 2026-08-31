@@ -52,5 +52,18 @@
 
     "Loop": false,
     "Duration": 0.95
+  },
+
+  "Light": {
+    "Enabled": true,
+    "Type": "Point",
+    "Color": [1.0, 0.45, 0.05, 1.0],
+    "Intensity": 12.0,
+    "Radius": 15.0,
+    "Decay": 2.0,
+    "Offset": [0.0, 0.0, 0.0],
+    "FollowEmitter": false,
+    "FadeOut": true,
+    "FadeDuration": 0.4
   }
 }

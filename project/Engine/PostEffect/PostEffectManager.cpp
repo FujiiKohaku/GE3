@@ -7,6 +7,7 @@
 #include "Engine/PostEffect/Fog/FogRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Winapp/WinApp.h"
+#include "Engine/Time/TimeManager.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
@@ -44,6 +45,9 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 void PostEffectManager::Update(Camera* camera)
 {
     if (camera != nullptr) {
+        auto& parameter = copyImageRenderer_->GetPostEffectParameter();
+        parameter.outlineNearClip = camera->GetNearClip();
+        parameter.outlineFarClip = camera->GetFarClip();
         fogManager_->SetCameraInfo(
             camera->GetNearClip(),
             camera->GetFarClip(),
@@ -62,6 +66,41 @@ void PostEffectManager::DrawImGui()
 
 #ifdef USE_IMGUI
     ImGui::Begin("Post Effects");
+
+    CopyImageRenderer::PostEffectParameter& parameter = copyImageRenderer_->GetPostEffectParameter();
+    const char* animationButtonLabel = "Animated Effects: OFF";
+    if (isAnimationEnabled_) {
+        animationButtonLabel = "Animated Effects: ON";
+    }
+    if (ImGui::Button(animationButtonLabel)) {
+        isAnimationEnabled_ = !isAnimationEnabled_;
+        if (isAnimationEnabled_) { parameter.animationEnabled = 1; } else { parameter.animationEnabled = 0; }
+    }
+    ImGui::SliderFloat("Pixel Size", &parameter.pixelSize, 1.0f, 64.0f, "%.0f");
+    ImGui::SliderFloat("Brightness", &parameter.colorBrightness, -1.0f, 1.0f);
+    ImGui::SliderFloat("Contrast", &parameter.colorContrast, 0.0f, 3.0f);
+    ImGui::SliderFloat("Saturation", &parameter.colorSaturation, 0.0f, 3.0f);
+    ImGui::SliderFloat("Focus Depth", &parameter.focusDepth, 0.0f, 1.0f, "%.4f");
+    ImGui::SliderFloat("Focus Range", &parameter.focusRange, 0.0001f, 0.2f, "%.4f");
+    ImGui::SliderFloat("DoF Radius", &parameter.depthOfFieldRadius, 0.0f, 32.0f);
+    ImGui::SliderFloat2("Motion Direction", &parameter.motionBlurDirection.x, -1.0f, 1.0f);
+    ImGui::SliderFloat("Motion Strength", &parameter.motionBlurStrength, 0.0f, 0.1f);
+    ImGui::SliderInt("Motion Samples", &parameter.motionBlurSampleCount, 1, 32);
+    ImGui::SliderFloat("Chromatic Aberration", &parameter.chromaticAberrationStrength, 0.0f, 0.05f);
+    ImGui::SliderFloat("Lens Distortion", &parameter.lensDistortionStrength, -1.0f, 1.0f);
+    ImGui::SliderFloat("Film Grain", &parameter.filmGrainStrength, 0.0f, 0.5f);
+    ImGui::SliderFloat("Lens Dirt", &parameter.lensDirtStrength, 0.0f, 3.0f);
+    float cameraShakeStrength = SceneManager::GetInstance()->GetCameraShakeStrength();
+    if (ImGui::SliderFloat("Camera Shake", &cameraShakeStrength, 0.0f, 0.05f)) {
+        SceneManager::GetInstance()->SetCameraShakeStrength(cameraShakeStrength);
+    }
+    ImGui::SliderFloat("Bokeh Radius", &parameter.bokehRadius, 0.0f, 32.0f);
+    ImGui::SliderInt("Bokeh Sides", &parameter.bokehSides, 3, 12);
+    ImGui::SliderFloat("Fisheye", &parameter.fisheyeStrength, 0.01f, 3.0f);
+    ImGui::SliderFloat("Light Threshold", &parameter.lightThreshold, 0.0f, 2.0f);
+    ImGui::SliderFloat("Light Strength", &parameter.lightStrength, 0.0f, 5.0f);
+    ImGui::SliderFloat("Light Radius", &parameter.lightRadius, 0.01f, 1.0f);
+    ImGui::Separator();
 
     const std::vector<PostEffectInfo>& postEffects = SceneManager::GetInstance()->GetPostEffects();
     if (postEffects.empty()) {
@@ -104,7 +143,9 @@ void PostEffectManager::PrepareDepthForParticleDraw()
 void PostEffectManager::SetBoostRadialBlurParameters(bool isBoosting)
 {
     CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-    postEffectParameter.time += 1.0f / 60.0f;
+    if (isAnimationEnabled_) {
+        postEffectParameter.time += TimeManager::GetInstance()->GetDeltaTime();
+    }
     if (postEffectParameter.time > 1000.0f) {
         postEffectParameter.time = 0.0f;
     }
@@ -125,6 +166,45 @@ void PostEffectManager::SetBoostRadialBlurParameters(bool isBoosting)
     }
 }
 
+void PostEffectManager::UpdatePostEffectParameters(
+    SceneManager* sceneManager)
+{
+    if (sceneManager == nullptr) {
+        return;
+    }
+
+    CopyImageRenderer::PostEffectParameter& postEffectParameter =
+        copyImageRenderer_->GetPostEffectParameter();
+    postEffectParameter.radialBlurCenter =
+        sceneManager->GetPostEffectCenter();
+    postEffectParameter.cameraShakeStrength =
+        sceneManager->GetCameraShakeStrength();
+    postEffectParameter.vignetteStrength =
+        sceneManager->GetVignetteStrength();
+    postEffectParameter.sonicBoomProgress =
+        sceneManager->GetSonicBoomProgress();
+    postEffectParameter.sonicBoomCenter =
+        sceneManager->GetSonicBoomCenter();
+    postEffectParameter.blackHoleCenter =
+        sceneManager->GetBlackHoleCenter();
+    postEffectParameter.blackHoleRadius =
+        sceneManager->GetBlackHoleRadius();
+    postEffectParameter.blackHoleStrength =
+        sceneManager->GetBlackHoleStrength();
+    postEffectParameter.waterEffectIntensity =
+        sceneManager->GetWaterEffectIntensity();
+    postEffectParameter.paintProgress =
+        sceneManager->GetPaintProgress();
+    postEffectParameter.paintIntensity =
+        sceneManager->GetPaintIntensity();
+    postEffectParameter.paintSeed =
+        sceneManager->GetPaintSeed();
+    postEffectParameter.paintPatternType =
+        sceneManager->GetPaintPatternType();
+    postEffectParameter.paintColor =
+        sceneManager->GetPaintColor();
+}
+
 void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
 {
     if (sceneManager == nullptr) {
@@ -136,8 +216,7 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
         return;
     }
 
-    CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-    postEffectParameter.radialBlurCenter = sceneManager->GetPostEffectCenter();
+    UpdatePostEffectParameters(sceneManager);
 
     const std::vector<PostEffectInfo>& postEffects = sceneManager->GetPostEffects();
     int enabledCount = 0;
@@ -193,6 +272,182 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
             inputHandle = renderTarget.GetSrvHandleGPU();
             pingPongIndex = GetNextPingPongIndex(pingPongIndex);
         }
+    }
+}
+
+void PostEffectManager::PrepareSceneForParticleDraw(
+    SceneManager* sceneManager,
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
+{
+    UpdatePostEffectParameters(sceneManager);
+
+    particleCompositionTargetIndex_ = 0;
+
+    if (sceneManager == nullptr) {
+        RenderTarget& renderTarget =
+            pingPongRenderTargets_[particleCompositionTargetIndex_];
+        renderTarget.BeginRender();
+        ApplyPostEffectToCurrentTarget(
+            PostEffectType::Copy,
+            sceneColorHandle);
+        renderTarget.EndRender();
+        return;
+    }
+
+    const std::vector<PostEffectInfo>& postEffects =
+        sceneManager->GetPostEffects();
+
+    D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
+        sceneColorHandle;
+    uint32_t targetIndex = 0;
+    bool appliedSceneEffect = false;
+
+    for (const PostEffectInfo& postEffect : postEffects) {
+        if (!postEffect.enabled) {
+            continue;
+        }
+
+        if (postEffect.stage !=
+            PostEffectStage::BeforeParticle) {
+            continue;
+        }
+
+        RenderTarget& renderTarget =
+            pingPongRenderTargets_[targetIndex];
+
+        if (postEffect.type == PostEffectType::Bloom &&
+            bloomRenderer_->IsEnabled()) {
+            bloomRenderer_->Generate(inputHandle);
+            renderTarget.BeginRender();
+            bloomRenderer_->Composite(inputHandle);
+            renderTarget.EndRender();
+        } else {
+            renderTarget.BeginRender();
+            ApplyPostEffectToCurrentTarget(
+                postEffect.type,
+                inputHandle);
+            renderTarget.EndRender();
+        }
+
+        inputHandle = renderTarget.GetSrvHandleGPU();
+        particleCompositionTargetIndex_ = targetIndex;
+        targetIndex = GetNextPingPongIndex(targetIndex);
+        appliedSceneEffect = true;
+    }
+
+    if (!appliedSceneEffect) {
+        particleCompositionTargetIndex_ = 0;
+        RenderTarget& renderTarget =
+            pingPongRenderTargets_[particleCompositionTargetIndex_];
+        renderTarget.BeginRender();
+        ApplyPostEffectToCurrentTarget(
+            PostEffectType::Copy,
+            sceneColorHandle);
+        renderTarget.EndRender();
+    }
+}
+
+void PostEffectManager::BeginParticleDraw()
+{
+    pingPongRenderTargets_[particleCompositionTargetIndex_]
+        .BeginRenderWithDepth(GetDepthDSVHandle());
+}
+
+void PostEffectManager::EndParticleDraw()
+{
+    pingPongRenderTargets_[particleCompositionTargetIndex_]
+        .EndRender();
+}
+
+void PostEffectManager::ApplyAfterParticleDraw(
+    SceneManager* sceneManager)
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
+        pingPongRenderTargets_[particleCompositionTargetIndex_]
+            .GetSrvHandleGPU();
+
+    if (sceneManager == nullptr) {
+        SetBackBufferRenderTarget();
+        ApplyPostEffectToCurrentTarget(
+            PostEffectType::Copy,
+            inputHandle);
+        return;
+    }
+
+    const std::vector<PostEffectInfo>& postEffects =
+        sceneManager->GetPostEffects();
+
+    int enabledCount = 0;
+    for (const PostEffectInfo& postEffect : postEffects) {
+        if (!postEffect.enabled) {
+            continue;
+        }
+
+        if (postEffect.stage !=
+            PostEffectStage::AfterParticle) {
+            continue;
+        }
+
+        enabledCount += 1;
+    }
+
+    if (enabledCount == 0) {
+        SetBackBufferRenderTarget();
+        ApplyPostEffectToCurrentTarget(
+            PostEffectType::Copy,
+            inputHandle);
+        return;
+    }
+
+    uint32_t targetIndex =
+        GetNextPingPongIndex(
+            particleCompositionTargetIndex_);
+    int appliedCount = 0;
+
+    for (const PostEffectInfo& postEffect : postEffects) {
+        if (!postEffect.enabled) {
+            continue;
+        }
+
+        if (postEffect.stage !=
+            PostEffectStage::AfterParticle) {
+            continue;
+        }
+
+        appliedCount += 1;
+        if (appliedCount == enabledCount) {
+            if (postEffect.type == PostEffectType::Bloom &&
+                bloomRenderer_->IsEnabled()) {
+                bloomRenderer_->Generate(inputHandle);
+                SetBackBufferRenderTarget();
+                bloomRenderer_->Composite(inputHandle);
+            } else {
+                SetBackBufferRenderTarget();
+                ApplyPostEffectToCurrentTarget(
+                    postEffect.type,
+                    inputHandle);
+            }
+            continue;
+        }
+
+        RenderTarget& renderTarget =
+            pingPongRenderTargets_[targetIndex];
+        if (postEffect.type == PostEffectType::Bloom &&
+            bloomRenderer_->IsEnabled()) {
+            bloomRenderer_->Generate(inputHandle);
+            renderTarget.BeginRender();
+            bloomRenderer_->Composite(inputHandle);
+            renderTarget.EndRender();
+        } else {
+            renderTarget.BeginRender();
+            ApplyPostEffectToCurrentTarget(
+                postEffect.type,
+                inputHandle);
+            renderTarget.EndRender();
+        }
+
+        inputHandle = renderTarget.GetSrvHandleGPU();
+        targetIndex = GetNextPingPongIndex(targetIndex);
     }
 }
 
@@ -275,6 +530,22 @@ void PostEffectManager::RenderTarget::BeginRender()
     commandList->RSSetScissorRects(1, &scissorRect_);
     commandList->OMSetRenderTargets(1, &rtvHandle_, false, nullptr);
     commandList->ClearRenderTargetView(rtvHandle_, clearColor_, 0, nullptr);
+}
+
+void PostEffectManager::RenderTarget::BeginRenderWithDepth(
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
+{
+    Transition(D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+    ID3D12GraphicsCommandList* commandList =
+        dxCommon_->GetCommandList();
+    commandList->RSSetViewports(1, &viewport_);
+    commandList->RSSetScissorRects(1, &scissorRect_);
+    commandList->OMSetRenderTargets(
+        1,
+        &rtvHandle_,
+        false,
+        &dsvHandle);
 }
 
 void PostEffectManager::RenderTarget::EndRender()

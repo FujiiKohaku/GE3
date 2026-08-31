@@ -11,6 +11,11 @@ public:
     void DrawDebug();
 
     void AddPoint(const Vector3& point);
+    void SetLooping(bool looping);
+    void StartAutoExtension(float minimumRemainingDistance);
+    void StopAutoExtension();
+    bool UpdateAutoExtension(float currentDistance);
+    bool IsAutoExtensionActive() const;
     Vector3 GetPosition(float progress) const;
     Vector3 GetPositionByDistance(float distance) const;
     float GetTotalLength() const;
@@ -47,4 +52,7 @@ private:
     std::vector<Vector3> controlPoints_;
     std::vector<float> cumulativeDistances_;
     float totalLength_ = 0.0f;
+    float autoExtensionMinimumRemainingDistance_ = 0.0f;
+    bool isAutoExtensionActive_ = false;
+    bool isLooping_ = false;
 };

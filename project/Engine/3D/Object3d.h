@@ -1,7 +1,6 @@
 #pragma once
 #include "Engine/Camera/Camera.h"
 #include "Engine/TextureManager/TextureManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/math/MatrixMath.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -10,11 +9,14 @@
 #include <string>
 #include <vector>
 #include <wrl.h>
+#include "Engine/LevelEditor/LevelData.h"
+#include "Engine/CollisionManager/BoxCollider.h"
 
 #include "../Animation/PlayAnimation.h"
 #include "Engine/math/object3Dstruct.h"
 class Object3dManager;
 class Model;
+class BoxCollider;
 class Object3d {
 public:
     // ===============================
@@ -30,9 +32,11 @@ public:
     // setter
     void SetModel(Model* model) { model_ = model; }
     // === setter ===
-    void SetScale(const Vector3& scale) { transform.scale = scale; }
-    void SetRotate(const Vector3& rotate) { transform.rotate = rotate; }
-    void SetTranslate(const Vector3& translate) { transform.translate = translate; }
+    void SetScale(const Vector3& scale) { transform.scale = scale; useCustomWorldMatrix_ = false; }
+    void SetRotate(const Vector3& rotate) { transform.rotate = rotate; useQuaternionRotation_ = false; useCustomWorldMatrix_ = false; }
+    void SetRotateQuaternion(const Quaternion& rotate) { quaternionRotation_ = rotate; useQuaternionRotation_ = true; useCustomWorldMatrix_ = false; }
+    void SetTranslate(const Vector3& translate) { transform.translate = translate; useCustomWorldMatrix_ = false; }
+    void SetCustomWorldMatrix(const Matrix4x4& matrix) { customWorldMatrix_ = matrix; useCustomWorldMatrix_ = true; }
     void SetModel(const std::string& filePath);
     void SetCamera(Camera* camera) { camera_ = camera; }
 
@@ -63,16 +67,6 @@ public:
         }
     }
 
-    void setEnableEnvironmentMap(bool enable)
-    {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableEnvironmentMap = 1;
-            } else {
-                materialData_->enableEnvironmentMap = 0;
-            }
-        }
-    }
     void SetAnimation(PlayAnimation* anim);
     const Node& GetRootNode() const;
     const Matrix4x4& GetWorldMatrix() const
@@ -86,12 +80,16 @@ public:
     }
     void SetEnableEnvironmentMap(bool enable)
     {
-        materialData_->enableEnvironmentMap = enable;
+        if (materialData_) {
+            materialData_->enableEnvironmentMap = enable;
+        }
     }
 
     void SetEnvironmentMapStrength(float strength)
     {
-        materialData_->environmentCoefficient = strength;
+        if (materialData_) {
+            materialData_->environmentCoefficient = strength;
+        }
     }
     void SetName(const std::string& name)
     {
@@ -102,6 +100,32 @@ public:
     {
         return name_;
     }
+
+    const std::string& GetModelFilePath() const
+    {
+        return modelFilePath_;
+    }
+
+    void SetGimmick(const LevelData::ObjectData::GimmickData& gimmick)
+    {
+        gimmick_ = gimmick;
+        baseTranslate_ = transform.translate;
+        gimmickTime_ = 0.0f;
+    }
+    const LevelData::ObjectData::GimmickData& GetGimmick() const { return gimmick_; }
+
+    void SetCollisionDamage(int damage) { collisionDamage_ = damage > 0 ? damage : 1; }
+    int GetCollisionDamage() const { return collisionDamage_; }
+
+    void SetCollider(BoxCollider* collider)
+    {
+        collider_ = collider;
+        if (collider_ != nullptr) {
+            colliderOffset_ = collider_->GetCenter() - transform.translate;
+            collider_->SetRotation(transform.rotate);
+        }
+    }
+    BoxCollider* GetCollider() const { return collider_; }
 
 private:
     // ===============================
@@ -122,8 +146,14 @@ private:
     //  DirectionalLight* directionalLightData = nullptr;
     Material* materialData_ = nullptr;
     // Transform
-    EulerTransform transform;
-    EulerTransform cameraTransform;
+    EulerTransform transform {};
+    EulerTransform cameraTransform {};
+
+    Quaternion quaternionRotation_ = { 0.0f, 0.0f, 0.0f, 1.0f };
+    bool useQuaternionRotation_ = false;
+
+    Matrix4x4 customWorldMatrix_ = {};
+    bool useCustomWorldMatrix_ = false;
 
     // カメラ
     Camera* camera_ = nullptr;
@@ -132,8 +162,16 @@ private:
     PlayAnimation* animation_ = nullptr;
 
     // World
-    Matrix4x4 worldMatrix_;
+    Matrix4x4 worldMatrix_ {};
     //  D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
     std::string environmentTextureFilePath_;
     std::string name_ = "Object[nameNull]";
+    std::string modelFilePath_;
+
+    LevelData::ObjectData::GimmickData gimmick_ {};
+    Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };
+    float gimmickTime_ = 0.0f;
+    int collisionDamage_ = 1;
+    BoxCollider* collider_ = nullptr;
+    Vector3 colliderOffset_ = { 0.0f, 0.0f, 0.0f };
 };

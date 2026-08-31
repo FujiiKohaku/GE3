@@ -19,6 +19,7 @@ public:
         BlendMode blendMode = kBlendModeAdd;
         bool depthTest = true;
         bool depthWrite = false;
+        bool usesVertexInput = true;
         D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
     };
 
@@ -35,11 +36,10 @@ public:
 private:
     void CreateRootSignature();
     void CreateDefaultGraphicsPipelines();
-    Microsoft::WRL::ComPtr<IDxcBlob> CompileShaderWithLog(
+    Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShaderWithLog(
         const std::string& effectName,
         const std::string& shaderStage,
-        const std::string& shaderPath,
-        const wchar_t* profile);
+        const std::string& shaderPath);
     std::string MakePipelineCacheKey(const GraphicsPipelineDesc& desc) const;
 
 

@@ -9,6 +9,13 @@
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
 class Camera;
 class Model;
+class EnemyBulletManager;
+
+struct EnemyCollisionPart {
+    Vector3 position = { 0.0f, 0.0f, 0.0f };
+    float radius = 3.0f;
+    int32_t partIndex = 0;
+};
 
 class BaseEnemy {
 public:
@@ -23,17 +30,25 @@ public:
 
     bool IsDead() const;
 
-    Vector3 GetPosition() const;
-    std::vector<std::unique_ptr<EnemyBullet>>& GetBullets()
+    virtual Vector3 GetPosition() const;
+    static void SetBulletManager(EnemyBulletManager* bulletManager);
+    virtual void SetPosition(const Vector3& position);
+    virtual void SetRotate(const Vector3& rotate);
+    void SetPatrolWaypoints(const std::vector<Vector3>& waypoints)
     {
-        return enemyBullets_;
+        waypoints_ = waypoints;
+        currentWaypointIndex_ = 0;
     }
-    void SetPosition(const Vector3& position);
     void SetEnableLighting(bool enable);
     void SetDead(bool isDead);
     void ApplyDamage(float damage);
+    virtual void ApplyDamageToPart(int32_t partIndex, float damage);
+    virtual void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const;
+    virtual bool IsCollisionPartDamageable(int32_t partIndex) const;
+    virtual void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position);
 
 protected:
+    void AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet);
     virtual void UpdateAnimation();
     virtual void OnDamage(float damage);
     virtual void OnDeath();
@@ -48,5 +63,8 @@ protected:
 
     float moveSpeed_ = 0.1f;
 
-    std::vector<std::unique_ptr<EnemyBullet>> enemyBullets_;
+    static EnemyBulletManager* bulletManager_;
+
+    std::vector<Vector3> waypoints_;
+    size_t currentWaypointIndex_ = 0;
 };

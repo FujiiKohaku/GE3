@@ -1,4 +1,4 @@
-﻿#include "CopyImageRenderer.h"
+#include "CopyImageRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
@@ -9,19 +9,44 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     CreateRootSignature();
     CreatePostEffectParameterResource();
 
-    maskTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png"); // 繝槭せ繧ｯ繝・け繧ｹ繝√Ε縺ｨ縺励※縲・resources/noise.png"繧剃ｽｿ逕ｨ縺励※縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶る←螳懷､画峩縺励※縺上□縺輔＞縲・
+#if 0
+    maskTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png");
 
-    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl"); // Copy逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲∝腰邏斐↓繝・け繧ｹ繝√Ε繧呈緒逕ｻ縺吶ｋ縺縺代・繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::Copy] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
 
-    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GrayScale.PS.hlsl"); // GrayScale逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε繧偵げ繝ｬ繝ｼ繧ｹ繧ｱ繝ｼ繝ｫ縺ｧ謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::GrayScale] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GrayScale.PS.hlsl");
 
-    pipelineStates_[PostEffectType::Vignette] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Vignette.PS.hlsl"); // Vignette逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ繝薙ロ繝・ヨ蜉ｹ譫懊ｒ驕ｩ逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::Vignette] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Vignette.PS.hlsl");
 
-    pipelineStates_[PostEffectType::smoothing] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BoxFilter.PS.hlsl"); // smoothing逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ蜊倡ｴ斐↑繝懊ャ繧ｯ繧ｹ繝輔ぅ繝ｫ繧ｿ繧帝←逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+#if 0
+    pipelineStates_[PostEffectType::DepthOfField] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthOfField.PS.hlsl");
+    pipelineStates_[PostEffectType::MotionBlur] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/MotionBlur.PS.hlsl");
+    pipelineStates_[PostEffectType::ChromaticAberration] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/ChromaticAberration.PS.hlsl");
+    pipelineStates_[PostEffectType::LensDistortion] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LensDistortion.PS.hlsl");
+    pipelineStates_[PostEffectType::FilmGrain] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/FilmGrain.PS.hlsl");
+    pipelineStates_[PostEffectType::LensDirt] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LensDirt.PS.hlsl");
+    pipelineStates_[PostEffectType::CameraShake] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/CameraShake.PS.hlsl");
+    pipelineStates_[PostEffectType::BokehShape] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BokehShape.PS.hlsl");
+    pipelineStates_[PostEffectType::Fisheye] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fisheye.PS.hlsl");
 
-    pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl"); // GaussianFilter逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｫ繧ｬ繧ｦ繧ｷ繧｢繝ｳ繝輔ぅ繝ｫ繧ｿ繧帝←逕ｨ縺励※謠冗判縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
-    pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl"); // LuminanceBasedOutline逕ｨ縺ｮ繧ｷ繧ｧ繝ｼ繝繝ｼ縺ｯ縲√ユ繧ｯ繧ｹ繝√Ε縺ｮ霈晏ｺｦ縺ｫ蝓ｺ縺･縺・※霈ｪ驛ｭ繧呈緒逕ｻ縺吶ｋ繧ゅ・繧堤畑諢上＠縺ｦ縺・ｋ縺ｨ莉ｮ螳壹＠縺ｦ縺・∪縺吶・
+    pipelineStates_[PostEffectType::Pixelate] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Pixelate.PS.hlsl");
+
+    pipelineStates_[PostEffectType::ColorAdjust] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/ColorAdjust.PS.hlsl");
+
+    pipelineStates_[PostEffectType::smoothing] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BoxFilter.PS.hlsl");
+
+    pipelineStates_[PostEffectType::GaussianFilter] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl");
+    pipelineStates_[PostEffectType::LuminanceBasedOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl");
     pipelineStates_[PostEffectType::Bloom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
+    pipelineStates_[PostEffectType::LensFlare] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LensFlare.PS.hlsl");
+    pipelineStates_[PostEffectType::Glare] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Glare.PS.hlsl");
+    pipelineStates_[PostEffectType::LightShafts] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LightShafts.PS.hlsl");
+    pipelineStates_[PostEffectType::VolumetricLight] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/VolumetricLight.PS.hlsl");
+    pipelineStates_[PostEffectType::AnamorphicFlare] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/AnamorphicFlare.PS.hlsl");
+    pipelineStates_[PostEffectType::Halo] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Halo.PS.hlsl");
+    pipelineStates_[PostEffectType::LightStreak] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/LightStreak.PS.hlsl");
+    pipelineStates_[PostEffectType::NeonGlow] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/NeonGlow.PS.hlsl");
+    pipelineStates_[PostEffectType::GhostImage] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GhostImage.PS.hlsl");
 
     pipelineStates_[PostEffectType::DepthOutline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl");
     pipelineStates_[PostEffectType::Outline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl");
@@ -32,7 +57,23 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::Dissolve] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Dissolve.PS.hlsl");
 
     pipelineStates_[PostEffectType::Random] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Random.PS.hlsl");
+    pipelineStates_[PostEffectType::Paint] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Paint.PS.hlsl");
+    pipelineStates_[PostEffectType::GlassCrack] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/GlassCrack.PS.hlsl");
+    pipelineStates_[PostEffectType::Shockwave] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Shockwave.PS.hlsl");
+    pipelineStates_[PostEffectType::HeatHaze] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl");
+    pipelineStates_[PostEffectType::SonicBoom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl");
+    pipelineStates_[PostEffectType::RainDrops] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/RainDrops.PS.hlsl");
+    pipelineStates_[PostEffectType::CyberScanline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/CyberScanline.PS.hlsl");
+    pipelineStates_[PostEffectType::HexShield] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HexShield.PS.hlsl");
+    pipelineStates_[PostEffectType::ChromaticAberration] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/ChromaticAberration.PS.hlsl");
+#endif
+#endif
 
+    TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
+    maskTextureHandle_ =
+        TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png");
+    pipelineStates_[PostEffectType::Copy] =
+        CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
 }
 
 void CopyImageRenderer::CreateRootSignature()
@@ -107,9 +148,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->CompileShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl", L"vs_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
 
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->CompileShader(pixelShaderPath, L"ps_6_0");
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = dxCommon_->LoadCompiledShader(pixelShaderPath);
 
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
@@ -157,6 +198,116 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
     return graphicsPipelineState;
 }
 
+Microsoft::WRL::ComPtr<ID3D12PipelineState>
+CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
+{
+    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator iterator =
+        pipelineStates_.find(type);
+    if (iterator != pipelineStates_.end()) {
+        return iterator->second;
+    }
+
+    const wchar_t* pixelShaderPath = GetPixelShaderPath(type);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState =
+        CreateGraphicsPipeline(pixelShaderPath);
+    pipelineStates_[type] = pipelineState;
+    return pipelineState;
+}
+
+const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
+{
+    switch (type) {
+    case PostEffectType::Copy:
+        [[fallthrough]];
+    case PostEffectType::Bloom:
+        [[fallthrough]];
+    case PostEffectType::Fog:
+        return L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl";
+    case PostEffectType::GrayScale:
+        return L"resources/Shaders/PostEffect/GrayScale.PS.hlsl";
+    case PostEffectType::Vignette:
+        return L"resources/Shaders/PostEffect/Vignette.PS.hlsl";
+    case PostEffectType::DepthOfField:
+        return L"resources/Shaders/PostEffect/DepthOfField.PS.hlsl";
+    case PostEffectType::MotionBlur:
+        return L"resources/Shaders/PostEffect/MotionBlur.PS.hlsl";
+    case PostEffectType::ChromaticAberration:
+        return L"resources/Shaders/PostEffect/ChromaticAberration.PS.hlsl";
+    case PostEffectType::LensDistortion:
+        return L"resources/Shaders/PostEffect/LensDistortion.PS.hlsl";
+    case PostEffectType::FilmGrain:
+        return L"resources/Shaders/PostEffect/FilmGrain.PS.hlsl";
+    case PostEffectType::LensDirt:
+        return L"resources/Shaders/PostEffect/LensDirt.PS.hlsl";
+    case PostEffectType::CameraShake:
+        return L"resources/Shaders/PostEffect/CameraShake.PS.hlsl";
+    case PostEffectType::BokehShape:
+        return L"resources/Shaders/PostEffect/BokehShape.PS.hlsl";
+    case PostEffectType::Fisheye:
+        return L"resources/Shaders/PostEffect/Fisheye.PS.hlsl";
+    case PostEffectType::Pixelate:
+        return L"resources/Shaders/PostEffect/Pixelate.PS.hlsl";
+    case PostEffectType::ColorAdjust:
+        return L"resources/Shaders/PostEffect/ColorAdjust.PS.hlsl";
+    case PostEffectType::smoothing:
+        return L"resources/Shaders/PostEffect/BoxFilter.PS.hlsl";
+    case PostEffectType::GaussianFilter:
+        return L"resources/Shaders/PostEffect/GaussianFilter.PS.hlsl";
+    case PostEffectType::LuminanceBasedOutline:
+        return L"resources/Shaders/PostEffect/LuminanceBasedOutline.PS.hlsl";
+    case PostEffectType::DepthOutline:
+        [[fallthrough]];
+    case PostEffectType::Outline:
+        return L"resources/Shaders/PostEffect/DepthBasedOutline.PS.hlsl";
+    case PostEffectType::RadialBlur:
+        return L"resources/Shaders/PostEffect/RadialBlur.PS.hlsl";
+    case PostEffectType::Dissolve:
+        return L"resources/Shaders/PostEffect/Dissolve.PS.hlsl";
+    case PostEffectType::Random:
+        return L"resources/Shaders/PostEffect/Random.PS.hlsl";
+    case PostEffectType::LensFlare:
+        return L"resources/Shaders/PostEffect/LensFlare.PS.hlsl";
+    case PostEffectType::Glare:
+        return L"resources/Shaders/PostEffect/Glare.PS.hlsl";
+    case PostEffectType::LightShafts:
+        return L"resources/Shaders/PostEffect/LightShafts.PS.hlsl";
+    case PostEffectType::VolumetricLight:
+        return L"resources/Shaders/PostEffect/VolumetricLight.PS.hlsl";
+    case PostEffectType::AnamorphicFlare:
+        return L"resources/Shaders/PostEffect/AnamorphicFlare.PS.hlsl";
+    case PostEffectType::Halo:
+        return L"resources/Shaders/PostEffect/Halo.PS.hlsl";
+    case PostEffectType::LightStreak:
+        return L"resources/Shaders/PostEffect/LightStreak.PS.hlsl";
+    case PostEffectType::NeonGlow:
+        return L"resources/Shaders/PostEffect/NeonGlow.PS.hlsl";
+    case PostEffectType::GhostImage:
+        return L"resources/Shaders/PostEffect/GhostImage.PS.hlsl";
+    case PostEffectType::FocusLine:
+        return L"resources/Shaders/PostEffect/FocusLine.PS.hlsl";
+    case PostEffectType::Paint:
+        return L"resources/Shaders/PostEffect/Paint.PS.hlsl";
+    case PostEffectType::GlassCrack:
+        return L"resources/Shaders/PostEffect/GlassCrack.PS.hlsl";
+    case PostEffectType::Shockwave:
+        return L"resources/Shaders/PostEffect/Shockwave.PS.hlsl";
+    case PostEffectType::HeatHaze:
+        return L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl";
+    case PostEffectType::SonicBoom:
+        return L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl";
+    case PostEffectType::RainDrops:
+        return L"resources/Shaders/PostEffect/RainDrops.PS.hlsl";
+    case PostEffectType::CyberScanline:
+        return L"resources/Shaders/PostEffect/CyberScanline.PS.hlsl";
+    case PostEffectType::HexShield:
+        return L"resources/Shaders/PostEffect/HexShield.PS.hlsl";
+    case PostEffectType::BlackHoleDistortion:
+        return L"resources/Shaders/PostEffect/BlackHoleDistortion.PS.hlsl";
+    }
+
+    return L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl";
+}
+
 void CopyImageRenderer::Draw(
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle,
     D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle)
@@ -165,19 +316,16 @@ void CopyImageRenderer::Draw(
 
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
 
-    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator iterator = pipelineStates_.find(currentPostEffectType_);
-    if (iterator == pipelineStates_.end()) {
-        iterator = pipelineStates_.find(PostEffectType::Copy);
-    }
-    assert(iterator != pipelineStates_.end());
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState = iterator->second;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState =
+        GetOrCreateGraphicsPipeline(currentPostEffectType_);
 
     commandList->SetPipelineState(pipelineState.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     D3D12_GPU_DESCRIPTOR_HANDLE secondTextureHandle = depthTextureHandle;
 
-    if (currentPostEffectType_ == PostEffectType::Dissolve) {
+    if (currentPostEffectType_ == PostEffectType::Dissolve ||
+        currentPostEffectType_ == PostEffectType::RainDrops) {
         secondTextureHandle = maskTextureHandle_;
     }
 
@@ -203,19 +351,52 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->grayScaleStrength = 1.0f;
     postEffectParameterData_->vignetteStrength = 1.0f;
     postEffectParameterData_->outlineScale = 1000.0f;
+    postEffectParameterData_->outlineNearClip = 0.1f;
+    postEffectParameterData_->outlineFarClip = 1000.0f;
+    postEffectParameterData_->outlineThreshold = 0.02f;
+    postEffectParameterData_->outlineSoftness = 0.04f;
     postEffectParameterData_->time = 0.0f;
-    // radialBlur縺ｮ繝代Λ繝｡繝ｼ繧ｿ縺ｮ蛻晄悄蛟､繧りｨｭ螳・
+
     postEffectParameterData_->radialBlurCenter = { 0.5f, 0.5f };
     postEffectParameterData_->radialBlurSampleCount = 32;
     postEffectParameterData_->radialBlurWidth = 0.08f;
-    // Dissolve繧ｨ繝輔ぉ繧ｯ繝医・繝代Λ繝｡繝ｼ繧ｿ縺ｮ蛻晄悄蛟､繧りｨｭ螳・
+
     postEffectParameterData_->dissolveThreshold = 0.5f;
     postEffectParameterData_->dissolveEdgeWidth = 0.05f;
     postEffectParameterData_->dissolveEdgeStrength = 2.0f;
+    postEffectParameterData_->dissolvePadding = 0.0f;
     postEffectParameterData_->boostKickStrength = 0.0f;
+    postEffectParameterData_->pixelSize = 8.0f;
+    postEffectParameterData_->colorBrightness = 0.03f;
+    postEffectParameterData_->colorContrast = 1.15f;
+    postEffectParameterData_->colorSaturation = 1.25f;
     postEffectParameterData_->padding0 = 0.0f;
     postEffectParameterData_->padding1 = 0.0f;
     postEffectParameterData_->padding2 = 0.0f;
+    postEffectParameterData_->focusDepth = 0.99f;
+    postEffectParameterData_->focusRange = 0.01f;
+    postEffectParameterData_->depthOfFieldRadius = 8.0f;
+    postEffectParameterData_->motionBlurStrength = 0.025f;
+    postEffectParameterData_->motionBlurDirection = { 1.0f, 0.2f };
+    postEffectParameterData_->motionBlurSampleCount = 12;
+    postEffectParameterData_->chromaticAberrationStrength = 0.008f;
+    postEffectParameterData_->lensDistortionStrength = 0.2f;
+    postEffectParameterData_->filmGrainStrength = 0.08f;
+    postEffectParameterData_->lensDirtStrength = 1.0f;
+    postEffectParameterData_->cameraShakeStrength = 0.008f;
+    postEffectParameterData_->bokehRadius = 10.0f;
+    postEffectParameterData_->bokehSides = 6;
+    postEffectParameterData_->fisheyeStrength = 1.2f;
+    postEffectParameterData_->animationEnabled = 1;
+    postEffectParameterData_->lightThreshold = 0.65f;
+    postEffectParameterData_->lightStrength = 1.0f;
+    postEffectParameterData_->lightRadius = 0.2f;
+    postEffectParameterData_->lightAngle = 0.0f;
+    postEffectParameterData_->blackHoleCenter = { 0.5f, 0.5f };
+    postEffectParameterData_->blackHoleRadius = 0.16f;
+    postEffectParameterData_->blackHoleStrength = 1.0f;
+    postEffectParameterData_->waterEffectIntensity = 0.0f;
+    postEffectParameterData_->paddingWaterEffect = {};
 }
 CopyImageRenderer::PostEffectParameter&CopyImageRenderer::GetPostEffectParameter()
 {

@@ -1,0 +1,46 @@
+{
+  "ResourcePoolReserve": 21,
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 256,
+    "Radius": 0.5,
+    "Frequency": 0.001
+  },
+  "Particle": {
+    "MaxParticles": 256,
+    "LifeTime": 2.1,
+    "StartScale": 0.28,
+    "EndScale": 0.04,
+    "StartRotation": 0.0,
+    "RotationSpeed": 6.0,
+    "Velocity": [0.0, 0.0, 0.0],
+    "StartColor": [0.4, 0.95, 1.0, 0.98],
+    "EndColor": [0.35, 0.25, 1.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": true,
+    "Gravity": 6.5,
+    "EnableDrag": true,
+    "Drag": 0.94,
+    "EnableNoise": true,
+    "NoiseStrength": 2.8,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "../../Textures/blue_silver_streak.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": false,
+    "Duration": 2.5
+  }
+}

@@ -8,10 +8,8 @@
 #include <d3d12.h>
 #include <iostream>
 #include <span> // std::span
-#include <utility> // std::pair
 #include <vector>
 #include <wrl.h>
-#include "Engine/SrvManager/SrvManager.h"
 class SkinCluster {
 public:
     SkinCluster() = default;
@@ -45,9 +43,8 @@ public:
         // MatrixPalette
         Microsoft::WRL::ComPtr<ID3D12Resource> paletteResource;
         std::span<WellForGPU> mappedPalette;
-        std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> paletteSrvHandle {};
     };
-   static SkinClusterData CreateSkinCluster(ID3D12Device* device, const Skeleton& skeleton, const ModelData& modelData, SrvManager* srvManager);
+   static SkinClusterData CreateSkinCluster(ID3D12Device* device, const Skeleton& skeleton, const ModelData& modelData);
     static void UpdateSkinCluster(SkinClusterData& skinCluster, const Skeleton& skeleton);
 
 private:

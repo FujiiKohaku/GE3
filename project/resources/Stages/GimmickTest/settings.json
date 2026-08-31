@@ -1,0 +1,24 @@
+{
+  "id": "gimmick_test",
+  "name": "GIMMICK TEST",
+  "description": "Test moving blocks, rotating lasers, breakable rocks, wind and gravity.",
+  "layout": "resources/Stages/GimmickTest/layout.json",
+  "rail": { "length": 3400.0, "point_interval": 50.0, "speed": 0.45 },
+  "boss": {
+    "type": "None",
+    "spawn_distance": 2900.0,
+    "position": [0.0, 12.0, 3000.0],
+    "rail_auto_extension": false,
+    "rail_extension_buffer": 1200.0
+  },
+  "environment": {
+    "skybox": "resources/Textures/rostock_laage_airport_4k.dds",
+    "bgm": "resources/Sounds/BGM.wav",
+    "floor_texture": "resources/Textures/floor_dirt_gemini.jpg",
+    "floor_enabled": true,
+    "floor_height": -35.0
+  },
+  "swarm_wave_distances": [],
+  "recovery_item_distances": [],
+  "paint_enemy_distances": []
+}

@@ -62,6 +62,40 @@ void SrvManager::Free(uint32_t index)
     freeIndices_.push_back(index);
 }
 
+bool SrvManager::FreeByCPUHandle(D3D12_CPU_DESCRIPTOR_HANDLE handle)
+{
+    if (!descriptorHeap) {
+        return false;
+    }
+    if (descriptorSize == 0) {
+        return false;
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE heapStart = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    if (handle.ptr < heapStart.ptr) {
+        return false;
+    }
+
+    SIZE_T byteOffset = handle.ptr - heapStart.ptr;
+    if (byteOffset % descriptorSize != 0) {
+        return false;
+    }
+
+    uint32_t index = static_cast<uint32_t>(byteOffset / descriptorSize);
+    if (index >= useIndex) {
+        return false;
+    }
+    if (index >= allocatedFlags_.size()) {
+        return false;
+    }
+    if (!allocatedFlags_[index]) {
+        return false;
+    }
+
+    Free(index);
+    return true;
+}
+
 D3D12_CPU_DESCRIPTOR_HANDLE SrvManager::GetCPUDescriptorHandle(uint32_t index)
 {
     D3D12_CPU_DESCRIPTOR_HANDLE handleCPU = descriptorHeap->GetCPUDescriptorHandleForHeapStart();

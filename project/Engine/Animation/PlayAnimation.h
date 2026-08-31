@@ -1,4 +1,5 @@
-﻿#pragma once
+#pragma once
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -11,21 +12,40 @@
 #include"../Skeleton/Skeleton.h"
 class PlayAnimation {
 public:
-    void SetAnimation(const Animation* animation);
+    void SetAnimation(const Animation* animation, float blendDuration = 0.0f);
     void Update(float deltaTime);
     void SetSkeleton(Skeleton* skeleton) { skeleton_ = skeleton; }
     Matrix4x4 GetLocalMatrix(const std::string& nodeName);
     Vector3 CalculateValue(const std::vector<KeyframeVector3>& keyframes, float time);
     Quaternion CalculateValue(const std::vector<KeyframeQuaternion>& keyframes, float time);
     void ApplyAnimation(Skeleton& skeleton,const Animation& animation,float animationTime);
+    void ApplyBlendAnimation(Skeleton& skeleton, const Animation& prevAnimation, float prevTime, const Animation& nextAnimation, float nextTime, float blendRatio);
+    bool PopTriggeredEvent(AnimationEvent& event);
     const Skeleton* GetSkeleton() const
     {
         return skeleton_;
     }
+    bool IsBlending() const
+    {
+        return prevAnimation_ != nullptr && blendTime_ < blendDuration_;
+    }
 
 
 private:
+    void QueueTriggeredEvents(
+        float previousTime,
+        float currentTime,
+        float deltaTime);
+
     const Animation* animation_ = nullptr;
     float animationTime_ = 0.0f;
+    bool hasAdvancedAnimation_ = false;
+    std::deque<AnimationEvent> triggeredEvents_;
     Skeleton* skeleton_ = nullptr;
+
+    // Animation Blending
+    const Animation* prevAnimation_ = nullptr;
+    float prevAnimationTime_ = 0.0f;
+    float blendTime_ = 0.0f;
+    float blendDuration_ = 0.0f;
 };

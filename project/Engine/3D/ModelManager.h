@@ -20,6 +20,10 @@ public:
 
     Model* CreatePlane(const std::string& texturePath = "", float tilingX = 1.0f, float tilingY = 1.0f);
 
+    Model* CreateCylinder(const std::string& texturePath = "", uint32_t divisions = 32);
+
+    Model* CreateBeamCross(const std::string& texturePath = "");
+
     Model* FindModel(const std::string& filePath);
 
     // Passkey

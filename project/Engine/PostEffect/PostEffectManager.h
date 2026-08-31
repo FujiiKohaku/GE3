@@ -28,15 +28,24 @@ public:
 
     void SetBoostRadialBlurParameters(bool isBoosting);
     void Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
+    void PrepareSceneForParticleDraw(
+        SceneManager* sceneManager,
+        D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
+    void BeginParticleDraw();
+    void EndParticleDraw();
+    void ApplyAfterParticleDraw(SceneManager* sceneManager);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthDSVHandle() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
+    CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
 
 private:
     class RenderTarget {
     public:
         void Initialize(DirectXCommon* dxCommon, uint32_t rtvIndex);
         void BeginRender();
+        void BeginRenderWithDepth(
+            D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
         void EndRender();
         D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;
 
@@ -60,6 +69,7 @@ private:
 
 private:
     void ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle);
+    void UpdatePostEffectParameters(SceneManager* sceneManager);
     void SetBackBufferRenderTarget();
     uint32_t GetNextPingPongIndex(uint32_t currentIndex) const;
 
@@ -72,4 +82,6 @@ private:
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
+    uint32_t particleCompositionTargetIndex_ = 0;
+    bool isAnimationEnabled_ = true;
 };

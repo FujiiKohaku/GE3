@@ -26,8 +26,8 @@ struct SkinnedVertex
 
 struct SkinningInformation
 {
-    uint vertexCount;
-    uint jointCount;
+    uint numVertices;
+    uint numJoints;
 };
 
 StructuredBuffer<Well> gMatrixPalette : register(t0);
@@ -41,7 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
     uint vertexIndex = DTid.x;
 
-    if (vertexIndex >= gSkinningInformation.vertexCount)
+    if (vertexIndex >= gSkinningInformation.numVertices)
     {
         return;
     }

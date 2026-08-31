@@ -5,8 +5,86 @@
 #include "Engine/Winapp/WinApp.h"
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <filesystem>
+#include <fstream>
 #include <format>
+#include <stdexcept>
 #include <wrl.h>
+
+namespace {
+std::filesystem::path MakeCompiledShaderPath(const std::filesystem::path& hlslPath)
+{
+    const std::filesystem::path resourcesRoot = "resources";
+    std::filesystem::path relativePath = hlslPath.lexically_relative(resourcesRoot);
+
+    if (relativePath.empty() || relativePath.native().starts_with(L"..")) {
+        return {};
+    }
+
+    std::filesystem::path compiledPath = resourcesRoot / "CompiledShaders" / relativePath;
+    compiledPath.replace_extension(".dxil");
+    return compiledPath;
+}
+
+std::wstring GetShaderProfile(const std::filesystem::path& sourcePath)
+{
+    const std::wstring fileName = sourcePath.filename().wstring();
+    if (fileName.ends_with(L".VS.hlsl")) {
+        return L"vs_6_0";
+    }
+    if (fileName.ends_with(L".PS.hlsl")) {
+        return L"ps_6_0";
+    }
+    if (fileName.ends_with(L".CS.hlsl")) {
+        return L"cs_6_0";
+    }
+    if (fileName.ends_with(L".GS.hlsl")) {
+        return L"gs_6_0";
+    }
+    return {};
+}
+
+bool IsShaderCacheOutdated(
+    const std::filesystem::path& sourcePath,
+    const std::filesystem::path& compiledPath)
+{
+    if (!std::filesystem::is_regular_file(compiledPath)) {
+        return true;
+    }
+
+    const std::filesystem::file_time_type cacheWriteTime =
+        std::filesystem::last_write_time(compiledPath);
+    if (std::filesystem::last_write_time(sourcePath) > cacheWriteTime) {
+        return true;
+    }
+
+    const std::filesystem::path includeRoots[] = {
+        std::filesystem::path("resources/Shaders"),
+        std::filesystem::path("resources/Effects"),
+    };
+
+    for (const std::filesystem::path& includeRoot : includeRoots) {
+        if (!std::filesystem::is_directory(includeRoot)) {
+            continue;
+        }
+
+        for (const std::filesystem::directory_entry& entry :
+            std::filesystem::recursive_directory_iterator(includeRoot)) {
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+            if (entry.path().extension() != L".hlsli") {
+                continue;
+            }
+            if (entry.last_write_time() > cacheWriteTime) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+}
 
 std::unique_ptr<DirectXCommon> DirectXCommon::instance_ = nullptr;
 // Singleton Instance
@@ -387,15 +465,13 @@ void DirectXCommon::InitializeScissorRect()
 #pragma region
 void DirectXCommon::InitializeDxcCompiler()
 {
-    HRESULT hr;
-
-    hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+    HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
     assert(SUCCEEDED(hr));
+
     hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
     assert(SUCCEEDED(hr));
 
-    // 現時点でincludeはしないがincludeに対応するための設定を行っておく
-    hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
+    hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
     assert(SUCCEEDED(hr));
 }
 #pragma endregion
@@ -488,73 +564,183 @@ void DirectXCommon::SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHan
 }
 #pragma endregion
 #pragma region
-Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring& filepath, const wchar_t* profile)
+Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath)
 {
-    // 1.hlslファイルを読み込む02_00
-    Logger::Log(StringUtility::ConvertString(std::format(L"Begin CompileShader,path:{},profike:{}\n", filepath, profile))); // これからシェーダーをコンパイルする旨をログに出す
-    // hlslファイルを読む
-    Microsoft::WRL::ComPtr<IDxcBlobEncoding> shaderSource = nullptr;
-    HRESULT hr = dxcUtils->LoadFile(filepath.c_str(), nullptr, &shaderSource);
-    assert(SUCCEEDED(hr)); // 読めなかったら止める
-    // 読み込んだファイルの内容を設定する
-    DxcBuffer shaderSourceBuffer;
-    shaderSourceBuffer.Ptr = shaderSource->GetBufferPointer();
-    shaderSourceBuffer.Size = shaderSource->GetBufferSize();
-    shaderSourceBuffer.Encoding = DXC_CP_UTF8; // UTF8の文字コードであることを通知
-    // 2.Compileする
-#ifdef _DEBUG
-    LPCWSTR arguments[] = {
-        filepath.c_str(),
-        L"-E", L"main",
-        L"-T", profile,
-        L"-Zi",
-        L"-Qembed_debug",
-        L"-Od",
-        L"-Zpr"
-    };
-#else
-    LPCWSTR arguments[] = {
-        filepath.c_str(),
-        L"-E", L"main",
-        L"-T", profile,
-        L"-O3",
-        L"-Zpr"
-    };
-#endif
-    // 実際にShaderをコンパイルする
-    Microsoft::WRL::ComPtr<IDxcResult> shaderResult = nullptr;
-    hr = dxcCompiler->Compile(
+    const std::filesystem::path sourcePath(hlslPath);
+    const std::filesystem::path compiledPath = MakeCompiledShaderPath(sourcePath);
 
-        &shaderSourceBuffer, // 読み込んだファイル
-        arguments, // コンパイルオプション02_00
-        _countof(arguments), // コンパイルオプションの数02_00
-        includeHandler.Get(), // includeが含まれた諸々02_00
-        IID_PPV_ARGS(&shaderResult) // コンパイル結果02_00
-    );
-    // コンパイルエラーではなくdxcが起動できないなど致命的な状況02_00
-    assert(SUCCEEDED(hr));
-    // 3.警告、エラーが出ていないか確認する02_00
-    // 警告.エラーが出ていたらログに出して止める02_00
-    IDxcBlobUtf8* shaderError = nullptr;
-    shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
-    if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
-        Logger::Log(shaderError->GetStringPointer());
-        // 警告、エラーダメ絶対02_00
-        assert(false);
+    if (compiledPath.empty()) {
+        const std::string message =
+            "Could not convert HLSL path to DXIL path. HLSL:" +
+            StringUtility::ConvertString(hlslPath);
+        Logger::Error(message);
+        throw std::runtime_error(message);
     }
-    // 4.Compile結果を受け取って返す02_00
-    // コンパイル結果から実行用のバイナリ部分を取得02_00
-    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob = nullptr;
-    hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob),nullptr);
-    assert(SUCCEEDED(hr));
-    // 成功したログを出す02_00
-    Logger::Log(StringUtility::ConvertString(std::format(L"Compile Succeeded, path:{}, profike:{}\n ",filepath, profile)));
 
-    // 実行用のバイナリを返却02_00
+    if (!std::filesystem::is_regular_file(sourcePath)) {
+        const std::string message =
+            "Shader source file is missing. HLSL:" +
+            std::filesystem::absolute(sourcePath).generic_string();
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    if (IsShaderCacheOutdated(sourcePath, compiledPath)) {
+        return CompileShaderAndSaveCache(sourcePath, compiledPath);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlobEncoding> shaderBinary;
+    HRESULT hr = dxcUtils->LoadFile(compiledPath.c_str(), nullptr, &shaderBinary);
+    if (FAILED(hr) || !shaderBinary) {
+        const std::string message =
+            "Failed to load compiled shader. HLSL:" + sourcePath.generic_string() +
+            " DXIL:" + std::filesystem::absolute(compiledPath).generic_string() +
+            " HRESULT:" + std::to_string(static_cast<unsigned long>(hr));
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob;
+    hr = shaderBinary.As(&shaderBlob);
+    if (FAILED(hr) || !shaderBlob) {
+        const std::string message =
+            "Failed to access compiled shader data. DXIL:" +
+            std::filesystem::absolute(compiledPath).generic_string();
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+#ifdef _DEBUG
+    Logger::Log(
+        "Loaded compiled shader. HLSL:" + sourcePath.generic_string() +
+        " DXIL:" + compiledPath.generic_string());
+#endif
     return shaderBlob;
 }
-#pragma endregion
-#pragma region
+
+Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShaderAndSaveCache(
+    const std::filesystem::path& sourcePath,
+    const std::filesystem::path& compiledPath)
+{
+    const std::wstring shaderProfile = GetShaderProfile(sourcePath);
+    if (shaderProfile.empty()) {
+        const std::string message =
+            "Could not determine shader profile from file name. HLSL:" +
+            sourcePath.generic_string();
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlobEncoding> sourceBlob;
+    HRESULT hr = dxcUtils->LoadFile(sourcePath.c_str(), nullptr, &sourceBlob);
+    if (FAILED(hr) || !sourceBlob) {
+        const std::string message =
+            "Failed to load shader source. HLSL:" + sourcePath.generic_string() +
+            " HRESULT:" + std::to_string(static_cast<unsigned long>(hr));
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    const std::wstring absoluteIncludeDirectory =
+        std::filesystem::absolute(sourcePath).parent_path().wstring();
+    const wchar_t* arguments[] = {
+        L"-E",
+        L"main",
+        L"-T",
+        shaderProfile.c_str(),
+        L"-O3",
+        L"-Zpr",
+        L"-I",
+        absoluteIncludeDirectory.c_str(),
+    };
+
+    DxcBuffer sourceBuffer {};
+    sourceBuffer.Ptr = sourceBlob->GetBufferPointer();
+    sourceBuffer.Size = sourceBlob->GetBufferSize();
+    sourceBuffer.Encoding = DXC_CP_UTF8;
+
+    Microsoft::WRL::ComPtr<IDxcResult> compileResult;
+    hr = dxcCompiler->Compile(
+        &sourceBuffer,
+        arguments,
+        _countof(arguments),
+        dxcIncludeHandler.Get(),
+        IID_PPV_ARGS(&compileResult));
+    if (FAILED(hr) || !compileResult) {
+        const std::string message =
+            "DXC failed to start shader compilation. HLSL:" + sourcePath.generic_string() +
+            " HRESULT:" + std::to_string(static_cast<unsigned long>(hr));
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlobUtf8> compileErrors;
+    compileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&compileErrors), nullptr);
+
+    HRESULT compileStatus = S_OK;
+    hr = compileResult->GetStatus(&compileStatus);
+    if (compileErrors && compileErrors->GetStringLength() > 0) {
+        const std::string compilerMessage =
+            "Shader compiler output. HLSL:" + sourcePath.generic_string() + "\n" +
+            std::string(compileErrors->GetStringPointer(), compileErrors->GetStringLength());
+        if (FAILED(compileStatus)) {
+            Logger::Error(compilerMessage);
+        } else {
+            Logger::Warning(compilerMessage);
+        }
+    }
+
+    if (FAILED(hr) || FAILED(compileStatus)) {
+        const std::string message =
+            "Shader compilation failed. HLSL:" + sourcePath.generic_string() +
+            " HRESULT:" + std::to_string(static_cast<unsigned long>(compileStatus));
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob;
+    hr = compileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
+    if (FAILED(hr) || !shaderBlob) {
+        const std::string message =
+            "Compiled shader object was not produced. HLSL:" + sourcePath.generic_string();
+        Logger::Error(message);
+        throw std::runtime_error(message);
+    }
+
+    std::error_code directoryError;
+    std::filesystem::create_directories(compiledPath.parent_path(), directoryError);
+    if (directoryError) {
+        Logger::Error(
+            "Could not create shader cache directory. DXIL:" +
+            std::filesystem::absolute(compiledPath).generic_string() +
+            " Error:" + directoryError.message());
+    } else {
+        std::ofstream cacheFile(compiledPath, std::ios::binary | std::ios::trunc);
+        if (cacheFile) {
+            cacheFile.write(
+                static_cast<const char*>(shaderBlob->GetBufferPointer()),
+                static_cast<std::streamsize>(shaderBlob->GetBufferSize()));
+            if (!cacheFile) {
+                Logger::Error(
+                    "Failed while writing shader cache. DXIL:" +
+                    std::filesystem::absolute(compiledPath).generic_string());
+                std::error_code removeError;
+                std::filesystem::remove(compiledPath, removeError);
+            }
+        } else {
+            Logger::Error(
+                "Could not open shader cache for writing. DXIL:" +
+                std::filesystem::absolute(compiledPath).generic_string());
+        }
+    }
+
+    Logger::Log(
+        "Compiled shader and updated cache. HLSL:" + sourcePath.generic_string() +
+        " DXIL:" + compiledPath.generic_string() +
+        " Profile:" + StringUtility::ConvertString(shaderProfile));
+    return shaderBlob;
+}
+
 // バッファリソース生成関数
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_t sizeInBytes)
 {

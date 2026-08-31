@@ -3,7 +3,9 @@
 #include "Engine/Logger/Logger.h"
 #include "Engine/StringUtility/StringUtility.h"
 #include <cassert>
+#include <chrono>
 #include <filesystem>
+#include <format>
 #pragma region
 void ParticleRenderManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -150,6 +152,11 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
         return pipelineIterator->second;
     }
 
+#ifdef _DEBUG
+    const std::chrono::steady_clock::time_point beginTime =
+        std::chrono::steady_clock::now();
+#endif
+
     D3D12_INPUT_ELEMENT_DESC inputElementDescriptions[3] = {};
 
     inputElementDescriptions[0].SemanticName = "POSITION";
@@ -166,8 +173,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     inputElementDescriptions[2].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 
     D3D12_INPUT_LAYOUT_DESC inputLayoutDesc {};
-    inputLayoutDesc.pInputElementDescs = inputElementDescriptions;
-    inputLayoutDesc.NumElements = _countof(inputElementDescriptions);
+    if (desc.usesVertexInput) {
+        inputLayoutDesc.pInputElementDescs = inputElementDescriptions;
+        inputLayoutDesc.NumElements = _countof(inputElementDescriptions);
+    }
 
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = desc.cullMode;
@@ -185,16 +194,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     }
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = CompileShaderWithLog(
+    Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = LoadCompiledShaderWithLog(
         desc.effectName,
         "VS",
-        desc.vertexShaderPath,
-        L"vs_6_0");
-    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = CompileShaderWithLog(
+        desc.vertexShaderPath);
+    Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = LoadCompiledShaderWithLog(
         desc.effectName,
         "PS",
-        desc.pixelShaderPath,
-        L"ps_6_0");
+        desc.pixelShaderPath);
     assert(vertexShaderBlob && pixelShaderBlob);
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc {};
@@ -218,15 +225,22 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
         IID_PPV_ARGS(&pipelineState));
     assert(SUCCEEDED(result));
 
+#ifdef _DEBUG
+    Logger::Log(std::format(
+        "[EffectPSO] {} Render Graphics: {} ms",
+        desc.effectName,
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - beginTime).count()));
+#endif
+
     pipelineStateCache_[cacheKey] = pipelineState;
     return pipelineState;
 }
 
-Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::CompileShaderWithLog(
+Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::LoadCompiledShaderWithLog(
     const std::string& effectName,
     const std::string& shaderStage,
-    const std::string& shaderPath,
-    const wchar_t* profile)
+    const std::string& shaderPath)
 {
     const std::filesystem::path shaderFilePath(shaderPath);
     const std::filesystem::path fullShaderPath = std::filesystem::absolute(shaderFilePath);
@@ -240,17 +254,19 @@ Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::CompileShaderWithLog(
         return nullptr;
     }
 
+#ifdef _DEBUG
     Logger::Log(
-        "Compile particle render shader. Effect:" + effectName +
+        "Load particle render shader. Effect:" + effectName +
         " Stage:" + shaderStage +
         " Path:" + fullShaderPath.generic_string());
+#endif
 
     Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob =
-        dxCommon_->CompileShader(StringUtility::ConvertString(shaderPath), profile);
+        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));
 
     if (!shaderBlob) {
         Logger::Error(
-            "Particle render shader compile failed. Effect:" + effectName +
+            "Particle render shader load failed. Effect:" + effectName +
             " Stage:" + shaderStage +
             " Path:" + fullShaderPath.generic_string());
     }
@@ -274,6 +290,12 @@ std::string ParticleRenderManager::MakePipelineCacheKey(const GraphicsPipelineDe
     }
     cacheKey += "|DepthWrite:";
     if (desc.depthWrite) {
+        cacheKey += "1";
+    } else {
+        cacheKey += "0";
+    }
+    cacheKey += "|VertexInput:";
+    if (desc.usesVertexInput) {
         cacheKey += "1";
     } else {
         cacheKey += "0";

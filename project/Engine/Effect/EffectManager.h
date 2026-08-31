@@ -11,6 +11,7 @@
 #include "externals/json.hpp"
 
 #include <d3d12.h>
+#include <array>
 #include <functional>
 #include <memory>
 #include <string>
@@ -21,6 +22,13 @@
 using EffectHandle = uint32_t;
 inline constexpr EffectHandle kInvalidEffectHandle = 0xffffffffu;
 using EffectPositionProvider = std::function<Vector3()>;
+inline constexpr uint32_t kEffectSkeletonJointCount = 18;
+
+struct EffectSkeletonPose {
+    std::array<Vector4, kEffectSkeletonJointCount> jointPositions {};
+    uint32_t jointCount = 0;
+    float padding[3] {};
+};
 
 struct EffectData {
     std::string effectName;
@@ -39,7 +47,13 @@ struct ActiveEffect {
     Vector3 prevPosition;
     EffectPositionProvider positionProvider;
     float duration = -1.0f;
+    uint32_t pointLightHandle = 0xffffffffu;
+    float lightBaseIntensity = 0.0f;
+    float lightFadeStartAge = 0.0f;
+    float lightFadeDuration = 0.0f;
     bool isLoop = false;
+    bool isEmitting = true;
+    bool isLightFading = false;
     bool isAlive = false;
 };
 
@@ -61,6 +75,12 @@ public:
     EffectManager& operator=(const EffectManager&) = delete;
 
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
+    bool IsInitialized() const { return isInitialized_; }
+
+    void BeginWarmUp();
+    void UpdateWarmUp();
+    bool IsWarmUpComplete() const;
+    float GetWarmUpProgress() const;
 
     void RegisterEffect(const EffectData& effectData);
     EffectHandle PlayEffect(const std::string& effectName, const Vector3& position);
@@ -90,12 +110,20 @@ public:
     }
 
     bool SetEffectPosition(EffectHandle handle, const Vector3& position);
+    bool SetEffectVelocity(EffectHandle handle, const Vector3& velocity);
+    bool SetEffectSkeletonPose(
+        EffectHandle handle,
+        const EffectSkeletonPose& skeletonPose);
     bool StopEffect(EffectHandle handle);
+    // シーンに属する再生中エフェクトだけを停止する。
+    // シェーダーやパイプラインなどの共通リソースは保持する。
+    void StopAllEffects();
     bool IsEffectAlive(EffectHandle handle) const;
 
     void Update();
     void PreDraw();
     void Draw();
+    void DrawFieldDebug() const;
 
     void SetBlendMode(BlendMode blendMode);
     void SetFogConstantBufferView(D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView);
@@ -104,13 +132,31 @@ public:
 
     const std::vector<ActiveEffect>& GetActiveEffects() const { return activeEffects_; }
 
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    float GetParticleUpdateGpuTimeMs() const { return particleUpdateGpuTimeMs_; }
+    float GetParticleDrawGpuTimeMs() const { return particleDrawGpuTimeMs_; }
+    void ReportAndResetFramePerformance(double frameTimeMs);
+#endif
+
 private:
+    enum class ParticleRenderType {
+        Mesh,
+        Trail,
+    };
+
     enum class EmitterShape : int32_t {
         Sphere,
         Box,
         Cone,
         Cylinder,
         Circle,
+    };
+
+    enum class ParticleFieldType : int32_t {
+        Wind,
+        Attractor,
+        Repulsor,
+        Vortex,
     };
 
     struct Material {
@@ -148,6 +194,60 @@ private:
         float emissionStrength = 1.0f;
         float uvScrollSpeedX = 0.0f;
         float uvScrollSpeedY = 0.0f;
+        Vector4 trailStartColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        Vector4 trailEndColor = { 1.0f, 1.0f, 1.0f, 0.0f };
+        float trailLifeTime = 0.5f;
+        float trailStartWidth = 0.2f;
+        float trailEndWidth = 0.0f;
+        float trailTextureTiling = 1.0f;
+        float trailMinVertexDistance = 0.05f;
+        float trailBreakDistance = 5.0f;
+        uint32_t maxTrailPoints = 64;
+        int32_t faceCamera = 1;
+        float trailRootExtension = 0.0f;
+        float trailPadding[3] = {};
+    };
+
+    struct TrailPoint {
+        Vector3 position;
+        float age = 0.0f;
+        Vector3 velocity = { 0.0f, 0.0f, 0.0f };
+        uint32_t isActive = 0;
+    };
+
+    struct ParticleField {
+        Vector3 position = { 0.0f, 0.0f, 0.0f };
+        float radius = 1.0f;
+        Vector3 direction = { 0.0f, 1.0f, 0.0f };
+        float strength = 1.0f;
+        int32_t type = static_cast<int32_t>(ParticleFieldType::Wind);
+        float falloff = 1.0f;
+        float padding[2] = {};
+    };
+
+    struct ParticleFieldDefinition {
+        ParticleField field;
+        int32_t isLocal = 1;
+    };
+
+    static constexpr uint32_t kMaxParticleFields = 16;
+
+    struct ParticleFieldCollection {
+        ParticleField fields[kMaxParticleFields];
+        uint32_t fieldCount = 0;
+        float padding[3] = {};
+    };
+
+    struct EffectLightSettings {
+        Vector4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        Vector3 offset = { 0.0f, 0.0f, 0.0f };
+        float intensity = 1.0f;
+        float radius = 5.0f;
+        float decay = 2.0f;
+        float fadeDuration = 0.25f;
+        int32_t enabled = 0;
+        int32_t followEmitter = 1;
+        int32_t fadeOut = 1;
     };
 
     struct EffectRuntime {
@@ -158,23 +258,30 @@ private:
         std::string texturePath = "resources/Particles/circle.png";
         std::string vertexShaderPath = "resources/Shaders/Effects/Common/Particle.VS.hlsl";
         std::string pixelShaderPath = "resources/Shaders/Effects/Common/Particle.PS.hlsl";
+        ParticleRenderType renderType = ParticleRenderType::Mesh;
         ParticleMeshManager::ParticleMeshType meshType = ParticleMeshManager::ParticleMeshType::Board;
         BlendMode blendMode = kBlendModeAdd;
         bool depthTest = true;
         bool depthWrite = false;
         D3D12_CULL_MODE cullMode = D3D12_CULL_MODE_NONE;
         uint32_t emitCount = 128;
+        uint32_t maxParticles = 1024;
         float emitRadius = 0.2f;
         float emitFrequency = 0.05f;
         float duration = 1.5f;
         bool defaultLoop = false;
+        uint32_t resourcePoolReserve = 0;
         EffectSettings settings;
         ParticleRenderParameter renderParameter;
+        EffectLightSettings lightSettings;
+        ParticleFieldDefinition fields[kMaxParticleFields];
+        uint32_t fieldCount = 0;
     };
 
     static constexpr uint32_t kInvalidDescriptorIndex = 0xffffffffu;
 
     struct ActiveEffectResource {
+        ParticleRenderType renderType = ParticleRenderType::Mesh;
         Microsoft::WRL::ComPtr<ID3D12Resource> particleResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> freeListIndexResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> freeListResource;
@@ -182,11 +289,15 @@ private:
         Microsoft::WRL::ComPtr<ID3D12Resource> perFrameResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> effectSettingsResource;
         Microsoft::WRL::ComPtr<ID3D12Resource> renderParameterResource;
+        Microsoft::WRL::ComPtr<ID3D12Resource> fieldResource;
+        Microsoft::WRL::ComPtr<ID3D12Resource> skeletonPoseResource;
 
         EmitterSphere* emitterData = nullptr;
         PerFrame* perFrameData = nullptr;
         EffectSettings* effectSettingsData = nullptr;
         ParticleRenderParameter* renderParameterData = nullptr;
+        ParticleFieldCollection* fieldData = nullptr;
+        EffectSkeletonPose* skeletonPoseData = nullptr;
 
         uint32_t particleUavIndex = kInvalidDescriptorIndex;
         uint32_t particleSrvIndex = kInvalidDescriptorIndex;
@@ -203,12 +314,13 @@ private:
         D3D12_RESOURCE_STATES freeListState = D3D12_RESOURCE_STATE_COMMON;
 
         float age = 0.0f;
+        uint32_t maxParticles = 0;
         bool hasEmitted = false;
     };
 
 private:
     void RegisterDefaultEffects();
-    void WarmUpEffects();
+    bool WarmUpEffect(const std::string& effectName);
     EffectRuntime CreateEffectRuntime(const EffectData& effectData);
     void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime);
     void ApplyRenderParameterConfig(const nlohmann::json& config, ParticleRenderParameter& renderParameter);
@@ -225,6 +337,17 @@ private:
         float duration,
         EffectPositionProvider positionProvider);
     ActiveEffectResource CreateActiveEffectResource(const EffectRuntime& runtime, const Vector3& position);
+    bool TryAcquirePooledResource(
+        const EffectRuntime& runtime,
+        const Vector3& position,
+        ActiveEffectResource& resource);
+    void ResetActiveEffectResource(
+        ActiveEffectResource& resource,
+        const EffectRuntime& runtime,
+        const Vector3& position);
+    void ReturnActiveEffectResourceToPool(ActiveEffectResource&& resource);
+    void ReleaseActiveEffectResource(ActiveEffectResource& resource);
+    void EvictOnePooledResource();
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateUavBufferResource(size_t sizeInBytes, const wchar_t* name);
     D3D12_GPU_DESCRIPTOR_HANDLE CreateStructuredBufferUAV(
         ID3D12Resource* resource,
@@ -244,14 +367,31 @@ private:
     void CreateInitializePipeline();
     void CreateEmitRootSignature();
     void CreateUpdateRootSignature();
+    void CreateFieldRootSignature();
+    void CreateFieldPipelines();
 
     void DispatchInitialize(ActiveEffectResource& resource);
     void DispatchEmit(const EffectRuntime& runtime, ActiveEffectResource& resource);
     void DispatchUpdate(const EffectRuntime& runtime, ActiveEffectResource& resource);
+    void DispatchFields(const EffectRuntime& runtime, ActiveEffectResource& resource);
 
     EffectHandle AllocateEffectHandle();
     size_t FindActiveEffectIndex(EffectHandle handle) const;
     void UpdateActiveEffect(size_t index);
+    void CreateEffectLight(const EffectRuntime& runtime, ActiveEffect& activeEffect);
+    void UpdateEffectLight(
+        const EffectRuntime& runtime,
+        ActiveEffect& activeEffect,
+        const ActiveEffectResource& resource);
+    void BeginEffectFadeOut(
+        const EffectRuntime& runtime,
+        ActiveEffect& activeEffect,
+        const ActiveEffectResource& resource);
+    void ReleaseEffectLight(ActiveEffect& activeEffect);
+    void UpdateEffectFields(
+        const EffectRuntime& runtime,
+        const ActiveEffect& activeEffect,
+        ActiveEffectResource& resource);
     void RemoveDeadEffects();
     void UnmapActiveEffectResource(ActiveEffectResource& resource);
     void ReleaseActiveEffectDescriptors(ActiveEffectResource& resource);
@@ -263,6 +403,21 @@ private:
         D3D12_RESOURCE_STATES& currentState,
         D3D12_RESOURCE_STATES nextState);
     void InsertUavBarrier(ID3D12Resource* resource);
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    void LogDebugEffectSummary();
+    void InitializePerformanceQueries();
+    void ReadbackPerformanceQueries();
+    void RecordEffectStartPerformance(
+        const std::string& effectName,
+        double totalTimeMs,
+        double resourceCreateTimeMs,
+        double fieldUpdateTimeMs,
+        double initializeDispatchTimeMs,
+        double lightCreateTimeMs,
+        double commitTimeMs,
+        bool reusedPooledResource);
+#endif
 
 private:
     static std::unique_ptr<EffectManager> instance_;
@@ -286,14 +441,49 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> initializeRootSignature_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> initializePipelineState_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> trailInitializePipelineState_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> emitRootSignature_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> updateRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12RootSignature> fieldRootSignature_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> particleFieldPipelineState_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> trailFieldPipelineState_;
 
     std::unordered_map<std::string, EffectRuntime> effects_;
     std::vector<ActiveEffect> activeEffects_;
     std::vector<ActiveEffectResource> activeResources_;
     std::vector<ActiveEffectResource> retiredResources_;
+    std::vector<ActiveEffectResource> pooledResources_;
     EffectHandle nextEffectHandle_ = 1;
 
-    static constexpr uint32_t kMaxGPUParticle = 1024;
+    std::vector<std::string> warmUpEffectNames_;
+    size_t warmUpEffectIndex_ = 0;
+    bool isWarmUpComplete_ = false;
+    bool isInitialized_ = false;
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    float debugLogElapsedTime_ = 0.0f;
+    Microsoft::WRL::ComPtr<ID3D12QueryHeap> performanceQueryHeap_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> performanceReadbackBuffer_;
+    uint64_t performanceTimestampFrequency_ = 1;
+    float particleUpdateGpuTimeMs_ = 0.0f;
+    float particleDrawGpuTimeMs_ = 0.0f;
+    bool performanceQueryPending_ = false;
+    bool performanceUpdateQueryWritten_ = false;
+    uint32_t performanceStartedEffectCount_ = 0;
+    double performanceStartEffectTotalTimeMs_ = 0.0;
+    double performanceStartEffectMaxTimeMs_ = 0.0;
+    double performanceResourceCreateTimeMs_ = 0.0;
+    double performanceFieldUpdateTimeMs_ = 0.0;
+    double performanceInitializeDispatchTimeMs_ = 0.0;
+    double performanceLightCreateTimeMs_ = 0.0;
+    double performanceCommitTimeMs_ = 0.0;
+    uint32_t performanceReusedResourceCount_ = 0;
+    uint32_t performanceCreatedResourceCount_ = 0;
+    std::string performanceSlowestEffectName_;
+    std::unordered_map<std::string, uint32_t> performanceStartedEffectCounts_;
+#endif
+
+    static constexpr uint32_t kMaxGPUParticleCapacity = 4096;
+    static constexpr uint32_t kMaxTrailPoints = 64;
+    static constexpr size_t kMaxPooledResources = 80;
 };

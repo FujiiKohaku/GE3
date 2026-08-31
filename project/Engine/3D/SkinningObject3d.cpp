@@ -10,16 +10,17 @@
 #pragma region
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
+    assert(model_ && "Call SetModel() before Initialize()");
+    assert(playAnimation_ && "Call SetAnimation() before Initialize()");
+
     uint32_t vertexCount = 0;
     for (const auto& primitive : model_->GetModelData().primitives) {
         vertexCount += static_cast<uint32_t>(primitive.vertices.size());
     }
-    assert(model_ && "Call SetModel() before Initialize()");
-    assert(playAnimation_ && "Call SetAnimation() before Initialize()");
     // Manager を保持
     skinningObject3dManager_ = skinningObject3DManager;
 
-    // チE��ォルトカメラ取征E
+
     camera_ = skinningObject3dManager_->GetDefaultCamera();
 
     // ================================
@@ -64,6 +65,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     assert(skinningInformationData_);
 
     skinningInformationData_->numVertices = vertexCount;
+    skinningInformationData_->numJoints = static_cast<uint32_t>(playAnimation_->GetSkeleton()->joints.size());
     // ================================
     // Transform 初期値
     // ================================
@@ -85,11 +87,9 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
         { 0.0f, 4.0f, -10.0f }
     };
 
-    skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData(), SrvManager::GetInstance());
-    // すきんぐりんぐ�Eリソースを作�E
-    CreateSkinningResources();
+    skinClusterData_ = SkinCluster::CreateSkinCluster(DirectXCommon::GetInstance()->GetDevice(), *playAnimation_->GetSkeleton(), model_->GetModelData());
 
-    // assert(model_->GetVertexResource() != nullptr);　
+    CreateSkinningResources();
 
    // TextureManager::GetInstance()->LoadTexture("resources/Textures/skybox.dds");
     //environmentTextureHandle_ = TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/skybox.dds");
@@ -113,7 +113,7 @@ void SkinningObject3d::Update()
     }
 
     // ================================
-    // 吁E��行�Eを作�E
+
     // ================================
 
     Matrix4x4 baseMatrix = MatrixMath::MakeAffineMatrix(
@@ -138,15 +138,15 @@ void SkinningObject3d::Update()
     }
 
     // ================================
-    // WVP行�Eを計算して転送E
+
     // ================================
     transformationMatrixData->WVP = worldViewProjectionMatrix;
 
-    // ワールド行�Eも送る�E�ライチE��ングなどで使用�E�E
-    // ワールド行�Eも送る�E�ライチE��ングなどで使用�E�E
+
+
     transformationMatrixData->World = worldMatrix_;
 
-    //  ここが重要E��World の送E��置
+
     Matrix4x4 invWorld = MatrixMath::Inverse(worldMatrix_);
     transformationMatrixData->WorldInverseTranspose = MatrixMath::Transpose(invWorld);
 
@@ -165,18 +165,17 @@ void SkinningObject3d::Draw()
     commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
-    commandList->SetGraphicsRootDescriptorTable(8, SrvManager::GetInstance()->GetGPUDescriptorHandle(paletteSrvIndex_));
-
-    D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetModelData().material.textureFilePath);
-
-    commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
-    commandList->SetGraphicsRootDescriptorTable(9, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootDescriptorTable(8, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
 
     uint32_t vertexOffset = 0;
 
     const ModelData& modelData = model_->GetModelData();
 
     for (const auto& primitive : modelData.primitives) {
+
+        const MaterialData& material = model_->GetMaterial(primitive.materialIndex);
+        D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(material.textureFilePath);
+        commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
 
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
         vbView.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
@@ -207,6 +206,29 @@ SkinningObject3d::~SkinningObject3d()
     if (materialResource) {
         materialResource->Unmap(0, nullptr);
     }
+
+    if (skinningInformationResource_ && skinningInformationData_) {
+        skinningInformationResource_->Unmap(0, nullptr);
+        skinningInformationData_ = nullptr;
+    }
+
+    SrvManager* srvManager = SrvManager::GetInstance();
+    if (inputVertexSrvIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(inputVertexSrvIndex_);
+        inputVertexSrvIndex_ = kInvalidDescriptorIndex;
+    }
+    if (influenceSrvIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(influenceSrvIndex_);
+        influenceSrvIndex_ = kInvalidDescriptorIndex;
+    }
+    if (paletteSrvIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(paletteSrvIndex_);
+        paletteSrvIndex_ = kInvalidDescriptorIndex;
+    }
+    if (skinnedVertexUavIndex_ != kInvalidDescriptorIndex) {
+        srvManager->Free(skinnedVertexUavIndex_);
+        skinnedVertexUavIndex_ = kInvalidDescriptorIndex;
+    }
 }
 void SkinningObject3d::CreateSkinningResources()
 {
@@ -230,7 +252,7 @@ void SkinningObject3d::CreateSkinningResources()
     paletteResource_ = skinClusterData_.paletteResource;
 
     // =====================================================
-    // 入力頂点バッファを�E前で作る
+
     // 全 primitive の頂点めE本にまとめる
     // =====================================================
     inputVertexResource_ = skinningObject3dManager_->GetDxCommon()->CreateBufferResource(bufferSize);
@@ -258,7 +280,7 @@ void SkinningObject3d::CreateSkinningResources()
     assert(copyOffset == vertexCount);
 
     // =====================================================
-    // Skinning結果を書き込む出力バチE��ァ
+
     // =====================================================
     D3D12_HEAP_PROPERTIES heapProperties = {};
     heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -284,6 +306,7 @@ void SkinningObject3d::CreateSkinningResources()
     assert(skinnedVertexResource_);
 
     skinnedVertexResource_->SetName(L"SkinningObject3d::SkinnedVertexResource");
+    skinnedVertexState_ = D3D12_RESOURCE_STATE_COMMON;
 
     // =====================================================
     // 描画用 VBV
@@ -393,11 +416,12 @@ void SkinningObject3d::DispatchSkinning()
     barrierBefore.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrierBefore.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     barrierBefore.Transition.pResource = skinnedVertexResource_.Get();
-    barrierBefore.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+    barrierBefore.Transition.StateBefore = skinnedVertexState_;
     barrierBefore.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     barrierBefore.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
     commandList->ResourceBarrier(1, &barrierBefore);
+    skinnedVertexState_ = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
     // =========================================
     // Compute設宁E
@@ -407,7 +431,7 @@ void SkinningObject3d::DispatchSkinning()
     ID3D12DescriptorHeap* descriptorHeaps[] = { SrvManager::GetInstance()->GetDescriptorHeap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
     // =========================================
-    // SRV / UAV セチE��
+
     // t0 : input vertex
     // t1 : influence
     // t2 : palette
@@ -454,5 +478,6 @@ void SkinningObject3d::DispatchSkinning()
     barrierAfter.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
     commandList->ResourceBarrier(1, &barrierAfter);
+    skinnedVertexState_ = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 }
 #pragma endregion

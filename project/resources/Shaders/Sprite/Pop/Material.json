@@ -1,0 +1,25 @@
+{
+  "Name": "Pop VS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 1,
+    "DivisionY": 1
+  },
+  "Effect": {
+    "Amplitude": 0.28,
+    "Frequency": 1,
+    "Speed": 2.5,
+    "Phase": 0,
+    "Direction": [
+      1,
+      1
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

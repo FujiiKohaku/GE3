@@ -1,0 +1,7 @@
+newmtl Snow
+Kd 0.96 0.98 1.0
+map_Kd ../../../Textures/white.png
+
+newmtl BlueIce
+Kd 0.40 0.73 0.92
+map_Kd ../../../Textures/ice_texture.jpg

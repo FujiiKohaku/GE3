@@ -6,11 +6,12 @@
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/2D/Text/FontManager.h"
 #include "Engine/ImGuiManager/ImGuiManager.h"
-#include "Engine/Particle/ParticleManager.h"
 #include "Engine/PostEffect/OffscreenRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/SrvManager/SrvManager.h"
+#include "Engine/TextureManager/TextureManager.h"
 #include "Engine/input/Input.h"
 
 Renderer::Renderer() = default;
@@ -41,20 +42,25 @@ void Renderer::DrawImGui()
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    FontManager::GetInstance()->FlushAtlasUpdates();
+    // シーンやモデルが予約したテクスチャ転送を、描画前に一度だけまとめて実行する。
+    TextureManager::GetInstance()->FlushUploads();
+
     // SRV heap setup
     SrvManager::GetInstance()->PreDraw();
 
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
-    if (defaultCamera != nullptr) {
-        EffectManager::GetInstance()->SetCamera(defaultCamera);
-        ParticleManager::GetInstance()->SetCamera(defaultCamera);
-        EffectManager::GetInstance()->UpdatePerView();
-        ParticleManager::GetInstance()->UpdatePerView();
-    }
+    EffectManager* effectManager = EffectManager::GetInstance();
+    if (effectManager->IsInitialized()) {
+        if (defaultCamera != nullptr) {
+            effectManager->SetCamera(defaultCamera);
+            effectManager->UpdatePerView();
+        }
 
-    D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = postEffectManager_->GetFogConstantBufferView();
-    EffectManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
-    ParticleManager::GetInstance()->SetFogConstantBufferView(fogConstantBufferView);
+        D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView =
+            postEffectManager_->GetFogConstantBufferView();
+        effectManager->SetFogConstantBufferView(fogConstantBufferView);
+    }
 
     // Offscreen draw start
     postEffectManager_->PreDrawDepth();
@@ -70,18 +76,25 @@ void Renderer::Draw(SceneManager* sceneManager)
     // Post effect apply
     const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
     postEffectManager_->SetBoostRadialBlurParameters(isBoosting);
-    postEffectManager_->Apply(sceneManager, offscreenRenderer_->GetSrvHandleGPU());
+    postEffectManager_->PrepareSceneForParticleDraw(
+        sceneManager,
+        offscreenRenderer_->GetSrvHandleGPU());
 
-    // Particle draw
     postEffectManager_->PrepareDepthForParticleDraw();
-    DirectXCommon::GetInstance()->SetBackBufferRenderTarget(postEffectManager_->GetDepthDSVHandle());
+    postEffectManager_->BeginParticleDraw();
     sceneManager->DrawParticle();
+    postEffectManager_->EndParticleDraw();
+    postEffectManager_->PostDrawDepth();
+
+    postEffectManager_->ApplyAfterParticleDraw(sceneManager);
 
     // 2D draw
     sceneManager->Draw2D();
 
-    // ImGui draw
+    // ImGui is not initialized in the Release configuration.
+#ifdef USE_IMGUI
     ImGuiManager::GetInstance()->Draw();
+#endif
 
     // Present
     DirectXCommon::GetInstance()->PostDraw();

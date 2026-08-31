@@ -1,0 +1,62 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Circle",
+    "Count": 512,
+    "Radius": 4.5,
+    "Frequency": 0.001
+  },
+  "Particle": {
+    "LifeTime": 3.0,
+    "StartScale": 0.25,
+    "EndScale": 0.08,
+    "StartRotation": 0.0,
+    "RotationSpeed": 8.0,
+    "Velocity": [0.0, 1.5, 0.0],
+    "StartColor": [1.0, 0.75, 0.15, 0.95],
+    "EndColor": [0.2, 0.8, 1.0, 0.0]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+    "EnableDrag": true,
+    "Drag": 0.98,
+    "EnableNoise": true,
+    "NoiseStrength": 3.0,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Fields": [
+    {
+      "Type": "Vortex",
+      "Position": [0.0, 0.0, 0.0],
+      "Strength": 24.0,
+      "Radius": 20.0,
+      "Decay": 0.5,
+      "Space": "World"
+    },
+    {
+      "Type": "Wind",
+      "Position": [0.0, 0.0, 0.0],
+      "Direction": [0.0, 1.0, 0.0],
+      "Strength": 12.0,
+      "Radius": 20.0,
+      "Space": "World"
+    }
+  ],
+  "Render": {
+    "Texture": "../../Textures/gold_ember.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": false,
+    "Duration": 3.5
+  }
+}

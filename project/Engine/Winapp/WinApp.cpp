@@ -122,6 +122,7 @@ void WinApp::initialize()
     wc_.hCursor = LoadCursor(nullptr, IDC_ARROW); // カーソル設定
 
     // ウィンドウクラスを登録
+    wc_.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
     RegisterClass(&wc_);
 
     // クライアント領域を元にウィンドウサイズを調整
@@ -131,13 +132,17 @@ void WinApp::initialize()
     // ウィンドウ生成
     hwnd_ = CreateWindow(
         wc_.lpszClassName, // クラス名
-        L"LE3B_21_フジイ_コハク", // タイトル
+        L"ゲームたいとる", // タイトル
         kWindowStyle, // スタイル
         CW_USEDEFAULT, CW_USEDEFAULT, // 位置（自動）
         wrc.right - wrc.left, // 幅
         wrc.bottom - wrc.top, // 高さ
         nullptr, nullptr, wc_.hInstance, nullptr);
 
+}
+
+void WinApp::Show()
+{
     // ウィンドウ表示
     ShowWindow(hwnd_, SW_SHOW);
 }
@@ -148,6 +153,7 @@ void WinApp::initialize()
 //==================================================================
 void WinApp::Finalize()
 {
+    ClipCursor(nullptr);
     CloseWindow(hwnd_);
     CoUninitialize();
 }

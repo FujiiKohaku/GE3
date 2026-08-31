@@ -8,12 +8,15 @@
 
 struct PostEffectInfo {
     PostEffectType type = PostEffectType::Copy;
+    PostEffectStage stage = PostEffectStage::BeforeParticle;
     bool enabled = true;
     int priority = 0;
 };
 
 class SceneManager {
 public:
+    static constexpr float kDefaultCameraShakeStrength = 0.008f;
+
     static SceneManager* GetInstance()
     {
         static SceneManager instance;
@@ -26,6 +29,15 @@ public:
         nextScene_ = std::move(nextScene);
     }
 
+    // ロード画面を挟んでシーン遷移するテンプレート関数
+    template <typename TLoadingScene, typename TTargetScene, typename... Args>
+    void SetNextSceneWithLoading(Args&&... args)
+    {
+        auto targetScene = std::make_unique<TTargetScene>(std::forward<Args>(args)...);
+        auto loadingScene = std::make_unique<TLoadingScene>(std::move(targetScene));
+        SetNextScene(std::move(loadingScene));
+    }
+
     void Update();
     void Finalize();
     void DrawImGui();
@@ -35,7 +47,9 @@ public:
     // PostEffectTypeのセッターとゲッター
     void SetPostEffectType(PostEffectType postEffectType);
     PostEffectType GetPostEffectType() const;
-    void AddPostEffect(PostEffectType type);
+    void AddPostEffect(
+        PostEffectType type,
+        PostEffectStage stage = PostEffectStage::BeforeParticle);
     void RemovePostEffect(PostEffectType type);
     void ClearPostEffects();
     void SetPostEffectEnabled(PostEffectType type, bool enable);
@@ -44,6 +58,32 @@ public:
     const Vector2& GetPostEffectCenter() const;
     void SetPostEffectKickStrength(float strength);
     float GetPostEffectKickStrength() const;
+    void SetCameraShakeStrength(float strength);
+    float GetCameraShakeStrength() const;
+    void SetPaintProgress(float progress) { paintProgress_ = progress; }
+    float GetPaintProgress() const { return paintProgress_; }
+    void SetPaintIntensity(float intensity) { paintIntensity_ = intensity; }
+    float GetPaintIntensity() const { return paintIntensity_; }
+    void SetPaintSeed(float seed) { paintSeed_ = seed; }
+    float GetPaintSeed() const { return paintSeed_; }
+    void SetPaintPatternType(int type) { paintPatternType_ = type; }
+    int GetPaintPatternType() const { return paintPatternType_; }
+    void SetPaintColor(const Vector3& color) { paintColor_ = color; }
+    const Vector3& GetPaintColor() const { return paintColor_; }
+    void SetVignetteStrength(float strength) { vignetteStrength_ = strength; }
+    float GetVignetteStrength() const { return vignetteStrength_; }
+    void SetSonicBoomProgress(float progress) { sonicBoomProgress_ = progress; }
+    float GetSonicBoomProgress() const { return sonicBoomProgress_; }
+    void SetSonicBoomCenter(const Vector2& center) { sonicBoomCenter_ = center; }
+    const Vector2& GetSonicBoomCenter() const { return sonicBoomCenter_; }
+    void SetBlackHoleCenter(const Vector2& center) { blackHoleCenter_ = center; }
+    const Vector2& GetBlackHoleCenter() const { return blackHoleCenter_; }
+    void SetBlackHoleRadius(float radius) { blackHoleRadius_ = radius; }
+    float GetBlackHoleRadius() const { return blackHoleRadius_; }
+    void SetBlackHoleStrength(float strength) { blackHoleStrength_ = strength; }
+    float GetBlackHoleStrength() const { return blackHoleStrength_; }
+    void SetWaterEffectIntensity(float intensity) { waterEffectIntensity_ = intensity; }
+    float GetWaterEffectIntensity() const { return waterEffectIntensity_; }
 
 private:
     SceneManager() = default;
@@ -55,8 +95,22 @@ private:
     std::vector<PostEffectInfo> postEffects_;
     Vector2 postEffectCenter_ = { 0.5f, 0.5f };
     float postEffectKickStrength_ = 0.0f;
+    float cameraShakeStrength_ = kDefaultCameraShakeStrength;
+    float vignetteStrength_ = 1.0f;
+    float sonicBoomProgress_ = 0.0f;
+    Vector2 sonicBoomCenter_ = { 0.5f, 0.5f };
+    Vector2 blackHoleCenter_ = { 0.5f, 0.5f };
+    float blackHoleRadius_ = 0.16f;
+    float blackHoleStrength_ = 1.0f;
+    float waterEffectIntensity_ = 0.0f;
+    float paintProgress_ = 0.0f;
+    float paintIntensity_ = 0.0f;
+    float paintSeed_ = 0.0f;
+    int paintPatternType_ = 0;
+    Vector3 paintColor_ = { 0.95f, 0.10f, 0.58f };
 
 private:
     std::unique_ptr<BaseScene> scene_;
     std::unique_ptr<BaseScene> nextScene_;
+    std::unique_ptr<BaseScene> retiredScene_;
 };

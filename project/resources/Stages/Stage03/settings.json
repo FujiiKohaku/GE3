@@ -1,0 +1,79 @@
+{
+  "id": "stage03",
+  "name": "FROZEN PASSAGE",
+  "description": "A quiet flight above an ice field lined with glacial crystals. No enemies or bosses.",
+  "layout": "resources/Stages/Stage03/layout.json",
+  "rail": {
+    "length": 3400.0,
+    "point_interval": 50.0,
+    "speed": 0.45,
+    "control_points": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        250.0
+      ],
+      [
+        0.0,
+        0.0,
+        700.0
+      ],
+      [
+        0.0,
+        0.0,
+        1150.0
+      ],
+      [
+        0.0,
+        0.0,
+        1600.0
+      ],
+      [
+        0.0,
+        0.0,
+        2050.0
+      ],
+      [
+        0.0,
+        0.0,
+        2500.0
+      ],
+      [
+        0.0,
+        0.0,
+        2950.0
+      ],
+      [
+        0.0,
+        0.0,
+        3400.0
+      ]
+    ]
+  },
+  "boss": {
+    "type": "None",
+    "spawn_distance": 2900.0,
+    "position": [
+      0.0,
+      12.0,
+      3000.0
+    ],
+    "rail_auto_extension": false,
+    "rail_extension_buffer": 1200.0
+  },
+  "environment": {
+    "skybox": "resources/Textures/rostock_laage_airport_4k.dds",
+    "bgm": "resources/Sounds/BGM.wav",
+    "floor_texture": "resources/Textures/ice_texture.jpg",
+    "floor_enabled": true,
+    "floor_height": -35.0
+  },
+  "swarm_wave_distances": [],
+  "recovery_item_distances": [],
+  "paint_enemy_distances": []
+}

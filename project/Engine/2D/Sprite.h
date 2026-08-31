@@ -1,154 +1,104 @@
 #pragma once
-#include "Engine/math/SpriteStruct.h" // Vector2, Vector3, Vector4, Matrix4x4 など
-#include "Engine/TextureManager/TextureManager.h"
-#include <cstdint> // uint32_t など
-#include <d3d12.h> // D3D12関連型（ID3D12Resourceなど）
-#include <string> // std::string
-#include <wrl.h> // ComPtrスマートポインタ
 
-// 前方宣言
+#include "Engine/TextureManager/TextureManager.h"
+#include "Engine/math/SpriteStruct.h"
+#include "SpriteMeshManager.h"
+#include "SpriteRenderManager.h"
+#include <cstdint>
+#include <d3d12.h>
+#include <string>
+#include <wrl.h>
+
 class SpriteManager;
 
-// ===============================================
-// Spriteクラス（2D画像描画クラス）
-// ===============================================
 class Sprite {
 public:
-    Sprite()
-    {
-        static int a = 0;
-        a++;
-    }
-
+    Sprite() = default;
     ~Sprite();
-    // ===============================
-    // 初期化（必要情報を渡して準備）
-    // ===============================
+
     void Initialize(SpriteManager* spriteManager, std::string textureFilePath);
-
-    // 毎フレームの更新処理（行列など）
     void Update();
-
-    // 描画処理（GPUにコマンド送信）
     void Draw();
 
-    // ===============================
-    // 各種Getter / Setter
-    // ===============================
+    const Vector2& GetPosition() const { return position_; }
+    void SetPosition(const Vector2& position) { position_ = position; }
 
-    // 位置
-    const Vector2& GetPosition() const { return position; }
-    void SetPosition(const Vector2& pos) { position = pos; }
+    float GetRotation() const { return rotation_; }
+    void SetRotation(float rotation) { rotation_ = rotation; }
 
-    // 回転
-    float GetRotation() const { return rotation; }
-    void SetRotation(float rot) { rotation = rot; }
+    const Vector4& GetColor() const { return materialData_->color; }
+    void SetColor(const Vector4& color) { materialData_->color = color; }
 
-    // 色
-    const Vector4& GetColor() const { return materialData->color; }
-    void SetColor(const Vector4& color) { materialData->color = color; }
+    const Vector2& GetSize() const { return size_; }
+    void SetSize(const Vector2& size) { size_ = size; }
 
-    // サイズ
-    const Vector2& GetSize() const { return size; }
-    void SetSize(const Vector2& s) { size = s; }
-
-private:
-    // ===============================
-    // メンバ変数
-    // ===============================
-
-    // 座標・回転・サイズ
-    Vector2 position = { 0.0f, 0.0f };
-    float rotation = 0.0f;
-    Vector2 size = { 640.0f, 360.0f };
-
-    // トランスフォーム初期値
-    EulerTransform transform {
-        { 1.0f, 1.0f, 1.0f }, // 拡縮
-        { 0.0f, 0.0f, 0.0f }, // 回転
-        { 0.0f, 0.0f, 0.0f } // 平行移動
-    };
-
-    // SpriteManagerへの参照
-    SpriteManager* spriteManager_ = nullptr;
-
-    // ===============================
-    // GPUバッファ関連
-    // ===============================
-
-    // GPUリソース（バッファ）
-    Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource; // 頂点バッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> indexResource; // インデックスバッファ
-    ULONG refCount = 0;
-
-    // CPU側アクセス用ポインタ
-    SpriteVertexData* vertexData = nullptr;
-    uint32_t* indexData = nullptr;
-
-    // バッファビュー（使い方情報）
-    D3D12_VERTEX_BUFFER_VIEW vertexBufferView {};
-    D3D12_INDEX_BUFFER_VIEW indexBufferView {};
-
-    // 変換行列定数バッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource;
-    SpriteTransform* transformationMatrixData = nullptr;
-
-    // マテリアル定数バッファ
-    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource;
-    SpriteMaterial* materialData = nullptr;
-
-    // ===============================
-    // テクスチャ関連
-    // ===============================
-    D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU_ {}; // GPUハンドル
-    std::string textureFilePath_;
-
-    // ===============================
-    // 内部処理関数
-    // ===============================
-    void CreateVertexBuffer(); // 頂点バッファ生成
-    void CreateMaterialBuffer(); // マテリアルバッファ生成
-    void CreateTransformationMatrixBuffer(); // 変換行列バッファ生成
-
-    // ===============================
-    // スプライト拡張
-    // ===============================
-
-    // アンカーポイント
-    Vector2 anchorPoint_ = { 0.0f, 0.0f };
-
-    // 左右フリップ
-    bool isFlipX_ = false;
-    // 上下フリップ
-    bool isFlipY_ = false;
-
-    // テクスチャ左上座標
-    Vector2 textureLeftTop_;
-    // テクスチャ切り出しサイズ
-    Vector2 textureSize_;
-    // テクスチャサイズをイメージに合わせる
-    void AdjustTextureSize();
-
-public:
-    // getter
     const Vector2& GetAnchorPoint() const { return anchorPoint_; }
-    // setter
-    void SetAnchorPoint(const Vector2& anchorpoint) { anchorPoint_ = anchorpoint; }
+    void SetAnchorPoint(const Vector2& anchorPoint) { anchorPoint_ = anchorPoint; }
 
-    // ========================================
-    // Setter
-    // ========================================
     void SetIsFlipX(bool isFlipX) { isFlipX_ = isFlipX; }
     void SetIsFlipY(bool isFlipY) { isFlipY_ = isFlipY; }
-    // --- セッター ---
-    void SetTextureLeftTop(const Vector2& leftTop) { textureLeftTop_ = leftTop; }
-    void SetTextureSize(const Vector2& size) { textureSize_ = size; }
-    // ========================================
-    // Getter
-    // ========================================
     bool GetIsFlipX() const { return isFlipX_; }
     bool GetIsFlipY() const { return isFlipY_; }
-    // --- ゲッター ---
+
+    void SetTextureLeftTop(const Vector2& leftTop) { textureLeftTop_ = leftTop; }
+    void SetTextureSize(const Vector2& size) { textureSize_ = size; }
     const Vector2& GetTextureLeftTop() const { return textureLeftTop_; }
     const Vector2& GetTextureSize() const { return textureSize_; }
+
+    void SetShaderPaths(const std::string& vertexShaderPath, const std::string& pixelShaderPath);
+    void SetVertexShaderPath(const std::string& vertexShaderPath);
+    void SetPixelShaderPath(const std::string& pixelShaderPath);
+    void SetBlendMode(BlendMode blendMode);
+    void SetMaterial(const std::string& shaderFolderPath);
+    const std::string& GetMaterialName() const { return materialName_; }
+    const std::string& GetMaterialFolderPath() const { return materialFolderPath_; }
+    const SpriteGraphicsPipelineDesc& GetPipelineDesc() const { return pipelineDesc_; }
+
+    void SetQuadMesh();
+    void SetGridMesh(uint32_t divisionX, uint32_t divisionY);
+    const SpriteMeshDesc& GetMeshDesc() const { return meshDesc_; }
+
+    void SetEffectAmplitude(float amplitude) { effectParameterData_->amplitude = amplitude; }
+    void SetEffectFrequency(float frequency) { effectParameterData_->frequency = frequency; }
+    void SetEffectSpeed(float speed) { effectParameterData_->speed = speed; }
+    void SetEffectPhase(float phase) { effectParameterData_->phase = phase; }
+    void SetEffectDirection(const Vector2& direction) { effectParameterData_->direction = direction; }
+    void SetEffectStrength(float strength) { effectParameterData_->strength = strength; }
+    void SetEffectThreshold(float threshold) { effectParameterData_->threshold = threshold; }
+
+private:
+    void CreateMaterialBuffer();
+    void CreateTransformationMatrixBuffer();
+    void CreateEffectParameterBuffer();
+    void AdjustTextureSize();
+    void UpdateTransform();
+    void UpdateUvTransform();
+
+private:
+    Vector2 position_ = { 0.0f, 0.0f };
+    float rotation_ = 0.0f;
+    Vector2 size_ = { 640.0f, 360.0f };
+
+    SpriteManager* spriteManager_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> transformationMatrixResource_;
+    SpriteTransform* transformationMatrixData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialResource_;
+    SpriteMaterialConstants* materialData_ = nullptr;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> effectParameterResource_;
+    SpriteEffectParameters* effectParameterData_ = nullptr;
+
+    std::string textureFilePath_;
+    Vector2 anchorPoint_ = { 0.0f, 0.0f };
+    bool isFlipX_ = false;
+    bool isFlipY_ = false;
+    Vector2 textureLeftTop_ = { 0.0f, 0.0f };
+    Vector2 textureSize_ = { 0.0f, 0.0f };
+
+    SpriteGraphicsPipelineDesc pipelineDesc_;
+    SpriteMeshDesc meshDesc_;
+    std::string materialName_ = "Standard";
+    std::string materialFolderPath_ = "resources/Shaders/Sprite/Standard";
 };

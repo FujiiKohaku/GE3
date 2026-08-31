@@ -14,7 +14,6 @@ struct VertexData {
 // マテリアル外部データ（ファイルパス・テクスチャ番号）
 struct MaterialData {
 	std::string textureFilePath;
-	uint32_t textureIndex = 0;
 };
 // マテリアルデータ（色情報など）
 struct Material {
@@ -49,6 +48,7 @@ struct MeshPrimitive {
 	std::vector<VertexData> vertices;
 	std::vector<uint32_t> indices;
 	PrimitiveMode mode;
+	uint32_t materialIndex = 0;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource;
 	D3D12_VERTEX_BUFFER_VIEW vbView;
@@ -71,7 +71,6 @@ struct JointWeightData {
 struct ModelData {
 	std::map<std::string, JointWeightData> skinClusterData;
 	std::vector<MeshPrimitive> primitives;
-	std::vector<uint32_t> indices;
-	MaterialData material;
+	std::vector<MaterialData> materials;
 	Node rootNode;
 };

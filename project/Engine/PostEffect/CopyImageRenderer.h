@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/math/EngineStruct.h"
 #include "PostEffectType.h"
@@ -24,9 +24,56 @@ public:
         float dissolvePadding;
 
         float boostKickStrength;
+        float pixelSize;
+        float colorBrightness;
+        float colorContrast;
+
+        float colorSaturation;
         float padding0;
         float padding1;
         float padding2;
+
+        float focusDepth;
+        float focusRange;
+        float depthOfFieldRadius;
+        float motionBlurStrength;
+
+        Vector2 motionBlurDirection;
+        int32_t motionBlurSampleCount;
+        float chromaticAberrationStrength;
+
+        float lensDistortionStrength;
+        float filmGrainStrength;
+        float lensDirtStrength;
+        float cameraShakeStrength;
+
+        float bokehRadius;
+        int32_t bokehSides;
+        float fisheyeStrength;
+        int32_t animationEnabled;
+
+        float lightThreshold;
+        float lightStrength;
+        float lightRadius;
+        float lightAngle;
+
+        float paintProgress;
+        float paintIntensity;
+        float paintSeed;
+        int32_t paintPatternType;
+        Vector3 paintColor;
+        float sonicBoomProgress;
+        Vector2 sonicBoomCenter;
+        Vector2 paddingSonicBoom;
+        Vector2 blackHoleCenter;
+        float blackHoleRadius;
+        float blackHoleStrength;
+        float waterEffectIntensity;
+        Vector3 paddingWaterEffect;
+        float outlineNearClip;
+        float outlineFarClip;
+        float outlineThreshold;
+        float outlineSoftness;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);
@@ -38,8 +85,9 @@ public:
 
 private:
     void CreateRootSignature();
-    // void CreateGraphicsPipeline();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(const std::wstring& pixelShaderPath);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> GetOrCreateGraphicsPipeline(PostEffectType type);
+    const wchar_t* GetPixelShaderPath(PostEffectType type) const;
     void CreatePostEffectParameterResource();
 
 private:

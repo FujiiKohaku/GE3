@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Animation.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -8,7 +8,7 @@
 class AnimationLoder {
 
     public:
-    static Animation LoadAnimationFile(const std::string& directoryPath, const std::string& filename);
+    static Animation LoadAnimationFile(const std::string& directoryPath, const std::string& filename, uint32_t animationIndex = 0);
 
 
 };

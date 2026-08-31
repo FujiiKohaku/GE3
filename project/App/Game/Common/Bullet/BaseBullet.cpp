@@ -1,5 +1,6 @@
 #include "App/Game/Common/Bullet/BaseBullet.h"
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/Time/TimeManager.h"
 #include <cassert>
 void BaseBullet::Initialize(Model* model)
 {
@@ -24,9 +25,10 @@ void BaseBullet::Update()
         return; // 弾が生存していない場合は更新処理を行わない
     }
 
+    previousPosition_ = transform_.translate;
     Move(); // 弾の移動処理を行う
 
-    lifeTime_ += 1.0f / 60.0f; // 60FPSを想定して、1フレームあたりの時間を加算
+    lifeTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
     if (lifeTime_ >= maxLifeTime_) { // 最大寿命時間を超えた場合は弾を消滅させる
         SetDead();
@@ -48,9 +50,32 @@ void BaseBullet::Draw()
     object_->Draw();
 }
 
+void BaseBullet::SetScale(const Vector3& scale)
+{
+    transform_.scale = scale;
+
+    if (object_ == nullptr) {
+        return;
+    }
+
+    object_->SetScale(transform_.scale);
+    object_->Update();
+}
+
+void BaseBullet::SetColor(const Vector4& color)
+{
+    if (object_ == nullptr) {
+        return;
+    }
+
+    object_->SetColor(color);
+    object_->Update();
+}
+
 void BaseBullet::SetTranslate(const Vector3& translate)
 {
     transform_.translate = translate;
+    previousPosition_ = translate;
 
     if (object_ == nullptr) {
         return;
@@ -65,9 +90,11 @@ void BaseBullet::SetTranslate(const Vector3& translate)
 
 void BaseBullet::Move()
 {
-    transform_.translate.x += velocity_.x;
-    transform_.translate.y += velocity_.y;
-    transform_.translate.z += velocity_.z;
+    const float timeScale =
+        GetTimeScale() * TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
+    transform_.translate.x += velocity_.x * timeScale;
+    transform_.translate.y += velocity_.y * timeScale;
+    transform_.translate.z += velocity_.z * timeScale;
 }
 
 void BaseBullet::SetDead()

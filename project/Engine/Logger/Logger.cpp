@@ -51,17 +51,32 @@ void Logger::Error(const std::string& message)
     Write("Error", message);
 }
 
+void Logger::Flush()
+{
+    if (logFile_.is_open()) {
+        logFile_.flush();
+    }
+}
+
 void Logger::Write(const std::string& level, const std::string& message)
 {
     std::string time = GetTimeString();
     std::string text = "[" + time + "] [" + level + "] " + message;
 
+#ifdef _DEBUG
     std::cout << text << std::endl;
     OutputDebugStringA((text + "\n").c_str());
+#endif
 
     if (logFile_.is_open()) {
-        logFile_ << text << std::endl;
+        logFile_ << text << '\n';
+#ifdef _DEBUG
         logFile_.flush();
+#else
+        if (level != "Log") {
+            logFile_.flush();
+        }
+#endif
     }
 }
 

@@ -3,56 +3,38 @@
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
-static const float kKernel3x3[3][3] =
-{
-    { 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f },
-    { 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f },
-    { 1.0f / 9.0f, 1.0f / 9.0f, 1.0f / 9.0f },
-};
-
-static const float2 kIndex3x3[3][3] =
-{
-    { { -1.0f, -1.0f }, { 0.0f, -1.0f }, { 1.0f, -1.0f } },
-    { { -1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    { { -1.0f, 1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } },
-};
-
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
     uint width;
     uint height;
-
     gTexture.GetDimensions(width, height);
 
-    float2 uvStepSize;
+    // ビネット強度/フェードパラメータ (1.0 -> 0.0 で徐々にサンプリング距離が縮小)
+    float blurStrength = saturate(vignetteStrength);
 
-    uvStepSize.x = 1.0f / float(width);
-    uvStepSize.y = 1.0f / float(height);
+    // 時間経過とともにサンプリングステップが 3.8px から 0.0px へスムーズにフェードアウト
+    float2 uvStepSize = float2((3.8f * blurStrength) / float(width), (3.8f * blurStrength) / float(height));
 
     float3 resultColor = float3(0.0f, 0.0f, 0.0f);
+    float totalWeight = 0.0f;
 
-    for (int x = 0; x < 3; x++)
+    // 5x5 ボックスフィルタフェード
+    [unroll]
+    for (int x = -2; x <= 2; ++x)
     {
-
-        for (int y = 0; y < 3; y++)
+        [unroll]
+        for (int y = -2; y <= 2; ++y)
         {
-
-            float2 texcoord =
-                input.texcoord +
-                kIndex3x3[x][y] * uvStepSize;
-
-            float3 fetchColor =
-                gTexture.Sample(gSampler, texcoord).rgb;
-
-            resultColor +=
-                fetchColor * kKernel3x3[x][y];
+            float2 offset = float2(x, y) * uvStepSize;
+            resultColor += gTexture.Sample(gSampler, input.texcoord + offset).rgb;
+            totalWeight += 1.0f;
         }
     }
 
-    float4 outputColor;
+    if (totalWeight > 0.0f)
+    {
+        resultColor /= totalWeight;
+    }
 
-    outputColor.rgb = resultColor;
-    outputColor.a = 1.0f;
-
-    return outputColor;
+    return float4(resultColor, 1.0f);
 }

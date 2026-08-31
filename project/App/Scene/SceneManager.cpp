@@ -1,28 +1,49 @@
 #include "SceneManager.h"
 #include <cassert>
 
+namespace {
+bool ChangeScene(
+    std::unique_ptr<BaseScene>& scene,
+    std::unique_ptr<BaseScene>& nextScene,
+    std::unique_ptr<BaseScene>& retiredScene)
+{
+    if (!nextScene) {
+        return false;
+    }
+
+    if (scene) {
+        retiredScene = std::move(scene);
+    }
+
+    scene = std::move(nextScene);
+    scene->Initialize();
+    return true;
+}
+}
 
 
 void SceneManager::Update()
 {
-    if (nextScene_) {
-
-        if (scene_) {
-            scene_->Finalize();
-        }
-
-        scene_ = std::move(nextScene_);
-
-        scene_->Initialize();
+    if (retiredScene_) {
+        retiredScene_->Finalize();
+        retiredScene_.reset();
     }
+
+    ChangeScene(scene_, nextScene_, retiredScene_);
 
     if (scene_) {
         scene_->Update();
     }
+
 }
 
 void SceneManager::Finalize()
 {
+    if (retiredScene_) {
+        retiredScene_->Finalize();
+        retiredScene_.reset();
+    }
+
     if (scene_) {
         scene_->Finalize();
         scene_.reset();
@@ -62,8 +83,12 @@ void SceneManager::DrawImGui()
 void SceneManager::SetPostEffectType(PostEffectType postEffectType)
 {
     ClearPostEffects();
-    AddPostEffect(postEffectType);
-    AddPostEffect(PostEffectType::Fog);
+    AddPostEffect(
+        postEffectType,
+        PostEffectStage::BeforeParticle);
+    AddPostEffect(
+        PostEffectType::Fog,
+        PostEffectStage::BeforeParticle);
     postEffectType_ = postEffectType;
 }
 
@@ -72,7 +97,9 @@ PostEffectType SceneManager::GetPostEffectType() const
     return postEffectType_;
 }
 
-void SceneManager::AddPostEffect(PostEffectType type)
+void SceneManager::AddPostEffect(
+    PostEffectType type,
+    PostEffectStage stage)
 {
     for (const PostEffectInfo& postEffect : postEffects_) {
         if (postEffect.type == type) {
@@ -82,6 +109,7 @@ void SceneManager::AddPostEffect(PostEffectType type)
 
     PostEffectInfo postEffect;
     postEffect.type = type;
+    postEffect.stage = stage;
     postEffect.enabled = true;
     postEffect.priority = 0;
     postEffects_.push_back(postEffect);
@@ -154,4 +182,21 @@ void SceneManager::SetPostEffectKickStrength(float strength)
 float SceneManager::GetPostEffectKickStrength() const
 {
     return postEffectKickStrength_;
+}
+
+void SceneManager::SetCameraShakeStrength(float strength)
+{
+    cameraShakeStrength_ = strength;
+    if (cameraShakeStrength_ < 0.0f) {
+        cameraShakeStrength_ = 0.0f;
+    }
+
+    if (cameraShakeStrength_ > 0.05f) {
+        cameraShakeStrength_ = 0.05f;
+    }
+}
+
+float SceneManager::GetCameraShakeStrength() const
+{
+    return cameraShakeStrength_;
 }

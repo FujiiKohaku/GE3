@@ -20,26 +20,26 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
-		Development|x64 = Development|x64
+		Develop|x64 = Develop|x64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{363657A6-518D-4D5C-90B2-3D50B381F493}.Debug|x64.ActiveCfg = Debug|x64
 		{363657A6-518D-4D5C-90B2-3D50B381F493}.Debug|x64.Build.0 = Debug|x64
-		{363657A6-518D-4D5C-90B2-3D50B381F493}.Development|x64.ActiveCfg = Development|x64
-		{363657A6-518D-4D5C-90B2-3D50B381F493}.Development|x64.Build.0 = Development|x64
+		{363657A6-518D-4D5C-90B2-3D50B381F493}.Develop|x64.ActiveCfg = Development|x64
+		{363657A6-518D-4D5C-90B2-3D50B381F493}.Develop|x64.Build.0 = Development|x64
 		{363657A6-518D-4D5C-90B2-3D50B381F493}.Release|x64.ActiveCfg = Release|x64
 		{363657A6-518D-4D5C-90B2-3D50B381F493}.Release|x64.Build.0 = Release|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Debug|x64.ActiveCfg = Debug|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Debug|x64.Build.0 = Debug|x64
-		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Development|x64.ActiveCfg = Development|x64
-		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Development|x64.Build.0 = Development|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Develop|x64.ActiveCfg = Development|x64
+		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Develop|x64.Build.0 = Development|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.ActiveCfg = Release|x64
 		{371B9FA9-4C90-4AC6-A123-ACED756D6C77}.Release|x64.Build.0 = Release|x64
 		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Debug|x64.ActiveCfg = Debug|x64
 		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Debug|x64.Build.0 = Debug|x64
-		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Development|x64.ActiveCfg = Release|x64
-		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Development|x64.Build.0 = Release|x64
+		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Develop|x64.ActiveCfg = Release|x64
+		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Develop|x64.Build.0 = Release|x64
 		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Release|x64.ActiveCfg = Release|x64
 		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection

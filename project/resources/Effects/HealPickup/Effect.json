@@ -1,0 +1,49 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 8,
+    "Radius": 1.40,
+    "Frequency": 0.35
+  },
+
+  "Particle": {
+    "MaxParticles": 64,
+    "LifeTime": 1.20,
+    "StartScale": 0.42,
+    "EndScale": 0.50,
+    "StartRotation": 0.0,
+    "RotationSpeed": 0.0,
+    "Velocity": [0.0, 3.6, 0.0],
+    "StartColor": [0.82, 1.0, 0.72, 1.0],
+    "EndColor": [0.20, 1.0, 0.32, 0.0]
+  },
+
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+    "EnableDrag": true,
+    "Drag": 0.985,
+    "EnableNoise": false,
+    "NoiseStrength": 0.0,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+
+  "Render": {
+    "Texture": "resources/Particles/HealingCross.png",
+    "MeshType": "Board",
+    "BlendMode": "Normal",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": false,
+    "Duration": 0.90
+  }
+}

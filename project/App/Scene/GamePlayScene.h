@@ -1,12 +1,13 @@
 #pragma once
 #include "Engine/3D/SkinningObject3d.h"
 #include "Engine/3D/SkinningObject3dManager.h"
-#include "Engine/3D/SphereObject.h"
 
 #include "Engine/Animation/PlayAnimation.h"
 #include "Engine/Skeleton/Skeleton.h"
 
 #include "App/Scene/BaseScene.h"
+#include "Engine/2D/Text/Text.h"
+#include "Engine/2D/Text/TextRenderer.h"
 
 #include "Engine/Camera/Camera.h"
 #include "Engine/debugcamera/DebugCameraController.h"
@@ -14,6 +15,8 @@
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/3D/OceanSurface.h"
+#include "Engine/3D/WaterPillarRenderer.h"
 
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Rail/Rail.h"
@@ -28,10 +31,14 @@
 #include "Engine/Animation/AnimationActor.h"
 
 #include "App/Game/Player/Player.h"
+#include "App/Game/Collision/GameplayCollisionSystem.h"
+#include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Hazard/WaterPillarHazard.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Engine/EditorManager/EditorManager.h"
@@ -39,12 +46,22 @@
 #include "Engine/SceneObjectManager/SceneObjectManager.h"
 
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 
 #include "App/Game/Enemy/Types/NormalEnemy.h"
-#include "App/Game/Boss/BaseBoss.h"
+#include "App/Game/Enemy/Types/ArmoredEnemy.h"
+#include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
+#include "App/Game/Boss/BossEncounterController.h"
+#include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
+
+struct LevelData;
 
 class GamePlayScene : public BaseScene {
 public:
+    explicit GamePlayScene(const std::string& stageId = "stage01")
+        : stageId_(stageId) {}
+
     void Initialize() override;
 
     void Finalize() override;
@@ -57,10 +74,63 @@ public:
     void DrawImGui() override;
 
 private:
-    void LoadEnemyPopData();
+    // プレイヤーと敵の当たり判定
+    static constexpr float kPlayerEnemyCollisionRadius = 2.0f;
+    static constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
+
+    // ブースト演出
+    static constexpr float kBoostPostEffectBaseWeight = 0.40f;
+    static constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
+    static constexpr float kBoostPostEffectPlayerWeight = 0.30f;
+    static constexpr float kBoostPostEffectCenterMin = 0.28f;
+    static constexpr float kBoostPostEffectCenterMax = 0.72f;
+    static constexpr float kBoostPostEffectVanishPointDistance = 150.0f;
+    static constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
+    static constexpr float kBoostKickDuration = 0.2f;
+    static constexpr float kBoostKickFovAdd = 0.1f;
+
+    // カメラシェイク
+    static constexpr float kCameraShakeFadeDuration = 5.0f;
+    static constexpr float kPlayerDamageShakeDuration = 0.35f;
+    static constexpr float kPlayerDamageShakeStrength = 0.006f;
+    static constexpr float kBossMadShakeDuration = 7.0f;
+    static constexpr float kBossMadShakeStrength = 0.008f;
+    static constexpr float kBossBeamShakeDuration = 0.1f;
+    static constexpr float kBossBeamShakeStrength = 0.0015f;
+
+    // 回復アイテム
+    static constexpr float kRecoveryItemCollisionRadius = 3.0f;
+    static constexpr float kRecoveryItemRotationSpeed = 0.035f;
+    static constexpr float kRecoveryItemBobSpeed = 0.045f;
+    static constexpr float kRecoveryItemBobHeight = 0.65f;
+    static constexpr int32_t kRecoveryItemHealAmount = 5;
+
+    // スウォームとジャスト回避
+    static constexpr int32_t kSwarmMembersPerWave = 18;
+    static constexpr float kJustDodgeSlowDuration = 1.0f;
+    static constexpr float kJustDodgeEnemyBulletTimeScale = 0.35f;
+
+    // 水柱ヒット時の画面水滴
+    static constexpr float kWaterDropEffectDuration = 4.0f;
+
+    std::string stageId_ = "stage01";
+    StageSettings stageSettings_;
+
+    void CreateLevelObjects(const LevelData& levelData);
+    void ClearLevelObjects();
+    void HotReloadLevel();
+    void LoadEnemyPopData(const LevelData& levelData);
     void CheckCollision();
+    void StartPaintHitEffect();
+    void StartWaterDropEffect();
+    void UpdateWaterDropEffect();
+    void UpdateJustDodgeSlowMotion(bool justDodged);
+#ifdef _DEBUG
+    void DrawCollisionDebug();
+#endif
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
+    StageBoss* GetActiveBoss() const;
 
     // Updateメソッドの処理分割用ヘルパー関数
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
@@ -68,10 +138,24 @@ private:
     void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
     void UpdateBoostKick(bool isPlayerBoosting);
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
+    void UpdateCameraShakePostEffect();
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
+    void ResetGameplayPostEffects();
+    void StopPlayerEngineEffects();
     void ProcessPlayerShooting(Input* input);
+    void UpdateBossHpHud();
+    void UpdateSwarmWaveSpawning();
+    void SpawnSwarmWave(
+        SwarmFormationType formationType,
+        int32_t travelDirection);
+    void InitializeRecoveryItems(Model* model);
+    void UpdateRecoveryItems();
+    void InitializeOceanLife();
+    void InitializeWaterPillars();
+    void UpdateOceanLife(const Vector3& railPosition, const Vector3& forward, const Vector3& railRight);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
+    std::unique_ptr<GameplayCollisionSystem> gameplayCollisionSystem_;
 
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
@@ -89,15 +173,36 @@ private:
     // 3dオブジェクト
     // ------------------------------
 
-    std::unique_ptr<SphereObject> sphere_;
     // std::unique_ptr<Object3d> terrain_;
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;
+    std::unique_ptr<OceanSurface> oceanSurface_;
+    std::unique_ptr<WaterPillarRenderer> waterPillarRenderer_;
+    std::vector<std::unique_ptr<Object3d>> oceanFish_;
+    std::vector<std::unique_ptr<Object3d>> oceanBirds_;
+    std::vector<std::unique_ptr<WaterPillarHazard>> waterPillars_;
+    float oceanLifeTime_ = 0.0f;
+    float fishSchoolTimer_ = 0.0f;
+    float fishSchoolCooldown_ = 5.0f;
+    bool isFishSchoolActive_ = false;
+    bool fishSchoolFromLeft_ = true;
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
     std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
+    std::vector<DestructibleLevelObject> destructibleLevelObjects_;
+    std::vector<StageTrigger> stageTriggers_;
+
+    struct RecoveryItem {
+        std::unique_ptr<Object3d> object;
+        Vector3 basePosition = { 0.0f, 0.0f, 0.0f };
+        EffectHandle effectHandle = kInvalidEffectHandle;
+        float animationTime = 0.0f;
+        bool collected = false;
+    };
+    std::vector<RecoveryItem> recoveryItems_;
+
     // player
     std::unique_ptr<Player> player_;
 
@@ -106,6 +211,10 @@ private:
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
+    std::vector<std::unique_ptr<Sprite>> homingLockSprites_;
+    std::unique_ptr<Sprite> weaponHudBgSprite_;
+    std::unique_ptr<Text> weaponHudLabelText_;
+    std::unique_ptr<Text> weaponHudNameText_;
     // ------------------------------
     // BGM / SE
     // ------------------------------
@@ -145,7 +254,6 @@ private:
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
-    EffectHandle boostLineHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
     bool wasBoostingForKick_ = false;
     bool isRandomPostEffect_ = false;
@@ -173,6 +281,8 @@ private:
     float followY_ = 0.35f;
     // エネミー配列
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
+    EnemyBulletManager enemyBulletManager_;
+    size_t nextSwarmWaveIndex_ = 0;
 
     // エイム用仮想カメラ
     std::unique_ptr<Camera> aimCamera_;
@@ -180,16 +290,94 @@ private:
     // エネミー・弾モデル
     Model* enemyModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
+    Model* fearWormEnemyModel_ = nullptr;
+    Model* angerBlockModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
-    static constexpr float kCameraUpwardOffset = 6.0f;
+    // EXZODIAC-like low chase view: keep the eye slightly below the rail
+    // center so the player is framed against the horizon instead of seen
+    // from above.
+    static constexpr float kCameraUpwardOffset = 1.0f;
 
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;
     float cameraLookUpFactor_ = 0.7f;
+    float cameraHorizontalFollowFactor_ = 0.2f;
+    float cameraLookHorizontalFactor_ = 0.35f;
 
     // ボス戦用
-    std::unique_ptr<BaseBoss> activeBoss_;
-    bool isBossSpawned_ = false;
+    std::unique_ptr<BossEncounterController> bossController_;
+    bool isPirateShipMidBossSpawned_ = false;
+
+    // カメラシェイク演出用
+    float cameraShakeTime_ = 0.0f;
+    float cameraShakeStrength_ = 0.0f;
+    float cameraShakeDuration_ = 0.0f;
+
+    // ペイントポストエフェクト用
+    bool isPaintEffectActive_ = false;
+    float paintEffectTimer_ = 0.0f;
+    float paintEffectDuration_ = 5.5f;
+
+    // 水柱ヒット時の画面水滴用
+    float waterDropEffectTimer_ = 0.0f;
+
+    // 被弾フラッシュ演出用
+    float damageFlashTimer_ = 0.0f;
+    int lastPlayerHp_ = 20;
+    float justDodgeSlowTimer_ = 0.0f;
+
+    // ボス登場時電波障害ノイズ用フェードアウトタイマー
+    float bossNoiseFadeTimer_ = 0.0f;
+
+    // プレイヤー爆発後、ゲームオーバー画面へ移るまでの待機時間
+    float playerDeathAfterExplosionTimer_ = 0.0f;
+    bool playerDeathExplosionPlayed_ = false;
+    bool hasPlayerDeathCameraState_ = false;
+    Vector3 playerDeathCameraOffset_ {};
+    Vector3 playerDeathCameraLookTarget_ {};
+
+    // ボス撃破ディゾルブ用タイマー
+    float bossDeathDissolveTimer_ = 0.0f;
+
+    // ブースト加速ソニックブーム衝撃音波タイマー
+    float sonicBoomTimer_ = 0.0f;
+
+    // ポーズメニュー（TABキー）関連
+    bool isPaused_ = false;
+    std::unique_ptr<Sprite> pauseMenuPanelSprite_;
+    std::unique_ptr<Sprite> pauseResumeBtnSprite_;
+    std::unique_ptr<Sprite> pauseRetryBtnSprite_;
+    std::unique_ptr<Sprite> pauseTitleBtnSprite_;
+    std::unique_ptr<Sprite> pauseControlBtnSprite_;
+
+    // ポーズ用日本語テキストUI（Textクラス）
+    std::unique_ptr<Text> pauseTitleText_;
+    std::unique_ptr<Text> pauseResumeText_;
+    std::unique_ptr<Text> pauseRetryText_;
+    std::unique_ptr<Text> pauseTitleBtnText_;
+    std::unique_ptr<Text> pauseControlText_;
+    std::unique_ptr<Text> pauseSensitivityText_;
+
+    // 画面右側のプレイヤーHPゲージUI
+    std::unique_ptr<Sprite> playerHpBgSprite_;
+    std::unique_ptr<Sprite> playerHpBarSprite_;
+    std::unique_ptr<Text> playerHpText_;
+    float displayedPlayerHpRatio_ = 1.0f;
+
+    // Release構成でも表示するボスHP HUD
+    std::unique_ptr<Sprite> bossHeadHpBgSprite_;
+    std::unique_ptr<Sprite> bossHeadHpBarSprite_;
+    std::unique_ptr<Sprite> bossBodyHpBgSprite_;
+    std::unique_ptr<Sprite> bossBodyHpBarSprite_;
+    std::unique_ptr<Text> bossNameText_;
+    std::unique_ptr<Text> bossHeadHpText_;
+    std::unique_ptr<Text> bossBodyHpText_;
+    float displayedBossHeadHpRatio_ = 1.0f;
+    float displayedBossBodyHpRatio_ = 1.0f;
+
+    bool hasCameraPoint_ = false;
+    LevelData::ObjectData cameraPointObject_ {};
+    float cameraPointLerpTime_ = 0.0f;
 };

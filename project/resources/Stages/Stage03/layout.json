@@ -1,0 +1,686 @@
+{
+  "scene": [
+    {
+      "name": "Ice_Spire_00_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -65,
+          180,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.0
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_00_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          65,
+          290,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.0
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_00_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_boulder.obj",
+      "transform": {
+        "translation": [
+          -95,
+          335,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.0
+        ],
+        "scale": [
+          48,
+          44,
+          30
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_01_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -77,
+          490,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.37
+        ],
+        "scale": [
+          34,
+          32,
+          90
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_01_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          77,
+          600,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.37
+        ],
+        "scale": [
+          34,
+          32,
+          90
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_01_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_slab.obj",
+      "transform": {
+        "translation": [
+          95,
+          645,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.37
+        ],
+        "scale": [
+          48,
+          18,
+          48
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_02_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -89,
+          800,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.74
+        ],
+        "scale": [
+          38,
+          32,
+          105
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_02_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_arch.obj",
+      "transform": {
+        "translation": [
+          100,
+          910,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          70,
+          22,
+          95
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_02_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_boulder.obj",
+      "transform": {
+        "translation": [
+          -95,
+          955,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0.74
+        ],
+        "scale": [
+          48,
+          44,
+          30
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_03_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -65,
+          1110,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.1099999999999999
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_03_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          65,
+          1220,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.1099999999999999
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_03_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_slab.obj",
+      "transform": {
+        "translation": [
+          95,
+          1265,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.1099999999999999
+        ],
+        "scale": [
+          48,
+          18,
+          48
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_04_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -77,
+          1420,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.48
+        ],
+        "scale": [
+          34,
+          32,
+          90
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_04_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          77,
+          1530,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.48
+        ],
+        "scale": [
+          34,
+          32,
+          90
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_04_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_boulder.obj",
+      "transform": {
+        "translation": [
+          -95,
+          1575,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.48
+        ],
+        "scale": [
+          48,
+          44,
+          30
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_05_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -89,
+          1730,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.85
+        ],
+        "scale": [
+          38,
+          32,
+          105
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_05_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          89,
+          1840,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.85
+        ],
+        "scale": [
+          38,
+          32,
+          105
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_05_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_slab.obj",
+      "transform": {
+        "translation": [
+          95,
+          1885,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          1.85
+        ],
+        "scale": [
+          48,
+          18,
+          48
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_06_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_arch.obj",
+      "transform": {
+        "translation": [
+          -100,
+          2040,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          70,
+          22,
+          95
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_06_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          65,
+          2150,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.2199999999999998
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_06_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_boulder.obj",
+      "transform": {
+        "translation": [
+          -95,
+          2195,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.2199999999999998
+        ],
+        "scale": [
+          48,
+          44,
+          30
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_07_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -77,
+          2350,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.59
+        ],
+        "scale": [
+          34,
+          32,
+          90
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_07_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          77,
+          2460,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.59
+        ],
+        "scale": [
+          34,
+          32,
+          90
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_07_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_slab.obj",
+      "transform": {
+        "translation": [
+          95,
+          2505,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.59
+        ],
+        "scale": [
+          48,
+          18,
+          48
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_08_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -89,
+          2660,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.96
+        ],
+        "scale": [
+          38,
+          32,
+          105
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_08_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          89,
+          2770,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.96
+        ],
+        "scale": [
+          38,
+          32,
+          105
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_08_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_boulder.obj",
+      "transform": {
+        "translation": [
+          -95,
+          2815,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          2.96
+        ],
+        "scale": [
+          48,
+          44,
+          30
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_09_L",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          -65,
+          2970,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          3.33
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Spire_09_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/crystal.obj",
+      "transform": {
+        "translation": [
+          65,
+          3080,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          3.33
+        ],
+        "scale": [
+          30,
+          32,
+          75
+        ]
+      }
+    },
+    {
+      "name": "Ice_Boulder_09_R",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_slab.obj",
+      "transform": {
+        "translation": [
+          95,
+          3125,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          3.33
+        ],
+        "scale": [
+          48,
+          18,
+          48
+        ]
+      }
+    },
+    {
+      "name": "Ice_Island_01",
+      "type": "MESH",
+      "file_name": "Environment/Ice/ice_island.obj",
+      "transform": {
+        "translation": [
+          145,
+          800,
+          -35
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          90,
+          90,
+          72
+        ]
+      }
+    }
+  ]
+}

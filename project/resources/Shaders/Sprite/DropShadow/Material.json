@@ -1,0 +1,25 @@
+{
+  "Name": "Drop Shadow PS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 1,
+    "DivisionY": 1
+  },
+  "Effect": {
+    "Amplitude": 0.018,
+    "Frequency": 1,
+    "Speed": 1,
+    "Phase": 0,
+    "Direction": [
+      1,
+      1
+    ],
+    "Strength": 0.75,
+    "Threshold": 0.5
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Sphere",
+    "Count": 1,
+    "Radius": 0.18,
+    "Frequency": 0.03
+  },
+  "Particle": {
+    "LifeTime": 4.2,
+    "StartScale": 0.42,
+    "EndScale": 0.12,
+    "StartRotation": 0.0,
+    "RotationSpeed": 0.0,
+    "Velocity": [0.0, 0.0, 0.0],
+    "StartColor": [0.1, 0.95, 1.0, 1.0],
+    "EndColor": [0.75, 0.15, 1.0, 0.05]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+    "EnableDrag": true,
+    "Drag": 0.998,
+    "EnableNoise": false,
+    "NoiseStrength": 0.0,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Fields": [
+    {
+      "Type": "Wind",
+      "Space": "Local",
+      "Position": [2.5, 1.0, 0.0],
+      "Direction": [1.0, 0.15, 0.0],
+      "Radius": 10.0,
+      "Strength": 4.0,
+      "Falloff": 0.35
+    },
+    {
+      "Type": "Vortex",
+      "Space": "Local",
+      "Position": [2.0, 1.0, 0.0],
+      "Direction": [0.0, 1.0, 0.0],
+      "Radius": 4.5,
+      "Strength": 5.0,
+      "Falloff": 0.7
+    }
+  ],
+  "Render": {
+    "Texture": "resources/Particles/circle.png",
+    "MeshType": "Sphere",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": true,
+    "Duration": -1.0
+  }
+}

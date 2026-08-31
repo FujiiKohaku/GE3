@@ -14,8 +14,15 @@ void AllocateImGuiSrvDescriptor(ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIP
     *outGpuHandle = srvManager->GetGPUDescriptorHandle(srvIndex);
 }
 
-void FreeImGuiSrvDescriptor(ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE)
+void FreeImGuiSrvDescriptor(
+    ImGui_ImplDX12_InitInfo* info,
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE)
 {
+    SrvManager* srvManager = static_cast<SrvManager*>(info->UserData);
+    assert(srvManager != nullptr);
+    bool wasFreed = srvManager->FreeByCPUHandle(cpuHandle);
+    assert(wasFreed);
 }
 }
 #endif

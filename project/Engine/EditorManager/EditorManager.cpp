@@ -1,4 +1,4 @@
-﻿#include "EditorManager.h"
+#include "EditorManager.h"
 #include "../3D/Object3d.h"
 
 #include "../Camera/Camera.h"
@@ -13,6 +13,7 @@
 #include "../externals/json.hpp"
 
 #include "../../Engine/SceneObjectManager/SceneObjectManager.h"
+#include "../../Engine/LevelEditor/LevelDataLoader.h"
 void EditorManager::Initialize()
 {
 }
@@ -21,22 +22,22 @@ void EditorManager::Update(Camera* camera)
 {
 #ifdef USE_IMGUI
 
-    // 繝槭え繧ｹ繧ｯ繝ｪ繝・け縺ｧ繧ｪ繝悶ず繧ｧ繧ｯ繝磯∈謚・
+
     if (ImGui::IsMouseClicked(0)) {
 
-        // 繧ｫ繝｡繝ｩ縺九ｉ繝槭え繧ｹ菴咲ｽｮ縺ｸ縺ｮ繝ｬ繧､繧剃ｽ懈・
+
         Ray ray = CreateMouseRay(camera);
 
-        // 隱ｭ縺ｿ霎ｼ縺ｾ繧後◆繧ｪ繝悶ず繧ｧ繧ｯ繝医・荳ｭ霄ｫ繧弛bjects_縺ｫ蜈･繧後ｋ
+
         for (const std::unique_ptr<Object3d>& object : sceneObjectManager_->GetObjects()) {
 
-            // object縺ｯstd::unique_ptr縺ｪ縺ｮ縺ｧ縲“et()縺ｧObject3d*繧貞叙蠕・
+
             Object3d* currentObject = object.get();
 
             
             Sphere sphere;
             sphere.center = currentObject->GetTranslate();
-            sphere.radius = 1.0f; // 逅・・蜊雁ｾ・・莉ｮ縺ｮ蛟､縺ｧ縺吶ゅが繝悶ず繧ｧ繧ｯ繝医・繧ｵ繧､繧ｺ縺ｫ蠢懊§縺ｦ驕ｩ蛻・↑蛟､繧定ｨｭ螳壹＠縺ｦ縺上□縺輔＞縲・
+            sphere.radius = 1.0f;
 
             if (RaySphereIntersect(ray, sphere)) {
 
@@ -230,7 +231,7 @@ void EditorManager::DrawGizmo(Camera* camera)
 
     const Matrix4x4& viewMatrix = camera->GetViewMatrix();
     const Matrix4x4& projectionMatrix = camera->GetProjectionMatrix();
-    // 謫堺ｽ懊Δ繝ｼ繝峨↓蠢懊§縺ｦImGuizmo縺ｮ謫堺ｽ懊ｒ蛻・ｊ譖ｿ縺医ｋ
+
     ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
     if (gizmoMode_ == GizmoMode::Rotate) {
@@ -288,7 +289,7 @@ void EditorManager::SaveJson(const std::string& filePath)
 {
     nlohmann::json root;
 
-    root["Objects"] = nlohmann::json::array();
+    root["scene"] = nlohmann::json::array();
 
     for (const std::unique_ptr<Object3d>& object :
         sceneObjectManager_->GetObjects()) {
@@ -297,27 +298,35 @@ void EditorManager::SaveJson(const std::string& filePath)
 
         nlohmann::json objectData;
 
-        objectData["Name"] = currentObject->GetName();
+        objectData["name"] = currentObject->GetName();
+        objectData["type"] = "MESH";
 
-        objectData["Translate"] = {
+        if (!currentObject->GetModelFilePath().empty()) {
+            objectData["file_name"] = currentObject->GetModelFilePath();
+        }
+
+        nlohmann::json transformData;
+
+        transformData["translation"] = {
             currentObject->GetTranslate().x,
-            currentObject->GetTranslate().y,
-            currentObject->GetTranslate().z
+            currentObject->GetTranslate().z,
+            currentObject->GetTranslate().y
         };
 
-        objectData["Rotate"] = {
-            currentObject->GetRotate().x,
-            currentObject->GetRotate().y,
-            currentObject->GetRotate().z
+        transformData["rotation"] = {
+            -currentObject->GetRotate().x,
+            -currentObject->GetRotate().z,
+            -currentObject->GetRotate().y
         };
 
-        objectData["Scale"] = {
+        transformData["scale"] = {
             currentObject->GetScale().x,
-            currentObject->GetScale().y,
-            currentObject->GetScale().z
+            currentObject->GetScale().z,
+            currentObject->GetScale().y
         };
 
-        root["Objects"].push_back(objectData);
+        objectData["transform"] = transformData;
+        root["scene"].push_back(objectData);
     }
 
     std::ofstream file(filePath);
@@ -329,28 +338,30 @@ void EditorManager::SaveJson(const std::string& filePath)
 }
 void EditorManager::LoadJson(const std::string& filePath)
 {
-    std::ifstream file(filePath);
-
-    if (!file.is_open()) {
+    if (sceneObjectManager_ == nullptr) {
         return;
     }
 
-    nlohmann::json root;
-    file >> root;
+    LevelDataLoader loader;
+    LevelData levelData = loader.Load(filePath);
 
-    for (const auto& objectData : root["Objects"]) {
+    for (const LevelData::ObjectData& objectData : levelData.objects) {
+        if (objectData.type != "MESH") {
+            continue;
+        }
 
-        std::string objectName = objectData["Name"];
+        Object3d* object = sceneObjectManager_->FindObject(objectData.name);
+        if (object == nullptr && !objectData.fileName.empty()) {
+            object = sceneObjectManager_->CreateObject(objectData.name, objectData.fileName);
+        }
 
-        Vector3 translate;
+        if (object == nullptr) {
+            continue;
+        }
 
-        translate.x = objectData["Translate"][0];
-
-        translate.y = objectData["Translate"][1];
-
-        translate.z = objectData["Translate"][2];
-
-        OutputDebugStringA((objectName + "\n").c_str());
+        object->SetTranslate(objectData.translation);
+        object->SetRotate(objectData.rotation);
+        object->SetScale(objectData.scale);
     }
 }
 void EditorManager::SetSceneObjectManager(

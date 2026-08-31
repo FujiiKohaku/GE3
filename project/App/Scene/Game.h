@@ -37,18 +37,20 @@
 #include "Engine/D3DResourceLeakChecker/D3DResourceLeakChecker.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
-#include "Engine/debugcamera/DebugCamera.h"
 #include "Engine/input/Input.h"
 #include "Engine/math/MatrixMath.h"
 
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/SpriteManager.h"
+#include "Engine/2D/Text/FontManager.h"
+#include "Engine/2D/Text/TextRenderer.h"
 #include "Engine/3D/Object3D.h"
 #include "Engine/3D/Object3dManager.h"
-#include "Engine/Particle/ParticleManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Engine/Time/TimeManager.h"
 #include "Engine/Winapp/Utility.h"
 #include "Engine/Winapp/WinApp.h"
 #include "Engine/audio/SoundManager.h"
@@ -81,6 +83,12 @@ public:
 private:
     void LockCursorToWindow();
     void UnlockCursor();
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    void InitializePerformanceLog();
+    void UpdatePerformanceLog();
+#endif
+
     // Scene
     SceneManager* sceneManager_ = nullptr;
 
@@ -96,7 +104,6 @@ private:
     // グラフィック / モデル
     // ------------------------------
     ModelCommon modelCommon_;
-    DebugCamera debugCamera_;
 
     // game
     // GamePlayScene* scene_;
@@ -161,4 +168,12 @@ private:
 
     bool isMouseCursorVisible_ = false;
     bool showDebugUI_ = true;
+
+#if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    std::chrono::steady_clock::time_point performanceLogStartTime_;
+    std::chrono::steady_clock::time_point performanceFrameStartTime_;
+    uint64_t performanceLogProcessTime_ = 0;
+    uint32_t performanceLogFrameCount_ = 0;
+    uint32_t performanceLogProcessorCount_ = 1;
+#endif
 };

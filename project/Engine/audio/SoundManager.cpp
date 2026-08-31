@@ -15,16 +15,31 @@ SoundManager* SoundManager::GetInstance()
 
 void SoundManager::Initialize()
 {
-    HRESULT result;
+    isInitialized_ = false;
+    initFuture_ = std::async(std::launch::async, [this]() {
+        HRESULT result;
 
-    result = MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET);
-    assert(SUCCEEDED(result));
+        result = MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET);
+        assert(SUCCEEDED(result));
 
-    result = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
-    assert(SUCCEEDED(result));
+        result = XAudio2Create(&xAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+        assert(SUCCEEDED(result));
 
-    result = xAudio2->CreateMasteringVoice(&masterVoice);
-    assert(SUCCEEDED(result));
+        result = xAudio2->CreateMasteringVoice(&masterVoice);
+        assert(SUCCEEDED(result));
+
+        isInitialized_ = true;
+    });
+}
+
+void SoundManager::EnsureInitialized()
+{
+    if (isInitialized_) {
+        return;
+    }
+    if (initFuture_.valid()) {
+        initFuture_.wait();
+    }
 }
 
 
@@ -47,6 +62,7 @@ struct FormatChunk {
 
 SoundData SoundManager::SoundLoadFile(const std::string& filename)
 {
+    EnsureInitialized();
     HRESULT result;
     SoundData soundData {};
 
@@ -137,12 +153,14 @@ SoundData SoundManager::SoundLoadFile(const std::string& filename)
 //==音声データ解放==//
 void SoundManager::SoundUnload(SoundData* soundData)
 {
+    EnsureInitialized();
 
     soundData->buffer.clear();
     soundData->wfex = {};
 }
 void SoundManager::SoundPlayWave(const SoundData& soundData)
 {
+    EnsureInitialized();
     HRESULT result;
 
     IXAudio2SourceVoice* pSourceVoice = nullptr;
@@ -162,6 +180,7 @@ void SoundManager::SoundPlayWave(const SoundData& soundData)
 }
 void SoundManager::Finalize()
 {
+    EnsureInitialized();
     if (!instance_) {
         return;
     }

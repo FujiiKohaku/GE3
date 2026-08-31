@@ -1,0 +1,52 @@
+{
+  "id": "stage02",
+  "name": "BLOCK CANYON",
+  "description": "The first real challenge: follow a winding canyon rail.",
+  "layout": "resources/Stages/Stage02/layout.json",
+  "rail": {
+    "length": 5200.0,
+    "point_interval": 50.0,
+    "speed": 0.6,
+    "control_points": [
+      [0.0, 0.0, 0.0],
+      [0.0, 0.0, 200.0],
+      [50.0, 15.0, 450.0],
+      [140.0, 45.0, 700.0],
+      [190.0, 80.0, 900.0],
+      [170.0, 30.0, 1100.0],
+      [120.0, -40.0, 1300.0],
+      [80.0, -70.0, 1500.0],
+      [80.0, -70.0, 1600.0],
+      [140.0, -20.0, 1800.0],
+      [80.0, 45.0, 2000.0],
+      [0.0, 80.0, 2200.0],
+      [-80.0, 45.0, 2400.0],
+      [-140.0, -10.0, 2600.0],
+      [-80.0, -55.0, 2800.0],
+      [0.0, -20.0, 3000.0],
+      [100.0, 20.0, 3300.0],
+      [100.0, 20.0, 3650.0],
+      [100.0, 20.0, 4050.0],
+      [100.0, 20.0, 4450.0],
+      [100.0, 20.0, 4850.0],
+      [100.0, 20.0, 5200.0]
+    ]
+  },
+  "boss": {
+    "type": "AngerBlock",
+    "spawn_distance": 3500.0,
+    "position": [84.0, 33.0, 3242.0],
+    "rail_auto_extension": false,
+    "rail_extension_buffer": 1200.0
+  },
+  "environment": {
+    "skybox": "resources/Textures/rostock_laage_airport_4k.dds",
+    "bgm": "resources/Sounds/BGM.wav",
+    "floor_texture": "resources/Textures/floor_dirt_gemini.jpg",
+    "floor_enabled": true,
+    "floor_height": -130.0
+  },
+  "swarm_wave_distances": [350.0, 800.0, 1300.0, 1850.0, 2450.0, 3150.0],
+  "recovery_item_distances": [650.0, 1550.0, 2850.0],
+  "paint_enemy_distances": [300.0, 760.0, 1350.0, 2200.0, 3100.0]
+}

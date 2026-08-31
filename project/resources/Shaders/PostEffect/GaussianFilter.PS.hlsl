@@ -3,65 +3,37 @@
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
-static const float kPI = 3.14159265f;
-
-static const float2 kIndex3x3[3][3] =
-{
-    { { -1.0f, -1.0f }, { 0.0f, -1.0f }, { 1.0f, -1.0f } },
-    { { -1.0f, 0.0f }, { 0.0f, 0.0f }, { 1.0f, 0.0f } },
-    { { -1.0f, 1.0f }, { 0.0f, 1.0f }, { 1.0f, 1.0f } },
+// 9x9 ガウシアンフィルタカーネル重み
+static const float kWeights[9] = {
+    0.051f, 0.092f, 0.122f, 0.135f, 0.150f, 0.135f, 0.122f, 0.092f, 0.051f
 };
-
-float Gauss(float x, float y, float sigma)
-{
-    float exponent = -(x * x + y * y) / (2.0f * sigma * sigma);
-    float denominator = 2.0f * kPI * sigma * sigma;
-
-    return exp(exponent) / denominator;
-}
 
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
-    uint width;
-    uint height;
+    float2 uv = input.texcoord;
+    float2 texelSize = float2(1.0f / 1280.0f, 1.0f / 720.0f); // テクセルサイズ
 
-    gTexture.GetDimensions(width, height);
+    float4 blurredColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    float totalWeight = 0.0f;
 
-    float2 uvStepSize;
-    uvStepSize.x = 1.0f / float(width);
-    uvStepSize.y = 1.0f / float(height);
-
-    float3 resultColor = float3(0.0f, 0.0f, 0.0f);
-    float weight = 0.0f;
-
-    for (int x = 0; x < 3; x++)
+    // 2次元ガウシアンブラーフィルタ
+    [unroll]
+    for (int x = -4; x <= 4; ++x)
     {
-
-        for (int y = 0; y < 3; y++)
+        [unroll]
+        for (int y = -4; y <= 4; ++y)
         {
-
-            float kernel = Gauss(
-                kIndex3x3[x][y].x,
-                kIndex3x3[x][y].y,
-                2.0f);
-
-            weight += kernel;
-
-            float2 texcoord =
-                input.texcoord + kIndex3x3[x][y] * uvStepSize;
-
-            float3 fetchColor =
-                gTexture.Sample(gSampler, texcoord).rgb;
-
-            resultColor += fetchColor * kernel;
+            float2 offset = float2(x, y) * texelSize * 2.2f; // ふわっと深いガウスぼかし
+            float weight = kWeights[x + 4] * kWeights[y + 4];
+            blurredColor += gTexture.Sample(gSampler, uv + offset) * weight;
+            totalWeight += weight;
         }
     }
 
-    resultColor *= 1.0f / weight;
+    if (totalWeight > 0.0f)
+    {
+        blurredColor /= totalWeight;
+    }
 
-    float4 outputColor;
-    outputColor.rgb = resultColor;
-    outputColor.a = 1.0f;
-
-    return outputColor;
+    return blurredColor;
 }

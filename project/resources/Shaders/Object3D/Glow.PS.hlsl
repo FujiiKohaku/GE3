@@ -3,8 +3,8 @@
 ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
-ConstantBuffer<PointLight> gPointLight : register(b3);
-ConstantBuffer<SpotLight> gSpotLight : register(b4);
+ConstantBuffer<PointLightCollection> gPointLights : register(b3);
+ConstantBuffer<SpotLightCollection> gSpotLights : register(b4);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 
@@ -18,16 +18,16 @@ PixelShaderOutput main(VertexShaderOutput input)
     PixelShaderOutput output;
 
     // =========================
-    // ÂƒlƒIƒ“i”­ŒõFj
+    // é’ãƒã‚ªãƒ³ï¼ˆç™ºå…‰è‰²ï¼‰
     // =========================
     float3 neonColor = float3(0.0f, 0.6f, 1.0f);
 
-    // ”­Œõ‹­“xi‚±‚±‚¾‚¯’²®‚·‚ê‚ÎOKj
+    // ç™ºå…‰å¼·åº¦ï¼ˆã“ã“ã ã‘èª¿æ•´ã™ã‚Œã°OKï¼‰
     float intensity = 3.0f;
 
     output.color.rgb = neonColor * intensity;
 
-    // ‰ÁZƒuƒŒƒ“ƒh‘O’ñ‚È‚Ì‚Å 1.0 ŒÅ’è
+    // åŠ ç®—ãƒ–ãƒ¬ãƒ³ãƒ‰å‰æãªã®ã§ 1.0 å›ºå®š
     output.color.a = 1.0f;
 
     return output;
