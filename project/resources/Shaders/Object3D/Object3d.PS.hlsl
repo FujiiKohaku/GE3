@@ -1,4 +1,4 @@
-#include "object3d.hlsli"
+﻿#include "object3d.hlsli"
 
 ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
@@ -33,6 +33,45 @@ PixelShaderOutput main(VertexShaderOutput input)
         float3 faceTint = lerp(float3(0.30f, 0.55f, 0.78f), float3(1.0f, 1.0f, 1.0f), faceLight);
         float3 iceTexture = lerp(float3(1.0f, 1.0f, 1.0f), textureColor.rgb, 0.25f);
         output.color = float4(gMaterial.color.rgb * iceTexture * faceTint, gMaterial.color.a * textureColor.a);
+    }
+    else if (gMaterial.enableLighting >= 3 && gMaterial.enableLighting <= 5)
+    {
+        // Archive-only materials: paper=3, leather=4, brass=5. Other scenes are unchanged.
+        float3 N = normalize(input.normal);
+        float3 V = normalize(gCamera.worldPosition - input.worldPosition);
+        float3 L = normalize(float3(-3.5f, 6.0f, -6.0f) - input.worldPosition);
+        float3 H = normalize(L + V);
+        float pool = exp(-dot(input.worldPosition.xy * float2(0.095f, 0.10f),
+                              input.worldPosition.xy * float2(0.095f, 0.10f)));
+        float diffuse = saturate(dot(N, L));
+        float3 base = gMaterial.color.rgb * textureColor.rgb;
+        float3 illumination = float3(0.32f, 0.34f, 0.37f) +
+            float3(0.85f, 0.72f, 0.52f) * (0.25f + diffuse * 0.65f) * pool;
+        float occlusion = 1.0f;
+        float specular = 0.0f;
+        if (gMaterial.enableLighting == 3)
+        {
+            // Each page now uses one full texture. Shade only the real outer edges;
+            // subdividing the UV here would create dark seams across the page.
+            // environmentCoefficient carries contact strength only in archive mode.
+            float pageU = saturate(transformedUV.x);
+            float edgeDistance = min(pageU, 1.0f - pageU);
+            float edgeShade = exp(-edgeDistance * 36.0f) * 0.08f;
+            float contact = saturate(gMaterial.environmentCoefficient);
+            float band = exp(-pow((edgeDistance - (0.12f + contact * 0.28f)) / 0.18f, 2.0f));
+            occlusion = 1.0f - edgeShade - contact * (0.08f + band * 0.18f);
+            // A little diffuse transmission, without a plastic highlight on paper.
+            illumination += float3(0.12f, 0.10f, 0.07f) * saturate(dot(-N, L));
+        }
+        else
+        {
+            bool brass = gMaterial.enableLighting == 5;
+            float grain = 0.85f + 0.15f * sin(transformedUV.x * 950.0f) * sin(transformedUV.y * 1130.0f);
+            specular = pow(saturate(dot(N, H)), brass ? 72.0f : 30.0f) *
+                (brass ? 0.38f : 0.07f) * pool * grain;
+        }
+        output.color = float4(base * illumination * saturate(occlusion) +
+            float3(1.0f, 0.78f, 0.42f) * specular, gMaterial.color.a * textureColor.a);
     }
     else if (gMaterial.enableLighting != 0)
     {

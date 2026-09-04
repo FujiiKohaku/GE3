@@ -1,7 +1,8 @@
-#include "ModelManager.h"
+﻿#include "ModelManager.h"
 #include "Engine/Animation/Event/AnimationEventLoader.h"
 #include "Engine/math/MatrixMath.h"
 #include <cmath>
+#include <cassert>
 #include <filesystem>
 #include <numbers>
 #include <utility>
@@ -57,6 +58,57 @@ ModelData CreatePlaneModelData(const std::string& texturePath, float tilingX, fl
     modelData.materials.push_back(material);
     SetupDefaultRootNode(modelData, "Plane");
 
+    return modelData;
+}
+
+ModelData CreateCubeModelData(const std::string& texturePath)
+{
+    ModelData modelData {};
+    MeshPrimitive primitive {};
+    primitive.mode = PrimitiveMode::Triangles;
+    primitive.vertices = {
+        { { -0.5f,  0.5f, -0.5f, 1.0f }, { 0.0f, 0.0f }, {  0.0f,  0.0f, -1.0f } },
+        { {  0.5f,  0.5f, -0.5f, 1.0f }, { 1.0f, 0.0f }, {  0.0f,  0.0f, -1.0f } },
+        { {  0.5f, -0.5f, -0.5f, 1.0f }, { 1.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
+        { { -0.5f, -0.5f, -0.5f, 1.0f }, { 0.0f, 1.0f }, {  0.0f,  0.0f, -1.0f } },
+
+        { {  0.5f,  0.5f,  0.5f, 1.0f }, { 0.0f, 0.0f }, {  0.0f,  0.0f,  1.0f } },
+        { { -0.5f,  0.5f,  0.5f, 1.0f }, { 1.0f, 0.0f }, {  0.0f,  0.0f,  1.0f } },
+        { { -0.5f, -0.5f,  0.5f, 1.0f }, { 1.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
+        { {  0.5f, -0.5f,  0.5f, 1.0f }, { 0.0f, 1.0f }, {  0.0f,  0.0f,  1.0f } },
+
+        { { -0.5f,  0.5f,  0.5f, 1.0f }, { 0.0f, 0.0f }, { -1.0f,  0.0f,  0.0f } },
+        { { -0.5f,  0.5f, -0.5f, 1.0f }, { 1.0f, 0.0f }, { -1.0f,  0.0f,  0.0f } },
+        { { -0.5f, -0.5f, -0.5f, 1.0f }, { 1.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
+        { { -0.5f, -0.5f,  0.5f, 1.0f }, { 0.0f, 1.0f }, { -1.0f,  0.0f,  0.0f } },
+
+        { {  0.5f,  0.5f, -0.5f, 1.0f }, { 0.0f, 0.0f }, {  1.0f,  0.0f,  0.0f } },
+        { {  0.5f,  0.5f,  0.5f, 1.0f }, { 1.0f, 0.0f }, {  1.0f,  0.0f,  0.0f } },
+        { {  0.5f, -0.5f,  0.5f, 1.0f }, { 1.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
+        { {  0.5f, -0.5f, -0.5f, 1.0f }, { 0.0f, 1.0f }, {  1.0f,  0.0f,  0.0f } },
+
+        { { -0.5f,  0.5f,  0.5f, 1.0f }, { 0.0f, 0.0f }, {  0.0f,  1.0f,  0.0f } },
+        { {  0.5f,  0.5f,  0.5f, 1.0f }, { 1.0f, 0.0f }, {  0.0f,  1.0f,  0.0f } },
+        { {  0.5f,  0.5f, -0.5f, 1.0f }, { 1.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
+        { { -0.5f,  0.5f, -0.5f, 1.0f }, { 0.0f, 1.0f }, {  0.0f,  1.0f,  0.0f } },
+
+        { { -0.5f, -0.5f, -0.5f, 1.0f }, { 0.0f, 0.0f }, {  0.0f, -1.0f,  0.0f } },
+        { {  0.5f, -0.5f, -0.5f, 1.0f }, { 1.0f, 0.0f }, {  0.0f, -1.0f,  0.0f } },
+        { {  0.5f, -0.5f,  0.5f, 1.0f }, { 1.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } },
+        { { -0.5f, -0.5f,  0.5f, 1.0f }, { 0.0f, 1.0f }, {  0.0f, -1.0f,  0.0f } }
+    };
+    primitive.indices = {
+        0, 1, 2, 0, 2, 3,
+        4, 5, 6, 4, 6, 7,
+        8, 9, 10, 8, 10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23
+    };
+
+    modelData.primitives.push_back(std::move(primitive));
+    modelData.materials.push_back({ texturePath });
+    SetupDefaultRootNode(modelData, "Cube");
     return modelData;
 }
 
@@ -157,6 +209,84 @@ Model* ModelManager::CreatePlane(const std::string& texturePath, float tilingX, 
     ModelData modelData = CreatePlaneModelData(actualTexturePath, tilingX, tilingY);
     auto model = std::make_unique<Model>();
     model->Initialize(modelCommon_.get(), modelData);
+
+    Model* raw = model.get();
+    models_.emplace(key, std::move(model));
+    return raw;
+}
+
+Model* ModelManager::CreateBookLeaf(
+    const std::string& frontTexturePath,
+    const std::string& backTexturePath,
+    uint32_t stripIndex,
+    uint32_t stripCount)
+{
+    assert(stripCount > 0 && stripIndex < stripCount);
+    const std::string key = "BookLeaf/" + frontTexturePath + "/" + backTexturePath +
+        "/" + std::to_string(stripIndex) + "/" + std::to_string(stripCount);
+    if (auto it = models_.find(key); it != models_.end()) {
+        return it->second.get();
+    }
+
+    ModelData data = CreateCubeModelData(frontTexturePath);
+    const MeshPrimitive source = data.primitives[0];
+
+    MeshPrimitive frontPrimitive = source;
+    frontPrimitive.materialIndex = 0;
+    frontPrimitive.indices = {
+        0, 1, 2, 0, 2, 3,
+        8, 9, 10, 8, 10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23
+    };
+    for (VertexData& vertex : frontPrimitive.vertices) {
+        vertex.texcoord.x =
+            (static_cast<float>(stripIndex) + vertex.texcoord.x) /
+            static_cast<float>(stripCount);
+    }
+
+    MeshPrimitive backPrimitive = source;
+    backPrimitive.materialIndex = 1;
+    backPrimitive.indices = { 4, 5, 6, 4, 6, 7 };
+    const uint32_t backStripIndex = stripCount - 1 - stripIndex;
+    for (VertexData& vertex : backPrimitive.vertices) {
+        vertex.texcoord.x =
+            (static_cast<float>(backStripIndex) + vertex.texcoord.x) /
+            static_cast<float>(stripCount);
+    }
+
+    data.primitives.clear();
+    data.primitives.push_back(std::move(frontPrimitive));
+    data.primitives.push_back(std::move(backPrimitive));
+    data.materials.clear();
+    data.materials.push_back({ frontTexturePath });
+    data.materials.push_back({ backTexturePath });
+
+    auto model = std::make_unique<Model>();
+    model->Initialize(modelCommon_.get(), data);
+    Model* result = model.get();
+    models_.emplace(key, std::move(model));
+    return result;
+}
+
+Model* ModelManager::CreateCube(const std::string& texturePath)
+{
+    std::string actualTexturePath = texturePath;
+    if (actualTexturePath.empty()) {
+        actualTexturePath = kDefaultPlaneTexture;
+    }
+
+    const std::string key = "Primitive/Cube/" + actualTexturePath;
+    const auto it = models_.find(key);
+    if (it != models_.end()) {
+        return it->second.get();
+    }
+
+    auto model = std::make_unique<Model>();
+    model->Initialize(
+        modelCommon_.get(),
+        CreateCubeModelData(actualTexturePath));
 
     Model* raw = model.get();
     models_.emplace(key, std::move(model));

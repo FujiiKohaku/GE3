@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <None Include="resources\Shaders\PostEffect\BokehShape.PS.hlsl" />
@@ -621,6 +621,8 @@
     <ClInclude Include="App\Scene\GamePlayScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Scene\ArchiveAudio.h" />
+    <ClInclude Include="App\Scene\PageTransition.h" />
     <ClInclude Include="App\Scene\StageSelectScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

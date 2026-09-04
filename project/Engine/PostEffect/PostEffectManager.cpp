@@ -175,6 +175,10 @@ void PostEffectManager::UpdatePostEffectParameters(
 
     CopyImageRenderer::PostEffectParameter& postEffectParameter =
         copyImageRenderer_->GetPostEffectParameter();
+    // ArchiveAtmosphere uses the existing reserved slots; the buffer layout stays intact.
+    postEffectParameter.padding0 = 16.5f;
+    postEffectParameter.padding1 = 2.3f;
+    postEffectParameter.padding2 = sceneManager->GetArchiveApproach();
     postEffectParameter.radialBlurCenter =
         sceneManager->GetPostEffectCenter();
     postEffectParameter.cameraShakeStrength =

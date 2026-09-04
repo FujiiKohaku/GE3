@@ -1,4 +1,4 @@
-#include "CopyImageRenderer.h"
+﻿#include "CopyImageRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
@@ -217,6 +217,8 @@ CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
 const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
 {
     switch (type) {
+    case PostEffectType::ArchiveAtmosphere:
+        return L"resources/Shaders/PostEffect/ArchiveAtmosphere.PS.hlsl";
     case PostEffectType::Copy:
         [[fallthrough]];
     case PostEffectType::Bloom:

@@ -1,8 +1,10 @@
-#include "PostEffectType.h"
+﻿#include "PostEffectType.h"
 
 const char* GetPostEffectTypeName(PostEffectType type)
 {
     switch (type) {
+    case PostEffectType::ArchiveAtmosphere:
+        return "ArchiveAtmosphere";
     case PostEffectType::Copy:
         return "Copy";
     case PostEffectType::GrayScale:

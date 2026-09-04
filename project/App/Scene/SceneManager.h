@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 #include "BaseScene.h"
+#include "PageTransition.h"
 #include "Engine/Math/MathStruct.h"
 #include <memory>
 #include <vector>
@@ -38,6 +39,8 @@ public:
         SetNextScene(std::move(loadingScene));
     }
 
+    void SetArchiveApproach(float progress) { archiveApproach_ = progress; }
+    float GetArchiveApproach() const { return archiveApproach_; }
     void Update();
     void Finalize();
     void DrawImGui();
@@ -103,6 +106,8 @@ private:
     float blackHoleRadius_ = 0.16f;
     float blackHoleStrength_ = 1.0f;
     float waterEffectIntensity_ = 0.0f;
+    float archiveApproach_ = 0.0f;
+    PageTransition::RevealOverlay pageReveal_;
     float paintProgress_ = 0.0f;
     float paintIntensity_ = 0.0f;
     float paintSeed_ = 0.0f;

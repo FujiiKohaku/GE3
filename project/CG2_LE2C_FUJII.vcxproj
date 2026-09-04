@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -384,6 +384,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
+    <ClInclude Include="App\Scene\ArchiveAudio.h" />
+    <ClInclude Include="App\Scene\PageTransition.h" />
     <ClInclude Include="App\Scene\StageSelectScene.h" />
     <ClInclude Include="App\Game\Stage\StageCatalog.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />

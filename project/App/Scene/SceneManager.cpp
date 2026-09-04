@@ -1,5 +1,6 @@
-#include "SceneManager.h"
+﻿#include "SceneManager.h"
 #include <cassert>
+#include "Engine/Time/TimeManager.h"
 
 namespace {
 bool ChangeScene(
@@ -29,7 +30,14 @@ void SceneManager::Update()
         retiredScene_.reset();
     }
 
-    ChangeScene(scene_, nextScene_, retiredScene_);
+    if (nextScene_) {
+        RemovePostEffect(PostEffectType::ArchiveAtmosphere);
+        archiveApproach_ = 0.0f;
+    }
+    if (ChangeScene(scene_, nextScene_, retiredScene_)) {
+        pageReveal_.InitializeIfRequested();
+    }
+    pageReveal_.Update(TimeManager::GetInstance()->GetDeltaTime());
 
     if (scene_) {
         scene_->Update();
@@ -56,6 +64,7 @@ void SceneManager::Draw2D()
     if (scene_) {
         scene_->Draw2D();
     }
+    pageReveal_.Draw();
 }
 void SceneManager::Draw3D()
 {
