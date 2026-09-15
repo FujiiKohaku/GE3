@@ -8,6 +8,7 @@ class Model;
 class Player;
 class Rail;
 class StageBoss;
+class Camera;
 
 class BossEncounterController {
 public:
@@ -22,6 +23,7 @@ public:
         Model* angerBlockModel,
         Model* enemyBulletModel,
         Player* player,
+        Camera* camera,
         Rail* rail,
         bool enableRailAutoExtension,
         float railExtensionBuffer);
@@ -48,6 +50,7 @@ private:
     Model* angerBlockModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
     Player* player_ = nullptr;
+    Camera* camera_ = nullptr;
     Rail* rail_ = nullptr;
     bool enableRailAutoExtension_ = false;
     bool isSpawned_ = false;

@@ -2,6 +2,7 @@
 
 #include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
+#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Boss/StageBoss.h"
 #include "Engine/Rail/Rail.h"
 
@@ -16,6 +17,7 @@ void BossEncounterController::Initialize(
     Model* angerBlockModel,
     Model* enemyBulletModel,
     Player* player,
+    Camera* camera,
     Rail* rail,
     bool enableRailAutoExtension,
     float railExtensionBuffer)
@@ -27,6 +29,7 @@ void BossEncounterController::Initialize(
     angerBlockModel_ = angerBlockModel;
     enemyBulletModel_ = enemyBulletModel;
     player_ = player;
+    camera_ = camera;
     rail_ = rail;
     enableRailAutoExtension_ = enableRailAutoExtension;
     railExtensionBuffer_ = railExtensionBuffer;
@@ -113,6 +116,10 @@ void BossEncounterController::SpawnBoss()
         auto angerBoss = std::make_unique<AngerBlockBoss>();
         angerBoss->Initialize(angerBlockModel_, enemyBulletModel_, player_);
         activeBoss_ = std::move(angerBoss);
+    } else if (bossType_ == "IceJellyfish") {
+        auto iceJellyfish = std::make_unique<IceJellyfish>();
+        iceJellyfish->Initialize(camera_, enemyBulletModel_, player_);
+        activeBoss_ = std::move(iceJellyfish);
     } else {
         auto fearWorm = std::make_unique<FearWormEnemy>();
         fearWorm->Initialize(fearWormModel_, enemyBulletModel_, player_);

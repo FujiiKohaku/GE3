@@ -42,7 +42,7 @@ bool EnemyBlocksJellyfishHit(const BaseEnemy* enemy, const Sphere& bullet,
 }
 
 void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
-    const std::vector<std::unique_ptr<BaseEnemy>>& enemies, const BaseEnemy* boss)
+    const std::vector<std::unique_ptr<BaseEnemy>>& enemies)
 {
     for (const auto& bullet : player.GetBullets()) {
         if (!bullet->IsAlive()) {
@@ -50,12 +50,12 @@ void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
         }
         const Sphere sphere { bullet->GetPreviousPosition(), bullet->GetCollisionRadius() };
         const Vector3 movement = bullet->GetPosition() - bullet->GetPreviousPosition();
-        bool hitCore = false;
-        const SweepHit hit = jellyfish.SweepBullet(sphere, movement, hitCore);
+        int32_t partIndex = 100;
+        const SweepHit hit = jellyfish.SweepBullet(sphere, movement, partIndex);
         if (!hit.isHit) {
             continue;
         }
-        bool blockedByEnemy = EnemyBlocksJellyfishHit(boss, sphere, movement, hit.time);
+        bool blockedByEnemy = false;
         for (const auto& enemy : enemies) {
             if (EnemyBlocksJellyfishHit(enemy.get(), sphere, movement, hit.time)) {
                 blockedByEnemy = true;
@@ -65,10 +65,10 @@ void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
         if (blockedByEnemy) {
             continue;
         }
-        if (hitCore) {
+        if (jellyfish.IsCollisionPartDamageable(partIndex)) {
             bullet->OnHitEnemy(hit.position);
         }
-        jellyfish.OnBulletHit(hitCore, static_cast<float>(bullet->GetDamage()), hit.position);
+        jellyfish.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
         bullet->SetDead();
     }
 }
@@ -283,18 +283,13 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     Player& player,
     std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss,
-    std::vector<std::unique_ptr<EnemyBullet>>& independentBullets,
-    IceJellyfish* iceJellyfish)
+    std::vector<std::unique_ptr<EnemyBullet>>& independentBullets)
 {
     GameplayCollisionEvents events {};
     const Sphere playerSphere {
         player.GetTranslate(),
         kPlayerEnemyCollisionRadius * 0.5f
     };
-
-    if (iceJellyfish != nullptr && !iceJellyfish->IsDead()) {
-        CheckPlayerBulletsAgainstJellyfish(player, *iceJellyfish, enemies, boss);
-    }
 
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies) {
         if (!enemy->IsDead()) {
@@ -316,7 +311,11 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
 
     if (boss != nullptr) {
         if (!boss->IsDead()) {
-            CheckPlayerBulletsAgainstEnemy(player, *boss);
+            if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(boss)) {
+                CheckPlayerBulletsAgainstJellyfish(player, *iceJellyfish, enemies);
+            } else {
+                CheckPlayerBulletsAgainstEnemy(player, *boss);
+            }
         }
     }
     CheckEnemyBulletsAgainstPlayer(player, independentBullets, events);
@@ -358,8 +357,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
 
 void GameplayCollisionSystem::SyncRaycastTargets(
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    const BaseEnemy* boss,
-    const IceJellyfish* iceJellyfish)
+    const BaseEnemy* boss)
 {
     CollisionManager* collisionManager = CollisionManager::GetInstance();
     collisionManager->ClearRaycastSphereTargets();
@@ -369,8 +367,9 @@ void GameplayCollisionSystem::SyncRaycastTargets(
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies) {
         RegisterEnemyRaycastParts(*collisionManager, nextObjectId, enemy.get());
     }
-    RegisterEnemyRaycastParts(*collisionManager, nextObjectId, boss);
-    if (iceJellyfish != nullptr) {
+    if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(boss)) {
         iceJellyfish->RegisterRaycastTargets(nextObjectId);
+    } else {
+        RegisterEnemyRaycastParts(*collisionManager, nextObjectId, boss);
     }
 }

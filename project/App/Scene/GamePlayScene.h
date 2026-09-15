@@ -309,7 +309,6 @@ private:
 
     // ボス戦用
     std::unique_ptr<BossEncounterController> bossController_;
-    std::unique_ptr<IceJellyfish> iceJellyfish_;
     bool showIceJellyfishCollision_ = false;
     bool isPirateShipMidBossSpawned_ = false;
 

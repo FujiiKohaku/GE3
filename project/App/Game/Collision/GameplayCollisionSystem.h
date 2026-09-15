@@ -10,7 +10,6 @@ class Object3d;
 class Player;
 class BaseEnemy;
 class EnemyBullet;
-class IceJellyfish;
 
 struct DestructibleLevelObject {
     Object3d* object = nullptr;
@@ -47,8 +46,7 @@ public:
         Player& player,
         std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss,
-        std::vector<std::unique_ptr<EnemyBullet>>& independentBullets,
-        IceJellyfish* iceJellyfish = nullptr);
+        std::vector<std::unique_ptr<EnemyBullet>>& independentBullets);
 
     GameplayCollisionEvents UpdateTriggers(
         Player& player,
@@ -56,6 +54,5 @@ public:
 
     void SyncRaycastTargets(
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        const BaseEnemy* boss,
-        const IceJellyfish* iceJellyfish = nullptr);
+        const BaseEnemy* boss);
 };

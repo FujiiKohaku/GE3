@@ -436,8 +436,10 @@ void GamePlayScene::Initialize()
 
     bossNameText_ = std::make_unique<Text>();
     bossNameText_->Initialize(kDefaultFont);
-    bossNameText_->SetText(
-        stageSettings_.bossType == "AngerBlock" ? "BOSS: ANGER" : "BOSS: FEAR WORM");
+    bossNameText_->SetText(stageSettings_.bossType == "AngerBlock"
+        ? "BOSS: ANGER"
+        : (stageSettings_.bossType == "IceJellyfish"
+            ? "BOSS: ICE JELLYFISH" : "BOSS: FEAR WORM"));
     bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
     bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
     bossNameText_->SetFontSize(20.0f);
@@ -446,8 +448,9 @@ void GamePlayScene::Initialize()
 
     bossHeadHpText_ = std::make_unique<Text>();
     bossHeadHpText_->Initialize(kDefaultFont);
-    bossHeadHpText_->SetText(
-        stageSettings_.bossType == "AngerBlock" ? "ANGER CORE" : "HEAD CORE");
+    bossHeadHpText_->SetText(stageSettings_.bossType == "AngerBlock"
+        ? "ANGER CORE"
+        : (stageSettings_.bossType == "IceJellyfish" ? "SHARED HP" : "HEAD CORE"));
     bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
     bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossHeadHpText_->SetFontSize(14.0f);
@@ -456,8 +459,9 @@ void GamePlayScene::Initialize()
 
     bossBodyHpText_ = std::make_unique<Text>();
     bossBodyHpText_->Initialize(kDefaultFont);
-    bossBodyHpText_->SetText(
-        stageSettings_.bossType == "AngerBlock" ? "FISTS" : "BODY SHIELD");
+    bossBodyHpText_->SetText(stageSettings_.bossType == "AngerBlock"
+        ? "FISTS"
+        : (stageSettings_.bossType == "IceJellyfish" ? "TENTACLE PARTS" : "BODY SHIELD"));
     bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
     bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossBodyHpText_->SetFontSize(14.0f);
@@ -511,6 +515,7 @@ void GamePlayScene::Initialize()
         angerBlockModel_,
         enemyBulletModel_,
         player_.get(),
+        camera_.get(),
         rail_.get(),
         stageSettings_.bossRailAutoExtension,
         stageSettings_.bossRailExtensionBuffer);
@@ -529,11 +534,6 @@ void GamePlayScene::Initialize()
     wasPlayerBoosting_ = false;
 
     CreateLevelObjects(levelData);
-
-    if (stageId_ == "stage03") {
-        iceJellyfish_ = std::make_unique<IceJellyfish>();
-        iceJellyfish_->Initialize(camera_.get(), stageSettings_.bossPosition);
-    }
 
     // ペイント弾を撃ってくるエネミーをコース上に5体配置（視認しやすくインクを連射する位置）
     for (size_t i = 0; i < stageSettings_.paintEnemyDistances.size(); ++i) {
@@ -794,14 +794,11 @@ void GamePlayScene::Update()
         UpdateCameraShakePostEffect();
         return;
     }
-    // Vキーを押すとボス登場前の座標（Z = 1450.0f）まで一瞬でワープ！
+    // ReleaseビルドでもVキーでボス戦の開始位置へワープできる。
     if (stageSettings_.bossType != "None" && Input::GetInstance()->IsKeyTrigger(DIK_V)) {
-        railDistance_ = (std::max)(
-            0.0f,
-            stageSettings_.bossSpawnDistance - 400.0f);
+        railDistance_ = (std::max)(0.0f, stageSettings_.bossSpawnDistance);
         if (player_) {
-            Vector3 pPos = player_->GetTranslate();
-            player_->SetTranslate({ pPos.x, pPos.y, railDistance_ });
+            player_->SetTranslate(rail_->GetPositionByDistance(railDistance_));
         }
     }
     // レール自体の更新
@@ -852,6 +849,11 @@ void GamePlayScene::Update()
     }
     if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
         oceanSurface_->SetLength(rail_->GetTotalLength());
+    }
+    if (bossController_->DidExtendRailThisFrame() && floorObj_ != nullptr) {
+        const float floorLength = rail_->GetTotalLength();
+        floorObj_->SetTranslate({ 0.0f, stageSettings_.floorHeight, floorLength * 0.5f });
+        floorObj_->SetScale({ 1000.0f, floorLength, 1.0f });
     }
 
     // プレイヤーのHP減少検知による被弾カメラシェイク
@@ -950,13 +952,9 @@ void GamePlayScene::Update()
     }
 #endif
 
-    if (iceJellyfish_ != nullptr) {
-        iceJellyfish_->Update(TimeManager::GetInstance()->GetDeltaTime(), currentPosition.z);
-    }
     gameplayCollisionSystem_->SyncRaycastTargets(
         enemies_,
-        GetActiveBoss(),
-        iceJellyfish_.get());
+        GetActiveBoss());
 
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
@@ -969,10 +967,6 @@ void GamePlayScene::Update()
     // 3. 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
     UpdateOceanLife(currentPosition, forward, railRight);
-    if (iceJellyfish_ != nullptr) {
-        iceJellyfish_->UpdateDrawMatrices();
-    }
-
     // 4. マウス左クリックによる弾の発射処理
     ProcessPlayerShooting(input);
 
@@ -1871,10 +1865,6 @@ void GamePlayScene::Draw3D()
     if (GetActiveBoss() != nullptr) {
         GetActiveBoss()->Draw();
     }
-    if (iceJellyfish_ != nullptr) {
-        iceJellyfish_->Draw();
-    }
-
 #ifdef _DEBUG
     rail_->DrawDebug();
     DrawCollisionDebug();
@@ -2212,12 +2202,15 @@ void GamePlayScene::DrawImGui()
         if (ImGui::Begin("Boss HP HUD", nullptr, windowFlags)) {
             // ボス名称
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-            ImGui::Text("BOSS: %s", stageSettings_.bossType == "AngerBlock" ? "ANGER" : "FEAR WORM");
+            const char* debugBossName = stageSettings_.bossType == "AngerBlock"
+                ? "ANGER"
+                : (stageSettings_.bossType == "IceJellyfish" ? "ICE JELLYFISH" : "FEAR WORM");
+            ImGui::Text("BOSS: %s", debugBossName);
             ImGui::PopStyleColor();
 
             // 1. 頭部HPバー (ネオンブルー)
             float headFraction = GetActiveBoss()->GetHeadHpFraction();
-            ImGui::Text("HEAD CORE  ");
+            ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "SHARED HP  " : "HEAD CORE  ");
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 1.0f, 1.0f)); // ネオンブルー
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.2f, 0.3f, 0.4f));       // 暗い青背景
@@ -2226,7 +2219,7 @@ void GamePlayScene::DrawImGui()
 
             // 2. 胴体HPバー (ネオンレッド + 胴体数に応じた9分割の区切り線)
             float bodyFraction = GetActiveBoss()->GetBodyHpFraction();
-            ImGui::Text("BODY SHIELD");
+            ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "TENTACLES  " : "BODY SHIELD");
             ImGui::SameLine();
             
             ImVec2 barPosMin = ImGui::GetCursorScreenPos();
@@ -2239,7 +2232,7 @@ void GamePlayScene::DrawImGui()
             // 直前に描画したProgressBarの領域を取得して、9分割(8本の縦線)で区切る
             ImVec2 barPosMax = ImGui::GetItemRectMax();
             float barWidth = barPosMax.x - barPosMin.x;
-            constexpr int kSegmentDivisions = 9;
+            const int kSegmentDivisions = stageSettings_.bossType == "IceJellyfish" ? 6 : 9;
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             ImU32 lineColor = IM_COL32(10, 10, 10, 255); // ほぼ黒のシャープな区切り線
 
@@ -2288,8 +2281,8 @@ void GamePlayScene::DrawImGui()
     ImGui::End();
 
     ImGui::Begin("Debug Teleport Menu");
-    if (iceJellyfish_ != nullptr) {
-        ImGui::Text("Ice Jellyfish core HP: %.0f / %.0f", iceJellyfish_->GetHp(), IceJellyfish::kMaxHp);
+    if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(GetActiveBoss())) {
+        ImGui::Text("Ice Jellyfish shared HP: %.0f / %.0f", iceJellyfish->GetHp(), IceJellyfish::kMaxHp);
         ImGui::Checkbox("Show Ice Jellyfish collision", &showIceJellyfishCollision_);
         if (ImGui::Button("Teleport to Ice Jellyfish")) {
             railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
@@ -2332,8 +2325,7 @@ void GamePlayScene::CheckCollision()
                 *player_,
                 enemies_,
                 GetActiveBoss(),
-                enemyBulletManager_.GetBullets(),
-                iceJellyfish_.get());
+                enemyBulletManager_.GetBullets());
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
@@ -2448,8 +2440,10 @@ void GamePlayScene::UpdateWaterDropEffect()
 #ifdef _DEBUG
 void GamePlayScene::DrawCollisionDebug()
 {
-    if (iceJellyfish_ != nullptr && showIceJellyfishCollision_) {
-        iceJellyfish_->DrawCollisionDebug();
+    if (showIceJellyfishCollision_) {
+        if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+            iceJellyfish->DrawCollisionDebug();
+        }
     }
     DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
     constexpr Vector4 kPlayerColor = { 0.0f, 1.0f, 0.0f, 1.0f };
@@ -2540,7 +2534,6 @@ void GamePlayScene::DrawCollisionDebug()
 
 void GamePlayScene::Finalize()
 {
-    iceJellyfish_.reset();
     BaseEnemy::SetBulletManager(nullptr);
     enemyBulletManager_.Clear();
     CollisionManager::GetInstance()->ClearRaycastSphereTargets();
