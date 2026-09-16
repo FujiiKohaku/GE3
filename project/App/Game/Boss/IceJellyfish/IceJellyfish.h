@@ -15,6 +15,7 @@ public:
     static constexpr float kMaxHp = 120.0f;
     static constexpr size_t kTentacleCount = 6;
     static constexpr size_t kSegmentsPerTentacle = 7;
+    static constexpr size_t kIcePillarModelCount = 6;
 
     enum class AttackPattern {
         FrozenSweep,
@@ -77,8 +78,12 @@ private:
     void UpdateAttackSequence(float floatPhase, float deltaTime);
     void StartIceSpearAttack();
     void FireIceSpearVolley();
+    void StartIcePillarAttack();
+    void PrepareIcePillarWarning();
+    void UpdateIcePillarAttack(float deltaTime);
     void UpdatePartTransforms();
     void UpdateCrystalTransforms();
+    void UpdateIcePillarModelTransforms();
     void DamagePlayerOnce(int slot, int damage);
     float PatternDuration() const;
     bool IsSegmentAlive(size_t tentacle, size_t segment) const;
@@ -92,6 +97,7 @@ private:
     std::array<std::array<std::unique_ptr<Object3d>, kSegmentsPerTentacle>,
         kTentacleCount> tentacles_;
     std::array<std::unique_ptr<Object3d>, 4> crystals_;
+    std::array<std::unique_ptr<Object3d>, kIcePillarModelCount> icePillarModels_;
     std::array<float, kTentacleCount> tentacleHp_ {};
     std::array<float, kTentacleCount> tentacleWavePhase_ {};
     std::array<float, kTentacleCount> tentacleWaveSpeed_ {};
@@ -124,7 +130,14 @@ private:
     int32_t iceSpearVolley_ = -1;
     float iceSpearTimer_ = 0.0f;
     float iceSpearPoseWeight_ = 0.0f;
-    bool nextAttackIsPulse_ = true;
+    int32_t icePillarWave_ = -1;
+    int32_t icePillarSafeLane_ = 1;
+    float icePillarTimer_ = 0.0f;
+    std::array<Vector3, 2> icePillarPositions_ {};
+    std::array<Vector3, kIcePillarModelCount> icePillarModelPositions_ {};
+    float icePillarModelTimer_ = 0.0f;
+    bool icePillarModelSpawnedForWave_ = false;
+    int32_t nextAttackIndex_ = 0;
     bool absoluteZeroUsed_ = false;
     bool absoluteInterrupted_ = false;
     AttackPattern attackPattern_ = AttackPattern::FrozenSweep;

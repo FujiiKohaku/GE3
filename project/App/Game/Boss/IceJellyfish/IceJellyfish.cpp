@@ -16,6 +16,9 @@
 
 namespace {
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+constexpr float kIcePillarAheadDistance = 190.0f;
+constexpr float kIcePillarRevealSeconds = 2.00f;
+constexpr float kIcePillarWaveTimeoutSeconds = 9.00f;
 
 bool Crossed(float previous, float current, float point)
 {
@@ -56,7 +59,11 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     iceSpearVolley_ = -1;
     iceSpearTimer_ = 0.0f;
     iceSpearPoseWeight_ = 0.0f;
-    nextAttackIsPulse_ = true;
+    icePillarWave_ = -1;
+    icePillarTimer_ = 0.0f;
+    icePillarModelTimer_ = 0.0f;
+    icePillarModelSpawnedForWave_ = false;
+    nextAttackIndex_ = 0;
     patternIndex_ = 0;
     phase_ = 1;
 
@@ -87,6 +94,10 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
         crystals_[crystal] = CreatePart(camera, "Environment/Ice/IceSpike.obj",
             { 0.35f, 0.82f, 1.0f, 1.0f }, true);
         crystalHp_[crystal] = 0.0f;
+    }
+    for (std::unique_ptr<Object3d>& pillar : icePillarModels_) {
+        pillar = CreatePart(camera, "Environment/Ice/IceSpike.obj",
+            { 1.1f, 1.65f, 2.6f, 1.0f }, false);
     }
 
     tentacleColliders_.reserve(kTentacleCount * kSegmentsPerTentacle);
@@ -183,6 +194,8 @@ void IceJellyfish::UpdateAttackSequence(float floatPhase, float deltaTime)
         }
     }
 
+    UpdateIcePillarAttack(deltaTime);
+
     const float pulse = std::sin(floatPhase);
     if (pulse <= -0.72f) {
         pulseAttackArmed_ = true;
@@ -191,13 +204,15 @@ void IceJellyfish::UpdateAttackSequence(float floatPhase, float deltaTime)
         return;
     }
 
-    if (nextAttackIsPulse_) {
+    if (nextAttackIndex_ == 0) {
         pulseBarrageWave_ = 0;
         pulseBarrageTimer_ = 0.0f;
-    } else {
+    } else if (nextAttackIndex_ == 1) {
         StartIceSpearAttack();
+    } else {
+        StartIcePillarAttack();
     }
-    nextAttackIsPulse_ = !nextAttackIsPulse_;
+    nextAttackIndex_ = (nextAttackIndex_ + 1) % 3;
     pulseAttackArmed_ = false;
 }
 
@@ -269,6 +284,95 @@ void IceJellyfish::FireIceSpearVolley()
         }
         break;
     }
+}
+
+void IceJellyfish::StartIcePillarAttack()
+{
+    if (player_ == nullptr || icePillarWave_ >= 0) return;
+    std::mt19937 randomEngine(std::random_device {}());
+    std::uniform_int_distribution<int32_t> laneDistribution(0, 2);
+    icePillarSafeLane_ = laneDistribution(randomEngine);
+    icePillarWave_ = 0;
+    icePillarTimer_ = 0.0f;
+    for (int32_t slot = 3; slot < 6; ++slot) attackHitApplied_[slot] = false;
+    PrepareIcePillarWarning();
+}
+
+void IceJellyfish::PrepareIcePillarWarning()
+{
+    if (player_ == nullptr || icePillarWave_ < 0 || icePillarWave_ >= 3) return;
+    icePillarModelSpawnedForWave_ = false;
+    constexpr std::array<float, 3> laneOffsets = { -15.0f, 0.0f, 15.0f };
+    const Vector3 playerPosition = player_->GetTranslate();
+    const float floorY = hoverCenterY_ - 55.0f;
+    size_t hazardIndex = 0;
+    for (int32_t lane = 0; lane < 3; ++lane) {
+        if (lane == icePillarSafeLane_) continue;
+        Vector3 position = {
+            hoverCenterX_ + laneOffsets[static_cast<size_t>(lane)],
+            floorY,
+            playerPosition.z + kIcePillarAheadDistance
+        };
+        icePillarPositions_[hazardIndex++] = position;
+        EffectManager::GetInstance()->PlayEffect("IceGroundPattern", position);
+    }
+}
+
+void IceJellyfish::UpdateIcePillarAttack(float deltaTime)
+{
+    if (icePillarWave_ < 0) return;
+    icePillarTimer_ += deltaTime;
+    if (icePillarModelSpawnedForWave_) {
+        icePillarModelTimer_ += deltaTime;
+    }
+    if (!icePillarModelSpawnedForWave_ &&
+        icePillarTimer_ >= kIcePillarRevealSeconds) {
+        constexpr std::array<float, 3> spikeOffsets = { -4.0f, 0.0f, 4.0f };
+        size_t modelIndex = 0;
+        for (const Vector3& laneCenter : icePillarPositions_) {
+            for (size_t spike = 0; spike < spikeOffsets.size(); ++spike) {
+                icePillarModelPositions_[modelIndex++] = {
+                    laneCenter.x + spikeOffsets[spike],
+                    laneCenter.y,
+                    laneCenter.z + (spike == 1 ? 1.2f : -1.2f)
+                };
+            }
+        }
+        icePillarModelTimer_ = 0.0f;
+        icePillarModelSpawnedForWave_ = true;
+    }
+
+    if (player_ != nullptr) {
+        const Vector3 playerPosition = player_->GetTranslate();
+        if (icePillarModelSpawnedForWave_) {
+            for (const Vector3& position : icePillarPositions_) {
+                const bool withinWidth = std::abs(playerPosition.x - position.x) <= 6.5f;
+                const bool withinDepth = std::abs(playerPosition.z - position.z) <= 4.0f;
+                const bool withinHeight = playerPosition.y >= position.y - 2.0f &&
+                    playerPosition.y <= position.y + 40.0f;
+                if (withinWidth && withinDepth && withinHeight) {
+                    DamagePlayerOnce(3 + icePillarWave_, 2);
+                    break;
+                }
+            }
+        }
+
+        const bool passedPillars = playerPosition.z > icePillarPositions_[0].z + 10.0f;
+        if (!passedPillars && icePillarTimer_ < kIcePillarWaveTimeoutSeconds) return;
+    } else if (icePillarTimer_ < kIcePillarWaveTimeoutSeconds) {
+        return;
+    }
+
+    icePillarModelSpawnedForWave_ = false;
+    icePillarModelTimer_ = 0.0f;
+    ++icePillarWave_;
+    icePillarTimer_ = 0.0f;
+    if (icePillarWave_ >= 3) {
+        icePillarWave_ = -1;
+        return;
+    }
+    icePillarSafeLane_ = (icePillarSafeLane_ + 1 + icePillarWave_ % 2) % 3;
+    PrepareIcePillarWarning();
 }
 
 void IceJellyfish::BeginPattern(AttackPattern pattern)
@@ -615,6 +719,11 @@ void IceJellyfish::UpdatePartTransforms()
     for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
         const float azimuth = kTwoPi * static_cast<float>(tentacle) /
             static_cast<float>(kTentacleCount) + 0.25f;
+        const bool icePillarTentacle = icePillarWave_ >= 0 &&
+            static_cast<int32_t>(tentacle % 2) == icePillarWave_ % 2;
+        const float icePillarCharge = icePillarTentacle
+            ? std::clamp(icePillarTimer_ / kIcePillarRevealSeconds, 0.0f, 1.0f)
+            : 0.0f;
         const float tentaclePhase =
             floatPhase * tentacleWaveSpeed_[tentacle] + tentacleWavePhase_[tentacle];
         const float tentacleAmplitude = tentacleWaveAmplitude_[tentacle];
@@ -652,6 +761,15 @@ void IceJellyfish::UpdatePartTransforms()
                 const float aimWeight = (0.15f + tipWeight * 0.67f) * iceSpearPoseWeight_;
                 down = Normalize(down * (1.0f - aimWeight) + aimDirection * aimWeight);
             }
+            if (icePillarTentacle && IsSegmentAlive(tentacle, segment)) {
+                const Vector3 floorDirection = Normalize(Vector3 {
+                    radialX * 0.08f,
+                    -1.0f,
+                    radialZ * 0.08f });
+                const float pointDownWeight = icePillarCharge * (0.35f + tipWeight * 0.25f);
+                down = Normalize(
+                    down * (1.0f - pointDownWeight) + floorDirection * pointDownWeight);
+            }
 
             down = Normalize(down);
             const Vector3 up = down * -1.0f;
@@ -685,7 +803,13 @@ void IceJellyfish::UpdatePartTransforms()
                     0.80f - iceSpearPoseWeight_ * 0.35f,
                     1.00f + iceSpearPoseWeight_ * 1.80f,
                     1.0f }
-                : Vector4 { 0.55f, 0.80f, 1.0f, 1.0f });
+                : (icePillarTentacle
+                    ? Vector4 {
+                        0.55f + icePillarCharge * 0.65f,
+                        0.80f + icePillarCharge * 1.35f,
+                        1.00f + icePillarCharge * 1.70f,
+                        1.0f }
+                    : Vector4 { 0.55f, 0.80f, 1.0f, 1.0f }));
             object.Update();
             if (IsSegmentAlive(tentacle, segment)) {
                 tentacleColliders_.push_back(IceJellyfishCollision::TransformBox(
@@ -696,6 +820,7 @@ void IceJellyfish::UpdatePartTransforms()
         }
     }
     UpdateCrystalTransforms();
+    UpdateIcePillarModelTransforms();
 }
 
 void IceJellyfish::UpdateCrystalTransforms()
@@ -716,6 +841,26 @@ void IceJellyfish::UpdateCrystalTransforms()
     }
 }
 
+void IceJellyfish::UpdateIcePillarModelTransforms()
+{
+    if (!icePillarModelSpawnedForWave_) return;
+
+    const float scaleWeight = (std::max)(0.12f,
+        std::clamp(icePillarModelTimer_ / 0.18f, 0.0f, 1.0f));
+    for (size_t index = 0; index < icePillarModelPositions_.size(); ++index) {
+        Vector3 position = icePillarModelPositions_[index];
+        position.y += 0.35f;
+        const float heightVariation = 0.88f + static_cast<float>(index % 3) * 0.08f;
+        const Matrix4x4 matrix = MatrixMath::MakeAffineMatrix(
+            Vector3 { 4.0f * scaleWeight, 11.0f * heightVariation * scaleWeight,
+                4.0f * scaleWeight },
+            Vector3 { 0.0f, (static_cast<float>(index) - 2.5f) * 0.08f, 0.0f },
+            position);
+        icePillarModels_[index]->SetCustomWorldMatrix(matrix);
+        icePillarModels_[index]->Update();
+    }
+}
+
 void IceJellyfish::Draw()
 {
     if (bell_ == nullptr || (isDead_ && deathTimer_ >= 2.0f)) return;
@@ -728,6 +873,9 @@ void IceJellyfish::Draw()
         if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->Draw();
         }
+    }
+    if (icePillarModelSpawnedForWave_) {
+        for (const std::unique_ptr<Object3d>& pillar : icePillarModels_) pillar->Draw();
     }
     core_->Draw();
     bell_->Draw();
@@ -878,6 +1026,21 @@ void IceJellyfish::DrawCollisionDebug() const
     for (const OBB& box : tentacleColliders_) {
         renderer->AddWireOBB(box.center, box.size, box.orientation[0], box.orientation[1],
             box.orientation[2], { 0.8f, 0.3f, 1.0f, 1.0f });
+    }
+    if (icePillarModelSpawnedForWave_) {
+        constexpr Vector3 axisX = { 1.0f, 0.0f, 0.0f };
+        constexpr Vector3 axisY = { 0.0f, 1.0f, 0.0f };
+        constexpr Vector3 axisZ = { 0.0f, 0.0f, 1.0f };
+        constexpr Vector3 collisionSize = { 13.0f, 42.0f, 8.0f };
+        for (const Vector3& position : icePillarPositions_) {
+            const Vector3 collisionCenter = {
+                position.x,
+                position.y + 19.0f,
+                position.z
+            };
+            renderer->AddWireOBB(collisionCenter, collisionSize,
+                axisX, axisY, axisZ, { 1.0f, 0.15f, 0.05f, 1.0f }, 3.0f);
+        }
     }
     renderer->AddWireSphere(coreCollider_.center, coreCollider_.radius,
         { 1.0f, 0.6f, 0.1f, 1.0f }, 2.0f);
