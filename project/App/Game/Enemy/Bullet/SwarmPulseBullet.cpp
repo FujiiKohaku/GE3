@@ -14,7 +14,7 @@ void SwarmPulseBullet::Initialize(Model* model)
 
     EnemyBullet::Initialize(model);
     SetEnableLighting(false);
-    SetColor({ 0.20f, 0.95f, 1.0f, 1.0f });
+    SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
 }
 
 void SwarmPulseBullet::SetTranslate(const Vector3& translate)

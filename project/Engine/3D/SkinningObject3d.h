@@ -91,16 +91,14 @@ public:
         }
     }
 
-    void SetEnableLighting(bool enable)
+    void SetEnableLighting(bool enable);
+    void SetShadingMode(MaterialShadingMode mode);
+    void SetMaterial(const std::string& materialFolderPath);
+    void SetPixelShaderPath(const std::string& pixelShaderPath)
     {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableLighting = 1;
-            } else {
-                materialData_->enableLighting = 0;
-            }
-        }
+        pixelShaderPath_ = pixelShaderPath;
     }
+    const std::string& GetPixelShaderPath() const { return pixelShaderPath_; }
 
     const Matrix4x4& GetWorldMatrix() const
     {
@@ -154,6 +152,8 @@ private:
     // SkinCluster skinCluster_;
     SkinCluster::SkinClusterData skinClusterData_;
     PlayAnimation* playAnimation_ = nullptr;
+    std::string pixelShaderPath_ =
+        "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
     // D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
 
     // コンピュートシェーダー用のバッファとSRV/UAV

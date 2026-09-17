@@ -3,6 +3,7 @@
 #include "Model.h"
 #include "ModelManager.h"
 #include "Object3dManager.h"
+#include "Object3dRootParameter.h"
 #include "Engine/Time/TimeManager.h"
 #include <cassert>
 #include <filesystem>
@@ -113,17 +114,67 @@ void Object3d::Update()
 void Object3d::Draw()
 {
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
+    object3dManager_->BindPipeline(pixelShaderPath_);
     
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Material),
+        materialResource->GetGPUVirtualAddress());
 
-    commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::TransformationMatrix),
+        transformationMatrixResource->GetGPUVirtualAddress());
 
-    commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
 
-    commandList->SetGraphicsRootDescriptorTable(8,Object3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
+        Object3dManager::GetInstance()->GetEnvironmentTexture());
 
     if (model_) {
         model_->Draw();
+    }
+}
+
+void Object3d::SetMaterial(const std::string& materialFolderPath)
+{
+    pixelShaderPath_ = materialFolderPath + "/Render.PS.hlsl";
+}
+
+void Object3d::SetEnableLighting(bool enable)
+{
+    SetShadingMode(enable ? MaterialShadingMode::Toon : MaterialShadingMode::Unlit);
+}
+
+void Object3d::SetShadingMode(MaterialShadingMode mode)
+{
+    if (materialData_) {
+        materialData_->enableLighting = static_cast<int32_t>(mode);
+    }
+
+    switch (mode) {
+    case MaterialShadingMode::Standard:
+        SetMaterial("resources/Shaders/Object3D/Standard");
+        break;
+    case MaterialShadingMode::Ice:
+        SetMaterial("resources/Shaders/Object3D/Ice");
+        break;
+    case MaterialShadingMode::ArchivePaper:
+        SetMaterial("resources/Shaders/Object3D/ArchivePaper");
+        break;
+    case MaterialShadingMode::ArchiveLeather:
+        SetMaterial("resources/Shaders/Object3D/ArchiveLeather");
+        break;
+    case MaterialShadingMode::ArchiveBrass:
+        SetMaterial("resources/Shaders/Object3D/ArchiveBrass");
+        break;
+    case MaterialShadingMode::Toon:
+        SetMaterial("resources/Shaders/Object3D/Toon");
+        break;
+    case MaterialShadingMode::Unlit:
+    default:
+        SetMaterial("resources/Shaders/Object3D/Unlit");
+        break;
     }
 }
 #pragma endregion

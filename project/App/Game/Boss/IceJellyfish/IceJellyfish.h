@@ -87,6 +87,7 @@ private:
     void DamagePlayerOnce(int slot, int damage);
     float PatternDuration() const;
     bool IsSegmentAlive(size_t tentacle, size_t segment) const;
+    bool AreAllTentaclesDestroyed() const;
     bool IsIceSpearTentacleSelected(size_t tentacle) const;
     bool IsIceSpearEmitter(size_t tentacle, size_t segment) const;
     Vector3 GetIceSpearAimTarget(size_t tentacle) const;

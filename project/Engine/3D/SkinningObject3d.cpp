@@ -4,6 +4,7 @@
 #include "ModelManager.h"
 #include "SkinCluster.h"
 #include "SkinningObject3dManager.h"
+#include "Object3dRootParameter.h"
 #include <cassert>
 #include <fstream>
 #include <sstream>
@@ -161,11 +162,19 @@ void SkinningObject3d::Update()
 void SkinningObject3d::Draw()
 {
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
+    skinningObject3dManager_->BindPipeline(pixelShaderPath_);
 
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
-    commandList->SetGraphicsRootDescriptorTable(8, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Material),
+        materialResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::TransformationMatrix),
+        transformationMatrixResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
+        SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
 
     uint32_t vertexOffset = 0;
 
@@ -175,7 +184,8 @@ void SkinningObject3d::Draw()
 
         const MaterialData& material = model_->GetMaterial(primitive.materialIndex);
         D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(material.textureFilePath);
-        commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
+        commandList->SetGraphicsRootDescriptorTable(
+            RootParameterIndex(Object3dRootParameter::Texture), textureHandle);
 
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
         vbView.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
@@ -195,6 +205,48 @@ void SkinningObject3d::Draw()
         }
 
         vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
+    }
+}
+
+void SkinningObject3d::SetMaterial(const std::string& materialFolderPath)
+{
+    pixelShaderPath_ = materialFolderPath + "/Render.PS.hlsl";
+}
+
+void SkinningObject3d::SetEnableLighting(bool enable)
+{
+    SetShadingMode(enable ? MaterialShadingMode::Toon : MaterialShadingMode::Unlit);
+}
+
+void SkinningObject3d::SetShadingMode(MaterialShadingMode mode)
+{
+    if (materialData_) {
+        materialData_->enableLighting = static_cast<int32_t>(mode);
+    }
+
+    switch (mode) {
+    case MaterialShadingMode::Standard:
+        SetMaterial("resources/Shaders/Object3D/Standard");
+        break;
+    case MaterialShadingMode::Ice:
+        SetMaterial("resources/Shaders/Object3D/Ice");
+        break;
+    case MaterialShadingMode::ArchivePaper:
+        SetMaterial("resources/Shaders/Object3D/ArchivePaper");
+        break;
+    case MaterialShadingMode::ArchiveLeather:
+        SetMaterial("resources/Shaders/Object3D/ArchiveLeather");
+        break;
+    case MaterialShadingMode::ArchiveBrass:
+        SetMaterial("resources/Shaders/Object3D/ArchiveBrass");
+        break;
+    case MaterialShadingMode::Toon:
+        SetMaterial("resources/Shaders/Object3D/Toon");
+        break;
+    case MaterialShadingMode::Unlit:
+    default:
+        SetMaterial("resources/Shaders/Object3D/Unlit");
+        break;
     }
 }
 SkinningObject3d::~SkinningObject3d()

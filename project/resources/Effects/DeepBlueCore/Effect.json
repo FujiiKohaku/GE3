@@ -8,20 +8,34 @@
   },
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 192,
+    "Count": 32,
     "Radius": 0.4,
     "Frequency": 0.001
   },
   "Particle": {
     "MaxParticles": 256,
     "LifeTime": 2.2,
-    "StartScale": 0.32,
-    "EndScale": 0.05,
+    "StartScale": 0.544,
+    "EndScale": 0.085,
     "StartRotation": 0.0,
     "RotationSpeed": 5.0,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [0.05, 0.25, 0.98, 0.98],
-    "EndColor": [0.0, 0.05, 0.65, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.05,
+      0.25,
+      0.98,
+      0.98
+    ],
+    "EndColor": [
+      0.0,
+      0.05,
+      0.65,
+      0.0
+    ]
   },
   "Simulation": {
     "EnableGravity": true,

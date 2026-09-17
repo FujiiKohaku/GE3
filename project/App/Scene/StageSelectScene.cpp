@@ -1137,7 +1137,6 @@ void StageSelectScene::Draw2D()
 void StageSelectScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     backdrop_->Draw();
     for (const DustMote& mote : dustMotes_) {
         mote.object->Draw();

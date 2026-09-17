@@ -291,7 +291,7 @@ void AngerBlockBoss::FireCoreBurst(bool spread)
             targetDirection + Vector3 { static_cast<float>(index) * 0.16f, 0.0f, 0.0f });
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * 0.85f);
-        bullet->SetColor({ 1.0f, 0.12f, 0.02f, 1.0f });
+        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         bullet->SetDamage(1);
         AddEnemyBullet(std::move(bullet));
     }

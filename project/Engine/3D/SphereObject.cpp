@@ -1,6 +1,7 @@
 #include "SphereObject.h"
 #include "Engine/math/MatrixMath.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Object3dRootParameter.h"
 #include <cassert>
 #include <numbers>
 // ================================
@@ -80,11 +81,17 @@ void SphereObject::Update(Camera* camera)
 void SphereObject::Draw(ID3D12GraphicsCommandList* cmd)
 {
 
-    cmd->SetGraphicsRootConstantBufferView(0, materialResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootConstantBufferView(1, transformResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Material),
+        materialResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::TransformationMatrix),
+        transformResource_->GetGPUVirtualAddress());
     //  cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootDescriptorTable(2, textureSrvHandle_);
-    cmd->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
+    cmd->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::Texture), textureSrvHandle_);
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView_);
     cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(vertexCount_, 1, 0, 0);

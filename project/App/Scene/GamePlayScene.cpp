@@ -36,6 +36,65 @@ namespace {
 Player::ControlMode gControlMode = Player::ControlMode::KeyboardAndMouse;
 float gMouseSensitivity = 1.0f;
 
+// 機能色。ゲーム内エフェクトとHUDで同じ意味に同じ色を使う。
+constexpr Vector4 kPlayerActionCyan { 0.325f, 0.847f, 0.910f, 1.0f };
+constexpr Vector4 kDangerVermilion { 1.000f, 0.353f, 0.239f, 1.0f };
+constexpr Vector4 kRecoveryMint { 0.475f, 0.902f, 0.702f, 1.0f };
+constexpr Vector4 kHudIvory { 0.910f, 0.870f, 0.750f, 1.0f };
+constexpr Vector4 kHudBrass { 0.714f, 0.541f, 0.290f, 1.0f };
+constexpr Vector4 kHudPanel { 0.025f, 0.055f, 0.100f, 0.84f };
+
+void AddHudFramePart(
+    std::vector<std::unique_ptr<Sprite>>& sprites,
+    const Vector2& position,
+    const Vector2& size,
+    const Vector4& color)
+{
+    auto sprite = std::make_unique<Sprite>();
+    sprite->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    sprite->SetAnchorPoint({ 0.0f, 0.0f });
+    sprite->SetPosition(position);
+    sprite->SetSize(size);
+    sprite->SetColor(color);
+    sprite->Update();
+    sprites.push_back(std::move(sprite));
+}
+
+void InitializeHudFrame(
+    std::vector<std::unique_ptr<Sprite>>& sprites,
+    const Vector2& position,
+    const Vector2& size,
+    const Vector2& anchor,
+    const Vector4& accentColor)
+{
+    sprites.clear();
+    const Vector2 topLeft {
+        position.x - size.x * anchor.x,
+        position.y - size.y * anchor.y
+    };
+    constexpr float kBorder = 3.0f;
+    constexpr float kCornerLength = 28.0f;
+
+    AddHudFramePart(sprites, topLeft, size, kHudPanel);
+    AddHudFramePart(sprites, topLeft, { size.x, kBorder }, kHudIvory);
+    AddHudFramePart(sprites, { topLeft.x, topLeft.y + size.y - kBorder }, { size.x, kBorder }, kHudIvory);
+    AddHudFramePart(sprites, topLeft, { kBorder, size.y }, kHudIvory);
+    AddHudFramePart(sprites, { topLeft.x + size.x - kBorder, topLeft.y }, { kBorder, size.y }, kHudIvory);
+    AddHudFramePart(sprites, topLeft, { kCornerLength, 6.0f }, accentColor);
+    AddHudFramePart(
+        sprites,
+        { topLeft.x + size.x - kCornerLength, topLeft.y + size.y - 6.0f },
+        { kCornerLength, 6.0f },
+        accentColor);
+}
+
+void DrawHudFrame(const std::vector<std::unique_ptr<Sprite>>& sprites)
+{
+    for (const std::unique_ptr<Sprite>& sprite : sprites) {
+        sprite->Draw();
+    }
+}
+
 Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
 {
     Vector2 center {};
@@ -106,11 +165,8 @@ void GamePlayScene::Initialize()
             rail_->AddPoint({ 0.0f, 0.0f, stageSettings_.railLength });
         }
     }
-    /// ポストエフェクト初期化
-    SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-    SceneManager::GetInstance()->AddPostEffect(
-        PostEffectType::Bloom,
-        PostEffectStage::BeforeParticle);
+    // 通常画面は輪郭・霧・ブルームだけに固定する。
+    ConfigureGameplayPostEffects(false);
     // =================================================
     // Camera
     // =================================================
@@ -197,7 +253,7 @@ void GamePlayScene::Initialize()
     // Light
     // =================================================
 
-    LightManager::GetInstance()->SetDirectional({ 1, 1, 1, 1 }, { 0, -1, 0 }, 1.0f);
+    ApplyStageVisualPreset();
 
     // =================================================
     // Sound
@@ -342,12 +398,18 @@ void GamePlayScene::Initialize()
     pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
 
     // 画面左下に表示する現在武器HUD
+    InitializeHudFrame(
+        weaponHudFrameSprites_,
+        { 20.0f, WinApp::GetInstance()->kClientHeight - 20.0f },
+        { 288.0f, 84.0f },
+        { 0.0f, 1.0f },
+        kPlayerActionCyan);
     weaponHudBgSprite_ = std::make_unique<Sprite>();
     weaponHudBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     weaponHudBgSprite_->SetSize({ 280.0f, 76.0f });
     weaponHudBgSprite_->SetAnchorPoint({ 0.0f, 1.0f });
     weaponHudBgSprite_->SetPosition({ 24.0f, WinApp::GetInstance()->kClientHeight - 24.0f });
-    weaponHudBgSprite_->SetColor({ 0.04f, 0.07f, 0.12f, 0.82f });
+    weaponHudBgSprite_->SetColor(kHudPanel);
     weaponHudBgSprite_->Update();
 
     weaponHudLabelText_ = std::make_unique<Text>();
@@ -355,7 +417,7 @@ void GamePlayScene::Initialize()
     weaponHudLabelText_->SetText("WEAPON");
     weaponHudLabelText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 92.0f });
     weaponHudLabelText_->SetFontSize(16.0f);
-    weaponHudLabelText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+    weaponHudLabelText_->SetColor(kPlayerActionCyan);
     weaponHudLabelText_->Update();
 
     weaponHudNameText_ = std::make_unique<Text>();
@@ -370,12 +432,18 @@ void GamePlayScene::Initialize()
     // -------------------------------------------------
     // 画面右側に表示するプレイヤーHPゲージUIの初期化
     // -------------------------------------------------
+    InitializeHudFrame(
+        playerHudFrameSprites_,
+        { WinApp::GetInstance()->kClientWidth - 18.0f, 8.0f },
+        { 268.0f, 70.0f },
+        { 1.0f, 0.0f },
+        kPlayerActionCyan);
     playerHpBgSprite_ = std::make_unique<Sprite>();
     playerHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     playerHpBgSprite_->SetSize({ 220.0f, 22.0f });
     playerHpBgSprite_->SetAnchorPoint({ 1.0f, 0.0f });
     playerHpBgSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
-    playerHpBgSprite_->SetColor({ 0.08f, 0.08f, 0.12f, 0.85f });
+    playerHpBgSprite_->SetColor(kHudPanel);
     playerHpBgSprite_->Update();
 
     playerHpBarSprite_ = std::make_unique<Sprite>();
@@ -384,7 +452,7 @@ void GamePlayScene::Initialize()
     playerHpBarSprite_->SetSize({ 220.0f, 22.0f });
     playerHpBarSprite_->SetAnchorPoint({ 1.0f, 0.0f });
     playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
-    playerHpBarSprite_->SetColor({ 0.20f, 0.85f, 0.40f, 0.95f });
+    playerHpBarSprite_->SetColor(kPlayerActionCyan);
     playerHpBarSprite_->Update();
 
     playerHpText_ = std::make_unique<Text>();
@@ -400,12 +468,19 @@ void GamePlayScene::Initialize()
     const float bossHpBarLeft = bossHudCenterX - 170.0f;
     const float bossHpBarWidth = 340.0f;
 
+    InitializeHudFrame(
+        bossHudFrameSprites_,
+        { bossHudCenterX, 8.0f },
+        { 620.0f, 110.0f },
+        { 0.5f, 0.0f },
+        kDangerVermilion);
+
     bossHeadHpBgSprite_ = std::make_unique<Sprite>();
     bossHeadHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     bossHeadHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
     bossHeadHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
     bossHeadHpBgSprite_->SetPosition({ bossHpBarLeft, 65.0f });
-    bossHeadHpBgSprite_->SetColor({ 0.06f, 0.12f, 0.18f, 0.90f });
+    bossHeadHpBgSprite_->SetColor(kHudPanel);
     bossHeadHpBgSprite_->Update();
 
     bossHeadHpBarSprite_ = std::make_unique<Sprite>();
@@ -414,7 +489,7 @@ void GamePlayScene::Initialize()
     bossHeadHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
     bossHeadHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
     bossHeadHpBarSprite_->SetPosition({ bossHpBarLeft, 65.0f });
-    bossHeadHpBarSprite_->SetColor({ 0.20f, 0.60f, 1.00f, 0.95f });
+    bossHeadHpBarSprite_->SetColor(kHudBrass);
     bossHeadHpBarSprite_->Update();
 
     bossBodyHpBgSprite_ = std::make_unique<Sprite>();
@@ -422,7 +497,7 @@ void GamePlayScene::Initialize()
     bossBodyHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
     bossBodyHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
     bossBodyHpBgSprite_->SetPosition({ bossHpBarLeft, 91.0f });
-    bossBodyHpBgSprite_->SetColor({ 0.18f, 0.06f, 0.06f, 0.90f });
+    bossBodyHpBgSprite_->SetColor(kHudPanel);
     bossBodyHpBgSprite_->Update();
 
     bossBodyHpBarSprite_ = std::make_unique<Sprite>();
@@ -431,7 +506,7 @@ void GamePlayScene::Initialize()
     bossBodyHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
     bossBodyHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
     bossBodyHpBarSprite_->SetPosition({ bossHpBarLeft, 91.0f });
-    bossBodyHpBarSprite_->SetColor({ 1.00f, 0.20f, 0.20f, 0.95f });
+    bossBodyHpBarSprite_->SetColor(kDangerVermilion);
     bossBodyHpBarSprite_->Update();
 
     bossNameText_ = std::make_unique<Text>();
@@ -443,18 +518,18 @@ void GamePlayScene::Initialize()
     bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
     bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
     bossNameText_->SetFontSize(20.0f);
-    bossNameText_->SetColor({ 1.0f, 0.25f, 0.25f, 1.0f });
+    bossNameText_->SetColor(kDangerVermilion);
     bossNameText_->Update();
 
     bossHeadHpText_ = std::make_unique<Text>();
     bossHeadHpText_->Initialize(kDefaultFont);
     bossHeadHpText_->SetText(stageSettings_.bossType == "AngerBlock"
         ? "ANGER CORE"
-        : (stageSettings_.bossType == "IceJellyfish" ? "SHARED HP" : "HEAD CORE"));
+        : (stageSettings_.bossType == "IceJellyfish" ? "CORE HP" : "HEAD CORE"));
     bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
     bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossHeadHpText_->SetFontSize(14.0f);
-    bossHeadHpText_->SetColor({ 0.55f, 0.80f, 1.0f, 1.0f });
+    bossHeadHpText_->SetColor(kHudBrass);
     bossHeadHpText_->Update();
 
     bossBodyHpText_ = std::make_unique<Text>();
@@ -465,7 +540,7 @@ void GamePlayScene::Initialize()
     bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
     bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossBodyHpText_->SetFontSize(14.0f);
-    bossBodyHpText_->SetColor({ 1.0f, 0.55f, 0.55f, 1.0f });
+    bossBodyHpText_->SetColor(kDangerVermilion);
     bossBodyHpText_->Update();
 
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
@@ -579,7 +654,9 @@ void GamePlayScene::Initialize()
         floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
         floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
         if (stageId_ == "stage03") {
-            floorObj_->SetColor({ 0.10f, 0.24f, 0.36f, 1.0f });
+            // Stage03の完成基準: 明るい氷色を3段階のセル陰影で見せる。
+            floorObj_->SetColor({ 0.25f, 0.48f, 0.64f, 1.0f });
+            floorObj_->SetShadingMode(MaterialShadingMode::Ice);
             floorObj_->GetMaterial()->shininess = 0.0f;
             floorObj_->SetEnableEnvironmentMap(false);
         }
@@ -670,10 +747,9 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
         SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
 
-        // ポーズ中は背景画面にガウスぼかし（GaussianFilter）、モノクロ白黒化（GrayScale）、SFホログラム走査線（CyberScanline）をトリプル適用
+        // ポーズ中は読みやすさに必要なぼかしと彩度低下だけを適用する。
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter,PostEffectStage::BeforeParticle);
         SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale,PostEffectStage::BeforeParticle);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::CyberScanline,PostEffectStage::BeforeParticle);
 
         // ポーズテキストオブジェクトの更新
         if (pauseTitleText_) pauseTitleText_->Update();
@@ -844,9 +920,6 @@ void GamePlayScene::Update()
 
     // ボス出現処理
     bossController_->Update(railDistance_);
-    if (bossController_->DidSpawnThisFrame()) {
-        bossNoiseFadeTimer_ = 4.5f;
-    }
     if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
         oceanSurface_->SetLength(rail_->GetTotalLength());
     }
@@ -936,14 +1009,6 @@ void GamePlayScene::Update()
     float nextRailDistance = 0.0f;
     UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
 
-    // 入力インスタンスの取得
-    if (input != nullptr) {
-        if (input->IsKeyTrigger(DIK_L)) {
-            isRandomPostEffect_ = !isRandomPostEffect_;
-            hasRandomPostEffectToggle_ = true;
-        }
-    }
-
     // 静的フラグ（初回フレームのログ出力用）
     static bool isFirstFrame = true;
 #ifdef _DEBUG
@@ -1005,42 +1070,7 @@ void GamePlayScene::Update()
 
     UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
 
-    // ポストエフェクトの切り替え
-    if (hasRandomPostEffectToggle_) {
-        if (isRandomPostEffect_) {
-            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Random);
-        } else {
-            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Bloom,
-                PostEffectStage::BeforeParticle);
-        }
-    } else {
-        if (isPlayerBoosting) {
-            SceneManager::GetInstance()->ClearPostEffects();
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::Fog,PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::RadialBlur,PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::FocusLine,PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::ChromaticAberration,
-                PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Bloom,
-                PostEffectStage::BeforeParticle);
-        } else if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDead()) {
-            // ボス戦中: 3Dボスの輝度境界を強調する LuminanceBasedOutline (5点加点) を適用！
-            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::LuminanceBasedOutline);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Bloom,
-                PostEffectStage::BeforeParticle);
-        } else {
-            // 通常時: 深度ベースのアウトライン (DepthOutline: 8点加点)
-            SceneManager::GetInstance()->SetPostEffectType(PostEffectType::DepthOutline);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Bloom,
-                PostEffectStage::BeforeParticle);
-        }
-    }
+    ConfigureGameplayPostEffects(isPlayerBoosting);
 
     // -------------------------------------------------
     // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
@@ -1072,16 +1102,6 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetSonicBoomProgress(boomProgress);
         SceneManager::GetInstance()->AddPostEffect(
             PostEffectType::SonicBoom,
-            PostEffectStage::BeforeParticle);
-    }
-
-    // -------------------------------------------------
-    // ミニガン連射時の「銃身熱気カゲロウ (HeatHaze)」演出
-    // -------------------------------------------------
-    if (player_ && player_->GetHeatRatio() > 0.01f) {
-        SceneManager::GetInstance()->SetVignetteStrength(player_->GetHeatRatio());
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::HeatHaze,
             PostEffectStage::BeforeParticle);
     }
 
@@ -1157,52 +1177,6 @@ void GamePlayScene::Update()
     }
 
     // -------------------------------------------------
-    // HP ≦ 5 ピンチ時: 画面端の不規則ビキビキガラスひび割れ (GlassCrack)
-    // -------------------------------------------------
-    if (player_ && player_->GetCurrentHp() <= 5) {
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::GlassCrack,
-            PostEffectStage::BeforeParticle);
-    }
-
-    // -------------------------------------------------
-    // 加点要素: Random (4点)
-    // 途切れ一切無しの完全シームレスノイズ＆たっぷり4.5秒間のロングフェードアウト
-    // -------------------------------------------------
-    float noiseIntensity = 0.0f;
-
-    // (A) ボス登場前予兆ノイズ (Z = 1450 〜 1850)
-    const float bossWarningStart = (std::max)(
-        0.0f,
-        stageSettings_.bossSpawnDistance - 400.0f);
-    if (stageSettings_.bossType != "None" && !bossController_->IsSpawned() && player_ && railDistance_ >= bossWarningStart) {
-        float playerDistance = railDistance_;
-        float warningLength =
-            stageSettings_.bossSpawnDistance - bossWarningStart;
-        float progress = warningLength > 0.0f
-            ? (playerDistance - bossWarningStart) / warningLength
-            : 1.0f;
-        if (progress > 1.0f) progress = 1.0f;
-        noiseIntensity = 0.30f + 0.70f * progress;
-    }
-    // (B) ボス登場後のロングフェードアウトノイズ (たっぷり4.5秒間かけて非常にゆっくり消えていく)
-    else if (bossNoiseFadeTimer_ > 0.0f) {
-        bossNoiseFadeTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
-        if (bossNoiseFadeTimer_ < 0.0f) bossNoiseFadeTimer_ = 0.0f;
-
-        float fadeProgress = bossNoiseFadeTimer_ / 4.5f;
-        noiseIntensity = fadeProgress;
-    }
-
-    // 途切れが絶対に発生しないよう、ノイズ強度がわずかでもある場合は100%確実に適用！
-    if (noiseIntensity > 0.001f) {
-        SceneManager::GetInstance()->SetVignetteStrength(noiseIntensity);
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::Random,
-            PostEffectStage::BeforeParticle);
-    }
-
-    // -------------------------------------------------
     // 画面右側のプレイヤーHPゲージのリアルタイム更新
     // -------------------------------------------------
     if (player_ && playerHpBarSprite_ && playerHpText_) {
@@ -1227,13 +1201,13 @@ void GamePlayScene::Update()
         float barWidth = 220.0f * displayedPlayerHpRatio_;
         playerHpBarSprite_->SetSize({ barWidth, 22.0f });
 
-        // 残りHP量に応じてバーの色を変化（緑 -> 黄色 -> 赤）
+        // 回復色の緑はアイテム専用。通常HPはプレイヤー色のシアンで示す。
         if (currentHp <= 3) {
-            playerHpBarSprite_->SetColor({ 0.95f, 0.15f, 0.15f, 0.95f });
+            playerHpBarSprite_->SetColor(kDangerVermilion);
         } else if (hpRatio < 0.45f) {
-            playerHpBarSprite_->SetColor({ 0.95f, 0.70f, 0.15f, 0.95f });
+            playerHpBarSprite_->SetColor(kHudBrass);
         } else {
-            playerHpBarSprite_->SetColor({ 0.20f, 0.85f, 0.40f, 0.95f });
+            playerHpBarSprite_->SetColor(kPlayerActionCyan);
         }
 
         playerHpBarSprite_->Update();
@@ -1306,19 +1280,19 @@ void GamePlayScene::Update()
     ImGui::Begin("Lighting Control");
 
     // ---- ライトの ON / OFF ----
-    static bool lightEnabled = false;
+    static bool lightEnabled = true;
     ImGui::Checkbox("Enable Light", &lightEnabled);
 
     // ---- ライトの色 ----
-    static Vector4 lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    static Vector4 lightColor = Vector4(0.90f, 0.96f, 1.0f, 1.0f);
     ImGui::ColorEdit3("Light Color", (float*)&lightColor);
 
     // ---- 明るさ（強さ） ----
-    static float lightIntensity = 1.0f;
+    static float lightIntensity = 0.90f;
     ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
     // ---- 光の向き ----
-    static Vector3 lightDir = { 0.0f, -1.0f, 0.0f };
+    static Vector3 lightDir = { -0.35f, -0.82f, 0.45f };
     ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
 
     // ---- 正規化 ----
@@ -1334,11 +1308,11 @@ void GamePlayScene::Update()
         normalizedDir,
         intensity);
 
-    static Vector4 ambientColor = Vector4(1.0f, 1.0f, 1.0f, 0.25f);
+    static Vector4 ambientColor = Vector4(0.40f, 0.52f, 0.68f, 0.24f);
 
     // ---- リセットボタン（向きだけ元に戻す）---
     if (ImGui::Button("Reset Direction")) {
-        lightDir = { 0.0f, -1.0f, 0.0f };
+        lightDir = { -0.35f, -0.82f, 0.45f };
     }
 
     ImGui::SameLine();
@@ -1346,10 +1320,10 @@ void GamePlayScene::Update()
     // ---- ライトを完全初期化 ----
     if (ImGui::Button("Reset Light")) {
         lightEnabled = true;
-        lightColor = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-        lightIntensity = 1.0f;
-        lightDir = { 0.0f, -1.0f, 0.0f };
-        ambientColor = Vector4(1.0f, 1.0f, 1.0f, 0.25f);
+        lightColor = Vector4(0.90f, 0.96f, 1.0f, 1.0f);
+        lightIntensity = 0.90f;
+        lightDir = { -0.35f, -0.82f, 0.45f };
+        ambientColor = Vector4(0.40f, 0.52f, 0.68f, 0.24f);
     }
 
     ImGui::ColorEdit3("Ambient Color", &ambientColor.x);
@@ -1447,29 +1421,7 @@ void GamePlayScene::Update()
 
     // 反映
 #else
-    LightManager::GetInstance()->SetDirectional(
-        { 1.0f, 1.0f, 1.0f, 1.0f },
-        { 0.0f, -1.0f, 0.0f },
-        0.0f);
-
-    LightManager::GetInstance()->SetPointRadius(10.0f);
-    LightManager::GetInstance()->SetPointDecay(1.0f);
-    LightManager::GetInstance()->SetPointLight(
-        { 1.0f, 1.0f, 1.0f, 1.0f },
-        { 0.0f, 2.0f, 0.0f },
-        0.0f);
-
-    LightManager::GetInstance()->SetAmbientColor({ 1.0f, 1.0f, 1.0f });
-    LightManager::GetInstance()->SetAmbientIntensity(0.25f);
-
-    LightManager* lightManager = LightManager::GetInstance();
-    lightManager->SetSpotLightColor({ 1.0f, 1.0f, 1.0f, 1.0f });
-    lightManager->SetSpotLightPosition({ 0.0f, 0.0f, 0.0f });
-    lightManager->SetSpotLightDirection({ -1.0f, 0.0f, 0.0f });
-    lightManager->SetSpotLightIntensity(4.0f);
-    lightManager->SetSpotLightDistance(7.0f);
-    lightManager->SetSpotLightDecay(2.0f);
-    lightManager->SetSpotLightCosAngle(0.5f);
+    ApplyStageVisualPreset();
 #endif // USE_IMGUI
 
     // terrain_->SetTranslate(terrainPos);
@@ -1828,7 +1780,6 @@ void GamePlayScene::Draw3D()
     }
 
     Object3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
 
     // Object3dManager::GetInstance()->SetGlowPSO();
     // Object3dManager::GetInstance()->SetNormalPSO();
@@ -1855,7 +1806,6 @@ void GamePlayScene::Draw3D()
         waterPillarRenderer_->PreDraw();
         for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) pillar->DrawPillar();
         Object3dManager::GetInstance()->PreDraw();
-        LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     }
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
@@ -1874,7 +1824,6 @@ void GamePlayScene::Draw3D()
     // スキニング
     //----------------------
     SkinningObject3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
                                                                                         // animationSkin00_->Draw();
     animationActor_->Draw();
 }
@@ -1901,7 +1850,7 @@ void GamePlayScene::InitializeRecoveryItems(Model* model)
         recoveryItem.object->SetModel(model);
         recoveryItem.object->SetTranslate(position);
         recoveryItem.object->SetScale({ 0.75f, 0.75f, 0.75f });
-        recoveryItem.object->SetColor({ 0.20f, 1.0f, 0.35f, 1.0f });
+        recoveryItem.object->SetColor(kRecoveryMint);
         recoveryItem.object->SetEnableLighting(false);
         recoveryItem.basePosition = position;
         recoveryItem.object->Update();
@@ -1987,12 +1936,15 @@ void GamePlayScene::Draw2D()
         }
     }
 
-    // 画面右側のプレイヤーHPゲージ（背景スプライト＆HPバー）の描画
+    // 全HUDは同じ濃紺パネル・アイボリー罫線・機能色アクセントを使う。
+    DrawHudFrame(weaponHudFrameSprites_);
     if (weaponHudBgSprite_) weaponHudBgSprite_->Draw();
+    DrawHudFrame(playerHudFrameSprites_);
     if (playerHpBgSprite_) playerHpBgSprite_->Draw();
     if (playerHpBarSprite_) playerHpBarSprite_->Draw();
 
     if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
+        DrawHudFrame(bossHudFrameSprites_);
         if (bossHeadHpBgSprite_) bossHeadHpBgSprite_->Draw();
         if (bossHeadHpBarSprite_) bossHeadHpBarSprite_->Draw();
         if (bossBodyHpBgSprite_) bossBodyHpBgSprite_->Draw();
@@ -2210,7 +2162,7 @@ void GamePlayScene::DrawImGui()
 
             // 1. 頭部HPバー (ネオンブルー)
             float headFraction = GetActiveBoss()->GetHeadHpFraction();
-            ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "SHARED HP  " : "HEAD CORE  ");
+            ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "CORE HP  " : "HEAD CORE  ");
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 1.0f, 1.0f)); // ネオンブルー
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.2f, 0.3f, 0.4f));       // 暗い青背景
@@ -2282,7 +2234,7 @@ void GamePlayScene::DrawImGui()
 
     ImGui::Begin("Debug Teleport Menu");
     if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(GetActiveBoss())) {
-        ImGui::Text("Ice Jellyfish shared HP: %.0f / %.0f", iceJellyfish->GetHp(), IceJellyfish::kMaxHp);
+        ImGui::Text("Ice Jellyfish core HP: %.0f / %.0f", iceJellyfish->GetHp(), IceJellyfish::kMaxHp);
         ImGui::Checkbox("Show Ice Jellyfish collision", &showIceJellyfishCollision_);
         if (ImGui::Button("Teleport to Ice Jellyfish")) {
             railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
@@ -2549,6 +2501,61 @@ void GamePlayScene::Finalize()
     playerJetSparkHandle_ = kInvalidEffectHandle;
 
     // SoundManager::GetInstance()->SoundUnload(&bgm);
+}
+
+void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    sceneManager->ClearPostEffects();
+    sceneManager->AddPostEffect(
+        PostEffectType::DepthOutline,
+        PostEffectStage::BeforeParticle);
+    sceneManager->AddPostEffect(
+        PostEffectType::Fog,
+        PostEffectStage::BeforeParticle);
+
+    if (isPlayerBoosting) {
+        sceneManager->AddPostEffect(
+            PostEffectType::RadialBlur,
+            PostEffectStage::BeforeParticle);
+        sceneManager->AddPostEffect(
+            PostEffectType::FocusLine,
+            PostEffectStage::BeforeParticle);
+        sceneManager->AddPostEffect(
+            PostEffectType::Bloom,
+            PostEffectStage::BeforeParticle);
+    }
+}
+
+void GamePlayScene::ApplyStageVisualPreset()
+{
+    LightManager* lightManager = LightManager::GetInstance();
+
+    // Stage03を完成見本とし、青白い主光源と低彩度の環境光で
+    // セル陰影の明・中・暗の3段階が安定して読める状態にする。
+    if (stageId_ == "stage03") {
+        lightManager->SetDirectional(
+            { 0.90f, 0.96f, 1.0f, 1.0f },
+            Normalize(Vector3 { -0.35f, -0.82f, 0.45f }),
+            0.90f);
+        lightManager->SetAmbientColor({ 0.40f, 0.52f, 0.68f });
+        lightManager->SetAmbientIntensity(0.24f);
+    } else {
+        lightManager->SetDirectional(
+            { 1.0f, 0.97f, 0.90f, 1.0f },
+            Normalize(Vector3 { -0.28f, -0.86f, 0.42f }),
+            1.0f);
+        lightManager->SetAmbientColor({ 0.52f, 0.60f, 0.68f });
+        lightManager->SetAmbientIntensity(0.28f);
+    }
+
+    lightManager->SetPointRadius(10.0f);
+    lightManager->SetPointDecay(1.0f);
+    lightManager->SetPointLight(
+        { 1.0f, 1.0f, 1.0f, 1.0f },
+        { 0.0f, 2.0f, 0.0f },
+        0.0f);
+    lightManager->SetSpotLightIntensity(0.0f);
 }
 
 void GamePlayScene::ResetGameplayPostEffects()
@@ -2893,9 +2900,10 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             const bool isIceModel = objData.fileName.starts_with("Environment/Ice/") ||
                 objData.fileName == "IceSpike.obj";
             if (stageId_ == "stage03" && isIceModel) {
-                levelObject->SetColor({ 0.90f, 0.96f, 1.0f, 1.0f });
-                // Diffuse ice facets: white lit faces and blue side faces, without glare.
-                levelObject->GetMaterial()->enableLighting = 2;
+                levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
+                // Three cel-shaded ice bands: deep blue shadow, cyan midtone,
+                // and a clean white lit face.
+                levelObject->SetShadingMode(MaterialShadingMode::Ice);
                 levelObject->GetMaterial()->shininess = 0.0f;
                 levelObject->SetEnableEnvironmentMap(false);
             }

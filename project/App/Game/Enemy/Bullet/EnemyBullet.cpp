@@ -7,6 +7,8 @@ float EnemyBullet::timeScale_ = 1.0f;
 void EnemyBullet::Initialize(Model* model)
 {
     BaseBullet::Initialize(model);
+    SetEnableLighting(false);
+    SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
 }
 
 void EnemyBullet::OnHitPlayer(const Vector3&)

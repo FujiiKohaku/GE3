@@ -143,8 +143,9 @@ void IceJellyfish::Update()
     basePosition_ = bodyPosition_;
     transform_.translate = bodyPosition_;
 
-    coreExposed_ = false;
+    coreExposed_ = AreAllTentaclesDestroyed();
     UpdateAttackSequence(animationTime_ * 1.10f, deltaTime);
+    coreExposed_ = AreAllTentaclesDestroyed();
     UpdatePartTransforms();
 }
 
@@ -273,9 +274,7 @@ void IceJellyfish::FireIceSpearVolley()
             bullet->Initialize(bulletModel_);
             bullet->SetTranslate(muzzle);
             bullet->SetVelocity(direction * speed);
-            bullet->SetColor(spear == 0
-                ? Vector4 { 0.92f, 0.68f, 1.0f, 1.0f }
-                : Vector4 { 0.62f, 0.32f, 1.0f, 1.0f });
+            bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
             bullet->SetScale(spear == 0
                 ? Vector3 { 0.44f, 0.44f, 1.70f }
                 : Vector3 { 0.30f, 0.30f, 1.25f });
@@ -381,7 +380,7 @@ void IceJellyfish::BeginPattern(AttackPattern pattern)
     attackTimer_ = 0.0f;
     previousAttackTimer_ = 0.0f;
     firedWave_ = 0;
-    coreExposed_ = false;
+    coreExposed_ = AreAllTentaclesDestroyed();
     absoluteInterrupted_ = false;
     attackHitApplied_.fill(false);
     absoluteSealDamage_.fill(0.0f);
@@ -476,7 +475,7 @@ void IceJellyfish::UpdateFrozenSweep()
         std::abs(player_->GetTranslate().x - lockedTarget_.x) < 6.0f) {
         DamagePlayerOnce(1, 2);
     }
-    coreExposed_ = attackTimer_ >= (phase_ == 3 ? 3.5f : 2.5f) && attackTimer_ < 5.4f;
+    coreExposed_ = AreAllTentaclesDestroyed();
 }
 
 void IceJellyfish::UpdateIcicleBloom()
@@ -489,7 +488,7 @@ void IceJellyfish::UpdateIcicleBloom()
             static_cast<float>(firedWave_) * std::numbers::pi_v<float> / 8.0f);
         ++firedWave_;
     }
-    coreExposed_ = attackTimer_ >= 3.6f && attackTimer_ < 5.8f;
+    coreExposed_ = AreAllTentaclesDestroyed();
 }
 
 void IceJellyfish::UpdateTentacleThrust()
@@ -506,7 +505,7 @@ void IceJellyfish::UpdateTentacleThrust()
             lockedTarget_ = player_->GetTranslate();
         }
     }
-    coreExposed_ = attackTimer_ >= 4.1f && attackTimer_ < 6.0f;
+    coreExposed_ = AreAllTentaclesDestroyed();
 }
 
 void IceJellyfish::UpdateBlizzardCurrent()
@@ -521,7 +520,7 @@ void IceJellyfish::UpdateBlizzardCurrent()
         FireAimedBurst(3, 0.24f, 0.42f, 1);
         ++firedWave_;
     }
-    coreExposed_ = attackTimer_ >= 5.2f && attackTimer_ < 6.2f;
+    coreExposed_ = AreAllTentaclesDestroyed();
 }
 
 void IceJellyfish::UpdateCrystalPrison()
@@ -540,7 +539,7 @@ void IceJellyfish::UpdateCrystalPrison()
     if (Crossed(previousAttackTimer_, attackTimer_, 5.6f) && alive > 0) {
         FireAimedBurst(alive, 0.18f, 0.60f, 1);
     }
-    coreExposed_ = alive == 0 || (attackTimer_ >= 5.8f && attackTimer_ < 7.2f);
+    coreExposed_ = AreAllTentaclesDestroyed();
 }
 
 void IceJellyfish::UpdateAbsoluteZero()
@@ -553,7 +552,7 @@ void IceJellyfish::UpdateAbsoluteZero()
         }
     }
     absoluteInterrupted_ = released == static_cast<int32_t>(kTentacleCount);
-    coreExposed_ = absoluteInterrupted_ || (attackTimer_ >= 6.2f && attackTimer_ < 7.8f);
+    coreExposed_ = AreAllTentaclesDestroyed();
     if (!absoluteInterrupted_ && Crossed(previousAttackTimer_, attackTimer_, 6.0f)) {
         DamagePlayerOnce(0, 4);
         FireRadialBurst(16, 0.78f, 2, 0.0f);
@@ -571,7 +570,7 @@ void IceJellyfish::FireAimedBurst(int count, float spread, float speed, int dama
         bullet->Initialize(bulletModel_);
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(Normalize(targetDirection + Vector3 { centered * spread, 0.0f, 0.0f }) * speed);
-        bullet->SetColor({ 0.25f, 0.82f, 1.0f, 1.0f });
+        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         bullet->SetScale({ 0.45f, 0.45f, 0.8f });
         bullet->SetDamage(damage);
         AddEnemyBullet(std::move(bullet));
@@ -590,7 +589,7 @@ void IceJellyfish::FireRadialBurst(int count, float speed, int damage, float ang
         bullet->Initialize(bulletModel_);
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * speed);
-        bullet->SetColor({ 0.35f, 0.88f, 1.0f, 1.0f });
+        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         bullet->SetScale({ 0.4f, 0.4f, 0.9f });
         bullet->SetDamage(damage);
         AddEnemyBullet(std::move(bullet));
@@ -610,7 +609,7 @@ void IceJellyfish::FirePulseRing(
         centerBullet->Initialize(bulletModel_);
         centerBullet->SetTranslate(muzzle);
         centerBullet->SetVelocity(targetDirection * speed);
-        centerBullet->SetColor({ 0.55f, 0.92f, 1.0f, 1.0f });
+        centerBullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         centerBullet->SetScale({ 0.46f, 0.46f, 0.95f });
         centerBullet->SetDamage(1);
         AddEnemyBullet(std::move(centerBullet));
@@ -628,7 +627,7 @@ void IceJellyfish::FirePulseRing(
         bullet->Initialize(bulletModel_);
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * speed);
-        bullet->SetColor({ 0.35f, 0.88f, 1.0f, 1.0f });
+        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         bullet->SetScale({ 0.42f, 0.42f, 0.90f });
         bullet->SetDamage(1);
         AddEnemyBullet(std::move(bullet));
@@ -639,6 +638,12 @@ bool IceJellyfish::IsSegmentAlive(size_t tentacle, size_t segment) const
 {
     const float segmentThreshold = kSegmentHp * static_cast<float>(segment);
     return tentacleHp_[tentacle] > segmentThreshold;
+}
+
+bool IceJellyfish::AreAllTentaclesDestroyed() const
+{
+    return std::all_of(tentacleHp_.begin(), tentacleHp_.end(),
+        [](float hp) { return hp <= 0.0f; });
 }
 
 bool IceJellyfish::IsIceSpearEmitter(size_t tentacle, size_t segment) const
@@ -927,7 +932,7 @@ void IceJellyfish::OnBulletHit(int32_t partIndex, float damage, const Vector3& p
 
 bool IceJellyfish::IsCollisionPartDamageable(int32_t partIndex) const
 {
-    if (partIndex == kCorePart) return true;
+    if (partIndex == kCorePart) return coreExposed_;
     if (partIndex >= kFirstSegmentPart &&
         partIndex < kFirstSegmentPart + static_cast<int32_t>(kTentacleCount * kSegmentsPerTentacle)) {
         const int32_t flat = partIndex - kFirstSegmentPart;
@@ -943,10 +948,10 @@ bool IceJellyfish::IsCollisionPartDamageable(int32_t partIndex) const
 void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
 {
     if (isDead_ || damage <= 0.0f) return;
-    float sharedDamage = damage;
     if (partIndex == kCorePart) {
-        sharedDamage *= 1.5f;
+        if (!coreExposed_) return;
         hitFlashTime_ = 0.12f;
+        hp_ = (std::max)(0.0f, hp_ - damage * 1.5f);
     } else if (partIndex >= kFirstSegmentPart &&
         partIndex < kFirstSegmentPart + static_cast<int32_t>(kTentacleCount * kSegmentsPerTentacle)) {
         const int32_t flat = partIndex - kFirstSegmentPart;
@@ -965,16 +970,14 @@ void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
         if (attackPattern_ == AttackPattern::AbsoluteZero) {
             absoluteSealDamage_[tentacle] += damage;
         }
+        coreExposed_ = AreAllTentaclesDestroyed();
     } else if (partIndex >= kFirstCrystalPart && partIndex < kFirstCrystalPart + 4) {
         const size_t crystal = static_cast<size_t>(partIndex - kFirstCrystalPart);
-        const float before = crystalHp_[crystal];
         crystalHp_[crystal] = (std::max)(0.0f, crystalHp_[crystal] - damage);
-        if (before > 0.0f && crystalHp_[crystal] <= 0.0f) sharedDamage += 3.0f;
     } else {
         return;
     }
 
-    hp_ = (std::max)(0.0f, hp_ - sharedDamage);
     if (hp_ <= 0.0f) {
         SetDead(true);
         EffectManager::GetInstance()->PlayEffect("Explosion", coreCollider_.center);

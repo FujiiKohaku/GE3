@@ -1114,7 +1114,6 @@ void TestScene1::Draw3D()
 {
     // 床の描画
     Object3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     if (floorObj_) {
         floorObj_->Draw();
     }
@@ -1137,7 +1136,6 @@ void TestScene1::Draw3D()
 
     // プレイヤー(Robo)の描画
     SkinningObject3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     if (playerActor_ && !isSandGolemMode_) {
         playerActor_->Draw();
     }

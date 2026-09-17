@@ -141,6 +141,8 @@ private:
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
     void UpdateCameraShakePostEffect();
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
+    void ConfigureGameplayPostEffects(bool isPlayerBoosting);
+    void ApplyStageVisualPreset();
     void ResetGameplayPostEffects();
     void StopPlayerEngineEffects();
     void ProcessPlayerShooting(Input* input);
@@ -214,6 +216,9 @@ private:
     std::unique_ptr<Sprite> aimSprite_;
     std::vector<std::unique_ptr<Sprite>> homingLockSprites_;
     std::unique_ptr<Sprite> weaponHudBgSprite_;
+    std::vector<std::unique_ptr<Sprite>> weaponHudFrameSprites_;
+    std::vector<std::unique_ptr<Sprite>> playerHudFrameSprites_;
+    std::vector<std::unique_ptr<Sprite>> bossHudFrameSprites_;
     std::unique_ptr<Text> weaponHudLabelText_;
     std::unique_ptr<Text> weaponHudNameText_;
     // ------------------------------
@@ -257,8 +262,6 @@ private:
     EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
     bool wasBoostingForKick_ = false;
-    bool isRandomPostEffect_ = false;
-    bool hasRandomPostEffectToggle_ = false;
     float normalFovY_ = 0.45f;
     float boostFovY_ = 0.75f;
     float currentFovY_ = 0.45f;
@@ -329,9 +332,6 @@ private:
     float damageFlashTimer_ = 0.0f;
     int lastPlayerHp_ = 20;
     float justDodgeSlowTimer_ = 0.0f;
-
-    // ボス登場時電波障害ノイズ用フェードアウトタイマー
-    float bossNoiseFadeTimer_ = 0.0f;
 
     // プレイヤー爆発後、ゲームオーバー画面へ移るまでの待機時間
     float playerDeathAfterExplosionTimer_ = 0.0f;

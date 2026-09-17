@@ -69,7 +69,6 @@ void GameOverScene::Draw2D()
 void GameOverScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     // titleObj_->Draw();
 }
 

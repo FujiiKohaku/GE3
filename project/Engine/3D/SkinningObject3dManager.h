@@ -4,6 +4,8 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/blend/blendutil.h"
 #include <memory>
+#include <string>
+#include <unordered_map>
 class SkinningObject3dManager {
 public:
     static SkinningObject3dManager* GetInstance();
@@ -40,6 +42,7 @@ public:
     {
         currentBlendMode = mode;
     }
+    void BindPipeline(const std::string& pixelShaderPath);
     ID3D12RootSignature* GetComputeRootSignature() const { return computeRootSignature_.Get(); }
     ID3D12PipelineState* GetComputePipelineState() const { return computePipelineState_.Get(); }
     ~SkinningObject3dManager() = default;
@@ -67,6 +70,8 @@ private:
 private:
     void CreateRootSignature();
     void CreateGraphicsPipeline();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateMaterialPipeline(
+        const std::string& pixelShaderPath, BlendMode blendMode);
 
 private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> computeRootSignature_;
@@ -83,7 +88,7 @@ private:
     // RootSignature / PSO
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature = nullptr;
 
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> materialPipelineCache_;
 
     Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;

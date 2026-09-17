@@ -17,9 +17,23 @@
     "EndScale": 0.12,
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [0.1, 0.95, 1.0, 1.0],
-    "EndColor": [0.75, 0.15, 1.0, 0.05]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.1,
+      0.95,
+      1.0,
+      1.0
+    ],
+    "EndColor": [
+      0.75,
+      0.15,
+      1.0,
+      0.05
+    ]
   },
   "Simulation": {
     "EnableGravity": false,
@@ -35,8 +49,16 @@
     {
       "Type": "Wind",
       "Space": "Local",
-      "Position": [2.5, 1.0, 0.0],
-      "Direction": [1.0, 0.15, 0.0],
+      "Position": [
+        2.5,
+        1.0,
+        0.0
+      ],
+      "Direction": [
+        1.0,
+        0.15,
+        0.0
+      ],
       "Radius": 10.0,
       "Strength": 4.0,
       "Falloff": 0.35
@@ -44,8 +66,16 @@
     {
       "Type": "Vortex",
       "Space": "Local",
-      "Position": [2.0, 1.0, 0.0],
-      "Direction": [0.0, 1.0, 0.0],
+      "Position": [
+        2.0,
+        1.0,
+        0.0
+      ],
+      "Direction": [
+        0.0,
+        1.0,
+        0.0
+      ],
       "Radius": 4.5,
       "Strength": 5.0,
       "Falloff": 0.7

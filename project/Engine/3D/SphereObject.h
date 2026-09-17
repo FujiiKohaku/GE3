@@ -53,9 +53,11 @@ public:
     {
         if (materialData_) {
             if (enable) {
-                materialData_->enableLighting = 1;
+                materialData_->enableLighting =
+                    static_cast<int32_t>(MaterialShadingMode::Toon);
             } else {
-                materialData_->enableLighting = 0;
+                materialData_->enableLighting =
+                    static_cast<int32_t>(MaterialShadingMode::Unlit);
             }
         }
     }

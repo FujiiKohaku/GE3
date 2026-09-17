@@ -4,6 +4,8 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/blend/blendutil.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include <string>
+#include <unordered_map>
 
 class Object3dManager {
 public:
@@ -34,6 +36,7 @@ public:
     }
     void SetNormalPSO();
     void SetGlowPSO();
+    void BindPipeline(const std::string& pixelShaderPath);
 
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture();
@@ -57,6 +60,8 @@ public:
 private:
     void CreateRootSignature();
     void CreateGraphicsPipeline();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateMaterialPipeline(
+        const std::string& pixelShaderPath, BlendMode blendMode);
 
 private:
     DirectXCommon* dxCommon_ = nullptr;
@@ -68,7 +73,7 @@ private:
     // PSOを保存する配列
 
     // 通常描画
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> materialPipelineCache_;
 
     // Glow描画
     Microsoft::WRL::ComPtr<ID3D12PipelineState> glowPipelineStates[kCountOfBlendMode];

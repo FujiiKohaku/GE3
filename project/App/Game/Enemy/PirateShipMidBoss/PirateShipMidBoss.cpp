@@ -119,7 +119,7 @@ void PirateShipMidBoss::FireCannons()
         bullet->Initialize(bulletModel_);
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * 0.72f);
-        bullet->SetColor({ 0.95f, 0.45f, 0.08f, 1.0f });
+        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         bullet->SetDamage(1);
         AddEnemyBullet(std::move(bullet));
         EffectManager::GetInstance()->PlayEffect("NormalBulletImpactFlash", muzzle);

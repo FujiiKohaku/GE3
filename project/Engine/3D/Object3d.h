@@ -56,16 +56,14 @@ public:
         }
     }
 
-    void SetEnableLighting(bool enable)
+    void SetEnableLighting(bool enable);
+    void SetShadingMode(MaterialShadingMode mode);
+    void SetMaterial(const std::string& materialFolderPath);
+    void SetPixelShaderPath(const std::string& pixelShaderPath)
     {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableLighting = 1;
-            } else {
-                materialData_->enableLighting = 0;
-            }
-        }
+        pixelShaderPath_ = pixelShaderPath;
     }
+    const std::string& GetPixelShaderPath() const { return pixelShaderPath_; }
 
     void SetAnimation(PlayAnimation* anim);
     const Node& GetRootNode() const;
@@ -167,6 +165,8 @@ private:
     std::string environmentTextureFilePath_;
     std::string name_ = "Object[nameNull]";
     std::string modelFilePath_;
+    std::string pixelShaderPath_ =
+        "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
 
     LevelData::ObjectData::GimmickData gimmick_ {};
     Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };

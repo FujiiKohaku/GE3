@@ -5,43 +5,46 @@
     "Vertex": "Render.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
-
   "Emitter": {
     "Shape": "Sphere",
     "Count": 2,
     "Radius": 0.02,
     "Frequency": 0.001
   },
-
   "Particle": {
     "LifeTime": 0.32,
-
     "StartScale": 0.6,
     "EndScale": 12.0,
-
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
-
-    "Velocity": [0.0, 0.0, 0.0],
-
-    "StartColor": [1.0, 0.72, 0.32, 0.42],
-    "EndColor": [1.0, 0.36, 0.08, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.6,
+      0.94,
+      1.0,
+      0.52
+    ],
+    "EndColor": [
+      0.12,
+      0.66,
+      0.92,
+      0.0
+    ]
   },
-
   "Simulation": {
     "EnableGravity": false,
     "Gravity": 0.0,
-
     "EnableDrag": true,
     "Drag": 0.9,
-
     "EnableNoise": false,
     "NoiseStrength": 0.0,
-
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },
-
   "Render": {
     "Texture": "resources/Effects/Explosion/explosion.png",
     "MeshType": "Ring",
@@ -49,7 +52,6 @@
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",
-
     "Loop": false,
     "Duration": 0.42
   }

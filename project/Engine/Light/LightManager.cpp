@@ -1,5 +1,7 @@
 #include "LightManager.h"
+#include "Engine/3D/Object3dRootParameter.h"
 #include "../math/MathStruct.h"
+#include <cassert>
 #include <numbers>
 
 std::unique_ptr<LightManager> LightManager::instance_ = nullptr;
@@ -515,8 +517,23 @@ float LightManager::GetAmbientIntensity() const
 
 void LightManager::Bind(ID3D12GraphicsCommandList* cmd)
 {
-    cmd->SetGraphicsRootConstantBufferView(3, lightResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootConstantBufferView(5, pointLightResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootConstantBufferView(6, spotLightResource_->GetGPUVirtualAddress());
-    cmd->SetGraphicsRootConstantBufferView(7, ambientLightResource_->GetGPUVirtualAddress());
+    const bool initialized = IsInitialized() && lightResource_ && pointLightResource_ &&
+        spotLightResource_ && ambientLightResource_;
+    assert(initialized && "LightManager::Bind called before Initialize");
+    if (!initialized || cmd == nullptr) {
+        return;
+    }
+
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::DirectionalLight),
+        lightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::PointLights),
+        pointLightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::SpotLights),
+        spotLightResource_->GetGPUVirtualAddress());
+    cmd->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::AmbientLight),
+        ambientLightResource_->GetGPUVirtualAddress());
 }

@@ -1,5 +1,6 @@
 #include "Model.h"
 #include "ModelCommon.h"
+#include "Object3dRootParameter.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
 #include <cstring>
@@ -86,7 +87,8 @@ void Model::Draw()
 
         const MaterialData& material = GetMaterial(primitive.materialIndex);
         D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(material.textureFilePath);
-        commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
+        commandList->SetGraphicsRootDescriptorTable(
+            RootParameterIndex(Object3dRootParameter::Texture), textureHandle);
 
         // draw
         if (!primitive.indices.empty()) {

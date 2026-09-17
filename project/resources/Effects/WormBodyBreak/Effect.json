@@ -5,36 +5,46 @@
     "Vertex": "Render.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
-
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 120,
+    "Count": 12,
     "Radius": 0.08,
     "Frequency": 0.001
   },
-
   "Particle": {
-    "LifeTime": 0.30,
-    "StartScale": 0.72,
-    "EndScale": 0.03,
+    "LifeTime": 0.3,
+    "StartScale": 0.8496,
+    "EndScale": 0.0354,
     "StartRotation": 0.0,
     "RotationSpeed": 64.0,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [1.0, 0.40, 1.0, 1.0],
-    "EndColor": [1.0, 0.05, 0.0, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      1.0,
+      0.4,
+      1.0,
+      1.0
+    ],
+    "EndColor": [
+      1.0,
+      0.05,
+      0.0,
+      0.0
+    ]
   },
-
   "Simulation": {
     "EnableGravity": false,
     "Gravity": 0.0,
     "EnableDrag": true,
-    "Drag": 0.70,
+    "Drag": 0.7,
     "EnableNoise": false,
     "NoiseStrength": 0.0,
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },
-
   "Render": {
     "Texture": "resources/Effects/HitEffect/shotBullet.png",
     "MeshType": "Sphere",

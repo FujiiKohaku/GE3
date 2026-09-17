@@ -93,32 +93,32 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     gParticles[particleIndex].scale =
         float32_t3(
-            scale * 0.7f,
-            scale,
-            scale);
+            scale * 0.85f,
+            scale * 0.45f,
+            scale * 0.75f);
 
     float4 currentColor;
 
     float4 coreColor =
     {
+        0.90f,
         1.0f,
-        0.85f,
         1.0f,
         1.0f
     };
 
     float4 flameColor =
     {
-        0.72f,
-        0.12f,
-        1.0f,
+        0.325f,
+        0.847f,
+        0.910f,
         1.0f
     };
 
     float4 smokeColor =
     {
-        0.18f,
-        0.04f,
+        0.08f,
+        0.32f,
         0.55f,
         0.0f
     };

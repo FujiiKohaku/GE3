@@ -53,7 +53,6 @@ void ClearScene::Draw2D()
 void ClearScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(DirectXCommon::GetInstance()->GetCommandList());
     // titleObj_->Draw();
 }
 

@@ -286,8 +286,6 @@ void TitleScene::Draw3D()
         oceanSurface_->Draw();
     }
     Object3dManager::GetInstance()->PreDraw();
-    LightManager::GetInstance()->Bind(
-        DirectXCommon::GetInstance()->GetCommandList());
     for (const std::unique_ptr<Object3d>& obstacle : obstacleObjects_) {
         obstacle->Draw();
     }

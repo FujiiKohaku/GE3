@@ -66,8 +66,11 @@ float4 main(VertexShaderOutput input) : SV_TARGET
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 
+    // A deep ink-blue outline keeps the cel look softer and more cohesive
+    // than pure black, while retaining strong silhouettes at 720p.
+    const float3 outlineColor = float3(0.027f, 0.067f, 0.122f);
     float4 outputColor;
-    outputColor.rgb = (1.0f - weight) * textureColor.rgb;
+    outputColor.rgb = lerp(textureColor.rgb, outlineColor, weight * 0.94f);
     outputColor.a = textureColor.a;
 
     return outputColor;

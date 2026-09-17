@@ -5,22 +5,35 @@
     "Vertex": "Render.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
-
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 220,
+    "Count": 12,
     "Radius": 0.2,
     "Frequency": 0.05
   },
   "Particle": {
     "LifeTime": 0.75,
-    "StartScale": 0.2,
-    "EndScale": 3.0,
+    "StartScale": 0.34,
+    "EndScale": 5.1,
     "StartRotation": 0.0,
     "RotationSpeed": 5.0,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [1.0, 0.55, 0.05, 1.0],
-    "EndColor": [0.15, 0.03, 0.0, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      1.0,
+      0.55,
+      0.05,
+      1.0
+    ],
+    "EndColor": [
+      0.15,
+      0.03,
+      0.0,
+      0.0
+    ]
   },
   "Simulation": {
     "EnableGravity": false,

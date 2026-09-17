@@ -31,15 +31,15 @@ PixelShaderOutput main(VertexShaderOutput input)
     float32_t outlineMask = CalcAnimeOutline(centeredTexcoord);
     float32_t celMask = saturate(impactMask * 1.25f + outlineMask * 0.65f);
 
-    float32_t3 hotColor = float32_t3(1.0f, 1.0f, 0.82f);
-    float32_t3 sparkColor = float32_t3(1.0f, 0.72f, 0.08f);
-    float32_t3 inkColor = float32_t3(1.0f, 0.02f, 0.0f);
+    float32_t3 hotColor = float32_t3(0.92f, 1.0f, 1.0f);
+    float32_t3 sparkColor = float32_t3(0.20f, 0.88f, 1.0f);
+    float32_t3 inkColor = float32_t3(0.02f, 0.24f, 0.58f);
 
     color.rgb = lerp(color.rgb, hotColor, saturate(celMask * 0.72f));
     color.rgb += sparkColor * impactMask * 1.25f;
     color.rgb += inkColor * outlineMask * 1.10f;
     color.rgb = saturate(color.rgb);
-    color.rgb = lerp(floor(color.rgb * 3.0f) / 3.0f, color.rgb, 0.20f);
+    color.rgb = QuantizeAnimeParticleColor(color.rgb);
 
     color.a *= saturate(0.50f + impactMask * 1.20f + outlineMask * 0.85f);
     color = ApplyParticleFog(color, input);

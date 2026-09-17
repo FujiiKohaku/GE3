@@ -21,6 +21,7 @@ public:
     static void Finalize();
 
     void Initialize(DirectXCommon* dxCommon);
+    bool IsInitialized() const { return dxCommon_ != nullptr; }
     void Update();
     void Bind(ID3D12GraphicsCommandList* cmd);
 
