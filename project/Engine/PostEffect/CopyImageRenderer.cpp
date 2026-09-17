@@ -80,7 +80,7 @@ void CopyImageRenderer::CreateRootSignature()
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
+    D3D12_DESCRIPTOR_RANGE descriptorRange[3] = {};
 
     descriptorRange[0].BaseShaderRegister = 0;
     descriptorRange[0].NumDescriptors = 1;
@@ -92,7 +92,12 @@ void CopyImageRenderer::CreateRootSignature()
     descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameter[3] = {};
+    descriptorRange[2].BaseShaderRegister = 2;
+    descriptorRange[2].NumDescriptors = 1;
+    descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameter[4] = {};
 
     rootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -104,9 +109,14 @@ void CopyImageRenderer::CreateRootSignature()
     rootParameter[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
     rootParameter[1].DescriptorTable.NumDescriptorRanges = 1;
 
-    rootParameter[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameter[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameter[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameter[2].Descriptor.ShaderRegister = 0;
+    rootParameter[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
+    rootParameter[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameter[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameter[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameter[3].Descriptor.ShaderRegister = 0;
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -119,7 +129,7 @@ void CopyImageRenderer::CreateRootSignature()
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
     rootSignatureDesc.pParameters = rootParameter;
-    rootSignatureDesc.NumParameters = 3;
+    rootSignatureDesc.NumParameters = _countof(rootParameter);
     rootSignatureDesc.pStaticSamplers = &staticSampler;
     rootSignatureDesc.NumStaticSamplers = 1;
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -312,7 +322,8 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
 
 void CopyImageRenderer::Draw(
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle,
-    D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle)
+    D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle)
 {
     ID3D12GraphicsCommandList* commandList = DirectXCommon::GetInstance()->GetCommandList();
 
@@ -333,9 +344,10 @@ void CopyImageRenderer::Draw(
 
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
     commandList->SetGraphicsRootDescriptorTable(1, secondTextureHandle);
+    commandList->SetGraphicsRootDescriptorTable(2, normalTextureHandle);
 
     commandList->SetGraphicsRootConstantBufferView(
-        2,
+        3,
         postEffectParameterResource_->GetGPUVirtualAddress());
 
     commandList->DrawInstanced(3, 1, 0, 0);
@@ -357,6 +369,10 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->outlineFarClip = 1000.0f;
     postEffectParameterData_->outlineThreshold = 0.012f;
     postEffectParameterData_->outlineSoftness = 0.016f;
+    postEffectParameterData_->outlineNormalThreshold = 0.08f;
+    postEffectParameterData_->outlineNormalSoftness = 0.14f;
+    postEffectParameterData_->outlineNormalStrength = 0.60f;
+    postEffectParameterData_->outlineNormalPadding = 0.0f;
     postEffectParameterData_->time = 0.0f;
 
     postEffectParameterData_->radialBlurCenter = { 0.5f, 0.5f };

@@ -60,4 +60,8 @@ cbuffer PostEffectParameter : register(b0)
     float outlineFarClip;
     float outlineThreshold;
     float outlineSoftness;
+    float outlineNormalThreshold;
+    float outlineNormalSoftness;
+    float outlineNormalStrength;
+    float outlineNormalPadding;
 };

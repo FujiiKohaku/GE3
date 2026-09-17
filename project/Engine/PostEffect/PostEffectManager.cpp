@@ -100,6 +100,9 @@ void PostEffectManager::DrawImGui()
     ImGui::SliderFloat("Light Threshold", &parameter.lightThreshold, 0.0f, 2.0f);
     ImGui::SliderFloat("Light Strength", &parameter.lightStrength, 0.0f, 5.0f);
     ImGui::SliderFloat("Light Radius", &parameter.lightRadius, 0.01f, 1.0f);
+    ImGui::SliderFloat("Outline Normal Threshold", &parameter.outlineNormalThreshold, 0.0f, 1.0f);
+    ImGui::SliderFloat("Outline Normal Softness", &parameter.outlineNormalSoftness, 0.001f, 1.0f);
+    ImGui::SliderFloat("Outline Normal Strength", &parameter.outlineNormalStrength, 0.0f, 1.0f);
     ImGui::Separator();
 
     const std::vector<PostEffectInfo>& postEffects = SceneManager::GetInstance()->GetPostEffects();
@@ -471,7 +474,8 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
         D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = fogManager_->GetConstantBufferView();
         if (fogConstantBufferView == 0) {
             copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
-            copyImageRenderer_->Draw(inputHandle, fogRenderer_->GetDepthSRVHandle());
+            copyImageRenderer_->Draw(
+                inputHandle, fogRenderer_->GetDepthSRVHandle(), normalTextureHandle_);
             return;
         }
 
@@ -481,12 +485,14 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
 
     if (type == PostEffectType::Bloom) {
         copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
-        copyImageRenderer_->Draw(inputHandle, fogRenderer_->GetDepthSRVHandle());
+        copyImageRenderer_->Draw(
+            inputHandle, fogRenderer_->GetDepthSRVHandle(), normalTextureHandle_);
         return;
     }
 
     copyImageRenderer_->SetPostEffectType(type);
-    copyImageRenderer_->Draw(inputHandle, fogRenderer_->GetDepthSRVHandle());
+    copyImageRenderer_->Draw(
+        inputHandle, fogRenderer_->GetDepthSRVHandle(), normalTextureHandle_);
 }
 
 void PostEffectManager::SetBackBufferRenderTarget()

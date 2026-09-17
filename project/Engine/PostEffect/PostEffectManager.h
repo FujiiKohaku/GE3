@@ -25,6 +25,10 @@ public:
     void PreDrawDepth();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
+    void SetNormalTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+    {
+        normalTextureHandle_ = handle;
+    }
 
     void SetBoostRadialBlurParameters(bool isBoosting);
     void Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
@@ -84,4 +88,5 @@ private:
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;
+    D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle_ {};
 };

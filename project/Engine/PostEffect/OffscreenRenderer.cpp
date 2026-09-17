@@ -10,6 +10,10 @@ OffscreenRenderer::~OffscreenRenderer()
         SrvManager::GetInstance()->Free(srvIndex_);
         srvIndex_ = kInvalidDescriptorIndex;
     }
+    if (normalSrvIndex_ != kInvalidDescriptorIndex) {
+        SrvManager::GetInstance()->Free(normalSrvIndex_);
+        normalSrvIndex_ = kInvalidDescriptorIndex;
+    }
 }
 
 void OffscreenRenderer::Initialize()
@@ -47,10 +51,23 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
         commandList->ResourceBarrier(1, &barrier);
         currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
     }
+    if (normalCurrentState_ != D3D12_RESOURCE_STATE_RENDER_TARGET) {
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = normalTextureResource_.Get();
+        barrier.Transition.StateBefore = normalCurrentState_;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &barrier);
+        normalCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    }
 
     commandList->RSSetViewports(1, &viewport_);
     commandList->RSSetScissorRects(1, &scissorRect_);
-    commandList->OMSetRenderTargets(1, &rtvHandle_, false, &dsvHandle);
+    const D3D12_CPU_DESCRIPTOR_HANDLE renderTargets[] = {
+        rtvHandle_, normalRtvHandle_
+    };
+    commandList->OMSetRenderTargets(_countof(renderTargets), renderTargets, false, &dsvHandle);
 
     float clearColor[] = {
         clearColor_.x,
@@ -59,6 +76,8 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
         clearColor_.w
     };
     commandList->ClearRenderTargetView(rtvHandle_, clearColor, 0, nullptr);
+    const float normalClearColor[] = { 0.5f, 0.5f, 1.0f, -1.0f };
+    commandList->ClearRenderTargetView(normalRtvHandle_, normalClearColor, 0, nullptr);
 }
 
 void OffscreenRenderer::PostDraw()
@@ -76,6 +95,17 @@ void OffscreenRenderer::PostDraw()
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     commandList->ResourceBarrier(1, &barrier);
     currentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+    if (normalCurrentState_ != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) {
+        D3D12_RESOURCE_BARRIER normalBarrier = {};
+        normalBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        normalBarrier.Transition.pResource = normalTextureResource_.Get();
+        normalBarrier.Transition.StateBefore = normalCurrentState_;
+        normalBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        normalBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &normalBarrier);
+        normalCurrentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    }
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource> OffscreenRenderer::CreateRenderTextureResource(
@@ -124,6 +154,11 @@ D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetSrvHandleGPU() const
     return srvHandleGPU_;
 }
 
+D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetNormalSrvHandleGPU() const
+{
+    return normalSrvHandleGPU_;
+}
+
 void OffscreenRenderer::CreateRenderTexture()
 {
     renderTextureResource_ = CreateRenderTextureResource(
@@ -132,6 +167,12 @@ void OffscreenRenderer::CreateRenderTexture()
         WinApp::kClientHeight,
         format_,
         clearColor_);
+    normalTextureResource_ = CreateRenderTextureResource(
+        DirectXCommon::GetInstance()->GetDevice(),
+        WinApp::kClientWidth,
+        WinApp::kClientHeight,
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        { 0.5f, 0.5f, 1.0f, -1.0f });
 }
 
 void OffscreenRenderer::CreateDescriptorViews()
@@ -145,6 +186,13 @@ void OffscreenRenderer::CreateDescriptorViews()
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
     device->CreateRenderTargetView(renderTextureResource_.Get(), &rtvDesc, rtvHandle_);
 
+    normalRtvHandle_ = directXCommon->GetRTVHandle(8);
+    D3D12_RENDER_TARGET_VIEW_DESC normalRtvDesc = {};
+    normalRtvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    normalRtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+    device->CreateRenderTargetView(
+        normalTextureResource_.Get(), &normalRtvDesc, normalRtvHandle_);
+
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Format = format_;
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -155,4 +203,15 @@ void OffscreenRenderer::CreateDescriptorViews()
     srvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(srvIndex_);
     srvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
     device->CreateShaderResourceView(renderTextureResource_.Get(), &srvDesc, srvHandleCPU_);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC normalSrvDesc = {};
+    normalSrvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    normalSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    normalSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    normalSrvDesc.Texture2D.MipLevels = 1;
+    normalSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    normalSrvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(normalSrvIndex_);
+    normalSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(normalSrvIndex_);
+    device->CreateShaderResourceView(
+        normalTextureResource_.Get(), &normalSrvDesc, normalSrvHandleCPU_);
 }

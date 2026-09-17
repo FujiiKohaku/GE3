@@ -2,6 +2,7 @@
 
 Texture2D<float4> gTexture : register(t0);
 Texture2D<float> gDepthTexture : register(t1);
+Texture2D<float4> gNormalTexture : register(t2);
 SamplerState gSampler : register(s0);
 
 static const float2 kIndex3x3[3][3] =
@@ -44,6 +45,12 @@ float4 main(VertexShaderOutput input) : SV_TARGET
 
     float2 difference = float2(0.0f, 0.0f);
     float nearestDepth = max(outlineFarClip, 0.0001f);
+    float4 centerNormalSample = gNormalTexture.Load(int3(centerPixel, 0));
+    float centerRawDepth = gDepthTexture.Load(int3(centerPixel, 0));
+    float3 centerNormal = normalize(centerNormalSample.xyz * 2.0f - 1.0f);
+    bool centerNormalValid = centerNormalSample.a >= 0.0f &&
+        abs(centerNormalSample.a - centerRawDepth) < 0.002f;
+    float normalDifference = 0.0f;
 
     for (int x = 0; x < 3; x++)
     {
@@ -51,18 +58,34 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         {
             // Point loads avoid blending foreground/background depths before reconstruction.
             int2 pixel = clamp(centerPixel + int2(kIndex3x3[x][y]), int2(0, 0), lastPixel);
-            float depth = RestoreViewDepth(gDepthTexture.Load(int3(pixel, 0)));
+            float rawDepth = gDepthTexture.Load(int3(pixel, 0));
+            float depth = RestoreViewDepth(rawDepth);
             nearestDepth = min(nearestDepth, depth);
 
             difference.x += depth * kPrewittHorizontalKernel[x][y];
             difference.y += depth * kPrewittVerticalKernel[x][y];
+
+            float4 normalSample = gNormalTexture.Load(int3(pixel, 0));
+            bool neighborNormalValid = normalSample.a >= 0.0f &&
+                abs(normalSample.a - rawDepth) < 0.002f;
+            if (centerNormalValid && neighborNormalValid)
+            {
+                float3 neighborNormal = normalize(normalSample.xyz * 2.0f - 1.0f);
+                normalDifference = max(
+                    normalDifference,
+                    1.0f - saturate(dot(centerNormal, neighborNormal)));
+            }
         }
     }
 
     // The same relative depth step now has the same strength near and far.
     float relativeDifference = length(difference) / max(nearestDepth, 0.0001f);
-    float weight = smoothstep(outlineThreshold,
+    float depthWeight = smoothstep(outlineThreshold,
         outlineThreshold + max(outlineSoftness, 0.0001f), relativeDifference);
+    float normalWeight = smoothstep(outlineNormalThreshold,
+        outlineNormalThreshold + max(outlineNormalSoftness, 0.0001f),
+        normalDifference) * outlineNormalStrength;
+    float weight = max(depthWeight, normalWeight);
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 

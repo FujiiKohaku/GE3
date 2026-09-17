@@ -74,9 +74,16 @@ public:
         float outlineFarClip;
         float outlineThreshold;
         float outlineSoftness;
+        float outlineNormalThreshold;
+        float outlineNormalSoftness;
+        float outlineNormalStrength;
+        float outlineNormalPadding;
     };
     void Initialize(DirectXCommon* dxCommon);
-    void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);
+    void Draw(
+        D3D12_GPU_DESCRIPTOR_HANDLE textureHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle);
 
     void SetPostEffectType(PostEffectType postEffectType);
 

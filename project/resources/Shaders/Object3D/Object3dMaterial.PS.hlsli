@@ -13,6 +13,7 @@ SamplerState gSampler : register(s0);
 struct PixelShaderOutput
 {
     float32_t4 color : SV_Target0;
+    float32_t4 encodedNormal : SV_Target1;
 };
 
 float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
@@ -129,6 +130,11 @@ PixelShaderOutput main(VertexShaderOutput input)
 #endif
 
     output.color.a = gMaterial.color.a * textureColor.a;
+    // Store hardware depth in alpha so the outline pass can reject a stale
+    // normal when a later non-MRT renderer covers this pixel.
+    output.encodedNormal = float4(
+        normalize(input.normal) * 0.5f + 0.5f,
+        input.position.z);
     if (gMaterial.enableEnvironmentMap != 0)
     {
         float3 N = normalize(input.normal);

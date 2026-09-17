@@ -27,6 +27,8 @@ void Renderer::Initialize()
     // Post effect chain setup
     postEffectManager_ = std::make_unique<PostEffectManager>();
     postEffectManager_->Initialize(DirectXCommon::GetInstance());
+    postEffectManager_->SetNormalTextureHandle(
+        offscreenRenderer_->GetNormalSrvHandleGPU());
 }
 
 void Renderer::Update()
