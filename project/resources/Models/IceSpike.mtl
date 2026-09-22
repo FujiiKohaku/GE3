@@ -6,4 +6,4 @@ Ks 1.0 1.0 1.0
 Ns 100.0
 d 1.0
 illum 2
-map_Kd ../Textures/ice_texture.jpg
+map_Kd ../Textures/white.png

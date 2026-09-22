@@ -143,7 +143,6 @@ void MoveEnemy::DrawImGui()
     ImGui::SliderFloat("Frequency", &frequency_, 0.0f, 10.0f);
     
     if (ImGui::Button("Reset Position")) {
-        moveTime_ = 0.0f;
-        transform_.translate = startPosition_;
+        ResetPosition();
     }
 }

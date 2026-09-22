@@ -89,7 +89,7 @@ void Player::Update()
         isDebugMode = debugCameraController_->GetDebugMode();
     }
 
-    isBoosting_ = input->IsKeyPressed(DIK_LSHIFT);
+    isBoosting_ = !isDebugMode && input->IsKeyPressed(DIK_LSHIFT);
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
     if (isBoosting_) {
@@ -97,10 +97,12 @@ void Player::Update()
         moveSpeed_ = boostAcceleration_;
     }
 
-    UpdateWeaponSwitch(input);
+    if (!isDebugMode) {
+        UpdateWeaponSwitch(input);
+    }
     const bool isHomingFireHeld =
         input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0);
-    if (currentWeapon_ == kWeaponHomingMissile) {
+    if (!isDebugMode && currentWeapon_ == kWeaponHomingMissile) {
         if (isHomingFireHeld && !wasHomingFireHeld_) {
             lockedHomingTargets_.clear();
         }
@@ -123,7 +125,7 @@ void Player::Update()
     if (minigunHeat_ < 0.0f) minigunHeat_ = 0.0f;
 
     // 攻撃ボタン長押しで熱気蓄積 ＆ ミニガン超高速連射
-    if (input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0)) {
+    if (!isDebugMode && (input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0))) {
         minigunHeat_ += 1.0f / 80.0f;
         if (minigunHeat_ > 1.0f) minigunHeat_ = 1.0f;
 
@@ -147,7 +149,7 @@ void Player::Update()
         }
     }
 
-    if (currentWeapon_ == kWeaponMissileBullet &&
+    if (!isDebugMode && currentWeapon_ == kWeaponMissileBullet &&
         (input->IsKeyTrigger(DIK_SPACE) || input->IsMouseTrigger(0)) &&
         camera_ != nullptr) {
         FireBullet(*camera_);
@@ -231,6 +233,11 @@ void Player::SetDebugCameraController(DebugCameraController* debugCameraControll
 
 bool Player::ApplyDamage(int damage)
 {
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    if (invincibleMode_) {
+        return false;
+    }
+#endif
     if (damage <= 0 || invincibleTimer_ > 0 || isRolling_ || currentHp_ <= 0) {
         return false;
     }

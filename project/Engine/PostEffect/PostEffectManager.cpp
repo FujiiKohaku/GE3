@@ -11,6 +11,12 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+#include "externals/json.hpp"
+#endif
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
@@ -19,6 +25,135 @@
 PostEffectManager::PostEffectManager() = default;
 
 PostEffectManager::~PostEffectManager() = default;
+
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+std::string PostEffectManager::GetDevelopmentSettingsJson() const
+{
+    const auto& p = copyImageRenderer_->GetPostEffectParameter();
+    const FogData& fog = fogManager_->GetFogData();
+    const auto* bloom = bloomRenderer_->GetBloomParameter();
+    nlohmann::json state = {
+        {"animationEnabled", isAnimationEnabled_},
+        {"pixelSize", p.pixelSize}, {"colorBrightness", p.colorBrightness},
+        {"colorContrast", p.colorContrast}, {"colorSaturation", p.colorSaturation},
+        {"focusDepth", p.focusDepth}, {"focusRange", p.focusRange},
+        {"depthOfFieldRadius", p.depthOfFieldRadius},
+        {"motionBlurDirectionX", p.motionBlurDirection.x},
+        {"motionBlurDirectionY", p.motionBlurDirection.y},
+        {"motionBlurStrength", p.motionBlurStrength},
+        {"motionBlurSampleCount", p.motionBlurSampleCount},
+        {"chromaticAberrationStrength", p.chromaticAberrationStrength},
+        {"lensDistortionStrength", p.lensDistortionStrength},
+        {"filmGrainStrength", p.filmGrainStrength}, {"lensDirtStrength", p.lensDirtStrength},
+        {"cameraShakeStrength", cameraShakeOverride_.value_or(SceneManager::GetInstance()->GetCameraShakeStrength())},
+        {"bokehRadius", p.bokehRadius}, {"bokehSides", p.bokehSides},
+        {"fisheyeStrength", p.fisheyeStrength},
+        {"lightThreshold", p.lightThreshold}, {"lightStrength", p.lightStrength},
+        {"lightRadius", p.lightRadius},
+        {"outlineNormalThreshold", p.outlineNormalThreshold},
+        {"outlineNormalSoftness", p.outlineNormalSoftness},
+        {"outlineNormalStrength", p.outlineNormalStrength},
+        {"fogEnabled", fog.isEnabled != 0}, {"distanceFogEnabled", fog.distanceEnabled != 0},
+        {"fogColorR", fog.color.x}, {"fogColorG", fog.color.y}, {"fogColorB", fog.color.z},
+        {"fogStart", fog.distance.start}, {"fogEnd", fog.distance.end},
+        {"fogCurve", fog.distance.curve}, {"fogDensity", fog.distance.density},
+        {"bloomEnabled", bloom && bloom->isEnabled != 0},
+        {"bloomThreshold", bloom ? bloom->threshold : 0.0f},
+        {"bloomBlurRadius", bloom ? bloom->blurRadius : 0},
+        {"bloomBlurSigma", bloom ? bloom->blurSigma : 0.0f},
+        {"bloomIntensity", bloom ? bloom->intensity : 0.0f}
+    };
+    state["passes"] = nlohmann::json::array();
+    for (const auto& pass : SceneManager::GetInstance()->GetPostEffects()) {
+        state["passes"].push_back({{"type", static_cast<int>(pass.type)},
+                                    {"name", GetPostEffectTypeName(pass.type)},
+                                    {"enabled", pass.enabled}});
+    }
+    return state.dump();
+}
+
+void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const std::string& value)
+{
+    auto parse = [&]() -> float {
+        char* end = nullptr;
+        const float number = std::strtof(value.c_str(), &end);
+        return end != value.c_str() && *end == '\0' && std::isfinite(number) ? number : NAN;
+    };
+    const bool enabled = value == "true";
+    auto& p = copyImageRenderer_->GetPostEffectParameter();
+    FogData* fog = fogManager_->GetEditableFogData();
+    auto* bloom = bloomRenderer_->GetEditableBloomParameter();
+    if (key == "animationEnabled") {
+        isAnimationEnabled_ = enabled;
+        p.animationEnabled = enabled ? 1 : 0;
+        return;
+    }
+    if (key == "fogEnabled" && fog) { fog->isEnabled = enabled; return; }
+    if (key == "distanceFogEnabled" && fog) { fog->distanceEnabled = enabled; return; }
+    if (key == "bloomEnabled" && bloom) { bloom->isEnabled = enabled; return; }
+    if (key.starts_with("pass.")) {
+        const int type = std::atoi(key.c_str() + 5);
+        for (const auto& pass : SceneManager::GetInstance()->GetPostEffects()) {
+            if (static_cast<int>(pass.type) == type) {
+                passOverrides_[type] = enabled;
+                SceneManager::GetInstance()->SetPostEffectEnabled(pass.type, enabled);
+                break;
+            }
+        }
+        return;
+    }
+    const float number = parse();
+    if (!std::isfinite(number)) return;
+#define SET_FLOAT(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return; }
+#define SET_INT(name, field, low, high) if (key == name) { field = static_cast<int>(std::clamp(number, float(low), float(high))); return; }
+    SET_FLOAT("pixelSize", p.pixelSize, 1.0f, 64.0f)
+    SET_FLOAT("colorBrightness", p.colorBrightness, -1.0f, 1.0f)
+    SET_FLOAT("colorContrast", p.colorContrast, 0.0f, 3.0f)
+    SET_FLOAT("colorSaturation", p.colorSaturation, 0.0f, 3.0f)
+    SET_FLOAT("focusDepth", p.focusDepth, 0.0f, 1.0f)
+    SET_FLOAT("focusRange", p.focusRange, 0.0001f, 0.2f)
+    SET_FLOAT("depthOfFieldRadius", p.depthOfFieldRadius, 0.0f, 32.0f)
+    SET_FLOAT("motionBlurDirectionX", p.motionBlurDirection.x, -1.0f, 1.0f)
+    SET_FLOAT("motionBlurDirectionY", p.motionBlurDirection.y, -1.0f, 1.0f)
+    SET_FLOAT("motionBlurStrength", p.motionBlurStrength, 0.0f, 0.1f)
+    SET_INT("motionBlurSampleCount", p.motionBlurSampleCount, 1, 32)
+    SET_FLOAT("chromaticAberrationStrength", p.chromaticAberrationStrength, 0.0f, 0.05f)
+    SET_FLOAT("lensDistortionStrength", p.lensDistortionStrength, -1.0f, 1.0f)
+    SET_FLOAT("filmGrainStrength", p.filmGrainStrength, 0.0f, 0.5f)
+    SET_FLOAT("lensDirtStrength", p.lensDirtStrength, 0.0f, 3.0f)
+    SET_FLOAT("bokehRadius", p.bokehRadius, 0.0f, 32.0f)
+    SET_INT("bokehSides", p.bokehSides, 3, 12)
+    SET_FLOAT("fisheyeStrength", p.fisheyeStrength, 0.01f, 3.0f)
+    SET_FLOAT("lightThreshold", p.lightThreshold, 0.0f, 2.0f)
+    SET_FLOAT("lightStrength", p.lightStrength, 0.0f, 5.0f)
+    SET_FLOAT("lightRadius", p.lightRadius, 0.01f, 1.0f)
+    SET_FLOAT("outlineNormalThreshold", p.outlineNormalThreshold, 0.0f, 1.0f)
+    SET_FLOAT("outlineNormalSoftness", p.outlineNormalSoftness, 0.001f, 1.0f)
+    SET_FLOAT("outlineNormalStrength", p.outlineNormalStrength, 0.0f, 1.0f)
+    if (key == "cameraShakeStrength") {
+        cameraShakeOverride_ = std::clamp(number, 0.0f, 0.05f);
+        SceneManager::GetInstance()->SetCameraShakeStrength(*cameraShakeOverride_);
+        return;
+    }
+    if (fog) {
+        SET_FLOAT("fogColorR", fog->color.x, 0.0f, 1.0f)
+        SET_FLOAT("fogColorG", fog->color.y, 0.0f, 1.0f)
+        SET_FLOAT("fogColorB", fog->color.z, 0.0f, 1.0f)
+        SET_FLOAT("fogStart", fog->distance.start, 0.0f, 3000.0f)
+        SET_FLOAT("fogEnd", fog->distance.end, 0.01f, 3000.0f)
+        SET_FLOAT("fogCurve", fog->distance.curve, 0.01f, 8.0f)
+        SET_FLOAT("fogDensity", fog->distance.density, 0.0f, 1.0f)
+    }
+    if (bloom) {
+        SET_FLOAT("bloomThreshold", bloom->threshold, 0.0f, 5.0f)
+        SET_INT("bloomBlurRadius", bloom->blurRadius, 0, 32)
+        SET_FLOAT("bloomBlurSigma", bloom->blurSigma, 0.01f, 20.0f)
+        SET_FLOAT("bloomIntensity", bloom->intensity, 0.0f, 5.0f)
+    }
+#undef SET_FLOAT
+#undef SET_INT
+}
+#endif
 
 void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -57,6 +192,24 @@ void PostEffectManager::Update(Camera* camera)
 
     fogManager_->Update();
     bloomRenderer_->Update();
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    if (cameraShakeOverride_) {
+        SceneManager::GetInstance()->SetCameraShakeStrength(*cameraShakeOverride_);
+        if (*cameraShakeOverride_ > 0.0f) {
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::CameraShake, PostEffectStage::BeforeParticle);
+        } else {
+            SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
+        }
+    }
+    for (const auto& [type, enabled] : passOverrides_) {
+        for (const auto& pass : SceneManager::GetInstance()->GetPostEffects()) {
+            if (static_cast<int>(pass.type) == type) {
+                SceneManager::GetInstance()->SetPostEffectEnabled(pass.type, enabled);
+                break;
+            }
+        }
+    }
+#endif
 }
 
 void PostEffectManager::DrawImGui()

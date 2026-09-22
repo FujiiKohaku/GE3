@@ -27,6 +27,8 @@ public:
     void Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
 
     bool IsEnabled() const;
+    const BloomParameter* GetBloomParameter() const { return parameterData_; }
+    BloomParameter* GetEditableBloomParameter() { return parameterData_; }
 
 private:
     class RenderTarget {

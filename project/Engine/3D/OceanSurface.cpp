@@ -53,6 +53,9 @@ void OceanSurface::Draw()
         return;
     }
 
+    // Refresh the view without advancing the waves during a pause.
+    Update(0.0f);
+
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
     commandList->SetPipelineState(pipelineState_.Get());

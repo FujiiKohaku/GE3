@@ -156,6 +156,10 @@ void DebugRenderer::AddWireSphere(
 
     const float angleStep = 2.0f * std::numbers::pi_v<float> /
         static_cast<float>(segmentCount);
+    const auto addWireLine = [this, &color, thickness](const Vector3& start, const Vector3& end) {
+        if (wireframeOverlay_) AddOverlayLine(start, end, color, thickness);
+        else AddLine(start, end, color, thickness);
+    };
 
     for (uint32_t segment = 0; segment < segmentCount; ++segment) {
         const float angle = angleStep * static_cast<float>(segment);
@@ -167,21 +171,15 @@ void DebugRenderer::AddWireSphere(
         const float sinNextAngle = std::sin(nextAngle);
 
         // XY、XZ、YZの3平面に円を描き、判定球の立体形状を確認できるようにする。
-        AddLine(
+        addWireLine(
             { center.x + radius * cosAngle, center.y + radius * sinAngle, center.z },
-            { center.x + radius * cosNextAngle, center.y + radius * sinNextAngle, center.z },
-            color,
-            thickness);
-        AddLine(
+            { center.x + radius * cosNextAngle, center.y + radius * sinNextAngle, center.z });
+        addWireLine(
             { center.x + radius * cosAngle, center.y, center.z + radius * sinAngle },
-            { center.x + radius * cosNextAngle, center.y, center.z + radius * sinNextAngle },
-            color,
-            thickness);
-        AddLine(
+            { center.x + radius * cosNextAngle, center.y, center.z + radius * sinNextAngle });
+        addWireLine(
             { center.x, center.y + radius * cosAngle, center.z + radius * sinAngle },
-            { center.x, center.y + radius * cosNextAngle, center.z + radius * sinNextAngle },
-            color,
-            thickness);
+            { center.x, center.y + radius * cosNextAngle, center.z + radius * sinNextAngle });
     }
 }
 
@@ -213,7 +211,8 @@ void DebugRenderer::AddWireOBB(
         { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 }
     };
     for (const auto& edge : kEdges) {
-        AddLine(corners[edge[0]], corners[edge[1]], color, thickness);
+        if (wireframeOverlay_) AddOverlayLine(corners[edge[0]], corners[edge[1]], color, thickness);
+        else AddLine(corners[edge[0]], corners[edge[1]], color, thickness);
     }
 }
 

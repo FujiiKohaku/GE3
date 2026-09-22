@@ -78,6 +78,7 @@ void SkyBox::Update(Camera* camera)
 void SkyBox::Draw(ID3D12GraphicsCommandList* commandList)
 {
     assert(commandList != nullptr);
+    Update(camera_);
 
     commandList->SetGraphicsRootConstantBufferView(0, transformResource_->GetGPUVirtualAddress());
     commandList->SetGraphicsRootDescriptorTable(1, TextureManager::GetInstance()->GetSrvHandleGPU(textureHandle_));

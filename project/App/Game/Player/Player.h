@@ -121,6 +121,10 @@ public:
     }
 
     bool ApplyDamage(int damage);
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    void SetInvincibleMode(bool enabled) { invincibleMode_ = enabled; }
+    bool IsInvincibleMode() const { return invincibleMode_; }
+#endif
     bool Heal(int amount);
     bool IsDead() const
     {
@@ -212,6 +216,9 @@ private:
     int maxHp_ = 20;
     int currentHp_ = maxHp_;
     int invincibleTimer_ = 0;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    bool invincibleMode_ = false;
+#endif
     static constexpr int kInvincibleFrames = 60;
     DeathState deathState_ = DeathState::Alive;
     float deathTimer_ = 0.0f;

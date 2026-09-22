@@ -73,6 +73,10 @@ public:
     void Draw3D() override;
     void DrawParticle() override;
     void DrawImGui() override;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    std::string GetDevelopmentStateJson() const;
+    void ApplyDevelopmentAction(const std::string& key, const std::string& value);
+#endif
 
 private:
     // プレイヤーと敵の当たり判定
@@ -126,7 +130,7 @@ private:
     void StartWaterDropEffect();
     void UpdateWaterDropEffect();
     void UpdateJustDodgeSlowMotion(bool justDodged);
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
     void DrawCollisionDebug();
 #endif
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
@@ -143,6 +147,7 @@ private:
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
     void ConfigureGameplayPostEffects(bool isPlayerBoosting);
     void ApplyStageVisualPreset();
+    void ApplyDevelopmentLighting();
     void ResetGameplayPostEffects();
     void StopPlayerEngineEffects();
     void ProcessPlayerShooting(Input* input);
@@ -313,6 +318,38 @@ private:
     // ボス戦用
     std::unique_ptr<BossEncounterController> bossController_;
     bool showIceJellyfishCollision_ = true;
+    bool lightEnabled_ = true;
+    Vector4 lightColor_ = { 0.90f, 0.96f, 1.0f, 1.0f };
+    float lightIntensity_ = 0.90f;
+    Vector3 lightDir_ = { -0.35f, -0.82f, 0.45f };
+    Vector4 ambientColor_ = { 0.40f, 0.52f, 0.68f, 0.24f };
+    bool pointEnabled_ = true;
+    Vector4 pointColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
+    Vector3 pointPos_ = { 0.0f, 2.0f, 0.0f };
+    float pointIntensity_ = 1.0f;
+    float pointRadius_ = 10.0f;
+    float pointDecay_ = 1.0f;
+    bool spotEnabled_ = true;
+    Vector4 spotColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
+    Vector3 spotPos_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 spotDir_ = { -1.0f, 0.0f, 0.0f };
+    float spotIntensity_ = 4.0f;
+    float spotDistance_ = 7.0f;
+    float spotDecay_ = 2.0f;
+    float spotAngleDeg_ = 60.0f;
+    float spotFalloffStartDeg_ = 30.0f;
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+    bool developmentPaused_ = false;
+    bool stepDevelopmentFrame_ = false;
+    bool showRailDebug_ = false;
+    bool showCollisionDebug_ = false;
+    bool showPlayerCollision_ = true;
+    bool showEnemyCollision_ = true;
+    bool showStageCollision_ = true;
+    bool showBulletCollision_ = false;
+    bool collisionOverlay_ = true;
+    float collisionDrawDistance_ = 500.0f;
+#endif
     bool isPirateShipMidBossSpawned_ = false;
 
     // カメラシェイク演出用

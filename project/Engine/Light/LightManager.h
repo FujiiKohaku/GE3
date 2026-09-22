@@ -64,6 +64,7 @@ public:
     void SetSpotLightDistance(float distance);
     void SetSpotLightDecay(float decay);
     void SetSpotLightCosAngle(float cosAngle);
+    void SetSpotLightCosFalloffStart(float cosFalloffStart);
 
     SpotLightHandle AddSpotLight(
         const Vector4& color,

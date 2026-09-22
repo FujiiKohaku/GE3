@@ -15,6 +15,7 @@ public:
     void Update();
     void DrawImGui();
     void Draw(SceneManager* sceneManager);
+    PostEffectManager* GetPostEffectManager() const { return postEffectManager_.get(); }
 
 private:
     std::unique_ptr<OffscreenRenderer> offscreenRenderer_;

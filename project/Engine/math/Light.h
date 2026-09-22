@@ -31,5 +31,5 @@ struct SpotLight {
     float decay;
     float cosAngle;
     int isActive;
-    float padding;
+    float cosFalloffStart;
 };

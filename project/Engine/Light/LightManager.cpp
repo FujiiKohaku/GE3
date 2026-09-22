@@ -105,6 +105,7 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     defaultSpotLight.intensity = 4.0f;
     defaultSpotLight.decay = 2.0f;
     defaultSpotLight.cosAngle = std::cos(std::numbers::pi_v<float> / 3.0f);
+    defaultSpotLight.cosFalloffStart = 1.0f;
     defaultSpotLight.isActive = 1;
     spotLightData_->activeCount = 1;
 }
@@ -332,6 +333,11 @@ void LightManager::SetSpotLightCosAngle(float cosAngle)
     spotLightData_->lights[0].cosAngle = cosAngle;
 }
 
+void LightManager::SetSpotLightCosFalloffStart(float cosFalloffStart)
+{
+    spotLightData_->lights[0].cosFalloffStart = cosFalloffStart;
+}
+
 SpotLightHandle LightManager::AddSpotLight(
     const Vector4& color,
     const Vector3& position,
@@ -354,6 +360,7 @@ SpotLightHandle LightManager::AddSpotLight(
         spotLight.distance = distance;
         spotLight.decay = decay;
         spotLight.cosAngle = cosAngle;
+        spotLight.cosFalloffStart = 1.0f;
         spotLight.isActive = 1;
         spotLightData_->activeCount++;
         return lightIndex;

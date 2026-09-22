@@ -161,6 +161,11 @@ void SkinningObject3d::Update()
 #pragma region
 void SkinningObject3d::Draw()
 {
+    // Keep the frozen pose while applying the current debug camera.
+    if (camera_) {
+        transformationMatrixData->WVP = MatrixMath::Multiply(
+            worldMatrix_, camera_->GetViewProjectionMatrix());
+    }
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
     skinningObject3dManager_->BindPipeline(pixelShaderPath_);
 

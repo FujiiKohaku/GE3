@@ -51,7 +51,8 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
         if (light.isActive == 0) continue;
         float3 L = normalize(worldPosition - light.position);
         float cosAngle = dot(L, light.direction);
-        float falloff = saturate((cosAngle - light.cosAngle) / (1.0f - light.cosAngle));
+        float falloff = saturate((cosAngle - light.cosAngle) /
+            max(light.cosFalloffStart - light.cosAngle, 0.001f));
         float attenuation = pow(saturate(-length(light.position - worldPosition) / light.distance + 1.0f), light.decay);
         float3 lightColor = light.color.rgb * light.intensity * attenuation * falloff;
         result += baseColor * lightColor * saturate(dot(N, L));
@@ -113,13 +114,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     float faceLight = saturate(dot(N, normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);
     float middleBand = smoothstep(0.34f, 0.38f, faceLight);
     float lightBand = smoothstep(0.70f, 0.74f, faceLight);
-    float3 faceTint = lerp(float3(0.28f, 0.52f, 0.76f), float3(0.65f, 0.86f, 1.0f), middleBand);
-    faceTint = lerp(faceTint, float3(1.0f, 1.0f, 1.0f), lightBand);
-    float3 iceTexture = lerp(float3(0.88f, 0.94f, 1.0f), textureColor.rgb, 0.52f);
+    float3 faceTint = lerp(float3(0.28f, 0.52f, 0.76f), float3(0.60f, 0.77f, 0.90f), middleBand);
+    faceTint = lerp(faceTint, float3(0.84f, 0.90f, 0.96f), lightBand);
+    float3 iceTexture = lerp(float3(0.80f, 0.88f, 0.95f), textureColor.rgb, 0.52f);
     float horizontal = smoothstep(0.82f, 0.96f, abs(N.y));
-    float wave = sin(input.worldPosition.x * 0.037f + sin(input.worldPosition.z * 0.021f) * 2.2f);
-    float glacierBand = wave < -0.28f ? 0.68f : (wave > 0.34f ? 0.94f : 0.81f);
-    faceTint *= lerp(1.0f.xxx, float3(0.76f, 0.88f, 1.0f) * glacierBand, horizontal * 0.72f);
+    faceTint *= lerp(1.0f.xxx, float3(0.62f, 0.73f, 0.81f), horizontal * 0.72f);
     output.color.rgb = gMaterial.color.rgb * iceTexture * faceTint;
 #elif OBJECT3D_MATERIAL_TYPE >= 3 && OBJECT3D_MATERIAL_TYPE <= 5
     output.color.rgb = ShadeArchive(baseColor, input.normal, input.worldPosition, transformedUV.xy);

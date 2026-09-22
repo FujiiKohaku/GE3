@@ -69,7 +69,7 @@
   "environment": {
     "skybox": "resources/Textures/rostock_laage_airport_4k.dds",
     "bgm": "resources/Sounds/BGM.wav",
-    "floor_texture": "resources/Textures/ice_texture.jpg",
+    "floor_texture": "resources/Textures/white.png",
     "floor_enabled": true,
     "floor_height": -35.0
   },

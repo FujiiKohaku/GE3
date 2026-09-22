@@ -1,4 +1,9 @@
 #include "TestScene1.h"
+#include "DevelopmentWebPanel.h"
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+#include "externals/json.hpp"
+#include <cstdlib>
+#endif
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/Light/LightManager.h"
@@ -535,6 +540,9 @@ void TestScene1::Initialize()
             jointNameTexts_.push_back(std::move(text));
         }
     }
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().SetTestScene(this);
+#endif
 }
 
 void TestScene1::Update()
@@ -1212,8 +1220,74 @@ void TestScene1::DrawImGui()
 #endif
 }
 
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+std::string TestScene1::GetDevelopmentStateJson() const
+{
+    nlohmann::json state = {
+        {"sandGolemMode", isSandGolemMode_},
+        {"enableFootIK", enableFootIK_}, {"showFootIKDebug", showFootIKDebug_},
+        {"leftFootIkWeight", leftFootIkWeight_}, {"rightFootIkWeight", rightFootIkWeight_},
+        {"footSoleGroundMargin", footSoleGroundMargin_},
+        {"showFieldDebug", showFieldDebug_},
+        {"showSkeletonDebug", showSkeletonDebug_},
+        {"selectedPostEffectIndex", selectedPostEffectIndex_},
+        {"playerScale", playerScale_}, {"playerRotOffset", playerRotOffset_},
+        {"playerY", playerPos_.y},
+        {"katanaScale", katanaScale_},
+        {"katanaOffsetX", katanaOffset_.x}, {"katanaOffsetY", katanaOffset_.y}, {"katanaOffsetZ", katanaOffset_.z},
+        {"katanaRotX", katanaRotation_.x}, {"katanaRotY", katanaRotation_.y}, {"katanaRotZ", katanaRotation_.z},
+        {"cameraDistance", cameraDistance_}, {"cameraPitch", cameraPitch_},
+        {"playerX", playerPos_.x}, {"playerZ", playerPos_.z},
+        {"cameraYaw", cameraYaw_}, {"lastAnimationEvent", lastAnimationEventName_}
+    };
+    state["postEffectOptions"] = nlohmann::json::array();
+    for (std::size_t index = 0; index < postEffectTypes_.size(); ++index) {
+        state["postEffectOptions"].push_back({{"index", index},
+                                               {"name", GetPostEffectTypeName(postEffectTypes_[index])}});
+    }
+    return state.dump();
+}
+
+void TestScene1::ApplyDevelopmentAction(const std::string& key, const std::string& value)
+{
+    if (key == "enableFootIK") { enableFootIK_ = value == "true"; return; }
+    if (key == "showFootIKDebug") { showFootIKDebug_ = value == "true"; return; }
+    if (key == "showFieldDebug") { showFieldDebug_ = value == "true"; return; }
+    if (key == "showSkeletonDebug") { showSkeletonDebug_ = value == "true"; return; }
+    char* end = nullptr;
+    const float number = std::strtof(value.c_str(), &end);
+    if (end == value.c_str() || *end != '\0' || !std::isfinite(number)) return;
+    if (key == "selectedPostEffectIndex") {
+        const int index = static_cast<int>(number);
+        if (index >= 0 && static_cast<std::size_t>(index) < postEffectTypes_.size()) {
+            selectedPostEffectIndex_ = static_cast<std::size_t>(index);
+            ApplySelectedPostEffect();
+        }
+        return;
+    }
+#define SET_TEST(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return; }
+    SET_TEST("footSoleGroundMargin", footSoleGroundMargin_, 0.0f, 0.30f)
+    SET_TEST("playerScale", playerScale_, 0.1f, 50.0f)
+    SET_TEST("playerRotOffset", playerRotOffset_, -3.1415f, 3.1415f)
+    SET_TEST("playerY", playerPos_.y, -10.0f, 20.0f)
+    SET_TEST("katanaScale", katanaScale_, 0.05f, 2.0f)
+    SET_TEST("katanaOffsetX", katanaOffset_.x, -100.0f, 100.0f)
+    SET_TEST("katanaOffsetY", katanaOffset_.y, -100.0f, 100.0f)
+    SET_TEST("katanaOffsetZ", katanaOffset_.z, -100.0f, 100.0f)
+    SET_TEST("katanaRotX", katanaRotation_.x, -3.1415f, 3.1415f)
+    SET_TEST("katanaRotY", katanaRotation_.y, -3.1415f, 3.1415f)
+    SET_TEST("katanaRotZ", katanaRotation_.z, -3.1415f, 3.1415f)
+    SET_TEST("cameraDistance", cameraDistance_, 1.0f, 100.0f)
+    SET_TEST("cameraPitch", cameraPitch_, -1.5f, 1.5f)
+#undef SET_TEST
+}
+#endif
+
 void TestScene1::Finalize()
 {
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().SetTestScene(nullptr);
+#endif
     StopMovementEffects();
     if (leftHandFlameHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(leftHandFlameHandle_);

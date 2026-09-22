@@ -3,6 +3,7 @@
 #include "Engine/Debug/Profiler/BootProfiler.h"
 #include "Engine/Debug/Profiler/ProfilerScope.h"
 #include "Engine/CollisionManager/CollisionManager.h"
+#include "DevelopmentWebPanel.h"
 
 #include <format>
 
@@ -130,6 +131,9 @@ void Game::Initialize()
 
     renderer_ = std::make_unique<Renderer>();
     renderer_->Initialize();
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().SetPostEffectManager(renderer_->GetPostEffectManager());
+#endif
 
     GetBootProfilerForGame()->Begin("Audio");
     SoundManager::GetInstance()->Initialize();
@@ -144,6 +148,12 @@ void Game::Initialize()
 #endif
 
     TimeManager::GetInstance()->Initialize();
+
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    if (!DevelopmentWebPanel::GetInstance().Start()) {
+        Logger::Log("Development browser panel failed to start");
+    }
+#endif
 
     Logger::Log("Game Initialize End");
 }
@@ -161,6 +171,10 @@ void Game::Update()
 #endif
 
     Input::GetInstance()->Update();
+
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().Poll();
+#endif
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
 
@@ -180,7 +194,11 @@ void Game::Update()
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
         showDebugUI_ = !showDebugUI_;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+        DevelopmentWebPanel::GetInstance().SetLegacyUiVisible(showDebugUI_);
+#else
         DebugRenderer::GetInstance()->SetVisible(showDebugUI_);
+#endif
     }
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
@@ -212,9 +230,14 @@ void Game::Update()
     DebugRenderer::GetInstance()->Update();
     
 #ifdef USE_IMGUI
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    // The game's TAB pause menu still uses ImGui; gameplay controls are in the browser.
+    SceneManager::GetInstance()->DrawImGui();
+#else
     if (showDebugUI_) {
         SceneManager::GetInstance()->DrawImGui();
     }
+#endif
 #endif
     
     {
@@ -224,7 +247,9 @@ void Game::Update()
     
 #ifdef USE_IMGUI
     if (showDebugUI_) {
+#if !defined(ENABLE_DEVELOPMENT_TOOLS)
         renderer_->DrawImGui();
+#endif
         Profiler::GetInstance()->DrawImGui();
     }
 
@@ -243,6 +268,9 @@ void Game::Draw()
 void Game::Finalize()
 {
     Logger::Log("Game Finalize Start");
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().Stop();
+#endif
    
     UnlockCursor(); // カーソルをウィンドウに固定解除
     ShowCursor(TRUE);

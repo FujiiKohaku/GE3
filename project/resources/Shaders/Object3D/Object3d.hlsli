@@ -114,7 +114,7 @@ struct SpotLight
     float decay;
     float cosAngle;
     int32_t isActive;
-    float padding;
+    float cosFalloffStart;
 };
 
 static const uint32_t kMaxSpotLights = 8;

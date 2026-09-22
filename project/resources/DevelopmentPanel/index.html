@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kohaku Development</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Yu Gothic UI", "Meiryo", sans-serif; background: #0b1320; color: #e9f0fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; }
+    header { padding: 25px clamp(20px, 4vw, 56px); background: linear-gradient(120deg, #142b40, #162138 70%, #1a2036); border-bottom: 1px solid #36506a; }
+    .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    h1 { font-size: clamp(24px, 3vw, 34px); margin: 0; letter-spacing: .03em; }
+    header p { color: #a9bdd0; margin: 8px 0 0; }
+    #connection { padding: 7px 12px; border-radius: 99px; background: #61402d; color: #ffe6b1; font-size: 13px; font-weight: 700; }
+    #connection.online { background: #143e38; color: #8de4c8; }
+    main { max-width: 1200px; padding: 26px 22px 48px; margin: auto; display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    section { background: #152236; border: 1px solid #2e435a; border-radius: 15px; padding: 22px; box-shadow: 0 12px 30px #050a1480; }
+    section.wide { grid-column: 1 / -1; }
+    h2 { font-size: 19px; margin: 0 0 15px; color: #d1e9ff; }
+    h3 { font-size: 13px; letter-spacing: .08em; color: #75c4d1; margin: 22px 0 11px; }
+    .muted { color: #9aaec2; font-size: 13px; line-height: 1.6; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 0; border-top: 1px solid #2a3c50; }
+    .row:first-of-type { border-top: 0; }
+    .row label { line-height: 1.4; }
+    .row small { display: block; color: #8ea5b9; margin-top: 3px; }
+    input[type=checkbox] { width: 20px; height: 20px; accent-color: #5cc4d1; cursor: pointer; flex: none; }
+    input[type=range] { width: min(55%, 280px); accent-color: #5cc4d1; cursor: pointer; }
+    input[type=number] { width: 95px; padding: 8px; color: #e9f0fa; background: #24384d; border: 1px solid #527084; border-radius: 7px; font: inherit; }
+    .numeric-control { display: flex; align-items: center; gap: 9px; flex: 1 1 225px; min-width: 170px; max-width: 330px; }
+    .numeric-control input[type=range] { flex: 1 1 auto; width: auto; min-width: 55px; }
+    .numeric-control input[type=number] { flex: 0 0 88px; width: 88px; }
+    button { background: #1f5b6b; color: white; border: 1px solid #4ea8b7; border-radius: 9px; padding: 10px 14px; font: inherit; cursor: pointer; }
+    button:hover { background: #28798a; }
+    button.active { background: #1b7254; border-color: #74ddb0; }
+    button:disabled, input:disabled { opacity: .4; cursor: default; }
+    .buttons { display: flex; gap: 9px; flex-wrap: wrap; }
+    .metric { font-size: 27px; font-weight: 700; color: #8ee1ee; font-variant-numeric: tabular-nums; }
+    .metrics { display: flex; gap: 30px; flex-wrap: wrap; margin: 12px 0 18px; }
+    .metric-label { color: #9aaec2; font-size: 12px; }
+    kbd { display: inline-block; padding: 3px 6px; margin: 2px; border: 1px solid #53697e; border-radius: 5px; background: #25374a; font: 12px system-ui, sans-serif; }
+    .help { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; line-height: 1.65; }
+    .help strong { display: block; color: #91dfe9; margin-bottom: 6px; }
+    .help p { margin: 0; color: #c3d1e0; }
+    [hidden] { display: none !important; }
+    details { border-top: 1px solid #2a3c50; padding: 12px 0; }
+    summary { cursor: pointer; color: #91dfe9; font-weight: 700; }
+    .setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; margin-top: 10px; }
+    .setting-grid .row { min-height: 52px; flex-wrap: wrap; }
+    select { padding: 8px; color: #e9f0fa; background: #24384d; border: 1px solid #527084; border-radius: 7px; font: inherit; }
+    @media (max-width: 760px) { .setting-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; padding: 16px; } section.wide { grid-column: 1; } .help { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top"><div><h1>Kohaku Development</h1><p>ゲームの確認と操作をブラウザから行えます。接続先はこのPC内だけです。</p></div><span id="connection">接続待ち</span></div>
+  </header>
+  <main>
+    <section class="gameplay-only">
+      <h2>カメラと進行</h2>
+      <div class="metrics"><div><div class="metric-label">自由カメラ速度（距離/秒）</div><div class="metric" id="cameraSpeed">—</div></div><div><div class="metric-label">レール進行距離</div><div class="metric" id="railDistance">—</div></div></div>
+      <div class="row"><label for="freeCamera">自由カメラ<small>プレイヤーカメラと切り替え</small></label><input id="freeCamera" data-field="freeCamera" type="checkbox"></div>
+      <div class="row"><label for="cameraSpeedControl">自由カメラの移動速度<small>距離/秒</small></label><div class="numeric-control"><input id="cameraSpeedSlider" type="range" min="1" max="1200" step="1" aria-label="自由カメラの移動速度をドラッグ"><input id="cameraSpeedControl" type="number" min="1" max="1200" step="1" aria-label="自由カメラの移動速度を入力"></div></div>
+      <p class="muted" id="cameraHint">自由カメラをオンにして、ゲーム画面へ戻るとWASDで移動できます。</p>
+      <div class="row"><label for="paused">ゲームを一時停止<small>停止中も自由カメラを操作できます</small></label><input id="paused" data-field="paused" type="checkbox"></div>
+      <div class="buttons"><button data-action="step">1フレーム進める</button><button data-action="returnCamera">プレイヤーカメラへ戻る</button></div>
+    </section>
+    <section class="gameplay-only">
+      <h2>当たり判定</h2>
+      <div class="row"><label for="showCollision">当たり判定を表示<small>オフでは線の生成処理も停止</small></label><input id="showCollision" data-field="showCollision" type="checkbox"></div>
+      <div class="row"><label for="collisionOverlay">線を手前に表示<small>モデルに隠れないようにします</small></label><input id="collisionOverlay" data-field="collisionOverlay" type="checkbox"></div>
+      <div class="row"><label for="showPlayer">プレイヤー <span style="color:#65da83">●</span></label><input id="showPlayer" data-field="showPlayer" type="checkbox"></div>
+      <div class="row"><label for="showEnemy">敵・ボス <span style="color:#ef7979">●</span></label><input id="showEnemy" data-field="showEnemy" type="checkbox"></div>
+      <div class="row"><label for="showStage">ステージ <span style="color:#e390e9">●</span></label><input id="showStage" data-field="showStage" type="checkbox"></div>
+      <div class="row"><label for="showBullet">弾 <span style="color:#85dce9">●</span></label><input id="showBullet" data-field="showBullet" type="checkbox"></div>
+      <div class="row"><label for="showIce">Ice Jellyfishの部位</label><input id="showIce" data-field="showIce" type="checkbox"></div>
+      <div class="row"><label for="drawDistanceInput">表示距離<small>この範囲を超える判定は描画しません</small></label><div class="numeric-control"><input id="drawDistance" type="range" min="20" max="2000" step="10" aria-label="当たり判定の表示距離をドラッグ"><input id="drawDistanceInput" type="number" min="20" max="2000" step="10" aria-label="当たり判定の表示距離を入力"></div></div>
+      <div class="row"><label for="showRail">レールを表示</label><input id="showRail" data-field="showRail" type="checkbox"></div>
+    </section>
+    <section class="gameplay-only">
+      <h2>プレイヤー</h2>
+      <p class="muted" id="playerHpStatus">HP: —</p>
+      <button id="invincibleModeButton" type="button" aria-pressed="false">無敵モード: OFF</button>
+      <p class="muted">ON の間は HP が減りません。切り替えは現在のステージだけに適用されます。</p>
+    </section>
+    <section class="wide gameplay-only">
+      <h2>移動先</h2>
+      <p class="muted" id="bossStatus">ボスの状態を確認中…</p>
+      <div class="buttons"><button data-action="teleportBoss">現在のボス付近へ</button><button data-action="teleportJellyfish">Ice Jellyfish付近へ</button><button data-action="teleportBossArea">ボス出現エリアへ</button></div>
+    </section>
+    <section class="wide">
+      <h2>ゲーム設定</h2>
+      <p class="muted">スライダーをドラッグするとすぐに反映されます。右の数値欄には直接入力できます。</p>
+      <div id="settingsRoot"></div>
+    </section>
+    <section class="wide">
+      <h2>操作方法</h2>
+      <div class="help">
+        <div><strong>自由カメラ</strong><p><kbd>F1</kbd> 切り替え<br><kbd>W</kbd><kbd>S</kbd> 前後、<kbd>A</kbd><kbd>D</kbd> 左右、<kbd>Q</kbd><kbd>E</kbd> 上下<br>左ドラッグまたは矢印キーで回転</p></div>
+        <div><strong>速度とマウス</strong><p><kbd>Shift</kbd> 移動速度5倍<br>ホイールで通常速度を調整<br><kbd>F2</kbd> カーソル表示を切り替え</p></div>
+        <div><strong>ゲーム進行</strong><p><kbd>F6</kbd> 一時停止・再開<br><kbd>F7</kbd> 停止中に1フレーム進める<br><kbd>TAB</kbd> ゲームのポーズメニュー<br><kbd>F10</kbd> 旧デバッグUIを表示</p></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const token = '__PANEL_TOKEN__';
+    const connection = document.getElementById('connection');
+    const settingGroups = [
+      ['操作・カメラ', [
+        ['controlMode', '操作モード', 'select', [['0', 'WASD＋マウス'], ['1', 'StarFox']]],
+        ['mouseSensitivity', 'マウス感度', 0.5, 2, 0.1],
+        ['cameraHeightFollowFactor', '高さ追従率', 0, 1, 0.01],
+        ['cameraLookUpFactor', '見上げ率', 0, 2, 0.01],
+        ['cameraX', 'カメラ位置 X', -10000, 10000, 0.1], ['cameraY', 'カメラ位置 Y', -10000, 10000, 0.1], ['cameraZ', 'カメラ位置 Z', -10000, 10000, 0.1],
+        ['cameraRotX', 'カメラ回転 X', -6.28, 6.28, 0.01], ['cameraRotY', 'カメラ回転 Y', -6.28, 6.28, 0.01], ['cameraRotZ', 'カメラ回転 Z', -6.28, 6.28, 0.01],
+        ['cameraScaleX', 'カメラ倍率 X', 0.01, 10, 0.01], ['cameraScaleY', 'カメラ倍率 Y', 0.01, 10, 0.01], ['cameraScaleZ', 'カメラ倍率 Z', 0.01, 10, 0.01],
+        ['cameraFovY', '視野角（rad）', 0.01, 3.13, 0.01], ['cameraNearClip', '近クリップ', 0.001, 10000, 0.01], ['cameraFarClip', '遠クリップ', 0.01, 10000, 1]
+      ]],
+      ['平行光・環境光', [
+        ['lightEnabled', '平行光', 'check'], ['lightColorR', '光の色 R', 0, 1, 0.01], ['lightColorG', '光の色 G', 0, 1, 0.01], ['lightColorB', '光の色 B', 0, 1, 0.01],
+        ['lightIntensity', '光の強さ', 0, 5, 0.05], ['lightDirX', '光の向き X', -1, 1, 0.01], ['lightDirY', '光の向き Y', -1, 1, 0.01], ['lightDirZ', '光の向き Z', -1, 1, 0.01],
+        ['ambientColorR', '環境光 R', 0, 1, 0.01], ['ambientColorG', '環境光 G', 0, 1, 0.01], ['ambientColorB', '環境光 B', 0, 1, 0.01], ['ambientIntensity', '環境光の強さ', 0, 1, 0.01]
+      ]],
+      ['点光源', [
+        ['pointEnabled', '点光源', 'check'], ['pointColorR', '色 R', 0, 1, 0.01], ['pointColorG', '色 G', 0, 1, 0.01], ['pointColorB', '色 B', 0, 1, 0.01],
+        ['pointPosX', '位置 X', -10, 10, 0.1], ['pointPosY', '位置 Y', -10, 10, 0.1], ['pointPosZ', '位置 Z', -10, 10, 0.1],
+        ['pointIntensity', '強さ', 0, 5, 0.05], ['pointRadius', '半径', 0.1, 30, 0.1], ['pointDecay', '減衰', 0.1, 5, 0.1]
+      ]],
+      ['スポットライト', [
+        ['spotEnabled', 'スポットライト', 'check'], ['spotColorR', '色 R', 0, 1, 0.01], ['spotColorG', '色 G', 0, 1, 0.01], ['spotColorB', '色 B', 0, 1, 0.01],
+        ['spotPosX', '位置 X', -10, 10, 0.1], ['spotPosY', '位置 Y', -10, 10, 0.1], ['spotPosZ', '位置 Z', -10, 10, 0.1],
+        ['spotDirX', '向き X', -1, 1, 0.01], ['spotDirY', '向き Y', -1, 1, 0.01], ['spotDirZ', '向き Z', -1, 1, 0.01],
+        ['spotIntensity', '強さ', 0, 10, 0.05], ['spotDistance', '距離', 0.1, 30, 0.1], ['spotDecay', '減衰', 0.1, 5, 0.1], ['spotAngleDeg', '角度（度）', 2, 90, 1], ['spotFalloffStartDeg', '減衰開始角（度）', 1, 89, 1]
+      ]],
+      ['霧・ブルーム', [
+        ['effects.fogEnabled', '霧', 'check'], ['effects.distanceFogEnabled', '距離の霧', 'check'],
+        ['effects.fogColorR', '霧の色 R', 0, 1, 0.01], ['effects.fogColorG', '霧の色 G', 0, 1, 0.01], ['effects.fogColorB', '霧の色 B', 0, 1, 0.01],
+        ['effects.fogStart', '霧の開始距離', 0, 3000, 0.1], ['effects.fogEnd', '霧の終了距離', 0.01, 3000, 0.1], ['effects.fogCurve', '霧の曲線', 0.01, 8, 0.01], ['effects.fogDensity', '霧の濃さ', 0, 1, 0.01],
+        ['effects.bloomEnabled', 'ブルーム', 'check'], ['effects.bloomThreshold', 'しきい値', 0, 5, 0.05], ['effects.bloomBlurRadius', 'ぼかし半径', 0, 32, 1], ['effects.bloomBlurSigma', 'ぼかし Sigma', 0.01, 20, 0.01], ['effects.bloomIntensity', 'ブルーム強度', 0, 5, 0.05]
+      ]],
+      ['ポストエフェクト', [
+        ['effects.animationEnabled', 'アニメーション', 'check'], ['effects.pixelSize', 'ピクセルサイズ', 1, 64, 1],
+        ['effects.colorBrightness', '明るさ', -1, 1, 0.01], ['effects.colorContrast', 'コントラスト', 0, 3, 0.01], ['effects.colorSaturation', '彩度', 0, 3, 0.01],
+        ['effects.focusDepth', 'フォーカス深度', 0, 1, 0.001], ['effects.focusRange', 'フォーカス範囲', 0.0001, 0.2, 0.0001], ['effects.depthOfFieldRadius', '被写界深度半径', 0, 32, 0.1],
+        ['effects.motionBlurDirectionX', 'モーション方向 X', -1, 1, 0.01], ['effects.motionBlurDirectionY', 'モーション方向 Y', -1, 1, 0.01], ['effects.motionBlurStrength', 'モーション強度', 0, 0.1, 0.001], ['effects.motionBlurSampleCount', 'モーションサンプル', 1, 32, 1],
+        ['effects.chromaticAberrationStrength', '色収差', 0, 0.05, 0.001], ['effects.lensDistortionStrength', 'レンズ歪み', -1, 1, 0.01], ['effects.filmGrainStrength', 'フィルム粒子', 0, 0.5, 0.01], ['effects.lensDirtStrength', 'レンズ汚れ', 0, 3, 0.01],
+        ['effects.cameraShakeStrength', 'カメラシェイク', 0, 0.05, 0.001], ['effects.bokehRadius', 'ボケ半径', 0, 32, 0.1], ['effects.bokehSides', 'ボケ辺数', 3, 12, 1], ['effects.fisheyeStrength', '魚眼強度', 0.01, 3, 0.01],
+        ['effects.lightThreshold', '光しきい値', 0, 2, 0.01], ['effects.lightStrength', '光の強さ', 0, 5, 0.05], ['effects.lightRadius', '光の半径', 0.01, 1, 0.01],
+        ['effects.outlineNormalThreshold', '輪郭法線しきい値', 0, 1, 0.01], ['effects.outlineNormalSoftness', '輪郭法線の柔らかさ', 0.001, 1, 0.01], ['effects.outlineNormalStrength', '輪郭法線強度', 0, 1, 0.01]
+      ]],
+      ['Robo テストシーン', [
+        ['test.enableFootIK', '足の IK', 'check'], ['test.showFootIKDebug', '足の IK 表示', 'check'], ['test.showFieldDebug', '粒子フィールド範囲', 'check'], ['test.showSkeletonDebug', '骨格表示', 'check'],
+        ['test.footSoleGroundMargin', '足裏の地面余白', 0, 0.3, 0.001],
+        ['test.selectedPostEffectIndex', 'エフェクト', 'select', []],
+        ['test.playerScale', 'プレイヤーの大きさ', 0.1, 50, 0.1], ['test.playerRotOffset', 'プレイヤー回転補正', -3.1415, 3.1415, 0.01], ['test.playerY', 'プレイヤー高さ', -10, 20, 0.1],
+        ['test.katanaScale', '刀の大きさ', 0.05, 2, 0.01],
+        ['test.katanaOffsetX', '刀位置 X', -100, 100, 0.01], ['test.katanaOffsetY', '刀位置 Y', -100, 100, 0.01], ['test.katanaOffsetZ', '刀位置 Z', -100, 100, 0.01],
+        ['test.katanaRotX', '刀回転 X', -3.1415, 3.1415, 0.01], ['test.katanaRotY', '刀回転 Y', -3.1415, 3.1415, 0.01], ['test.katanaRotZ', '刀回転 Z', -3.1415, 3.1415, 0.01],
+        ['test.cameraDistance', 'カメラ距離', 1, 100, 0.1], ['test.cameraPitch', 'カメラ上下角', -1.5, 1.5, 0.01]
+      ]]
+    ];
+    const settingsRoot = document.getElementById('settingsRoot');
+    const numericPairs = new Map();
+    const numericRequests = new Map();
+    const draggingNumericKeys = new Set();
+    function queueNumericAction(key, value, immediate = false) {
+      if (!active) return;
+      let request = numericRequests.get(key);
+      if (!request) {
+        request = {latest: null, timer: null, sending: false};
+        numericRequests.set(key, request);
+      }
+      request.latest = String(value);
+      if (immediate) {
+        if (request.timer) clearTimeout(request.timer);
+        request.timer = null;
+        void sendQueuedNumeric(key);
+      } else if (!request.timer && !request.sending) {
+        request.timer = setTimeout(() => {
+          request.timer = null;
+          void sendQueuedNumeric(key);
+        }, 80);
+      }
+    }
+    async function sendQueuedNumeric(key) {
+      const request = numericRequests.get(key);
+      if (!request || request.sending) return;
+      request.sending = true;
+      try {
+        while (request.latest !== null && active) {
+          const value = request.latest;
+          request.latest = null;
+          const response = await fetch(`/api/action?key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}&token=${token}`, {method: 'POST'});
+          if (!response.ok) throw new Error('offline');
+          if (request.latest !== null) await new Promise(resolve => setTimeout(resolve, 80));
+        }
+      } catch {
+        connection.textContent = '接続が切れました';
+        connection.classList.remove('online');
+      } finally {
+        request.sending = false;
+        if (request.latest !== null && active) void sendQueuedNumeric(key);
+        else if (!request.timer) numericRequests.delete(key);
+        void refresh();
+      }
+    }
+    function bindNumericPair(range, number, key) {
+      numericPairs.set(key, {range, number});
+      range.addEventListener('pointerdown', () => draggingNumericKeys.add(key));
+      const finishDrag = () => {
+        if (draggingNumericKeys.delete(key)) queueNumericAction(key, range.value, true);
+      };
+      range.addEventListener('pointerup', finishDrag);
+      range.addEventListener('pointercancel', finishDrag);
+      range.addEventListener('input', () => {
+        number.value = range.value;
+        queueNumericAction(key, range.value);
+      });
+      range.addEventListener('change', () => queueNumericAction(key, range.value, true));
+      number.addEventListener('input', () => {
+        if (number.value !== '' && Number.isFinite(Number(number.value))) range.value = number.value;
+      });
+      number.addEventListener('change', () => {
+        const parsed = Number(number.value);
+        if (number.value === '' || !Number.isFinite(parsed)) { number.value = range.value; return; }
+        const bounded = Math.min(Number(range.max), Math.max(Number(range.min), parsed));
+        number.value = String(bounded);
+        range.value = String(bounded);
+        queueNumericAction(key, bounded, true);
+      });
+    }
+    function createNumericPair(key, min, max, step, dataset) {
+      const control = document.createElement('div'); control.className = 'numeric-control';
+      const range = document.createElement('input'); range.type = 'range'; range.min = min; range.max = max; range.step = step;
+      const number = document.createElement('input'); number.type = 'number'; number.min = min; number.max = max; number.step = step;
+      range.setAttribute('aria-label', `${key} をドラッグ`);
+      number.setAttribute('aria-label', `${key} を入力`);
+      dataset(range); dataset(number);
+      bindNumericPair(range, number, key);
+      control.append(range, number);
+      return control;
+    }
+    function syncNumericPair(key, value, disabled) {
+      const pair = numericPairs.get(key);
+      if (!pair) return;
+      pair.range.disabled = disabled;
+      pair.number.disabled = disabled;
+      const request = numericRequests.get(key);
+      if (value === undefined || value === null || draggingNumericKeys.has(key) ||
+          document.activeElement === pair.number || (request && (request.timer || request.sending || request.latest !== null))) return;
+      pair.range.value = value;
+      pair.number.value = value;
+    }
+    for (const [title, settings] of settingGroups) {
+      const details = document.createElement('details');
+      details.dataset.groupKind = settings[0][0].startsWith('test.') ? 'test' : settings[0][0].startsWith('effects.') ? 'effects' : 'gameplay';
+      const summary = document.createElement('summary'); summary.textContent = title; details.append(summary);
+      const grid = document.createElement('div'); grid.className = 'setting-grid'; details.append(grid);
+      for (const [key, label, min, max, step] of settings) {
+        const row = document.createElement('div'); row.className = 'row';
+        const caption = document.createElement('label'); caption.textContent = label; row.append(caption);
+        if (min !== 'check' && min !== 'select') {
+          row.append(createNumericPair(key, min, max, step, input => { input.dataset.setting = key; }));
+        } else {
+          const input = min === 'check' ? document.createElement('input') : document.createElement('select');
+          input.dataset.setting = key;
+          if (min === 'check') input.type = 'checkbox';
+          else for (const [value, text] of max) { const option = document.createElement('option'); option.value = value; option.textContent = text; input.append(option); }
+          input.addEventListener('change', () => action(key, input.type === 'checkbox' ? String(input.checked) : input.value));
+          row.append(input);
+        }
+        grid.append(row);
+      }
+      settingsRoot.append(details);
+    }
+    const lightingActions = document.createElement('div'); lightingActions.className = 'buttons';
+    for (const [key, label] of [['resetLightDirection', '光の向きを戻す'], ['resetLight', '平行光を初期化']]) {
+      const button = document.createElement('button'); button.textContent = label; button.dataset.action = key; lightingActions.append(button);
+    }
+    settingsRoot.children[1].append(lightingActions);
+    const passes = document.createElement('details'); passes.innerHTML = '<summary>エフェクトの有効・無効</summary><div class="setting-grid" id="effectPasses"></div>'; settingsRoot.append(passes);
+    let passSignature = '';
+    const enemiesPanel = document.createElement('details'); enemiesPanel.innerHTML = '<summary>移動する敵の調整</summary><div id="moveEnemies" class="setting-grid"></div>'; settingsRoot.append(enemiesPanel);
+    let enemySignature = '';
+    const editorPanel = document.createElement('details'); editorPanel.innerHTML = '<summary>シーンオブジェクト編集</summary><div class="row"><label for="objectSelect">オブジェクト</label><select id="objectSelect"></select></div><div class="row"><label for="gizmoMode">ギズモ</label><select id="gizmoMode"><option value="0">移動</option><option value="1">回転</option><option value="2">拡大縮小</option></select></div><div id="objectFields" class="setting-grid"></div><div class="buttons"><button data-action="editorSave">シーンを保存</button><button data-action="editorLoad">シーンを読み込み</button></div>'; settingsRoot.append(editorPanel);
+    for (const [key, label, min, max, step] of [['objectX','位置 X',-10000,10000,0.1],['objectY','位置 Y',-10000,10000,0.1],['objectZ','位置 Z',-10000,10000,0.1],['objectRotX','回転 X',-6.28,6.28,0.01],['objectRotY','回転 Y',-6.28,6.28,0.01],['objectRotZ','回転 Z',-6.28,6.28,0.01],['objectScaleX','拡大率 X',0.01,100,0.01],['objectScaleY','拡大率 Y',0.01,100,0.01],['objectScaleZ','拡大率 Z',0.01,100,0.01]]) {
+      const row = document.createElement('div'); row.className = 'row';
+      const caption = document.createElement('label'); caption.textContent = label;
+      const input = document.createElement('input'); input.type = 'number'; input.min = min; input.max = max; input.step = step; input.dataset.editorField = key;
+      input.addEventListener('change', () => action(key, input.value));
+      row.append(caption, input); document.getElementById('objectFields').append(row);
+    }
+    document.getElementById('objectSelect').addEventListener('change', e => action('objectSelect', e.target.value));
+    document.getElementById('gizmoMode').addEventListener('change', e => action('gizmoMode', e.target.value));
+    let objectSignature = '';
+    let testEffectSignature = '';
+    let active = false;
+    let gameplayActive = false;
+    let testActive = false;
+    let invincibleMode = false;
+    let paused = false;
+    async function action(key, value = '') {
+      if (!active) return;
+      try {
+        await fetch(`/api/action?key=${encodeURIComponent(key)}&value=${encodeURIComponent(value)}&token=${token}`, {method: 'POST'});
+        await refresh();
+      } catch { connection.textContent = '接続が切れました'; connection.classList.remove('online'); }
+    }
+    document.querySelectorAll('[data-field]').forEach(input => {
+      input.addEventListener('change', () => action(input.dataset.field, input.type === 'checkbox' ? String(input.checked) : input.value));
+    });
+    const speedInput = document.getElementById('cameraSpeedControl');
+    document.getElementById('applyCameraSpeed').addEventListener('click', () => action('cameraSpeed', speedInput.value));
+    document.getElementById('invincibleModeButton').addEventListener('click', () => action('invincibleMode', String(!invincibleMode)));
+    speedInput.addEventListener('keydown', e => { if (e.key === 'Enter') action('cameraSpeed', speedInput.value); });
+    document.getElementById('drawDistance').addEventListener('input', e => {
+      document.getElementById('distanceValue').textContent = e.target.value;
+    });
+    document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => action(button.dataset.action)));
+    async function refresh() {
+      try {
+        const response = await fetch('/api/state', {cache: 'no-store'});
+        if (!response.ok) throw new Error('offline');
+        const state = await response.json();
+        gameplayActive = !!state.active;
+        testActive = !!state.testActive;
+        active = gameplayActive || testActive;
+        paused = !!state.paused;
+        invincibleMode = gameplayActive && !!state.invincibleMode;
+        connection.textContent = gameplayActive ? 'ゲームに接続中' : testActive ? 'Robo テストに接続中' : 'ステージ開始待ち';
+        connection.classList.add('online');
+        const invincibleButton = document.getElementById('invincibleModeButton');
+        invincibleButton.disabled = !gameplayActive;
+        invincibleButton.textContent = `無敵モード: ${invincibleMode ? 'ON' : 'OFF'}`;
+        invincibleButton.setAttribute('aria-pressed', String(invincibleMode));
+        invincibleButton.classList.toggle('active', invincibleMode);
+        document.getElementById('playerHpStatus').textContent = gameplayActive ? `HP: ${state.playerHp} / ${state.playerMaxHp}` : 'HP: —';
+        document.querySelectorAll('.gameplay-only').forEach(section => section.hidden = !gameplayActive);
+        document.querySelectorAll('[data-group-kind]').forEach(group => {
+          group.hidden = group.dataset.groupKind === 'test' ? !testActive : group.dataset.groupKind === 'gameplay' ? !gameplayActive : !active;
+        });
+        enemiesPanel.hidden = !gameplayActive;
+        editorPanel.hidden = !gameplayActive;
+        passes.hidden = !active;
+        const testOptions = state.test?.postEffectOptions || [];
+        const nextTestEffectSignature = testOptions.map(option => `${option.index}:${option.name}`).join('|');
+        if (nextTestEffectSignature !== testEffectSignature) {
+          testEffectSignature = nextTestEffectSignature;
+          const select = document.querySelector('[data-setting="test.selectedPostEffectIndex"]'); select.replaceChildren();
+          for (const option of testOptions) {
+            const item = document.createElement('option'); item.value = option.index; item.textContent = option.name; select.append(item);
+          }
+        }
+        document.querySelectorAll('[data-field]').forEach(input => {
+          input.disabled = !gameplayActive;
+          if (gameplayActive && document.activeElement !== input) {
+            if (input.type === 'checkbox') input.checked = !!state[input.dataset.field];
+            else input.value = input.type === 'number' ? Number(state[input.dataset.field]).toFixed(2) : state[input.dataset.field];
+          }
+        });
+        document.querySelectorAll('[data-setting]').forEach(input => {
+          const key = input.dataset.setting;
+          const isEffect = key.startsWith('effects.');
+          const isTest = key.startsWith('test.');
+          const value = isEffect ? state.effects?.[key.slice(8)] : isTest ? state.test?.[key.slice(5)] : state[key];
+          input.disabled = !(isEffect ? active : isTest ? testActive : gameplayActive) || value === undefined || (key.startsWith('camera') && ['cameraX','cameraY','cameraZ','cameraRotX','cameraRotY','cameraRotZ'].includes(key) && !state.freeCamera);
+          if (value !== undefined && document.activeElement !== input) {
+            if (input.type === 'checkbox') input.checked = !!value;
+            else input.value = value;
+          }
+        });
+        const passList = state.effects?.passes || [];
+        const signature = passList.map(pass => `${pass.type}:${pass.name}`).join('|');
+        if (signature !== passSignature) {
+          passSignature = signature;
+          const container = document.getElementById('effectPasses'); container.replaceChildren();
+          for (const pass of passList) {
+            const row = document.createElement('div'); row.className = 'row';
+            const label = document.createElement('label'); label.textContent = pass.name;
+            const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.dataset.pass = pass.type;
+            checkbox.addEventListener('change', () => action(`effects.pass.${pass.type}`, String(checkbox.checked)));
+            row.append(label, checkbox); container.append(row);
+          }
+        }
+        document.querySelectorAll('[data-pass]').forEach(input => {
+          const pass = passList.find(item => item.type === Number(input.dataset.pass));
+          input.disabled = !active || !pass;
+          if (pass) input.checked = !!pass.enabled;
+        });
+        const moveEnemies = state.moveEnemies || [];
+        const nextEnemySignature = moveEnemies.map(enemy => enemy.index).join(',');
+        if (nextEnemySignature !== enemySignature) {
+          enemySignature = nextEnemySignature;
+          const container = document.getElementById('moveEnemies'); container.replaceChildren();
+          for (const enemy of moveEnemies) {
+            const group = document.createElement('div');
+            const heading = document.createElement('h3'); heading.textContent = `MoveEnemy ${enemy.index + 1}`; group.append(heading);
+            for (const [field, label, min, max, step] of [['pattern','移動パターン',0,3,1],['speed','速度',0,10,0.1],['amplitude','振幅',0,20,0.1],['frequency','周波数',0,10,0.1]]) {
+              const row = document.createElement('div'); row.className = 'row';
+              const caption = document.createElement('label'); caption.textContent = label;
+              const input = field === 'pattern' ? document.createElement('select') : document.createElement('input');
+              if (field === 'pattern') for (const [index, name] of ['左右','上下','ジグザグ','波'].entries()) { const option = document.createElement('option'); option.value = index; option.textContent = name; input.append(option); }
+              else { input.type = 'number'; input.min = min; input.max = max; input.step = step; }
+              input.dataset.enemy = enemy.index; input.dataset.enemyField = field;
+              input.addEventListener('change', () => action(`enemy.${enemy.index}.${field}`, input.value));
+              row.append(caption, input); group.append(row);
+            }
+            const reset = document.createElement('button'); reset.textContent = '位置を戻す';
+            reset.dataset.enemyReset = enemy.index;
+            reset.addEventListener('click', () => action(`enemy.${enemy.index}.reset`));
+            group.append(reset); container.append(group);
+          }
+        }
+        document.querySelectorAll('[data-enemy]').forEach(input => {
+          const enemy = moveEnemies.find(item => item.index === Number(input.dataset.enemy));
+          input.disabled = !active || !enemy;
+          if (enemy && document.activeElement !== input) input.value = enemy[input.dataset.enemyField];
+        });
+        document.querySelectorAll('[data-enemy-reset]').forEach(button => button.disabled = !active);
+        const objects = state.objects || [];
+        const nextObjectSignature = objects.map(object => `${object.index}:${object.name}`).join('|');
+        if (nextObjectSignature !== objectSignature) {
+          objectSignature = nextObjectSignature;
+          const selector = document.getElementById('objectSelect'); selector.replaceChildren();
+          const empty = document.createElement('option'); empty.value = -1; empty.textContent = '選択なし'; selector.append(empty);
+          for (const object of objects) {
+            const option = document.createElement('option'); option.value = object.index; option.textContent = object.name; selector.append(option);
+          }
+        }
+        const selectedObject = state.selectedObject ?? -1;
+        const objectSelect = document.getElementById('objectSelect'); objectSelect.disabled = !active;
+        if (document.activeElement !== objectSelect) objectSelect.value = selectedObject;
+        const gizmoMode = document.getElementById('gizmoMode'); gizmoMode.disabled = !active;
+        if (document.activeElement !== gizmoMode && state.gizmoMode !== undefined) gizmoMode.value = state.gizmoMode;
+        document.querySelectorAll('[data-editor-field]').forEach(input => {
+          input.disabled = !active || selectedObject === -1;
+          if (selectedObject !== -1 && document.activeElement !== input) input.value = state[input.dataset.editorField];
+        });
+        speedInput.disabled = !gameplayActive || !state.freeCamera;
+        document.getElementById('applyCameraSpeed').disabled = speedInput.disabled;
+        if (active && document.activeElement !== speedInput) speedInput.value = state.cameraSpeed.toFixed(1);
+        document.getElementById('cameraHint').textContent = !active ? 'ステージ開始後に操作できます。' :
+          state.freeCamera ? '速度を変えたらゲーム画面へ戻り、WASDで移動してください。' :
+          '速度設定は自由カメラ専用です。自由カメラをオンにしてから変更してください。';
+        document.querySelectorAll('[data-action]').forEach(button => {
+          button.disabled = !gameplayActive || (button.dataset.action === 'step' && !paused) ||
+            (button.dataset.action === 'teleportBoss' && !state.bossAvailable) ||
+            (button.dataset.action === 'teleportJellyfish' && !state.jellyfishAvailable);
+        });
+        document.getElementById('cameraSpeed').textContent = active ? state.cameraSpeed.toFixed(2) : '—';
+        document.getElementById('railDistance').textContent = active ? state.railDistance.toFixed(0) : '—';
+        document.getElementById('distanceValue').textContent = active ? Math.round(state.drawDistance) : '—';
+        document.getElementById('bossStatus').textContent = !active ? 'ゲームプレイ開始後に操作できます。' :
+          state.bossAvailable ? `ボス位置 Z: ${state.bossZ.toFixed(1)}${state.bossHp === null ? '' : ` / HP: ${state.bossHp.toFixed(0)}`}` : '現在ボスは出現していません。';
+      } catch {
+        active = false;
+        connection.textContent = 'ゲームとの接続が切れました';
+        connection.classList.remove('online');
+        document.querySelectorAll('input, button').forEach(el => el.disabled = true);
+      }
+    }
+    refresh();
+    setInterval(refresh, 500);
+  </script>
+</body>
+</html>

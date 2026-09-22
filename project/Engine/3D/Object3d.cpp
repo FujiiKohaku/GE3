@@ -113,6 +113,11 @@ void Object3d::Update()
 #pragma region
 void Object3d::Draw()
 {
+    // The camera can move while gameplay updates are paused.
+    if (camera_) {
+        transformationMatrixData->WVP = MatrixMath::Multiply(
+            worldMatrix_, camera_->GetViewProjectionMatrix());
+    }
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
     object3dManager_->BindPipeline(pixelShaderPath_);
     

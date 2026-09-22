@@ -23,6 +23,10 @@ public:
     void Draw3D() override;
     void DrawParticle() override;
     void DrawImGui() override;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    std::string GetDevelopmentStateJson() const;
+    void ApplyDevelopmentAction(const std::string& key, const std::string& value);
+#endif
 
 private:
     void ApplySelectedPostEffect();

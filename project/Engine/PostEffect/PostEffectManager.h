@@ -5,6 +5,9 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
 #include <wrl.h>
 
 class Camera;
@@ -21,6 +24,11 @@ public:
     void Initialize(DirectXCommon* dxCommon);
     void Update(Camera* camera);
     void DrawImGui();
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    std::string GetDevelopmentSettingsJson() const;
+    void ApplyDevelopmentSetting(const std::string& key, const std::string& value);
+    void ClearDevelopmentPassOverrides() { passOverrides_.clear(); cameraShakeOverride_.reset(); }
+#endif
 
     void PreDrawDepth();
     void PostDrawDepth();
@@ -88,5 +96,9 @@ private:
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    std::unordered_map<int, bool> passOverrides_;
+    std::optional<float> cameraShakeOverride_;
+#endif
     D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle_ {};
 };

@@ -20,6 +20,7 @@ public:
     // ===============================
     void SetRotate(const Vector3& rotate) { transform_.rotate = rotate; }
     void SetTranslate(const Vector3& translate) { transform_.translate = translate; }
+    void SetScale(const Vector3& scale) { transform_.scale = scale; }
     void SetFovY(float fovY) { fovY_ = fovY; }
     void SetAspectRatio(float aspectRatio) { aspectRatio_ = aspectRatio; }
     void SetNearClip(float nearClip) { nearClip_ = nearClip; }
@@ -39,6 +40,7 @@ public:
     // 各種Transform情報
     const Vector3& GetRotate() const { return transform_.rotate; }
     const Vector3& GetTranslate() const { return transform_.translate; }
+    const Vector3& GetScale() const { return transform_.scale; }
     Vector3& GetTranslate() { return transform_.translate; }
     Vector3& GetRotate() { return transform_.rotate; }
     // 各種プロジェクション設定値

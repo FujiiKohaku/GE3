@@ -29,6 +29,7 @@
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
 #include "Engine/Time/TimeManager.h"
+#include "DevelopmentWebPanel.h"
 #include <algorithm>
 #include <cmath>
 
@@ -654,15 +655,19 @@ void GamePlayScene::Initialize()
         floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
         floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
         if (stageId_ == "stage03") {
-            // Stage03の完成基準: 明るい氷色を3段階のセル陰影で見せる。
-            floorObj_->SetColor({ 0.25f, 0.48f, 0.64f, 1.0f });
+            // The floor uses a white texture; its restrained cracks are drawn in the PS.
+            floorObj_->SetColor({ 0.54f, 0.73f, 0.86f, 1.0f });
             floorObj_->SetShadingMode(MaterialShadingMode::Ice);
+            floorObj_->SetMaterial("resources/Shaders/Object3D/StageIceFloor");
             floorObj_->GetMaterial()->shininess = 0.0f;
             floorObj_->SetEnableEnvironmentMap(false);
         }
     }
 
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().SetScene(this);
+#endif
 }
 
 Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railPosition) const
@@ -739,6 +744,21 @@ void GamePlayScene::Update()
 {
     // TABキーによるポーズメニュー（Pause Menu）切り替え
     Input* input = Input::GetInstance();
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+    if (input != nullptr && input->IsKeyTrigger(DIK_F6)) {
+        developmentPaused_ = !developmentPaused_;
+        stepDevelopmentFrame_ = false;
+    }
+    if (developmentPaused_ && input != nullptr && input->IsKeyTrigger(DIK_F7)) {
+        stepDevelopmentFrame_ = true;
+    }
+    if (developmentPaused_ && !stepDevelopmentFrame_) {
+        debugCameraController_->Update();
+        camera_->Update();
+        return;
+    }
+    stepDevelopmentFrame_ = false;
+#endif
     if (input != nullptr && input->IsKeyTrigger(DIK_TAB)) {
         isPaused_ = !isPaused_;
     }
@@ -802,6 +822,8 @@ void GamePlayScene::Update()
         }
 
         // ポーズ中はゲームオブジェクトの更新を停止
+        debugCameraController_->Update();
+        camera_->Update();
         return;
     }
     if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
@@ -811,6 +833,8 @@ void GamePlayScene::Update()
     // 時間停止中はゲーム世界を更新しない。
     // チュートリアルUIは、今後この判定より前でUnscaledDeltaTimeを使って更新する。
     if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
+        debugCameraController_->Update();
+        camera_->Update();
         return;
     }
 
@@ -1270,7 +1294,9 @@ void GamePlayScene::Update()
     UpdateCameraShakePostEffect();
 
 #pragma region
-#ifdef USE_IMGUI
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    ApplyDevelopmentLighting();
+#elif defined(USE_IMGUI)
 
     // player_->DrawImGui();
 
@@ -1280,19 +1306,19 @@ void GamePlayScene::Update()
     ImGui::Begin("Lighting Control");
 
     // ---- ライトの ON / OFF ----
-    static bool lightEnabled = true;
+    bool& lightEnabled = lightEnabled_;
     ImGui::Checkbox("Enable Light", &lightEnabled);
 
     // ---- ライトの色 ----
-    static Vector4 lightColor = Vector4(0.90f, 0.96f, 1.0f, 1.0f);
+    Vector4& lightColor = lightColor_;
     ImGui::ColorEdit3("Light Color", (float*)&lightColor);
 
     // ---- 明るさ（強さ） ----
-    static float lightIntensity = 0.90f;
+    float& lightIntensity = lightIntensity_;
     ImGui::SliderFloat("Intensity", &lightIntensity, 0.0f, 5.0f);
 
     // ---- 光の向き ----
-    static Vector3 lightDir = { -0.35f, -0.82f, 0.45f };
+    Vector3& lightDir = lightDir_;
     ImGui::SliderFloat3("Direction", &lightDir.x, -1.0f, 1.0f);
 
     // ---- 正規化 ----
@@ -1308,7 +1334,7 @@ void GamePlayScene::Update()
         normalizedDir,
         intensity);
 
-    static Vector4 ambientColor = Vector4(0.40f, 0.52f, 0.68f, 0.24f);
+    Vector4& ambientColor = ambientColor_;
 
     // ---- リセットボタン（向きだけ元に戻す）---
     if (ImGui::Button("Reset Direction")) {
@@ -1335,20 +1361,20 @@ void GamePlayScene::Update()
 
     // Point Light コントロール
     ImGui::Begin("Point Light Control");
-    static bool pointEnabled = true;
+    bool& pointEnabled = pointEnabled_;
     ImGui::Checkbox("Enable Point Light", &pointEnabled);
 
-    static Vector4 pointColor = { 1, 1, 1, 1 };
+    Vector4& pointColor = pointColor_;
     ImGui::ColorEdit3("Point Color", (float*)&pointColor);
 
-    static Vector3 pointPos = { 0.0f, 2.0f, 0.0f };
+    Vector3& pointPos = pointPos_;
     ImGui::SliderFloat3("Point Position", &pointPos.x, -10.0f, 10.0f);
 
-    static float pointIntensity = 1.0f;
+    float& pointIntensity = pointIntensity_;
     ImGui::SliderFloat("Point Intensity", &pointIntensity, 0.0f, 5.0f);
 
-    static float pointRadius = 10.0f;
-    static float pointDecay = 1.0f;
+    float& pointRadius = pointRadius_;
+    float& pointDecay = pointDecay_;
     ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
     ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
 
@@ -1364,37 +1390,37 @@ void GamePlayScene::Update()
 
     // Spot Light コントロール
     ImGui::Begin("Spot Light Control");
-    static bool spotEnabled = true;
+    bool& spotEnabled = spotEnabled_;
     ImGui::Checkbox("Enable Spot Light", &spotEnabled);
 
     // 色
-    static Vector4 spotColor = { 1, 1, 1, 1 };
+    Vector4& spotColor = spotColor_;
     ImGui::ColorEdit3("Spot Color", (float*)&spotColor);
 
     // 位置
-    static Vector3 spotPos = { 0.0f, 0.0f, 0.0f };
+    Vector3& spotPos = spotPos_;
     ImGui::SliderFloat3("Spot Position", &spotPos.x, -10.0f, 10.0f);
 
     // 方向
-    static Vector3 spotDir = { -1.0f, 0.0f, 0.0f };
+    Vector3& spotDir = spotDir_;
     ImGui::SliderFloat3("Spot Direction", &spotDir.x, -1.0f, 1.0f);
     Vector3 normalizedSpotDir = Normalize(spotDir);
 
     // 強さ
-    static float spotIntensity = 4.0f;
+    float& spotIntensity = spotIntensity_;
     ImGui::SliderFloat("Spot Intensity", &spotIntensity, 0.0f, 10.0f);
 
     // 距離・減衰
-    static float spotDistance = 7.0f;
-    static float spotDecay = 2.0f;
+    float& spotDistance = spotDistance_;
+    float& spotDecay = spotDecay_;
     ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
     ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
 
     // 角度（度数で操作し、cos に変換）
-    static float spotAngleDeg = 60.0f;
-    static float spotFalloffStartDeg = 30.0f;
+    float& spotAngleDeg = spotAngleDeg_;
+    float& spotFalloffStartDeg = spotFalloffStartDeg_;
 
-    ImGui::SliderFloat("Spot Angle (deg)", &spotAngleDeg, 1.0f, 90.0f);
+    ImGui::SliderFloat("Spot Angle (deg)", &spotAngleDeg, 2.0f, 90.0f);
     ImGui::SliderFloat("Falloff Start (deg)", &spotFalloffStartDeg, 1.0f, spotAngleDeg - 1.0f);
 
     // cos に変換
@@ -1416,6 +1442,7 @@ void GamePlayScene::Update()
     lm->SetSpotLightDistance(spotDistance);
     lm->SetSpotLightDecay(spotDecay);
     lm->SetSpotLightCosAngle(cosAngle);
+    lm->SetSpotLightCosFalloffStart(cosFalloffStart);
 
     ImGui::End();
 
@@ -1528,8 +1555,9 @@ void GamePlayScene::UpdateCamera(
     float nextRailDistance,
     Input* input)
 {
+    debugCameraController_->Update();
     // カメラポイント補間の適用
-    if (hasCameraPoint_) {
+    if (hasCameraPoint_ && !debugCameraController_->GetDebugMode()) {
         float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
         cameraPointLerpTime_ += deltaTime;
         float moveTime = cameraPointObject_.cameraPoint.moveTime;
@@ -1578,9 +1606,6 @@ void GamePlayScene::UpdateCamera(
     // FOVの補間計算とカメラへの適用
     currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
     camera_->SetFovY(currentFovY_);
-
-    // 1. デバッグカメラコントローラーの更新
-    debugCameraController_->Update();
 
     // デバッグモードでない場合は、描画用カメラをレールに沿って遅延追従（Lerp）させる
     if (!debugCameraController_->GetDebugMode()) {
@@ -1759,7 +1784,7 @@ void GamePlayScene::UpdateOceanLife(
 
 void GamePlayScene::ProcessPlayerShooting(Input* input)
 {
-    if (input != nullptr) {
+    if (input != nullptr && !debugCameraController_->GetDebugMode()) {
         if (input->IsMouseTrigger(0) && !player_->IsHomingMissileSelected()) {
             // 最新の描画用カメラを渡して、高精度な射撃用Rayから弾を発射する
             player_->FireBullet(*camera_);
@@ -1815,9 +1840,15 @@ void GamePlayScene::Draw3D()
     if (GetActiveBoss() != nullptr) {
         GetActiveBoss()->Draw();
     }
-#ifdef _DEBUG
-    rail_->DrawDebug();
-    DrawCollisionDebug();
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+    if (DebugRenderer::GetInstance()->IsVisible()) {
+        if (showRailDebug_) {
+            rail_->DrawDebug();
+        }
+        if (showCollisionDebug_) {
+            DrawCollisionDebug();
+        }
+    }
 #endif
 
     //----------------------
@@ -2134,6 +2165,13 @@ void GamePlayScene::DrawImGui()
         return;
     }
 #endif
+#if defined(ENABLE_DEVELOPMENT_TOOLS) && !defined(_DEBUG)
+    // Keep the TAB pause menu. F10 can reveal older ImGui tools when needed.
+    if (!DevelopmentWebPanel::GetInstance().IsLegacyUiVisible()) {
+        editorManager_->DrawGizmo(camera_.get());
+        return;
+    }
+#endif
 #ifdef USE_IMGUI
     // ボス出現時、画面上部中央にスタイリッシュな2本の横長HPバーをHUD風にオーバーレイ表示する
     if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
@@ -2389,43 +2427,372 @@ void GamePlayScene::UpdateWaterDropEffect()
         PostEffectStage::AfterParticle);
 }
 
-#ifdef _DEBUG
-void GamePlayScene::DrawCollisionDebug()
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+std::string GamePlayScene::GetDevelopmentStateJson() const
 {
-    if (showIceJellyfishCollision_) {
-        if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
-            iceJellyfish->DrawCollisionDebug();
+    const StageBoss* boss = GetActiveBoss();
+    const IceJellyfish* jellyfish = dynamic_cast<const IceJellyfish*>(boss);
+    nlohmann::json state = {
+        { "active", true },
+        { "freeCamera", debugCameraController_->GetDebugMode() },
+        { "cameraSpeed", debugCameraController_->GetMoveSpeed() },
+        { "paused", developmentPaused_ },
+        { "invincibleMode", player_->IsInvincibleMode() },
+        { "playerHp", player_->GetCurrentHp() },
+        { "playerMaxHp", player_->GetMaxHp() },
+        { "showRail", showRailDebug_ },
+        { "showCollision", showCollisionDebug_ },
+        { "showPlayer", showPlayerCollision_ },
+        { "showEnemy", showEnemyCollision_ },
+        { "showStage", showStageCollision_ },
+        { "showBullet", showBulletCollision_ },
+        { "showIce", showIceJellyfishCollision_ },
+        { "controlMode", static_cast<int>(gControlMode) },
+        { "mouseSensitivity", gMouseSensitivity },
+        { "cameraHeightFollowFactor", cameraHeightFollowFactor_ },
+        { "cameraLookUpFactor", cameraLookUpFactor_ },
+        { "cameraX", camera_->GetTranslate().x }, { "cameraY", camera_->GetTranslate().y },
+        { "cameraZ", camera_->GetTranslate().z },
+        { "cameraRotX", camera_->GetRotate().x }, { "cameraRotY", camera_->GetRotate().y },
+        { "cameraRotZ", camera_->GetRotate().z },
+        { "cameraScaleX", camera_->GetScale().x }, { "cameraScaleY", camera_->GetScale().y },
+        { "cameraScaleZ", camera_->GetScale().z },
+        { "cameraFovY", camera_->GetFovY() }, { "cameraNearClip", camera_->GetNearClip() },
+        { "cameraFarClip", camera_->GetFarClip() },
+        { "lightEnabled", lightEnabled_ },
+        { "lightColorR", lightColor_.x }, { "lightColorG", lightColor_.y }, { "lightColorB", lightColor_.z },
+        { "lightIntensity", lightIntensity_ },
+        { "lightDirX", lightDir_.x }, { "lightDirY", lightDir_.y }, { "lightDirZ", lightDir_.z },
+        { "ambientColorR", ambientColor_.x }, { "ambientColorG", ambientColor_.y },
+        { "ambientColorB", ambientColor_.z }, { "ambientIntensity", ambientColor_.w },
+        { "pointEnabled", pointEnabled_ },
+        { "pointColorR", pointColor_.x }, { "pointColorG", pointColor_.y }, { "pointColorB", pointColor_.z },
+        { "pointPosX", pointPos_.x }, { "pointPosY", pointPos_.y }, { "pointPosZ", pointPos_.z },
+        { "pointIntensity", pointIntensity_ }, { "pointRadius", pointRadius_ }, { "pointDecay", pointDecay_ },
+        { "spotEnabled", spotEnabled_ },
+        { "spotColorR", spotColor_.x }, { "spotColorG", spotColor_.y }, { "spotColorB", spotColor_.z },
+        { "spotPosX", spotPos_.x }, { "spotPosY", spotPos_.y }, { "spotPosZ", spotPos_.z },
+        { "spotDirX", spotDir_.x }, { "spotDirY", spotDir_.y }, { "spotDirZ", spotDir_.z },
+        { "spotIntensity", spotIntensity_ }, { "spotDistance", spotDistance_ },
+        { "spotDecay", spotDecay_ }, { "spotAngleDeg", spotAngleDeg_ },
+        { "spotFalloffStartDeg", spotFalloffStartDeg_ },
+        { "collisionOverlay", collisionOverlay_ },
+        { "drawDistance", collisionDrawDistance_ },
+        { "railDistance", railDistance_ },
+        { "bossAvailable", boss != nullptr && !boss->IsDead() },
+        { "jellyfishAvailable", jellyfish != nullptr && !jellyfish->IsDead() },
+        { "bossZ", boss ? boss->GetPosition().z : 0.0f },
+        { "bossHp", jellyfish ? nlohmann::json(jellyfish->GetHp()) : nlohmann::json(nullptr) }
+    };
+    state["moveEnemies"] = nlohmann::json::array();
+    state["objects"] = nlohmann::json::array();
+    state["selectedObject"] = nullptr;
+    state["gizmoMode"] = static_cast<int>(editorManager_->GetGizmoMode());
+    const auto& sceneObjects = sceneObjectManager_->GetObjects();
+    for (std::size_t index = 0; index < sceneObjects.size(); ++index) {
+        const Object3d* object = sceneObjects[index].get();
+        state["objects"].push_back({{"index", index}, {"name", object->GetName()}});
+        if (object == editorManager_->GetSelectedObject()) {
+            state["selectedObject"] = index;
+            state["objectX"] = object->GetTranslate().x;
+            state["objectY"] = object->GetTranslate().y;
+            state["objectZ"] = object->GetTranslate().z;
+            state["objectRotX"] = object->GetRotate().x;
+            state["objectRotY"] = object->GetRotate().y;
+            state["objectRotZ"] = object->GetRotate().z;
+            state["objectScaleX"] = object->GetScale().x;
+            state["objectScaleY"] = object->GetScale().y;
+            state["objectScaleZ"] = object->GetScale().z;
         }
     }
+    int moveEnemyIndex = 0;
+    for (const auto& enemy : enemies_) {
+        if (enemy->IsDead()) continue;
+        if (const MoveEnemy* moveEnemy = dynamic_cast<const MoveEnemy*>(enemy.get())) {
+            state["moveEnemies"].push_back({
+                {"index", moveEnemyIndex++},
+                {"pattern", static_cast<int>(moveEnemy->GetMovePattern())},
+                {"speed", moveEnemy->GetMoveSpeed()},
+                {"amplitude", moveEnemy->GetAmplitude()},
+                {"frequency", moveEnemy->GetFrequency()}
+            });
+        }
+    }
+    return state.dump();
+}
+
+void GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::string& value)
+{
+    const bool enabled = value == "true";
+    if (key == "invincibleMode") {
+        player_->SetInvincibleMode(enabled);
+        return;
+    }
+    if (key == "editorSave") { editorManager_->SaveJson("resources/Scenes/TestScene.json"); return; }
+    if (key == "editorLoad") { editorManager_->LoadJson("resources/Scenes/TestScene.json"); return; }
+    if (key == "objectSelect" || key == "gizmoMode") {
+        char* end = nullptr;
+        const long index = std::strtol(value.c_str(), &end, 10);
+        if (end == value.c_str() || *end != '\0') return;
+        if (key == "gizmoMode") {
+            if (index >= 0 && index <= 2) editorManager_->SetGizmoMode(static_cast<GizmoMode>(index));
+        } else if (index == -1) {
+            editorManager_->SetSelectedObject(nullptr);
+        } else if (index >= 0 && static_cast<std::size_t>(index) < sceneObjectManager_->GetObjects().size()) {
+            editorManager_->SetSelectedObject(sceneObjectManager_->GetObjects()[index].get());
+        }
+        return;
+    }
+    if (key.starts_with("object")) {
+        Object3d* object = editorManager_->GetSelectedObject();
+        if (!object) return;
+        char* end = nullptr;
+        const float number = std::strtof(value.c_str(), &end);
+        if (end == value.c_str() || *end != '\0' || !std::isfinite(number)) return;
+        Vector3 translate = object->GetTranslate();
+        Vector3 rotate = object->GetRotate();
+        Vector3 scale = object->GetScale();
+#define OBJECT_FIELD(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); }
+        OBJECT_FIELD("objectX", translate.x, -10000.0f, 10000.0f)
+        OBJECT_FIELD("objectY", translate.y, -10000.0f, 10000.0f)
+        OBJECT_FIELD("objectZ", translate.z, -10000.0f, 10000.0f)
+        OBJECT_FIELD("objectRotX", rotate.x, -6.28f, 6.28f)
+        OBJECT_FIELD("objectRotY", rotate.y, -6.28f, 6.28f)
+        OBJECT_FIELD("objectRotZ", rotate.z, -6.28f, 6.28f)
+        OBJECT_FIELD("objectScaleX", scale.x, 0.01f, 100.0f)
+        OBJECT_FIELD("objectScaleY", scale.y, 0.01f, 100.0f)
+        OBJECT_FIELD("objectScaleZ", scale.z, 0.01f, 100.0f)
+#undef OBJECT_FIELD
+        object->SetTranslate(translate);
+        object->SetRotate(rotate);
+        object->SetScale(scale);
+        return;
+    }
+    if (key.starts_with("enemy.")) {
+        const std::size_t separator = key.find('.', 6);
+        if (separator == std::string::npos) return;
+        const std::string indexText = key.substr(6, separator - 6);
+        char* indexEnd = nullptr;
+        const long targetIndex = std::strtol(indexText.c_str(), &indexEnd, 10);
+        if (indexEnd == indexText.c_str() || *indexEnd != '\0' || targetIndex < 0) return;
+        int currentIndex = 0;
+        for (const auto& enemy : enemies_) {
+            if (enemy->IsDead()) continue;
+            MoveEnemy* moveEnemy = dynamic_cast<MoveEnemy*>(enemy.get());
+            if (!moveEnemy) continue;
+            if (currentIndex++ != targetIndex) continue;
+            const std::string field = key.substr(separator + 1);
+            if (field == "reset") { moveEnemy->ResetPosition(); return; }
+            char* end = nullptr;
+            const float number = std::strtof(value.c_str(), &end);
+            if (end == value.c_str() || *end != '\0' || !std::isfinite(number)) return;
+            if (field == "pattern") moveEnemy->SetMovePattern(static_cast<MovePattern>(std::clamp(static_cast<int>(number), 0, 3)));
+            else if (field == "speed") moveEnemy->SetMoveSpeed(std::clamp(number, 0.0f, 10.0f));
+            else if (field == "amplitude") moveEnemy->SetAmplitude(std::clamp(number, 0.0f, 20.0f));
+            else if (field == "frequency") moveEnemy->SetFrequency(std::clamp(number, 0.0f, 10.0f));
+            return;
+        }
+        return;
+    }
+    if (key == "lightEnabled") { lightEnabled_ = enabled; ApplyDevelopmentLighting(); return; }
+    if (key == "pointEnabled") { pointEnabled_ = enabled; ApplyDevelopmentLighting(); return; }
+    if (key == "spotEnabled") { spotEnabled_ = enabled; ApplyDevelopmentLighting(); return; }
+    if (key == "resetLightDirection") {
+        lightDir_ = { -0.35f, -0.82f, 0.45f };
+        ApplyDevelopmentLighting();
+        return;
+    }
+    if (key == "resetLight") {
+        lightEnabled_ = true;
+        lightColor_ = { 0.90f, 0.96f, 1.0f, 1.0f };
+        lightIntensity_ = 0.90f;
+        lightDir_ = { -0.35f, -0.82f, 0.45f };
+        ambientColor_ = { 0.40f, 0.52f, 0.68f, 0.24f };
+        ApplyDevelopmentLighting();
+        return;
+    }
+    char* settingEnd = nullptr;
+    const float number = std::strtof(value.c_str(), &settingEnd);
+    if (settingEnd != value.c_str() && *settingEnd == '\0' && std::isfinite(number)) {
+#define SET_LIGHT(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); ApplyDevelopmentLighting(); return; }
+#define SET_VALUE(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return; }
+        SET_LIGHT("lightColorR", lightColor_.x, 0.0f, 1.0f)
+        SET_LIGHT("lightColorG", lightColor_.y, 0.0f, 1.0f)
+        SET_LIGHT("lightColorB", lightColor_.z, 0.0f, 1.0f)
+        SET_LIGHT("lightIntensity", lightIntensity_, 0.0f, 5.0f)
+        SET_LIGHT("lightDirX", lightDir_.x, -1.0f, 1.0f)
+        SET_LIGHT("lightDirY", lightDir_.y, -1.0f, 1.0f)
+        SET_LIGHT("lightDirZ", lightDir_.z, -1.0f, 1.0f)
+        SET_LIGHT("ambientColorR", ambientColor_.x, 0.0f, 1.0f)
+        SET_LIGHT("ambientColorG", ambientColor_.y, 0.0f, 1.0f)
+        SET_LIGHT("ambientColorB", ambientColor_.z, 0.0f, 1.0f)
+        SET_LIGHT("ambientIntensity", ambientColor_.w, 0.0f, 1.0f)
+        SET_LIGHT("pointColorR", pointColor_.x, 0.0f, 1.0f)
+        SET_LIGHT("pointColorG", pointColor_.y, 0.0f, 1.0f)
+        SET_LIGHT("pointColorB", pointColor_.z, 0.0f, 1.0f)
+        SET_LIGHT("pointPosX", pointPos_.x, -10.0f, 10.0f)
+        SET_LIGHT("pointPosY", pointPos_.y, -10.0f, 10.0f)
+        SET_LIGHT("pointPosZ", pointPos_.z, -10.0f, 10.0f)
+        SET_LIGHT("pointIntensity", pointIntensity_, 0.0f, 5.0f)
+        SET_LIGHT("pointRadius", pointRadius_, 0.1f, 30.0f)
+        SET_LIGHT("pointDecay", pointDecay_, 0.1f, 5.0f)
+        SET_LIGHT("spotColorR", spotColor_.x, 0.0f, 1.0f)
+        SET_LIGHT("spotColorG", spotColor_.y, 0.0f, 1.0f)
+        SET_LIGHT("spotColorB", spotColor_.z, 0.0f, 1.0f)
+        SET_LIGHT("spotPosX", spotPos_.x, -10.0f, 10.0f)
+        SET_LIGHT("spotPosY", spotPos_.y, -10.0f, 10.0f)
+        SET_LIGHT("spotPosZ", spotPos_.z, -10.0f, 10.0f)
+        SET_LIGHT("spotDirX", spotDir_.x, -1.0f, 1.0f)
+        SET_LIGHT("spotDirY", spotDir_.y, -1.0f, 1.0f)
+        SET_LIGHT("spotDirZ", spotDir_.z, -1.0f, 1.0f)
+        SET_LIGHT("spotIntensity", spotIntensity_, 0.0f, 10.0f)
+        SET_LIGHT("spotDistance", spotDistance_, 0.1f, 30.0f)
+        SET_LIGHT("spotDecay", spotDecay_, 0.1f, 5.0f)
+        if (key == "spotAngleDeg") {
+            spotAngleDeg_ = std::clamp(number, 2.0f, 90.0f);
+            spotFalloffStartDeg_ = (std::min)(spotFalloffStartDeg_, spotAngleDeg_ - 1.0f);
+            ApplyDevelopmentLighting();
+            return;
+        }
+        if (key == "spotFalloffStartDeg") {
+            spotFalloffStartDeg_ = std::clamp(number, 1.0f, spotAngleDeg_ - 1.0f);
+            ApplyDevelopmentLighting();
+            return;
+        }
+        SET_VALUE("cameraHeightFollowFactor", cameraHeightFollowFactor_, 0.0f, 1.0f)
+        SET_VALUE("cameraLookUpFactor", cameraLookUpFactor_, 0.0f, 2.0f)
+        if (key == "controlMode") {
+            gControlMode = number >= 0.5f ? Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
+            player_->SetControlMode(gControlMode);
+            return;
+        }
+        if (key == "mouseSensitivity") {
+            gMouseSensitivity = std::clamp(number, 0.5f, 2.0f);
+            player_->SetMouseSensitivity(gMouseSensitivity);
+            return;
+        }
+        if (key == "cameraFovY") {
+            normalFovY_ = std::clamp(number, 0.01f, 3.13f);
+            currentFovY_ = normalFovY_;
+            camera_->SetFovY(currentFovY_);
+            return;
+        }
+        if (key == "cameraNearClip") { camera_->SetNearClip(std::clamp(number, 0.001f, camera_->GetFarClip() - 0.001f)); return; }
+        if (key == "cameraFarClip") { camera_->SetFarClip(std::clamp(number, camera_->GetNearClip() + 0.001f, 10000.0f)); return; }
+        if (debugCameraController_->GetDebugMode()) {
+            SET_VALUE("cameraX", camera_->GetTranslate().x, -10000.0f, 10000.0f)
+            SET_VALUE("cameraY", camera_->GetTranslate().y, -10000.0f, 10000.0f)
+            SET_VALUE("cameraZ", camera_->GetTranslate().z, -10000.0f, 10000.0f)
+            SET_VALUE("cameraRotX", camera_->GetRotate().x, -6.28f, 6.28f)
+            SET_VALUE("cameraRotY", camera_->GetRotate().y, -6.28f, 6.28f)
+            SET_VALUE("cameraRotZ", camera_->GetRotate().z, -6.28f, 6.28f)
+        }
+        if (key == "cameraScaleX" || key == "cameraScaleY" || key == "cameraScaleZ") {
+            Vector3 scale = camera_->GetScale();
+            if (key == "cameraScaleX") scale.x = std::clamp(number, 0.01f, 10.0f);
+            if (key == "cameraScaleY") scale.y = std::clamp(number, 0.01f, 10.0f);
+            if (key == "cameraScaleZ") scale.z = std::clamp(number, 0.01f, 10.0f);
+            camera_->SetScale(scale);
+            return;
+        }
+#undef SET_LIGHT
+#undef SET_VALUE
+    }
+    if (key == "freeCamera") debugCameraController_->SetDebugMode(enabled);
+    else if (key == "returnCamera") debugCameraController_->SetDebugMode(false);
+    else if (key == "cameraSpeed") {
+        char* end = nullptr;
+        const float speed = std::strtof(value.c_str(), &end);
+        if (end != value.c_str() && *end == '\0') debugCameraController_->SetMoveSpeed(speed);
+    }
+    else if (key == "paused") {
+        developmentPaused_ = enabled;
+        if (!enabled) stepDevelopmentFrame_ = false;
+    } else if (key == "step") {
+        if (developmentPaused_) stepDevelopmentFrame_ = true;
+    } else if (key == "showRail") showRailDebug_ = enabled;
+    else if (key == "showCollision") showCollisionDebug_ = enabled;
+    else if (key == "showPlayer") showPlayerCollision_ = enabled;
+    else if (key == "showEnemy") showEnemyCollision_ = enabled;
+    else if (key == "showStage") showStageCollision_ = enabled;
+    else if (key == "showBullet") showBulletCollision_ = enabled;
+    else if (key == "showIce") showIceJellyfishCollision_ = enabled;
+    else if (key == "collisionOverlay") collisionOverlay_ = enabled;
+    else if (key == "drawDistance") {
+        char* end = nullptr;
+        const float distance = std::strtof(value.c_str(), &end);
+        if (end != value.c_str() && *end == '\0' && std::isfinite(distance)) {
+            collisionDrawDistance_ = std::clamp(distance, 20.0f, 2000.0f);
+        }
+    } else if (key == "teleportBossArea") {
+        railDistance_ = 1750.0f;
+    } else if (key == "teleportBoss") {
+        if (const StageBoss* boss = GetActiveBoss()) {
+            railDistance_ = (std::max)(0.0f, boss->GetPosition().z - 130.0f);
+        }
+    } else if (key == "teleportJellyfish") {
+        if (dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+            railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
+        }
+    }
+}
+#endif
+
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+void GamePlayScene::DrawCollisionDebug()
+{
     DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
+    const bool previousOverlay = debugRenderer->IsWireframeOverlay();
+    debugRenderer->SetWireframeOverlay(collisionOverlay_);
+    const Vector3 cameraPosition = camera_->GetTranslate();
+    const auto isNearCamera = [&](const Vector3& position, float radius = 0.0f) {
+        const float dx = position.x - cameraPosition.x;
+        const float dy = position.y - cameraPosition.y;
+        const float dz = position.z - cameraPosition.z;
+        const float range = collisionDrawDistance_ + (std::max)(0.0f, radius);
+        return dx * dx + dy * dy + dz * dz <= range * range;
+    };
+    if (showEnemyCollision_ && showIceJellyfishCollision_) {
+        if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+            if (isNearCamera(iceJellyfish->GetPosition(), 100.0f)) {
+                iceJellyfish->DrawCollisionDebug();
+            }
+        }
+    }
     constexpr Vector4 kPlayerColor = { 0.0f, 1.0f, 0.0f, 1.0f };
     constexpr Vector4 kEnemyColor = { 1.0f, 0.15f, 0.15f, 1.0f };
     constexpr Vector4 kPlayerBulletColor = { 0.0f, 0.8f, 1.0f, 1.0f };
     constexpr Vector4 kEnemyBulletColor = { 1.0f, 0.85f, 0.0f, 1.0f };
     constexpr Vector4 kStageColliderColor = { 1.0f, 0.0f, 1.0f, 1.0f };
-    constexpr float kLineThickness = 2.0f;
+    constexpr float kLineThickness = 3.0f;
 
-    debugRenderer->AddWireSphere(
-        player_->GetTranslate(),
-        kPlayerEnemyCollisionRadius * 0.5f,
-        kPlayerColor,
-        kLineThickness);
+    if (showPlayerCollision_ && isNearCamera(player_->GetTranslate(), kPlayerEnemyCollisionRadius)) {
+        debugRenderer->AddWireSphere(
+            player_->GetTranslate(), kPlayerEnemyCollisionRadius * 0.5f,
+            kPlayerColor, kLineThickness);
+    }
 
-    for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
-        if (bullet->IsAlive()) {
+    if (showBulletCollision_) {
+      for (const std::unique_ptr<PlayerBullet>& bullet : player_->GetBullets()) {
+        if (bullet->IsAlive() && isNearCamera(bullet->GetPosition(), bullet->GetCollisionRadius())) {
             debugRenderer->AddWireSphere(
                 bullet->GetPosition(),
                 bullet->GetCollisionRadius(),
                 kPlayerBulletColor,
                 kLineThickness);
         }
+      }
     }
 
-    for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
+    if (showStageCollision_) {
+      for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
         const BoxCollider* collider = levelObject->GetCollider();
         if (collider == nullptr) {
             continue;
         }
+        const Vector3 size = collider->GetSize();
+        const float radius = 0.5f * std::sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+        if (!isNearCamera(collider->GetCenter(), radius)) continue;
         const OBB box = CollisionManager::MakeOBB(
             collider->GetCenter(),
             collider->GetSize(),
@@ -2438,10 +2805,12 @@ void GamePlayScene::DrawCollisionDebug()
             box.orientation[2],
             kStageColliderColor,
             kLineThickness);
+      }
     }
 
     std::vector<EnemyCollisionPart> collisionParts;
-    for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+    if (showEnemyCollision_) {
+      for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (enemy->IsDead()) {
             continue;
         }
@@ -2449,6 +2818,33 @@ void GamePlayScene::DrawCollisionDebug()
         collisionParts.clear();
         enemy->GetCollisionParts(collisionParts);
         for (const EnemyCollisionPart& part : collisionParts) {
+            if (!isNearCamera(part.position, part.radius)) continue;
+            debugRenderer->AddWireSphere(
+                part.position,
+                part.radius,
+                kEnemyColor,
+                kLineThickness);
+        }
+      }
+    }
+
+    if (showBulletCollision_) {
+      for (const std::unique_ptr<EnemyBullet>& bullet : enemyBulletManager_.GetBullets()) {
+        if (bullet->IsAlive() && isNearCamera(bullet->GetPosition(), bullet->GetCollisionRadius())) {
+            debugRenderer->AddWireSphere(
+                bullet->GetPosition(),
+                bullet->GetCollisionRadius() * 0.5f,
+                kEnemyBulletColor,
+                kLineThickness);
+        }
+      }
+    }
+
+    if (showEnemyCollision_ && GetActiveBoss() != nullptr && !GetActiveBoss()->IsDead()) {
+        collisionParts.clear();
+        GetActiveBoss()->GetCollisionParts(collisionParts);
+        for (const EnemyCollisionPart& part : collisionParts) {
+            if (!isNearCamera(part.position, part.radius)) continue;
             debugRenderer->AddWireSphere(
                 part.position,
                 part.radius,
@@ -2456,36 +2852,15 @@ void GamePlayScene::DrawCollisionDebug()
                 kLineThickness);
         }
     }
-
-    for (const std::unique_ptr<EnemyBullet>& bullet : enemyBulletManager_.GetBullets()) {
-        if (bullet->IsAlive()) {
-            debugRenderer->AddWireSphere(
-                bullet->GetPosition(),
-                bullet->GetCollisionRadius() * 0.5f,
-                kEnemyBulletColor,
-                kLineThickness);
-        }
-    }
-
-    if (GetActiveBoss() == nullptr || GetActiveBoss()->IsDead()) {
-        return;
-    }
-
-    collisionParts.clear();
-    GetActiveBoss()->GetCollisionParts(collisionParts);
-    for (const EnemyCollisionPart& part : collisionParts) {
-        debugRenderer->AddWireSphere(
-            part.position,
-            part.radius,
-            kEnemyColor,
-            kLineThickness);
-    }
-
+    debugRenderer->SetWireframeOverlay(previousOverlay);
 }
 #endif
 
 void GamePlayScene::Finalize()
 {
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().SetScene(nullptr);
+#endif
     BaseEnemy::SetBulletManager(nullptr);
     enemyBulletManager_.Clear();
     CollisionManager::GetInstance()->ClearRaycastSphereTargets();
@@ -2525,6 +2900,36 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
             PostEffectType::Bloom,
             PostEffectStage::BeforeParticle);
     }
+}
+
+void GamePlayScene::ApplyDevelopmentLighting()
+{
+    LightManager* lightManager = LightManager::GetInstance();
+    if (lightManager == nullptr) return;
+    Vector3 direction = Normalize(lightDir_);
+    if (std::abs(direction.x) + std::abs(direction.y) + std::abs(direction.z) < 0.001f) {
+        direction = { -0.35f, -0.82f, 0.45f };
+    }
+    lightManager->SetDirectional(lightColor_, direction, lightEnabled_ ? lightIntensity_ : 0.0f);
+    lightManager->SetAmbientColor({ ambientColor_.x, ambientColor_.y, ambientColor_.z });
+    lightManager->SetAmbientIntensity(ambientColor_.w);
+    lightManager->SetPointRadius(pointRadius_);
+    lightManager->SetPointDecay(pointDecay_);
+    lightManager->SetPointLight(pointColor_, pointPos_, pointEnabled_ ? pointIntensity_ : 0.0f);
+    direction = Normalize(spotDir_);
+    if (std::abs(direction.x) + std::abs(direction.y) + std::abs(direction.z) < 0.001f) {
+        direction = { -1.0f, 0.0f, 0.0f };
+    }
+    lightManager->SetSpotLightColor(spotColor_);
+    lightManager->SetSpotLightPosition(spotPos_);
+    lightManager->SetSpotLightDirection(direction);
+    lightManager->SetSpotLightIntensity(spotEnabled_ ? spotIntensity_ : 0.0f);
+    lightManager->SetSpotLightDistance(spotDistance_);
+    lightManager->SetSpotLightDecay(spotDecay_);
+    lightManager->SetSpotLightCosAngle(std::cos(spotAngleDeg_ * std::numbers::pi_v<float> / 180.0f));
+    lightManager->SetSpotLightCosFalloffStart(std::cos(
+        std::clamp(spotFalloffStartDeg_, 1.0f, (std::max)(1.0f, spotAngleDeg_ - 1.0f)) *
+        std::numbers::pi_v<float> / 180.0f));
 }
 
 void GamePlayScene::ApplyStageVisualPreset()
@@ -2901,9 +3306,20 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 objData.fileName == "IceSpike.obj";
             if (stageId_ == "stage03" && isIceModel) {
                 levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
-                // Three cel-shaded ice bands: deep blue shadow, cyan midtone,
-                // and a clean white lit face.
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);
+                const char* iceMaterial = "resources/Shaders/Object3D/StageIceSpire";
+                if (objData.fileName == "Environment/Ice/ice_island.obj") {
+                    iceMaterial = "resources/Shaders/Object3D/StageIceIsland";
+                } else if (objData.fileName == "Environment/Ice/ice_boulder.obj") {
+                    iceMaterial = "resources/Shaders/Object3D/StageIceBoulder";
+                } else if (objData.fileName == "Environment/Ice/ice_slab.obj") {
+                    iceMaterial = "resources/Shaders/Object3D/StageIceSlab";
+                } else if (objData.fileName == "Environment/Ice/ice_arch.obj") {
+                    iceMaterial = "resources/Shaders/Object3D/StageIceArch";
+                } else if (objData.fileName == "Environment/Ice/crystal.obj") {
+                    iceMaterial = "resources/Shaders/Object3D/StageIceCrystal";
+                }
+                levelObject->SetMaterial(iceMaterial);
                 levelObject->GetMaterial()->shininess = 0.0f;
                 levelObject->SetEnableEnvironmentMap(false);
             }

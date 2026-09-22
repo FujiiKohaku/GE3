@@ -24,6 +24,22 @@ bool Crossed(float previous, float current, float point)
 {
     return previous < point && current >= point;
 }
+
+float SmoothStep(float value)
+{
+    const float t = std::clamp(value, 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+Vector4 LerpColor(const Vector4& from, const Vector4& to, float t)
+{
+    return {
+        from.x + (to.x - from.x) * t,
+        from.y + (to.y - from.y) * t,
+        from.z + (to.z - from.z) * t,
+        from.w + (to.w - from.w) * t
+    };
+}
 }
 
 std::unique_ptr<Object3d> IceJellyfish::CreatePart(
@@ -802,19 +818,18 @@ void IceJellyfish::UpdatePartTransforms()
             const bool iceSpearChargedSegment = iceSpearEmitter ||
                 (segment + 1 < kSegmentsPerTentacle &&
                     IsIceSpearEmitter(tentacle, segment + 1));
+            const Vector4 baseTentacleColor = { 0.55f, 0.80f, 1.0f, 1.0f };
+            const Vector4 chargedTentacleColor = { 1.65f, 0.45f, 2.80f, 1.0f };
+            const float easedCharge = SmoothStep(iceSpearPoseWeight_);
             object.SetColor(iceSpearChargedSegment
-                ? Vector4 {
-                    0.55f + iceSpearPoseWeight_ * 1.10f,
-                    0.80f - iceSpearPoseWeight_ * 0.35f,
-                    1.00f + iceSpearPoseWeight_ * 1.80f,
-                    1.0f }
+                ? LerpColor(baseTentacleColor, chargedTentacleColor, easedCharge)
                 : (icePillarTentacle
                     ? Vector4 {
                         0.55f + icePillarCharge * 0.65f,
                         0.80f + icePillarCharge * 1.35f,
                         1.00f + icePillarCharge * 1.70f,
                         1.0f }
-                    : Vector4 { 0.55f, 0.80f, 1.0f, 1.0f }));
+                    : baseTentacleColor));
             object.Update();
             if (IsSegmentAlive(tentacle, segment)) {
                 tentacleColliders_.push_back(IceJellyfishCollision::TransformBox(

@@ -167,7 +167,11 @@ private:
     std::unique_ptr<Renderer> renderer_;
 
     bool isMouseCursorVisible_ = false;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    bool showDebugUI_ = false;
+#else
     bool showDebugUI_ = true;
+#endif
 
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
     std::chrono::steady_clock::time_point performanceLogStartTime_;
