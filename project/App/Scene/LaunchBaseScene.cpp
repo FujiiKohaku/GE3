@@ -98,7 +98,6 @@ void LaunchBaseScene::Initialize()
     AddObject(std::string(kLaunchBase) + "fuel_station.obj", { -42.0f, 0.0f, -8.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.35f, 0.0f });
     AddObject(std::string(kLaunchBase) + "tool_crate.obj", { -36.0f, 0.0f, -1.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, -0.2f, 0.0f });
     AddObject(std::string(kLaunchBase) + "tool_crate.obj", { -40.0f, 0.0f, 2.0f }, { 0.85f, 0.85f, 0.85f }, { 0.0f, 0.45f, 0.0f });
-    AddObject(std::string(kLaunchBase) + "maintenance_tug.obj", { 31.5f, 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, -0.3f, 0.0f });
     AddObject(std::string(kLaunchBase) + "tool_crate.obj", { 39.0f, 0.0f, 2.5f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.25f, 0.0f });
     AddObject(std::string(kLaunchBase) + "fire_station.obj", { 43.0f, 0.0f, -5.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, -0.5f, 0.0f });
     AddObject(std::string(kLaunchBase) + "windsock.obj", { -47.0f, 0.0f, -3.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.3f, 0.0f });

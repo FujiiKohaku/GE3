@@ -356,20 +356,6 @@ def make_pipe_module() -> Mesh:
     return mesh
 
 
-def make_maintenance_tug() -> Mesh:
-    mesh = Mesh("MaintenanceTug")
-    mesh.box((0.0, 0.75, 0.0), (4.2, 1.2, 5.8), "navy")
-    mesh.box((0.0, 1.65, -0.6), (3.5, 1.3, 2.6), "white")
-    mesh.box((0.0, 2.25, -0.75), (3.1, 0.7, 1.7), "glass")
-    mesh.box((-2.05, 0.55, -1.65), (0.45, 1.05, 1.15), "deck_dark")
-    mesh.box((2.05, 0.55, -1.65), (0.45, 1.05, 1.15), "deck_dark")
-    mesh.box((-2.05, 0.55, 1.65), (0.45, 1.05, 1.15), "deck_dark")
-    mesh.box((2.05, 0.55, 1.65), (0.45, 1.05, 1.15), "deck_dark")
-    mesh.beam_between((0.0, 0.65, 2.7), (0.0, 0.45, 5.4), 0.28, "orange")
-    mesh.box((0.0, 1.0, -3.0), (2.2, 0.3, 0.28), "cyan")
-    return mesh
-
-
 def make_fuel_station() -> Mesh:
     mesh = Mesh("FuelStation")
     mesh.cylinder(2.6, 6.2, "navy", 16, y=3.1)
@@ -448,7 +434,6 @@ def main() -> None:
         "maintenance_catwalk.obj": make_catwalk(),
         "service_ladder.obj": make_ladder(),
         "pipe_module.obj": make_pipe_module(),
-        "maintenance_tug.obj": make_maintenance_tug(),
         "fuel_station.obj": make_fuel_station(),
         "tool_crate.obj": make_tool_crate(),
         "guidance_sign.obj": make_guidance_sign(),
