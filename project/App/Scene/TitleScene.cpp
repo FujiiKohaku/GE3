@@ -8,6 +8,7 @@
 #include "Engine/Light/LightManager.h"
 #include "Engine/Time/TimeManager.h"
 #include "StageSelectScene.h"
+#include "LaunchBaseScene.h"
 #include "SceneManager.h"
 #include <algorithm>
 #include <cmath>
@@ -120,7 +121,7 @@ void TitleScene::Initialize()
 
     pushToStartText_ = std::make_unique<Text>();
     pushToStartText_->Initialize(kDefaultFont);
-    pushToStartText_->SetText("PUSH TO START");
+    pushToStartText_->SetText("ENTER / SPACE: MISSION SELECT     L: LAUNCH BASE");
     pushToStartText_->SetPosition({ 640.0f, 475.0f });
     pushToStartText_->SetAnchorPoint({ 0.5f, 0.5f });
     pushToStartText_->SetFontSize(30.0f);
@@ -132,6 +133,11 @@ void TitleScene::Initialize()
 void TitleScene::Update()
 {
     Input* input = Input::GetInstance();
+    if (input != nullptr && input->IsKeyTrigger(DIK_L)) {
+        SceneManager::GetInstance()->SetNextScene(
+            std::make_unique<LaunchBaseScene>());
+        return;
+    }
     if (input != nullptr &&
         (input->IsKeyTrigger(DIK_RETURN) ||
          input->IsKeyTrigger(DIK_SPACE))) {

@@ -226,6 +226,7 @@ private:
     static constexpr float kDeathFallDuration = 1.2f;
 
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
+    float smoothedAimDistance_ = 220.0f;
 
     float normalMaxSpeed_ = 0.5f;
     float boostMaxSpeed_ = 1.0f;
@@ -266,9 +267,8 @@ private:
     Vector3 CalculateMuzzlePosition() const;
     void CreateAimRay(Ray& aimRay, const Camera& activeCamera) const;
     Vector3 CreateConvergencePoint(const Ray& aimRay) const;
-    Vector3 ResolveAimPoint(
-        const Ray& aimRay,
-        const Vector3& muzzlePosition) const;
+    void UpdateSmoothedAimDistance(const Camera& activeCamera);
+    Vector3 ResolveAimPoint(const Ray& aimRay) const;
     std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
     void FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget);
     void UpdateHomingTarget(bool isLocking);

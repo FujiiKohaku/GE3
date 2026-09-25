@@ -20,6 +20,9 @@
     <None Include="resources\Shaders\PostEffect\LensDistortion.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\MotionBlur.PS.hlsl" />
     <ClCompile Include="App\Scene\LoadingScene.cpp" />
+    <ClCompile Include="App\Scene\LaunchBaseScene.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <Filter Include="ソース ファイル">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
@@ -624,6 +627,9 @@
     <ClInclude Include="App\Scene\ArchiveAudio.h" />
     <ClInclude Include="App\Scene\PageTransition.h" />
     <ClInclude Include="App\Scene\StageSelectScene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\LaunchBaseScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Stage\StageCatalog.h">

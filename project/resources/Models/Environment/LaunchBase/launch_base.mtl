@@ -1,0 +1,63 @@
+# Launch-base palette
+newmtl deck
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/deck.png
+
+newmtl deck_dark
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/deck_dark.png
+
+newmtl navy
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/navy.png
+
+newmtl white
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/white.png
+
+newmtl orange
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/orange.png
+
+newmtl cyan
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/cyan.png
+
+newmtl glass
+Ka 1 1 1
+Kd 1 1 1
+Ks 0.08 0.08 0.08
+Ns 12
+d 1
+illum 2
+map_Kd textures/glass.png

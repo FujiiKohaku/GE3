@@ -24,6 +24,7 @@
 
 namespace {
 constexpr float kAimConvergenceDistance = 220.0f;
+constexpr float kAimDistanceFollowSpeed = 12.0f;
 }
 
 void Player::Initialize(Model* model)
@@ -54,6 +55,7 @@ void Player::Initialize(Model* model)
 
     aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) / 2.0f;
     aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) / 2.0f;
+    smoothedAimDistance_ = kAimConvergenceDistance;
 }
 
 void Player::Update()
@@ -78,6 +80,10 @@ void Player::Update()
 
     if (input == nullptr) {
         return;
+    }
+
+    if (camera_ != nullptr) {
+        UpdateSmoothedAimDistance(*camera_);
     }
    
     if (invincibleTimer_ > 0) {
@@ -424,7 +430,7 @@ void Player::FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarge
     Ray aimRay {};
     CreateAimRay(aimRay, activeCamera);
 
-    Vector3 aimPoint = ResolveAimPoint(aimRay, muzzlePosition);
+    Vector3 aimPoint = ResolveAimPoint(aimRay);
 
     if (HomingMissileBullet* missile = dynamic_cast<HomingMissileBullet*>(bullet.get())) {
         missile->SetTarget(homingTarget, homingTargets_);
@@ -438,7 +444,7 @@ void Player::FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarge
 
     Ray drawRay {};
     CreateAimRay(drawRay, *camera_);
-    Vector3 drawAimPoint = ResolveAimPoint(drawRay, muzzlePosition);
+    Vector3 drawAimPoint = ResolveAimPoint(drawRay);
     debugDrawRayOrigin_ = drawRay.origin;
     debugDrawAimPoint_ = drawAimPoint;
 #endif
@@ -501,19 +507,25 @@ Vector3 Player::CreateConvergencePoint(const Ray& aimRay) const
     return aimRay.origin + aimRay.direction * kAimConvergenceDistance;
 }
 
-Vector3 Player::ResolveAimPoint(
-    const Ray& aimRay,
-    const Vector3& muzzlePosition) const
+void Player::UpdateSmoothedAimDistance(const Camera& activeCamera)
 {
-    Vector3 convergencePoint = CreateConvergencePoint(aimRay);
-    Vector3 aimPoint = convergencePoint;
-    RaycastHit hit {};
+    Ray aimRay {};
+    CreateAimRay(aimRay, activeCamera);
 
+    float targetDistance = kAimConvergenceDistance;
+    RaycastHit hit {};
     if (CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
-        aimPoint = hit.position;
+        targetDistance = hit.distance;
     }
 
-    return aimPoint;
+    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+    const float followRate = 1.0f - std::exp(-kAimDistanceFollowSpeed * deltaTime);
+    smoothedAimDistance_ += (targetDistance - smoothedAimDistance_) * followRate;
+}
+
+Vector3 Player::ResolveAimPoint(const Ray& aimRay) const
+{
+    return aimRay.origin + aimRay.direction * smoothedAimDistance_;
 }
 
 std::unique_ptr<PlayerBullet> Player::CreateBullet(float& shotSpeed)
