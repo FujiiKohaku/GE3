@@ -179,6 +179,9 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 
 void PostEffectManager::Update(Camera* camera)
 {
+    if (FogData* fogData = fogManager_->GetEditableFogData()) {
+        fogData->color = SceneManager::GetInstance()->GetSceneFogColor();
+    }
     if (camera != nullptr) {
         auto& parameter = copyImageRenderer_->GetPostEffectParameter();
         parameter.outlineNearClip = camera->GetNearClip();

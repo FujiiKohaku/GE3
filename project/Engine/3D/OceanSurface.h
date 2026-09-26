@@ -17,6 +17,11 @@ public:
     void SetWaveAmplitude(float amplitude) { waveAmplitude_ = amplitude; }
     void SetWaveFrequency(float frequency) { waveFrequency_ = frequency; }
     void SetLength(float length) { length_ = length; }
+    void SetColors(const Vector4& deepColor, const Vector4& crestColor)
+    {
+        deepColor_ = deepColor;
+        crestColor_ = crestColor;
+    }
 
 private:
     struct Vertex {
@@ -53,4 +58,6 @@ private:
     float time_ = 0.0f;
     float waveAmplitude_ = 1.55f;
     float waveFrequency_ = 0.075f;
+    Vector4 deepColor_ = { 0.006f, 0.055f, 0.19f, 1.0f };
+    Vector4 crestColor_ = { 0.025f, 0.43f, 0.64f, 1.0f };
 };

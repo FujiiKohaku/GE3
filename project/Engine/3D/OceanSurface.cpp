@@ -43,8 +43,8 @@ void OceanSurface::Update(float deltaTime)
     const Vector3 cameraPosition = camera_->GetTranslate();
     constants_->cameraPositionAndTime = { cameraPosition.x, cameraPosition.y, cameraPosition.z, time_ };
     constants_->waveParameters = { waveAmplitude_, waveFrequency_, 0.0f, 0.0f };
-    constants_->deepColor = { 0.006f, 0.055f, 0.19f, 1.0f };
-    constants_->crestColor = { 0.025f, 0.43f, 0.64f, 1.0f };
+    constants_->deepColor = deepColor_;
+    constants_->crestColor = crestColor_;
 }
 
 void OceanSurface::Draw()

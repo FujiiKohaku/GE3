@@ -66,6 +66,7 @@ void Renderer::Draw(SceneManager* sceneManager)
 
     // Offscreen draw start
     postEffectManager_->PreDrawDepth();
+    offscreenRenderer_->SetClearColor(sceneManager->GetSceneClearColor());
     offscreenRenderer_->PreDraw(postEffectManager_->GetDepthDSVHandle());
     sceneManager->Draw3D();
     DebugRenderer::GetInstance()->Draw();

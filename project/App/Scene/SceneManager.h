@@ -87,6 +87,10 @@ public:
     float GetBlackHoleStrength() const { return blackHoleStrength_; }
     void SetWaterEffectIntensity(float intensity) { waterEffectIntensity_ = intensity; }
     float GetWaterEffectIntensity() const { return waterEffectIntensity_; }
+    void SetSceneClearColor(const Vector4& color) { sceneClearColor_ = color; }
+    const Vector4& GetSceneClearColor() const { return sceneClearColor_; }
+    void SetSceneFogColor(const Vector4& color) { sceneFogColor_ = color; }
+    const Vector4& GetSceneFogColor() const { return sceneFogColor_; }
 
 private:
     SceneManager() = default;
@@ -113,6 +117,8 @@ private:
     float paintSeed_ = 0.0f;
     int paintPatternType_ = 0;
     Vector3 paintColor_ = { 0.95f, 0.10f, 0.58f };
+    Vector4 sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
+    Vector4 sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
 
 private:
     std::unique_ptr<BaseScene> scene_;

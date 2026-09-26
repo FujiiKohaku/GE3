@@ -14,6 +14,7 @@ public:
     void Initialize();
     void PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
     void PostDraw();
+    void SetClearColor(const Vector4& color) { clearColor_ = color; }
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetNormalSrvHandleGPU() const;

@@ -33,6 +33,9 @@ void SceneManager::Update()
     if (nextScene_) {
         RemovePostEffect(PostEffectType::ArchiveAtmosphere);
         archiveApproach_ = 0.0f;
+        // 時間帯を持たないシーンに、前シーンの空色を残さない。
+        sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
+        sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
     }
     if (ChangeScene(scene_, nextScene_, retiredScene_)) {
         pageReveal_.InitializeIfRequested();

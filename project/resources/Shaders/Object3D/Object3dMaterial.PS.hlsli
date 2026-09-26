@@ -35,7 +35,8 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
     {
         PointLight light = gPointLights.lights[i];
         if (light.isActive == 0) continue;
-        float3 L = normalize(worldPosition - light.position);
+        // Surface-to-light vector for diffuse/specular lighting.
+        float3 L = normalize(light.position - worldPosition);
         float attenuation = pow(saturate(-length(light.position - worldPosition) / light.radius + 1.0f), light.decay);
         float3 lightColor = light.color.rgb * light.intensity * attenuation;
         result += baseColor * lightColor * saturate(dot(N, L));
@@ -49,8 +50,9 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
     {
         SpotLight light = gSpotLights.lights[i];
         if (light.isActive == 0) continue;
-        float3 L = normalize(worldPosition - light.position);
-        float cosAngle = dot(L, light.direction);
+        float3 lightToSurface = normalize(worldPosition - light.position);
+        float cosAngle = dot(lightToSurface, light.direction);
+        float3 L = -lightToSurface;
         float falloff = saturate((cosAngle - light.cosAngle) /
             max(light.cosFalloffStart - light.cosAngle, 0.001f));
         float attenuation = pow(saturate(-length(light.position - worldPosition) / light.distance + 1.0f), light.decay);
