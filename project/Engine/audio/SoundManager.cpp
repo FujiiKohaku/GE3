@@ -1,4 +1,5 @@
 #include "SoundManager.h"
+#include <algorithm>
 std::unique_ptr<SoundManager> SoundManager::instance_ = nullptr;
 
 SoundManager::SoundManager(ConstructorKey)
@@ -39,6 +40,18 @@ void SoundManager::EnsureInitialized()
     }
     if (initFuture_.valid()) {
         initFuture_.wait();
+    }
+}
+
+void SoundManager::Update()
+{
+    for (auto iterator = activeVoices_.begin(); iterator != activeVoices_.end();) {
+        if (!iterator->callback->finished.load()) {
+            ++iterator;
+            continue;
+        }
+        iterator->voice->DestroyVoice();
+        iterator = activeVoices_.erase(iterator);
     }
 }
 
@@ -158,13 +171,22 @@ void SoundManager::SoundUnload(SoundData* soundData)
     soundData->buffer.clear();
     soundData->wfex = {};
 }
-void SoundManager::SoundPlayWave(const SoundData& soundData)
+void SoundManager::SoundPlayWave(const SoundData& soundData, float volume)
 {
     EnsureInitialized();
+    if (soundData.buffer.empty()) {
+        return;
+    }
     HRESULT result;
 
+    auto callback = std::make_unique<SoundVoiceCallback>();
     IXAudio2SourceVoice* pSourceVoice = nullptr;
-    result = xAudio2->CreateSourceVoice(&pSourceVoice, &soundData.wfex);
+    result = xAudio2->CreateSourceVoice(
+        &pSourceVoice,
+        &soundData.wfex,
+        0,
+        XAUDIO2_DEFAULT_FREQ_RATIO,
+        callback.get());
     assert(SUCCEEDED(result));
 
     XAUDIO2_BUFFER buf {};
@@ -177,6 +199,10 @@ void SoundManager::SoundPlayWave(const SoundData& soundData)
 
     result = pSourceVoice->Start();
     assert(SUCCEEDED(result));
+
+    result = pSourceVoice->SetVolume(std::clamp(volume, 0.0f, 1.0f));
+    assert(SUCCEEDED(result));
+    activeVoices_.push_back({ pSourceVoice, std::move(callback) });
 }
 void SoundManager::Finalize()
 {
@@ -184,6 +210,13 @@ void SoundManager::Finalize()
     if (!instance_) {
         return;
     }
+
+    for (ActiveVoice& activeVoice : activeVoices_) {
+        if (activeVoice.voice != nullptr) {
+            activeVoice.voice->DestroyVoice();
+        }
+    }
+    activeVoices_.clear();
 
     if (instance_->masterVoice) {
         instance_->masterVoice->DestroyVoice();

@@ -3,6 +3,7 @@
 #include "App/Game/Player/Bullet/HomingMissileBullet.h"
 #include "App/Game/Player/Bullet/NormalBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Audio/GameSfx.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -95,7 +96,11 @@ void Player::Update()
         isDebugMode = debugCameraController_->GetDebugMode();
     }
 
+    const bool wasBoosting = isBoosting_;
     isBoosting_ = !isDebugMode && input->IsKeyPressed(DIK_LSHIFT);
+    if (isBoosting_ && !wasBoosting) {
+        GameSfx::GetInstance()->Play(GameSfxId::BoostStart);
+    }
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
     if (isBoosting_) {
@@ -249,6 +254,7 @@ bool Player::ApplyDamage(int damage)
     }
 
     currentHp_ -= damage;
+    GameSfx::GetInstance()->Play(GameSfxId::PlayerDamage);
     if (currentHp_ < 0) {
         currentHp_ = 0;
     }
@@ -291,6 +297,7 @@ bool Player::Heal(int amount)
     }
 
     currentHp_ += amount;
+    GameSfx::GetInstance()->Play(GameSfxId::HealPickup);
     if (currentHp_ > maxHp_) {
         currentHp_ = maxHp_;
     }
@@ -397,12 +404,25 @@ void Player::FireBullet(const Camera& activeCamera)
 
     if (currentWeapon_ == kWeaponHomingMissile &&
         !lockedHomingTargets_.empty()) {
+        GameSfx::GetInstance()->Play(GameSfxId::MissileShot);
         for (BaseEnemy* target : lockedHomingTargets_) {
             FireSingleBullet(activeCamera, target);
         }
         return;
     }
 
+    switch (currentWeapon_) {
+    case kWeaponMissileBullet:
+    case kWeaponHomingMissile:
+        GameSfx::GetInstance()->Play(GameSfxId::MissileShot);
+        break;
+    case kWeaponMinigun:
+        GameSfx::GetInstance()->Play(GameSfxId::MinigunShot);
+        break;
+    default:
+        GameSfx::GetInstance()->Play(GameSfxId::NormalShot);
+        break;
+    }
     FireSingleBullet(activeCamera, nullptr);
 }
 
@@ -590,6 +610,7 @@ void Player::UpdateHomingTarget(bool isLocking)
         return;
     }
 
+    const std::size_t previousLockCount = lockedHomingTargets_.size();
     constexpr float kLockRadiusPixels = 120.0f;
     struct LockCandidate {
         BaseEnemy* enemy;
@@ -632,6 +653,9 @@ void Player::UpdateHomingTarget(bool isLocking)
         if (lockedHomingTargets_.size() >= kMaxHomingLockCount) {
             break;
         }
+    }
+    if (lockedHomingTargets_.size() > previousLockCount) {
+        GameSfx::GetInstance()->Play(GameSfxId::HomingLock);
     }
 }
 

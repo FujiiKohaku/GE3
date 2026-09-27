@@ -8,6 +8,7 @@
 #include "Engine/Light/LightManager.h"
 #include "Engine/Time/TimeManager.h"
 #include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Audio/GameSfx.h"
 #include "GamePlayScene.h"
 #include "LoadingScene.h"
 #include "SceneManager.h"
@@ -445,9 +446,11 @@ bool LaunchBaseScene::UpdateStageSelection()
 
     if (selectionChanged) {
         RefreshStageSelectionText();
+        GameSfx::GetInstance()->Play(GameSfxId::UiSelect);
     }
 
     if (input->IsKeyTrigger(DIK_RETURN) || input->IsKeyTrigger(DIK_SPACE)) {
+        GameSfx::GetInstance()->Play(GameSfxId::UiConfirm);
         stageTransitionQueued_ = true;
         SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>(
             stages_[currentStageIndex_].id);

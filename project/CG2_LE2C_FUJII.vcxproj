@@ -164,6 +164,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Engine\CollisionManager\CollisionLayer.h" />
+    <ClCompile Include="App\Game\Audio\GameSfx.cpp" />
     <ClCompile Include="App\Game\Collision\GameplayCollisionSystem.cpp" />
     <ClCompile Include="App\Scene\LoadingScene.cpp" />
     <ClCompile Include="App\Scene\LaunchBaseScene.cpp" />
@@ -332,6 +333,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="App\Game\Audio\GameSfx.h" />
     <ClInclude Include="App\Game\Collision\GameplayCollisionSystem.h" />
     <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h" />
     <ClInclude Include="App\Game\Hazard\WaterPillarHazard.h" />

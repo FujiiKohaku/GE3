@@ -6,6 +6,7 @@
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
 #include "App/Game/Enemy/Bullet/PaintBullet.h"
+#include "App/Game/Audio/GameSfx.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -67,8 +68,15 @@ void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
         }
         if (jellyfish.IsCollisionPartDamageable(partIndex)) {
             bullet->OnHitEnemy(hit.position);
+            GameSfx::GetInstance()->Play(GameSfxId::EnemyHit);
+        } else {
+            GameSfx::GetInstance()->Play(GameSfxId::ArmorDeflect);
         }
+        const bool wasDead = jellyfish.IsDead();
         jellyfish.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
+        if (!wasDead && jellyfish.IsDead()) {
+            GameSfx::GetInstance()->Play(GameSfxId::BossDestroyed);
+        }
         bullet->SetDead();
     }
 }
@@ -88,7 +96,8 @@ void RegisterEnemyRaycastParts(CollisionManager& manager,
 
 void CheckPlayerBulletsAgainstEnemy(
     Player& player,
-    BaseEnemy& enemy)
+    BaseEnemy& enemy,
+    bool isBoss = false)
 {
     if (enemy.IsDead()) {
         return;
@@ -118,11 +127,18 @@ void CheckPlayerBulletsAgainstEnemy(
 
             if (enemy.IsCollisionPartDamageable(part.partIndex)) {
                 bullet->OnHitEnemy(part.position);
+                const bool wasDead = enemy.IsDead();
                 enemy.ApplyDamageToPart(
                     part.partIndex,
                     static_cast<float>(bullet->GetDamage()));
+                GameSfx::GetInstance()->Play(GameSfxId::EnemyHit);
+                if (!wasDead && enemy.IsDead()) {
+                    GameSfx::GetInstance()->Play(
+                        isBoss ? GameSfxId::BossDestroyed : GameSfxId::EnemyDestroyed);
+                }
             } else {
                 enemy.OnCollisionPartGuarded(part.partIndex, part.position);
+                GameSfx::GetInstance()->Play(GameSfxId::ArmorDeflect);
             }
             bullet->SetDead();
             break;
@@ -206,6 +222,7 @@ void GameplayCollisionSystem::UpdateStageCollisions(
             collider->GetRotation());
         if (CollisionManager::Intersect(playerSphere, obstacleBox).isHit) {
             if (player.ApplyDamage(levelObject->GetCollisionDamage())) {
+                GameSfx::GetInstance()->Play(GameSfxId::EnvironmentCollision);
                 EffectManager::GetInstance()->PlayEffect(
                     "DamageHit",
                     playerPosition);
@@ -314,7 +331,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
             if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(boss)) {
                 CheckPlayerBulletsAgainstJellyfish(player, *iceJellyfish, enemies);
             } else {
-                CheckPlayerBulletsAgainstEnemy(player, *boss);
+                CheckPlayerBulletsAgainstEnemy(player, *boss, true);
             }
         }
     }

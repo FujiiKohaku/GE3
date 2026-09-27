@@ -5,6 +5,7 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "DevelopmentWebPanel.h"
 #include "LaunchBaseScene.h"
+#include "App/Game/Audio/GameSfx.h"
 
 #include <format>
 
@@ -138,6 +139,7 @@ void Game::Initialize()
 
     GetBootProfilerForGame()->Begin("Audio");
     SoundManager::GetInstance()->Initialize();
+    GameSfx::GetInstance()->Initialize();
     GetBootProfilerForGame()->End("Audio");
 
     // Boot計測完了
@@ -162,6 +164,7 @@ void Game::Initialize()
 void Game::Update()
 {
     TimeManager::GetInstance()->Update();
+    SoundManager::GetInstance()->Update();
 
     // フレーム全体の開始
     Profiler::GetInstance()->BeginFrame();
@@ -296,6 +299,7 @@ void Game::Finalize()
     TextureManager::GetInstance()->Finalize();
     SrvManager::GetInstance()->Finalize();
 
+    GameSfx::GetInstance()->Finalize();
     SoundManager::GetInstance()->Finalize();
 
     DirectXCommon::GetInstance()->Finalize();

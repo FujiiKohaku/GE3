@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="App\Game\Audio\GameSfx.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <None Include="resources\Shaders\PostEffect\BokehShape.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\LensFlare.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\Glare.PS.hlsl" />

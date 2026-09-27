@@ -4,8 +4,10 @@
 #include "GamePlayScene.h"
 
 #include "LaunchBaseScene.h"
+#include "App/Game/Audio/GameSfx.h"
 void ClearScene::Initialize()
 {
+    GameSfx::GetInstance()->Play(GameSfxId::StageClear);
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
     camera_->SetTranslate({ 0.0f, 0.0f, -10.0f });

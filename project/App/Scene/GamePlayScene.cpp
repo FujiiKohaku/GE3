@@ -30,6 +30,7 @@
 #include "Engine/Input/Input.h"
 #include "Engine/Time/TimeManager.h"
 #include "DevelopmentWebPanel.h"
+#include "App/Game/Audio/GameSfx.h"
 #include <algorithm>
 #include <cmath>
 
@@ -758,6 +759,7 @@ void GamePlayScene::Update()
 #endif
     if (input != nullptr && input->IsKeyTrigger(DIK_TAB)) {
         isPaused_ = !isPaused_;
+        GameSfx::GetInstance()->Play(GameSfxId::PauseToggle);
     }
 
     if (isPaused_) {
@@ -1167,6 +1169,9 @@ void GamePlayScene::Update()
         // ダメージ検知
         if (currentHp < lastPlayerHp_) {
             damageFlashTimer_ = 0.35f;
+            if (currentHp <= 3 && lastPlayerHp_ > 3) {
+                GameSfx::GetInstance()->Play(GameSfxId::LowHpWarning);
+            }
         }
         lastPlayerHp_ = currentHp;
 

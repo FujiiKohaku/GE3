@@ -1,4 +1,5 @@
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Audio/GameSfx.h"
 
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Time/TimeManager.h"
@@ -60,6 +61,7 @@ void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
 void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet)
 {
     if (bulletManager_ != nullptr) {
+        GameSfx::GetInstance()->Play(GameSfxId::EnemyShot);
         bulletManager_->Add(std::move(bullet));
     }
 }
