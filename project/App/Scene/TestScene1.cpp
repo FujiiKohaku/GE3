@@ -8,7 +8,7 @@
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
-#include "TitleScene.h"
+#include "LaunchBaseScene.h"
 #include "externals/imgui/imgui.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
@@ -549,7 +549,7 @@ void TestScene1::Update()
 {
     // タイトルシーンに戻る
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
         return;
     }
 

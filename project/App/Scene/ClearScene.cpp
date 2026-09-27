@@ -3,7 +3,7 @@
 #include "Engine/input/Input.h"
 #include "GamePlayScene.h"
 
-#include "TitleScene.h"
+#include "LaunchBaseScene.h"
 void ClearScene::Initialize()
 {
     camera_ = std::make_unique<Camera>();
@@ -37,7 +37,7 @@ void ClearScene::Initialize()
 void ClearScene::Update()
 {
     if (Input::GetInstance()->IsKeyPressed(DIK_SPACE)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
     }
     titleObj_->Update();
     titleSprite_->Update();

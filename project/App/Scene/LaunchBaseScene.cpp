@@ -7,8 +7,10 @@
 #include "Engine/Input/Input.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/Time/TimeManager.h"
+#include "App/Game/Stage/StageCatalog.h"
+#include "GamePlayScene.h"
+#include "LoadingScene.h"
 #include "SceneManager.h"
-#include "TitleScene.h"
 #include <algorithm>
 #include <cmath>
 #include <format>
@@ -267,7 +269,7 @@ void LaunchBaseScene::Initialize()
 
     titleText_ = std::make_unique<Text>();
     titleText_->Initialize(kFont);
-    titleText_->SetText("LAUNCH BASE  /  FLIGHT TEST");
+    titleText_->SetText("LAUNCH BASE");
     titleText_->SetPosition({ 42.0f, 42.0f });
     titleText_->SetFontSize(32.0f);
     titleText_->SetColor({ 0.65f, 0.95f, 1.0f, 1.0f });
@@ -275,14 +277,16 @@ void LaunchBaseScene::Initialize()
 
     controlsText_ = std::make_unique<Text>();
     controlsText_->Initialize(kFont);
-    controlsText_->SetText("W/S: MOVE   A/D: TURN   UP/DOWN: ALTITUDE   SHIFT: BOOST   T: TIME +6H   BACKSPACE: TITLE");
-    controlsText_->SetPosition({ 42.0f, 650.0f });
+    controlsText_->SetText("A / D : SELECT MISSION     ENTER / SPACE : DEPLOY     T : TIME +6H");
+    controlsText_->SetPosition({ 640.0f, 650.0f });
+    controlsText_->SetAnchorPoint({ 0.5f, 0.0f });
     controlsText_->SetFontSize(19.0f);
     controlsText_->SetColor({ 0.88f, 0.94f, 1.0f, 1.0f });
     controlsText_->SetOutlineWidth(1.0f);
 
     speedText_ = std::make_unique<Text>();
     speedText_->Initialize(kFont);
+    speedText_->SetText("AIRCRAFT CONTROL LOCKED");
     speedText_->SetPosition({ 42.0f, 92.0f });
     speedText_->SetFontSize(22.0f);
     speedText_->SetColor({ 1.0f, 0.62f, 0.22f, 1.0f });
@@ -293,12 +297,14 @@ void LaunchBaseScene::Initialize()
     timeText_->SetFontSize(18.0f);
     timeText_->SetColor({ 0.82f, 0.92f, 1.0f, 1.0f });
 
+    InitializeStageSelection();
+
     // 日没後に自動点灯する構内照明。明るさは時間帯に応じて更新する。
     LightManager* lightManager = LightManager::GetInstance();
     lightManager->SetPointIntensity(0.0f);
     lightManager->SetSpotLightIntensity(0.0f);
 
-    UpdateAircraft(0.0f);
+    UpdateAircraft();
     UpdateCamera();
     ApplyTimeOfDayLighting();
     // NeonGlowは画面下側の輪郭をマゼンタへ着色するため、
@@ -328,27 +334,144 @@ Object3d* LaunchBaseScene::AddObject(
 
 void LaunchBaseScene::Update()
 {
-    Input* input = Input::GetInstance();
-    if (input != nullptr && input->IsKeyTrigger(DIK_BACK)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+    if (stageTransitionQueued_) {
+        return;
+    }
+
+    if (UpdateStageSelection()) {
         return;
     }
 
     const float deltaTime = (std::min)(TimeManager::GetInstance()->GetDeltaTime(), 1.0f / 20.0f);
     UpdateTimeOfDay(deltaTime);
-    UpdateAircraft(deltaTime);
+    UpdateAircraft();
     UpdateCamera();
     oceanSurface_->Update(deltaTime);
 
-    speedText_->SetText(std::format("SPEED  {:03.0f}", flightSpeed_));
     const int hours = static_cast<int>(timeOfDayHours_);
     const int minutes = static_cast<int>((timeOfDayHours_ - static_cast<float>(hours)) * 60.0f);
     timeText_->SetText(std::format("TIME  {:02}:{:02}  {}", hours, minutes, GetTimePeriodName(timeOfDayHours_)));
     atmosphereTint_->Update();
+    stagePanel_->Update();
     titleText_->Update();
     controlsText_->Update();
     speedText_->Update();
     timeText_->Update();
+    stagePanelHeaderText_->Update();
+    stageNameText_->Update();
+    stageDescriptionText_->Update();
+    stagePageText_->Update();
+    stageConfirmText_->Update();
+}
+
+void LaunchBaseScene::InitializeStageSelection()
+{
+    stages_.clear();
+    StageCatalog* catalog = StageCatalog::GetInstance();
+    if (catalog->Load()) {
+        for (const StageSettings& stage : catalog->GetStages()) {
+            if (stage.id == "gimmick_test") {
+                continue;
+            }
+            stages_.push_back({ stage.id, stage.name, stage.description });
+        }
+    }
+
+    stagePanel_ = std::make_unique<Sprite>();
+    stagePanel_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
+    stagePanel_->SetPosition({ 380.0f, 130.0f });
+    stagePanel_->SetSize({ 520.0f, 300.0f });
+    stagePanel_->SetColor({ 0.015f, 0.045f, 0.085f, 0.84f });
+
+    stagePanelHeaderText_ = std::make_unique<Text>();
+    stagePanelHeaderText_->Initialize(kFont);
+    stagePanelHeaderText_->SetText("SELECT MISSION");
+    stagePanelHeaderText_->SetPosition({ 640.0f, 154.0f });
+    stagePanelHeaderText_->SetAnchorPoint({ 0.5f, 0.0f });
+    stagePanelHeaderText_->SetFontSize(18.0f);
+    stagePanelHeaderText_->SetColor({ 0.32f, 0.88f, 1.0f, 1.0f });
+    stagePanelHeaderText_->SetLetterSpacing(1.5f);
+
+    stageNameText_ = std::make_unique<Text>();
+    stageNameText_->Initialize(kFont);
+    stageNameText_->SetPosition({ 420.0f, 190.0f });
+    stageNameText_->SetFontSize(27.0f);
+    stageNameText_->SetMaxWidth(440.0f);
+    stageNameText_->SetColor({ 1.0f, 0.78f, 0.30f, 1.0f });
+    stageNameText_->SetOutlineWidth(1.0f);
+
+    stageDescriptionText_ = std::make_unique<Text>();
+    stageDescriptionText_->Initialize(kFont);
+    stageDescriptionText_->SetPosition({ 420.0f, 238.0f });
+    stageDescriptionText_->SetFontSize(17.0f);
+    stageDescriptionText_->SetMaxWidth(440.0f);
+    stageDescriptionText_->SetLineSpacing(4.0f);
+    stageDescriptionText_->SetColor({ 0.84f, 0.92f, 1.0f, 1.0f });
+
+    stagePageText_ = std::make_unique<Text>();
+    stagePageText_->Initialize(kFont);
+    stagePageText_->SetPosition({ 640.0f, 350.0f });
+    stagePageText_->SetAnchorPoint({ 0.5f, 0.0f });
+    stagePageText_->SetFontSize(19.0f);
+    stagePageText_->SetColor({ 0.46f, 0.86f, 1.0f, 1.0f });
+
+    stageConfirmText_ = std::make_unique<Text>();
+    stageConfirmText_->Initialize(kFont);
+    stageConfirmText_->SetText("ENTER / SPACE  :  DEPLOY");
+    stageConfirmText_->SetPosition({ 640.0f, 390.0f });
+    stageConfirmText_->SetAnchorPoint({ 0.5f, 0.0f });
+    stageConfirmText_->SetFontSize(16.0f);
+    stageConfirmText_->SetColor({ 0.72f, 1.0f, 0.78f, 1.0f });
+
+    currentStageIndex_ = 0;
+    RefreshStageSelectionText();
+}
+
+bool LaunchBaseScene::UpdateStageSelection()
+{
+    Input* input = Input::GetInstance();
+    if (input == nullptr || stages_.empty()) {
+        return false;
+    }
+
+    bool selectionChanged = false;
+    if (input->IsKeyTrigger(DIK_D)) {
+        currentStageIndex_ = (currentStageIndex_ + 1) % stages_.size();
+        selectionChanged = true;
+    } else if (input->IsKeyTrigger(DIK_A)) {
+        currentStageIndex_ = (currentStageIndex_ + stages_.size() - 1) % stages_.size();
+        selectionChanged = true;
+    }
+
+    if (selectionChanged) {
+        RefreshStageSelectionText();
+    }
+
+    if (input->IsKeyTrigger(DIK_RETURN) || input->IsKeyTrigger(DIK_SPACE)) {
+        stageTransitionQueued_ = true;
+        SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>(
+            stages_[currentStageIndex_].id);
+        return true;
+    }
+    return false;
+}
+
+void LaunchBaseScene::RefreshStageSelectionText()
+{
+    if (stages_.empty()) {
+        stageNameText_->SetText("NO MISSION DATA");
+        stageDescriptionText_->SetText(StageCatalog::GetInstance()->GetLastError());
+        stagePageText_->SetText("-- / --");
+        stageConfirmText_->SetText("STAGE CATALOG NOT AVAILABLE");
+        return;
+    }
+
+    const StagePanelData& stage = stages_[currentStageIndex_];
+    stageNameText_->SetText(std::format(
+        "MISSION {:02}  {}", currentStageIndex_ + 1, stage.name));
+    stageDescriptionText_->SetText(stage.description);
+    stagePageText_->SetText(std::format(
+        "A  <   {} / {}   >  D", currentStageIndex_ + 1, stages_.size()));
 }
 
 void LaunchBaseScene::UpdateTimeOfDay(float deltaTime)
@@ -433,65 +556,15 @@ void LaunchBaseScene::ApplyTimeOfDayLighting()
     }
 }
 
-void LaunchBaseScene::UpdateAircraft(float deltaTime)
+void LaunchBaseScene::UpdateAircraft()
 {
-    Input* input = Input::GetInstance();
-    if (input == nullptr || aircraft_ == nullptr) {
+    if (aircraft_ == nullptr) {
         return;
     }
 
-    const float turnInput =
-        (input->IsKeyPressed(DIK_D) ? 1.0f : 0.0f) -
-        (input->IsKeyPressed(DIK_A) ? 1.0f : 0.0f);
-    const float altitudeInput =
-        (input->IsKeyPressed(DIK_UP) ? 1.0f : 0.0f) -
-        (input->IsKeyPressed(DIK_DOWN) ? 1.0f : 0.0f);
-    const bool accelerate = input->IsKeyPressed(DIK_W);
-    const bool brake = input->IsKeyPressed(DIK_S);
-    const bool boost = input->IsKeyPressed(DIK_LSHIFT) || input->IsKeyPressed(DIK_RSHIFT);
-
-    if (accelerate && !brake) {
-        flightSpeed_ += (boost ? 42.0f : 24.0f) * deltaTime;
-    } else if (brake && !accelerate) {
-        flightSpeed_ -= 24.0f * deltaTime;
-    } else {
-        // 入力がないときは前進・後退のどちらからでも穏やかに停止する。
-        const float coastDeceleration = 8.0f * deltaTime;
-        if (flightSpeed_ > 0.0f) {
-            flightSpeed_ = (std::max)(0.0f, flightSpeed_ - coastDeceleration);
-        } else if (flightSpeed_ < 0.0f) {
-            flightSpeed_ = (std::min)(0.0f, flightSpeed_ + coastDeceleration);
-        }
-    }
-    constexpr float kMaximumReverseSpeed = 16.0f;
-    flightSpeed_ = std::clamp(flightSpeed_, -kMaximumReverseSpeed, boost ? 72.0f : 45.0f);
-
-    const float steeringScale = 0.45f + std::clamp(std::abs(flightSpeed_) / 18.0f, 0.0f, 1.0f) * 0.55f;
-    // GamePlaySceneと同じ座標系では、右方向へ機首を向ける回転Yは負方向。
-    aircraftYaw_ -= turnInput * 1.15f * steeringScale * deltaTime;
-    aircraftPosition_.y = std::clamp(
-        aircraftPosition_.y + altitudeInput * 22.0f * deltaTime,
-        2.0f,
-        100.0f);
-
-    const Vector3 forward = {
-        -std::sin(aircraftYaw_),
-        0.0f,
-        std::cos(aircraftYaw_)
-    };
-    aircraftPosition_.x += forward.x * flightSpeed_ * deltaTime;
-    aircraftPosition_.z += forward.z * flightSpeed_ * deltaTime;
-    aircraftPosition_.x = std::clamp(aircraftPosition_.x, -500.0f, 500.0f);
-    aircraftPosition_.z = std::clamp(aircraftPosition_.z, -80.0f, 900.0f);
-
-    const float bankTarget = -turnInput * 0.48f;
-    const float pitchTarget = -altitudeInput * 0.20f;
-    const float blend = 1.0f - std::exp(-6.0f * deltaTime);
-    aircraftBank_ += (bankTarget - aircraftBank_) * blend;
-    aircraftPitch_ += (pitchTarget - aircraftPitch_) * blend;
-
+    // ランチベースでは機体を背景演出として固定し、入力を受け付けない。
     aircraft_->SetTranslate(aircraftPosition_);
-    aircraft_->SetRotate({ aircraftPitch_, aircraftYaw_, aircraftBank_ });
+    aircraft_->SetRotate({ 0.0f, aircraftYaw_, 0.0f });
     aircraft_->Update();
 }
 
@@ -537,12 +610,18 @@ void LaunchBaseScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     atmosphereTint_->Draw();
+    stagePanel_->Draw();
 
     TextRenderer::GetInstance()->PreDraw();
     titleText_->Draw();
     controlsText_->Draw();
     speedText_->Draw();
     timeText_->Draw();
+    stagePanelHeaderText_->Draw();
+    stageNameText_->Draw();
+    stageDescriptionText_->Draw();
+    stagePageText_->Draw();
+    stageConfirmText_->Draw();
 }
 
 void LaunchBaseScene::Finalize()

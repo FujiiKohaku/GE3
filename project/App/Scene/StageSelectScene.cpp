@@ -15,7 +15,7 @@
 #include "TestScene1.h"
 #include "SpriteTestScene.h"
 #include "TextTestScene.h"
-#include "TitleScene.h"
+#include "LaunchBaseScene.h"
 #include "LoadingScene.h"
 #include "App/Game/Stage/StageCatalog.h"
 #include "Engine/WinApp/WinApp.h"
@@ -460,7 +460,7 @@ void StageSelectScene::UpdateTitleReturn(float deltaTime)
     if (progress >= 1.0f) {
         transitionQueued_ = true;
         audio_.Stop();
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
     }
 }
 
@@ -948,7 +948,7 @@ void StageSelectScene::UpdateStageConfirmed(float deltaTime)
             manager->SetNextScene(std::make_unique<TextTestScene>());
             break;
         case StageDestination::Title:
-            manager->SetNextScene(std::make_unique<TitleScene>());
+            manager->SetNextScene(std::make_unique<LaunchBaseScene>());
             break;
         }
     }

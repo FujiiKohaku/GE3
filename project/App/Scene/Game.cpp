@@ -4,6 +4,7 @@
 #include "Engine/Debug/Profiler/ProfilerScope.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "DevelopmentWebPanel.h"
+#include "LaunchBaseScene.h"
 
 #include <format>
 
@@ -126,7 +127,7 @@ void Game::Initialize()
     // エフェクトのシェーダーとパイプラインはゲーム起動時に一度だけ作成する。
     // 使用するカメラは各シーンのInitializeで設定する。
     GetBootProfilerForGame()->Begin("Scene");
-    SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+    SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
     GetBootProfilerForGame()->End("Scene");
 
     renderer_ = std::make_unique<Renderer>();

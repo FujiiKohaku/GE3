@@ -28,7 +28,6 @@
 #include "Engine/TextureManager/TextureManager.h"
 #include <numbers>
 
-#include "Engine/Animation/AnimationActor.h"
 
 #include "App/Game/Player/Player.h"
 #include "App/Game/Collision/GameplayCollisionSystem.h"
@@ -197,7 +196,6 @@ private:
     std::unique_ptr<Object3d> droneObj_;
     std::unique_ptr<SkyBox> skyBox_;
     std::unique_ptr<SkinningObject3d> skinningPlayer_;
-    std::unique_ptr<AnimationActor> animationActor_;
     std::vector<std::unique_ptr<Object3d>> levelObjects_;
     std::vector<DestructibleLevelObject> destructibleLevelObjects_;
     std::vector<StageTrigger> stageTriggers_;
@@ -226,6 +224,7 @@ private:
     std::vector<std::unique_ptr<Sprite>> bossHudFrameSprites_;
     std::unique_ptr<Text> weaponHudLabelText_;
     std::unique_ptr<Text> weaponHudNameText_;
+    std::unique_ptr<Text> gameplayControlsText_;
     // ------------------------------
     // BGM / SE
     // ------------------------------

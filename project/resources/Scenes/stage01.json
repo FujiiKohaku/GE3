@@ -1,7 +1,5 @@
 {
   "scene": [
-    { "name": "StageTerrain", "type": "MESH", "file_name": "Environment/Terrain/terrain.obj", "transform": { "translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [1.0, 1.0, 1.0] } },
-
     { "name": "OceanIsland_Left01", "type": "MESH", "file_name": "Environment/Ocean/tropical_island.obj", "transform": { "translation": [-145.0, 480.0, -30.0], "rotation": [0.0, 0.0, 0.24], "scale": [1.45, 1.45, 1.45] } },
     { "name": "OceanIsland_Right01", "type": "MESH", "file_name": "Environment/Ocean/tropical_island.obj", "transform": { "translation": [175.0, 1320.0, -31.0], "rotation": [0.0, 0.0, -0.42], "scale": [1.85, 1.85, 1.85] } },
     { "name": "OceanIsland_Left02", "type": "MESH", "file_name": "Environment/Ocean/tropical_island.obj", "transform": { "translation": [-190.0, 2260.0, -30.0], "rotation": [0.0, 0.0, 0.68], "scale": [2.10, 2.10, 2.10] } },

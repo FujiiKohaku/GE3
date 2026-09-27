@@ -4,7 +4,7 @@
 #include "Engine/2D/Text/TextRenderer.h"
 #include "GamePlayScene.h"
 
-#include "TitleScene.h"
+#include "LaunchBaseScene.h"
 void GameOverScene::Initialize()
 {
     camera_ = std::make_unique<Camera>();
@@ -51,7 +51,7 @@ void GameOverScene::Update()
         SceneManager::GetInstance()->SetNextScene(
             std::make_unique<GamePlayScene>(stageId_));
     } else if (Input::GetInstance()->IsKeyTrigger(DIK_T)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
     }
     titleObj_->Update();
     titleSprite_->Update();

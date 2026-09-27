@@ -24,7 +24,7 @@
 
 #include "ClearScene.h"
 #include "GameOverScene.h"
-#include "TitleScene.h"
+#include "LaunchBaseScene.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
@@ -214,7 +214,6 @@ void GamePlayScene::Initialize()
 
     // nodeLoad
     ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
-    ModelManager::GetInstance()->Load("Characters/Animation/SneakWalk/sneakWalk.gltf");
     Model* recoveryItemModel = ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("fish/fish.obj");
 
@@ -226,21 +225,6 @@ void GamePlayScene::Initialize()
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
-    //==============
-    //  OBJ
-    //==============
-    Object3d* terrain_ = sceneObjectManager_->CreateObject("terrain", "Environment/Terrain/terrain.obj");
-
-    Object3d* star = sceneObjectManager_->CreateObject("star", "Weapons/Star/star.obj");
-
-    animationActor_ = std::make_unique<AnimationActor>();
-    OutputDebugStringA("A\n");
-    animationActor_->Initialize("Characters/Animation/SneakWalk/sneakWalk.gltf");
-    OutputDebugStringA("B\n");
-    animationActor_->SetRotate({ 0.0f, std::numbers::pi_v<float>, 0.0f });
-    animationActor_->SetTranslate({ 5.0f, -2.0f, 0.0f });
-    animationActor_->SetScale({ 1.0f, 1.0f, 1.0f });
-
     // =================================================
     // Particle
     // =================================================
@@ -429,6 +413,19 @@ void GamePlayScene::Initialize()
     weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     weaponHudNameText_->SetOutlineWidth(1.0f);
     weaponHudNameText_->Update();
+
+    // 仮のゲームプレイ操作ガイド。正式UIへ置き換えるまで左上に常時表示する。
+    gameplayControlsText_ = std::make_unique<Text>();
+    gameplayControlsText_->Initialize(kDefaultFont);
+    gameplayControlsText_->SetText(
+        "WASD : MOVE    MOUSE : AIM    LEFT CLICK / SPACE : FIRE\n"
+        "SHIFT : BOOST    1-4 / WHEEL : WEAPON    TAB : PAUSE");
+    gameplayControlsText_->SetPosition({ 24.0f, 20.0f });
+    gameplayControlsText_->SetFontSize(22.0f);
+    gameplayControlsText_->SetLineSpacing(6.0f);
+    gameplayControlsText_->SetColor({ 0.0f, 0.0f, 0.0f, 1.0f });
+    gameplayControlsText_->SetOutlineWidth(0.0f);
+    gameplayControlsText_->Update();
 
     // -------------------------------------------------
     // 画面右側に表示するプレイヤーHPゲージUIの初期化
@@ -809,7 +806,7 @@ void GamePlayScene::Update()
         // Tキーでタイトル画面へ戻る
         if (input != nullptr && input->IsKeyTrigger(DIK_T)) {
             ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
             return;
         }
 
@@ -1287,8 +1284,6 @@ void GamePlayScene::Update()
         oceanSurface_->Update(TimeManager::GetInstance()->GetDeltaTime());
     }
 
-    animationActor_->Update(TimeManager::GetInstance()->GetDeltaTime());
-    
     // コリジョン判定の実行
     CheckCollision();
     UpdateCameraShakePostEffect();
@@ -1851,12 +1846,6 @@ void GamePlayScene::Draw3D()
     }
 #endif
 
-    //----------------------
-    // スキニング
-    //----------------------
-    SkinningObject3dManager::GetInstance()->PreDraw();
-                                                                                        // animationSkin00_->Draw();
-    animationActor_->Draw();
 }
 
 void GamePlayScene::DrawParticle()
@@ -2002,6 +1991,7 @@ void GamePlayScene::Draw2D()
         TextRenderer::GetInstance()->PreDraw();
         if (weaponHudLabelText_) weaponHudLabelText_->Draw();
         if (weaponHudNameText_) weaponHudNameText_->Draw();
+        if (gameplayControlsText_) gameplayControlsText_->Draw();
         if (playerHpText_) playerHpText_->Draw();
         if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
             if (bossNameText_) bossNameText_->Draw();
@@ -2154,7 +2144,7 @@ void GamePlayScene::DrawImGui()
             if (ImGui::Button("TITLE (ESC)", ImVec2(-1, 44.0f))) {
                 isPaused_ = false;
                 ResetGameplayPostEffects();
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
             }
 
             ImGui::End();

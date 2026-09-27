@@ -6,7 +6,7 @@
 #include "Engine/PostEffect/PostEffectType.h"
 #include "Engine/input/Input.h"
 #include "SceneManager.h"
-#include "TitleScene.h"
+#include "LaunchBaseScene.h"
 #include <string>
 
 namespace {
@@ -49,7 +49,7 @@ void SpriteTestScene::Finalize()
 void SpriteTestScene::Update()
 {
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
         return;
     }
 
