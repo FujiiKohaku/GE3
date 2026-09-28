@@ -38,7 +38,8 @@ void OceanSurface::Update(float deltaTime)
     constants_->viewProjection = camera_->GetViewProjectionMatrix();
     const Vector3 scale = { width_, 1.0f, length_ };
     const Vector3 rotation = { 0.0f, 0.0f, 0.0f };
-    const Vector3 translation = { 0.0f, height_, length_ * 0.5f };
+    const Vector3 translation = {
+        0.0f, height_, startZ_ + length_ * 0.5f };
     constants_->world = MatrixMath::MakeAffineMatrix(scale, rotation, translation);
     const Vector3 cameraPosition = camera_->GetTranslate();
     constants_->cameraPositionAndTime = { cameraPosition.x, cameraPosition.y, cameraPosition.z, time_ };
