@@ -4,6 +4,12 @@
     <ClCompile Include="App\Game\Audio\GameSfx.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Engine\Screenshot\ScreenshotManager.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClInclude Include="Engine\Screenshot\ScreenshotManager.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <None Include="resources\Shaders\PostEffect\BokehShape.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\LensFlare.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\Glare.PS.hlsl" />

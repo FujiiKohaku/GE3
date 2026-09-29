@@ -197,7 +197,7 @@ private:
 
     bool isDebugMode = false;
     bool isBoosting_ = false;
-    ControlMode controlMode_ = ControlMode::KeyboardAndMouse;
+    ControlMode controlMode_ = ControlMode::StarFox;
     float mouseSensitivity_ = 1.0f;
     Vector2 starFoxSteeringInput_ = { 0.0f, 0.0f };
 

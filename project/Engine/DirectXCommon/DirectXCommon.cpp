@@ -562,6 +562,16 @@ void DirectXCommon::SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHan
     commandList->RSSetViewports(1, &viewport);
     commandList->RSSetScissorRects(1, &scissorRect);
 }
+
+ID3D12Resource* DirectXCommon::GetCurrentBackBuffer() const
+{
+    if (swapChain == nullptr) {
+        return nullptr;
+    }
+
+    const UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+    return swapChainResources[backBufferIndex].Get();
+}
 #pragma endregion
 #pragma region
 Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath)

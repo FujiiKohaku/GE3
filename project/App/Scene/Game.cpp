@@ -6,6 +6,7 @@
 #include "DevelopmentWebPanel.h"
 #include "LaunchBaseScene.h"
 #include "App/Game/Audio/GameSfx.h"
+#include "Engine/Screenshot/ScreenshotManager.h"
 
 #include <format>
 
@@ -133,6 +134,9 @@ void Game::Initialize()
 
     renderer_ = std::make_unique<Renderer>();
     renderer_->Initialize();
+    ScreenshotManager::GetInstance()->Initialize(
+        DirectXCommon::GetInstance(),
+        WinApp::GetInstance());
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     DevelopmentWebPanel::GetInstance().SetPostEffectManager(renderer_->GetPostEffectManager());
 #endif
@@ -175,6 +179,16 @@ void Game::Update()
 #endif
 
     Input::GetInstance()->Update();
+
+    ScreenshotManager::GetInstance()->Update();
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F12)) {
+        bool savePng = false;
+        if (Input::GetInstance()->IsKeyPressed(DIK_LSHIFT) ||
+            Input::GetInstance()->IsKeyPressed(DIK_RSHIFT)) {
+            savePng = true;
+        }
+        ScreenshotManager::GetInstance()->RequestCapture(savePng);
+    }
 
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     DevelopmentWebPanel::GetInstance().Poll();
@@ -286,6 +300,8 @@ void Game::Finalize()
     ImGuiManager::Finalize();
 #endif
     renderer_.reset();
+
+    ScreenshotManager::Finalize();
 
     SkinningObject3dManager::GetInstance()->Finalize();
     DebugRenderer::GetInstance()->Finalize();

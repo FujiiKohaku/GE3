@@ -11,6 +11,7 @@
 #include "Engine/PostEffect/OffscreenRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/SrvManager/SrvManager.h"
+#include "Engine/Screenshot/ScreenshotManager.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/input/Input.h"
 
@@ -99,6 +100,10 @@ void Renderer::Draw(SceneManager* sceneManager)
     ImGuiManager::GetInstance()->Draw();
 #endif
 
+    ScreenshotManager::GetInstance()->DrawNotification();
+    ScreenshotManager::GetInstance()->PrepareCapture();
+
     // Present
     DirectXCommon::GetInstance()->PostDraw();
+    ScreenshotManager::GetInstance()->CompleteCapture();
 }
