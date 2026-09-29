@@ -43,6 +43,7 @@ public:
     ID3D12GraphicsCommandList* GetCommandList() const { return commandList.Get(); }
     ID3D12CommandAllocator* GetCommandAllocator() const { return commandAllocator.Get(); }
     ID3D12CommandQueue* GetCommandQueue() const { return commandQueue.Get(); }
+    ID3D12Resource* GetCurrentBackBuffer() const;
 
     size_t GetSwapChainResourcesNum() const
     {

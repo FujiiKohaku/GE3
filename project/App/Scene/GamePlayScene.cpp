@@ -35,7 +35,7 @@
 #include <cmath>
 
 namespace {
-Player::ControlMode gControlMode = Player::ControlMode::KeyboardAndMouse;
+Player::ControlMode gControlMode = Player::ControlMode::StarFox;
 float gMouseSensitivity = 1.0f;
 
 // 機能色。ゲーム内エフェクトとHUDで同じ意味に同じ色を使う。
@@ -419,8 +419,8 @@ void GamePlayScene::Initialize()
     gameplayControlsText_ = std::make_unique<Text>();
     gameplayControlsText_->Initialize(kDefaultFont);
     gameplayControlsText_->SetText(
-        "WASD : MOVE    MOUSE : AIM    LEFT CLICK / SPACE : FIRE\n"
-        "SHIFT : BOOST    1-4 / WHEEL : WEAPON    TAB : PAUSE");
+        "MOUSE : MOVE / AIM    LEFT CLICK / SPACE : FIRE\n"
+        "C : WASD + MOUSE (SUB)    SHIFT : BOOST    TAB : PAUSE");
     gameplayControlsText_->SetPosition({ 24.0f, 20.0f });
     gameplayControlsText_->SetFontSize(22.0f);
     gameplayControlsText_->SetLineSpacing(6.0f);
@@ -776,18 +776,21 @@ void GamePlayScene::Update()
         if (pauseRetryText_) pauseRetryText_->Update();
         if (pauseTitleBtnText_) pauseTitleBtnText_->Update();
         if (input != nullptr && input->IsKeyTrigger(DIK_C)) {
-            gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
-                ? Player::ControlMode::StarFox
-                : Player::ControlMode::KeyboardAndMouse;
+            if (gControlMode == Player::ControlMode::KeyboardAndMouse) {
+                gControlMode = Player::ControlMode::StarFox;
+            } else {
+                gControlMode = Player::ControlMode::KeyboardAndMouse;
+            }
             if (player_) {
                 player_->SetControlMode(gControlMode);
             }
         }
         if (pauseControlText_) {
-            pauseControlText_->SetText(
-                gControlMode == Player::ControlMode::StarFox
-                    ? "CONTROL: STARFOX [C]"
-                    : "CONTROL: WASD + MOUSE [C]");
+            if (gControlMode == Player::ControlMode::StarFox) {
+                pauseControlText_->SetText("CONTROL: MOUSE (MAIN) [C]");
+            } else {
+                pauseControlText_->SetText("CONTROL: WASD + MOUSE (SUB) [C]");
+            }
             pauseControlText_->Update();
         }
         if (input != nullptr && input->IsKeyTrigger(DIK_LBRACKET)) {
@@ -2119,14 +2122,16 @@ void GamePlayScene::DrawImGui()
 
             // 3. CONTROL MODE
             ImGui::SetCursorPosY(250.0f);
-            const char* controlLabel =
-                gControlMode == Player::ControlMode::StarFox
-                    ? "CONTROL: STARFOX (C)"
-                    : "CONTROL: WASD + MOUSE (C)";
+            const char* controlLabel = "CONTROL: MOUSE (MAIN) (C)";
+            if (gControlMode == Player::ControlMode::KeyboardAndMouse) {
+                controlLabel = "CONTROL: WASD + MOUSE (SUB) (C)";
+            }
             if (ImGui::Button(controlLabel, ImVec2(-1, 44.0f))) {
-                gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
-                    ? Player::ControlMode::StarFox
-                    : Player::ControlMode::KeyboardAndMouse;
+                if (gControlMode == Player::ControlMode::KeyboardAndMouse) {
+                    gControlMode = Player::ControlMode::StarFox;
+                } else {
+                    gControlMode = Player::ControlMode::KeyboardAndMouse;
+                }
                 if (player_) {
                     player_->SetControlMode(gControlMode);
                 }
@@ -2657,7 +2662,11 @@ void GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         SET_VALUE("cameraHeightFollowFactor", cameraHeightFollowFactor_, 0.0f, 1.0f)
         SET_VALUE("cameraLookUpFactor", cameraLookUpFactor_, 0.0f, 2.0f)
         if (key == "controlMode") {
-            gControlMode = number >= 0.5f ? Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
+            if (number >= 0.5f) {
+                gControlMode = Player::ControlMode::StarFox;
+            } else {
+                gControlMode = Player::ControlMode::KeyboardAndMouse;
+            }
             player_->SetControlMode(gControlMode);
             return;
         }
