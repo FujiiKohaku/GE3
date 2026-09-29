@@ -86,7 +86,6 @@ private:
     std::unique_ptr<Camera> camera_;
     std::unique_ptr<OceanSurface> oceanSurface_;
     std::unique_ptr<Object3d> aircraft_;
-    std::unique_ptr<Object3d> stageSwitchAircraft_;
     std::vector<std::unique_ptr<Object3d>> baseObjects_;
     std::vector<StageRoomObject> firstFlightRoomObjects_;
     std::vector<StageRoomObject> frozenPassageRoomObjects_;
@@ -96,7 +95,6 @@ private:
     std::unique_ptr<Sprite> settingsAccent_;
     std::unique_ptr<Sprite> stagePanel_;
     std::unique_ptr<Sprite> frozenFogOverlay_;
-    std::unique_ptr<Sprite> stageSwitchBlackout_;
     std::unique_ptr<Text> logoText_;
     std::unique_ptr<Text> pushToStartText_;
     std::unique_ptr<Text> settingsShortcutText_;

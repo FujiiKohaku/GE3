@@ -426,17 +426,6 @@ void TitleScene::InitializeStageRoomSets()
     firstFlightRoomObjects_.clear();
     frozenPassageRoomObjects_.clear();
 
-    // ショップ切り替え時のキャラクター移動に相当する前景機体。
-    stageSwitchAircraft_ = std::make_unique<Object3d>();
-    stageSwitchAircraft_->Initialize(Object3dManager::GetInstance());
-    stageSwitchAircraft_->SetModel(
-        ModelManager::GetInstance()->Load(kAircraftModel));
-    stageSwitchAircraft_->SetCamera(camera_.get());
-    stageSwitchAircraft_->SetTranslate({ 0.0f, -40.0f, -15.0f });
-    stageSwitchAircraft_->SetScale({ 1.7f, 1.7f, 1.7f });
-    stageSwitchAircraft_->SetEnableLighting(true);
-    stageSwitchAircraft_->Update();
-
     // FIRST FLIGHT: 中央の訓練機と、その周囲を囲む整備・誘導設備。
     AddStageRoomObject(
         firstFlightRoomObjects_, kAircraftModel,
@@ -666,12 +655,6 @@ void TitleScene::InitializeStageSelection()
     frozenFogOverlay_->SetSize({ 1280.0f, 720.0f });
     frozenFogOverlay_->SetColor({ 0.72f, 0.90f, 1.0f, 0.0f });
 
-    stageSwitchBlackout_ = std::make_unique<Sprite>();
-    stageSwitchBlackout_->Initialize(
-        SpriteManager::GetInstance(), kWhiteTexture);
-    stageSwitchBlackout_->SetSize({ 1280.0f, 720.0f });
-    stageSwitchBlackout_->SetColor({ 0.0f, 0.0f, 0.0f, 0.0f });
-
     stageHeaderText_ = std::make_unique<Text>();
     stageHeaderText_->Initialize(kDefaultFont);
     stageHeaderText_->SetText("MISSION HANGAR");
@@ -819,19 +802,15 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
         frozenRoomAmount_ = stages_[currentStageIndex_].id == "stage03"
             ? 1.0f
             : 0.0f;
-        if (stageSwitchAircraft_) {
-            stageSwitchAircraft_->SetTranslate({ 0.0f, -40.0f, -15.0f });
-            stageSwitchAircraft_->Update();
-        }
         return;
     }
 
     stageRoomTransitionTime_ += deltaTime;
     const float progress = Clamp01(
         stageRoomTransitionTime_ / kStageRoomTransitionDuration);
-    const float outgoingProgress = SmoothStep(progress / 0.52f);
-    const float incomingProgress = Clamp01((progress - 0.38f) / 0.62f);
-    const float incomingEase = EaseOutBack(incomingProgress);
+    const float outgoingProgress = SmoothStep(progress / 0.46f);
+    const float incomingProgress = Clamp01((progress - 0.32f) / 0.52f);
+    const float incomingEase = SmoothStep(incomingProgress);
     const float direction = static_cast<float>(stageRoomTransitionDirection_);
 
     // 前回の遷移で残った座標を先に戻し、今回描く2セットだけ動かす。
@@ -842,7 +821,7 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
             FindStageRoomObjects(stages_[previousStageIndex_].id)) {
         UpdateStageRoomObjectGroup(
             *outgoing,
-            -direction * 11.0f * outgoingProgress,
+            -direction * 62.0f * outgoingProgress,
             0.0f,
             -direction);
     }
@@ -850,33 +829,9 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
             FindStageRoomObjects(stages_[nextStageIndex_].id)) {
         UpdateStageRoomObjectGroup(
             *incoming,
-            direction * 13.0f * (1.0f - incomingEase),
+            direction * 62.0f * (1.0f - incomingEase),
             incomingProgress,
             direction);
-    }
-
-    // 機体が画面中央を横切る瞬間に、選択ステージとUIを交換する。
-    if (stageSwitchAircraft_) {
-        const float flightEase = SmoothStep(progress);
-        const float x = -direction * 27.0f + direction * 54.0f * flightEase;
-        const float jump = std::sin(progress * std::numbers::pi_v<float>);
-        const float landingWobble = progress > 0.72f
-            ? std::sin((progress - 0.72f) * 9.0f * std::numbers::pi_v<float>) *
-                std::exp(-(progress - 0.72f) * 9.0f)
-            : 0.0f;
-        stageSwitchAircraft_->SetTranslate({
-            x,
-            6.4f + jump * 3.8f + std::abs(landingWobble) * 0.35f,
-            -15.5f,
-        });
-        stageSwitchAircraft_->SetRotate({
-            -0.08f + jump * 0.10f,
-            direction > 0.0f
-                ? -std::numbers::pi_v<float> * 0.5f
-                : std::numbers::pi_v<float> * 0.5f,
-            -direction * (0.22f * jump + 0.12f * landingWobble),
-        });
-        stageSwitchAircraft_->Update();
     }
 
     if (!stageRoomSelectionSwapped_ && progress >= 0.46f) {
@@ -1079,16 +1034,24 @@ void TitleScene::UpdateStageSelection(float deltaTime)
     if (stageRoomTransitionActive_) {
         const float progress = Clamp01(
             stageRoomTransitionTime_ / kStageRoomTransitionDuration);
-        const float envelope = std::sin(progress * std::numbers::pi_v<float>);
-        const float horizontalShake =
-            std::sin(stageRoomTransitionTime_ * 49.0f) * 0.24f * envelope;
-        const float verticalShake =
-            std::sin(stageRoomTransitionTime_ * 67.0f + 0.8f) *
-            0.11f * envelope;
-        eye.x += horizontalShake;
-        eye.y += verticalShake;
-        target.x -= horizontalShake * 0.32f;
-        target.y -= verticalShake * 0.18f;
+        if (progress >= 0.80f) {
+            const float impactProgress =
+                Clamp01((progress - 0.80f) / 0.20f);
+            const float envelope =
+                std::sin(impactProgress * std::numbers::pi_v<float>) *
+                (1.0f - impactProgress * 0.35f);
+            const float horizontalShake =
+                std::sin(impactProgress * 4.0f *
+                    std::numbers::pi_v<float>) * 0.24f * envelope;
+            const float verticalShake =
+                std::sin(impactProgress * 5.0f *
+                    std::numbers::pi_v<float> + 0.8f) *
+                0.11f * envelope;
+            eye.x += horizontalShake;
+            eye.y += verticalShake;
+            target.x -= horizontalShake * 0.32f;
+            target.y -= verticalShake * 0.18f;
+        }
     }
 
     camera_->LookAt(eye, target);
@@ -1224,42 +1187,40 @@ void TitleScene::UpdateInterface(float deltaTime)
     float roomUiAlpha = 1.0f;
     float roomUiOffset = 0.0f;
     float panelKick = 0.0f;
-    float blackoutAmount = 0.0f;
     if (stageRoomTransitionActive_) {
         const float progress = Clamp01(
             stageRoomTransitionTime_ / kStageRoomTransitionDuration);
         const float direction =
             static_cast<float>(stageRoomTransitionDirection_);
-        panelKick = direction *
-            std::sin(progress * std::numbers::pi_v<float>) * 0.012f;
-        const float fadeToBlack = SmoothStep((progress - 0.24f) / 0.20f);
-        const float fadeFromBlack =
-            1.0f - SmoothStep((progress - 0.50f) / 0.20f);
-        blackoutAmount = (std::min)(fadeToBlack, fadeFromBlack);
+        if (progress >= 0.80f) {
+            const float impactProgress =
+                Clamp01((progress - 0.80f) / 0.20f);
+            panelKick = direction *
+                std::sin(impactProgress * 3.0f *
+                    std::numbers::pi_v<float>) *
+                (1.0f - impactProgress) * 0.012f;
+        }
         if (progress < 0.46f) {
             const float exit = SmoothStep(progress / 0.46f);
             roomUiAlpha = 1.0f - exit;
             roomUiOffset = -direction * 260.0f * exit;
         } else {
             const float enter = Clamp01((progress - 0.46f) / 0.54f);
-            roomUiAlpha = SmoothStep(enter / 0.58f);
+            const float uiEase = SmoothStep(enter);
+            roomUiAlpha = uiEase;
             roomUiOffset =
-                direction * 260.0f * (1.0f - EaseOutBack(enter));
+                direction * 260.0f * (1.0f - uiEase);
         }
     }
     stagePanel_->SetRotation(
         (1.0f - stageAlpha) * 0.025f + panelKick);
     stagePanel_->SetColor({ 0.008f, 0.026f, 0.055f, 0.80f * stageAlpha });
-    stageSwitchBlackout_->SetColor(
-        { 0.0f, 0.0f, 0.0f, blackoutAmount });
 
     const float stageTextY = stagePanelY - 112.0f;
     stageHeaderText_->SetPosition({ 640.0f, stageTextY + 10.0f });
-    const float blackoutVisibility = 1.0f - blackoutAmount;
     stageHeaderText_->SetColor(
-        { 0.20f, 0.90f, 1.0f, stageAlpha * blackoutVisibility });
-    const float changingTextAlpha =
-        stageAlpha * roomUiAlpha * blackoutVisibility;
+        { 0.20f, 0.90f, 1.0f, stageAlpha });
+    const float changingTextAlpha = stageAlpha * roomUiAlpha;
     stageNameText_->SetPosition(
         { 640.0f + roomUiOffset, stageTextY + 40.0f });
     stageNameText_->SetColor(
@@ -1274,12 +1235,11 @@ void TitleScene::UpdateInterface(float deltaTime)
         { 0.36f, 0.88f, 1.0f, changingTextAlpha });
     stageControlsText_->SetPosition({ 640.0f, stageTextY + 194.0f });
     stageControlsText_->SetColor(
-        { 0.70f, 0.88f, 0.96f, stageAlpha * blackoutVisibility });
+        { 0.70f, 0.88f, 0.96f, stageAlpha });
 
     atmosphereTint_->Update();
     frozenFogOverlay_->Update();
     stagePanel_->Update();
-    stageSwitchBlackout_->Update();
     settingsBackdrop_->Update();
     settingsAccent_->Update();
     logoText_->Update();
@@ -1324,7 +1284,6 @@ void TitleScene::Draw2D()
     stagePanel_->Draw();
     settingsBackdrop_->Draw();
     settingsAccent_->Draw();
-    stageSwitchBlackout_->Draw();
 
     TextRenderer::GetInstance()->PreDraw();
     logoText_->Draw();
@@ -1366,16 +1325,13 @@ void TitleScene::Draw3D()
         if (stageRoomTransitionActive_) {
             const float progress = Clamp01(
                 stageRoomTransitionTime_ / kStageRoomTransitionDuration);
-            if (progress < 0.60f) {
+            if (progress < 0.56f) {
                 drawRoomGroup(
                     FindStageRoomObjects(stages_[previousStageIndex_].id));
             }
-            if (progress >= 0.32f) {
+            if (progress >= 0.30f) {
                 drawRoomGroup(
                     FindStageRoomObjects(stages_[nextStageIndex_].id));
-            }
-            if (stageSwitchAircraft_) {
-                stageSwitchAircraft_->Draw();
             }
         } else {
             drawRoomGroup(
