@@ -27,6 +27,8 @@ struct EmitterSphere {
     uint32_t emit;
     uint32_t maxParticles;
     uint32_t padding2[3];
+    Vector3 direction;
+    float padding3;
 };
 struct PerFrame {
     float time;
