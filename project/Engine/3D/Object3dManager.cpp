@@ -78,6 +78,12 @@ void Object3dManager::SetNormalPSO()
     BindPipeline(kDefaultObject3dPixelShader);
 }
 
+void Object3dManager::ReloadMaterialPipelines()
+{
+    dxCommon_->WaitForGPU();
+    materialPipelineCache_.clear();
+}
+
 void Object3dManager::SetGlowPSO()
 {
     auto* commandList = dxCommon_->GetCommandList();

@@ -16,6 +16,7 @@
 
 #include "../externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
+#include "App/Game/Stage/GameplayVisualPreset.h"
 #include <fstream>
 #include <string_view>
 
@@ -681,12 +682,13 @@ void GamePlayScene::Initialize()
         floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
         floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
         if (stageId_ == "stage03") {
-            // The floor uses a white texture; its restrained cracks are drawn in the PS.
+            // The floor is matte; ice objects use their own reflective material.
             floorObj_->SetColor({ 0.54f, 0.73f, 0.86f, 1.0f });
             floorObj_->SetShadingMode(MaterialShadingMode::Ice);
             floorObj_->SetMaterial("resources/Shaders/Object3D/StageIceFloor");
             floorObj_->GetMaterial()->shininess = 0.0f;
             floorObj_->SetEnableEnvironmentMap(false);
+            floorObj_->SetEnvironmentMapStrength(0.0f);
         }
     }
 
@@ -2981,26 +2983,7 @@ void GamePlayScene::Finalize()
 
 void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
 {
-    SceneManager* sceneManager = SceneManager::GetInstance();
-    sceneManager->ClearPostEffects();
-    sceneManager->AddPostEffect(
-        PostEffectType::DepthOutline,
-        PostEffectStage::BeforeParticle);
-    sceneManager->AddPostEffect(
-        PostEffectType::Fog,
-        PostEffectStage::BeforeParticle);
-
-    if (isPlayerBoosting) {
-        sceneManager->AddPostEffect(
-            PostEffectType::RadialBlur,
-            PostEffectStage::BeforeParticle);
-        sceneManager->AddPostEffect(
-            PostEffectType::FocusLine,
-            PostEffectStage::BeforeParticle);
-        sceneManager->AddPostEffect(
-            PostEffectType::Bloom,
-            PostEffectStage::BeforeParticle);
-    }
+    GameplayVisualPreset::ConfigurePostEffects(isPlayerBoosting);
 }
 
 void GamePlayScene::ApplyDevelopmentLighting()
@@ -3035,33 +3018,7 @@ void GamePlayScene::ApplyDevelopmentLighting()
 
 void GamePlayScene::ApplyStageVisualPreset()
 {
-    LightManager* lightManager = LightManager::GetInstance();
-
-    // Stage03を完成見本とし、青白い主光源と低彩度の環境光で
-    // セル陰影の明・中・暗の3段階が安定して読める状態にする。
-    if (stageId_ == "stage03") {
-        lightManager->SetDirectional(
-            { 0.90f, 0.96f, 1.0f, 1.0f },
-            Normalize(Vector3 { -0.35f, -0.82f, 0.45f }),
-            0.90f);
-        lightManager->SetAmbientColor({ 0.40f, 0.52f, 0.68f });
-        lightManager->SetAmbientIntensity(0.24f);
-    } else {
-        lightManager->SetDirectional(
-            { 1.0f, 0.97f, 0.90f, 1.0f },
-            Normalize(Vector3 { -0.28f, -0.86f, 0.42f }),
-            1.0f);
-        lightManager->SetAmbientColor({ 0.52f, 0.60f, 0.68f });
-        lightManager->SetAmbientIntensity(0.28f);
-    }
-
-    lightManager->SetPointRadius(10.0f);
-    lightManager->SetPointDecay(1.0f);
-    lightManager->SetPointLight(
-        { 1.0f, 1.0f, 1.0f, 1.0f },
-        { 0.0f, 2.0f, 0.0f },
-        0.0f);
-    lightManager->SetSpotLightIntensity(0.0f);
+    GameplayVisualPreset::ApplyLighting(stageId_);
 }
 
 void GamePlayScene::ResetGameplayPostEffects()
@@ -3412,21 +3369,10 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             if (stageId_ == "stage03" && isIceModel) {
                 levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);
-                const char* iceMaterial = "resources/Shaders/Object3D/StageIceSpire";
-                if (objData.fileName == "Environment/Ice/ice_island.obj") {
-                    iceMaterial = "resources/Shaders/Object3D/StageIceIsland";
-                } else if (objData.fileName == "Environment/Ice/ice_boulder.obj") {
-                    iceMaterial = "resources/Shaders/Object3D/StageIceBoulder";
-                } else if (objData.fileName == "Environment/Ice/ice_slab.obj") {
-                    iceMaterial = "resources/Shaders/Object3D/StageIceSlab";
-                } else if (objData.fileName == "Environment/Ice/ice_arch.obj") {
-                    iceMaterial = "resources/Shaders/Object3D/StageIceArch";
-                } else if (objData.fileName == "Environment/Ice/crystal.obj") {
-                    iceMaterial = "resources/Shaders/Object3D/StageIceCrystal";
-                }
-                levelObject->SetMaterial(iceMaterial);
-                levelObject->GetMaterial()->shininess = 0.0f;
+                levelObject->SetMaterial(GameplayVisualPreset::IceMaterialFolder(objData.fileName));
+                levelObject->GetMaterial()->shininess = GameplayVisualPreset::kIceShininess;
                 levelObject->SetEnableEnvironmentMap(false);
+                levelObject->SetEnvironmentMapStrength(0.0f);
             }
 
             if (objData.gimmick.exists) {

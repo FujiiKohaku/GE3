@@ -40,6 +40,8 @@ public:
     }
     void SetNormalPSO();
     void SetGlowPSO();
+    // Call between frames, after waiting for GPU work to finish.
+    void ReloadMaterialPipelines();
     void BindPipeline(const std::string& pixelShaderPath, bool transparent = false,
         bool transparentDepthWrite = false,
         const std::string& vertexShaderPath = "resources/Shaders/Object3D/Object3d.VS.hlsl");

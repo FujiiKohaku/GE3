@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Share the engine's source/dependency list, but use a separate entry point and objects. -->
+  <Import Project="CG2_LE2C_FUJII.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{AAF76E07-733C-48E4-B9D3-63A7D49E493F}</ProjectGuid>
+    <ProjectName>ModelPreview</ProjectName>
+    <TargetName>ModelPreview</TargetName>
+    <IntDir>$(ProjectDir)..\generated\obj\ModelPreview\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>ModelPreview.exe</TargetFileName>
+    <TargetPath>$(OutDir)ModelPreview.exe</TargetPath>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>USE_IMGUI;MODEL_PREVIEW_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="App\main.cpp" />
+    <ClCompile Include="App\Preview\ModelPreview.cpp" />
+    <ClCompile Include="App\Preview\PreviewCapture.cpp" />
+    <ClCompile Include="App\Preview\PreviewGif.cpp" />
+    <ClInclude Include="App\Preview\PreviewCapture.h" />
+    <ClInclude Include="App\Preview\PreviewGif.h" />
+  </ItemGroup>
+</Project>
