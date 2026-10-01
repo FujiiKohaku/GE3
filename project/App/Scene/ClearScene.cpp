@@ -3,7 +3,7 @@
 #include "Engine/input/Input.h"
 #include "GamePlayScene.h"
 
-#include "LaunchBaseScene.h"
+#include "TitleScene.h"
 #include "App/Game/Audio/GameSfx.h"
 void ClearScene::Initialize()
 {
@@ -39,7 +39,7 @@ void ClearScene::Initialize()
 void ClearScene::Update()
 {
     if (Input::GetInstance()->IsKeyPressed(DIK_SPACE)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
     }
     titleObj_->Update();
     titleSprite_->Update();

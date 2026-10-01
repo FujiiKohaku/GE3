@@ -1,4 +1,5 @@
 #include "../../Shaders/Common/Particle.hlsli"
+#include "../Common/JetEmissionCommon.hlsli"
 
 ConstantBuffer<EmitterSphere> gEmitter : register(b0);
 RWStructuredBuffer<ParticleCS> gParticles : register(u0);
@@ -72,12 +73,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     float spread = 0.15f;
 
-    float32_t3 direction =
-        normalize(
-            float32_t3(
-                random.x * spread,
-                random.y * spread,
-                -1.0f));
+    float32_t3 exhaustAxis = GetJetExhaustAxis(gEmitter.direction);
+    float32_t3 direction = MakeJetEmissionDirection(random, spread, exhaustAxis);
 
     float velocityLength =
         length(gEffectSettings.velocity);
@@ -112,13 +109,13 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     float32_t t = (float32_t)DTid.x / (float32_t)gEmitter.count;
     float32_t3 velocity =
         direction * velocityLength +
-        gEffectSettings.velocity;
+        exhaustAxis * velocityLength;
     float32_t dt = gPerFrame.deltaTime * (1.0f - t);
     float32_t dragFactor = gEffectSettings.enableDrag != 0 ? pow(max(gEffectSettings.drag, 0.0f), dt * 30.0f) : 1.0f;
 
     gParticles[particleIndex].translate =
         lerp(gEmitter.prevTranslate, gEmitter.translate, t) + 
-        MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius) + 
+        RotateJetOffset(MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius), exhaustAxis) +
         velocity * dt * dragFactor;
 
     gParticles[particleIndex].velocity = velocity;

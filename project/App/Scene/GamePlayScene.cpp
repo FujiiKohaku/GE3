@@ -24,7 +24,7 @@
 
 #include "ClearScene.h"
 #include "GameOverScene.h"
-#include "LaunchBaseScene.h"
+#include "TitleScene.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
@@ -419,7 +419,12 @@ void GamePlayScene::Initialize()
     gameplayControlsText_->Initialize(kDefaultFont);
     gameplayControlsText_->SetText(
         "MOUSE : MOVE / AIM    LEFT CLICK / SPACE : FIRE\n"
-        "C : WASD + MOUSE (SUB)    SHIFT : BOOST    TAB : PAUSE");
+        "C : WASD + MOUSE (SUB)    SHIFT / RMB : BOOST    TAB : PAUSE");
+    if (stageSettings_.allRangeMode) {
+        gameplayControlsText_->SetText(
+            "ALL-RANGE   MOUSE : TURN / CLIMB    LEFT CLICK : FIRE\n"
+            "SHIFT / RMB : BOOST    TAB : PAUSE / CONTROLS");
+    }
     gameplayControlsText_->SetPosition({ 24.0f, 20.0f });
     gameplayControlsText_->SetFontSize(22.0f);
     gameplayControlsText_->SetLineSpacing(6.0f);
@@ -578,6 +583,14 @@ void GamePlayScene::Initialize()
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+    if (stageSettings_.allRangeMode) {
+        player_->EnableAllRangeMode(stageSettings_.flightAreaRadius,
+            stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
+        camera_->SetFarClip(4000.0f);
+        camera_->LookAt(playerStartPos - player_->GetFlightForward() * kCameraBackwardOffset +
+            Vector3 { 0.0f, kAllRangeCameraUpwardOffset, 0.0f }, playerStartPos + player_->GetFlightForward() * 60.0f);
+        camera_->Update();
+    }
 
     bossController_ = std::make_unique<BossEncounterController>();
     bossController_->Initialize(
@@ -602,8 +615,13 @@ void GamePlayScene::Initialize()
         }
     }
     InitializeRecoveryItems(recoveryItemModel);
-    playerJetHandle_ = EffectManager::GetInstance()->AttachEffect("Jet", player_);
-    playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect("JetSpark", player_);
+    playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(
+        "Jet", std::bind(&Player::GetEngineExhaustPosition, player_.get()));
+    playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(
+        "JetSpark", std::bind(&Player::GetEngineExhaustPosition, player_.get()));
+    const Vector3 exhaustDirection = player_->GetEngineExhaustDirection();
+    EffectManager::GetInstance()->SetEffectDirection(playerJetHandle_, exhaustDirection);
+    EffectManager::GetInstance()->SetEffectDirection(playerJetSparkHandle_, exhaustDirection);
     wasPlayerBoosting_ = false;
 
     CreateLevelObjects(levelData);
@@ -626,13 +644,24 @@ void GamePlayScene::Initialize()
     editorManager_->SetSceneObjectManager(sceneObjectManager_.get());
 
     // floorの初期化
-    if (stageSettings_.floorEnabled && stageId_ == "stage01") {
+    if (stageSettings_.floorEnabled &&
+        (stageId_ == "stage01" || stageSettings_.allRangeMode)) {
         oceanSurface_ = std::make_unique<OceanSurface>();
+        float oceanWidth = 1000.0f;
+        float oceanLength = stageSettings_.railLength;
+        if (stageSettings_.allRangeMode) {
+            oceanWidth = stageSettings_.flightAreaRadius * 2.0f + 2000.0f;
+            oceanLength = oceanWidth;
+        }
         oceanSurface_->Initialize(
             camera_.get(),
-            1000.0f,
-            stageSettings_.railLength,
+            oceanWidth,
+            oceanLength,
             stageSettings_.floorHeight);
+        if (stageSettings_.allRangeMode) {
+            oceanSurface_->SetStartZ(-oceanLength * 0.5f);
+            oceanSurface_->SetWaveAmplitude(0.65f);
+        }
         if (stageId_ == "stage01") {
             waterPillarRenderer_ = std::make_unique<WaterPillarRenderer>();
             waterPillarRenderer_->Initialize(camera_.get());
@@ -810,7 +839,7 @@ void GamePlayScene::Update()
         // Tキーでタイトル画面へ戻る
         if (input != nullptr && input->IsKeyTrigger(DIK_T)) {
             ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
             return;
         }
 
@@ -915,8 +944,11 @@ void GamePlayScene::Update()
     });
     const Vector3 currentRailPosition =
         rail_->GetPositionByDistance(railDistance_);
-    const Vector3 currentRailForward =
+    Vector3 currentRailForward =
         CalculateRailForward(railDistance_, currentRailPosition);
+    if (stageSettings_.allRangeMode) {
+        currentRailForward = player_->GetFlightForward();
+    }
     enemyBulletManager_.Update(
         player_->GetTranslate(),
         currentRailForward);
@@ -1048,6 +1080,20 @@ void GamePlayScene::Update()
 
     // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
+    if (stageSettings_.allRangeMode) {
+        currentPosition = player_->GetTranslate();
+        forward = player_->GetFlightForward();
+        CalculateRailBasis(forward, railRight, railUp);
+        if (player_->IsReturningToFlightArea()) {
+            gameplayControlsText_->SetText(
+                "AREA LIMIT : AUTO TURN\nSHIFT / RMB : BOOST    TAB : PAUSE");
+        } else {
+            gameplayControlsText_->SetText(
+                "ALL-RANGE   MOUSE : TURN / CLIMB    LEFT CLICK : FIRE\n"
+                "SHIFT / RMB : BOOST    TAB : PAUSE / CONTROLS");
+        }
+        gameplayControlsText_->Update();
+    }
     const bool isPlayerBoosting = player_->IsBoosting();
     UpdateBoostKick(isPlayerBoosting);
 
@@ -1087,11 +1133,17 @@ void GamePlayScene::Update()
             jetEffectName = "JetBoost";
             sparkEffectName = "JetBoostSpark";
         }
-        playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(jetEffectName, player_);
-        playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(sparkEffectName, player_);
+        playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(
+            jetEffectName, std::bind(&Player::GetEngineExhaustPosition, player_.get()));
+        playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(
+            sparkEffectName, std::bind(&Player::GetEngineExhaustPosition, player_.get()));
 
         wasPlayerBoosting_ = isPlayerBoosting;
     }
+
+    const Vector3 exhaustDirection = player_->GetEngineExhaustDirection();
+    EffectManager::GetInstance()->SetEffectDirection(playerJetHandle_, exhaustDirection);
+    EffectManager::GetInstance()->SetEffectDirection(playerJetSparkHandle_, exhaustDirection);
 
     UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
 
@@ -1466,6 +1518,13 @@ void GamePlayScene::UpdateRailMovement(
     Vector3& outUp,
     float& outNextDistance)
 {
+    if (stageSettings_.allRangeMode) {
+        outPosition = player_->GetTranslate();
+        outForward = player_->GetFlightForward();
+        CalculateRailBasis(outForward, outRight, outUp);
+        outNextDistance = railDistance_;
+        return;
+    }
     // 次フレームのレール上の進行距離を計算
     const float frameScale = TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
     outNextDistance = railDistance_ + railSpeed_ * frameScale;
@@ -1500,13 +1559,19 @@ void GamePlayScene::UpdatePlayerTransform(
     player_->SetHomingTargets(homingTargets);
 
     // プレイヤーにレール情報の最新のフレーム（座標、右方向、上方向、前方向）を伝える
-    player_->SetRailFrame(currentPosition, railRight, railUp, forward);
+    if (!stageSettings_.allRangeMode) {
+        player_->SetRailFrame(currentPosition, railRight, railUp, forward);
+    }
     
     // プレイヤーの内部座標（移動制限など）を更新
     player_->Update();
     if (weaponHudNameText_) {
         weaponHudNameText_->SetText(player_->GetCurrentWeaponDisplayName());
         weaponHudNameText_->Update();
+    }
+
+    if (stageSettings_.allRangeMode) {
+        return;
     }
 
     // 進行方向に合わせてプレイヤーの回転を適用
@@ -1558,6 +1623,39 @@ void GamePlayScene::UpdateCamera(
     Input* input)
 {
     debugCameraController_->Update();
+    if (stageSettings_.allRangeMode) {
+        const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+        float targetFov = normalFovY_;
+        if (player_->IsBoosting()) {
+            targetFov = boostFovY_;
+        }
+        currentFovY_ += (targetFov - currentFovY_) * (1.0f - std::exp(-8.0f * deltaTime));
+        camera_->SetFovY(currentFovY_);
+        if (!debugCameraController_->GetDebugMode()) {
+            const Vector3 targetEye = currentPosition - forward * kCameraBackwardOffset +
+                Vector3 { 0.0f, kAllRangeCameraUpwardOffset, 0.0f };
+            const Vector3 targetLook = currentPosition + forward * 60.0f;
+            const float followRate = 1.0f - std::exp(-9.0f * deltaTime);
+            if (!hasCameraFollowState_) {
+                smoothedCameraPosition_ = targetEye;
+                smoothedLookAheadPosition_ = targetLook;
+                hasCameraFollowState_ = true;
+            } else {
+                smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetEye, followRate);
+                smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLook, followRate);
+            }
+            camera_->LookAt(smoothedCameraPosition_, smoothedLookAheadPosition_);
+        } else {
+            hasCameraFollowState_ = false;
+        }
+        camera_->Update();
+        aimCamera_->LookAt(camera_->GetTranslate(), camera_->GetTranslate() + forward * 60.0f);
+        aimCamera_->SetFovY(currentFovY_);
+        aimCamera_->SetAspectRatio(camera_->GetAspectRatio());
+        aimCamera_->SetFarClip(camera_->GetFarClip());
+        aimCamera_->Update();
+        return;
+    }
     // カメラポイント補間の適用
     if (hasCameraPoint_ && !debugCameraController_->GetDebugMode()) {
         float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
@@ -1596,8 +1694,8 @@ void GamePlayScene::UpdateCamera(
 
     // ブースト中かどうかで視野角（FOV）を切り替える
     bool isBoostingForCamera = false;
-    if (input != nullptr) {
-        isBoostingForCamera = input->IsKeyPressed(DIK_LSHIFT);
+    if (player_ != nullptr) {
+        isBoostingForCamera = player_->IsBoosting();
     }
 
     float targetFovY = normalFovY_;
@@ -2153,7 +2251,7 @@ void GamePlayScene::DrawImGui()
             if (ImGui::Button("TITLE (ESC)", ImVec2(-1, 44.0f))) {
                 isPaused_ = false;
                 ResetGameplayPostEffects();
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
             }
 
             ImGui::End();
@@ -3254,6 +3352,10 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
     }
 
     Vector3 vanishPointPosition = rail_->GetPositionByDistance(vanishPointDistance);
+    if (stageSettings_.allRangeMode) {
+        vanishPointPosition = player_->GetTranslate() +
+            player_->GetFlightForward() * kBoostPostEffectVanishPointDistance;
+    }
     Vector2 vanishPointScreen = camera_->WorldToScreen(vanishPointPosition);
     Vector2 vanishPointCenter = ScreenPositionToPostEffectCenter(vanishPointScreen, clientWidth, clientHeight);
 
@@ -3458,6 +3560,11 @@ void GamePlayScene::HotReloadLevel()
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
 
     CreateLevelObjects(newLevelData);
+    if (stageSettings_.allRangeMode) {
+        player_->EnableAllRangeMode(stageSettings_.flightAreaRadius,
+            stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
+        hasCameraFollowState_ = false;
+    }
 }
 
 void GamePlayScene::ClearLevelObjects()

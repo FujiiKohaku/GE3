@@ -167,8 +167,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="App\Game\Audio\GameSfx.cpp" />
     <ClCompile Include="App\Game\Collision\GameplayCollisionSystem.cpp" />
     <ClCompile Include="App\Scene\LoadingScene.cpp" />
-    <ClCompile Include="App\Scene\LaunchBaseScene.cpp" />
-    <ClCompile Include="App\Scene\StageSelectScene.cpp" />
     <ClCompile Include="App\Game\Stage\StageCatalog.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="App\Scene\ClearScene.cpp" />
@@ -390,10 +388,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
     <ClInclude Include="App\Scene\GamePlayScene.h" />
-    <ClInclude Include="App\Scene\ArchiveAudio.h" />
     <ClInclude Include="App\Scene\PageTransition.h" />
-    <ClInclude Include="App\Scene\StageSelectScene.h" />
-    <ClInclude Include="App\Scene\LaunchBaseScene.h" />
     <ClInclude Include="App\Game\Stage\StageCatalog.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
     <ClInclude Include="App\Scene\Game.h" />

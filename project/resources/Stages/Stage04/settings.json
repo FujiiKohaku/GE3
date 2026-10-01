@@ -1,0 +1,20 @@
+{
+  "id": "stage04",
+  "name": "OPEN OCEAN",
+  "description": "All-range flight. Explore the islands, reefs and shipwrecks. Mouse to steer; right click to boost.",
+  "layout": "resources/Scenes/stage04.json",
+  "flight": {
+    "mode": "all_range",
+    "area_radius": 600.0,
+    "min_height": 5.0,
+    "max_height": 180.0
+  },
+  "rail": { "length": 1600.0, "point_interval": 50.0, "speed": 0.5 },
+  "boss": { "type": "None", "spawn_distance": 0.0 },
+  "environment": {
+    "skybox": "resources/Textures/skybox.dds",
+    "bgm": "resources/Sounds/BGM.wav",
+    "floor_enabled": true,
+    "floor_height": 0.0
+  }
+}

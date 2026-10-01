@@ -307,6 +307,7 @@ private:
     // center so the player is framed against the horizon instead of seen
     // from above.
     static constexpr float kCameraUpwardOffset = 1.0f;
+    static constexpr float kAllRangeCameraUpwardOffset = 2.0f;
 
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;

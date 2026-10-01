@@ -102,6 +102,19 @@ bool StageCatalog::LoadStageSettings(
     settings.description = json.value("description", "");
     settings.layoutFile = json.value("layout", "");
 
+    if (json.contains("flight")) {
+        const nlohmann::json& flight = json["flight"];
+        settings.allRangeMode = flight.value("mode", "rail") == "all_range";
+        settings.flightAreaRadius = flight.value("area_radius", settings.flightAreaRadius);
+        settings.flightMinHeight = flight.value("min_height", settings.flightMinHeight);
+        settings.flightMaxHeight = flight.value("max_height", settings.flightMaxHeight);
+        if (settings.flightAreaRadius <= 100.0f ||
+            settings.flightMinHeight >= settings.flightMaxHeight) {
+            lastError_ = "Invalid flight area: " + settings.id;
+            return false;
+        }
+    }
+
     if (json.contains("rail")) {
         const nlohmann::json& rail = json["rail"];
         settings.railLength = rail.value("length", settings.railLength);

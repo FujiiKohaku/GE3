@@ -26,6 +26,16 @@
 namespace {
 constexpr float kAimConvergenceDistance = 220.0f;
 constexpr float kAimDistanceFollowSpeed = 12.0f;
+
+float ApplySteeringDeadZone(float value)
+{
+    constexpr float kDeadZone = 0.05f;
+    const float magnitude = std::abs(value);
+    if (magnitude <= kDeadZone) {
+        return 0.0f;
+    }
+    return std::copysign((magnitude - kDeadZone) / (1.0f - kDeadZone), value);
+}
 }
 
 void Player::Initialize(Model* model)
@@ -97,7 +107,8 @@ void Player::Update()
     }
 
     const bool wasBoosting = isBoosting_;
-    isBoosting_ = !isDebugMode && input->IsKeyPressed(DIK_LSHIFT);
+    isBoosting_ = !isDebugMode &&
+        (input->IsKeyPressed(DIK_LSHIFT) || input->IsMousePressed(1));
     if (isBoosting_ && !wasBoosting) {
         GameSfx::GetInstance()->Play(GameSfxId::BoostStart);
     }
@@ -170,7 +181,9 @@ void Player::Update()
     if (!isDebugMode) {
         UpdateMouseAim();
         UpdateRolling(input);
-        if (controlMode_ == ControlMode::StarFox) {
+        if (allRangeMode_) {
+            UpdateAllRangeMove(input);
+        } else if (controlMode_ == ControlMode::StarFox) {
             UpdateStarFoxMove();
         } else {
             UpdateKeyboardMove(input);
@@ -178,7 +191,9 @@ void Player::Update()
         ClampAimScreenPosition();
     }
 
-    transform_.translate = CalculateRailWorldPosition(railOffset_);
+    if (!allRangeMode_) {
+        transform_.translate = CalculateRailWorldPosition(railOffset_);
+    }
 
     // transform反映
     ApplyTransform();
@@ -490,6 +505,20 @@ Vector3 Player::CalculateMuzzlePosition() const
     return MatrixMath::Transform(localMuzzle, worldMatrix);
 }
 
+Vector3 Player::GetEngineExhaustPosition() const
+{
+    const Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(
+        transform_.scale, transform_.rotate, transform_.translate);
+    return MatrixMath::Transform(Vector3 { 0.0f, 0.0f, -1.0f }, worldMatrix);
+}
+
+Vector3 Player::GetEngineExhaustDirection() const
+{
+    const Matrix4x4 rotationMatrix = MatrixMath::MakeAffineMatrix(
+        Vector3 { 1.0f, 1.0f, 1.0f }, transform_.rotate, Vector3 {});
+    return Normalize(MatrixMath::Transform(Vector3 { 0.0f, 0.0f, -1.0f }, rotationMatrix));
+}
+
 void Player::CreateAimRay(Ray& aimRay, const Camera& activeCamera) const
 {
     float mouseX = aimScreenPosition_.x;
@@ -737,7 +766,7 @@ void Player::UpdateKeyboardMove(Input* input)
     railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
 }
 
-void Player::UpdateStarFoxMove()
+void Player::UpdateStarFoxSteering()
 {
     const float screenWidth =
         static_cast<float>(WinApp::GetInstance()->GetClientWidth());
@@ -754,34 +783,125 @@ void Player::UpdateStarFoxMove()
     float inputY = (screenHeight * 0.5f - aimScreenPosition_.y) /
         (screenHeight * 0.5f);
 
-    constexpr float kDeadZone = 0.05f;
-    constexpr float kStarFoxResponse = 2.75f;
-    auto applyDeadZone = [](float value) {
-        const float magnitude = std::abs(value);
-        if (magnitude <= kDeadZone) {
-            return 0.0f;
-        }
-        const float scaled = (magnitude - kDeadZone) / (1.0f - kDeadZone);
-        return std::copysign(scaled, value);
-    };
-
-    inputX = applyDeadZone(std::clamp(
+    inputX = ApplySteeringDeadZone(std::clamp(
         inputX * mouseSensitivity_, -1.0f, 1.0f));
-    inputY = applyDeadZone(std::clamp(
+    inputY = ApplySteeringDeadZone(std::clamp(
         inputY * mouseSensitivity_, -1.0f, 1.0f));
 
-    constexpr float kSteeringLerpRate = 0.20f;
+    float steeringLerpRate = 0.20f;
+    if (allRangeMode_) {
+        steeringLerpRate = 1.0f - std::exp(
+            -13.4f * TimeManager::GetInstance()->GetDeltaTime());
+    }
     starFoxSteeringInput_.x +=
-        (inputX - starFoxSteeringInput_.x) * kSteeringLerpRate;
+        (inputX - starFoxSteeringInput_.x) * steeringLerpRate;
     starFoxSteeringInput_.y +=
-        (inputY - starFoxSteeringInput_.y) * kSteeringLerpRate;
+        (inputY - starFoxSteeringInput_.y) * steeringLerpRate;
 
+}
+
+void Player::UpdateStarFoxMove()
+{
+    UpdateStarFoxSteering();
+    constexpr float kStarFoxResponse = 2.75f;
     Vector3 nextRailOffset = railOffset_;
     nextRailOffset.x +=
         starFoxSteeringInput_.x * moveSpeed_ * kStarFoxResponse;
     nextRailOffset.y +=
         starFoxSteeringInput_.y * moveSpeed_ * kStarFoxResponse;
     railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
+}
+
+void Player::EnableAllRangeMode(float areaRadius, float minHeight, float maxHeight)
+{
+    allRangeMode_ = true;
+    flightAreaRadius_ = areaRadius;
+    flightMinHeight_ = minHeight;
+    flightMaxHeight_ = maxHeight;
+    flightYaw_ = -transform_.rotate.y;
+    flightPitch_ = -transform_.rotate.x;
+    railForward_ = {
+        std::sin(flightYaw_) * std::cos(flightPitch_),
+        std::sin(flightPitch_),
+        std::cos(flightYaw_) * std::cos(flightPitch_)
+    };
+    railRight_ = Normalize(Cross(Vector3 { 0.0f, 1.0f, 0.0f }, railForward_));
+    railUp_ = Normalize(Cross(railForward_, railRight_));
+    returningToFlightArea_ = false;
+    railOffset_ = {};
+    starFoxSteeringInput_ = {};
+}
+
+void Player::UpdateAllRangeMove(Input* input)
+{
+    UpdateStarFoxSteering();
+    Vector2 steering = starFoxSteeringInput_;
+    if (controlMode_ == ControlMode::KeyboardAndMouse) {
+        steering = {};
+        if (input->IsKeyPressed(DIK_A)) steering.x -= 1.0f;
+        if (input->IsKeyPressed(DIK_D)) steering.x += 1.0f;
+        if (input->IsKeyPressed(DIK_W)) steering.y += 1.0f;
+        if (input->IsKeyPressed(DIK_S)) steering.y -= 1.0f;
+    }
+
+    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+    constexpr float kYawSpeed = 1.35f;
+    constexpr float kPitchSpeed = 0.85f;
+    constexpr float kMaxPitch = 0.95f;
+    flightYaw_ += steering.x * kYawSpeed * deltaTime;
+    flightPitch_ = std::clamp(
+        flightPitch_ + steering.y * kPitchSpeed * deltaTime, -kMaxPitch, kMaxPitch);
+
+    // Begin an automatic inward turn early enough to keep the chase camera inside the ocean.
+    const float horizontalDistance = std::sqrt(
+        transform_.translate.x * transform_.translate.x +
+        transform_.translate.z * transform_.translate.z);
+    if (horizontalDistance > flightAreaRadius_ - 90.0f) {
+        returningToFlightArea_ = true;
+    } else if (horizontalDistance < flightAreaRadius_ - 150.0f) {
+        returningToFlightArea_ = false;
+    }
+    if (returningToFlightArea_) {
+        flightYaw_ -= steering.x * kYawSpeed * deltaTime;
+        const float inwardYaw = std::atan2(-transform_.translate.x, -transform_.translate.z);
+        const float yawDifference = std::remainder(
+            inwardYaw - flightYaw_, 2.0f * std::numbers::pi_v<float>);
+        flightYaw_ += std::clamp(yawDifference, -2.0f * deltaTime, 2.0f * deltaTime);
+        steering.x = std::clamp(yawDifference, -1.0f, 1.0f);
+    }
+    flightYaw_ = std::remainder(flightYaw_, 2.0f * std::numbers::pi_v<float>);
+    if (transform_.translate.y < flightMinHeight_ + 12.0f && flightPitch_ < 0.0f) {
+        flightPitch_ += (0.25f - flightPitch_) * (1.0f - std::exp(-4.0f * deltaTime));
+    }
+    if (transform_.translate.y > flightMaxHeight_ - 12.0f && flightPitch_ > 0.0f) {
+        flightPitch_ += (-0.25f - flightPitch_) * (1.0f - std::exp(-4.0f * deltaTime));
+    }
+    railForward_ = {
+        std::sin(flightYaw_) * std::cos(flightPitch_),
+        std::sin(flightPitch_),
+        std::cos(flightYaw_) * std::cos(flightPitch_)
+    };
+    railRight_ = Normalize(Cross(Vector3 { 0.0f, 1.0f, 0.0f }, railForward_));
+    railUp_ = Normalize(Cross(railForward_, railRight_));
+    transform_.translate += railForward_ * (velocity_.z * 60.0f * deltaTime);
+    const float distanceAfterMove = std::sqrt(
+        transform_.translate.x * transform_.translate.x +
+        transform_.translate.z * transform_.translate.z);
+    if (distanceAfterMove > flightAreaRadius_) {
+        const float correction = flightAreaRadius_ / distanceAfterMove;
+        transform_.translate.x *= correction;
+        transform_.translate.z *= correction;
+    }
+    transform_.translate.y = std::clamp(
+        transform_.translate.y, flightMinHeight_, flightMaxHeight_);
+    railBasePosition_ = transform_.translate;
+    transform_.rotate.x = -flightPitch_;
+    transform_.rotate.y = -flightYaw_;
+    if (!isRolling_) {
+        const float targetBank = -steering.x * 0.65f;
+        transform_.rotate.z += (targetBank - transform_.rotate.z) *
+            (1.0f - std::exp(-7.0f * deltaTime));
+    }
 }
 
 void Player::UpdateRolling(Input* input)

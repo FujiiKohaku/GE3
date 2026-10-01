@@ -4,7 +4,7 @@
 #include "Engine/2D/Text/TextRenderer.h"
 #include "GamePlayScene.h"
 
-#include "LaunchBaseScene.h"
+#include "TitleScene.h"
 #include "App/Game/Audio/GameSfx.h"
 void GameOverScene::Initialize()
 {
@@ -53,7 +53,7 @@ void GameOverScene::Update()
         SceneManager::GetInstance()->SetNextScene(
             std::make_unique<GamePlayScene>(stageId_));
     } else if (Input::GetInstance()->IsKeyTrigger(DIK_T)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<LaunchBaseScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
     }
     titleObj_->Update();
     titleSprite_->Update();

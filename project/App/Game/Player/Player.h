@@ -60,8 +60,18 @@ public:
         if (IsDead()) {
             return { 0.0f, 0.0f, 0.0f };
         }
+        if (allRangeMode_) {
+            return railForward_ * velocity_.z;
+        }
         return railForward_ * normalMaxSpeed_;
     }
+
+    void EnableAllRangeMode(float areaRadius, float minHeight, float maxHeight);
+    bool IsAllRangeMode() const { return allRangeMode_; }
+    bool IsReturningToFlightArea() const { return returningToFlightArea_; }
+    const Vector3& GetFlightForward() const { return railForward_; }
+    Vector3 GetEngineExhaustPosition() const;
+    Vector3 GetEngineExhaustDirection() const;
 
     void ApplyRailAreaForce(const Vector3& force)
     {
@@ -200,6 +210,13 @@ private:
     ControlMode controlMode_ = ControlMode::StarFox;
     float mouseSensitivity_ = 1.0f;
     Vector2 starFoxSteeringInput_ = { 0.0f, 0.0f };
+    bool allRangeMode_ = false;
+    bool returningToFlightArea_ = false;
+    float flightAreaRadius_ = 600.0f;
+    float flightMinHeight_ = 5.0f;
+    float flightMaxHeight_ = 180.0f;
+    float flightYaw_ = 0.0f;
+    float flightPitch_ = 0.0f;
 
     // ローリング（バレルロール）用
     bool isRolling_ = false;
@@ -281,6 +298,8 @@ private:
 
     void UpdateKeyboardMove(Input* input);
     void UpdateStarFoxMove();
+    void UpdateStarFoxSteering();
+    void UpdateAllRangeMove(Input* input);
     void UpdateRolling(Input* input);
     void UpdateMouseAim();
     void ClampAimScreenPosition();

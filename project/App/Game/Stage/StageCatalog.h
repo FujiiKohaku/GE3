@@ -18,6 +18,10 @@ struct StageSettings {
     float railLength = 4600.0f;
     float railPointInterval = 50.0f;
     float railSpeed = 0.5f;
+    bool allRangeMode = false;
+    float flightAreaRadius = 600.0f;
+    float flightMinHeight = 5.0f;
+    float flightMaxHeight = 180.0f;
     std::vector<Vector3> railControlPoints;
     std::string bossType = "FearWorm";
     float bossSpawnDistance = 1850.0f;
