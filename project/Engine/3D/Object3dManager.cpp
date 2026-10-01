@@ -8,9 +8,18 @@ namespace {
 constexpr const char* kDefaultObject3dPixelShader =
     "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
 
-std::string MakePipelineKey(const std::string& pixelShaderPath, BlendMode blendMode)
+std::string MakePipelineKey(const std::string& pixelShaderPath, BlendMode blendMode,
+    bool transparent, bool transparentDepthWrite, const std::string& vertexShaderPath)
 {
-    return pixelShaderPath + "#" + std::to_string(static_cast<int>(blendMode));
+    std::string key = vertexShaderPath + "#" + pixelShaderPath + "#" +
+        std::to_string(static_cast<int>(blendMode));
+    if (transparent) {
+        if (transparentDepthWrite) {
+            return key + "#transparent-depth-write";
+        }
+        return key + "#transparent";
+    }
+    return key + "#default";
 }
 }
 
@@ -76,13 +85,19 @@ void Object3dManager::SetGlowPSO()
     commandList->SetPipelineState(glowPipelineStates[currentBlendMode].Get());
 }
 
-void Object3dManager::BindPipeline(const std::string& pixelShaderPath)
+void Object3dManager::BindPipeline(const std::string& pixelShaderPath, bool transparent,
+    bool transparentDepthWrite, const std::string& vertexShaderPath)
 {
-    const BlendMode blendMode = static_cast<BlendMode>(currentBlendMode);
-    const std::string key = MakePipelineKey(pixelShaderPath, blendMode);
+    BlendMode blendMode = static_cast<BlendMode>(currentBlendMode);
+    if (transparent) {
+        blendMode = kBlendModeNormal;
+    }
+    const std::string key = MakePipelineKey(
+        pixelShaderPath, blendMode, transparent, transparentDepthWrite, vertexShaderPath);
     auto found = materialPipelineCache_.find(key);
     if (found == materialPipelineCache_.end()) {
-        auto pipeline = CreateMaterialPipeline(pixelShaderPath, blendMode);
+        auto pipeline = CreateMaterialPipeline(
+            pixelShaderPath, blendMode, transparent, transparentDepthWrite, vertexShaderPath);
         found = materialPipelineCache_.emplace(key, std::move(pipeline)).first;
     }
     dxCommon_->GetCommandList()->SetPipelineState(found->second.Get());
@@ -95,7 +110,7 @@ void Object3dManager::CreateRootSignature()
 
     // ====== RootParameterの設宁E======
     D3D12_ROOT_PARAMETER rootParameters[
-        RootParameterIndex(Object3dRootParameter::Count)] = {};
+        kVertexShaderParametersRootIndex + 1] = {};
 
 
     auto& materialParameter = rootParameters[
@@ -168,6 +183,12 @@ void Object3dManager::CreateRootSignature()
     environmentParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     environmentParameter.DescriptorTable.pDescriptorRanges = descriptorRangeEnvironment;
     environmentParameter.DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeEnvironment);
+
+    auto& vertexShaderParameters = rootParameters[kVertexShaderParametersRootIndex];
+    vertexShaderParameters.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    vertexShaderParameters.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    vertexShaderParameters.Constants.ShaderRegister = 1;
+    vertexShaderParameters.Constants.Num32BitValues = 4;
     // ====== Sampler設宁E======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -283,7 +304,8 @@ void Object3dManager::CreateGraphicsPipeline()
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipeline(
-    const std::string& pixelShaderPath, BlendMode blendMode)
+    const std::string& pixelShaderPath, BlendMode blendMode, bool transparent,
+    bool transparentDepthWrite, const std::string& vertexShaderPath)
 {
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
     inputElementDescs[0].SemanticName = "POSITION";
@@ -306,8 +328,12 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
     depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
+    if (transparent && !transparentDepthWrite) {
+        depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+    }
+
     const auto vertexShader = dxCommon_->LoadCompiledShader(
-        L"resources/Shaders/Object3D/Object3d.VS.hlsl");
+        std::filesystem::path(vertexShaderPath).wstring());
     const auto pixelShader = dxCommon_->LoadCompiledShader(
         std::filesystem::path(pixelShaderPath).wstring());
     assert(vertexShader && pixelShader);
@@ -320,6 +346,16 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     desc.RasterizerState = rasterizerDesc;
     desc.DepthStencilState = depthStencilDesc;
     desc.BlendState = CreateBlendDesc(blendMode);
+    if (transparent) {
+        // Write unblended normals only when this surface also writes depth.
+        desc.BlendState.IndependentBlendEnable = TRUE;
+        desc.BlendState.RenderTarget[1] = desc.BlendState.RenderTarget[0];
+        desc.BlendState.RenderTarget[1].BlendEnable = FALSE;
+        desc.BlendState.RenderTarget[1].RenderTargetWriteMask = 0;
+        if (transparentDepthWrite) {
+            desc.BlendState.RenderTarget[1].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        }
+    }
     desc.NumRenderTargets = 2;
     desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     desc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;

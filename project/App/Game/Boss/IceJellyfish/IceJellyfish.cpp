@@ -10,15 +10,47 @@
 #include "Engine/Time/TimeManager.h"
 #include "Engine/math/MatrixMath.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numbers>
 #include <random>
 
 namespace {
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
+constexpr float kBodyAlpha = 0.95f;
+constexpr float kBellWaveAmplitude = 1.0f;
+constexpr float kTentacleWaveAmplitude = 0.10f;
 constexpr float kIcePillarAheadDistance = 190.0f;
 constexpr float kIcePillarRevealSeconds = 2.00f;
 constexpr float kIcePillarWaveTimeoutSeconds = 9.00f;
+
+void ConfigureJellyfishBodyMaterial(Object3d& object)
+{
+    object.SetMaterial("resources/Shaders/Object3D/IceJellyfish");
+    object.SetVertexShaderPath("resources/Shaders/Object3D/IceJellyfish/Render.VS.hlsl");
+    object.SetTransparent(true);
+    object.SetTransparentDepthWrite(true);
+    object.SetEnableEnvironmentMap(true);
+    object.SetEnvironmentMapStrength(0.10f);
+    object.GetMaterial()->shininess = 96.0f;
+}
+
+struct TransparentPart {
+    Object3d* object = nullptr;
+    float viewDepth = 0.0f;
+};
+
+TransparentPart MakeTransparentPart(Object3d& object, const Camera& camera)
+{
+    const Vector3 worldPosition = MatrixMath::Transform({}, object.GetWorldMatrix());
+    const Vector3 viewPosition = MatrixMath::Transform(worldPosition, camera.GetViewMatrix());
+    return { &object, viewPosition.z };
+}
+
+bool IsFartherPart(const TransparentPart& left, const TransparentPart& right)
+{
+    return left.viewDepth > right.viewDepth;
+}
 
 bool Crossed(float previous, float current, float point)
 {
@@ -84,7 +116,8 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     phase_ = 1;
 
     bell_ = CreatePart(camera, "Boss/IceJellyfish/IceJellyfishBell.obj",
-        { 0.65f, 0.86f, 1.0f, 1.0f }, true);
+        { 0.65f, 0.86f, 1.0f, kBodyAlpha }, true);
+    ConfigureJellyfishBodyMaterial(*bell_);
     core_ = CreatePart(camera, "Boss/IceJellyfish/IceJellyfishCore.obj",
         { 2.8f, 1.25f, 0.25f, 1.0f }, false);
 
@@ -102,7 +135,8 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
             tentacles_[tentacle][segment] = CreatePart(camera,
                 isTip ? "Boss/IceJellyfish/IceJellyfishTip.obj"
                       : "Boss/IceJellyfish/IceJellyfishSegment.obj",
-                { 0.55f, 0.80f, 1.0f, 1.0f }, true);
+                { 0.55f, 0.80f, 1.0f, kBodyAlpha }, true);
+            ConfigureJellyfishBodyMaterial(*tentacles_[tentacle][segment]);
         }
     }
 
@@ -718,7 +752,8 @@ void IceJellyfish::UpdatePartTransforms()
             1.0f - contractionAmount * 0.08f },
         Vector3 {}, Vector3 { 0.0f, openLift, 0.0f });
     bell_->SetCustomWorldMatrix(MatrixMath::Multiply(bellLocal, bodyMatrix));
-    bell_->SetColor({ 0.65f, 0.86f, 1.0f, 1.0f });
+    bell_->SetColor({ 0.65f, 0.86f, 1.0f, kBodyAlpha });
+    bell_->SetVertexShaderParameters({ animationTime_, kBellWaveAmplitude, 0.0f, 0.0f });
     bell_->Update();
 
     const float coreScale = 1.0f - contractionAmount * 0.08f;
@@ -818,18 +853,22 @@ void IceJellyfish::UpdatePartTransforms()
             const bool iceSpearChargedSegment = iceSpearEmitter ||
                 (segment + 1 < kSegmentsPerTentacle &&
                     IsIceSpearEmitter(tentacle, segment + 1));
-            const Vector4 baseTentacleColor = { 0.55f, 0.80f, 1.0f, 1.0f };
-            const Vector4 chargedTentacleColor = { 1.65f, 0.45f, 2.80f, 1.0f };
+            const Vector4 baseTentacleColor = { 0.55f, 0.80f, 1.0f, kBodyAlpha };
+            const Vector4 chargedTentacleColor = { 1.65f, 0.45f, 2.80f, kBodyAlpha };
             const float easedCharge = SmoothStep(iceSpearPoseWeight_);
-            object.SetColor(iceSpearChargedSegment
-                ? LerpColor(baseTentacleColor, chargedTentacleColor, easedCharge)
-                : (icePillarTentacle
-                    ? Vector4 {
-                        0.55f + icePillarCharge * 0.65f,
-                        0.80f + icePillarCharge * 1.35f,
-                        1.00f + icePillarCharge * 1.70f,
-                        1.0f }
-                    : baseTentacleColor));
+            Vector4 tentacleColor = baseTentacleColor;
+            if (iceSpearChargedSegment) {
+                tentacleColor = LerpColor(baseTentacleColor, chargedTentacleColor, easedCharge);
+            } else if (icePillarTentacle) {
+                tentacleColor = {
+                    0.55f + icePillarCharge * 0.65f,
+                    0.80f + icePillarCharge * 1.35f,
+                    1.00f + icePillarCharge * 1.70f,
+                    kBodyAlpha };
+            }
+            object.SetColor(tentacleColor);
+            object.SetVertexShaderParameters({ animationTime_, kTentacleWaveAmplitude,
+                tentacleWavePhase_[tentacle] + index * 0.55f, 1.0f });
             object.Update();
             if (IsSegmentAlive(tentacle, segment)) {
                 tentacleColliders_.push_back(IceJellyfishCollision::TransformBox(
@@ -883,12 +922,7 @@ void IceJellyfish::UpdateIcePillarModelTransforms()
 
 void IceJellyfish::Draw()
 {
-    if (bell_ == nullptr || (isDead_ && deathTimer_ >= 2.0f)) return;
-    for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
-        for (size_t segment = 0; segment < kSegmentsPerTentacle; ++segment) {
-            if (IsSegmentAlive(tentacle, segment)) tentacles_[tentacle][segment]->Draw();
-        }
-    }
+    if (bell_ == nullptr || camera_ == nullptr || (isDead_ && deathTimer_ >= 2.0f)) return;
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
         if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->Draw();
@@ -898,7 +932,22 @@ void IceJellyfish::Draw()
         for (const std::unique_ptr<Object3d>& pillar : icePillarModels_) pillar->Draw();
     }
     core_->Draw();
-    bell_->Draw();
+
+    // Draw opaque parts first, then sort the transparent body in camera space.
+    std::array<TransparentPart, kTentacleCount * kSegmentsPerTentacle + 1> parts {};
+    size_t partCount = 0;
+    parts[partCount++] = MakeTransparentPart(*bell_, *camera_);
+    for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
+        for (size_t segment = 0; segment < kSegmentsPerTentacle; ++segment) {
+            if (IsSegmentAlive(tentacle, segment)) {
+                parts[partCount++] = MakeTransparentPart(*tentacles_[tentacle][segment], *camera_);
+            }
+        }
+    }
+    std::sort(parts.begin(), parts.begin() + partCount, IsFartherPart);
+    for (size_t part = 0; part < partCount; ++part) {
+        parts[part].object->Draw();
+    }
 }
 
 SweepHit IceJellyfish::SweepBullet(

@@ -119,7 +119,10 @@ void Object3d::Draw()
             worldMatrix_, camera_->GetViewProjectionMatrix());
     }
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
-    object3dManager_->BindPipeline(pixelShaderPath_);
+    object3dManager_->BindPipeline(
+        pixelShaderPath_, transparent_, transparentDepthWrite_, vertexShaderPath_);
+    commandList->SetGraphicsRoot32BitConstants(
+        Object3dManager::kVertexShaderParametersRootIndex, 4, &vertexShaderParameters_, 0);
     
     commandList->SetGraphicsRootConstantBufferView(
         RootParameterIndex(Object3dRootParameter::Material),

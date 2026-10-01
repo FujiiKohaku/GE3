@@ -4,11 +4,15 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/blend/blendutil.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Object3dRootParameter.h"
 #include <string>
 #include <unordered_map>
 
 class Object3dManager {
 public:
+    // Append the static-object VS parameters after the shared root slots.
+    static constexpr uint32_t kVertexShaderParametersRootIndex =
+        RootParameterIndex(Object3dRootParameter::Count);
     // Singleton インターフェース
     static Object3dManager* GetInstance();
     static void Finalize();
@@ -36,7 +40,9 @@ public:
     }
     void SetNormalPSO();
     void SetGlowPSO();
-    void BindPipeline(const std::string& pixelShaderPath);
+    void BindPipeline(const std::string& pixelShaderPath, bool transparent = false,
+        bool transparentDepthWrite = false,
+        const std::string& vertexShaderPath = "resources/Shaders/Object3D/Object3d.VS.hlsl");
 
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture();
@@ -61,7 +67,8 @@ private:
     void CreateRootSignature();
     void CreateGraphicsPipeline();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateMaterialPipeline(
-        const std::string& pixelShaderPath, BlendMode blendMode);
+        const std::string& pixelShaderPath, BlendMode blendMode, bool transparent,
+        bool transparentDepthWrite, const std::string& vertexShaderPath);
 
 private:
     DirectXCommon* dxCommon_ = nullptr;

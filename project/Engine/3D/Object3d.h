@@ -65,6 +65,24 @@ public:
     }
     const std::string& GetPixelShaderPath() const { return pixelShaderPath_; }
 
+    void SetVertexShaderPath(const std::string& vertexShaderPath)
+    {
+        vertexShaderPath_ = vertexShaderPath;
+    }
+    const std::string& GetVertexShaderPath() const { return vertexShaderPath_; }
+    // Four floats at VS b1. Their meaning is defined by the selected shader.
+    void SetVertexShaderParameters(const Vector4& parameters)
+    {
+        vertexShaderParameters_ = parameters;
+    }
+
+    // Transparent objects use alpha blending without writing depth by default.
+    // The caller must draw them after opaque objects, from back to front.
+    void SetTransparent(bool transparent) { transparent_ = transparent; }
+    bool IsTransparent() const { return transparent_; }
+    // Depth writing is an approximation for nearly opaque, sorted surfaces.
+    void SetTransparentDepthWrite(bool enable) { transparentDepthWrite_ = enable; }
+
     void SetAnimation(PlayAnimation* anim);
     const Node& GetRootNode() const;
     const Matrix4x4& GetWorldMatrix() const
@@ -167,6 +185,10 @@ private:
     std::string modelFilePath_;
     std::string pixelShaderPath_ =
         "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
+    std::string vertexShaderPath_ = "resources/Shaders/Object3D/Object3d.VS.hlsl";
+    Vector4 vertexShaderParameters_ = {};
+    bool transparent_ = false;
+    bool transparentDepthWrite_ = false;
 
     LevelData::ObjectData::GimmickData gimmick_ {};
     Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };
