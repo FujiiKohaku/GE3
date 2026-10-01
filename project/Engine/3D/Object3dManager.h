@@ -8,11 +8,18 @@
 #include <string>
 #include <unordered_map>
 
+class ShadowMapRenderer;
+
 class Object3dManager {
 public:
     // Append the static-object VS parameters after the shared root slots.
     static constexpr uint32_t kVertexShaderParametersRootIndex =
         RootParameterIndex(Object3dRootParameter::Count);
+    static constexpr uint32_t kShadowConstantsRootIndex = kVertexShaderParametersRootIndex + 1;
+    static constexpr uint32_t kShadowTextureRootIndex = kShadowConstantsRootIndex + 1;
+    static constexpr uint32_t kShadowReceiverRootIndex = kShadowTextureRootIndex + 1;
+    void SetShadowRenderer(ShadowMapRenderer* renderer) { shadowRenderer_ = renderer; }
+    void BindShadowResources(bool receiveShadow);
     // Singleton インターフェース
     static Object3dManager* GetInstance();
     static void Finalize();
@@ -63,7 +70,7 @@ public:
         friend class Object3dManager;
     };
     explicit Object3dManager(ConstructorKey);
-    ~Object3dManager() = default;
+    ~Object3dManager();
 
 private:
     void CreateRootSignature();
@@ -73,6 +80,9 @@ private:
         bool transparentDepthWrite, const std::string& vertexShaderPath);
 
 private:
+    ShadowMapRenderer* shadowRenderer_ = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> disabledShadowConstants_;
+    uint32_t nullShadowSrv_ = 0xffffffffu;
     DirectXCommon* dxCommon_ = nullptr;
     Camera* defaultCamera_ = nullptr;
 

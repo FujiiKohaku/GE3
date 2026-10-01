@@ -326,3 +326,5 @@ project/Tools/UIAnimationEditor/ai_settings.json
 # Log Files
 logs/
 !project/resources/**/*.obj
+
+project/captures/ShadowMapTests/

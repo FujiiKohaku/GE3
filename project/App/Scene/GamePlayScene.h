@@ -70,6 +70,8 @@ public:
 
     void Draw2D() override;
     void Draw3D() override;
+    void DrawShadow(ShadowMapRenderer& renderer) override;
+    ShadowSettings GetShadowSettings() const override { return stageSettings_.shadows; }
     void DrawParticle() override;
     void DrawImGui() override;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)

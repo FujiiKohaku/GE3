@@ -5,6 +5,7 @@
 class OffscreenRenderer;
 class PostEffectManager;
 class SceneManager;
+class ShadowMapRenderer;
 
 class Renderer {
 public:
@@ -18,6 +19,7 @@ public:
     PostEffectManager* GetPostEffectManager() const { return postEffectManager_.get(); }
 
 private:
+    std::unique_ptr<ShadowMapRenderer> shadowRenderer_;
     std::unique_ptr<OffscreenRenderer> offscreenRenderer_;
     std::unique_ptr<PostEffectManager> postEffectManager_;
 };

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="CG2_LE2C_FUJII.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{2845638C-C623-480F-88D1-F988AA810E5A}</ProjectGuid>
+    <ProjectName>ShadowMapTests</ProjectName>
+    <TargetName>ShadowMapTests</TargetName>
+    <IntDir>$(ProjectDir)..\generated\obj\ShadowMapTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>ShadowMapTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)ShadowMapTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>KOHAKU_RENDER_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="App\main.cpp" />
+    <ClCompile Include="Tests\ShadowMapRenderTests.cpp" />
+  </ItemGroup>
+</Project>

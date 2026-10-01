@@ -1,3 +1,5 @@
+// Legacy Ice is also used by the skinning pipeline, which has no shadow inputs.
+#define KOHAKU_NO_SHADOWS
 #include "../StageIceCommon.PS.hlsli"
 
 StageIcePixelOutput main(VertexShaderOutput input)

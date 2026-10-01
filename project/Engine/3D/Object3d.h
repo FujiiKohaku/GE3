@@ -17,6 +17,7 @@
 class Object3dManager;
 class Model;
 class BoxCollider;
+class ShadowMapRenderer;
 class Object3d {
 public:
     // ===============================
@@ -25,6 +26,11 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
+    void DrawShadow(ShadowMapRenderer& renderer);
+    void SetCastShadow(bool enabled) { castShadow_ = enabled; }
+    void SetReceiveShadow(bool enabled) { receiveShadow_ = enabled; }
+    bool GetCastShadow() const { return castShadow_; }
+    bool GetReceiveShadow() const { return receiveShadow_; }
     ~Object3d();
     static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
     // static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
@@ -187,6 +193,8 @@ private:
         "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
     std::string vertexShaderPath_ = "resources/Shaders/Object3D/Object3d.VS.hlsl";
     Vector4 vertexShaderParameters_ = {};
+    bool castShadow_ = false;
+    bool receiveShadow_ = false;
     bool transparent_ = false;
     bool transparentDepthWrite_ = false;
 

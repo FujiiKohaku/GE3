@@ -14,10 +14,15 @@
 #include "Engine/Screenshot/ScreenshotManager.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/input/Input.h"
+#include "Engine/Shadow/ShadowMapRenderer.h"
+#include "Engine/Light/LightManager.h"
 
 Renderer::Renderer() = default;
 
-Renderer::~Renderer() = default;
+Renderer::~Renderer()
+{
+    Object3dManager::GetInstance()->SetShadowRenderer(nullptr);
+}
 
 void Renderer::Initialize()
 {
@@ -63,6 +68,21 @@ void Renderer::Draw(SceneManager* sceneManager)
         D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView =
             postEffectManager_->GetFogConstantBufferView();
         effectManager->SetFogConstantBufferView(fogConstantBufferView);
+    }
+
+    ShadowSettings shadows = sceneManager->GetShadowSettings();
+    Object3dManager::GetInstance()->SetShadowRenderer(nullptr);
+    if (shadows.enabled && defaultCamera != nullptr) {
+        if (!shadowRenderer_ || shadowRenderer_->GetResolution() != shadows.resolution) {
+            DirectXCommon::GetInstance()->WaitForGPU();
+            shadowRenderer_ = std::make_unique<ShadowMapRenderer>();
+            shadowRenderer_->Initialize(DirectXCommon::GetInstance(), shadows.resolution);
+        }
+        shadowRenderer_->Update(*defaultCamera, LightManager::GetInstance()->GetDirectionalDirection(), shadows);
+        shadowRenderer_->BeginShadowPass();
+        sceneManager->DrawShadow(*shadowRenderer_);
+        shadowRenderer_->EndShadowPass();
+        Object3dManager::GetInstance()->SetShadowRenderer(shadowRenderer_.get());
     }
 
     // Offscreen draw start

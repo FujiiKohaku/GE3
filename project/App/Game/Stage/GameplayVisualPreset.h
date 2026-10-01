@@ -8,24 +8,46 @@
 // Game and model preview deliberately share these settings.
 namespace GameplayVisualPreset {
 inline constexpr float kIceShininess = 96.0f;
+struct LightingPreset {
+    Vector4 color;
+    Vector3 direction;
+    float intensity;
+    Vector4 ambient;
+};
+
+inline LightingPreset GetLighting(const std::string& stageId)
+{
+    if (stageId == "stage03") {
+        return { { 0.90f, 0.96f, 1.0f, 1.0f },
+            { -0.60f, -0.70f, 0.40f }, 0.82f, { 0.38f, 0.50f, 0.67f, 0.22f } };
+    }
+    return { { 1.0f, 0.97f, 0.90f, 1.0f },
+        { -0.28f, -0.86f, 0.42f }, 1.0f, { 0.52f, 0.60f, 0.68f, 0.28f } };
+}
+
 inline void ApplyLighting(const std::string& stageId)
 {
     LightManager* lightManager = LightManager::GetInstance();
-    if (stageId == "stage03") {
-        lightManager->SetDirectional({ 0.90f, 0.96f, 1.0f, 1.0f },
-            Normalize(Vector3 { -0.35f, -0.82f, 0.45f }), 0.90f);
-        lightManager->SetAmbientColor({ 0.40f, 0.52f, 0.68f });
-        lightManager->SetAmbientIntensity(0.24f);
-    } else {
-        lightManager->SetDirectional({ 1.0f, 0.97f, 0.90f, 1.0f },
-            Normalize(Vector3 { -0.28f, -0.86f, 0.42f }), 1.0f);
-        lightManager->SetAmbientColor({ 0.52f, 0.60f, 0.68f });
-        lightManager->SetAmbientIntensity(0.28f);
-    }
+    const LightingPreset lighting = GetLighting(stageId);
+    lightManager->SetDirectional(lighting.color, lighting.direction, lighting.intensity);
+    lightManager->SetAmbientColor({ lighting.ambient.x, lighting.ambient.y, lighting.ambient.z });
+    lightManager->SetAmbientIntensity(lighting.ambient.w);
     lightManager->SetPointRadius(10.0f);
     lightManager->SetPointDecay(1.0f);
     lightManager->SetPointLight({ 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 2.0f, 0.0f }, 0.0f);
     lightManager->SetSpotLightIntensity(0.0f);
+}
+
+inline void ApplyAtmosphere(const std::string& stageId)
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (stageId == "stage03") {
+        // Keep nearby ice clear and let middle-distance silhouettes survive the fog.
+        sceneManager->SetSceneFogColor({ 0.58f, 0.80f, 0.96f, 1.0f });
+        sceneManager->SetSceneDistanceFog({ 450.0f, 1000.0f, 1.0f, 1.35f });
+        return;
+    }
+    sceneManager->SetSceneDistanceFog({ 380.0f, 720.0f, 1.0f, 1.2f });
 }
 
 inline void ConfigurePostEffects(bool boosting)

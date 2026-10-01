@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include "Engine/Shadow/ShadowMapRenderer.h"
+#include <cmath>
 #pragma region
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
@@ -139,6 +141,7 @@ void Object3d::Draw()
         RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
         Object3dManager::GetInstance()->GetEnvironmentTexture());
 
+    object3dManager_->BindShadowResources(receiveShadow_);
     if (model_) {
         model_->Draw();
     }
@@ -428,4 +431,20 @@ Object3d::~Object3d()
     if (materialResource) {
         materialResource->Unmap(0, nullptr);
     }
+}
+
+void Object3d::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (!castShadow_ || transparent_ || model_ == nullptr) { return; }
+    Vector3 center = MatrixMath::Transform(model_->GetBoundsCenter(), worldMatrix_);
+    float squaredScale = 0.0f;
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            squaredScale += worldMatrix_.m[row][column] * worldMatrix_.m[row][column];
+        }
+    }
+    float radius = model_->GetBoundsRadius() * std::sqrt(squaredScale);
+    if (!renderer.Intersects(center, radius)) { return; }
+    renderer.BindObject(worldMatrix_);
+    model_->DrawDepth();
 }

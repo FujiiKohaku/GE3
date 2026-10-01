@@ -1,7 +1,13 @@
 #include "Object3d.hlsli"
+#ifndef KOHAKU_NO_SHADOWS
+#include "ShadowSampling.hlsli"
+#else
+float SampleShadowVisibility(float3 worldPosition, float3 normal) { return 1.0f; }
+float ShadowDirectFactor(float visibility) { return 1.0f; }
+#endif
 
 ConstantBuffer<Material> gMaterial : register(b0);
-ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
+#include "StageIceLighting.hlsli"
 ConstantBuffer<Camera> gCamera : register(b2);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
@@ -16,7 +22,7 @@ struct StageIceLighting
 {
     float3 normal;
     float3 view;
-    float lightBand;
+    float directVisibility;
     float3 shade;
 };
 
@@ -39,14 +45,8 @@ StageIceLighting GetStageIceLighting(VertexShaderOutput input)
     StageIceLighting lighting;
     lighting.normal = normalize(input.normal);
     lighting.view = normalize(gCamera.worldPosition - input.worldPosition);
-    float faceLight = saturate(dot(lighting.normal,
-        normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);
-    float middleBand = smoothstep(0.35f, 0.37f, faceLight);
-    lighting.lightBand = smoothstep(0.71f, 0.73f, faceLight);
-    lighting.shade = lerp(float3(0.33f, 0.52f, 0.68f),
-        float3(0.70f, 0.84f, 0.93f), middleBand);
-    lighting.shade = lerp(lighting.shade,
-        float3(0.91f, 0.96f, 1.0f), lighting.lightBand);
+    lighting.directVisibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, lighting.normal));
+    lighting.shade = GetStageIceDiffuseLighting(lighting.normal, lighting.directVisibility);
     return lighting;
 }
 
@@ -74,10 +74,11 @@ float3 ShadeStageIceSurface(StageIceLighting lighting, float3 iceColor,
     float3 surface = lerp(iceColor * float3(0.82f, 0.88f, 0.92f), frostColor, frost);
     float clearSurface = 1.0f - frost;
     // Highlights stay visible even on darker material/texture colors.
-    surface += float3(0.44f, 0.76f, 1.0f) * glaze * 0.18f * clearSurface;
-    surface += float3(0.65f, 0.88f, 1.0f) * fresnel *
-        (0.14f + rimStrength * 0.90f) * clearSurface;
-    float3 lightColor = gDirectionalLight.color.rgb * gDirectionalLight.intensity;
+    float3 ambientRadiance = GetStageIceAmbientRadiance();
+    surface += ambientRadiance * float3(0.75f, 0.90f, 1.0f) * glaze * 0.55f * clearSurface;
+    surface += ambientRadiance * fresnel *
+        (0.50f + rimStrength * 3.0f) * clearSurface;
+    float3 lightColor = GetStageIceDirectRadiance(lighting.directVisibility);
     surface += lightColor * float3(0.82f, 0.96f, 1.0f) *
         ((sharpHighlight * 0.85f + broadHighlight * 0.38f) * clearSurface +
          frostHighlight * 0.025f * frost);

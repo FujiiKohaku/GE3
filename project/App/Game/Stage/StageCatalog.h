@@ -3,8 +3,10 @@
 #include "Engine/math/EngineStruct.h"
 #include <string>
 #include <vector>
+#include "Engine/Shadow/ShadowSettings.h"
 
 struct StageSettings {
+    ShadowSettings shadows;
     std::string id;
     std::string name;
     std::string description;

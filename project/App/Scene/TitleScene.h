@@ -18,10 +18,15 @@ public:
     void Update() override;
     void Draw2D() override;
     void Draw3D() override;
+    void DrawShadow(ShadowMapRenderer& renderer) override;
+    ShadowSettings GetShadowSettings() const override;
     void DrawParticle() override;
     void DrawImGui() override;
 
 private:
+#if defined(KOHAKU_RENDER_TESTS)
+    friend class TitleSceneRenderTest;
+#endif
     struct StageRoomObject {
         std::unique_ptr<Object3d> object;
         Vector3 basePosition {};
@@ -78,6 +83,9 @@ private:
     void UpdateStageConfirmation(float deltaTime);
     void UpdateSettingsTransition(float deltaTime);
     void UpdateInterface(float deltaTime);
+    void UpdateSceneLighting();
+    void DrawRoomObjects(const std::vector<StageRoomObject>* roomObjects, ShadowMapRenderer* shadows);
+    void DrawVisibleRoomObjects(ShadowMapRenderer* shadows);
 
     static float Clamp01(float value);
     static float SmoothStep(float value);

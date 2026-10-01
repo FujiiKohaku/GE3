@@ -149,6 +149,7 @@ void ModelPreviewApp::Initialize()
     TextureManager::GetInstance()->LoadTexture(iceStage->skybox);
     skyBox_->SetTexture(iceStage->skybox);
     GameplayVisualPreset::ApplyLighting("stage03");
+    GameplayVisualPreset::ApplyAtmosphere("stage03");
     GameplayVisualPreset::ConfigurePostEffects(false);
     capture_.Initialize(dx_);
     TimeManager::GetInstance()->Initialize();

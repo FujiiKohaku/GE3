@@ -4,6 +4,8 @@
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
 #include <cstring>
+#include <algorithm>
+#include <cfloat>
 
 // ===============================================
 // モデル初期化処理
@@ -24,6 +26,20 @@ void Model::Initialize(ModelCommon* modelCommon, const ModelData& modelData)
 
 void Model::CreateMeshResources()
 {
+    Vector3 minimum { FLT_MAX, FLT_MAX, FLT_MAX };
+    Vector3 maximum { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+    for (const auto& primitive : modelData_.primitives) {
+        for (const auto& vertex : primitive.vertices) {
+            minimum.x = (std::min)(minimum.x, vertex.position.x);
+            minimum.y = (std::min)(minimum.y, vertex.position.y);
+            minimum.z = (std::min)(minimum.z, vertex.position.z);
+            maximum.x = (std::max)(maximum.x, vertex.position.x);
+            maximum.y = (std::max)(maximum.y, vertex.position.y);
+            maximum.z = (std::max)(maximum.z, vertex.position.z);
+        }
+    }
+    boundsCenter_ = (minimum + maximum) * 0.5f;
+    boundsRadius_ = Vector3Length(maximum - minimum) * 0.5f;
     auto* dx = modelCommon_->GetDxCommon();
 
     for (MeshPrimitive& primitive : modelData_.primitives) {
@@ -123,4 +139,18 @@ const MaterialData& Model::GetMaterial(uint32_t materialIndex) const
         return modelData_.materials[0];
     }
     return modelData_.materials[materialIndex];
+}
+
+void Model::DrawDepth()
+{
+    auto* cmd = modelCommon_->GetDxCommon()->GetCommandList();
+    for (const MeshPrimitive& primitive : modelData_.primitives) {
+        cmd->IASetVertexBuffers(0, 1, &primitive.vbView);
+        if (!primitive.indices.empty()) {
+            cmd->IASetIndexBuffer(&primitive.ibView);
+            cmd->DrawIndexedInstanced(static_cast<UINT>(primitive.indices.size()), 1, 0, 0, 0);
+        } else {
+            cmd->DrawInstanced(static_cast<UINT>(primitive.vertices.size()), 1, 0, 0);
+        }
+    }
 }

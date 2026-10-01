@@ -3,6 +3,8 @@
 #include "Engine/Light/LightManager.h"
 #include <cassert>
 #include <filesystem>
+#include "Engine/Shadow/ShadowMapRenderer.h"
+#include "Engine/SrvManager/SrvManager.h"
 
 namespace {
 constexpr const char* kDefaultObject3dPixelShader =
@@ -45,6 +47,14 @@ void Object3dManager::Initialize(DirectXCommon* dxCommon)
     dxCommon_ = dxCommon;
     LightManager::GetInstance()->Initialize(dxCommon_);
 
+
+    disabledShadowConstants_ = dxCommon_->CreateBufferResource(sizeof(ShadowConstants));
+    ShadowConstants* disabled = nullptr;
+    disabledShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabled));
+    *disabled = {};
+    disabled->lightViewProjection = MatrixMath::MakeIdentity4x4();
+    nullShadowSrv_ = SrvManager::GetInstance()->Allocate();
+    SrvManager::GetInstance()->CreateSRVforTexture2D(nullShadowSrv_, nullptr, DXGI_FORMAT_R32_FLOAT, 1);
 
     CreateRootSignature();
 
@@ -116,7 +126,7 @@ void Object3dManager::CreateRootSignature()
 
     // ====== RootParameterの設宁E======
     D3D12_ROOT_PARAMETER rootParameters[
-        kVertexShaderParametersRootIndex + 1] = {};
+        kShadowReceiverRootIndex + 1] = {};
 
 
     auto& materialParameter = rootParameters[
@@ -195,6 +205,23 @@ void Object3dManager::CreateRootSignature()
     vertexShaderParameters.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     vertexShaderParameters.Constants.ShaderRegister = 1;
     vertexShaderParameters.Constants.Num32BitValues = 4;
+    auto& shadowConstants = rootParameters[kShadowConstantsRootIndex];
+    shadowConstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    shadowConstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    shadowConstants.Descriptor.ShaderRegister = 6;
+    D3D12_DESCRIPTOR_RANGE shadowRange {};
+    shadowRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    shadowRange.BaseShaderRegister = 2;
+    shadowRange.NumDescriptors = 1;
+    auto& shadowTexture = rootParameters[kShadowTextureRootIndex];
+    shadowTexture.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    shadowTexture.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    shadowTexture.DescriptorTable = { 1, &shadowRange };
+    auto& receiver = rootParameters[kShadowReceiverRootIndex];
+    receiver.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    receiver.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    receiver.Constants.ShaderRegister = 7;
+    receiver.Constants.Num32BitValues = 1;
     // ====== Sampler設宁E======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -206,13 +233,21 @@ void Object3dManager::CreateRootSignature()
     staticSampler.ShaderRegister = 0;
     staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+    D3D12_STATIC_SAMPLER_DESC samplers[2] { staticSampler, staticSampler };
+    samplers[1].ShaderRegister = 1;
+    samplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+    samplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    samplers[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    samplers[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    samplers[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    samplers[1].BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
     // ====== RootSignatureDesc設宁E======
     D3D12_ROOT_SIGNATURE_DESC desc = {};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     desc.pParameters = rootParameters;
     desc.NumParameters = _countof(rootParameters);
-    desc.pStaticSamplers = &staticSampler;
-    desc.NumStaticSamplers = 1;
+    desc.pStaticSamplers = samplers;
+    desc.NumStaticSamplers = 2;
 
 
     hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
@@ -393,4 +428,25 @@ D3D12_GPU_DESCRIPTOR_HANDLE Object3dManager::GetEnvironmentTexture()
 void Object3dManager::SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle)
 {
     environmentTextureHandle_ = handle;
+}
+
+Object3dManager::~Object3dManager()
+{
+    if (nullShadowSrv_ != 0xffffffffu) { SrvManager::GetInstance()->Free(nullShadowSrv_); }
+}
+
+void Object3dManager::BindShadowResources(bool receiveShadow)
+{
+    auto* cmd = dxCommon_->GetCommandList();
+    D3D12_GPU_VIRTUAL_ADDRESS address = disabledShadowConstants_->GetGPUVirtualAddress();
+    auto srv = SrvManager::GetInstance()->GetGPUDescriptorHandle(nullShadowSrv_);
+    if (shadowRenderer_ != nullptr) {
+        address = shadowRenderer_->GetConstantsAddress();
+        srv = shadowRenderer_->GetSrv();
+    }
+    cmd->SetGraphicsRootConstantBufferView(kShadowConstantsRootIndex, address);
+    cmd->SetGraphicsRootDescriptorTable(kShadowTextureRootIndex, srv);
+    uint32_t receiver = 0;
+    if (receiveShadow) { receiver = 1; }
+    cmd->SetGraphicsRoot32BitConstant(kShadowReceiverRootIndex, receiver, 0);
 }

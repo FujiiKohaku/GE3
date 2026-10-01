@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Engine/PostEffect/PostEffectType.h"
+#include "Engine/PostEffect/Fog/FogData.h"
 
 struct PostEffectInfo {
     PostEffectType type = PostEffectType::Copy;
@@ -46,6 +47,8 @@ public:
     void DrawImGui();
     void Draw2D();
     void Draw3D();
+    void DrawShadow(ShadowMapRenderer& renderer);
+    ShadowSettings GetShadowSettings() const;
     void DrawParticle();
     // PostEffectTypeのセッターとゲッター
     void SetPostEffectType(PostEffectType postEffectType);
@@ -91,6 +94,13 @@ public:
     const Vector4& GetSceneClearColor() const { return sceneClearColor_; }
     void SetSceneFogColor(const Vector4& color) { sceneFogColor_ = color; }
     const Vector4& GetSceneFogColor() const { return sceneFogColor_; }
+    void SetSceneDistanceFog(const DistanceFogData& fog)
+    {
+        sceneDistanceFog_ = fog;
+        ++sceneFogRevision_;
+    }
+    const DistanceFogData& GetSceneDistanceFog() const { return sceneDistanceFog_; }
+    uint64_t GetSceneFogRevision() const { return sceneFogRevision_; }
 
 private:
     SceneManager() = default;
@@ -119,6 +129,8 @@ private:
     Vector3 paintColor_ = { 0.95f, 0.10f, 0.58f };
     Vector4 sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
     Vector4 sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
+    DistanceFogData sceneDistanceFog_ { 380.0f, 720.0f, 1.0f, 1.2f };
+    uint64_t sceneFogRevision_ = 1;
 
 private:
     std::unique_ptr<BaseScene> scene_;

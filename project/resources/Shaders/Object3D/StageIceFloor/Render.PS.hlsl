@@ -1,4 +1,6 @@
 #include "../Object3d.hlsli"
+#include "../ShadowSampling.hlsli"
+#include "../StageIceLighting.hlsli"
 
 ConstantBuffer<Material> gMaterial : register(b0);
 Texture2D<float4> gTexture : register(t0);
@@ -18,10 +20,8 @@ FloorPixelOutput main(VertexShaderOutput input)
     float2 uv = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform).xy;
     float4 textureColor = gTexture.Sample(gSampler, uv);
     float3 N = normalize(input.normal);
-    float faceLight = saturate(dot(N, normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);
-    float3 shade = lerp(float3(0.33f, 0.52f, 0.68f), float3(0.70f, 0.84f, 0.93f),
-        smoothstep(0.35f, 0.37f, faceLight));
-    shade = lerp(shade, float3(0.91f, 0.96f, 1.0f), smoothstep(0.71f, 0.73f, faceLight));
+    float direct = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, N));
+    float3 shade = GetStageIceDiffuseLighting(N, direct);
     float3 color = gMaterial.color.rgb * textureColor.rgb * shade * kFloorTint *
         float3(0.82f, 0.88f, 0.92f);
 

@@ -180,7 +180,13 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 void PostEffectManager::Update(Camera* camera)
 {
     if (FogData* fogData = fogManager_->GetEditableFogData()) {
-        fogData->color = SceneManager::GetInstance()->GetSceneFogColor();
+        SceneManager* sceneManager = SceneManager::GetInstance();
+        fogData->color = sceneManager->GetSceneFogColor();
+        // Apply a preset once, so development sliders remain usable afterwards.
+        if (sceneFogRevision_ != sceneManager->GetSceneFogRevision()) {
+            fogData->distance = sceneManager->GetSceneDistanceFog();
+            sceneFogRevision_ = sceneManager->GetSceneFogRevision();
+        }
     }
     if (camera != nullptr) {
         auto& parameter = copyImageRenderer_->GetPostEffectParameter();

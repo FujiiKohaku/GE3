@@ -27,6 +27,7 @@ public:
 
     void SetDirectional(const Vector4& color, const Vector3& dir, float intensity);
     void SetDirection(const Vector3& dir);
+    Vector3 GetDirectionalDirection() const { return lightData_->direction; }
     void SetIntensity(float intensity);
 
     void SetPointLight(const Vector4& color, const Vector3& pos, float intensity);

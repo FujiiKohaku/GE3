@@ -9,6 +9,7 @@
 #include "Engine/Time/TimeManager.h"
 #include "App/Game/Audio/GameSfx.h"
 #include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Stage/GameplayVisualPreset.h"
 #include "GamePlayScene.h"
 #include "LoadingScene.h"
 #include "SceneManager.h"
@@ -180,17 +181,11 @@ void TitleScene::Initialize()
     InitializeStageSelection();
     UpdateInterface(0.0f);
 
-    LightManager::GetInstance()->SetDirectional(
-        { 1.0f, 0.68f, 0.46f, 1.0f },
-        { -0.35f, -0.78f, 0.42f },
-        1.15f);
-    LightManager::GetInstance()->SetAmbientColor({ 0.34f, 0.42f, 0.56f });
-    LightManager::GetInstance()->SetAmbientIntensity(0.32f);
+    UpdateSceneLighting();
 
     SceneManager::GetInstance()->SetSceneClearColor(
         { 0.16f, 0.29f, 0.46f, 1.0f });
-    SceneManager::GetInstance()->SetSceneFogColor(
-        { 0.22f, 0.38f, 0.54f, 1.0f });
+    SceneManager::GetInstance()->SetSceneDistanceFog({ 300.0f, 1100.0f, 1.0f, 1.4f });
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
 }
 
@@ -208,6 +203,10 @@ Object3d* TitleScene::AddBaseObject(
     object->SetScale(scale);
     object->SetRotate(rotation);
     object->SetEnableLighting(true);
+    object->SetMaterial("resources/Shaders/Object3D/ShadowToon");
+    object->SetCastShadow(true);
+    if (modelPath.ends_with("deck_tile.obj")) { object->SetCastShadow(false); }
+    object->SetReceiveShadow(true);
     object->Update();
     Object3d* result = object.get();
     baseObjects_.push_back(std::move(object));
@@ -246,6 +245,9 @@ Object3d* TitleScene::AddStageRoomObject(
     roomObject.object->SetScale(fittedScale);
     roomObject.object->SetRotate(rotation);
     roomObject.object->SetEnableLighting(true);
+    roomObject.object->SetMaterial("resources/Shaders/Object3D/ShadowToon");
+    roomObject.object->SetCastShadow(true);
+    roomObject.object->SetReceiveShadow(true);
     roomObject.object->Update();
     roomObject.basePosition = fittedPosition;
     roomObject.baseRotation = rotation;
@@ -416,6 +418,9 @@ void TitleScene::InitializeLaunchBase()
     aircraft_->SetTranslate({ 0.0f, 3.0f, -5.0f });
     aircraft_->SetScale({ 1.45f, 1.45f, 1.45f });
     aircraft_->SetEnableLighting(true);
+    aircraft_->SetMaterial("resources/Shaders/Object3D/ShadowToon");
+    aircraft_->SetCastShadow(true);
+    aircraft_->SetReceiveShadow(true);
     aircraft_->Update();
 
     InitializeStageRoomSets();
@@ -533,7 +538,11 @@ void TitleScene::InitializeStageRoomSets()
             0.72f + static_cast<float>(index % 3) * 0.20f,
             static_cast<float>(index) * 0.025f);
         ice->SetColor({ 0.68f, 0.88f, 1.0f, 1.0f });
-        ice->SetShadingMode(MaterialShadingMode::Ice);
+        const std::string modelPath = std::string(kIceEnvironment) + iceProps[index].model;
+        ice->SetMaterial(GameplayVisualPreset::IceMaterialFolder(modelPath));
+        ice->GetMaterial()->shininess = GameplayVisualPreset::kIceShininess;
+        ice->SetEnableEnvironmentMap(false);
+        ice->SetEnvironmentMapStrength(0.0f);
     }
 
     for (float x : { -24.0f, 18.0f }) {
@@ -930,6 +939,7 @@ void TitleScene::Update()
     }
 
     UpdateStageRoomTransition(deltaTime);
+    UpdateSceneLighting();
 
     oceanSurface_->Update(deltaTime);
     for (const auto& object : baseObjects_) {
@@ -1312,32 +1322,89 @@ void TitleScene::Draw3D()
         aircraft_->Draw();
     }
 
-    auto drawRoomGroup = [](const std::vector<StageRoomObject>* roomObjects) {
-        if (roomObjects == nullptr) {
-            return;
-        }
-        for (const StageRoomObject& roomObject : *roomObjects) {
+    DrawVisibleRoomObjects(nullptr);
+}
+
+void TitleScene::DrawRoomObjects(
+    const std::vector<StageRoomObject>* roomObjects, ShadowMapRenderer* shadows)
+{
+    if (roomObjects == nullptr) { return; }
+    for (const StageRoomObject& roomObject : *roomObjects) {
+        if (shadows != nullptr) {
+            roomObject.object->DrawShadow(*shadows);
+        } else {
             roomObject.object->Draw();
         }
-    };
+    }
+}
+
+void TitleScene::DrawVisibleRoomObjects(ShadowMapRenderer* shadows)
+{
 
     if (!stages_.empty()) {
         if (stageRoomTransitionActive_) {
             const float progress = Clamp01(
                 stageRoomTransitionTime_ / kStageRoomTransitionDuration);
             if (progress < 0.56f) {
-                drawRoomGroup(
-                    FindStageRoomObjects(stages_[previousStageIndex_].id));
+                DrawRoomObjects(
+                    FindStageRoomObjects(stages_[previousStageIndex_].id), shadows);
             }
             if (progress >= 0.30f) {
-                drawRoomGroup(
-                    FindStageRoomObjects(stages_[nextStageIndex_].id));
+                DrawRoomObjects(
+                    FindStageRoomObjects(stages_[nextStageIndex_].id), shadows);
             }
         } else {
-            drawRoomGroup(
-                FindStageRoomObjects(stages_[currentStageIndex_].id));
+            DrawRoomObjects(
+                FindStageRoomObjects(stages_[currentStageIndex_].id), shadows);
         }
     }
+}
+
+void TitleScene::DrawShadow(ShadowMapRenderer& renderer)
+{
+    for (const auto& object : baseObjects_) { object->DrawShadow(renderer); }
+    if (aircraft_ != nullptr) { aircraft_->DrawShadow(renderer); }
+    // Use the same visibility rules during room swaps as the color pass.
+    DrawVisibleRoomObjects(&renderer);
+}
+
+ShadowSettings TitleScene::GetShadowSettings() const
+{
+    ShadowSettings settings;
+    settings.enabled = true;
+    settings.distance = 240.0f;
+    settings.casterMargin = 180.0f;
+    settings.strength = 0.70f;
+    settings.normalBias = 0.12f;
+    settings.pcfRadius = 1.0f;
+    return settings;
+}
+
+void TitleScene::UpdateSceneLighting()
+{
+    float roomAmount = 1.0f;
+    if (viewState_ == ViewState::Title || viewState_ == ViewState::Settings ||
+        viewState_ == ViewState::EnteringSettings || viewState_ == ViewState::LeavingSettings) {
+        roomAmount = 0.0f;
+    } else if (viewState_ == ViewState::EnteringStageSelect) {
+        roomAmount = SmoothStep(animationTime_ / kStageTransitionDuration);
+    } else if (viewState_ == ViewState::LeavingStageSelect) {
+        roomAmount = 1.0f - SmoothStep(animationTime_ / kStageReturnDuration);
+    }
+    const float frozenAmount = Clamp01(frozenRoomAmount_) * roomAmount;
+    const auto ice = GameplayVisualPreset::GetLighting("stage03");
+    const Vector3 color = Lerp(Vector3 { 0.98f, 0.80f, 0.64f },
+        Vector3 { ice.color.x, ice.color.y, ice.color.z }, frozenAmount);
+    const Vector3 ambient = Lerp(Vector3 { 0.34f, 0.42f, 0.56f },
+        Vector3 { ice.ambient.x, ice.ambient.y, ice.ambient.z }, frozenAmount);
+    LightManager* lights = LightManager::GetInstance();
+    lights->SetDirectional({ color.x, color.y, color.z, 1.0f },
+        { -0.55f, -0.70f, 0.45f }, std::lerp(0.95f, ice.intensity, frozenAmount));
+    lights->SetAmbientColor(ambient);
+    lights->SetAmbientIntensity(std::lerp(0.32f, 0.28f, frozenAmount));
+    const Vector3 fog = Lerp(Vector3 { 0.22f, 0.38f, 0.54f },
+        Vector3 { 0.58f, 0.80f, 0.96f }, frozenAmount);
+    SceneManager::GetInstance()->SetSceneFogColor({ fog.x, fog.y, fog.z, 1.0f });
 }
 
 void TitleScene::Finalize()

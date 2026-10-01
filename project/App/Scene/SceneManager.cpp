@@ -36,6 +36,7 @@ void SceneManager::Update()
         // 時間帯を持たないシーンに、前シーンの空色を残さない。
         sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
         sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
+        SetSceneDistanceFog({ 380.0f, 720.0f, 1.0f, 1.2f });
     }
     if (ChangeScene(scene_, nextScene_, retiredScene_)) {
         pageReveal_.InitializeIfRequested();
@@ -211,4 +212,14 @@ void SceneManager::SetCameraShakeStrength(float strength)
 float SceneManager::GetCameraShakeStrength() const
 {
     return cameraShakeStrength_;
+}
+
+void SceneManager::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (scene_) { scene_->DrawShadow(renderer); }
+}
+ShadowSettings SceneManager::GetShadowSettings() const
+{
+    if (scene_) { return scene_->GetShadowSettings(); }
+    return {};
 }

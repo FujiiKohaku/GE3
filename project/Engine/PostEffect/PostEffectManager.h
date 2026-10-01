@@ -93,6 +93,7 @@ private:
     std::unique_ptr<BloomRenderer> bloomRenderer_;
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
+    uint64_t sceneFogRevision_ = 0;
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;

@@ -1,4 +1,6 @@
 #pragma once
+#include "Engine/Shadow/ShadowSettings.h"
+class ShadowMapRenderer;
 
 
 // シーン基底クラス
@@ -13,6 +15,8 @@ public:
 
     virtual void Draw2D() = 0;
     virtual void Draw3D() = 0;
+    virtual void DrawShadow(ShadowMapRenderer&) {}
+    virtual ShadowSettings GetShadowSettings() const { return {}; }
     virtual void DrawParticle() = 0;
     virtual void DrawImGui() = 0;
 

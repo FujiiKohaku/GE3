@@ -241,6 +241,8 @@ void GamePlayScene::Initialize()
 
     ApplyStageVisualPreset();
 
+    GameplayVisualPreset::ApplyAtmosphere(stageId_);
+
     // =================================================
     // Sound
     // =================================================
@@ -689,6 +691,7 @@ void GamePlayScene::Initialize()
             floorObj_->GetMaterial()->shininess = 0.0f;
             floorObj_->SetEnableEnvironmentMap(false);
             floorObj_->SetEnvironmentMapStrength(0.0f);
+            floorObj_->SetReceiveShadow(true);
         }
     }
 
@@ -1394,7 +1397,7 @@ void GamePlayScene::Update()
 
     // ---- リセットボタン（向きだけ元に戻す）---
     if (ImGui::Button("Reset Direction")) {
-        lightDir = { -0.35f, -0.82f, 0.45f };
+        lightDir = GameplayVisualPreset::GetLighting(stageId_).direction;
     }
 
     ImGui::SameLine();
@@ -1402,10 +1405,7 @@ void GamePlayScene::Update()
     // ---- ライトを完全初期化 ----
     if (ImGui::Button("Reset Light")) {
         lightEnabled = true;
-        lightColor = Vector4(0.90f, 0.96f, 1.0f, 1.0f);
-        lightIntensity = 0.90f;
-        lightDir = { -0.35f, -0.82f, 0.45f };
-        ambientColor = Vector4(0.40f, 0.52f, 0.68f, 0.24f);
+        ApplyStageVisualPreset();
     }
 
     ImGui::ColorEdit3("Ambient Color", &ambientColor.x);
@@ -2697,16 +2697,13 @@ void GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
     if (key == "pointEnabled") { pointEnabled_ = enabled; ApplyDevelopmentLighting(); return; }
     if (key == "spotEnabled") { spotEnabled_ = enabled; ApplyDevelopmentLighting(); return; }
     if (key == "resetLightDirection") {
-        lightDir_ = { -0.35f, -0.82f, 0.45f };
+        lightDir_ = GameplayVisualPreset::GetLighting(stageId_).direction;
         ApplyDevelopmentLighting();
         return;
     }
     if (key == "resetLight") {
         lightEnabled_ = true;
-        lightColor_ = { 0.90f, 0.96f, 1.0f, 1.0f };
-        lightIntensity_ = 0.90f;
-        lightDir_ = { -0.35f, -0.82f, 0.45f };
-        ambientColor_ = { 0.40f, 0.52f, 0.68f, 0.24f };
+        ApplyStageVisualPreset();
         ApplyDevelopmentLighting();
         return;
     }
@@ -2992,7 +2989,7 @@ void GamePlayScene::ApplyDevelopmentLighting()
     if (lightManager == nullptr) return;
     Vector3 direction = Normalize(lightDir_);
     if (std::abs(direction.x) + std::abs(direction.y) + std::abs(direction.z) < 0.001f) {
-        direction = { -0.35f, -0.82f, 0.45f };
+        direction = GameplayVisualPreset::GetLighting(stageId_).direction;
     }
     lightManager->SetDirectional(lightColor_, direction, lightEnabled_ ? lightIntensity_ : 0.0f);
     lightManager->SetAmbientColor({ ambientColor_.x, ambientColor_.y, ambientColor_.z });
@@ -3018,6 +3015,11 @@ void GamePlayScene::ApplyDevelopmentLighting()
 
 void GamePlayScene::ApplyStageVisualPreset()
 {
+    const GameplayVisualPreset::LightingPreset lighting = GameplayVisualPreset::GetLighting(stageId_);
+    lightColor_ = lighting.color;
+    lightDir_ = lighting.direction;
+    lightIntensity_ = lighting.intensity;
+    ambientColor_ = lighting.ambient;
     GameplayVisualPreset::ApplyLighting(stageId_);
 }
 
@@ -3373,6 +3375,8 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 levelObject->GetMaterial()->shininess = GameplayVisualPreset::kIceShininess;
                 levelObject->SetEnableEnvironmentMap(false);
                 levelObject->SetEnvironmentMapStrength(0.0f);
+                levelObject->SetCastShadow(true);
+                levelObject->SetReceiveShadow(true);
             }
 
             if (objData.gimmick.exists) {
@@ -3524,4 +3528,9 @@ void GamePlayScene::ClearLevelObjects()
         }
     }
     levelObjects_.clear();
+}
+
+void GamePlayScene::DrawShadow(ShadowMapRenderer& renderer)
+{
+    for (const auto& object : levelObjects_) { object->DrawShadow(renderer); }
 }
