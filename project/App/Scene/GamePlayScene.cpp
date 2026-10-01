@@ -62,8 +62,7 @@ void AddHudFramePart(
     sprites.push_back(std::move(sprite));
 }
 
-void InitializeHudFrame(
-    std::vector<std::unique_ptr<Sprite>>& sprites,
+void InitializeHudFrame(std::vector<std::unique_ptr<Sprite>>& sprites,
     const Vector2& position,
     const Vector2& size,
     const Vector2& anchor,

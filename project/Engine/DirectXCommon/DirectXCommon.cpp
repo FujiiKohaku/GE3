@@ -233,7 +233,10 @@ void DirectXCommon::InitializeDevice()
         D3D12_MESSAGE_ID denyIds[] = {
             // windows11でのDXGIデバックレイヤーとDX12デバックレイヤーの相互作用バグによるエラーメッセージ
             // https://stackoverflow.com/questions/69805245/directx-12-application-is-crashing-in-windows-11
-            D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE
+            D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+            // シーンごとに背景色を変更するため、作成時の最適化用クリア色とは異なる。
+            // 描画結果に問題のない性能警告のみ除外し、他の警告・エラーでは停止する。
+            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
         };
         // 抑制するレベル
         D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
