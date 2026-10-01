@@ -215,7 +215,8 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
     const aiScene* scene = importer.ReadFile(
         filePath.c_str(),
-        aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
+        aiProcess_Triangulate | aiProcess_GenSmoothNormals |
+            aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 
     assert(scene);
     assert(scene->HasMeshes());
@@ -236,9 +237,10 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
             VertexData vertex {};
 
             aiVector3D pos = mesh->mVertices[v];
-            aiVector3D nrm = mesh->HasNormals()
-                ? mesh->mNormals[v]
-                : aiVector3D(0, 1, 0);
+            aiVector3D nrm(0, 1, 0);
+            if (mesh->HasNormals()) {
+                nrm = mesh->mNormals[v];
+            }
 
             aiVector3D uv = mesh->HasTextureCoords(0)
                 ? mesh->mTextureCoords[0][v]

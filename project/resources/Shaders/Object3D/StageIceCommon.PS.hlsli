@@ -58,25 +58,29 @@ float3 ShadeStageIceSurface(StageIceLighting lighting, float3 iceColor,
     float facing = saturate(dot(lighting.normal, lighting.view));
     float grazing = 1.0f - facing;
     float grazingSquared = grazing * grazing;
-    // Analytic ice highlights depend on the light and view, without sampling scenery.
-    float fresnel = 0.02f + 0.98f * grazingSquared * grazingSquared * grazing;
+    // A broad blue glaze reads across flat faces, without sampling scenery.
+    float glaze = 0.06f + 0.94f * grazingSquared;
+    float fresnel = 0.04f + 0.96f * grazingSquared * grazingSquared * grazing;
     float3 L = normalize(-gDirectionalLight.direction);
     float3 halfVector = L + lighting.view;
     halfVector *= rsqrt(max(dot(halfVector, halfVector), 0.000001f));
     float normalHalf = saturate(dot(lighting.normal, halfVector));
-    float sharpHighlight = pow(normalHalf, max(gMaterial.shininess, 1.0f));
-    sharpHighlight *= smoothstep(0.0f, 0.15f, saturate(dot(lighting.normal, L)));
+    float lightVisibility = smoothstep(0.0f, 0.15f, saturate(dot(lighting.normal, L)));
+    float sharpHighlight = pow(normalHalf, max(gMaterial.shininess, 1.0f)) * lightVisibility;
+    float broadHighlight = pow(normalHalf, 12.0f) * lightVisibility;
     float frostHighlight = pow(normalHalf, 18.0f);
     // Keep frost blue and retain the material tint instead of replacing it with white.
     float3 frostColor = lerp(iceColor, lighting.shade * float3(0.52f, 0.72f, 0.84f), 0.45f);
     float3 surface = lerp(iceColor * float3(0.82f, 0.88f, 0.92f), frostColor, frost);
     float clearSurface = 1.0f - frost;
     // Highlights stay visible even on darker material/texture colors.
+    surface += float3(0.44f, 0.76f, 1.0f) * glaze * 0.18f * clearSurface;
     surface += float3(0.65f, 0.88f, 1.0f) * fresnel *
-        (0.045f + rimStrength * 0.65f) * clearSurface;
+        (0.14f + rimStrength * 0.90f) * clearSurface;
     float3 lightColor = gDirectionalLight.color.rgb * gDirectionalLight.intensity;
     surface += lightColor * float3(0.82f, 0.96f, 1.0f) *
-        (sharpHighlight * 0.65f * clearSurface + frostHighlight * 0.025f * frost);
+        ((sharpHighlight * 0.85f + broadHighlight * 0.38f) * clearSurface +
+         frostHighlight * 0.025f * frost);
     return surface;
 }
 
