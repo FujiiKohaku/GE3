@@ -1,5 +1,15 @@
 {
   "id": "stage04",
+  "shadows": {
+    "enabled": true,
+    "resolution": 2048,
+    "distance": 350.0,
+    "caster_margin": 220.0,
+    "strength": 0.65,
+    "depth_bias": 0.00025,
+    "normal_bias": 0.18,
+    "pcf_radius": 1.0
+  },
   "name": "OPEN OCEAN",
   "description": "All-range flight. Explore the islands, reefs and shipwrecks. Mouse to steer; right click to boost.",
   "layout": "resources/Scenes/stage04.json",

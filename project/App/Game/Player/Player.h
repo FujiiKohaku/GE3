@@ -25,6 +25,7 @@ public:
     void Initialize(Model* model);
     void Update();
     void Draw();
+    void DrawShadow(ShadowMapRenderer& renderer);
 
     void SetCamera(Camera* camera);
     void SetDebugCameraController(DebugCameraController* debugCameraController);

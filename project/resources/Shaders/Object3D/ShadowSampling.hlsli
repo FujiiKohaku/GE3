@@ -20,14 +20,15 @@ float SampleShadowVisibility(float3 worldPosition, float3 normal)
     if (clip.z <= 0.0f || clip.z >= 1.0f || any(uv <= 0.0f) || any(uv >= 1.0f)) { return 1.0f; }
     float visibility = 0.0f;
     [unroll]
-    for (int y = -1; y <= 1; ++y) {
+    for (int y = -2; y <= 2; ++y) {
         [unroll]
-        for (int x = -1; x <= 1; ++x) {
+        for (int x = -2; x <= 2; ++x) {
             float2 offset = float2(x, y) * gShadowParameters.x * gShadowOptions.y;
-            visibility += gShadowMap.SampleCmpLevelZero(gShadowSampler, uv + offset, clip.z - gShadowParameters.y);
+            float weight = (3.0f - abs(float(x))) * (3.0f - abs(float(y)));
+            visibility += weight * gShadowMap.SampleCmpLevelZero(gShadowSampler, uv + offset, clip.z - gShadowParameters.y);
         }
     }
-    visibility /= 9.0f;
+    visibility /= 81.0f;
     float edgeDistance = min(min(uv.x, uv.y), min(1.0f - uv.x, 1.0f - uv.y));
     float edgeFade = smoothstep(0.0f, 0.04f, edgeDistance);
     float depthFade = smoothstep(0.0f, 0.02f, clip.z) * smoothstep(0.0f, 0.02f, 1.0f - clip.z);

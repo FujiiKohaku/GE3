@@ -11,6 +11,7 @@ public:
     void BeginShadowPass();
     void EndShadowPass();
     void BindObject(const Matrix4x4& world);
+    void BindJellyfishObject(const Matrix4x4& world, const Vector4& animation);
     bool Intersects(const Vector3& center, float radius) const { return camera_.Intersects(center, radius); }
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrv() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetConstantsAddress() const { return constantsBuffer_->GetGPUVirtualAddress(); }
@@ -28,4 +29,5 @@ private:
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvHeap_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> root_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeline_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> jellyfishPipeline_;
 };

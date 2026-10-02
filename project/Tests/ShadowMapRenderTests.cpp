@@ -87,6 +87,31 @@ class ShadowTestStage : public GamePlayScene {
 public:
     explicit ShadowTestStage(const std::string& stageId) : GamePlayScene(stageId) {}
     void SetShadowEnabled(bool enabled) { enabled_ = enabled; }
+    void PrepareBossCapture()
+    {
+        const Vector3 bossPosition = stageSettings_.bossPosition;
+        player_->SetTranslate(bossPosition + Vector3 { 0.0f, 0.0f, -120.0f });
+        player_->Update();
+        TimeManager::GetInstance()->SetTimeScale(1.0f);
+        for (int frame = 0; frame < 180; ++frame) {
+            Sleep(16);
+            TimeManager::GetInstance()->Update();
+            bossController_->Update(stageSettings_.bossSpawnDistance);
+        }
+        TimeManager::GetInstance()->SetTimeScale(0.0f);
+        camera_->LookAt(bossPosition + Vector3 { 70.0f, 65.0f, -180.0f }, bossPosition);
+        camera_->Update();
+    }
+    void AdvanceBossCapture()
+    {
+        TimeManager::GetInstance()->SetTimeScale(1.0f);
+        for (int frame = 0; frame < 45; ++frame) {
+            Sleep(16);
+            TimeManager::GetInstance()->Update();
+            bossController_->Update(stageSettings_.bossSpawnDistance);
+        }
+        TimeManager::GetInstance()->SetTimeScale(0.0f);
+    }
     ShadowSettings GetShadowSettings() const override {
         ShadowSettings settings = GamePlayScene::GetShadowSettings();
         settings.enabled = enabled_;
@@ -266,19 +291,34 @@ int RunGameStageShadowTest(const std::string& stageId)
         if (info) { info->ClearStoredMessages(); }
         std::vector<uint8_t> enabledFrame;
         std::vector<uint8_t> disabledFrame;
-        for (int mode = 0; mode < 2; ++mode) {
-            stage->SetShadowEnabled(mode == 0);
-            for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
-            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
-                D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-            dx->GetCommandList()->ResourceBarrier(1, &barrier);
-            std::filesystem::path file = "captures/ShadowMapTests/" + stageId + "-enabled.png";
-            if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-disabled.png"; }
-            if (mode == 0) { enabledFrame = ReadFrame(dx, file); }
-            else { disabledFrame = ReadFrame(dx, file); }
+        int viewCount = 2;
+        if (stageId == "stage03") { viewCount = 3; }
+        if (stageId == "stage04") { viewCount = 1; }
+        for (int view = 0; view < viewCount; ++view) {
+            if (view == 1) { stage->PrepareBossCapture(); }
+            if (view == 2) { stage->AdvanceBossCapture(); }
+            for (int mode = 0; mode < 2; ++mode) {
+                stage->SetShadowEnabled(mode == 0);
+                for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
+                auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
+                    D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                dx->GetCommandList()->ResourceBarrier(1, &barrier);
+                std::filesystem::path file = "captures/ShadowMapTests/" + stageId + "-enabled.png";
+                if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-disabled.png"; }
+                if (view == 1) {
+                    file = "captures/ShadowMapTests/" + stageId + "-boss-enabled.png";
+                    if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-boss-disabled.png"; }
+                }
+                if (view == 2) {
+                    file = "captures/ShadowMapTests/" + stageId + "-boss-motion-enabled.png";
+                    if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-boss-motion-disabled.png"; }
+                }
+                if (mode == 0) { enabledFrame = ReadFrame(dx, file); }
+                else { disabledFrame = ReadFrame(dx, file); }
+            }
+            Require(ChangedPixels(enabledFrame, disabledFrame) > 100,
+                "Stage shadow ON/OFF did not change enough pixels");
         }
-        Require(ChangedPixels(enabledFrame, disabledFrame) > 100,
-            "Stage shadow ON/OFF did not change enough pixels");
         if (info) {
             for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
                 SIZE_T size = 0;
@@ -309,6 +349,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
     if (std::string(commandLine).find("--title") != std::string::npos) { return RunTitleShadowTest(); }
     if (std::string(commandLine).find("--stage01") != std::string::npos) { return RunGameStageShadowTest("stage01"); }
+    if (std::string(commandLine).find("--stage02") != std::string::npos) { return RunGameStageShadowTest("stage02"); }
+    if (std::string(commandLine).find("--stage04") != std::string::npos) { return RunGameStageShadowTest("stage04"); }
     if (std::string(commandLine).find("--stage") != std::string::npos) { return RunGameStageShadowTest("stage03"); }
     int exitCode = 0;
     try {

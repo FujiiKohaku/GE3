@@ -80,6 +80,9 @@ public:
 #endif
 
 private:
+#if defined(KOHAKU_RENDER_TESTS)
+    friend class ShadowTestStage;
+#endif
     // プレイヤーと敵の当たり判定
     static constexpr float kPlayerEnemyCollisionRadius = 2.0f;
     static constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;

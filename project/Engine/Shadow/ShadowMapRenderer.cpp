@@ -46,7 +46,7 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution)
     CheckShadow(constantsBuffer_->Map(0, nullptr, reinterpret_cast<void**>(&constants_)));
     *constants_ = {};
 
-    D3D12_ROOT_PARAMETER parameters[2] {};
+    D3D12_ROOT_PARAMETER parameters[3] {};
     parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     parameters[0].Constants.ShaderRegister = 0;
     parameters[0].Constants.Num32BitValues = 16;
@@ -54,9 +54,13 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution)
     parameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     parameters[1].Descriptor.ShaderRegister = 1;
     parameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    parameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    parameters[2].Constants.ShaderRegister = 2;
+    parameters[2].Constants.Num32BitValues = 4;
+    parameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     D3D12_ROOT_SIGNATURE_DESC signature {};
     signature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    signature.NumParameters = 2; signature.pParameters = parameters;
+    signature.NumParameters = 3; signature.pParameters = parameters;
     Microsoft::WRL::ComPtr<ID3DBlob> blob;
     Microsoft::WRL::ComPtr<ID3DBlob> errors;
     CheckShadow(D3D12SerializeRootSignature(&signature, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
@@ -83,6 +87,10 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution)
     pso.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     pso.SampleDesc.Count = 1;
     CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipeline_)));
+    auto jellyfishShader = dx_->LoadCompiledShader(L"resources/Shaders/ShadowMap/JellyfishDepth.VS.hlsl");
+    pso.VS = { jellyfishShader->GetBufferPointer(), jellyfishShader->GetBufferSize() };
+    pso.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&jellyfishPipeline_)));
 }
 
 void ShadowMapRenderer::Update(const Camera& camera, const Vector3& direction, const ShadowSettings& settings)
@@ -116,7 +124,16 @@ void ShadowMapRenderer::BeginShadowPass()
 
 void ShadowMapRenderer::BindObject(const Matrix4x4& world)
 {
+    dx_->GetCommandList()->SetPipelineState(pipeline_.Get());
     dx_->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &world, 0);
+}
+
+void ShadowMapRenderer::BindJellyfishObject(const Matrix4x4& world, const Vector4& animation)
+{
+    auto* commandList = dx_->GetCommandList();
+    commandList->SetPipelineState(jellyfishPipeline_.Get());
+    commandList->SetGraphicsRoot32BitConstants(0, 16, &world, 0);
+    commandList->SetGraphicsRoot32BitConstants(2, 4, &animation, 0);
 }
 
 void ShadowMapRenderer::EndShadowPass()

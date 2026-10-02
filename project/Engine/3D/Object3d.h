@@ -26,7 +26,7 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
-    void DrawShadow(ShadowMapRenderer& renderer);
+    void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
     void SetCastShadow(bool enabled) { castShadow_ = enabled; }
     void SetReceiveShadow(bool enabled) { receiveShadow_ = enabled; }
     bool GetCastShadow() const { return castShadow_; }

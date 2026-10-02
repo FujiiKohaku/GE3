@@ -1,4 +1,7 @@
 #include "Object3d.hlsli"
+#if defined(KOHAKU_MATERIAL_SHADOWS)
+#include "ShadowSampling.hlsli"
+#endif
 
 ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
@@ -23,12 +26,16 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
     float3 ambient = baseColor * gAmbientLight.color.rgb * gAmbientLight.color.a;
     float3 Ld = normalize(-gDirectionalLight.direction);
     float NdotLd = saturate(dot(N, Ld));
-    float3 result = ambient + baseColor * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity;
+    float visibility = 1.0f;
+#if defined(KOHAKU_MATERIAL_SHADOWS)
+    visibility = ShadowDirectFactor(SampleShadowVisibility(worldPosition, N));
+#endif
+    float3 result = ambient + baseColor * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity * visibility;
     float3 Hd = normalize(Ld + V);
     if (gMaterial.shininess > 0.0f)
     {
         result += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
-            pow(saturate(dot(N, Hd)), gMaterial.shininess);
+            pow(saturate(dot(N, Hd)), gMaterial.shininess) * visibility;
     }
 
     for (uint32_t i = 0; i < kMaxPointLights; ++i)

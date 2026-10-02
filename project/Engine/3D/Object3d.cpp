@@ -115,6 +115,13 @@ void Object3d::Update()
 #pragma region
 void Object3d::Draw()
 {
+    if (receiveShadow_) {
+        if (pixelShaderPath_ == "resources/Shaders/Object3D/Toon/Render.PS.hlsl") {
+            SetMaterial("resources/Shaders/Object3D/ShadowToon");
+        } else if (pixelShaderPath_ == "resources/Shaders/Object3D/Standard/Render.PS.hlsl") {
+            SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+        }
+    }
     // The camera can move while gameplay updates are paused.
     if (camera_) {
         transformationMatrixData->WVP = MatrixMath::Multiply(
@@ -433,9 +440,10 @@ Object3d::~Object3d()
     }
 }
 
-void Object3d::DrawShadow(ShadowMapRenderer& renderer)
+void Object3d::DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow)
 {
-    if (!castShadow_ || transparent_ || model_ == nullptr) { return; }
+    if (!castShadow_ || (transparent_ && !opaqueTransparentShadow) || model_ == nullptr) { return; }
+    const bool jellyfish = vertexShaderPath_ == "resources/Shaders/Object3D/IceJellyfish/Render.VS.hlsl";
     Vector3 center = MatrixMath::Transform(model_->GetBoundsCenter(), worldMatrix_);
     float squaredScale = 0.0f;
     for (int row = 0; row < 3; ++row) {
@@ -443,8 +451,18 @@ void Object3d::DrawShadow(ShadowMapRenderer& renderer)
             squaredScale += worldMatrix_.m[row][column] * worldMatrix_.m[row][column];
         }
     }
-    float radius = model_->GetBoundsRadius() * std::sqrt(squaredScale);
+    float localRadius = model_->GetBoundsRadius();
+    if (jellyfish) {
+        // Include wave displacement and bell pulse in conservative caster bounds.
+        float amplitude = std::abs(vertexShaderParameters_.y);
+        localRadius += amplitude * 1.2f + localRadius * amplitude * 0.020f;
+    }
+    float radius = localRadius * std::sqrt(squaredScale);
     if (!renderer.Intersects(center, radius)) { return; }
-    renderer.BindObject(worldMatrix_);
+    if (jellyfish) {
+        renderer.BindJellyfishObject(worldMatrix_, vertexShaderParameters_);
+    } else {
+        renderer.BindObject(worldMatrix_);
+    }
     model_->DrawDepth();
 }

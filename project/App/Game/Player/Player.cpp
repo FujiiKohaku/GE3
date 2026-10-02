@@ -44,6 +44,9 @@ void Player::Initialize(Model* model)
 
     object_ = std::make_unique<Object3d>();
     object_->Initialize(Object3dManager::GetInstance());
+    object_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    object_->SetCastShadow(true);
+    object_->SetReceiveShadow(true);
     object_->SetEnableLighting(true);
     object_->SetModel(model);
 
@@ -240,6 +243,16 @@ void Player::Draw()
         (deathState_ == DeathState::Alive && isVisibleWhileAlive);
     if (shouldDrawPlayer) {
         object_->Draw();
+    }
+}
+
+void Player::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (object_ == nullptr) { return; }
+    const bool visible = invincibleTimer_ <= 0 || (invincibleTimer_ / 4) % 2 == 0;
+    if (deathState_ == DeathState::Falling ||
+        (deathState_ == DeathState::Alive && visible)) {
+        object_->DrawShadow(renderer);
     }
 }
 

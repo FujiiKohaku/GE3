@@ -1,6 +1,6 @@
 # Directional shadow maps
 
-Stage01 and Stage03 opt in through their stage `settings.json` (`shadows`).
+Stage01 through Stage04 opt in through their stage `settings.json` (`shadows`).
 TitleScene also enables shadows for its static base, aircraft and visible room
 props. Other scenes default to disabled. The game Renderer owns the shadow resources;
 model preview does not run a shadow pass or add a floor.
@@ -18,11 +18,12 @@ Both flags default to false. CastShadow draws static opaque Object3d meshes into
 the light depth map. ReceiveShadow is implemented by StageIceFloor and the
 StageIce object pixel shaders. Other materials need to opt in to
 ShadowSampling.hlsli before the receive flag changes their lighting.
-Transparent, skeletal and vertex-deformed shadow casting is outside this version.
+Generic transparent and skeletal shadow casting is outside this version;
+Jellyfish has an explicit opaque, vertex-deformed shadow path.
 ShadowToon receives shadows for title props, retaining ambient light in shadow.
 The title's frozen room uses the same StageIce materials as the game. The ocean
 keeps its separate wave renderer and receives shadows on the displaced surface,
-but does not cast them. Stage01 static level meshes use ShadowToon to cast and
+but does not cast them. Enabled stages static level meshes use ShadowToon to cast and
 receive shadows; emissive laser hazards keep their existing material.
 Legacy Ice remains compatible with the skinning root signature and does not
 sample shadows.
@@ -41,7 +42,7 @@ configured distance, with extra depth range toward possible offscreen casters.
 Its light-space X/Y origin is snapped to texels. Conservative transformed model
 bounds exclude casters outside the light volume, rather than the visible camera
 frustum. Visibility fades out near the volume boundary. The map uses depth bias,
-receiver normal offset and comparison-sampler 3x3 PCF. Blue ambient lighting is
+receiver normal offset and comparison-sampler weighted 5x5 PCF. Blue ambient lighting is
 retained while direct lighting and specular highlights are attenuated.
 
 The floor remains matte. Ice highlights use pixel-shader math without scenery
@@ -64,7 +65,7 @@ preset, while development distance sliders remain editable between changes.
 
 ## Cost
 
-One depth-only draw per in-range caster, up to nine comparison samples per
+One depth-only draw per in-range caster, up to 25 comparison samples per
 receiving pixel, and 16 MiB for the 2048-square depth texture (plus small descriptor
 and constant buffers). Model bounds are computed at load time. The light camera
 and bounds tests run on the CPU each frame. GPU time depends on scene coverage.
@@ -92,3 +93,26 @@ errors. Private transition access is enabled only in this validation project;
 normal game builds do not expose test controls.
 `--stage01` follows the normal loading path for Stage01, freezes simulation for
 the shadow ON/OFF comparison and requires a visible pixel difference.
+
+## Dynamic actors
+
+Player, normal enemies, pirate mid-boss, FearWorm segments, AngerBlock parts,
+and opaque IceJellyfish core/crystals/pillars cast shadows through the same
+culled depth pass. Destroyed parts and player blink visibility follow normal
+rendering. Toon and Standard receivers select shadow-aware materials while
+unlit effects remain unlit. Point lights, ambient and environment reflections
+are retained by ShadowStandard. Jellyfish bell and living tentacles cast opaque shadows with a dedicated depth VS using the same deformation and animation parameters as normal rendering. Generic transparent casting and skinning remain unsupported. Weighted 5x5 PCF softens edges without increasing
+the 2048-square map allocation.
+
+`--stage01`, `--stage02`, and `--stage` capture the normal scene and its boss
+with simulation frozen for shadow ON/OFF pixel comparisons.
+Jellyfish shadow geometry is double-sided and caster bounds include wave displacement.
+
+Tentacles use a smooth 16-side, 12-strip link mesh (384 triangles per link).
+CPU poses filter direction more slowly toward the tip, overlap adjacent links,
+and apply a traveling stretch pulse with inverse square-root width compensation.
+The shared VS tapers each link, corrects its normals and uses the same geometry
+for opaque shadows. Jellyfish surface data adds broad moving wet highlights.
+Tentacle normal-buffer alpha encodes -(2 + depth); DepthOutline decodes this tag
+to soften internal normal edges while retaining depth silhouettes and stale-depth
+validation. Boss render tests advance actual time for a second animation pose.

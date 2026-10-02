@@ -24,6 +24,7 @@ public:
     virtual void Initialize(Model* model);
     virtual void Update();
     virtual void Draw();
+    virtual void DrawShadow(ShadowMapRenderer& renderer);
 
     virtual void Move();
     virtual void Attack();

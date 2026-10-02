@@ -12,6 +12,7 @@ public:
     void Initialize(Model* model, Model* bulletModel, Player* player);
     void Update() override;
     void Draw() override;
+    void DrawShadow(ShadowMapRenderer& renderer) override;
 
     Vector3 GetPosition() const override { return bodyPosition_; }
     void SetPosition(const Vector3& position) override;

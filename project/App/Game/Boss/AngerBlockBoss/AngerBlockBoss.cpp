@@ -14,6 +14,9 @@ std::unique_ptr<Object3d> CreatePart(Model* model, const Vector3& scale, const V
 {
     auto part = std::make_unique<Object3d>();
     part->Initialize(Object3dManager::GetInstance());
+    part->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    part->SetCastShadow(true);
+    part->SetReceiveShadow(true);
     part->SetModel(model);
     part->SetScale(scale);
     part->SetColor(color);
@@ -338,6 +341,14 @@ void AngerBlockBoss::UpdatePartTransforms()
         rightHand_->SetTranslate(rightHandPosition_);
         rightHand_->Update();
     }
+}
+
+void AngerBlockBoss::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (body_) { body_->DrawShadow(renderer); }
+    if (core_) { core_->DrawShadow(renderer); }
+    if (leftHand_ && leftHandHp_ > 0.0f) { leftHand_->DrawShadow(renderer); }
+    if (rightHand_ && rightHandHp_ > 0.0f) { rightHand_->DrawShadow(renderer); }
 }
 
 void AngerBlockBoss::Draw()

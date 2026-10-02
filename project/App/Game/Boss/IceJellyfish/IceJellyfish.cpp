@@ -18,8 +18,8 @@
 namespace {
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr float kBodyAlpha = 0.95f;
-constexpr float kBellWaveAmplitude = 1.0f;
-constexpr float kTentacleWaveAmplitude = 0.10f;
+constexpr float kBellWaveAmplitude = 1.5f;
+constexpr float kTentacleWaveAmplitude = 0.12f;
 constexpr float kIcePillarAheadDistance = 190.0f;
 constexpr float kIcePillarRevealSeconds = 2.00f;
 constexpr float kIcePillarWaveTimeoutSeconds = 9.00f;
@@ -79,6 +79,9 @@ std::unique_ptr<Object3d> IceJellyfish::CreatePart(
 {
     auto object = std::make_unique<Object3d>();
     object->Initialize(Object3dManager::GetInstance());
+    object->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    object->SetCastShadow(true);
+    object->SetReceiveShadow(true);
     object->SetModel(ModelManager::GetInstance()->Load(modelPath));
     object->SetCamera(camera);
     object->SetColor(color);
@@ -97,6 +100,8 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     hp_ = kMaxHp;
     isDead_ = false;
     animationTime_ = 0.0f;
+    softPoseTime_ = 0.0f;
+    softPoseInitialized_ = false;
     deathTimer_ = 0.0f;
     hitFlashTime_ = 0.0f;
     absoluteZeroUsed_ = false;
@@ -131,10 +136,8 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
         tentacleWaveSpeed_[tentacle] = speedDistribution(randomEngine);
         tentacleWaveAmplitude_[tentacle] = amplitudeDistribution(randomEngine);
         for (size_t segment = 0; segment < kSegmentsPerTentacle; ++segment) {
-            const bool isTip = segment + 1 == kSegmentsPerTentacle;
             tentacles_[tentacle][segment] = CreatePart(camera,
-                isTip ? "Boss/IceJellyfish/IceJellyfishTip.obj"
-                      : "Boss/IceJellyfish/IceJellyfishSegment.obj",
+                "Boss/IceJellyfish/IceJellyfishSoftSegment.obj",
                 { 0.55f, 0.80f, 1.0f, kBodyAlpha }, true);
             ConfigureJellyfishBodyMaterial(*tentacles_[tentacle][segment]);
         }
@@ -737,26 +740,28 @@ int32_t IceJellyfish::SegmentPartIndex(size_t tentacle, size_t segment) const
 void IceJellyfish::UpdatePartTransforms()
 {
     if (bell_ == nullptr) return;
+    const float poseDelta = std::clamp(animationTime_ - softPoseTime_, 0.0f, 0.1f);
+    softPoseTime_ = animationTime_;
 
     const float floatPhase = animationTime_ * 1.10f;
-    const float contractionAmount = std::clamp(-std::sin(floatPhase), 0.0f, 1.0f);
+    const float contractionAmount = 0.5f - 0.5f * std::sin(floatPhase);
     const Vector3 rotation = {};
     const Matrix4x4 bodyMatrix = MatrixMath::MakeAffineMatrix(
         { 1.0f, 1.0f, 1.0f }, rotation, bodyPosition_);
     const float pulse = 0.0f;
-    const float openLift = 0.0f;
+    const float openLift = std::sin(floatPhase) * 0.8f;
     const Matrix4x4 bellLocal = MatrixMath::MakeAffineMatrix(
         Vector3 {
-            1.0f - contractionAmount * 0.08f,
-            1.0f - contractionAmount * 0.14f,
-            1.0f - contractionAmount * 0.08f },
+            1.0f - contractionAmount * 0.10f,
+            1.0f - contractionAmount * 0.20f,
+            1.0f - contractionAmount * 0.10f },
         Vector3 {}, Vector3 { 0.0f, openLift, 0.0f });
     bell_->SetCustomWorldMatrix(MatrixMath::Multiply(bellLocal, bodyMatrix));
     bell_->SetColor({ 0.65f, 0.86f, 1.0f, kBodyAlpha });
     bell_->SetVertexShaderParameters({ animationTime_, kBellWaveAmplitude, 0.0f, 0.0f });
     bell_->Update();
 
-    const float coreScale = 1.0f - contractionAmount * 0.08f;
+    const float coreScale = 1.0f - contractionAmount * 0.10f;
     const Matrix4x4 coreLocal = MatrixMath::MakeAffineMatrix(
         Vector3 { coreScale, coreScale, coreScale },
         Vector3 {}, Vector3 { 0.0f, -2.0f, 0.0f });
@@ -781,28 +786,29 @@ void IceJellyfish::UpdatePartTransforms()
             ? std::clamp(icePillarTimer_ / kIcePillarRevealSeconds, 0.0f, 1.0f)
             : 0.0f;
         const float tentaclePhase =
-            floatPhase * tentacleWaveSpeed_[tentacle] + tentacleWavePhase_[tentacle];
+            floatPhase * (1.0f + (tentacleWaveSpeed_[tentacle] - 1.0f) * 0.15f) + tentacleWavePhase_[tentacle] * 0.35f;
         const float tentacleAmplitude = tentacleWaveAmplitude_[tentacle];
         const float radialX = std::cos(azimuth);
         const float radialZ = std::sin(azimuth);
-        Vector3 joint = { radialX * 10.5f, -1.2f, radialZ * 10.5f };
+        const float rootRadius = 10.5f * (1.0f - contractionAmount * 0.10f);
+        Vector3 joint = { radialX * rootRadius, -1.2f + openLift, radialZ * rootRadius };
         const float contraction = std::sin(tentaclePhase * 0.72f);
-        float bend = 0.30f + contraction * 0.34f * tentacleAmplitude -
+        float bend = 0.30f + contraction * 0.44f * tentacleAmplitude -
             contractionAmount * 0.42f;
 
         for (size_t segment = 0; segment < kSegmentsPerTentacle; ++segment) {
             const float index = static_cast<float>(segment);
             const float tipWeight = index / static_cast<float>(kSegmentsPerTentacle - 1);
             const float tipInfluence = tipWeight * tipWeight;
-            const float waveDelay = index * 0.52f + index * index * 0.035f;
+            const float waveDelay = index * 0.68f + index * index * 0.045f;
             const float delayedPhase = tentaclePhase * 1.15f - waveDelay;
             const float tipCurl = std::sin(tentaclePhase * 1.30f - index * 0.90f) *
-                tipInfluence * 0.24f * tentacleAmplitude;
+                tipInfluence * 0.36f * tentacleAmplitude;
             bend += 0.045f + std::sin(delayedPhase + azimuth * 0.35f) *
-                (0.070f + index * 0.012f) * tentacleAmplitude + tipCurl -
+                (0.095f + index * 0.017f) * tentacleAmplitude + tipCurl -
                 contractionAmount * (0.025f + index * 0.010f);
             const float sway = std::sin(tentaclePhase * 0.95f - index * 0.58f + azimuth) *
-                (0.025f + index * 0.011f + tipInfluence * 0.10f) * tentacleAmplitude;
+                (0.025f + index * 0.011f + tipInfluence * 0.14f) * tentacleAmplitude;
             Vector3 down = {
                 radialX * std::sin(bend) - radialZ * sway,
                 -std::cos(bend),
@@ -828,12 +834,24 @@ void IceJellyfish::UpdatePartTransforms()
             }
 
             down = Normalize(down);
+            if (!softPoseInitialized_) {
+                softDirections_[tentacle][segment] = down;
+            } else if (poseDelta > 0.0f) {
+                const float follow = 1.0f - std::exp(-(9.0f - tipWeight * 6.0f) * poseDelta);
+                softDirections_[tentacle][segment] = Normalize(
+                    softDirections_[tentacle][segment] * (1.0f - follow) + down * follow);
+            }
+            down = softDirections_[tentacle][segment];
             const Vector3 up = down * -1.0f;
             const Vector3 tangent = { -radialZ, 0.0f, radialX };
             Vector3 right = Normalize(Cross(up, tangent));
             const Vector3 forward = Cross(right, up);
             float length = (5.4f - index * 0.32f) * 1.5f;
-            const float width = 6.6f - index * 1.0f;
+            const float stretch = 1.0f + std::sin(tentaclePhase - waveDelay) * (0.025f + tipWeight * 0.035f);
+            length *= stretch;
+            const float width = (6.6f - index * 0.88f) / std::sqrt(stretch);
+            float endRatio = (6.6f - (index + 1.0f) * 0.88f) / (6.6f - index * 0.88f);
+            if (segment + 1 == kSegmentsPerTentacle) { endRatio = 0.025f; }
             Matrix4x4 local = MatrixMath::MakeIdentity4x4();
             local.m[0][0] = right.x * width;
             local.m[0][1] = right.y * width;
@@ -868,16 +886,17 @@ void IceJellyfish::UpdatePartTransforms()
             }
             object.SetColor(tentacleColor);
             object.SetVertexShaderParameters({ animationTime_, kTentacleWaveAmplitude,
-                tentacleWavePhase_[tentacle] + index * 0.55f, 1.0f });
+                tentacleWavePhase_[tentacle] - waveDelay, 1.0f + endRatio });
             object.Update();
             if (IsSegmentAlive(tentacle, segment)) {
                 tentacleColliders_.push_back(IceJellyfishCollision::TransformBox(
                     object.GetWorldMatrix(), { 0.0f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }));
                 tentacleColliderParts_.push_back(SegmentPartIndex(tentacle, segment));
             }
-            joint = joint + down * (length + 0.18f);
+            joint = joint + down * (length * 0.94f);
         }
     }
+    softPoseInitialized_ = true;
     UpdateCrystalTransforms();
     UpdateIcePillarModelTransforms();
 }
@@ -917,6 +936,28 @@ void IceJellyfish::UpdateIcePillarModelTransforms()
             position);
         icePillarModels_[index]->SetCustomWorldMatrix(matrix);
         icePillarModels_[index]->Update();
+    }
+}
+
+void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (bell_ == nullptr || camera_ == nullptr || (isDead_ && deathTimer_ >= 2.0f)) { return; }
+    for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
+        if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
+            crystals_[crystal]->DrawShadow(renderer);
+        }
+    }
+    if (icePillarModelSpawnedForWave_) {
+        for (const auto& pillar : icePillarModels_) { pillar->DrawShadow(renderer); }
+    }
+    core_->DrawShadow(renderer);
+    bell_->DrawShadow(renderer, true);
+    for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
+        for (size_t segment = 0; segment < kSegmentsPerTentacle; ++segment) {
+            if (IsSegmentAlive(tentacle, segment)) {
+                tentacles_[tentacle][segment]->DrawShadow(renderer, true);
+            }
+        }
     }
 }
 

@@ -141,6 +141,9 @@ void FearWormEnemy::InitializeSegments(Model* model)
         Segment segment { };
         segment.object = std::make_unique<Object3d>();
         segment.object->Initialize(Object3dManager::GetInstance());
+        segment.object->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+        segment.object->SetCastShadow(true);
+        segment.object->SetReceiveShadow(true);
         segment.object->SetModel(model);
         segment.object->SetEnableLighting(false);
         segment.isHead = false;
@@ -800,6 +803,14 @@ void FearWormEnemy::Draw()
     }
 
     DrawBeam();
+}
+
+void FearWormEnemy::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (state_ == BossState::Wait) { return; }
+    for (Segment& segment : segments_) {
+        if (segment.isAlive && segment.object != nullptr) { segment.object->DrawShadow(renderer); }
+    }
 }
 
 bool FearWormEnemy::IsDeathSequenceFinished() const

@@ -1,4 +1,5 @@
 #include "../Object3d.hlsli"
+#include "../ShadowSampling.hlsli"
 
 ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
@@ -14,7 +15,16 @@ struct PixelShaderOutput
     float4 encodedNormal : SV_Target1;
 };
 
-PixelShaderOutput main(VertexShaderOutput input)
+struct JellyfishPixelInput
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+    float3 normal : NORMAL0;
+    float3 worldPosition : POSITION0;
+    float3 surface : TEXCOORD1;
+};
+
+PixelShaderOutput main(JellyfishPixelInput input)
 {
     const float kFaceOpacityScale = 0.86f;
     const float kSpecularStrength = 0.65f;
@@ -32,7 +42,8 @@ PixelShaderOutput main(VertexShaderOutput input)
     float NdotL = saturate(dot(N, L));
     float edge = pow(1.0f - NdotV, 3.0f);
     float fresnel = 0.04f + 0.96f * pow(1.0f - NdotV, 5.0f);
-    float3 lightColor = gDirectionalLight.color.rgb * gDirectionalLight.intensity;
+    float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, N));
+    float3 lightColor = gDirectionalLight.color.rgb * gDirectionalLight.intensity * visibility;
 
     // Retain the ice texture softly so the body does not look like opaque stone.
     float3 textureTint = lerp(float3(0.80f, 0.90f, 1.0f), textureColor.rgb, 0.35f);
@@ -48,6 +59,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     float specular = pow(saturate(dot(N, H)), max(gMaterial.shininess, 1.0f));
     specular *= smoothstep(0.0f, 0.15f, NdotL);
     color += lightColor * float3(0.82f, 0.96f, 1.0f) * specular * kSpecularStrength;
+    if (input.surface.z > 0.5f) {
+        float broadGlaze = pow(saturate(dot(N, H)), 24.0f);
+        float flowingGlaze = 0.85f + 0.15f * sin(input.texcoord.y * 5.0f - input.surface.x * 1.2f + input.surface.y);
+        color += lightColor * float3(0.68f, 0.88f, 1.0f) * broadGlaze * flowingGlaze * 0.38f;
+    }
     color += float3(0.65f, 0.90f, 1.0f) * edge * kRimStrength;
 
     if (gMaterial.enableEnvironmentMap != 0)
@@ -62,5 +78,9 @@ PixelShaderOutput main(VertexShaderOutput input)
     float opacity = gMaterial.color.a * lerp(kFaceOpacityScale, 1.0f, edge);
     output.color = float4(color, saturate(opacity * textureColor.a));
     output.encodedNormal = float4(N * 0.5f + 0.5f, input.position.z);
+    if (input.surface.z > 0.5f) {
+        // Tag tentacle normals so outline preserves the silhouette but softens internal joints.
+        output.encodedNormal.a = -2.0f - input.position.z;
+    }
     return output;
 }

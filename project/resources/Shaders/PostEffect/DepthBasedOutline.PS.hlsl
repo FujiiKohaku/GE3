@@ -47,6 +47,8 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float nearestDepth = max(outlineFarClip, 0.0001f);
     float4 centerNormalSample = gNormalTexture.Load(int3(centerPixel, 0));
     float centerRawDepth = gDepthTexture.Load(int3(centerPixel, 0));
+    bool softSurface = centerNormalSample.a <= -2.0f;
+    if (softSurface) { centerNormalSample.a = -centerNormalSample.a - 2.0f; }
     float3 centerNormal = normalize(centerNormalSample.xyz * 2.0f - 1.0f);
     bool centerNormalValid = centerNormalSample.a >= 0.0f &&
         abs(centerNormalSample.a - centerRawDepth) < 0.002f;
@@ -66,6 +68,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
             difference.y += depth * kPrewittVerticalKernel[x][y];
 
             float4 normalSample = gNormalTexture.Load(int3(pixel, 0));
+            if (normalSample.a <= -2.0f) { normalSample.a = -normalSample.a - 2.0f; }
             bool neighborNormalValid = normalSample.a >= 0.0f &&
                 abs(normalSample.a - rawDepth) < 0.002f;
             if (centerNormalValid && neighborNormalValid)
@@ -86,6 +89,10 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         outlineNormalThreshold + max(outlineNormalSoftness, 0.0001f),
         normalDifference) * outlineNormalStrength;
     float weight = max(depthWeight, normalWeight);
+    if (softSurface && centerNormalValid) {
+        // Keep depth silhouettes, soften normal changes inside the smooth tentacle.
+        weight = max(depthWeight, normalWeight * 0.15f);
+    }
 
     float4 textureColor = gTexture.Sample(gSampler, input.texcoord);
 

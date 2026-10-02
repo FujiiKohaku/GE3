@@ -23,6 +23,9 @@ std::unique_ptr<Object3d> PirateShipMidBoss::CreatePart(
 {
     auto part = std::make_unique<Object3d>();
     part->Initialize(Object3dManager::GetInstance());
+    part->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    part->SetCastShadow(true);
+    part->SetReceiveShadow(true);
     part->SetModel(model);
     part->SetScale(scale);
     part->SetColor(color);
@@ -143,6 +146,17 @@ void PirateShipMidBoss::UpdateParts()
     updatePart(sail_.get(), shipPosition_ + Vector3 { 0.0f, 16.0f, -2.0f });
     updatePart(leftCannons_.get(), shipPosition_ + Vector3 { -13.0f, 5.0f, 0.0f });
     updatePart(rightCannons_.get(), shipPosition_ + Vector3 { 13.0f, 5.0f, 0.0f });
+}
+
+void PirateShipMidBoss::DrawShadow(ShadowMapRenderer& renderer)
+{
+    hull_->DrawShadow(renderer);
+    deck_->DrawShadow(renderer);
+    cabin_->DrawShadow(renderer);
+    mast_->DrawShadow(renderer);
+    sail_->DrawShadow(renderer);
+    leftCannons_->DrawShadow(renderer);
+    rightCannons_->DrawShadow(renderer);
 }
 
 void PirateShipMidBoss::Draw()

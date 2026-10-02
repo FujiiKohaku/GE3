@@ -15,6 +15,9 @@ void BaseEnemy::Initialize(Model* model)
     object_->Initialize(
         Object3dManager::GetInstance());
     object_->SetEnableLighting(true);
+    object_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    object_->SetCastShadow(true);
+    object_->SetReceiveShadow(true);
     transform_.scale = {
         2.0f,
         2.0f,
@@ -51,6 +54,11 @@ void BaseEnemy::Draw()
         object_->Draw();
     }
 
+}
+
+void BaseEnemy::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (!isDead_ && object_ != nullptr) { object_->DrawShadow(renderer); }
 }
 
 void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)

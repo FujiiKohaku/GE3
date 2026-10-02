@@ -683,6 +683,10 @@ void GamePlayScene::Initialize()
             stageSettings_.railLength * 0.5f });
         floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
         floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
+        if (stageSettings_.shadows.enabled) {
+            floorObj_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+            floorObj_->SetReceiveShadow(true);
+        }
         if (stageId_ == "stage03") {
             // The floor is matte; ice objects use their own reflective material.
             floorObj_->SetColor({ 0.54f, 0.73f, 0.86f, 1.0f });
@@ -3368,7 +3372,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 
             const bool isIceModel = objData.fileName.starts_with("Environment/Ice/") ||
                 objData.fileName == "IceSpike.obj";
-            if (stageId_ == "stage01" &&
+            if (stageSettings_.shadows.enabled &&
                 !(objData.hazard.exists && objData.hazard.type == "LASER")) {
                 levelObject->SetMaterial("resources/Shaders/Object3D/ShadowToon");
                 levelObject->SetCastShadow(true);
@@ -3539,4 +3543,7 @@ void GamePlayScene::ClearLevelObjects()
 void GamePlayScene::DrawShadow(ShadowMapRenderer& renderer)
 {
     for (const auto& object : levelObjects_) { object->DrawShadow(renderer); }
+    if (player_) { player_->DrawShadow(renderer); }
+    for (const auto& enemy : enemies_) { enemy->DrawShadow(renderer); }
+    if (GetActiveBoss() != nullptr) { GetActiveBoss()->DrawShadow(renderer); }
 }

@@ -29,6 +29,7 @@ public:
     void Initialize(Camera* camera, Model* bulletModel, Player* player);
     void Update() override;
     void Draw() override;
+    void DrawShadow(ShadowMapRenderer& renderer) override;
     void SetPosition(const Vector3& position) override;
     Vector3 GetPosition() const override { return basePosition_; }
 
@@ -103,6 +104,9 @@ private:
     std::array<float, kTentacleCount> tentacleWavePhase_ {};
     std::array<float, kTentacleCount> tentacleWaveSpeed_ {};
     std::array<float, kTentacleCount> tentacleWaveAmplitude_ {};
+    std::array<std::array<Vector3, kSegmentsPerTentacle>, kTentacleCount> softDirections_ {};
+    float softPoseTime_ = 0.0f;
+    bool softPoseInitialized_ = false;
     std::array<float, 4> crystalHp_ {};
     std::array<float, kTentacleCount> absoluteSealDamage_ {};
     std::array<bool, 8> attackHitApplied_ {};
