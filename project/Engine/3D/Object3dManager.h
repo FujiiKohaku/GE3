@@ -19,7 +19,10 @@ public:
     static constexpr uint32_t kShadowTextureRootIndex = kShadowConstantsRootIndex + 1;
     static constexpr uint32_t kShadowReceiverRootIndex = kShadowTextureRootIndex + 1;
     void SetShadowRenderer(ShadowMapRenderer* renderer) { shadowRenderer_ = renderer; }
-    void BindShadowResources(bool receiveShadow);
+    void BindShadowResources(bool receiveShadow,
+        uint32_t constantsIndex = kShadowConstantsRootIndex,
+        uint32_t textureIndex = kShadowTextureRootIndex,
+        uint32_t receiverIndex = kShadowReceiverRootIndex);
     // Singleton インターフェース
     static Object3dManager* GetInstance();
     static void Finalize();

@@ -3368,6 +3368,12 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 
             const bool isIceModel = objData.fileName.starts_with("Environment/Ice/") ||
                 objData.fileName == "IceSpike.obj";
+            if (stageId_ == "stage01" &&
+                !(objData.hazard.exists && objData.hazard.type == "LASER")) {
+                levelObject->SetMaterial("resources/Shaders/Object3D/ShadowToon");
+                levelObject->SetCastShadow(true);
+                levelObject->SetReceiveShadow(true);
+            }
             if (stageId_ == "stage03" && isIceModel) {
                 levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);

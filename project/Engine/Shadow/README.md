@@ -1,6 +1,6 @@
 # Directional shadow maps
 
-Stage03 opts in through `resources/Stages/Stage03/settings.json` (`shadows`).
+Stage01 and Stage03 opt in through their stage `settings.json` (`shadows`).
 TitleScene also enables shadows for its static base, aircraft and visible room
 props. Other scenes default to disabled. The game Renderer owns the shadow resources;
 model preview does not run a shadow pass or add a floor.
@@ -21,7 +21,9 @@ ShadowSampling.hlsli before the receive flag changes their lighting.
 Transparent, skeletal and vertex-deformed shadow casting is outside this version.
 ShadowToon receives shadows for title props, retaining ambient light in shadow.
 The title's frozen room uses the same StageIce materials as the game. The ocean
-keeps its separate wave renderer and is not a shadow receiver or caster.
+keeps its separate wave renderer and receives shadows on the displaced surface,
+but does not cast them. Stage01 static level meshes use ShadowToon to cast and
+receive shadows; emissive laser hazards keep their existing material.
 Legacy Ice remains compatible with the skinning root signature and does not
 sample shadows.
 
@@ -88,3 +90,5 @@ ambient intensity and ambient color using actual GPU pixels.
 and return to overview. It compares frozen shadow ON/OFF frames and checks D3D12
 errors. Private transition access is enabled only in this validation project;
 normal game builds do not expose test controls.
+`--stage01` follows the normal loading path for Stage01, freezes simulation for
+the shadow ON/OFF comparison and requires a visible pixel difference.

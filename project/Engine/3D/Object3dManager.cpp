@@ -435,7 +435,8 @@ Object3dManager::~Object3dManager()
     if (nullShadowSrv_ != 0xffffffffu) { SrvManager::GetInstance()->Free(nullShadowSrv_); }
 }
 
-void Object3dManager::BindShadowResources(bool receiveShadow)
+void Object3dManager::BindShadowResources(bool receiveShadow,
+    uint32_t constantsIndex, uint32_t textureIndex, uint32_t receiverIndex)
 {
     auto* cmd = dxCommon_->GetCommandList();
     D3D12_GPU_VIRTUAL_ADDRESS address = disabledShadowConstants_->GetGPUVirtualAddress();
@@ -444,9 +445,9 @@ void Object3dManager::BindShadowResources(bool receiveShadow)
         address = shadowRenderer_->GetConstantsAddress();
         srv = shadowRenderer_->GetSrv();
     }
-    cmd->SetGraphicsRootConstantBufferView(kShadowConstantsRootIndex, address);
-    cmd->SetGraphicsRootDescriptorTable(kShadowTextureRootIndex, srv);
+    cmd->SetGraphicsRootConstantBufferView(constantsIndex, address);
+    cmd->SetGraphicsRootDescriptorTable(textureIndex, srv);
     uint32_t receiver = 0;
     if (receiveShadow) { receiver = 1; }
-    cmd->SetGraphicsRoot32BitConstant(kShadowReceiverRootIndex, receiver, 0);
+    cmd->SetGraphicsRoot32BitConstant(receiverIndex, receiver, 0);
 }

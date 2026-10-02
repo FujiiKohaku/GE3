@@ -1,5 +1,15 @@
 {
   "id": "stage01",
+  "shadows": {
+    "enabled": true,
+    "resolution": 2048,
+    "distance": 350.0,
+    "caster_margin": 220.0,
+    "strength": 0.65,
+    "depth_bias": 0.00025,
+    "normal_bias": 0.18,
+    "pcf_radius": 1.0
+  },
   "name": "FIRST FLIGHT",
   "description": "Fly through the block gates and defeat Fear Worm.",
   "layout": "resources/Scenes/stage01.json",

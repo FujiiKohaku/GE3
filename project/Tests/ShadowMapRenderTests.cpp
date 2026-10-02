@@ -85,7 +85,7 @@ size_t ChangedPixels(const std::vector<uint8_t>& a, const std::vector<uint8_t>& 
 // Exercise the actual game Renderer and Stage03 scene without modifying preview.
 class ShadowTestStage : public GamePlayScene {
 public:
-    ShadowTestStage() : GamePlayScene("stage03") {}
+    explicit ShadowTestStage(const std::string& stageId) : GamePlayScene(stageId) {}
     void SetShadowEnabled(bool enabled) { enabled_ = enabled; }
     ShadowSettings GetShadowSettings() const override {
         ShadowSettings settings = GamePlayScene::GetShadowSettings();
@@ -234,7 +234,7 @@ int RunTitleShadowTest()
     }
 }
 
-int RunGameStageShadowTest()
+int RunGameStageShadowTest(const std::string& stageId)
 {
     Logger::Initialize();
     std::filesystem::create_directories("captures/ShadowMapTests");
@@ -249,7 +249,7 @@ int RunGameStageShadowTest()
         // Follow normal startup: the title initializes the shared 3D/light managers.
         game.Update();
         game.Draw();
-        auto scene = std::make_unique<ShadowTestStage>();
+        auto scene = std::make_unique<ShadowTestStage>(stageId);
         ShadowTestStage* stage = scene.get();
         SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::move(scene)));
         bool stageReady = false;
@@ -258,21 +258,27 @@ int RunGameStageShadowTest()
             game.Draw();
             if (SceneManager::GetInstance()->GetShadowSettings().enabled) { stageReady = true; break; }
         }
-        Require(stageReady, "Stage03 did not finish the normal loading sequence");
+        Require(stageReady, "Stage did not finish the normal loading sequence");
+        TimeManager::GetInstance()->SetTimeScale(0.0f);
         auto* dx = DirectXCommon::GetInstance();
         Microsoft::WRL::ComPtr<ID3D12InfoQueue> info;
         dx->GetDevice()->QueryInterface(IID_PPV_ARGS(&info));
         if (info) { info->ClearStoredMessages(); }
+        std::vector<uint8_t> enabledFrame;
+        std::vector<uint8_t> disabledFrame;
         for (int mode = 0; mode < 2; ++mode) {
             stage->SetShadowEnabled(mode == 0);
             for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
             auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
                 D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
             dx->GetCommandList()->ResourceBarrier(1, &barrier);
-            std::filesystem::path file = "captures/ShadowMapTests/stage03-enabled.png";
-            if (mode == 1) { file = "captures/ShadowMapTests/stage03-disabled.png"; }
-            ReadFrame(dx, file);
+            std::filesystem::path file = "captures/ShadowMapTests/" + stageId + "-enabled.png";
+            if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-disabled.png"; }
+            if (mode == 0) { enabledFrame = ReadFrame(dx, file); }
+            else { disabledFrame = ReadFrame(dx, file); }
         }
+        Require(ChangedPixels(enabledFrame, disabledFrame) > 100,
+            "Stage shadow ON/OFF did not change enough pixels");
         if (info) {
             for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
                 SIZE_T size = 0;
@@ -287,7 +293,7 @@ int RunGameStageShadowTest()
             }
         }
         game.Finalize();
-        std::ofstream("captures/ShadowMapTests/stage-result.txt") << "PASS: actual Stage03 game render, shadow ON/OFF, no D3D12 errors\n";
+        std::ofstream("captures/ShadowMapTests/stage-result.txt") << "PASS: actual " << stageId << " game render, shadow ON/OFF, no D3D12 errors\n";
         Logger::Finalize();
         return 0;
     } catch (const std::exception& error) {
@@ -302,7 +308,8 @@ int RunGameStageShadowTest()
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
     if (std::string(commandLine).find("--title") != std::string::npos) { return RunTitleShadowTest(); }
-    if (std::string(commandLine).find("--stage") != std::string::npos) { return RunGameStageShadowTest(); }
+    if (std::string(commandLine).find("--stage01") != std::string::npos) { return RunGameStageShadowTest("stage01"); }
+    if (std::string(commandLine).find("--stage") != std::string::npos) { return RunGameStageShadowTest("stage03"); }
     int exitCode = 0;
     try {
         std::filesystem::path directory = "captures/ShadowMapTests";
