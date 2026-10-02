@@ -188,6 +188,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Renderer\Renderer.cpp" />
     <ClCompile Include="Engine\Shadow\ShadowCamera.cpp" />
     <ClCompile Include="Engine\Shadow\ShadowMapRenderer.cpp" />
+    <ClCompile Include="Engine\Shadow\LocalShadowRenderer.cpp" />
     <ClCompile Include="Engine\Screenshot\ScreenshotManager.cpp" />
     <ClCompile Include="Engine\PostEffect\CopyImageRenderer.cpp" />
     <ClCompile Include="Engine\PostEffect\PostEffectManager.cpp" />
@@ -202,7 +203,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Animation\KeyFrame.cpp" />
     <ClCompile Include="Engine\debugcamera\DebugCameraController.cpp" />
     <ClCompile Include="Engine\math\Light.cpp" />
-    <ClCompile Include="Engine\Light\LightManager.cpp" />
+    <ClCompile Include="Engine\Light\LightManager.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+    </ClCompile>
     <ClCompile Include="Engine\Debug\DebugRenderer.cpp" />
     <ClCompile Include="Engine\Rail\Rail.cpp" />
     <ClCompile Include="Engine\math\MathStruct.cpp" />
@@ -361,6 +364,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Shadow\ShadowSettings.h" />
     <ClInclude Include="Engine\Shadow\ShadowCamera.h" />
     <ClInclude Include="Engine\Shadow\ShadowMapRenderer.h" />
+    <ClInclude Include="Engine\Shadow\LocalShadowRenderer.h" />
     <ClInclude Include="Engine\Screenshot\ScreenshotManager.h" />
     <ClInclude Include="Engine\PostEffect\CopyImageRenderer.h" />
     <ClInclude Include="Engine\PostEffect\PostEffectManager.h" />
@@ -658,6 +662,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <ItemGroup>
+    <None Include="resources\Shaders\Atmosphere\Scattering.hlsli" />
+    <None Include="resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
+    <None Include="resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
+  </ItemGroup>
 </Project>
 
 

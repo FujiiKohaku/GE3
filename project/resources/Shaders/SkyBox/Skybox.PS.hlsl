@@ -1,4 +1,10 @@
 #include "Skybox.hlsli"
+#include "../Atmosphere/Scattering.hlsli"
+cbuffer SkySun : register(b1) { float4 sunColor; float3 sunDirectionVector; float sunIntensity; };
+cbuffer SkyAtmosphere : register(b5) {
+    float4 ambientColor; float4 ambientSky; float4 ambientGround;
+    float4 environmentSettings; float4 atmosphereSettings;
+};
 
 TextureCube<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
@@ -53,11 +59,16 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     skyColor = lerp(skyColor, cloudShadow, cloudMask * 0.88f);
     skyColor = lerp(skyColor, cloudLight, cloudCore);
 
-    float3 sunDirection = normalize(float3(-0.42f, 0.58f, 0.70f));
+    float3 sunDirection = normalize(-sunDirectionVector);
+    if (atmosphereSettings.x > 0.5f) {
+        float3 scattering = AtmosphereRadiance(direction, sunDirection, sunColor.rgb, sunIntensity, atmosphereSettings.w);
+        skyColor = lerp(skyColor, scattering, saturate(atmosphereSettings.z));
+    }
     float sunDisk = smoothstep(0.996f, 0.9992f, dot(direction, sunDirection));
     float sunGlow = pow(saturate(dot(direction, sunDirection)), 48.0f);
-    skyColor += float3(1.0f, 0.83f, 0.48f) * sunGlow * 0.12f;
-    skyColor = lerp(skyColor, float3(1.0f, 0.93f, 0.68f), sunDisk);
+    float visibleSun = saturate(sunIntensity) * smoothstep(-0.12f, 0.10f, sunDirection.y);
+    skyColor += float3(1.0f, 0.83f, 0.48f) * sunGlow * 0.12f * visibleSun;
+    skyColor = lerp(skyColor, float3(1.0f, 0.93f, 0.68f), sunDisk * visibleSun);
 
-    return float4(saturate(skyColor), 1.0f);
+    return float4(max(skyColor, 0.0f), 1.0f);
 }

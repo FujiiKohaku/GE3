@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 class ShadowMapRenderer;
+class LocalShadowRenderer;
 
 class Object3dManager {
 public:
@@ -18,6 +19,9 @@ public:
     static constexpr uint32_t kShadowConstantsRootIndex = kVertexShaderParametersRootIndex + 1;
     static constexpr uint32_t kShadowTextureRootIndex = kShadowConstantsRootIndex + 1;
     static constexpr uint32_t kShadowReceiverRootIndex = kShadowTextureRootIndex + 1;
+    static constexpr uint32_t kLocalShadowConstantsRootIndex = kShadowReceiverRootIndex + 1;
+    static constexpr uint32_t kLocalShadowTextureRootIndex = kLocalShadowConstantsRootIndex + 1;
+    void SetLocalShadowRenderer(LocalShadowRenderer* renderer) { localShadowRenderer_ = renderer; }
     void SetShadowRenderer(ShadowMapRenderer* renderer) { shadowRenderer_ = renderer; }
     void BindShadowResources(bool receiveShadow,
         uint32_t constantsIndex = kShadowConstantsRootIndex,
@@ -84,6 +88,9 @@ private:
 
 private:
     ShadowMapRenderer* shadowRenderer_ = nullptr;
+    LocalShadowRenderer* localShadowRenderer_ = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> disabledLocalShadowConstants_;
+    uint32_t nullLocalShadowSrv_ = 0xffffffffu;
     Microsoft::WRL::ComPtr<ID3D12Resource> disabledShadowConstants_;
     uint32_t nullShadowSrv_ = 0xffffffffu;
     DirectXCommon* dxCommon_ = nullptr;

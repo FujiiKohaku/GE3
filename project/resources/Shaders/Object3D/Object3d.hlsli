@@ -89,6 +89,12 @@ struct AmbientLight
     float4 color;
     float4 skyColor;
     float4 groundColor;
+    float4 environmentSettings;
+    float4 atmosphereSettings;
+    float4x4 clusterView;
+    float4x4 clusterProjection;
+    float4 clusterSettings;
+    uint4 clusterMasks[1536];
 };
 struct Camera
 {

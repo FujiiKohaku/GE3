@@ -34,7 +34,7 @@ void ConfigureJellyfishBodyMaterial(Object3d& object)
     object.SetEnableEnvironmentMap(true);
     object.SetEnvironmentMapStrength(0.10f);
     object.GetMaterial()->shininess = 96.0f;
-    object.SetSurfaceProperties(0.24f, 0.0f, 1.0f);
+    object.SetSurfaceProperties(0.28f, 0.0f, 0.70f);
 }
 
 struct TransparentPart {

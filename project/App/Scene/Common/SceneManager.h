@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "App/Scene/Common/BaseScene.h"
 #include "App/Scene/Common/PageTransition.h"
 #include "Engine/Math/MathStruct.h"
@@ -104,6 +104,9 @@ public:
         ++sceneFogRevision_;
     }
     const DistanceFogData& GetSceneDistanceFog() const { return sceneDistanceFog_; }
+    void SetSceneExposure(float exposure);
+    float GetSceneExposure() const { return sceneExposure_; }
+    uint64_t GetSceneExposureRevision() const { return sceneExposureRevision_; }
     uint64_t GetSceneFogRevision() const { return sceneFogRevision_; }
 
 private:
@@ -136,6 +139,8 @@ private:
     Vector4 sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
     DistanceFogData sceneDistanceFog_ { 380.0f, 720.0f, 1.0f, 1.2f };
     uint64_t sceneFogRevision_ = 1;
+    float sceneExposure_ = 1.0f;
+    uint64_t sceneExposureRevision_ = 1;
 
 private:
     std::unique_ptr<BaseScene> scene_;

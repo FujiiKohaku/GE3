@@ -4,6 +4,7 @@
 #include <cassert>
 #include <filesystem>
 #include "Engine/Shadow/ShadowMapRenderer.h"
+#include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
 
 namespace {
@@ -53,6 +54,17 @@ void Object3dManager::Initialize(DirectXCommon* dxCommon)
     disabledShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabled));
     *disabled = {};
     disabled->lightViewProjection = MatrixMath::MakeIdentity4x4();
+    disabledLocalShadowConstants_ = dxCommon_->CreateBufferResource(sizeof(LocalShadowConstants));
+    LocalShadowConstants* disabledLocal = nullptr;
+    disabledLocalShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabledLocal));
+    *disabledLocal = {};
+    nullLocalShadowSrv_ = SrvManager::GetInstance()->Allocate();
+    D3D12_SHADER_RESOURCE_VIEW_DESC localNullDesc {};
+    localNullDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    localNullDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+    localNullDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    localNullDesc.Texture2DArray.ArraySize = 8; localNullDesc.Texture2DArray.MipLevels = 1;
+    dxCommon_->GetDevice()->CreateShaderResourceView(nullptr, &localNullDesc, SrvManager::GetInstance()->GetCPUDescriptorHandle(nullLocalShadowSrv_));
     nullShadowSrv_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforTexture2D(nullShadowSrv_, nullptr, DXGI_FORMAT_R32_FLOAT, 1);
 
@@ -126,7 +138,7 @@ void Object3dManager::CreateRootSignature()
 
     // ====== RootParameterの設宁E======
     D3D12_ROOT_PARAMETER rootParameters[
-        kShadowReceiverRootIndex + 1] = {};
+        kLocalShadowTextureRootIndex + 1] = {};
 
 
     auto& materialParameter = rootParameters[
@@ -232,6 +244,18 @@ void Object3dManager::CreateRootSignature()
     receiver.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     receiver.Constants.ShaderRegister = 7;
     receiver.Constants.Num32BitValues = 1;
+    auto& localConstants = rootParameters[kLocalShadowConstantsRootIndex];
+    localConstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    localConstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    localConstants.Descriptor.ShaderRegister = 8;
+    D3D12_DESCRIPTOR_RANGE localRange {};
+    localRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    localRange.BaseShaderRegister = 4; localRange.NumDescriptors = 1;
+    localRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    auto& localTexture = rootParameters[kLocalShadowTextureRootIndex];
+    localTexture.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    localTexture.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    localTexture.DescriptorTable = { 1, &localRange };
     // ====== Sampler設宁E======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -442,6 +466,7 @@ void Object3dManager::SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle)
 
 Object3dManager::~Object3dManager()
 {
+    if (nullLocalShadowSrv_ != 0xffffffffu) { SrvManager::GetInstance()->Free(nullLocalShadowSrv_); }
     if (nullShadowSrv_ != 0xffffffffu) { SrvManager::GetInstance()->Free(nullShadowSrv_); }
 }
 
@@ -460,4 +485,14 @@ void Object3dManager::BindShadowResources(bool receiveShadow,
     uint32_t receiver = 0;
     if (receiveShadow) { receiver = 1; }
     cmd->SetGraphicsRoot32BitConstant(receiverIndex, receiver, 0);
+    if (receiverIndex == kShadowReceiverRootIndex) {
+        auto localAddress = disabledLocalShadowConstants_->GetGPUVirtualAddress();
+        auto localSrv = SrvManager::GetInstance()->GetGPUDescriptorHandle(nullLocalShadowSrv_);
+        if (localShadowRenderer_ != nullptr && localShadowRenderer_->HasValidFrame()) {
+            localAddress = localShadowRenderer_->GetConstantsAddress();
+            localSrv = localShadowRenderer_->GetSrv();
+        }
+        cmd->SetGraphicsRootConstantBufferView(kLocalShadowConstantsRootIndex, localAddress);
+        cmd->SetGraphicsRootDescriptorTable(kLocalShadowTextureRootIndex, localSrv);
+    }
 }

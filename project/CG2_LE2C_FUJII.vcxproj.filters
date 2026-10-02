@@ -897,4 +897,13 @@
     <ClCompile Include="Engine\PostEffect\PostEffectManager.cpp" />
     <ClInclude Include="Engine\PostEffect\PostEffectManager.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Shadow\LocalShadowRenderer.cpp"><Filter>ソース ファイル</Filter></ClCompile>
+    <ClInclude Include="Engine\Shadow\LocalShadowRenderer.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\Shaders\Atmosphere\Scattering.hlsli" />
+    <None Include="resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
+    <None Include="resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
+  </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 #include "Engine/Shadow/ShadowMapRenderer.h"
+#include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/ModelManager.h"
@@ -28,6 +29,7 @@
 #include <stdexcept>
 #include <vector>
 #include <cmath>
+#include <chrono>
 
 namespace {
 void Require(bool value, const char* message)
@@ -872,6 +874,201 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(!volume->GetLocalFogParameters().isEnabled && !volume->GetFogVolumes()[0].isEnabled, "Local fog reset retained settings");
             Logger::Log("Local fog PASS: sphere, box, height, noise, stable frames, camera inside, shadow fallback, invalid settings and reset");
 
+            auto* lights = LightManager::GetInstance();
+            lights->ClearDynamicPointLights(); lights->ClearDynamicSpotLights();
+            const PointLightHandle stalePoint = lights->AddPointLight({1,1,1,1}, {0,40,0}, 1.0f, 220.0f, 2.0f);
+            Require(stalePoint != kInvalidPointLightHandle, "Point light registration failed");
+            Require(lights->RemovePointLight(stalePoint), "Point removal failed");
+            const PointLightHandle pointHandle = lights->AddPointLight({0.65f,0.85f,1,1}, {35,40,-10}, 2.0f, 220.0f, 2.0f);
+            Require(!lights->SetPointLightIntensity(stalePoint, 10.0f), "Stale point handle modified reused slot");
+            const SpotLightHandle spotHandle = lights->AddSpotLight({1,0.8f,0.6f,1}, {-20,65,-20}, {0.2f,-0.8f,0.6f}, 2.0f, 220.0f, 2.0f, 0.65f);
+            Require(spotHandle != kInvalidSpotLightHandle, "Spot light registration failed");
+            Require(!lights->SetSpotLightDirection(spotHandle, {}), "Zero spot direction was accepted");
+            Require(!lights->SetPointLightRadius(pointHandle, std::numeric_limits<float>::quiet_NaN()), "NaN point radius was accepted");
+            Require(lights->AddSpotLight({1,1,1,1}, {}, {}, 1.0f, 100.0f, 1.0f, 0.7f) == kInvalidSpotLightHandle, "Invalid spotlight was registered");
+            LocalShadowRenderer localShadows;
+            Require(localShadows.Initialize(dx), "Local shadow initialization failed");
+            D3D12_QUERY_HEAP_DESC localQueryDesc {};
+            localQueryDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP; localQueryDesc.Count = 2;
+            Microsoft::WRL::ComPtr<ID3D12QueryHeap> localQuery;
+            Require(SUCCEEDED(dx->GetDevice()->CreateQueryHeap(&localQueryDesc, IID_PPV_ARGS(&localQuery))), "Local light GPU timer failed");
+            D3D12_HEAP_PROPERTIES localTimerHeap {}; localTimerHeap.Type = D3D12_HEAP_TYPE_READBACK;
+            auto localTimerDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(UINT64) * 2);
+            Microsoft::WRL::ComPtr<ID3D12Resource> localTimer;
+            Require(SUCCEEDED(dx->GetDevice()->CreateCommittedResource(&localTimerHeap, D3D12_HEAP_FLAG_NONE, &localTimerDesc,
+                D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&localTimer))), "Local timer allocation failed");
+            UINT64 localFrequency = 0;
+            Require(SUCCEEDED(dx->GetCommandQueue()->GetTimestampFrequency(&localFrequency)), "Local timer frequency failed");
+            double localAverages[6] {};
+            std::vector<uint8_t> localLightImages[6];
+            floor.SetReceiveShadow(true); ice.SetReceiveShadow(true);
+            for (int mode = 0; mode < 6; ++mode) {
+                lights->SetPointLightIntensity(pointHandle, 0.0f);
+                lights->SetSpotLightIntensity(spotHandle, 0.0f);
+                lights->SetPointLightShadowEnabled(pointHandle, false);
+                lights->SetSpotLightShadowEnabled(spotHandle, false);
+                if (mode == 1 || mode == 2 || mode == 5) { lights->SetPointLightIntensity(pointHandle, 2.0f); }
+                if (mode == 3 || mode == 4 || mode == 5) { lights->SetSpotLightIntensity(spotHandle, 2.0f); }
+                if (mode == 2 || mode == 5) { lights->SetPointLightShadowEnabled(pointHandle, true); }
+                if (mode == 4 || mode == 5) { lights->SetSpotLightShadowEnabled(spotHandle, true); }
+                for (int sampleIndex = 0; sampleIndex < 24; ++sampleIndex) {
+                dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+                localShadows.Prepare(*lights);
+                Require(!localShadows.HasValidFrame(), "Local shadow prepare retained old frame");
+                uint32_t expectedPasses = 0;
+                if (mode == 2) { expectedPasses = 6; }
+                if (mode == 4) { expectedPasses = 1; }
+                if (mode == 5) { expectedPasses = 7; }
+                Require(localShadows.GetPassCount() == expectedPasses, "Local shadow pass count is incorrect");
+                for (uint32_t passIndex = 0; passIndex < localShadows.GetPassCount(); ++passIndex) {
+                    auto& pass = localShadows.GetPass(passIndex);
+                    pass.BeginShadowPass(); floor.DrawShadow(pass); ice.DrawShadow(pass); pass.EndShadowPass();
+                }
+                localShadows.Finish();
+                Object3dManager::GetInstance()->SetLocalShadowRenderer(&localShadows);
+                volume->SetEnabled(false);
+                SrvManager::GetInstance()->PreDraw();
+                post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth(); dx->PreDraw();
+                post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+                dx->GetCommandList()->ResolveQueryData(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, localTimer.Get(), 0);
+                if (sampleIndex == 23) { localLightImages[mode] = ReadFrame(dx, directory / ("local-light-" + std::to_string(mode) + ".png")); }
+                else { dx->PostDraw(); }
+                UINT64* localTicks = nullptr;
+                D3D12_RANGE timerReadRange { 0, sizeof(UINT64) * 2 };
+                Require(SUCCEEDED(localTimer->Map(0, &timerReadRange, reinterpret_cast<void**>(&localTicks))), "Local timer map failed");
+                if (sampleIndex >= 4) { localAverages[mode] += double(localTicks[1] - localTicks[0]) * 1000.0 / double(localFrequency) / 20.0; }
+                D3D12_RANGE noTimerWrites { 0, 0 }; localTimer->Unmap(0, &noTimerWrites);
+                }
+
+            }
+            std::ofstream(directory / "local-light-differences.txt") << "Point shadow pixels: " << ChangedPixels(localLightImages[1], localLightImages[2])
+                << "\nSpot shadow pixels: " << ChangedPixels(localLightImages[3], localLightImages[4]) << "\n";
+            Require(ChangedPixels(localLightImages[0], localLightImages[1]) > 100, "Point light did not illuminate materials");
+            Require(ChangedPixels(localLightImages[1], localLightImages[2]) > 20, "Point light shadow did not occlude light");
+            Require(ChangedPixels(localLightImages[0], localLightImages[3]) > 100, "Spot light did not illuminate materials");
+            Require(ChangedPixels(localLightImages[3], localLightImages[4]) > 20, "Spot light shadow did not occlude light");
+            Require(ChangedPixels(localLightImages[4], localLightImages[5]) > 100, "Multiple local lights did not combine");
+            Object3dManager::GetInstance()->SetLocalShadowRenderer(nullptr);
+            lights->ClearDynamicPointLights(); lights->ClearDynamicSpotLights();
+            Require(!lights->SetPointLightIntensity(pointHandle, 2.0f), "Cleared light handle remained valid");
+            std::ofstream localTimingFile(directory / "local-light-timing.txt");
+            localTimingFile << "1280x720, 512 shadow faces, debug layer enabled, 20 samples; shadow passes + geometry + post processing\n";
+            for (int mode = 0; mode < 6; ++mode) { localTimingFile << "Mode " << mode << " ms: " << localAverages[mode] << "\n"; }
+            Logger::Log("Local lights PASS: point/spot lighting, six point shadow faces, spotlight shadow, combined lights, generation handles and validation");
+
+            // ④〜⑥：画像比較で接触影、散乱、環境光とライトの欠落を確認する。
+            const Vector4 originalEnvironment = lights->GetEnvironmentLighting();
+            const Vector4 originalAtmosphere = lights->GetAtmosphereSettings();
+            Require(!post.SetSsao(true, std::numeric_limits<float>::quiet_NaN(), 6.0f, 0.08f), "NaN SSAO accepted");
+            Require(!lights->SetEnvironmentLighting(-1.0f, 0.2f), "Negative environment strength accepted");
+            Require(!lights->SetAtmosphere(true, 0.0003f, 1.0f, 1.0f), "Invalid scattering anisotropy accepted");
+            std::vector<uint8_t> screenImages[8];
+            double screenAverages[8] {};
+            for (int mode = 0; mode < 8; ++mode) {
+                post.SetSsao(false, 0.35f, 8.0f, 0.08f);
+                lights->SetAtmosphere(false, 0.002f, 0.7f, 0.65f);
+                lights->SetEnvironmentLighting(0.0f, 0.0f);
+                post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
+                if (mode == 1 || mode == 2 || mode == 5) { post.SetSsao(true, 0.35f, 8.0f, 0.08f); }
+                if (mode == 3 || mode == 5) { lights->SetAtmosphere(true, 0.002f, 0.7f, 0.65f); }
+                if (mode == 4 || mode == 5) { lights->SetEnvironmentLighting(0.25f, 0.4f); }
+                if (mode == 6) { post.SetSsao(true, 0.0f, 8.0f, 0.08f); }
+                if (mode == 7) { post.SetSsao(true, 0.35f, 8.0f, 0.08f); post.SetNormalTextureHandle({}); }
+                for (int sampleIndex = 0; sampleIndex < 24; ++sampleIndex) {
+                    post.Update(&camera);
+                    lights->UpdateClusters(&camera);
+                    dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+                    SrvManager::GetInstance()->PreDraw();
+                    post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                    Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                    offscreen.PostDraw(); post.PostDrawDepth(); dx->PreDraw();
+                    post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                    dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+                    dx->GetCommandList()->ResolveQueryData(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, localTimer.Get(), 0);
+                    if (sampleIndex == 23) { screenImages[mode] = ReadFrame(dx, directory / ("screen-lighting-" + std::to_string(mode) + ".png")); }
+                    else { dx->PostDraw(); }
+                    UINT64* ticks = nullptr;
+                    D3D12_RANGE readRange { 0, sizeof(UINT64) * 2 };
+                    Require(SUCCEEDED(localTimer->Map(0, &readRange, reinterpret_cast<void**>(&ticks))), "Screen timer map failed");
+                    if (sampleIndex >= 4) { screenAverages[mode] += double(ticks[1] - ticks[0]) * 1000.0 / double(localFrequency) / 20.0; }
+                    D3D12_RANGE noWrites { 0, 0 }; localTimer->Unmap(0, &noWrites);
+                }
+            }
+            std::ofstream screenReport(directory / "screen-lighting-report.txt");
+            screenReport << "SSAO changed pixels: " << ChangedPixels(screenImages[0], screenImages[1])
+                << "\nAtmosphere changed pixels: " << ChangedPixels(screenImages[0], screenImages[3])
+                << "\nEnvironment changed pixels: " << ChangedPixels(screenImages[0], screenImages[4]) << "\n";
+            for (int mode = 0; mode < 8; ++mode) { screenReport << "Mode " << mode << " GPU ms: " << screenAverages[mode] << "\n"; }
+            Require(ChangedPixels(screenImages[0], screenImages[1]) > 20, "SSAO did not add contact occlusion");
+            Require(screenImages[1] == screenImages[2], "Static SSAO flickered");
+            Require(ChangedPixels(screenImages[0], screenImages[3]) > 500, "Atmospheric perspective did not change distance colors");
+            Require(ChangedPixels(screenImages[0], screenImages[4]) > 100, "Environment map lighting did not change materials");
+            Require(screenImages[0] == screenImages[6], "Zero-strength SSAO changed the image");
+            Require(screenImages[0] == screenImages[7], "Missing-normal SSAO fallback changed the image");
+            post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
+            post.SetSsao(false, 0.25f, 6.0f, 0.08f);
+            lights->SetAtmosphere(false, 0.00035f, 0.45f, 0.65f);
+            lights->SetEnvironmentLighting(0.0f, 0.0f);
+            for (uint32_t index = 0; index < 31; ++index) {
+                const float x = float(index % 7) * 24.0f - 72.0f;
+                const float z = float(index / 7) * 38.0f - 36.0f;
+                Require(lights->AddPointLight({0.7f,0.8f,1,1}, {x,12,z}, 0.18f, 34.0f, 2.0f) != kInvalidPointLightHandle, "Many-light registration failed");
+            }
+            for (uint32_t index = 0; index < 7; ++index) {
+                Require(lights->AddSpotLight({1,0.7f,0.4f,1}, {float(index)*24.0f-72.0f,40,50}, {0,-1,0.2f},
+                    0.3f, 55.0f, 2.0f, 0.6f) != kInvalidSpotLightHandle, "Many-spot registration failed");
+            }
+            std::ofstream clusterReport(directory / "clustered-lighting-report.txt");
+            for (int viewIndex = 0; viewIndex < 3; ++viewIndex) {
+                Vector3 eye = {0,40,-95};
+                if (viewIndex == 1) { eye = {75,25,-30}; }
+                if (viewIndex == 2) { eye = {-40,10,20}; }
+                camera.LookAt(eye, {0,0,35}); camera.Update(); floor.Update(); ice.Update();
+                std::vector<uint8_t> clusterImages[3];
+                for (int mode = 0; mode < 3; ++mode) {
+                    lights->SetClusteredLightingEnabled(mode != 0);
+                    double gpuMs = 0.0;
+                    double cpuMs = 0.0;
+                    for (int sampleIndex = 0; sampleIndex < 24; ++sampleIndex) {
+                        const auto begin = std::chrono::steady_clock::now();
+                        if (mode == 2) { lights->UpdateClusters(nullptr); }
+                        else { lights->UpdateClusters(&camera); }
+                        const auto end = std::chrono::steady_clock::now();
+                        if (sampleIndex >= 4) { cpuMs += std::chrono::duration<double, std::milli>(end - begin).count() / 20.0; }
+                        post.Update(&camera);
+                        dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+                        SrvManager::GetInstance()->PreDraw();
+                        post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                        Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                        offscreen.PostDraw(); post.PostDrawDepth(); dx->PreDraw();
+                        post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                        dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+                        dx->GetCommandList()->ResolveQueryData(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, localTimer.Get(), 0);
+                        if (sampleIndex == 23) { clusterImages[mode] = ReadFrame(dx, directory / ("cluster-" + std::to_string(viewIndex) + "-" + std::to_string(mode) + ".png")); }
+                        else { dx->PostDraw(); }
+                        UINT64* ticks = nullptr;
+                        D3D12_RANGE readRange { 0, sizeof(UINT64) * 2 };
+                        Require(SUCCEEDED(localTimer->Map(0, &readRange, reinterpret_cast<void**>(&ticks))), "Cluster timer map failed");
+                        if (sampleIndex >= 4) { gpuMs += double(ticks[1] - ticks[0]) * 1000.0 / double(localFrequency) / 20.0; }
+                        D3D12_RANGE noWrites { 0, 0 }; localTimer->Unmap(0, &noWrites);
+                    }
+                    clusterReport << "View " << viewIndex << " mode " << mode << " GPU ms: " << gpuMs << "; CPU classify ms: " << cpuMs << "\n";
+                }
+                clusterReport << "Changed pixels: " << ChangedPixels(clusterImages[0], clusterImages[1]) << "\n";
+                Require(clusterImages[0] == clusterImages[1], "Clustered culling lost or changed light contributions");
+                Require(clusterImages[0] == clusterImages[2], "Missing-camera cluster fallback changed lighting");
+            }
+            lights->ClearDynamicPointLights(); lights->ClearDynamicSpotLights();
+            lights->SetClusteredLightingEnabled(true); lights->UpdateClusters(nullptr);
+            lights->SetEnvironmentLighting(originalEnvironment.x, originalEnvironment.y);
+            lights->SetAtmosphere(originalAtmosphere.x > 0.5f, originalAtmosphere.y, originalAtmosphere.z, originalAtmosphere.w);
+            camera.LookAt({0,40,-95}, {0,0,35}); camera.Update(); floor.Update(); ice.Update();
+            post.GetCopyImageRenderer()->GetPostEffectParameter().screenCameraSettings.z = 0.0f;
+            Logger::Log("Lighting 4-6 PASS: SSAO stable/off/normal fallback, atmosphere, environment maps, 38 lights clustered image parity across three cameras");
+
             D3D12_QUERY_HEAP_DESC volumeQueryDesc {};
             volumeQueryDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP; volumeQueryDesc.Count = 2;
             Microsoft::WRL::ComPtr<ID3D12QueryHeap> volumeQuery;
@@ -943,7 +1140,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 }
             }
         }
-        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting, local sphere/box/height fog, stable noise, shadow fallbacks, D3D12 validation\n";
+        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting, local sphere/box/height fog, stable noise, shadow fallbacks, point/spot lights and shadows, generation handles, SSAO, atmospheric perspective, environment illumination, clustered image parity, D3D12 validation\n";
         ModelManager::Finalize();
         Object3dManager::Finalize();
         LightManager::Finalize();

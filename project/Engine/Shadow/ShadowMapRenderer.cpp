@@ -16,7 +16,7 @@ ShadowMapRenderer::~ShadowMapRenderer()
     if (srvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(srvIndex_); }
 }
 
-void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution)
+void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution, ID3D12Resource* sharedDepth, uint32_t arraySlice)
 {
     resolution_ = std::clamp(resolution, 256u, 4096u);
     dx_ = dx;
@@ -32,16 +32,28 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution)
     D3D12_CLEAR_VALUE clear {};
     clear.Format = DXGI_FORMAT_D32_FLOAT;
     clear.DepthStencil.Depth = 1.0f;
-    CheckShadow(dx_->GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
-        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&depth_)));
+    if (sharedDepth != nullptr) {
+        depth_ = sharedDepth;
+        depthSubresource_ = arraySlice;
+    } else {
+        CheckShadow(dx_->GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&depth_)));
+    }
     depth_->SetName(L"ShadowMap::Depth");
     dsvHeap_ = dx_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv {};
     dsv.Format = DXGI_FORMAT_D32_FLOAT;
     dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    if (sharedDepth != nullptr) {
+        dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+        dsv.Texture2DArray.FirstArraySlice = arraySlice;
+        dsv.Texture2DArray.ArraySize = 1;
+    }
     dx_->GetDevice()->CreateDepthStencilView(depth_.Get(), &dsv, dsvHeap_->GetCPUDescriptorHandleForHeapStart());
-    srvIndex_ = SrvManager::GetInstance()->Allocate();
-    SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, depth_.Get(), DXGI_FORMAT_R32_FLOAT, 1);
+    if (sharedDepth == nullptr) {
+        srvIndex_ = SrvManager::GetInstance()->Allocate();
+        SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, depth_.Get(), DXGI_FORMAT_R32_FLOAT, 1);
+    }
     constantsBuffer_ = dx_->CreateBufferResource(sizeof(ShadowConstants));
     CheckShadow(constantsBuffer_->Map(0, nullptr, reinterpret_cast<void**>(&constants_)));
     *constants_ = {};
@@ -110,7 +122,7 @@ void ShadowMapRenderer::BeginShadowPass()
 {
     shadowPassComplete_ = false;
     auto* cmd = dx_->GetCommandList();
-    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthSubresource_);
     cmd->ResourceBarrier(1, &barrier);
     auto dsv = dsvHeap_->GetCPUDescriptorHandleForHeapStart();
     cmd->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
@@ -142,11 +154,22 @@ void ShadowMapRenderer::BindJellyfishObject(const Matrix4x4& world, const Vector
 void ShadowMapRenderer::EndShadowPass()
 {
     shadowPassComplete_ = true;
-    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, depthSubresource_);
     dx_->GetCommandList()->ResourceBarrier(1, &barrier);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE ShadowMapRenderer::GetSrv() const
 {
+    if (srvIndex_ == 0xffffffffu) { return {}; }
     return SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
+}
+
+void ShadowMapRenderer::UpdatePerspective(const Vector3& position, const Vector3& direction, float distance, float fovY)
+{
+    shadowPassComplete_ = false;
+    lightDirection_ = direction;
+    camera_.UpdatePerspective(position, direction, distance, fovY);
+    constants_->lightViewProjection = camera_.GetViewProjection();
+    constants_->parameters = { 1.0f / resolution_, 0.00005f, 0.03f, 1.0f };
+    constants_->options = { 1.0f, 1.0f, 0.0f, 0.0f };
 }

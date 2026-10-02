@@ -72,4 +72,11 @@ cbuffer PostEffectParameter : register(b0)
     float toneExposure;
     float toneContrast;
     float toneSaturation;
+    float4x4 screenInverseProjection;
+    float4x4 screenCameraRotation;
+    float4 ssaoSettings;
+    float4 screenCameraSettings;
+    float4 atmosphereSettings;
+    float4 screenSunDirection;
+    float4 screenSunColor;
 };

@@ -9,6 +9,7 @@ cbuffer ShadowSettings : register(b6)
 cbuffer ShadowReceiver : register(b7) { uint gReceiveShadow; };
 Texture2D<float> gShadowMap : register(t2);
 SamplerComparisonState gShadowSampler : register(s1);
+#include "LocalShadowSampling.hlsli"
 
 float SampleShadowVisibility(float3 worldPosition, float3 normal)
 {

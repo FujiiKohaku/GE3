@@ -1,5 +1,7 @@
-﻿#include "App/Scene/Common/SceneManager.h"
+#include "App/Scene/Common/SceneManager.h"
 #include <cassert>
+#include <cmath>
+#include "Engine/Light/LightManager.h"
 #include "Engine/Time/TimeManager.h"
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 
@@ -32,6 +34,16 @@ void SceneManager::Update()
     }
 
     if (nextScene_) {
+        auto* lights = LightManager::GetInstance();
+        if (lights->IsInitialized()) {
+            lights->ClearDynamicPointLights();
+            lights->ClearDynamicSpotLights();
+            lights->SetPointIntensity(0.0f);
+            lights->SetSpotLightIntensity(0.0f);
+            lights->SetPointLightShadowEnabled(0, false);
+            lights->SetSpotLightShadowEnabled(0, false);
+        }
+        SetSceneExposure(1.0f);
         if (volumetricLightRenderer_ != nullptr) { volumetricLightRenderer_->ResetLocalFog(); }
         RemovePostEffect(PostEffectType::ArchiveAtmosphere);
         archiveApproach_ = 0.0f;
@@ -224,4 +236,10 @@ ShadowSettings SceneManager::GetShadowSettings() const
 {
     if (scene_) { return scene_->GetShadowSettings(); }
     return {};
+}
+
+void SceneManager::SetSceneExposure(float exposure) {
+    if (!std::isfinite(exposure) || exposure < 0.1f || exposure > 4.0f) { return; }
+    sceneExposure_ = exposure;
+    ++sceneExposureRevision_;
 }

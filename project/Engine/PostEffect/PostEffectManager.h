@@ -27,6 +27,7 @@ public:
 
     void Initialize(DirectXCommon* dxCommon);
     void Update(Camera* camera);
+    bool SetSsao(bool isEnabled, float strength, float radius, float bias);
     void DrawImGui();
     void SetFxaaEnabled(bool enabled) { fxaaEnabled_ = enabled; }
     bool IsFxaaEnabled() const { return fxaaEnabled_; }
@@ -111,6 +112,7 @@ private:
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
     uint64_t sceneFogRevision_ = 0;
+    uint64_t sceneExposureRevision_ = 0;
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;

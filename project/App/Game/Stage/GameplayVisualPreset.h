@@ -19,10 +19,10 @@ inline LightingPreset GetLighting(const std::string& stageId)
 {
     if (stageId == "stage03") {
         return { { 0.90f, 0.96f, 1.0f, 1.0f },
-            { -0.60f, -0.70f, 0.40f }, 0.82f, { 0.38f, 0.50f, 0.67f, 0.22f } };
+            { -0.52f, -0.76f, 0.39f }, 0.90f, { 0.38f, 0.50f, 0.67f, 0.16f } };
     }
     return { { 1.0f, 0.97f, 0.90f, 1.0f },
-        { -0.28f, -0.86f, 0.42f }, 1.0f, { 0.52f, 0.60f, 0.68f, 0.28f } };
+        { -0.28f, -0.86f, 0.42f }, 0.95f, { 0.52f, 0.60f, 0.68f, 0.22f } };
 }
 
 inline void ApplyLighting(const std::string& stageId)
@@ -33,7 +33,7 @@ inline void ApplyLighting(const std::string& stageId)
     lightManager->SetAmbientColor({ lighting.ambient.x, lighting.ambient.y, lighting.ambient.z });
     lightManager->SetAmbientIntensity(lighting.ambient.w);
     if (stageId == "stage03") {
-        lightManager->SetHemisphereColors({ 0.80f, 1.00f, 1.20f }, { 0.40f, 0.55f, 0.70f });
+        lightManager->SetHemisphereColors({ 0.72f, 0.94f, 1.16f }, { 0.24f, 0.36f, 0.50f });
     } else {
         lightManager->SetHemisphereColors({ 0.78f, 0.90f, 1.10f }, { 0.42f, 0.38f, 0.34f });
     }
@@ -47,11 +47,13 @@ inline void ApplyAtmosphere(const std::string& stageId)
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
     if (stageId == "stage03") {
+        sceneManager->SetSceneExposure(0.95f);
         // Keep nearby ice clear and let middle-distance silhouettes survive the fog.
         sceneManager->SetSceneFogColor({ 0.58f, 0.80f, 0.96f, 1.0f });
         sceneManager->SetSceneDistanceFog({ 450.0f, 1000.0f, 1.0f, 1.35f });
         return;
     }
+    sceneManager->SetSceneExposure(1.0f);
     sceneManager->SetSceneDistanceFog({ 380.0f, 720.0f, 1.0f, 1.2f });
 }
 

@@ -3,8 +3,11 @@
 #include "../StageIceLighting.hlsli"
 
 ConstantBuffer<Material> gMaterial : register(b0);
+#include "../LocalLighting.hlsli"
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
+TextureCube<float4> gEnvironmentTexture : register(t1);
+#include "../EnvironmentLighting.hlsli"
 
 struct FloorPixelOutput
 {
@@ -24,6 +27,9 @@ FloorPixelOutput main(VertexShaderOutput input)
     float3 shade = GetStageIceDiffuseLighting(N, direct);
     float3 color = gMaterial.color.rgb * textureColor.rgb * shade * kFloorTint *
         float3(0.82f, 0.88f, 0.92f);
+
+    color += EnvironmentLighting(gMaterial.color.rgb * textureColor.rgb * kFloorTint, N, float3(0, 0, 1), false);
+    color += ShadeLocalLights(gMaterial.color.rgb * textureColor.rgb * kFloorTint, N, float3(0, 0, 1), input.worldPosition, N, false);
 
     // The floor is matte: no environment reflection, specular highlight or rim glow.
 

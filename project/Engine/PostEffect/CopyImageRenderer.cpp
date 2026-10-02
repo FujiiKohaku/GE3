@@ -226,6 +226,8 @@ CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
 const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
 {
     switch (type) {
+    case PostEffectType::ScreenLighting:
+        return L"resources/Shaders/PostEffect/ScreenLighting.PS.hlsl";
     case PostEffectType::ArchiveAtmosphere:
         return L"resources/Shaders/PostEffect/ArchiveAtmosphere.PS.hlsl";
     case PostEffectType::Copy:
@@ -347,6 +349,7 @@ void CopyImageRenderer::Draw(
 
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
     commandList->SetGraphicsRootDescriptorTable(1, secondTextureHandle);
+    if (normalTextureHandle.ptr == 0) { normalTextureHandle = maskTextureHandle_; }
     commandList->SetGraphicsRootDescriptorTable(2, normalTextureHandle);
 
     commandList->SetGraphicsRootConstantBufferView(
@@ -365,6 +368,8 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
 
     postEffectParameterResource_->Map(0,nullptr,reinterpret_cast<void**>(&postEffectParameterData_));
 
+    *postEffectParameterData_ = {};
+    postEffectParameterData_->ssaoSettings = { 0.25f, 6.0f, 0.08f, 1.0f };
     postEffectParameterData_->grayScaleStrength = 1.0f;
     postEffectParameterData_->toneMapEnabled = 1;
     postEffectParameterData_->toneExposure = 1.05f;

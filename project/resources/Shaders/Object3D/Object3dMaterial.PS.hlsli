@@ -6,13 +6,13 @@
 ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
-ConstantBuffer<PointLightCollection> gPointLights : register(b3);
-ConstantBuffer<SpotLightCollection> gSpotLights : register(b4);
 ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 Texture2D<float32_t4> gTexture : register(t0);
 TextureCube<float32_t4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
 #include "NormalMapping.PS.hlsli"
+#include "LocalLighting.hlsli"
+#include "EnvironmentLighting.hlsli"
 
 struct PixelShaderOutput
 {
@@ -24,7 +24,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, floa
 {
     float3 N = normalize(normal);
     float3 V = normalize(gCamera.worldPosition - worldPosition);
-    float3 ambient = baseColor * HemisphereAmbient(gAmbientLight, N);
+    float3 ambient = baseColor * HemisphereAmbient(gAmbientLight, N) + EnvironmentLighting(baseColor, N, V, true);
     float3 Ld = normalize(-gDirectionalLight.direction);
     float NdotLd = saturate(dot(N, Ld));
     float visibility = 1.0f;
@@ -39,38 +39,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, floa
             SurfaceSpecular(gMaterial, baseColor, N, V, Ld) * visibility;
     }
 
-    for (uint32_t i = 0; i < kMaxPointLights; ++i)
-    {
-        PointLight light = gPointLights.lights[i];
-        if (light.isActive == 0) continue;
-        // Surface-to-light vector for diffuse/specular lighting.
-        float3 L = normalize(light.position - worldPosition);
-        float attenuation = pow(saturate(-length(light.position - worldPosition) / light.radius + 1.0f), light.decay);
-        float3 lightColor = light.color.rgb * light.intensity * attenuation;
-        result += baseColor * lightColor * saturate(dot(N, L));
-        if (gMaterial.shininess > 0.0f)
-        {
-            result += lightColor * SurfaceSpecular(gMaterial, baseColor, N, V, L);
-        }
-    }
-
-    for (uint32_t i = 0; i < kMaxSpotLights; ++i)
-    {
-        SpotLight light = gSpotLights.lights[i];
-        if (light.isActive == 0) continue;
-        float3 lightToSurface = normalize(worldPosition - light.position);
-        float cosAngle = dot(lightToSurface, light.direction);
-        float3 L = -lightToSurface;
-        float falloff = saturate((cosAngle - light.cosAngle) /
-            max(light.cosFalloffStart - light.cosAngle, 0.001f));
-        float attenuation = pow(saturate(-length(light.position - worldPosition) / light.distance + 1.0f), light.decay);
-        float3 lightColor = light.color.rgb * light.intensity * attenuation * falloff;
-        result += baseColor * lightColor * saturate(dot(N, L));
-        if (gMaterial.shininess > 0.0f)
-        {
-            result += lightColor * SurfaceSpecular(gMaterial, baseColor, N, V, L);
-        }
-    }
+    result += ShadeLocalLights(baseColor, N, V, worldPosition, geometricNormal, gMaterial.shininess > 0.0f);
     return result;
 }
 
@@ -125,6 +94,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     output.color.rgb += baseColor * HemisphereAmbient(gAmbientLight, toonN) * 0.30f;
     output.color.rgb += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
         SurfaceSpecular(gMaterial, baseColor, toonN, toonV, normalize(-gDirectionalLight.direction));
+    output.color.rgb += ShadeLocalLights(baseColor, toonN, toonV, input.worldPosition, input.normal, true);
 #elif OBJECT3D_MATERIAL_TYPE == 2
     float3 N = surfaceNormal;
     float faceLight = saturate(dot(N, normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);
@@ -154,7 +124,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     {
         float3 N = surfaceNormal;
         float3 reflected = reflect(normalize(input.worldPosition - gCamera.worldPosition), N);
-        output.color.rgb += gEnvironmentTexture.Sample(gSampler, reflected).rgb *
+        output.color.rgb += gEnvironmentTexture.SampleLevel(gSampler, reflected, saturate(gMaterial.roughness) * 5.0f).rgb *
             gMaterial.environmentCoefficient;
     }
     return output;

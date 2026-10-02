@@ -15,6 +15,7 @@
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/input/Input.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
+#include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 
@@ -23,6 +24,7 @@ Renderer::Renderer() = default;
 Renderer::~Renderer()
 {
     Object3dManager::GetInstance()->SetShadowRenderer(nullptr);
+    Object3dManager::GetInstance()->SetLocalShadowRenderer(nullptr);
 }
 
 void Renderer::Initialize()
@@ -59,6 +61,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     SrvManager::GetInstance()->PreDraw();
 
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
+    LightManager::GetInstance()->UpdateClusters(defaultCamera);
     EffectManager* effectManager = EffectManager::GetInstance();
     if (effectManager->IsInitialized()) {
         if (defaultCamera != nullptr) {
@@ -84,6 +87,33 @@ void Renderer::Draw(SceneManager* sceneManager)
         sceneManager->DrawShadow(*shadowRenderer_);
         shadowRenderer_->EndShadowPass();
         Object3dManager::GetInstance()->SetShadowRenderer(shadowRenderer_.get());
+    }
+
+    Object3dManager::GetInstance()->SetLocalShadowRenderer(nullptr);
+    bool hasLocalShadows = false;
+    auto* lights = LightManager::GetInstance();
+    for (uint32_t lightIndex = 0; lightIndex < LightManager::kMaxPointLights; ++lightIndex) {
+        const PointLight light = lights->GetPointLight(lightIndex);
+        if (lights->IsPointLightShadowEnabled(lightIndex) && light.isActive != 0 && light.intensity > 0.0f) { hasLocalShadows = true; }
+    }
+    for (uint32_t lightIndex = 0; lightIndex < LightManager::kMaxSpotLights; ++lightIndex) {
+        const SpotLight light = lights->GetSpotLight(lightIndex);
+        if (lights->IsSpotLightShadowEnabled(lightIndex) && light.isActive != 0 && light.intensity > 0.0f) { hasLocalShadows = true; }
+    }
+    if (hasLocalShadows && defaultCamera != nullptr) {
+        if (!localShadowRenderer_) {
+            localShadowRenderer_ = std::make_unique<LocalShadowRenderer>();
+            localShadowRenderer_->Initialize(DirectXCommon::GetInstance());
+        }
+        localShadowRenderer_->Prepare(*lights);
+        for (uint32_t passIndex = 0; passIndex < localShadowRenderer_->GetPassCount(); ++passIndex) {
+            ShadowMapRenderer& pass = localShadowRenderer_->GetPass(passIndex);
+            pass.BeginShadowPass();
+            sceneManager->DrawShadow(pass);
+            pass.EndShadowPass();
+        }
+        localShadowRenderer_->Finish();
+        if (localShadowRenderer_->HasValidFrame()) { Object3dManager::GetInstance()->SetLocalShadowRenderer(localShadowRenderer_.get()); }
     }
 
     // Always clear/supply frame inputs, including frames with shadows disabled.

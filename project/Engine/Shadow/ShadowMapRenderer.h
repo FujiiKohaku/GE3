@@ -6,7 +6,8 @@ class Camera;
 class ShadowMapRenderer {
 public:
     ~ShadowMapRenderer();
-    void Initialize(DirectXCommon* dx, uint32_t resolution);
+    void Initialize(DirectXCommon* dx, uint32_t resolution, ID3D12Resource* sharedDepth = nullptr, uint32_t arraySlice = 0);
+    void UpdatePerspective(const Vector3& position, const Vector3& direction, float distance, float fovY);
     void Update(const Camera& camera, const Vector3& direction, const ShadowSettings& settings);
     void BeginShadowPass();
     void EndShadowPass();
@@ -24,6 +25,7 @@ public:
     Vector3 GetLightDirection() const { return lightDirection_; }
     float GetDepthBias() const { return constants_->parameters.y; }
 private:
+    uint32_t depthSubresource_ = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     bool shadowPassComplete_ = false;
     Vector3 lightDirection_ {};
     DirectXCommon* dx_ = nullptr;

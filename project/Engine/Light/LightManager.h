@@ -5,12 +5,15 @@
 #include <d3d12.h>
 #include <cstdint>
 #include <memory>
+#include <array>
 #include <wrl.h>
 
 using PointLightHandle = uint32_t;
 inline constexpr PointLightHandle kInvalidPointLightHandle = 0xffffffffu;
 using SpotLightHandle = uint32_t;
 inline constexpr SpotLightHandle kInvalidSpotLightHandle = 0xffffffffu;
+
+class Camera;
 
 class LightManager {
 public:
@@ -23,6 +26,15 @@ public:
     void Initialize(DirectXCommon* dxCommon);
     bool IsInitialized() const { return dxCommon_ != nullptr; }
     void Update();
+    void UpdateClusters(const Camera* camera);
+    void SetClusteredLightingEnabled(bool isEnabled);
+    bool IsClusteredLightingEnabled() const { return isClusteredLightingEnabled_; }
+    bool SetEnvironmentLighting(float diffuseStrength, float specularStrength);
+    bool SetAtmosphere(bool isEnabled, float density, float strength, float anisotropy);
+    Vector4 GetEnvironmentLighting() const { return ambientLightData_->environmentSettings; }
+    Vector4 GetAtmosphereSettings() const { return ambientLightData_->atmosphereSettings; }
+    D3D12_GPU_VIRTUAL_ADDRESS GetAmbientGpuAddress() const { return ambientLightResource_->GetGPUVirtualAddress(); }
+    D3D12_GPU_VIRTUAL_ADDRESS GetDirectionalGpuAddress() const { return lightResource_->GetGPUVirtualAddress(); }
     void Bind(ID3D12GraphicsCommandList* cmd);
 
     void SetDirectional(const Vector4& color, const Vector3& dir, float intensity);
@@ -94,6 +106,13 @@ public:
     bool SetSpotLightCosAngle(SpotLightHandle handle, float cosAngle);
     bool RemoveSpotLight(SpotLightHandle handle);
     void ClearDynamicSpotLights();
+    bool SetPointLightShadowEnabled(PointLightHandle handle, bool isEnabled);
+    bool SetSpotLightShadowEnabled(SpotLightHandle handle, bool isEnabled);
+    bool IsPointLightShadowEnabled(uint32_t lightIndex) const;
+    bool IsSpotLightShadowEnabled(uint32_t lightIndex) const;
+    PointLight GetPointLight(uint32_t lightIndex) const;
+    SpotLight GetSpotLight(uint32_t lightIndex) const;
+    bool SetSpotLightCosFalloffStart(SpotLightHandle handle, float cosFalloffStart);
 
     void SetAmbientColor(const Vector3& color);
     void SetHemisphereColors(const Vector3& sky, const Vector3& ground);
@@ -132,6 +151,11 @@ private:
     bool IsValidDynamicPointLightHandle(PointLightHandle handle) const;
     bool IsValidDynamicSpotLightHandle(SpotLightHandle handle) const;
 
+    std::array<uint32_t, kMaxPointLights> pointGenerations_ {};
+    std::array<uint32_t, kMaxSpotLights> spotGenerations_ {};
+    std::array<bool, kMaxPointLights> pointShadowEnabled_ {};
+    std::array<bool, kMaxSpotLights> spotShadowEnabled_ {};
+    bool isClusteredLightingEnabled_ = true;
     DirectXCommon* dxCommon_ = nullptr;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> lightResource_;

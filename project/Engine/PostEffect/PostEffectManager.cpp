@@ -1,3 +1,4 @@
+#include "Engine/Light/LightManager.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 
@@ -63,6 +64,17 @@ void PostEffectManager::RegisterDevelopmentPanel()
 nlohmann::json PostEffectManager::GetDevelopmentControls() const
 {
     static const nlohmann::json kControls = nlohmann::json::array({
+        {{"key", "ssaoEnabled"}, {"label", "SSAOを有効"}, {"group", "ライティング"}, {"type", "bool"}},
+        {{"key", "atmosphereEnabled"}, {"label", "大気散乱を有効"}, {"group", "ライティング"}, {"type", "bool"}},
+        {{"key", "clusteredLightingEnabled"}, {"label", "Clusteredを有効"}, {"group", "ライティング"}, {"type", "bool"}},
+        {{"key", "ssaoStrength"}, {"label", "SSAO強度"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.6}, {"step", 0.01}},
+        {{"key", "ssaoRadius"}, {"label", "SSAO半径"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0.1}, {"maximum", 30}, {"step", 0.1}},
+        {{"key", "ssaoBias"}, {"label", "SSAOバイアス"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "environmentDiffuse"}, {"label", "環境光の拡散"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "environmentSpecular"}, {"label", "環境光の反射"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "atmosphereDensity"}, {"label", "大気の密度"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.01}, {"step", 5e-05}},
+        {{"key", "atmosphereStrength"}, {"label", "大気散乱の強度"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "atmosphereAnisotropy"}, {"label", "大気の前方散乱"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.9}, {"step", 0.01}},
         {{"key", "localFogEnabled"}, {"label", "立体霧を有効"}, {"group", "立体霧"}, {"type", "bool"}},
         {{"key", "localFogHeight"}, {"label", "基準高さ"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", -1000}, {"maximum", 1000}, {"step", 0.1}},
         {{"key", "localFogHeightDensity"}, {"label", "高さ霧の濃度"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.05}, {"step", 0.0001}},
@@ -161,6 +173,14 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
 
 bool PostEffectManager::SetDevelopmentBool(const std::string& key, bool isEnabled)
 {
+    LightManager* lights = LightManager::GetInstance();
+    const Vector4 ssao = copyImageRenderer_->GetPostEffectParameter().ssaoSettings;
+    if (key == "ssaoEnabled") { return SetSsao(isEnabled, ssao.x, ssao.y, ssao.z); }
+    if (key == "clusteredLightingEnabled") { lights->SetClusteredLightingEnabled(isEnabled); return true; }
+    if (key == "atmosphereEnabled") {
+        const Vector4 atmosphere = lights->GetAtmosphereSettings();
+        return lights->SetAtmosphere(isEnabled, atmosphere.y, atmosphere.z, atmosphere.w);
+    }
     if (key == "localFogEnabled") { volumetricLightRenderer_->SetLocalFogEnabled(isEnabled); return true; }
     uint32_t volumeIndex = 0;
     std::string field;
@@ -179,6 +199,18 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
     if (!std::isfinite(value)) { return false; }
     const float number = static_cast<float>(value);
     if (!std::isfinite(number)) { return false; }
+    const Vector4 ssao = copyImageRenderer_->GetPostEffectParameter().ssaoSettings;
+    if (key == "ssaoStrength") { return SetSsao(ssao.w > 0.5f, number, ssao.y, ssao.z); }
+    if (key == "ssaoRadius") { return SetSsao(ssao.w > 0.5f, ssao.x, number, ssao.z); }
+    if (key == "ssaoBias") { return SetSsao(ssao.w > 0.5f, ssao.x, ssao.y, number); }
+    LightManager* lights = LightManager::GetInstance();
+    const Vector4 environment = lights->GetEnvironmentLighting();
+    if (key == "environmentDiffuse") { return lights->SetEnvironmentLighting(number, environment.y); }
+    if (key == "environmentSpecular") { return lights->SetEnvironmentLighting(environment.x, number); }
+    const Vector4 atmosphere = lights->GetAtmosphereSettings();
+    if (key == "atmosphereDensity") { return lights->SetAtmosphere(atmosphere.x > 0.5f, number, atmosphere.z, atmosphere.w); }
+    if (key == "atmosphereStrength") { return lights->SetAtmosphere(atmosphere.x > 0.5f, atmosphere.y, number, atmosphere.w); }
+    if (key == "atmosphereAnisotropy") { return lights->SetAtmosphere(atmosphere.x > 0.5f, atmosphere.y, atmosphere.z, number); }
     uint32_t volumeIndex = 0;
     std::string field;
     if (ParseFogVolumeKey(key, volumeIndex, field)) {
@@ -229,6 +261,9 @@ bool PostEffectManager::ExecuteDevelopmentCommand(const std::string& key)
 nlohmann::json PostEffectManager::GetDevelopmentSettings() const
 {
     const auto& p = copyImageRenderer_->GetPostEffectParameter();
+    const LightManager* lights = LightManager::GetInstance();
+    const Vector4 environment = lights->GetEnvironmentLighting();
+    const Vector4 atmosphere = lights->GetAtmosphereSettings();
     const FogData& fog = fogManager_->GetFogData();
     const auto* bloom = bloomRenderer_->GetBloomParameter();
     const auto& volume = volumetricLightRenderer_->GetParameters();
@@ -240,6 +275,12 @@ nlohmann::json PostEffectManager::GetDevelopmentSettings() const
         {"animationEnabled", isAnimationEnabled_},
         {"toneMapEnabled", p.toneMapEnabled != 0}, {"toneExposure", p.toneExposure},
         {"toneContrast", p.toneContrast}, {"toneSaturation", p.toneSaturation},
+        {"ssaoEnabled", p.ssaoSettings.w > 0.5f}, {"ssaoStrength", p.ssaoSettings.x},
+        {"ssaoRadius", p.ssaoSettings.y}, {"ssaoBias", p.ssaoSettings.z},
+        {"environmentDiffuse", environment.x}, {"environmentSpecular", environment.y},
+        {"atmosphereEnabled", atmosphere.x > 0.5f}, {"atmosphereDensity", atmosphere.y},
+        {"atmosphereStrength", atmosphere.z}, {"atmosphereAnisotropy", atmosphere.w},
+        {"clusteredLightingEnabled", lights->IsClusteredLightingEnabled()},
         {"fxaaEnabled", fxaaEnabled_}, {"fxaaStrength", p.fxaaStrength},
         {"fxaaSubpixel", p.fxaaSubpixel}, {"fxaaEdgeThreshold", p.fxaaEdgeThreshold},
         {"fxaaEdgeThresholdMin", p.fxaaEdgeThresholdMin},
@@ -452,8 +493,45 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
     }
 }
 
+bool PostEffectManager::SetSsao(bool isEnabled, float strength, float radius, float bias)
+{
+    if (!std::isfinite(strength) || !std::isfinite(radius) || !std::isfinite(bias) ||
+        strength < 0.0f || strength > 0.6f || radius < 0.1f || radius > 30.0f || bias < 0.0f || bias > radius) { return false; }
+    float enabled = 0.0f;
+    if (isEnabled) { enabled = 1.0f; }
+    copyImageRenderer_->GetPostEffectParameter().ssaoSettings = { strength, radius, bias, enabled };
+    return true;
+}
+
 void PostEffectManager::Update(Camera* camera)
 {
+    auto& screenParameters = copyImageRenderer_->GetPostEffectParameter();
+    screenParameters.screenCameraSettings.z = 0.0f;
+    LightManager* lights = LightManager::GetInstance();
+    screenParameters.atmosphereSettings = lights->GetAtmosphereSettings();
+    const DirectionalLight sun = lights->GetDirectionalLight();
+    screenParameters.screenSunDirection = { -sun.direction.x, -sun.direction.y, -sun.direction.z, sun.intensity };
+    screenParameters.screenSunColor = sun.color;
+    if (camera != nullptr && camera->GetNearClip() > 0.0f && camera->GetFarClip() > camera->GetNearClip()) {
+        screenParameters.screenInverseProjection = MatrixMath::Inverse(camera->GetProjectionMatrix());
+        screenParameters.screenCameraRotation = camera->GetWorldMatrix();
+        screenParameters.screenCameraRotation.m[3][0] = 0.0f;
+        screenParameters.screenCameraRotation.m[3][1] = 0.0f;
+        screenParameters.screenCameraRotation.m[3][2] = 0.0f;
+        bool isFiniteCamera = true;
+        for (uint32_t row = 0; row < 4; ++row) {
+            for (uint32_t column = 0; column < 4; ++column) {
+                if (!std::isfinite(screenParameters.screenInverseProjection.m[row][column]) ||
+                    !std::isfinite(screenParameters.screenCameraRotation.m[row][column])) { isFiniteCamera = false; }
+            }
+        }
+        if (isFiniteCamera) { screenParameters.screenCameraSettings = { camera->GetNearClip(), camera->GetFarClip(), 1.0f, 0.0f }; }
+    }
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (sceneExposureRevision_ != sceneManager->GetSceneExposureRevision()) {
+        copyImageRenderer_->GetPostEffectParameter().toneExposure = sceneManager->GetSceneExposure();
+        sceneExposureRevision_ = sceneManager->GetSceneExposureRevision();
+    }
     if (FogData* fogData = fogManager_->GetEditableFogData()) {
         SceneManager* sceneManager = SceneManager::GetInstance();
         fogData->color = sceneManager->GetSceneFogColor();
@@ -680,8 +758,23 @@ void PostEffectManager::PrepareSceneForParticleDraw(
 
     particleCompositionTargetIndex_ = 0;
     bool volumeApplied = false;
-    if (volumetricLightRenderer_->Generate(fogRenderer_->GetDepthSRVHandle(), sceneDepthReady_)) {
+    auto& screenSettings = copyImageRenderer_->GetPostEffectParameter();
+    screenSettings.screenCameraSettings.w = 0.0f;
+    if (normalTextureHandle_.ptr != 0) { screenSettings.screenCameraSettings.w = 1.0f; }
+    if (sceneDepthReady_ && screenSettings.screenCameraSettings.z > 0.5f &&
+        ((screenSettings.ssaoSettings.w > 0.5f && normalTextureHandle_.ptr != 0) || screenSettings.atmosphereSettings.x > 0.5f)) {
         RenderTarget& target = pingPongRenderTargets_[0];
+        target.BeginRender();
+        ApplyPostEffectToCurrentTarget(PostEffectType::ScreenLighting, sceneColorHandle);
+        target.EndRender();
+        sceneColorHandle = target.GetSrvHandleGPU();
+        volumeApplied = true;
+    }
+    if (volumetricLightRenderer_->Generate(fogRenderer_->GetDepthSRVHandle(), sceneDepthReady_)) {
+        uint32_t targetIndex = 0;
+        if (volumeApplied) { targetIndex = 1; }
+        particleCompositionTargetIndex_ = targetIndex;
+        RenderTarget& target = pingPongRenderTargets_[targetIndex];
         target.BeginRender();
         volumetricLightRenderer_->Composite(sceneColorHandle);
         target.EndRender();
@@ -707,7 +800,7 @@ void PostEffectManager::PrepareSceneForParticleDraw(
     D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
         sceneColorHandle;
     uint32_t targetIndex = 0;
-    if (volumeApplied) { targetIndex = 1; }
+    if (volumeApplied) { targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_); }
     bool appliedSceneEffect = volumeApplied;
 
     for (const PostEffectInfo& postEffect : postEffects) {

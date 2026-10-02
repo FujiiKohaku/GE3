@@ -9,6 +9,8 @@ Texture2D<float4> gTexture : register(t0);
 TextureCube<float4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
 #include "../NormalMapping.PS.hlsli"
+#include "../LocalLighting.hlsli"
+#include "../EnvironmentLighting.hlsli"
 
 struct PixelShaderOutput
 {
@@ -71,9 +73,12 @@ PixelShaderOutput main(JellyfishPixelInput input)
     if (gMaterial.enableEnvironmentMap != 0)
     {
         float3 reflected = reflect(-V, N);
-        float3 environment = gEnvironmentTexture.Sample(gSampler, reflected).rgb;
+        float3 environment = gEnvironmentTexture.SampleLevel(gSampler, reflected, saturate(gMaterial.roughness) * 5.0f).rgb;
         color += environment * gMaterial.environmentCoefficient * (0.25f + 0.75f * fresnel);
     }
+
+    color += EnvironmentLighting(bodyTint, N, V, true);
+    color += ShadeLocalLights(bodyTint, N, V, input.worldPosition, normalize(input.normal), true);
 
     PixelShaderOutput output;
     // This material uses the existing sorted, depth-writing transparency mode.

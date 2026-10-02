@@ -430,6 +430,8 @@ private:
     float displayedBossHeadHpRatio_ = 1.0f;
     float displayedBossBodyHpRatio_ = 1.0f;
 
+    uint32_t bossSpotLightHandle_ = 0xffffffffu;
+    uint32_t bossPointLightHandle_ = 0xffffffffu;
     bool hasCameraPoint_ = false;
     LevelData::ObjectData cameraPointObject_ {};
     float cameraPointLerpTime_ = 0.0f;

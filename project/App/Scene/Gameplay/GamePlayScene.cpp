@@ -274,6 +274,17 @@ void GamePlayScene::Initialize()
             volume->SetFogVolume(0, footFog);
         }
     }
+    if (stageId_ == "stage03") {
+        auto* lights = LightManager::GetInstance();
+        const Vector3 bossPosition = stageSettings_.bossPosition;
+        bossSpotLightHandle_ = lights->AddSpotLight({ 0.72f, 0.86f, 1.0f, 1.0f },
+            bossPosition + Vector3 { -55.0f, 100.0f, -45.0f }, { 0.4f, -0.8f, 0.3f }, 0.65f, 240.0f, 2.0f, 0.72f);
+        lights->SetSpotLightCosFalloffStart(bossSpotLightHandle_, 0.90f);
+        lights->SetSpotLightShadowEnabled(bossSpotLightHandle_, true);
+        bossPointLightHandle_ = lights->AddPointLight({ 0.25f, 0.55f, 0.85f, 1.0f },
+            bossPosition + Vector3 { 45.0f, 20.0f, -35.0f }, 0.30f, 180.0f, 2.0f);
+        lights->SetPointLightShadowEnabled(bossPointLightHandle_, true);
+    }
 
     // =================================================
     // Sound
@@ -1019,6 +1030,11 @@ void GamePlayScene::Update()
 
     // ボス出現処理
     bossController_->Update(railDistance_);
+    if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+        auto* lights = LightManager::GetInstance();
+        lights->SetSpotLightPosition(bossSpotLightHandle_, jellyfish->GetPosition() + Vector3 { -55.0f, 100.0f, -45.0f });
+        lights->SetPointLightPosition(bossPointLightHandle_, jellyfish->GetPosition() + Vector3 { 45.0f, 20.0f, -35.0f });
+    }
     if (stageId_ == "stage03") {
         if (auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
             FogVolumeSettings footFog = volume->GetFogVolumes()[0];
@@ -3160,6 +3176,10 @@ void GamePlayScene::DrawCollisionDebug()
 
 void GamePlayScene::Finalize()
 {
+    LightManager::GetInstance()->RemoveSpotLight(bossSpotLightHandle_);
+    LightManager::GetInstance()->RemovePointLight(bossPointLightHandle_);
+    bossSpotLightHandle_ = kInvalidSpotLightHandle;
+    bossPointLightHandle_ = kInvalidPointLightHandle;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     DevelopmentWebPanel::GetInstance().UnregisterOwner(this);
 #endif

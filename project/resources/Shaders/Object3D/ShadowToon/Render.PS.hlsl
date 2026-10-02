@@ -8,6 +8,7 @@ ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
 #include "../NormalMapping.PS.hlsli"
+#include "../LocalLighting.hlsli"
 
 struct PixelShaderOutput
 {
@@ -41,6 +42,8 @@ PixelShaderOutput main(VertexShaderOutput input)
     float rim = smoothstep(0.72f, 0.88f, 1.0f - saturate(dot(N, V)));
     color += direct * SurfaceSpecular(gMaterial, baseColor, N, V, L);
     color += baseColor * ambient * rim * 0.12f;
+
+    color += ShadeLocalLights(baseColor, N, V, input.worldPosition, normalize(input.normal), true);
 
     PixelShaderOutput output;
     output.color = float4(color, gMaterial.color.a * textureColor.a);

@@ -52,6 +52,7 @@ enum class PostEffectType {
     ArchiveAtmosphere,
     FXAA,
     ToneMap,
+    ScreenLighting,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

@@ -86,6 +86,13 @@ public:
         float toneExposure;
         float toneContrast;
         float toneSaturation;
+        Matrix4x4 screenInverseProjection;
+        Matrix4x4 screenCameraRotation;
+        Vector4 ssaoSettings;
+        Vector4 screenCameraSettings;
+        Vector4 atmosphereSettings;
+        Vector4 screenSunDirection;
+        Vector4 screenSunColor;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(

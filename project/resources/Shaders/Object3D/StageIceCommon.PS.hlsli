@@ -11,7 +11,10 @@ ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<Camera> gCamera : register(b2);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
+TextureCube<float4> gEnvironmentTexture : register(t1);
+#include "EnvironmentLighting.hlsli"
 #include "NormalMapping.PS.hlsli"
+#include "LocalLighting.hlsli"
 
 struct StageIcePixelOutput
 {
@@ -36,6 +39,10 @@ float4 SampleStageIceTexture(VertexShaderOutput input)
 StageIcePixelOutput FinishStageIce(VertexShaderOutput input, float3 color, float textureAlpha)
 {
     StageIcePixelOutput output;
+    float3 normal = normalize(input.normal);
+    float3 view = normalize(gCamera.worldPosition - input.worldPosition);
+    color += EnvironmentLighting(gMaterial.color.rgb, normal, view, true);
+    color += ShadeLocalLights(gMaterial.color.rgb, normal, view, input.worldPosition, normal, true);
     output.color = float4(color, gMaterial.color.a * textureAlpha);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     return output;

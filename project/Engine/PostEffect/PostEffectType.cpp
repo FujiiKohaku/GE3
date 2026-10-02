@@ -3,6 +3,8 @@
 const char* GetPostEffectTypeName(PostEffectType type)
 {
     switch (type) {
+    case PostEffectType::ScreenLighting:
+        return "ScreenLighting";
     case PostEffectType::ToneMap:
         return "ToneMap";
     case PostEffectType::FXAA:
