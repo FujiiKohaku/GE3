@@ -199,6 +199,16 @@ void Object3dManager::CreateRootSignature()
     environmentParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     environmentParameter.DescriptorTable.pDescriptorRanges = descriptorRangeEnvironment;
     environmentParameter.DescriptorTable.NumDescriptorRanges = _countof(descriptorRangeEnvironment);
+    D3D12_DESCRIPTOR_RANGE normalRange {};
+    normalRange.BaseShaderRegister = 3;
+    normalRange.NumDescriptors = 1;
+    normalRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    normalRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    auto& normalParameter = rootParameters[RootParameterIndex(Object3dRootParameter::NormalTexture)];
+    normalParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    normalParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    normalParameter.DescriptorTable = { 1, &normalRange };
+
 
     auto& vertexShaderParameters = rootParameters[kVertexShaderParametersRootIndex];
     vertexShaderParameters.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;

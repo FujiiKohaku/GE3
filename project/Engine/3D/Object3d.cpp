@@ -45,6 +45,10 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->metallic = 0.0f;
     materialData_->specularStrength = 0.35f;
     materialData_->surfacePadding = 0.0f;
+    materialData_->normalMapEnabled = 0;
+    materialData_->normalMapStrength = 0.0f;
+    materialData_->normalMapFlipY = 0.0f;
+    materialData_->normalMapPadding = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // ================================
@@ -149,6 +153,9 @@ void Object3d::Draw()
     commandList->SetGraphicsRootConstantBufferView(
         RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
 
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::NormalTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_));
     commandList->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
         Object3dManager::GetInstance()->GetEnvironmentTexture());
@@ -494,4 +501,24 @@ void Object3d::SetSurfaceProperties(float roughness, float metallic, float specu
     materialData_->roughness = std::clamp(roughness, 0.08f, 1.0f);
     materialData_->metallic = std::clamp(metallic, 0.0f, 1.0f);
     materialData_->specularStrength = std::clamp(specularStrength, 0.0f, 2.0f);
+}
+
+void Object3d::SetNormalMap(const std::string& filePath, float strength, bool flipY)
+{
+    if (materialData_ == nullptr) { return; }
+    normalMapTextureKey_.clear();
+    materialData_->normalMapEnabled = 0;
+    if (!filePath.empty()) {
+        normalMapTextureKey_ = TextureManager::GetInstance()->LoadLinearTexture(filePath);
+        if (!normalMapTextureKey_.empty()) { materialData_->normalMapEnabled = 1; }
+    }
+    SetNormalMapStrength(strength);
+    materialData_->normalMapFlipY = 0.0f;
+    if (flipY) { materialData_->normalMapFlipY = 1.0f; }
+}
+
+void Object3d::SetNormalMapStrength(float strength)
+{
+    if (materialData_ == nullptr) { return; }
+    materialData_->normalMapStrength = std::clamp(strength, 0.0f, 2.0f);
 }

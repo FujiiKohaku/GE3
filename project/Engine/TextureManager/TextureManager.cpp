@@ -85,6 +85,30 @@ void TextureManager::LoadTexture(const std::string& filePath)
     RegisterTexture(filePath, image);
 }
 
+// Normal maps contain vectors: neither decoding nor mip filtering applies sRGB gamma.
+std::string TextureManager::LoadLinearTexture(const std::string& filePath)
+{
+    if (filePath.empty()) { return {}; }
+    const std::string key = filePath + "#linear";
+    if (textureDatas.contains(key)) { return key; }
+    DirectX::ScratchImage image;
+    std::wstring path = StringUtility::ConvertString(filePath);
+    HRESULT result;
+    if (path.ends_with(L".dds")) {
+        result = DirectX::LoadFromDDSFile(path.c_str(), DirectX::DDS_FLAGS_NONE, nullptr, image);
+    } else {
+        result = DirectX::LoadFromWICFile(path.c_str(), DirectX::WIC_FLAGS_IGNORE_SRGB, nullptr, image);
+    }
+    if (FAILED(result)) {
+        Logger::Error(std::format("Linear texture load failed: {}", filePath));
+        return {};
+    }
+    image.OverrideFormat(DirectX::MakeLinear(image.GetMetadata().format));
+    RegisterTexture(key, image);
+    if (!textureDatas.contains(key)) { return {}; }
+    return key;
+}
+
 void TextureManager::LoadTextureFromMemory(
     const std::string& textureKey,
     const uint8_t* data,
@@ -230,11 +254,13 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
     if (DirectX::IsCompressed(image.GetMetadata().format)) {
         mipImages = std::move(image);
     } else {
+        DirectX::TEX_FILTER_FLAGS filter = DirectX::TEX_FILTER_DEFAULT;
+        if (DirectX::IsSRGB(image.GetMetadata().format)) { filter = DirectX::TEX_FILTER_SRGB; }
         HRESULT hr = DirectX::GenerateMipMaps(
             image.GetImages(),
             image.GetImageCount(),
             image.GetMetadata(),
-            DirectX::TEX_FILTER_SRGB,
+            filter,
             0,
             mipImages);
         if (FAILED(hr)) {

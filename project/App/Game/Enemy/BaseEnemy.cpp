@@ -16,6 +16,7 @@ void BaseEnemy::Initialize(Model* model)
         Object3dManager::GetInstance());
     object_->SetEnableLighting(true);
     object_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    object_->SetNormalMap("resources/Textures/Normals/metal_detail.png", 0.2f);
     object_->SetCastShadow(true);
     object_->SetReceiveShadow(true);
     transform_.scale = {

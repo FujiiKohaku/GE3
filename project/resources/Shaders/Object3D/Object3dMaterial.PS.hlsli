@@ -12,6 +12,7 @@ ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 Texture2D<float32_t4> gTexture : register(t0);
 TextureCube<float32_t4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
+#include "NormalMapping.PS.hlsli"
 
 struct PixelShaderOutput
 {
@@ -19,7 +20,7 @@ struct PixelShaderOutput
     float32_t4 encodedNormal : SV_Target1;
 };
 
-float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
+float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, float3 geometricNormal)
 {
     float3 N = normalize(normal);
     float3 V = normalize(gCamera.worldPosition - worldPosition);
@@ -28,7 +29,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
     float NdotLd = saturate(dot(N, Ld));
     float visibility = 1.0f;
 #if defined(KOHAKU_MATERIAL_SHADOWS)
-    visibility = ShadowDirectFactor(SampleShadowVisibility(worldPosition, N));
+    visibility = ShadowDirectFactor(SampleShadowVisibility(worldPosition, geometricNormal));
 #endif
     float3 result = ambient + baseColor * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity * visibility;
     float3 Hd = normalize(Ld + V);
@@ -113,18 +114,19 @@ PixelShaderOutput main(VertexShaderOutput input)
     float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
     float3 baseColor = gMaterial.color.rgb * textureColor.rgb;
+    float3 surfaceNormal = ApplyNormalMap(input.worldPosition, input.normal, transformedUV.xy);
 
 #if OBJECT3D_MATERIAL_TYPE == 6
-    output.color.rgb = ShadeToonSurface(baseColor, input.normal,
+    output.color.rgb = ShadeToonSurface(baseColor, surfaceNormal,
         gCamera.worldPosition - input.worldPosition, -gDirectionalLight.direction,
         gDirectionalLight.color.rgb, gDirectionalLight.intensity);
-    float3 toonN = normalize(input.normal);
+    float3 toonN = surfaceNormal;
     float3 toonV = normalize(gCamera.worldPosition - input.worldPosition);
     output.color.rgb += baseColor * HemisphereAmbient(gAmbientLight, toonN) * 0.30f;
     output.color.rgb += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
         SurfaceSpecular(gMaterial, baseColor, toonN, toonV, normalize(-gDirectionalLight.direction));
 #elif OBJECT3D_MATERIAL_TYPE == 2
-    float3 N = normalize(input.normal);
+    float3 N = surfaceNormal;
     float faceLight = saturate(dot(N, normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);
     float middleBand = smoothstep(0.34f, 0.38f, faceLight);
     float lightBand = smoothstep(0.70f, 0.74f, faceLight);
@@ -135,9 +137,9 @@ PixelShaderOutput main(VertexShaderOutput input)
     faceTint *= lerp(1.0f.xxx, float3(0.62f, 0.73f, 0.81f), horizontal * 0.72f);
     output.color.rgb = gMaterial.color.rgb * iceTexture * faceTint;
 #elif OBJECT3D_MATERIAL_TYPE >= 3 && OBJECT3D_MATERIAL_TYPE <= 5
-    output.color.rgb = ShadeArchive(baseColor, input.normal, input.worldPosition, transformedUV.xy);
+    output.color.rgb = ShadeArchive(baseColor, surfaceNormal, input.worldPosition, transformedUV.xy);
 #elif OBJECT3D_MATERIAL_TYPE == 1
-    output.color.rgb = ShadeStandard(baseColor, input.normal, input.worldPosition);
+    output.color.rgb = ShadeStandard(baseColor, surfaceNormal, input.worldPosition, input.normal);
 #else
     output.color.rgb = baseColor;
 #endif
@@ -150,7 +152,7 @@ PixelShaderOutput main(VertexShaderOutput input)
         input.position.z);
     if (gMaterial.enableEnvironmentMap != 0)
     {
-        float3 N = normalize(input.normal);
+        float3 N = surfaceNormal;
         float3 reflected = reflect(normalize(input.worldPosition - gCamera.worldPosition), N);
         output.color.rgb += gEnvironmentTexture.Sample(gSampler, reflected).rgb *
             gMaterial.environmentCoefficient;

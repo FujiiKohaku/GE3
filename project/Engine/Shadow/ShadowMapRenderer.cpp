@@ -95,6 +95,8 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution)
 
 void ShadowMapRenderer::Update(const Camera& camera, const Vector3& direction, const ShadowSettings& settings)
 {
+    shadowPassComplete_ = false;
+    lightDirection_ = direction;
     ShadowSettings effective = settings;
     effective.resolution = resolution_;
     camera_.Update(camera, direction, effective);
@@ -106,6 +108,7 @@ void ShadowMapRenderer::Update(const Camera& camera, const Vector3& direction, c
 
 void ShadowMapRenderer::BeginShadowPass()
 {
+    shadowPassComplete_ = false;
     auto* cmd = dx_->GetCommandList();
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
     cmd->ResourceBarrier(1, &barrier);
@@ -138,6 +141,7 @@ void ShadowMapRenderer::BindJellyfishObject(const Matrix4x4& world, const Vector
 
 void ShadowMapRenderer::EndShadowPass()
 {
+    shadowPassComplete_ = true;
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     dx_->GetCommandList()->ResourceBarrier(1, &barrier);
 }

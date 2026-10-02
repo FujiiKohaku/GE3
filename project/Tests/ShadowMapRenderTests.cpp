@@ -8,6 +8,8 @@
 #include "Engine/PostEffect/CopyImageRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/PostEffect/Bloom/BloomRenderer.h"
+#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
+#include <limits>
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "App/Game/Stage/StageCatalog.h"
@@ -656,6 +658,42 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(ChangedPixels(surfaceImages[0], surfaceImages[1]) > 100, "Material response did not change highlights");
             Require(ChangedPixels(surfaceImages[2], surfaceImages[3]) > 500, "Hemisphere colors did not affect surface normals");
 
+            // Verify linear decoding, a visible lighting response and zero-strength equivalence.
+            GameplayVisualPreset::ApplyLighting("stage03");
+            std::vector<uint8_t> normalImages[3];
+            std::vector<uint8_t> outlineNormalImages[3];
+            for (int mode = 0; mode < 3; ++mode) {
+                ice.SetNormalMap("");
+                if (mode > 0) {
+                    ice.SetNormalMap("resources/Textures/Normals/ice_detail.png", 1.0f);
+                    const std::string key = "resources/Textures/Normals/ice_detail.png#linear";
+                    Require(!DirectX::IsSRGB(TextureManager::GetInstance()->GetMetaData(key).format),
+                        "Normal texture was decoded as sRGB");
+                    Require(TextureManager::GetInstance()->GetMetaData(key).mipLevels > 1,
+                        "Normal texture has no mipmaps");
+                }
+                if (mode == 2) { ice.SetNormalMapStrength(0.0f); }
+                SrvManager::GetInstance()->PreDraw();
+                offscreen.PreDraw(dx->GetDSVHandle());
+                dx->GetCommandList()->ClearDepthStencilView(dx->GetDSVHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+                Object3dManager::GetInstance()->PreDraw();
+                ice.Draw();
+                offscreen.PostDraw();
+                dx->PreDraw();
+                copy.Draw(offscreen.GetSrvHandleGPU(), shadows.GetSrv(), offscreen.GetNormalSrvHandleGPU());
+                normalImages[mode] = ReadFrame(dx, directory / ("normal-mapping-" + std::to_string(mode) + ".png"));
+                SrvManager::GetInstance()->PreDraw();
+                dx->PreDraw();
+                copy.Draw(offscreen.GetNormalSrvHandleGPU(), shadows.GetSrv(), offscreen.GetNormalSrvHandleGPU());
+                outlineNormalImages[mode] = ReadFrame(dx, directory / ("normal-outline-" + std::to_string(mode) + ".png"));
+            }
+            Require(ChangedPixels(normalImages[0], normalImages[1]) > 100,
+                "Normal mapping did not change surface lighting");
+            Require(normalImages[0] == normalImages[2], "Zero-strength normal map changed the image");
+            Require(outlineNormalImages[0] == outlineNormalImages[1], "Normal map changed outline normals or depth");
+            ice.SetNormalMap("");
+            Logger::Log("Normal mapping PASS: linear mipmapped texture, surface lighting and zero-strength equivalence");
+
             PostEffectManager post;
             post.Initialize(dx);
             post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
@@ -683,6 +721,130 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             const size_t verticalHaloPixel = (296 * 1280 + 640) * 4;
             Require(bloomImages[1][verticalHaloPixel] > bloomImages[0][verticalHaloPixel] + 5,
                 "HDR bloom did not spread vertically");
+            auto* volume = post.GetVolumetricLightRenderer();
+            Require(volume->IsReady(), "Volumetric light initialization failed");
+            VolumetricLightRenderer uninitializedVolume;
+            Require(!uninitializedVolume.Generate({}, true), "Uninitialized volume renderer should skip safely");
+            ShadowMapRenderer uninitializedShadow;
+            volume->SetFrameInputs(&camera, &uninitializedShadow);
+            Require(!volume->HasValidFrameInputs(), "Uninitialized shadow was accepted");
+            // Moving-camera regression: translated matrix precision must never toggle the effect.
+            Camera movingCamera;
+            movingCamera.Initialize(); movingCamera.SetFovY(0.45f);
+            const float cameraDistances[] = { 100.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f };
+            ShadowSettings movingSettings = settings; movingSettings.enabled = true;
+            shadows.Update(camera, LightManager::GetInstance()->GetDirectionalDirection(), movingSettings);
+            shadows.BeginShadowPass(); shadows.EndShadowPass();
+            for (float distance : cameraDistances) {
+                for (int frame = 0; frame < 240; ++frame) {
+                    movingCamera.SetTranslate({ 0.0f, 40.0f, distance + frame * 0.25f });
+                    movingCamera.SetRotate({ 0.2f, 0.0f, 0.0f }); movingCamera.Update();
+                    volume->SetFrameInputs(&movingCamera, &shadows);
+                    Require(volume->HasValidFrameInputs(), "Moving camera falsely disabled volumetric light");
+                }
+            }
+            Logger::Log("Volumetric camera regression PASS: 1440 frames, positions 100 through 10000, no false safety toggles");
+            volume->SetFogDensity(std::numeric_limits<float>::quiet_NaN());
+            volume->SetLightIntensity(std::numeric_limits<float>::infinity());
+            volume->SetSampleCount(100000);
+            Require(volume->GetParameters().fogDensity == 0.0f && volume->GetParameters().lightIntensity == 0.0f &&
+                volume->GetParameters().sampleCount == 64, "Unsafe volume parameters were accepted");
+            GameplayVisualPreset::ApplyLighting("stage03");
+            ice.SetCastShadow(true);
+            floor.SetReceiveShadow(false);
+            ice.SetReceiveShadow(false);
+            settings.enabled = true;
+            Camera outsideCamera;
+            outsideCamera.Initialize(); outsideCamera.SetFovY(0.7f);
+            outsideCamera.LookAt({ 1000.0f, 40.0f, -95.0f }, { 1000.0f, 0.0f, 35.0f });
+            outsideCamera.Update();
+            Camera singularCamera;
+            singularCamera.Initialize(); singularCamera.SetScale({ 0.0f, 0.0f, 0.0f }); singularCamera.Update();
+            std::vector<uint8_t> volumeImages[13];
+            for (int mode = 0; mode < 13; ++mode) {
+                volume->SetEnabled(mode != 0);
+                volume->SetFogDensity(0.006f);
+                volume->SetLightIntensity(0.8f);
+                volume->SetSampleCount(32);
+                if (mode == 6) { volume->SetFogDensity(0.0f); }
+                if (mode == 7) { volume->SetLightIntensity(0.0f); }
+                if (mode == 9) { volume->SetLightIntensity(std::numeric_limits<float>::quiet_NaN()); }
+                settings.enabled = mode != 2;
+                shadows.Update(camera, LightManager::GetInstance()->GetDirectionalDirection(), settings);
+                Require(!shadows.IsReadyForSampling(), "Shadow update did not invalidate the old frame");
+                shadows.BeginShadowPass();
+                if (mode != 10) { ice.DrawShadow(shadows); }
+                shadows.EndShadowPass();
+                if (mode == 3) { volume->SetFrameInputs(nullptr, &shadows); }
+                else if (mode == 4) { volume->SetFrameInputs(&camera, &uninitializedShadow); }
+                else if (mode == 8) { volume->SetFrameInputs(&camera, nullptr); }
+                else if (mode == 11) {
+                    volume->SetFrameInputs(&outsideCamera, &shadows);
+                    Require(volume->HasValidFrameInputs(), "Outside-volume camera should pass CPU validation");
+                }
+                else if (mode == 12) {
+                    volume->SetFrameInputs(&singularCamera, &shadows);
+                    Require(!volume->HasValidFrameInputs(), "Singular camera was accepted");
+                }
+                else { volume->SetFrameInputs(&camera, &shadows); }
+                SrvManager::GetInstance()->PreDraw();
+                offscreen.SetClearColor({ 0.04f, 0.04f, 0.04f, 1.0f });
+                post.PreDrawDepth();
+                offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw();
+                floor.Draw(); ice.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth();
+                if (mode == 5) {
+                    Require(!volume->Generate(shadows.GetSrv(), false), "Missing depth readiness was ignored");
+                }
+                dx->PreDraw();
+                post.GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = 0;
+                post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                volumeImages[mode] = ReadFrame(dx, directory / ("volumetric-safety-" + std::to_string(mode) + ".png"));
+            }
+            Require(ChangedPixels(volumeImages[0], volumeImages[1]) > 1000, "Volumetric lighting did not affect the image");
+            for (int mode = 2; mode < 10; ++mode) {
+                Require(volumeImages[0] == volumeImages[mode], "Volumetric safety fallback changed the base image");
+            }
+            Require(ChangedPixels(volumeImages[1], volumeImages[10]) > 20, "Shadow casters did not block volumetric light");
+            Require(volumeImages[0] == volumeImages[11], "Light leaked outside the shadow camera volume");
+            Require(volumeImages[0] == volumeImages[12], "Singular camera fallback changed the image");
+            Require(!volume->Generate(shadows.GetSrv(), true), "Consumed frame inputs were reused");
+
+            D3D12_QUERY_HEAP_DESC volumeQueryDesc {};
+            volumeQueryDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP; volumeQueryDesc.Count = 2;
+            Microsoft::WRL::ComPtr<ID3D12QueryHeap> volumeQuery;
+            Require(SUCCEEDED(dx->GetDevice()->CreateQueryHeap(&volumeQueryDesc, IID_PPV_ARGS(&volumeQuery))), "Volume GPU timer creation failed");
+            D3D12_HEAP_PROPERTIES timerHeap {}; timerHeap.Type = D3D12_HEAP_TYPE_READBACK;
+            auto timerDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(UINT64) * 2);
+            Microsoft::WRL::ComPtr<ID3D12Resource> volumeTimer;
+            Require(SUCCEEDED(dx->GetDevice()->CreateCommittedResource(&timerHeap, D3D12_HEAP_FLAG_NONE, &timerDesc,
+                D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&volumeTimer))), "Volume GPU timer allocation failed");
+            UINT64 volumeFrequency = 0;
+            Require(SUCCEEDED(dx->GetCommandQueue()->GetTimestampFrequency(&volumeFrequency)), "Volume GPU timer frequency failed");
+            double volumeAverages[2] {};
+            volume->SetFogDensity(0.003f); volume->SetLightIntensity(0.35f);
+            for (int mode = 0; mode < 2; ++mode) {
+                volume->SetEnabled(mode != 0);
+                for (int sample = 0; sample < 24; ++sample) {
+                    volume->SetFrameInputs(&camera, &shadows);
+                    SrvManager::GetInstance()->PreDraw(); dx->PreDraw();
+                    dx->GetCommandList()->EndQuery(volumeQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+                    post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                    dx->GetCommandList()->EndQuery(volumeQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+                    dx->GetCommandList()->ResolveQueryData(volumeQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, volumeTimer.Get(), 0);
+                    dx->PostDraw();
+                    UINT64* ticks = nullptr;
+                    D3D12_RANGE readRange { 0, sizeof(UINT64) * 2 };
+                    Require(SUCCEEDED(volumeTimer->Map(0, &readRange, reinterpret_cast<void**>(&ticks))), "Volume GPU timer map failed");
+                    if (sample >= 4) { volumeAverages[mode] += double(ticks[1] - ticks[0]) * 1000.0 / double(volumeFrequency) / 20.0; }
+                    D3D12_RANGE noWrites { 0, 0 }; volumeTimer->Unmap(0, &noWrites);
+                }
+            }
+            std::ofstream(directory / "volumetric-timing.txt") << "1280x720, half-resolution 32 samples, debug layer enabled, 20 samples\nOFF ms: "
+                << volumeAverages[0] << "\nON ms: " << volumeAverages[1] << "\nAdded ms: " << volumeAverages[1] - volumeAverages[0] << "\n";
+            Logger::Log("Volumetric PASS: lighting, missing/disabled shadows, missing camera/depth, zero/NaN intensity, zero density, consumed frame inputs");
+
             Logger::Log("Graphics tests PASS: HDR highlight separation, material reflection, hemisphere lighting, emissive bloom halo");
             GameplayVisualPreset::ApplyAtmosphere("stage03");
             Require(SceneManager::GetInstance()->GetSceneDistanceFog().start == 450.0f,
@@ -707,7 +869,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 }
             }
         }
-        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, D3D12 validation\n";
+        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting and safety fallbacks, D3D12 validation\n";
         ModelManager::Finalize();
         Object3dManager::Finalize();
         LightManager::Finalize();

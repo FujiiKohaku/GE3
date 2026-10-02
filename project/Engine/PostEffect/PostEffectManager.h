@@ -12,6 +12,7 @@
 
 class Camera;
 class BloomRenderer;
+class VolumetricLightRenderer;
 class FogManager;
 class FogRenderer;
 class SceneManager;
@@ -53,6 +54,7 @@ public:
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
     CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
     BloomRenderer* GetBloomRenderer() const { return bloomRenderer_.get(); }
+    VolumetricLightRenderer* GetVolumetricLightRenderer() const { return volumetricLightRenderer_.get(); }
 
 private:
     class RenderTarget {
@@ -95,6 +97,8 @@ private:
     DirectXCommon* dxCommon_ = nullptr;
     std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
     std::unique_ptr<BloomRenderer> bloomRenderer_;
+    std::unique_ptr<VolumetricLightRenderer> volumetricLightRenderer_;
+    bool sceneDepthReady_ = false;
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
     uint64_t sceneFogRevision_ = 0;

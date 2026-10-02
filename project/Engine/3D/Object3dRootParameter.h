@@ -12,6 +12,7 @@ enum class Object3dRootParameter : uint32_t {
     SpotLights,
     AmbientLight,
     EnvironmentTexture,
+    NormalTexture,
     Count
 };
 

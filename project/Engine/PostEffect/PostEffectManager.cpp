@@ -3,6 +3,7 @@
 #include "App/Scene/SceneManager.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/PostEffect/Bloom/BloomRenderer.h"
+#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include "Engine/PostEffect/Fog/FogManager.h"
 #include "Engine/PostEffect/Fog/FogRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
@@ -32,7 +33,12 @@ std::string PostEffectManager::GetDevelopmentSettingsJson() const
     const auto& p = copyImageRenderer_->GetPostEffectParameter();
     const FogData& fog = fogManager_->GetFogData();
     const auto* bloom = bloomRenderer_->GetBloomParameter();
+    const auto& volume = volumetricLightRenderer_->GetParameters();
     nlohmann::json state = {
+        {"volumeEnabled", volume.enabled}, {"volumeIntensity", volume.lightIntensity},
+        {"volumeDensity", volume.fogDensity}, {"volumeDistance", volume.maxDistance},
+        {"volumeAnisotropy", volume.anisotropy}, {"volumeSamples", volume.sampleCount},
+        {"volumeColorR", volume.lightColor.x}, {"volumeColorG", volume.lightColor.y}, {"volumeColorB", volume.lightColor.z},
         {"animationEnabled", isAnimationEnabled_},
         {"toneMapEnabled", p.toneMapEnabled != 0}, {"toneExposure", p.toneExposure},
         {"toneContrast", p.toneContrast}, {"toneSaturation", p.toneSaturation},
@@ -93,6 +99,7 @@ void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
         if (enabled) { p.toneMapEnabled = 1; }
         return;
     }
+    if (key == "volumeEnabled") { volumetricLightRenderer_->SetEnabled(enabled); return; }
     if (key == "fxaaEnabled") { fxaaEnabled_ = enabled; return; }
     if (key == "animationEnabled") {
         isAnimationEnabled_ = enabled;
@@ -115,6 +122,19 @@ void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
     }
     const float number = parse();
     if (!std::isfinite(number)) return;
+    if (key == "volumeIntensity") { volumetricLightRenderer_->SetLightIntensity(number); return; }
+    if (key == "volumeDensity") { volumetricLightRenderer_->SetFogDensity(number); return; }
+    if (key == "volumeDistance") { volumetricLightRenderer_->SetMaxDistance(number); return; }
+    if (key == "volumeAnisotropy") { volumetricLightRenderer_->SetAnisotropy(number); return; }
+    if (key == "volumeSamples") { volumetricLightRenderer_->SetSampleCount(static_cast<int32_t>(std::clamp(number, 8.0f, 64.0f))); return; }
+    if (key == "volumeColorR" || key == "volumeColorG" || key == "volumeColorB") {
+        Vector3 color = volumetricLightRenderer_->GetParameters().lightColor;
+        if (key == "volumeColorR") { color.x = number; }
+        if (key == "volumeColorG") { color.y = number; }
+        if (key == "volumeColorB") { color.z = number; }
+        volumetricLightRenderer_->SetLightColor(color);
+        return;
+    }
 #define SET_FLOAT(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return; }
 #define SET_INT(name, field, low, high) if (key == name) { field = static_cast<int>(std::clamp(number, float(low), float(high))); return; }
     SET_FLOAT("toneExposure", p.toneExposure, 0.1f, 4.0f)
@@ -183,6 +203,8 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 
     bloomRenderer_ = std::make_unique<BloomRenderer>();
     bloomRenderer_->Initialize(dxCommon_);
+    volumetricLightRenderer_ = std::make_unique<VolumetricLightRenderer>();
+    volumetricLightRenderer_->Initialize(dxCommon_);
 
     fogManager_ = std::make_unique<FogManager>();
     fogManager_->Initialize(dxCommon_);
@@ -243,6 +265,7 @@ void PostEffectManager::DrawImGui()
 {
     fogManager_->DrawImGui();
     bloomRenderer_->DrawImGui();
+    volumetricLightRenderer_->DrawImGui();
 
 #ifdef USE_IMGUI
     ImGui::Begin("Post Effects");
@@ -323,16 +346,19 @@ void PostEffectManager::DrawImGui()
 
 void PostEffectManager::PreDrawDepth()
 {
+    sceneDepthReady_ = false;
     fogRenderer_->PreDrawDepth();
 }
 
 void PostEffectManager::PostDrawDepth()
 {
     fogRenderer_->PostDrawDepth();
+    sceneDepthReady_ = true;
 }
 
 void PostEffectManager::PrepareDepthForParticleDraw()
 {
+    sceneDepthReady_ = false;
     fogRenderer_->PrepareDepthForParticleDraw();
 }
 
@@ -418,8 +444,18 @@ void PostEffectManager::PrepareSceneForParticleDraw(
     UpdatePostEffectParameters(sceneManager);
 
     particleCompositionTargetIndex_ = 0;
+    bool volumeApplied = false;
+    if (volumetricLightRenderer_->Generate(fogRenderer_->GetDepthSRVHandle(), sceneDepthReady_)) {
+        RenderTarget& target = pingPongRenderTargets_[0];
+        target.BeginRender();
+        volumetricLightRenderer_->Composite(sceneColorHandle);
+        target.EndRender();
+        sceneColorHandle = target.GetSrvHandleGPU();
+        volumeApplied = true;
+    }
 
     if (sceneManager == nullptr) {
+        if (volumeApplied) { return; }
         RenderTarget& renderTarget =
             pingPongRenderTargets_[particleCompositionTargetIndex_];
         renderTarget.BeginRender();
@@ -436,7 +472,8 @@ void PostEffectManager::PrepareSceneForParticleDraw(
     D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
         sceneColorHandle;
     uint32_t targetIndex = 0;
-    bool appliedSceneEffect = false;
+    if (volumeApplied) { targetIndex = 1; }
+    bool appliedSceneEffect = volumeApplied;
 
     for (const PostEffectInfo& postEffect : postEffects) {
         if (!postEffect.enabled || postEffect.type == PostEffectType::FXAA ||

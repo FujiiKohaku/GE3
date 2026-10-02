@@ -45,6 +45,7 @@ void Player::Initialize(Model* model)
     object_ = std::make_unique<Object3d>();
     object_->Initialize(Object3dManager::GetInstance());
     object_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    object_->SetNormalMap("resources/Textures/Normals/metal_detail.png", 0.25f);
     object_->SetCastShadow(true);
     object_->SetReceiveShadow(true);
     object_->SetEnableLighting(true);

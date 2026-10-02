@@ -27,6 +27,7 @@ constexpr float kIcePillarWaveTimeoutSeconds = 9.00f;
 void ConfigureJellyfishBodyMaterial(Object3d& object)
 {
     object.SetMaterial("resources/Shaders/Object3D/IceJellyfish");
+    object.SetNormalMap("resources/Textures/Normals/ice_detail.png", 0.18f);
     object.SetVertexShaderPath("resources/Shaders/Object3D/IceJellyfish/Render.VS.hlsl");
     object.SetTransparent(true);
     object.SetTransparentDepthWrite(true);

@@ -42,6 +42,10 @@ struct Material {
     float metallic;
     float specularStrength;
     float surfacePadding;
+    int32_t normalMapEnabled;
+    float normalMapStrength;
+    float normalMapFlipY;
+    float normalMapPadding;
 };
 
 // 変換行列データ（GPU定数バッファ用）

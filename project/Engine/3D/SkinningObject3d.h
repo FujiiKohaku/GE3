@@ -24,6 +24,8 @@ public:
     void Initialize(SkinningObject3dManager* skinningObject3DManager);
     void Update();
     void Draw();
+    void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
+    void SetNormalMapStrength(float strength);
     ~SkinningObject3d();
     // setter
     void SetModel(Model* model) { model_ = model; }
@@ -180,4 +182,5 @@ private:
     void CreateSkinningResources();
     void DispatchSkinning();
     std::vector<D3D12_VERTEX_BUFFER_VIEW> skinnedPrimitiveVertexBufferViews_;
+    std::string normalMapTextureKey_;
 };

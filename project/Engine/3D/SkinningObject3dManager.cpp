@@ -155,6 +155,16 @@ void SkinningObject3dManager::CreateRootSignature()
     environmentParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     environmentParameter.DescriptorTable.pDescriptorRanges = &environmentTextureRange;
     environmentParameter.DescriptorTable.NumDescriptorRanges = 1;
+    D3D12_DESCRIPTOR_RANGE normalRange {};
+    normalRange.BaseShaderRegister = 3;
+    normalRange.NumDescriptors = 1;
+    normalRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    normalRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    auto& normalParameter = rootParameters[RootParameterIndex(Object3dRootParameter::NormalTexture)];
+    normalParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    normalParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    normalParameter.DescriptorTable = { 1, &normalRange };
+
     // ===============================
     // Sampler
     // ===============================

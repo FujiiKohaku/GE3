@@ -18,7 +18,14 @@ public:
     ID3D12Resource* GetDepthTexture() const { return depth_.Get(); }
     const Matrix4x4& GetLightViewProjection() const { return camera_.GetViewProjection(); }
     uint32_t GetResolution() const { return resolution_; }
+    bool IsReadyForSampling() const {
+        return shadowPassComplete_ && constants_ != nullptr && constants_->options.x > 0.5f;
+    }
+    Vector3 GetLightDirection() const { return lightDirection_; }
+    float GetDepthBias() const { return constants_->parameters.y; }
 private:
+    bool shadowPassComplete_ = false;
+    Vector3 lightDirection_ {};
     DirectXCommon* dx_ = nullptr;
     ShadowCamera camera_;
     uint32_t resolution_ = 2048;

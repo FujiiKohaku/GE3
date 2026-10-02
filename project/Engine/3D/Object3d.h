@@ -26,6 +26,8 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
+    void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
+    void SetNormalMapStrength(float strength);
     void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
     void SetCastShadow(bool enabled) { castShadow_ = enabled; }
     void SetReceiveShadow(bool enabled) { receiveShadow_ = enabled; }
@@ -205,4 +207,5 @@ private:
     int collisionDamage_ = 1;
     BoxCollider* collider_ = nullptr;
     Vector3 colliderOffset_ = { 0.0f, 0.0f, 0.0f };
+    std::string normalMapTextureKey_;
 };

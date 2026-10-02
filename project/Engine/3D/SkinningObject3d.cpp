@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "SkinningObject3d.h"
 #include "Engine/math/MatrixMath.h"
 #include "Model.h"
@@ -55,6 +56,10 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->metallic = 0.0f;
     materialData_->specularStrength = 0.35f;
     materialData_->surfacePadding = 0.0f;
+    materialData_->normalMapEnabled = 0;
+    materialData_->normalMapStrength = 0.0f;
+    materialData_->normalMapFlipY = 0.0f;
+    materialData_->normalMapPadding = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // =====================================================
@@ -181,6 +186,9 @@ void SkinningObject3d::Draw()
         transformationMatrixResource->GetGPUVirtualAddress());
     commandList->SetGraphicsRootConstantBufferView(
         RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::NormalTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_));
     commandList->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
         SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
@@ -542,3 +550,23 @@ void SkinningObject3d::DispatchSkinning()
     skinnedVertexState_ = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 }
 #pragma endregion
+
+void SkinningObject3d::SetNormalMap(const std::string& filePath, float strength, bool flipY)
+{
+    if (materialData_ == nullptr) { return; }
+    normalMapTextureKey_.clear();
+    materialData_->normalMapEnabled = 0;
+    if (!filePath.empty()) {
+        normalMapTextureKey_ = TextureManager::GetInstance()->LoadLinearTexture(filePath);
+        if (!normalMapTextureKey_.empty()) { materialData_->normalMapEnabled = 1; }
+    }
+    SetNormalMapStrength(strength);
+    materialData_->normalMapFlipY = 0.0f;
+    if (flipY) { materialData_->normalMapFlipY = 1.0f; }
+}
+
+void SkinningObject3d::SetNormalMapStrength(float strength)
+{
+    if (materialData_ == nullptr) { return; }
+    materialData_->normalMapStrength = std::clamp(strength, 0.0f, 2.0f);
+}

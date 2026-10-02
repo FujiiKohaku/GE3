@@ -16,6 +16,7 @@
 #include "Engine/input/Input.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include "Engine/Light/LightManager.h"
+#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 
 Renderer::Renderer() = default;
 
@@ -84,6 +85,11 @@ void Renderer::Draw(SceneManager* sceneManager)
         shadowRenderer_->EndShadowPass();
         Object3dManager::GetInstance()->SetShadowRenderer(shadowRenderer_.get());
     }
+
+    // Always clear/supply frame inputs, including frames with shadows disabled.
+    const ShadowMapRenderer* volumetricShadows = nullptr;
+    if (shadows.enabled) { volumetricShadows = shadowRenderer_.get(); }
+    postEffectManager_->GetVolumetricLightRenderer()->SetFrameInputs(defaultCamera, volumetricShadows);
 
     // Offscreen draw start
     postEffectManager_->PreDrawDepth();

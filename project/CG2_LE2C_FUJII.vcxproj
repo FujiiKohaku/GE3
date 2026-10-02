@@ -183,6 +183,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\math\EngineStruct.cpp" />
     <ClCompile Include="Engine\Effect\EffectManager.cpp" />
     <ClCompile Include="Engine\PostEffect\Bloom\BloomRenderer.cpp" />
+    <ClCompile Include="Engine\PostEffect\Volumetric\VolumetricLightRenderer.cpp" />
     <ClCompile Include="Engine\PostEffect\Fog\FogManager.cpp" />
     <ClCompile Include="Engine\PostEffect\Fog\FogRenderer.cpp" />
     <ClCompile Include="Engine\Renderer\Renderer.cpp" />
@@ -354,6 +355,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\math\EngineStruct.h" />
     <ClInclude Include="Engine\Effect\EffectManager.h" />
     <ClInclude Include="Engine\PostEffect\Bloom\BloomRenderer.h" />
+    <ClInclude Include="Engine\PostEffect\Volumetric\VolumetricLightRenderer.h" />
     <ClInclude Include="Engine\PostEffect\Fog\FogData.h" />
     <ClInclude Include="Engine\PostEffect\Fog\FogManager.h" />
     <ClInclude Include="Engine\PostEffect\Fog\FogRenderer.h" />

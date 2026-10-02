@@ -21,6 +21,10 @@ struct Material
     float metallic;
     float specularStrength;
     float surfacePadding;
+    int normalMapEnabled;
+    float normalMapStrength;
+    float normalMapFlipY;
+    float normalMapPadding;
 };
 
 static const int kShadingUnlit = 0;

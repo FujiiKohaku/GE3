@@ -11,6 +11,7 @@ ConstantBuffer<Material> gMaterial : register(b0);
 ConstantBuffer<Camera> gCamera : register(b2);
 Texture2D<float32_t4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
+#include "NormalMapping.PS.hlsli"
 
 struct StageIcePixelOutput
 {
@@ -43,9 +44,10 @@ StageIcePixelOutput FinishStageIce(VertexShaderOutput input, float3 color, float
 StageIceLighting GetStageIceLighting(VertexShaderOutput input)
 {
     StageIceLighting lighting;
-    lighting.normal = normalize(input.normal);
+    float2 uv = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform).xy;
+    lighting.normal = ApplyNormalMap(input.worldPosition, input.normal, uv);
     lighting.view = normalize(gCamera.worldPosition - input.worldPosition);
-    lighting.directVisibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, lighting.normal));
+    lighting.directVisibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
     lighting.shade = GetStageIceDiffuseLighting(lighting.normal, lighting.directVisibility);
     return lighting;
 }

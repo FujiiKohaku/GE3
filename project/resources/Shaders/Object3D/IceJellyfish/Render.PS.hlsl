@@ -8,6 +8,7 @@ ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 Texture2D<float4> gTexture : register(t0);
 TextureCube<float4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
+#include "../NormalMapping.PS.hlsli"
 
 struct PixelShaderOutput
 {
@@ -32,7 +33,7 @@ PixelShaderOutput main(JellyfishPixelInput input)
 
     float2 uv = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform).xy;
     float4 textureColor = gTexture.Sample(gSampler, uv);
-    float3 N = normalize(input.normal);
+    float3 N = ApplyNormalMap(input.worldPosition, input.normal, uv);
     float3 V = normalize(gCamera.worldPosition - input.worldPosition);
     float3 L = normalize(-gDirectionalLight.direction);
     float3 halfVector = L + V;
@@ -42,7 +43,7 @@ PixelShaderOutput main(JellyfishPixelInput input)
     float NdotL = saturate(dot(N, L));
     float edge = pow(1.0f - NdotV, 3.0f);
     float fresnel = 0.04f + 0.96f * pow(1.0f - NdotV, 5.0f);
-    float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, N));
+    float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
     float3 lightColor = gDirectionalLight.color.rgb * gDirectionalLight.intensity * visibility;
 
     // Retain the ice texture softly so the body does not look like opaque stone.
@@ -78,7 +79,7 @@ PixelShaderOutput main(JellyfishPixelInput input)
     // This material uses the existing sorted, depth-writing transparency mode.
     float opacity = gMaterial.color.a * lerp(kFaceOpacityScale, 1.0f, edge);
     output.color = float4(color, saturate(opacity * textureColor.a));
-    output.encodedNormal = float4(N * 0.5f + 0.5f, input.position.z);
+    output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     if (input.surface.z > 0.5f) {
         // Tag tentacle normals so outline preserves the silhouette but softens internal joints.
         output.encodedNormal.a = -2.0f - input.position.z;
