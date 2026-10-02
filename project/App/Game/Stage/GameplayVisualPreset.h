@@ -1,6 +1,6 @@
 #pragma once
 
-#include "App/Scene/SceneManager.h"
+#include "App/Scene/Common/SceneManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/math/MatrixMath.h"
 #include <string>

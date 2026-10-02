@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="CG2_LE2C_FUJII.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{8F8F3A93-5610-4602-AE03-5283AC39B026}</ProjectGuid>
+    <ProjectName>DevelopmentWebPanelTests</ProjectName>
+    <TargetName>DevelopmentWebPanelTests</TargetName>
+    <IntDir>$(ProjectDir)..\generated\obj\DevelopmentWebPanelTests\</IntDir>
+    <OutDir>$(ProjectDir)..\generated\outputs\Release\</OutDir>
+    <TargetFileName>DevelopmentWebPanelTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)DevelopmentWebPanelTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><PreprocessorDefinitions>ENABLE_DEVELOPMENT_TOOLS;USE_IMGUI;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+    <Link><SubSystem>Console</SubSystem></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="App\main.cpp" />
+    <ClCompile Include="Tests\DevelopmentWebPanelTests.cpp" />
+  </ItemGroup>
+</Project>

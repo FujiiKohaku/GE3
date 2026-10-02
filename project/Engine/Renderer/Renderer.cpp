@@ -1,6 +1,6 @@
 #include "Engine/Renderer/Renderer.h"
 
-#include "App/Scene/SceneManager.h"
+#include "App/Scene/Common/SceneManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Debug/DebugRenderer.h"

@@ -1,9 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="App\Game\Audio\GameSfx.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
+    <ClCompile Include="Engine\Development\DevelopmentWebPanel.cpp"><Filter>ソース ファイル</Filter></ClCompile>
+    <ClInclude Include="Engine\Development\DevelopmentWebPanel.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
     <ClCompile Include="Engine\Screenshot\ScreenshotManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -28,7 +27,7 @@
     <None Include="resources\Shaders\PostEffect\LensDirt.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\LensDistortion.PS.hlsl" />
     <None Include="resources\Shaders\PostEffect\MotionBlur.PS.hlsl" />
-    <ClCompile Include="App\Scene\LoadingScene.cpp" />
+    <ClCompile Include="App\Scene\Loading\LoadingScene.cpp" />
     <Filter Include="ソース ファイル">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
@@ -160,7 +159,7 @@
     <ClCompile Include="Engine\3D\ModelManager.cpp">
       <Filter>3D</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\Game.cpp">
+    <ClCompile Include="App\Scene\Application\Game.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\Camera\Camera.cpp">
@@ -175,28 +174,28 @@
     <ClCompile Include="Engine\blend\BlendUtil.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\GamePlayScene.cpp">
+    <ClCompile Include="App\Scene\Gameplay\GamePlayScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Stage\StageCatalog.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\TitleScene.cpp">
+    <ClCompile Include="App\Scene\Title\TitleScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\SpriteTestScene.cpp">
+    <ClCompile Include="App\Scene\Test\SpriteTestScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\TextTestScene.cpp">
+    <ClCompile Include="App\Scene\Test\TextTestScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\TestScene1.cpp">
+    <ClCompile Include="App\Scene\Test\TestScene1.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\BaseScene.cpp">
+    <ClCompile Include="App\Scene\Common\BaseScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\SceneManager.cpp">
+    <ClCompile Include="App\Scene\Common\SceneManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3D\SphereObject.cpp">
@@ -334,10 +333,10 @@
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\BaseScene.cpp">
+    <ClCompile Include="App\Scene\Common\BaseScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\SceneManager.cpp">
+    <ClCompile Include="App\Scene\Common\SceneManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="Engine\3D\SphereObject.cpp">
@@ -499,10 +498,10 @@
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\ClearScene.cpp">
+    <ClCompile Include="App\Scene\Result\ClearScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\GameOverScene.cpp">
+    <ClCompile Include="App\Scene\Result\GameOverScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp">
@@ -609,7 +608,7 @@
     <ClInclude Include="Engine\3D\ModelManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\Game.h">
+    <ClInclude Include="App\Scene\Application\Game.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\Camera\Camera.h">
@@ -624,30 +623,30 @@
     <ClInclude Include="Engine\blend\BlendUtil.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\GamePlayScene.h">
+    <ClInclude Include="App\Scene\Gameplay\GamePlayScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\PageTransition.h" />
+    <ClInclude Include="App\Scene\Common\PageTransition.h" />
     <ClInclude Include="App\Game\Stage\StageCatalog.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\LoadingScene.h" />
-    <ClInclude Include="App\Scene\TitleScene.h">
+    <ClInclude Include="App\Scene\Loading\LoadingScene.h" />
+    <ClInclude Include="App\Scene\Title\TitleScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\SpriteTestScene.h">
+    <ClInclude Include="App\Scene\Test\SpriteTestScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\TextTestScene.h">
+    <ClInclude Include="App\Scene\Test\TextTestScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\TestScene1.h">
+    <ClInclude Include="App\Scene\Test\TestScene1.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\BaseScene.h">
+    <ClInclude Include="App\Scene\Common\BaseScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\SceneManager.h">
+    <ClInclude Include="App\Scene\Common\SceneManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\3D\SphereObject.h">
@@ -815,10 +814,10 @@
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\ClearScene.h">
+    <ClInclude Include="App\Scene\Result\ClearScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\GameOverScene.h">
+    <ClInclude Include="App\Scene\Result\GameOverScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h">

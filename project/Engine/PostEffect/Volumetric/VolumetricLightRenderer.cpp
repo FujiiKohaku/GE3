@@ -6,6 +6,7 @@
 #include "Engine/math/MatrixMath.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Winapp/WinApp.h"
+#include "Engine/Time/TimeManager.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -28,7 +29,10 @@ float SafeVolumeValue(float value, float minimum, float maximum, float fallback)
     if (!std::isfinite(value)) { return fallback; }
     return std::clamp(value, minimum, maximum);
 }
-Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* dxCommon_, ID3D12RootSignature* rootSignature, const std::wstring& pixelShaderPath)
+bool IsFiniteVector(const Vector3& value) {
+    return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+}
+Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* dxCommon_, ID3D12RootSignature* rootSignature, const std::wstring& pixelShaderPath, bool isRaymarch)
 {
     ID3D12Device* device = dxCommon_->GetDevice();
 
@@ -44,6 +48,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* 
     D3D12_BLEND_DESC blendDesc = {};
     blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     blendDesc.RenderTarget[0].BlendEnable = FALSE;
+    if (isRaymarch) {
+        blendDesc.IndependentBlendEnable = TRUE;
+        blendDesc.RenderTarget[1].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    }
 
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc = {};
     depthStencilDesc.DepthEnable = false;
@@ -63,6 +71,10 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* 
     pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     pipelineStateDesc.NumRenderTargets = 1;
     pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    if (isRaymarch) {
+        pipelineStateDesc.NumRenderTargets = 2;
+        pipelineStateDesc.RTVFormats[1] = DXGI_FORMAT_R16_FLOAT;
+    }
     pipelineStateDesc.SampleDesc.Count = 1;
     pipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
 
@@ -79,6 +91,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* 
 }
 VolumetricLightRenderer::~VolumetricLightRenderer() {
     if (srvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(srvIndex_); }
+    if (transmittanceSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(transmittanceSrvIndex_); }
 }
 bool VolumetricLightRenderer::Initialize(DirectXCommon* dxCommon) {
     if (dxCommon == nullptr) { return false; }
@@ -102,6 +115,53 @@ void VolumetricLightRenderer::SetFogDensity(float value) { parameters_.fogDensit
 void VolumetricLightRenderer::SetMaxDistance(float value) { parameters_.maxDistance = SafeVolumeValue(value, 1.0f, 1000.0f, 240.0f); }
 void VolumetricLightRenderer::SetAnisotropy(float value) { parameters_.anisotropy = SafeVolumeValue(value, -0.8f, 0.8f, 0.0f); }
 void VolumetricLightRenderer::SetSampleCount(int32_t samples) { parameters_.sampleCount = std::clamp(samples, 8, 64); }
+bool VolumetricLightRenderer::SetFogVolume(uint32_t volumeIndex, const FogVolumeSettings& settings) {
+    if (volumeIndex >= kMaxFogVolumes || !IsFiniteVector(settings.center) || !IsFiniteVector(settings.halfExtents) ||
+        !std::isfinite(settings.radius) || !std::isfinite(settings.density) || !std::isfinite(settings.edgeSoftness)) { return false; }
+    if (settings.shape != FogVolumeShape::Sphere && settings.shape != FogVolumeShape::Box) { return false; }
+    if (settings.radius <= 0.0f || settings.radius > 10000.0f || settings.halfExtents.x <= 0.0f ||
+        settings.halfExtents.y <= 0.0f || settings.halfExtents.z <= 0.0f || settings.halfExtents.x > 10000.0f ||
+        settings.halfExtents.y > 10000.0f || settings.halfExtents.z > 10000.0f || settings.density < 0.0f ||
+        settings.density > 0.05f || settings.edgeSoftness <= 0.0f) { return false; }
+    float minimumExtent = settings.radius;
+    if (settings.shape == FogVolumeShape::Box) {
+        minimumExtent = (std::min)({ settings.halfExtents.x, settings.halfExtents.y, settings.halfExtents.z });
+    }
+    if (settings.edgeSoftness > minimumExtent) { return false; }
+    fogVolumes_[volumeIndex] = settings;
+    return true;
+}
+void VolumetricLightRenderer::ClearFogVolumes() { fogVolumes_ = {}; }
+void VolumetricLightRenderer::ResetLocalFog() {
+    ClearFogVolumes();
+    localFog_ = {};
+    noiseOffset_ = {};
+    frameValid_ = false;
+    generated_ = false;
+}
+bool VolumetricLightRenderer::SetHeightFog(float baseHeight, float density, float heightFalloff) {
+    if (!std::isfinite(baseHeight) || !std::isfinite(density) || !std::isfinite(heightFalloff) ||
+        density < 0.0f || density > 0.05f || heightFalloff <= 0.0f || heightFalloff > 10.0f) { return false; }
+    localFog_.baseHeight = baseHeight;
+    localFog_.heightDensity = density;
+    localFog_.heightFalloff = heightFalloff;
+    return true;
+}
+bool VolumetricLightRenderer::SetNoiseParameters(float scale, float strength, const Vector3& velocity) {
+    if (!std::isfinite(scale) || !std::isfinite(strength) || !IsFiniteVector(velocity) || scale <= 0.0f ||
+        scale > 10.0f || strength < 0.0f || strength > 1.0f || std::abs(velocity.x) > 100.0f ||
+        std::abs(velocity.y) > 100.0f || std::abs(velocity.z) > 100.0f) { return false; }
+    localFog_.noiseScale = scale;
+    localFog_.noiseStrength = strength;
+    localFog_.noiseVelocity = velocity;
+    return true;
+}
+bool VolumetricLightRenderer::SetFogColor(const Vector3& color) {
+    if (!IsFiniteVector(color) || color.x < 0.0f || color.y < 0.0f || color.z < 0.0f ||
+        color.x > 4.0f || color.y > 4.0f || color.z > 4.0f) { return false; }
+    localFog_.color = color;
+    return true;
+}
 void VolumetricLightRenderer::SetLightDirection(const Vector3& direction) {
     float length = direction.x * direction.x + direction.y * direction.y + direction.z * direction.z;
     if (!std::isfinite(length) || length < 0.000001f) { return; }
@@ -115,21 +175,43 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
     frameValid_ = false;
     generated_ = false;
     shadowSrv_ = {};
-    if (!ready_ || camera == nullptr || shadows == nullptr || !shadows->IsReadyForSampling()) { return; }
-    if (!LightManager::GetInstance()->IsInitialized()) { return; }
-    const auto light = LightManager::GetInstance()->GetDirectionalLight();
-    const auto direction = shadows->GetLightDirection();
-    const float sunLength = light.direction.x * light.direction.x + light.direction.y * light.direction.y + light.direction.z * light.direction.z;
-    if (!std::isfinite(sunLength) || sunLength < 0.000001f) { return; }
-    float length = direction.x * direction.x + direction.y * direction.y + direction.z * direction.z;
-    if (!std::isfinite(length) || length < 0.000001f || !std::isfinite(light.intensity)) { return; }
-    const float alignment = (direction.x * light.direction.x + direction.y * light.direction.y + direction.z * light.direction.z) / std::sqrt(length * sunLength);
-    if (!std::isfinite(alignment) || alignment < 0.9999f) { return; }
+    if (!ready_ || camera == nullptr) { return; }
+    bool hasValidShadow = false;
+    Vector3 direction { 0.0f, -1.0f, 0.0f };
+    frameConstants_.lightColorAndIntensity = {};
+    frameConstants_.lightViewProjection = {};
+    frameConstants_.settings = { parameters_.anisotropy, static_cast<float>(parameters_.sampleCount), 0.00025f, 0.0f };
+    if (shadows != nullptr && shadows->IsReadyForSampling() && LightManager::GetInstance()->IsInitialized()) {
+        const auto light = LightManager::GetInstance()->GetDirectionalLight();
+        direction = shadows->GetLightDirection();
+        const float sunLength = light.direction.x * light.direction.x + light.direction.y * light.direction.y + light.direction.z * light.direction.z;
+        const float shadowLength = direction.x * direction.x + direction.y * direction.y + direction.z * direction.z;
+        if (std::isfinite(sunLength) && std::isfinite(shadowLength) && sunLength > 0.000001f && shadowLength > 0.000001f &&
+            std::isfinite(light.intensity) && FiniteMatrix(shadows->GetLightViewProjection())) {
+            const float alignment = (direction.x * light.direction.x + direction.y * light.direction.y + direction.z * light.direction.z) / std::sqrt(shadowLength * sunLength);
+            if (std::isfinite(alignment) && alignment >= 0.9999f && shadows->GetSrv().ptr != 0) {
+                const float inverseLength = 1.0f / std::sqrt(shadowLength);
+                direction = { direction.x * inverseLength, direction.y * inverseLength, direction.z * inverseLength };
+                frameConstants_.lightViewProjection = shadows->GetLightViewProjection();
+                frameConstants_.lightColorAndIntensity = {
+                    SafeVolumeValue(light.color.x, 0.0f, 8.0f, 0.0f) * parameters_.lightColor.x,
+                    SafeVolumeValue(light.color.y, 0.0f, 8.0f, 0.0f) * parameters_.lightColor.y,
+                    SafeVolumeValue(light.color.z, 0.0f, 8.0f, 0.0f) * parameters_.lightColor.z,
+                    SafeVolumeValue(light.intensity, 0.0f, 8.0f, 0.0f) * parameters_.lightIntensity };
+                frameConstants_.settings.z = SafeVolumeValue(shadows->GetDepthBias(), 0.0f, 0.01f, 0.00025f);
+                frameConstants_.settings.w = 1.0f;
+                shadowSrv_ = shadows->GetSrv();
+                hasValidShadow = true;
+            }
+        }
+    }
+    if (!hasValidShadow && !localFog_.isEnabled) { return; }
+    if (!hasValidShadow) { direction = { 0.0f, -1.0f, 0.0f }; }
     if (camera->GetNearClip() <= 0.0f || camera->GetFarClip() <= camera->GetNearClip()) { return; }
     const auto& world = camera->GetWorldMatrix();
     const auto& projection = camera->GetProjectionMatrix();
     if (!FiniteMatrix(world) || !FiniteMatrix(projection) ||
-        !FiniteMatrix(camera->GetViewProjectionMatrix()) || !FiniteMatrix(shadows->GetLightViewProjection())) { return; }
+        !FiniteMatrix(camera->GetViewProjectionMatrix())) { return; }
     // Validate the camera basis without its translation. A translated VP inverse
     // loses precision and falsely toggles this effect as the camera moves.
     const double determinant =
@@ -151,23 +233,44 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
     relativeWorld.m[3][0] = 0.0f; relativeWorld.m[3][1] = 0.0f; relativeWorld.m[3][2] = 0.0f;
     frameConstants_.inverseViewProjection = MatrixMath::Multiply(inverseProjection, relativeWorld);
     if (!FiniteMatrix(frameConstants_.inverseViewProjection)) { return; }
-    frameConstants_.lightViewProjection = shadows->GetLightViewProjection();
     frameConstants_.cameraAndDistance = { world.m[3][0], world.m[3][1], world.m[3][2], parameters_.maxDistance };
-    float inverseLength = 1.0f / std::sqrt(length);
-    frameConstants_.lightDirectionAndDensity = { direction.x * inverseLength, direction.y * inverseLength, direction.z * inverseLength, parameters_.fogDensity };
-    frameConstants_.lightColorAndIntensity = {
-        SafeVolumeValue(light.color.x, 0.0f, 8.0f, 0.0f) * parameters_.lightColor.x,
-        SafeVolumeValue(light.color.y, 0.0f, 8.0f, 0.0f) * parameters_.lightColor.y,
-        SafeVolumeValue(light.color.z, 0.0f, 8.0f, 0.0f) * parameters_.lightColor.z,
-        SafeVolumeValue(light.intensity, 0.0f, 8.0f, 0.0f) * parameters_.lightIntensity };
-    frameConstants_.settings = { parameters_.anisotropy, static_cast<float>(parameters_.sampleCount), SafeVolumeValue(shadows->GetDepthBias(), 0.0f, 0.01f, 0.00025f), 0.0f };
-    shadowSrv_ = shadows->GetSrv();
-    frameValid_ = shadowSrv_.ptr != 0;
+    frameConstants_.lightDirectionAndDensity = { direction.x, direction.y, direction.z, parameters_.fogDensity };
+    frameConstants_.fogColorAndEnabled = { localFog_.color.x, localFog_.color.y, localFog_.color.z, 0.0f };
+    if (localFog_.isEnabled) { frameConstants_.fogColorAndEnabled.w = 1.0f; }
+    frameConstants_.heightAndVolumeCount = { localFog_.baseHeight, localFog_.heightDensity, localFog_.heightFalloff, 0.0f };
+    const float deltaSeconds = SafeVolumeValue(TimeManager::GetInstance()->GetDeltaTime(), 0.0f, 0.1f, 0.0f);
+    // 周期ノイズの座標だけを折り返し、長時間実行時の精度低下を防ぐ。
+    noiseOffset_.x = std::fmod(noiseOffset_.x + localFog_.noiseVelocity.x * localFog_.noiseScale * deltaSeconds, 256.0f);
+    noiseOffset_.y = std::fmod(noiseOffset_.y + localFog_.noiseVelocity.y * localFog_.noiseScale * deltaSeconds, 256.0f);
+    noiseOffset_.z = std::fmod(noiseOffset_.z + localFog_.noiseVelocity.z * localFog_.noiseScale * deltaSeconds, 256.0f);
+    frameConstants_.noiseScaleAndOffset = { localFog_.noiseScale, noiseOffset_.x, noiseOffset_.y, noiseOffset_.z };
+    frameConstants_.noiseSettings = { localFog_.noiseStrength, 0.0f, 0.0f, 0.0f };
+    uint32_t volumeCount = 0;
+    for (const FogVolumeSettings& volume : fogVolumes_) {
+        if (!localFog_.isEnabled || !volume.isEnabled || volume.density <= 0.0f) { continue; }
+        const Vector3 relativeCenter { volume.center.x - world.m[3][0], volume.center.y - world.m[3][1], volume.center.z - world.m[3][2] };
+        float boundingRadius = volume.radius;
+        if (volume.shape == FogVolumeShape::Box) {
+            boundingRadius = std::sqrt(volume.halfExtents.x * volume.halfExtents.x + volume.halfExtents.y * volume.halfExtents.y + volume.halfExtents.z * volume.halfExtents.z);
+        }
+        const float centerDistance = std::sqrt(relativeCenter.x * relativeCenter.x + relativeCenter.y * relativeCenter.y + relativeCenter.z * relativeCenter.z);
+        if (centerDistance > parameters_.maxDistance + boundingRadius) { continue; }
+        FogVolumeConstants& destination = frameConstants_.volumes[volumeCount];
+        float shape = 0.0f;
+        if (volume.shape == FogVolumeShape::Box) { shape = 1.0f; }
+        destination.centerAndShape = { relativeCenter.x, relativeCenter.y, relativeCenter.z, shape };
+        destination.extentsAndDensity = { volume.halfExtents.x, volume.halfExtents.y, volume.halfExtents.z, volume.density };
+        destination.radiusAndSoftness = { volume.radius, volume.edgeSoftness, 0.0f, 0.0f };
+        ++volumeCount;
+    }
+    frameConstants_.heightAndVolumeCount.w = static_cast<float>(volumeCount);
+    frameValid_ = true;
+
 }
 void VolumetricLightRenderer::CreateResources() {
     auto* device = dxCommon_->GetDevice();
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc {};
-    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; heapDesc.NumDescriptors = 1;
+    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; heapDesc.NumDescriptors = 2;
     CheckVolume(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeap_)));
     D3D12_RESOURCE_DESC desc {};
     desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -183,6 +286,18 @@ void VolumetricLightRenderer::CreateResources() {
     srvIndex_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, volumeTexture_.Get(), desc.Format, 1);
     volumeSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
+    desc.Format = DXGI_FORMAT_R16_FLOAT;
+    clear.Format = desc.Format;
+    clear.Color[0] = 1.0f;
+    CheckVolume(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, textureState_, &clear, IID_PPV_ARGS(&transmittanceTexture_)));
+    transmittanceTexture_->SetName(L"VolumetricLight::HalfResolutionTransmittance");
+    auto transmittanceRtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
+    transmittanceRtv.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    device->CreateRenderTargetView(transmittanceTexture_.Get(), nullptr, transmittanceRtv);
+    if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Fog transmittance SRV heap full"); }
+    transmittanceSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    SrvManager::GetInstance()->CreateSRVforTexture2D(transmittanceSrvIndex_, transmittanceTexture_.Get(), desc.Format, 1);
+    transmittanceSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(transmittanceSrvIndex_);
     D3D12_HEAP_PROPERTIES uploadHeap {}; uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
     auto buffer = CD3DX12_RESOURCE_DESC::Buffer((sizeof(Constants) + 255) & ~size_t(255));
     CheckVolume(device->CreateCommittedResource(&uploadHeap, D3D12_HEAP_FLAG_NONE, &buffer,
@@ -190,9 +305,9 @@ void VolumetricLightRenderer::CreateResources() {
     CheckVolume(constantsResource_->Map(0, nullptr, reinterpret_cast<void**>(&constantsData_)));
 }
 void VolumetricLightRenderer::CreatePipelines() {
-    D3D12_DESCRIPTOR_RANGE ranges[3] {};
-    D3D12_ROOT_PARAMETER root[4] {};
-    for (uint32_t index = 0; index < 3; ++index) {
+    D3D12_DESCRIPTOR_RANGE ranges[4] {};
+    D3D12_ROOT_PARAMETER root[5] {};
+    for (uint32_t index = 0; index < 4; ++index) {
         ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         ranges[index].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -200,8 +315,8 @@ void VolumetricLightRenderer::CreatePipelines() {
         root[index].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
         root[index].DescriptorTable = { 1, &ranges[index] };
     }
-    root[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    root[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; root[3].Descriptor.ShaderRegister = 0;
+    root[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    root[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; root[4].Descriptor.ShaderRegister = 0;
     D3D12_STATIC_SAMPLER_DESC samplers[2] {};
     for (uint32_t index = 0; index < 2; ++index) {
         samplers[index].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -215,18 +330,20 @@ void VolumetricLightRenderer::CreatePipelines() {
     samplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
     samplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
     D3D12_ROOT_SIGNATURE_DESC desc {};
-    desc.NumParameters = 4; desc.pParameters = root;
+    desc.NumParameters = 5; desc.pParameters = root;
     desc.NumStaticSamplers = 2; desc.pStaticSamplers = samplers;
     Microsoft::WRL::ComPtr<ID3DBlob> blob, errors;
     CheckVolume(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
     CheckVolume(dxCommon_->GetDevice()->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&rootSignature_)));
-    raymarchPipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Raymarch.PS.hlsl");
-    compositePipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Composite.PS.hlsl");
+    raymarchPipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Raymarch.PS.hlsl", true);
+    compositePipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Composite.PS.hlsl", false);
 }
 void VolumetricLightRenderer::Transition(D3D12_RESOURCE_STATES state) {
     if (textureState_ == state) { return; }
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(volumeTexture_.Get(), textureState_, state);
-    dxCommon_->GetCommandList()->ResourceBarrier(1, &barrier);
+    const auto transmittanceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(transmittanceTexture_.Get(), textureState_, state);
+    const D3D12_RESOURCE_BARRIER barriers[] = { barrier, transmittanceBarrier };
+    dxCommon_->GetCommandList()->ResourceBarrier(2, barriers);
     textureState_ = state;
 }
 void VolumetricLightRenderer::Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESCRIPTOR_HANDLE color,
@@ -237,7 +354,10 @@ void VolumetricLightRenderer::Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESC
     cmd->SetGraphicsRootSignature(rootSignature_.Get()); cmd->SetPipelineState(pipeline);
     cmd->SetGraphicsRootDescriptorTable(0, color); cmd->SetGraphicsRootDescriptorTable(1, depth);
     cmd->SetGraphicsRootDescriptorTable(2, shadow);
-    cmd->SetGraphicsRootConstantBufferView(3, constantsResource_->GetGPUVirtualAddress());
+    D3D12_GPU_DESCRIPTOR_HANDLE transmittance = depth;
+    if (pipeline == compositePipeline_.Get()) { transmittance = transmittanceSrv_; }
+    cmd->SetGraphicsRootDescriptorTable(3, transmittance);
+    cmd->SetGraphicsRootConstantBufferView(4, constantsResource_->GetGPUVirtualAddress());
     cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(3, 1, 0, 0);
 }
@@ -246,8 +366,8 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     bool valid = frameValid_;
     frameValid_ = false; // Consume the frame; a missing update never reuses old shadows.
     if (!ready_ || !valid || !depthReady || depthHandle.ptr == 0 || !parameters_.enabled ||
-        parameters_.fogDensity <= 0.0f || parameters_.lightIntensity <= 0.0f) { return false; }
-    if (frameConstants_.lightColorAndIntensity.w <= 0.0f) { return false; }
+        (!localFog_.isEnabled && (parameters_.fogDensity <= 0.0f || frameConstants_.lightColorAndIntensity.w <= 0.0f))) { return false; }
+    if (shadowSrv_.ptr == 0) { shadowSrv_ = depthHandle; }
     *constantsData_ = frameConstants_;
     depthSrv_ = depthHandle;
     Transition(D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -256,7 +376,7 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     D3D12_RECT scissor { 0, 0, WinApp::kClientWidth / 2, WinApp::kClientHeight / 2 };
     cmd->RSSetViewports(1, &viewport); cmd->RSSetScissorRects(1, &scissor);
     auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
-    cmd->OMSetRenderTargets(1, &rtv, FALSE, nullptr);
+    cmd->OMSetRenderTargets(2, &rtv, TRUE, nullptr);
     Draw(raymarchPipeline_.Get(), depthHandle, depthHandle, shadowSrv_);
     Transition(D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     generated_ = true;

@@ -19,10 +19,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Remove="App\main.cpp" />
-    <ClCompile Include="App\Preview\ModelPreview.cpp" />
-    <ClCompile Include="App\Preview\PreviewCapture.cpp" />
-    <ClCompile Include="App\Preview\PreviewGif.cpp" />
-    <ClInclude Include="App\Preview\PreviewCapture.h" />
-    <ClInclude Include="App\Preview\PreviewGif.h" />
+    <ClCompile Include="ModelPreview\ModelPreview.cpp" />
+    <ClCompile Include="ModelPreview\ModelPreviewApp.cpp" />
+    <ClCompile Include="ModelPreview\ModelPreviewModels.cpp" />
+    <ClCompile Include="ModelPreview\ModelPreviewCamera.cpp" />
+    <ClCompile Include="ModelPreview\ModelPreviewControls.cpp" />
+    <ClCompile Include="ModelPreview\ModelPreviewUpdate.cpp" />
+    <ClCompile Include="ModelPreview\ModelPreviewRender.cpp" />
+    <ClCompile Include="ModelPreview\PreviewSmokeTest.cpp" />
+    <ClCompile Include="ModelPreview\PreviewCapture.cpp" />
+    <ClCompile Include="ModelPreview\PreviewGif.cpp" />
+    <ClInclude Include="ModelPreview\PreviewCapture.h" />
+    <ClInclude Include="ModelPreview\ModelPreviewApp.h" />
+    <ClInclude Include="ModelPreview\PreviewItem.h" />
+    <ClInclude Include="ModelPreview\PreviewSmokeTest.h" />
+    <ClInclude Include="ModelPreview\PreviewGif.h" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,9 @@
 #include "../Fullscreen.hlsli"
+struct FogVolumeConstants {
+    float4 centerAndShape;
+    float4 extentsAndDensity;
+    float4 radiusAndSoftness;
+};
 cbuffer VolumeConstants : register(b0) {
     row_major float4x4 inverseViewProjection;
     row_major float4x4 lightViewProjection;
@@ -6,6 +11,11 @@ cbuffer VolumeConstants : register(b0) {
     float4 lightDirectionAndDensity;
     float4 lightColorAndIntensity;
     float4 settings;
+    float4 fogColorAndEnabled;
+    float4 heightAndVolumeCount;
+    float4 noiseScaleAndOffset;
+    float4 noiseSettings;
+    FogVolumeConstants volumes[8];
 };
 Texture2D<float4> gColor : register(t0);
 Texture2D<float> gDepth : register(t1);

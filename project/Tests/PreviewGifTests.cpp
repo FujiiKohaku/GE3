@@ -1,4 +1,4 @@
-#include "App/Preview/PreviewGif.h"
+#include "ModelPreview/PreviewGif.h"
 #include <iostream>
 #include <stdexcept>
 

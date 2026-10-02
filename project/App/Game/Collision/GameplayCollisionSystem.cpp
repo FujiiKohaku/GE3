@@ -6,7 +6,7 @@
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
 #include "App/Game/Enemy/Bullet/PaintBullet.h"
-#include "App/Game/Audio/GameSfx.h"
+#include "Engine/audio/SoundManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -68,14 +68,14 @@ void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
         }
         if (jellyfish.IsCollisionPartDamageable(partIndex)) {
             bullet->OnHitEnemy(hit.position);
-            GameSfx::GetInstance()->Play(GameSfxId::EnemyHit);
+            SoundManager::GetInstance()->Play("EnemyHit");
         } else {
-            GameSfx::GetInstance()->Play(GameSfxId::ArmorDeflect);
+            SoundManager::GetInstance()->Play("ArmorDeflect");
         }
         const bool wasDead = jellyfish.IsDead();
         jellyfish.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
         if (!wasDead && jellyfish.IsDead()) {
-            GameSfx::GetInstance()->Play(GameSfxId::BossDestroyed);
+            SoundManager::GetInstance()->Play("BossDestroyed");
         }
         bullet->SetDead();
     }
@@ -131,14 +131,17 @@ void CheckPlayerBulletsAgainstEnemy(
                 enemy.ApplyDamageToPart(
                     part.partIndex,
                     static_cast<float>(bullet->GetDamage()));
-                GameSfx::GetInstance()->Play(GameSfxId::EnemyHit);
+                SoundManager::GetInstance()->Play("EnemyHit");
                 if (!wasDead && enemy.IsDead()) {
-                    GameSfx::GetInstance()->Play(
-                        isBoss ? GameSfxId::BossDestroyed : GameSfxId::EnemyDestroyed);
+                    if (isBoss) {
+                        SoundManager::GetInstance()->Play("BossDestroyed");
+                    } else {
+                        SoundManager::GetInstance()->Play("EnemyDestroyed");
+                    }
                 }
             } else {
                 enemy.OnCollisionPartGuarded(part.partIndex, part.position);
-                GameSfx::GetInstance()->Play(GameSfxId::ArmorDeflect);
+                SoundManager::GetInstance()->Play("ArmorDeflect");
             }
             bullet->SetDead();
             break;
@@ -222,7 +225,7 @@ void GameplayCollisionSystem::UpdateStageCollisions(
             collider->GetRotation());
         if (CollisionManager::Intersect(playerSphere, obstacleBox).isHit) {
             if (player.ApplyDamage(levelObject->GetCollisionDamage())) {
-                GameSfx::GetInstance()->Play(GameSfxId::EnvironmentCollision);
+                SoundManager::GetInstance()->Play("EnvironmentCollision");
                 EffectManager::GetInstance()->PlayEffect(
                     "DamageHit",
                     playerPosition);

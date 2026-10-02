@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -164,12 +164,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Engine\CollisionManager\CollisionLayer.h" />
-    <ClCompile Include="App\Game\Audio\GameSfx.cpp" />
     <ClCompile Include="App\Game\Collision\GameplayCollisionSystem.cpp" />
-    <ClCompile Include="App\Scene\LoadingScene.cpp" />
+    <ClCompile Include="App\Scene\Loading\LoadingScene.cpp" />
     <ClCompile Include="App\Game\Stage\StageCatalog.cpp" />
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp" />
-    <ClCompile Include="App\Scene\ClearScene.cpp" />
+    <ClCompile Include="App\Scene\Result\ClearScene.cpp" />
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp" />
     <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp" />
@@ -213,16 +212,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\Particle\ParticleData.cpp" />
     <ClCompile Include="Engine\Particle\MeshManager\ParticleMeshManager.cpp" />
     <ClCompile Include="Engine\Particle\ParticleRenderManager.cpp" />
-    <ClCompile Include="App\Scene\SceneManager.cpp" />
-    <ClCompile Include="App\Scene\BaseScene.cpp" />
+    <ClCompile Include="App\Scene\Common\SceneManager.cpp" />
+    <ClCompile Include="App\Scene\Common\BaseScene.cpp" />
     <ClCompile Include="Engine\blend\BlendUtil.cpp" />
     <ClCompile Include="Engine\Camera\Camera.cpp" />
     <ClCompile Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.cpp" />
     <ClCompile Include="Engine\DirectXCommon\DirectXCommon.cpp" />
-    <ClCompile Include="App\Scene\GamePlayScene.cpp" />
-    <ClCompile Include="App\Scene\DevelopmentWebPanel.cpp" />
+    <ClCompile Include="App\Scene\Gameplay\GamePlayScene.cpp" />
+    <ClCompile Include="Engine\Development\DevelopmentWebPanel.cpp" />
     <ClCompile Include="Engine\ImGuiManager\ImGuiManager.cpp" />
-    <ClCompile Include="App\Scene\Game.cpp" />
+    <ClCompile Include="App\Scene\Application\Game.cpp" />
     <ClCompile Include="Engine\Debug\Profiler\Profiler.cpp" />
     <ClCompile Include="Engine\Debug\Profiler\CPUProfiler.cpp" />
     <ClCompile Include="Engine\Debug\Profiler\GPUProfiler.cpp" />
@@ -268,10 +267,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\SrvManager\SrvManager.cpp" />
     <ClCompile Include="Engine\StringUtility\StringUtility.cpp" />
     <ClCompile Include="Engine\TextureManager\TextureManager.cpp" />
-    <ClCompile Include="App\Scene\TitleScene.cpp" />
-    <ClCompile Include="App\Scene\SpriteTestScene.cpp" />
-    <ClCompile Include="App\Scene\TextTestScene.cpp" />
-    <ClCompile Include="App\Scene\TestScene1.cpp" />
+    <ClCompile Include="App\Scene\Title\TitleScene.cpp" />
+    <ClCompile Include="App\Scene\Test\SpriteTestScene.cpp" />
+    <ClCompile Include="App\Scene\Test\TextTestScene.cpp" />
+    <ClCompile Include="App\Scene\Test\TestScene1.cpp" />
     <ClCompile Include="Engine\Winapp\Utility.cpp">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">MaxSpeed</Optimization>
       <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Development|x64'">true</WholeProgramOptimization>
@@ -301,7 +300,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="Engine\math\Ray.cpp" />
     <ClCompile Include="Engine\math\Sphere.cpp" />
     <ClCompile Include="Engine\SceneObjectManager\SceneObjectManager.cpp" />
-    <ClCompile Include="App\Scene\GameOverScene.cpp" />
+    <ClCompile Include="App\Scene\Result\GameOverScene.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\Types\ArmoredEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
@@ -335,12 +334,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App\Game\Audio\GameSfx.h" />
     <ClInclude Include="App\Game\Collision\GameplayCollisionSystem.h" />
     <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h" />
     <ClInclude Include="App\Game\Hazard\WaterPillarHazard.h" />
     <ClInclude Include="App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.h" />
-    <ClInclude Include="App\Scene\ClearScene.h" />
+    <ClInclude Include="App\Scene\Result\ClearScene.h" />
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h" />
     <ClInclude Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h" />
@@ -388,17 +386,18 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\Particle\ParticleData.h" />
     <ClInclude Include="Engine\Particle\MeshManager\ParticleMeshManager.h" />
     <ClInclude Include="Engine\Particle\ParticleRenderManager.h" />
-    <ClInclude Include="App\Scene\SceneManager.h" />
-    <ClInclude Include="App\Scene\BaseScene.h" />
+    <ClInclude Include="App\Scene\Common\SceneManager.h" />
+    <ClInclude Include="App\Scene\Common\BaseScene.h" />
     <ClInclude Include="Engine\blend\BlendUtil.h" />
     <ClInclude Include="Engine\Camera\Camera.h" />
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h" />
     <ClInclude Include="Engine\DirectXCommon\DirectXCommon.h" />
-    <ClInclude Include="App\Scene\GamePlayScene.h" />
-    <ClInclude Include="App\Scene\PageTransition.h" />
+    <ClInclude Include="App\Scene\Gameplay\GamePlayScene.h" />
+    <ClInclude Include="App\Scene\Common\PageTransition.h" />
     <ClInclude Include="App\Game\Stage\StageCatalog.h" />
     <ClInclude Include="Engine\ImGuiManager\ImGuiManager.h" />
-    <ClInclude Include="App\Scene\Game.h" />
+    <ClInclude Include="Engine\Development\DevelopmentWebPanel.h" />
+    <ClInclude Include="App\Scene\Application\Game.h" />
     <ClInclude Include="Engine\Debug\Profiler\Profiler.h" />
     <ClInclude Include="Engine\Debug\Profiler\CPUProfiler.h" />
     <ClInclude Include="Engine\Debug\Profiler\GPUProfiler.h" />
@@ -435,11 +434,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\SrvManager\SrvManager.h" />
     <ClInclude Include="Engine\StringUtility\StringUtility.h" />
     <ClInclude Include="Engine\TextureManager\TextureManager.h" />
-    <ClInclude Include="App\Scene\TitleScene.h" />
-    <ClInclude Include="App\Scene\SpriteTestScene.h" />
-    <ClInclude Include="App\Scene\TextTestScene.h" />
-    <ClInclude Include="App\Scene\TestScene1.h" />
-    <ClInclude Include="App\Scene\LoadingScene.h" />
+    <ClInclude Include="App\Scene\Title\TitleScene.h" />
+    <ClInclude Include="App\Scene\Test\SpriteTestScene.h" />
+    <ClInclude Include="App\Scene\Test\TextTestScene.h" />
+    <ClInclude Include="App\Scene\Test\TestScene1.h" />
+    <ClInclude Include="App\Scene\Loading\LoadingScene.h" />
     <ClInclude Include="Engine\Winapp\Utility.h" />
     <ClInclude Include="Engine\math\MatrixMath.h" />
     <ClInclude Include="Engine\Winapp\WinApp.h" />
@@ -462,7 +461,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="Engine\math\Ray.h" />
     <ClInclude Include="Engine\math\Sphere.h" />
     <ClInclude Include="Engine\SceneObjectManager\SceneObjectManager.h" />
-    <ClInclude Include="App\Scene\GameOverScene.h" />
+    <ClInclude Include="App\Scene\Result\GameOverScene.h" />
     <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h" />
     <ClInclude Include="App\Game\Enemy\Types\ArmoredEnemy.h" />
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />

@@ -14,10 +14,10 @@
 #include "Engine/SrvManager/SrvManager.h"
 #include "App/Game/Stage/StageCatalog.h"
 #include "App/Game/Stage/GameplayVisualPreset.h"
-#include "App/Scene/Game.h"
-#include "App/Scene/GamePlayScene.h"
-#include "App/Scene/SceneManager.h"
-#include "App/Scene/LoadingScene.h"
+#include "App/Scene/Application/Game.h"
+#include "App/Scene/Gameplay/GamePlayScene.h"
+#include "App/Scene/Common/SceneManager.h"
+#include "App/Scene/Loading/LoadingScene.h"
 #include "Engine/Logger/Logger.h"
 #include "DirectXTex/DirectXTex.h"
 #include <d3d12sdklayers.h>
@@ -811,6 +811,67 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(volumeImages[0] == volumeImages[12], "Singular camera fallback changed the image");
             Require(!volume->Generate(shadows.GetSrv(), true), "Consumed frame inputs were reused");
 
+            FogVolumeSettings testFog;
+            testFog.isEnabled = true;
+            testFog.center = { 0.0f, 0.0f, 35.0f };
+            testFog.radius = 40.0f;
+            testFog.halfExtents = { 40.0f, 20.0f, 40.0f };
+            testFog.density = 0.025f;
+            testFog.edgeSoftness = 10.0f;
+            Require(volume->SetFogVolume(0, testFog), "Valid fog volume was rejected");
+            FogVolumeSettings invalidFog = testFog;
+            invalidFog.density = std::numeric_limits<float>::quiet_NaN();
+            Require(!volume->SetFogVolume(0, invalidFog), "NaN fog density was accepted");
+            invalidFog = testFog; invalidFog.radius = 0.0f;
+            Require(!volume->SetFogVolume(0, invalidFog), "Zero fog radius was accepted");
+            Require(!volume->SetFogVolume(8, testFog), "Fog volume limit was ignored");
+            Require(!volume->SetNoiseParameters(0.0f, 0.5f, {}), "Zero noise scale was accepted");
+            Require(!volume->SetHeightFog(0.0f, -1.0f, 0.1f), "Negative height fog was accepted");
+            Require(!volume->SetFogColor({ std::numeric_limits<float>::infinity(), 0.0f, 0.0f }), "Infinite fog color was accepted");
+            std::vector<uint8_t> localFogImages[11];
+            for (int mode = 0; mode < 11; ++mode) {
+                volume->ResetLocalFog();
+                volume->SetEnabled(true);
+                volume->SetFogDensity(0.0f);
+                volume->SetLightIntensity(0.0f);
+                volume->SetLocalFogEnabled(mode != 0 && mode != 8);
+                FogVolumeSettings settingsFog = testFog;
+                if (mode == 2) { settingsFog.shape = FogVolumeShape::Box; }
+                if (mode == 3) { settingsFog.center.x = 1000.0f; }
+                if (mode == 9) { settingsFog.center = camera.GetTranslate(); settingsFog.radius = 60.0f; }
+                Require(volume->SetFogVolume(0, settingsFog), "Fog volume setup failed");
+                if (mode == 5 || mode == 6) { Require(volume->SetNoiseParameters(0.1f, 0.8f, {}), "Noise setup failed"); }
+                if (mode == 7) { volume->SetLightIntensity(0.35f); }
+                if (mode == 10) {
+                    volume->ClearFogVolumes();
+                    Require(volume->SetHeightFog(0.0f, 0.025f, 0.1f), "Height fog setup failed");
+                }
+                if (mode == 4) { volume->SetFrameInputs(&camera, nullptr); }
+                else { volume->SetFrameInputs(&camera, &shadows); }
+                if (mode == 4) { Require(volume->HasValidFrameInputs(), "Local fog required shadow resources"); }
+                SrvManager::GetInstance()->PreDraw();
+                post.PreDrawDepth();
+                offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth();
+                dx->PreDraw();
+                post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                localFogImages[mode] = ReadFrame(dx, directory / ("local-fog-" + std::to_string(mode) + ".png"));
+            }
+            Require(ChangedPixels(localFogImages[0], localFogImages[1]) > 500, "Sphere fog did not affect the image");
+            Require(ChangedPixels(localFogImages[1], localFogImages[2]) > 100, "Sphere and box fog produced identical images");
+            Require(localFogImages[0] == localFogImages[3], "Distant local fog affected the image");
+            Require(localFogImages[1] == localFogImages[4], "Missing shadow changed ambient fog");
+            Require(ChangedPixels(localFogImages[1], localFogImages[5]) > 100, "Noise did not modulate fog");
+            Require(localFogImages[5] == localFogImages[6], "Static fog noise flickered");
+            Require(ChangedPixels(localFogImages[1], localFogImages[7]) > 100, "Fog did not scatter sunlight");
+            Require(localFogImages[0] == localFogImages[8], "Reset fog changed the base image");
+            Require(ChangedPixels(localFogImages[0], localFogImages[9]) > 500, "Camera inside fog failed");
+            Require(ChangedPixels(localFogImages[0], localFogImages[10]) > 500, "Height fog did not affect the image");
+            volume->ResetLocalFog();
+            Require(!volume->GetLocalFogParameters().isEnabled && !volume->GetFogVolumes()[0].isEnabled, "Local fog reset retained settings");
+            Logger::Log("Local fog PASS: sphere, box, height, noise, stable frames, camera inside, shadow fallback, invalid settings and reset");
+
             D3D12_QUERY_HEAP_DESC volumeQueryDesc {};
             volumeQueryDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP; volumeQueryDesc.Count = 2;
             Microsoft::WRL::ComPtr<ID3D12QueryHeap> volumeQuery;
@@ -822,10 +883,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&volumeTimer))), "Volume GPU timer allocation failed");
             UINT64 volumeFrequency = 0;
             Require(SUCCEEDED(dx->GetCommandQueue()->GetTimestampFrequency(&volumeFrequency)), "Volume GPU timer frequency failed");
-            double volumeAverages[2] {};
+            double volumeAverages[4] {};
             volume->SetFogDensity(0.003f); volume->SetLightIntensity(0.35f);
-            for (int mode = 0; mode < 2; ++mode) {
+            for (int mode = 0; mode < 4; ++mode) {
                 volume->SetEnabled(mode != 0);
+                volume->ResetLocalFog();
+                if (mode >= 2) {
+                    volume->SetLocalFogEnabled(true);
+                    uint32_t fogCount = 2;
+                    if (mode == 3) { fogCount = 8; volume->SetNoiseParameters(0.05f, 0.5f, {}); }
+                    for (uint32_t volumeIndex = 0; volumeIndex < fogCount; ++volumeIndex) {
+                        FogVolumeSettings timingFog = testFog;
+                        timingFog.center.x += static_cast<float>(volumeIndex) * 2.0f;
+                        timingFog.density = 0.003f;
+                        volume->SetFogVolume(volumeIndex, timingFog);
+                    }
+                }
                 for (int sample = 0; sample < 24; ++sample) {
                     volume->SetFrameInputs(&camera, &shadows);
                     SrvManager::GetInstance()->PreDraw(); dx->PreDraw();
@@ -842,7 +915,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 }
             }
             std::ofstream(directory / "volumetric-timing.txt") << "1280x720, half-resolution 32 samples, debug layer enabled, 20 samples\nOFF ms: "
-                << volumeAverages[0] << "\nON ms: " << volumeAverages[1] << "\nAdded ms: " << volumeAverages[1] - volumeAverages[0] << "\n";
+                << volumeAverages[0] << "\nLight only ms: " << volumeAverages[1] << "\nLocal 2 volumes ms: " << volumeAverages[2] << "\nLocal 8 + noise ms: " << volumeAverages[3] << "\nAdded light ms: " << volumeAverages[1] - volumeAverages[0] << "\n";
+            volume->ResetLocalFog();
             Logger::Log("Volumetric PASS: lighting, missing/disabled shadows, missing camera/depth, zero/NaN intensity, zero density, consumed frame inputs");
 
             Logger::Log("Graphics tests PASS: HDR highlight separation, material reflection, hemisphere lighting, emissive bloom halo");
@@ -869,7 +943,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 }
             }
         }
-        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting and safety fallbacks, D3D12 validation\n";
+        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting, local sphere/box/height fog, stable noise, shadow fallbacks, D3D12 validation\n";
         ModelManager::Finalize();
         Object3dManager::Finalize();
         LightManager::Finalize();

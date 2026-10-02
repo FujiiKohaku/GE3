@@ -1,6 +1,7 @@
+#include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 
-#include "App/Scene/SceneManager.h"
+#include "App/Scene/Common/SceneManager.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/PostEffect/Bloom/BloomRenderer.h"
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
@@ -15,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <charconv>
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
 #include "externals/json.hpp"
 #endif
@@ -23,12 +25,208 @@
 #include "externals/imgui/imgui.h"
 #endif
 
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+namespace {
+bool ParseFogVolumeKey(const std::string& key, uint32_t& volumeIndex, std::string& field) {
+    const std::string prefix = "fogVolume.";
+    if (!key.starts_with(prefix)) { return false; }
+    const size_t separator = key.find('.', prefix.size());
+    if (separator == std::string::npos) { return false; }
+    const char* begin = key.data() + prefix.size();
+    const char* end = key.data() + separator;
+    const auto result = std::from_chars(begin, end, volumeIndex);
+    if (result.ec != std::errc() || result.ptr != end || volumeIndex >= VolumetricLightRenderer::kMaxFogVolumes) { return false; }
+    field = key.substr(separator + 1);
+    return !field.empty();
+}
+}
+#endif
+
 PostEffectManager::PostEffectManager() = default;
 
-PostEffectManager::~PostEffectManager() = default;
+PostEffectManager::~PostEffectManager()
+{
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().UnregisterOwner(this);
+#endif
+}
 
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
-std::string PostEffectManager::GetDevelopmentSettingsJson() const
+void PostEffectManager::RegisterDevelopmentPanel()
+{
+    DevelopmentWebPanel::GetInstance().RegisterSource(this, "effects", "ポストエフェクト", false,
+        &PostEffectManager::GetDevelopmentSettings, &PostEffectManager::GetDevelopmentControls,
+        &PostEffectManager::SetDevelopmentBool, &PostEffectManager::SetDevelopmentNumber,
+        &PostEffectManager::ExecuteDevelopmentCommand, &PostEffectManager::ClearDevelopmentPassOverrides);
+}
+
+nlohmann::json PostEffectManager::GetDevelopmentControls() const
+{
+    static const nlohmann::json kControls = nlohmann::json::array({
+        {{"key", "localFogEnabled"}, {"label", "立体霧を有効"}, {"group", "立体霧"}, {"type", "bool"}},
+        {{"key", "localFogHeight"}, {"label", "基準高さ"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", -1000}, {"maximum", 1000}, {"step", 0.1}},
+        {{"key", "localFogHeightDensity"}, {"label", "高さ霧の濃度"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.05}, {"step", 0.0001}},
+        {{"key", "localFogHeightFalloff"}, {"label", "高さによる薄まり"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0.001}, {"maximum", 10}, {"step", 0.001}},
+        {{"key", "localFogNoiseScale"}, {"label", "ノイズの細かさ"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0.001}, {"maximum", 10}, {"step", 0.001}},
+        {{"key", "localFogNoiseStrength"}, {"label", "ノイズの強さ"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "localFogVelocityX"}, {"label", "霧の移動 X"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", -100}, {"maximum", 100}, {"step", 0.1}},
+        {{"key", "localFogVelocityY"}, {"label", "霧の移動 Y"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", -100}, {"maximum", 100}, {"step", 0.1}},
+        {{"key", "localFogVelocityZ"}, {"label", "霧の移動 Z"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", -100}, {"maximum", 100}, {"step", 0.1}},
+        {{"key", "localFogColorR"}, {"label", "霧の色 R"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "localFogColorG"}, {"label", "霧の色 G"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "localFogColorB"}, {"label", "霧の色 B"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "fogEnabled"}, {"label", "霧"}, {"group", "霧・ブルーム"}, {"type", "bool"}},
+        {{"key", "distanceFogEnabled"}, {"label", "距離の霧"}, {"group", "霧・ブルーム"}, {"type", "bool"}},
+        {{"key", "fogColorR"}, {"label", "霧の色 R"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "fogColorG"}, {"label", "霧の色 G"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "fogColorB"}, {"label", "霧の色 B"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "fogStart"}, {"label", "霧の開始距離"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 3000}, {"step", 0.1}},
+        {{"key", "fogEnd"}, {"label", "霧の終了距離"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 3000}, {"step", 0.1}},
+        {{"key", "fogCurve"}, {"label", "霧の曲線"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 8}, {"step", 0.01}},
+        {{"key", "fogDensity"}, {"label", "霧の濃さ"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "bloomEnabled"}, {"label", "ブルーム"}, {"group", "霧・ブルーム"}, {"type", "bool"}},
+        {{"key", "bloomThreshold"}, {"label", "しきい値"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 5}, {"step", 0.05}},
+        {{"key", "bloomBlurRadius"}, {"label", "ぼかし半径"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 32}, {"step", 1}},
+        {{"key", "bloomBlurSigma"}, {"label", "ぼかし Sigma"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 20}, {"step", 0.01}},
+        {{"key", "bloomIntensity"}, {"label", "ブルーム強度"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 5}, {"step", 0.05}},
+        {{"key", "toneMapEnabled"}, {"label", "トーンマッピング"}, {"group", "ポストエフェクト"}, {"type", "bool"}},
+        {{"key", "toneExposure"}, {"label", "露出"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.1}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "toneContrast"}, {"label", "最終コントラスト"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.5}, {"maximum", 1.5}, {"step", 0.01}},
+        {{"key", "toneSaturation"}, {"label", "最終彩度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "volumeEnabled"}, {"label", "ボリューメトリックライト"}, {"group", "ポストエフェクト"}, {"type", "bool"}},
+        {{"key", "volumeIntensity"}, {"label", "空間の光 強度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "volumeDensity"}, {"label", "散乱密度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.05}, {"step", 0.0001}},
+        {{"key", "volumeDistance"}, {"label", "光の計算距離"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 1}, {"maximum", 1000}, {"step", 1}},
+        {{"key", "volumeAnisotropy"}, {"label", "散乱方向性"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", -0.8}, {"maximum", 0.8}, {"step", 0.01}},
+        {{"key", "volumeSamples"}, {"label", "光の計算サンプル数"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 8}, {"maximum", 64}, {"step", 1}},
+        {{"key", "volumeColorR"}, {"label", "空間の光 色 R"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "volumeColorG"}, {"label", "空間の光 色 G"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "volumeColorB"}, {"label", "空間の光 色 B"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
+        {{"key", "fxaaEnabled"}, {"label", "FXAA"}, {"group", "ポストエフェクト"}, {"type", "bool"}},
+        {{"key", "fxaaStrength"}, {"label", "FXAA 強さ"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "fxaaSubpixel"}, {"label", "FXAA サブピクセル"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "fxaaEdgeThreshold"}, {"label", "FXAA 輪郭しきい値"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 0.5}, {"step", 0.01}},
+        {{"key", "fxaaEdgeThresholdMin"}, {"label", "FXAA 最小しきい値"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.2}, {"step", 0.001}},
+        {{"key", "animationEnabled"}, {"label", "アニメーション"}, {"group", "ポストエフェクト"}, {"type", "bool"}},
+        {{"key", "pixelSize"}, {"label", "ピクセルサイズ"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 1}, {"maximum", 64}, {"step", 1}},
+        {{"key", "colorBrightness"}, {"label", "明るさ"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", -1}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "colorContrast"}, {"label", "コントラスト"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 3}, {"step", 0.01}},
+        {{"key", "colorSaturation"}, {"label", "彩度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 3}, {"step", 0.01}},
+        {{"key", "focusDepth"}, {"label", "フォーカス深度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.001}},
+        {{"key", "focusRange"}, {"label", "フォーカス範囲"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.0001}, {"maximum", 0.2}, {"step", 0.0001}},
+        {{"key", "depthOfFieldRadius"}, {"label", "被写界深度半径"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 32}, {"step", 0.1}},
+        {{"key", "motionBlurDirectionX"}, {"label", "モーション方向 X"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", -1}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "motionBlurDirectionY"}, {"label", "モーション方向 Y"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", -1}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "motionBlurStrength"}, {"label", "モーション強度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.1}, {"step", 0.001}},
+        {{"key", "motionBlurSampleCount"}, {"label", "モーションサンプル"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 1}, {"maximum", 32}, {"step", 1}},
+        {{"key", "chromaticAberrationStrength"}, {"label", "色収差"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.05}, {"step", 0.001}},
+        {{"key", "lensDistortionStrength"}, {"label", "レンズ歪み"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", -1}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "filmGrainStrength"}, {"label", "フィルム粒子"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.5}, {"step", 0.01}},
+        {{"key", "lensDirtStrength"}, {"label", "レンズ汚れ"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 3}, {"step", 0.01}},
+        {{"key", "cameraShakeStrength"}, {"label", "カメラシェイク"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.05}, {"step", 0.001}},
+        {{"key", "bokehRadius"}, {"label", "ボケ半径"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 32}, {"step", 0.1}},
+        {{"key", "bokehSides"}, {"label", "ボケ辺数"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 3}, {"maximum", 12}, {"step", 1}},
+        {{"key", "fisheyeStrength"}, {"label", "魚眼強度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 3}, {"step", 0.01}},
+        {{"key", "lightThreshold"}, {"label", "光しきい値"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "lightStrength"}, {"label", "光の強さ"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 5}, {"step", 0.05}},
+        {{"key", "lightRadius"}, {"label", "光の半径"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "outlineNormalThreshold"}, {"label", "輪郭法線しきい値"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "outlineNormalSoftness"}, {"label", "輪郭法線の柔らかさ"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.001}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "outlineNormalStrength"}, {"label", "輪郭法線強度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+    });
+    nlohmann::json controls = kControls;
+    for (uint32_t volumeIndex = 0; volumeIndex < VolumetricLightRenderer::kMaxFogVolumes; ++volumeIndex) {
+        const std::string prefix = "fogVolume." + std::to_string(volumeIndex) + ".";
+        const std::string group = "局所霧 " + std::to_string(volumeIndex);
+        controls.push_back({ {"key", prefix + "enabled"}, {"label", "有効"}, {"group", group}, {"type", "bool"} });
+        controls.push_back({ {"key", prefix + "shape"}, {"label", "形状"}, {"group", group}, {"type", "select"},
+            {"options", nlohmann::json::array({ {{"value", 0}, {"label", "球"}}, {{"value", 1}, {"label", "箱"}} })} });
+        controls.push_back({ {"key", prefix + "centerX"}, {"label", "中心 X"}, {"group", group}, {"type", "number"}, {"minimum", -10000}, {"maximum", 10000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "centerY"}, {"label", "中心 Y"}, {"group", group}, {"type", "number"}, {"minimum", -10000}, {"maximum", 10000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "centerZ"}, {"label", "中心 Z"}, {"group", group}, {"type", "number"}, {"minimum", -10000}, {"maximum", 10000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "extentX"}, {"label", "半幅 X"}, {"group", group}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "extentY"}, {"label", "半幅 Y"}, {"group", group}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "extentZ"}, {"label", "半幅 Z"}, {"group", group}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "radius"}, {"label", "半径"}, {"group", group}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1000}, {"step", 0.1} });
+        controls.push_back({ {"key", prefix + "density"}, {"label", "濃度"}, {"group", group}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.05}, {"step", 0.0001} });
+        controls.push_back({ {"key", prefix + "softness"}, {"label", "境界のぼかし"}, {"group", group}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1000}, {"step", 0.1} });
+    }
+
+    for (const auto& pass : SceneManager::GetInstance()->GetPostEffects()) {
+        controls.push_back({{"key","pass."+std::to_string(static_cast<int>(pass.type))},
+            {"label",GetPostEffectTypeName(pass.type)},{"group","パス"},{"type","bool"}});
+    }
+    return controls;
+}
+
+bool PostEffectManager::SetDevelopmentBool(const std::string& key, bool isEnabled)
+{
+    if (key == "localFogEnabled") { volumetricLightRenderer_->SetLocalFogEnabled(isEnabled); return true; }
+    uint32_t volumeIndex = 0;
+    std::string field;
+    if (ParseFogVolumeKey(key, volumeIndex, field)) {
+        if (field != "enabled") { return false; }
+        FogVolumeSettings settings = volumetricLightRenderer_->GetFogVolumes()[volumeIndex];
+        settings.isEnabled = isEnabled;
+        return volumetricLightRenderer_->SetFogVolume(volumeIndex, settings);
+    }
+    if (isEnabled) { return ApplyDevelopmentSetting(key, "true"); }
+    return ApplyDevelopmentSetting(key, "false");
+}
+
+bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double value)
+{
+    if (!std::isfinite(value)) { return false; }
+    const float number = static_cast<float>(value);
+    if (!std::isfinite(number)) { return false; }
+    uint32_t volumeIndex = 0;
+    std::string field;
+    if (ParseFogVolumeKey(key, volumeIndex, field)) {
+        FogVolumeSettings settings = volumetricLightRenderer_->GetFogVolumes()[volumeIndex];
+        if (field == "shape") {
+            if (number == 0.0f) { settings.shape = FogVolumeShape::Sphere; }
+            else if (number == 1.0f) { settings.shape = FogVolumeShape::Box; }
+            else { return false; }
+        }
+        else if (field == "centerX") { settings.center.x = number; }
+        else if (field == "centerY") { settings.center.y = number; }
+        else if (field == "centerZ") { settings.center.z = number; }
+        else if (field == "extentX") { settings.halfExtents.x = number; }
+        else if (field == "extentY") { settings.halfExtents.y = number; }
+        else if (field == "extentZ") { settings.halfExtents.z = number; }
+        else if (field == "radius") { settings.radius = number; }
+        else if (field == "density") { settings.density = number; }
+        else if (field == "softness") { settings.edgeSoftness = number; }
+        else { return false; }
+        return volumetricLightRenderer_->SetFogVolume(volumeIndex, settings);
+    }
+    LocalFogParameters fog = volumetricLightRenderer_->GetLocalFogParameters();
+    if (key == "localFogHeight") { return volumetricLightRenderer_->SetHeightFog(number, fog.heightDensity, fog.heightFalloff); }
+    if (key == "localFogHeightDensity") { return volumetricLightRenderer_->SetHeightFog(fog.baseHeight, number, fog.heightFalloff); }
+    if (key == "localFogHeightFalloff") { return volumetricLightRenderer_->SetHeightFog(fog.baseHeight, fog.heightDensity, number); }
+    if (key == "localFogNoiseScale") { return volumetricLightRenderer_->SetNoiseParameters(number, fog.noiseStrength, fog.noiseVelocity); }
+    if (key == "localFogNoiseStrength") { return volumetricLightRenderer_->SetNoiseParameters(fog.noiseScale, number, fog.noiseVelocity); }
+    if (key == "localFogVelocityX" || key == "localFogVelocityY" || key == "localFogVelocityZ") {
+        if (key == "localFogVelocityX") { fog.noiseVelocity.x = number; }
+        if (key == "localFogVelocityY") { fog.noiseVelocity.y = number; }
+        if (key == "localFogVelocityZ") { fog.noiseVelocity.z = number; }
+        return volumetricLightRenderer_->SetNoiseParameters(fog.noiseScale, fog.noiseStrength, fog.noiseVelocity);
+    }
+    if (key == "localFogColorR" || key == "localFogColorG" || key == "localFogColorB") {
+        if (key == "localFogColorR") { fog.color.x = number; }
+        if (key == "localFogColorG") { fog.color.y = number; }
+        if (key == "localFogColorB") { fog.color.z = number; }
+        return volumetricLightRenderer_->SetFogColor(fog.color);
+    }
+    return ApplyDevelopmentSetting(key, nlohmann::json(value).dump());
+}
+
+bool PostEffectManager::ExecuteDevelopmentCommand(const std::string& key)
+{
+    return ApplyDevelopmentSetting(key, "");
+}
+
+nlohmann::json PostEffectManager::GetDevelopmentSettings() const
 {
     const auto& p = copyImageRenderer_->GetPostEffectParameter();
     const FogData& fog = fogManager_->GetFogData();
@@ -80,98 +278,134 @@ std::string PostEffectManager::GetDevelopmentSettingsJson() const
                                     {"name", GetPostEffectTypeName(pass.type)},
                                     {"enabled", pass.enabled}});
     }
-    return state.dump();
+    for (const auto& pass : state["passes"]) {
+        state["pass."+std::to_string(pass["type"].get<int>())] = pass["enabled"];
+    }
+    const LocalFogParameters& localFog = volumetricLightRenderer_->GetLocalFogParameters();
+    state["localFogEnabled"] = localFog.isEnabled;
+    state["localFogHeight"] = localFog.baseHeight;
+    state["localFogHeightDensity"] = localFog.heightDensity;
+    state["localFogHeightFalloff"] = localFog.heightFalloff;
+    state["localFogNoiseScale"] = localFog.noiseScale;
+    state["localFogNoiseStrength"] = localFog.noiseStrength;
+    state["localFogVelocityX"] = localFog.noiseVelocity.x;
+    state["localFogVelocityY"] = localFog.noiseVelocity.y;
+    state["localFogVelocityZ"] = localFog.noiseVelocity.z;
+    state["localFogColorR"] = localFog.color.x;
+    state["localFogColorG"] = localFog.color.y;
+    state["localFogColorB"] = localFog.color.z;
+    for (uint32_t volumeIndex = 0; volumeIndex < VolumetricLightRenderer::kMaxFogVolumes; ++volumeIndex) {
+        const FogVolumeSettings& settings = volumetricLightRenderer_->GetFogVolumes()[volumeIndex];
+        const std::string prefix = "fogVolume." + std::to_string(volumeIndex) + ".";
+        state[prefix + "enabled"] = settings.isEnabled;
+        state[prefix + "shape"] = static_cast<int>(settings.shape);
+        state[prefix + "centerX"] = settings.center.x;
+        state[prefix + "centerY"] = settings.center.y;
+        state[prefix + "centerZ"] = settings.center.z;
+        state[prefix + "extentX"] = settings.halfExtents.x;
+        state[prefix + "extentY"] = settings.halfExtents.y;
+        state[prefix + "extentZ"] = settings.halfExtents.z;
+        state[prefix + "radius"] = settings.radius;
+        state[prefix + "density"] = settings.density;
+        state[prefix + "softness"] = settings.edgeSoftness;
+    }
+    return state;
 }
 
-void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const std::string& value)
+std::string PostEffectManager::GetDevelopmentSettingsJson() const
 {
-    auto parse = [&]() -> float {
-        char* end = nullptr;
-        const float number = std::strtof(value.c_str(), &end);
-        return end != value.c_str() && *end == '\0' && std::isfinite(number) ? number : NAN;
-    };
-    const bool enabled = value == "true";
-    auto& p = copyImageRenderer_->GetPostEffectParameter();
+    return GetDevelopmentSettings().dump();
+}
+
+bool PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const std::string& value)
+{
+    if ((key == "toneMapEnabled" || key == "volumeEnabled" || key == "fxaaEnabled" || key == "animationEnabled" || key == "fogEnabled" || key == "distanceFogEnabled" || key == "bloomEnabled" || key.starts_with("pass.")) && value != "true" && value != "false") { return false; }
+    const bool isEnabled = value == "true";
+    auto& parameters = copyImageRenderer_->GetPostEffectParameter();
     FogData* fog = fogManager_->GetEditableFogData();
     auto* bloom = bloomRenderer_->GetEditableBloomParameter();
     if (key == "toneMapEnabled") {
-        p.toneMapEnabled = 0;
-        if (enabled) { p.toneMapEnabled = 1; }
-        return;
+        parameters.toneMapEnabled = 0;
+        if (isEnabled) { parameters.toneMapEnabled = 1; }
+        return true;
     }
-    if (key == "volumeEnabled") { volumetricLightRenderer_->SetEnabled(enabled); return; }
-    if (key == "fxaaEnabled") { fxaaEnabled_ = enabled; return; }
+    if (key == "volumeEnabled") { volumetricLightRenderer_->SetEnabled(isEnabled); return true; }
+    if (key == "fxaaEnabled") { fxaaEnabled_ = isEnabled; return true; }
     if (key == "animationEnabled") {
-        isAnimationEnabled_ = enabled;
-        p.animationEnabled = enabled ? 1 : 0;
-        return;
+        isAnimationEnabled_ = isEnabled;
+        parameters.animationEnabled = 0;
+        if (isEnabled) { parameters.animationEnabled = 1; }
+        return true;
     }
-    if (key == "fogEnabled" && fog) { fog->isEnabled = enabled; return; }
-    if (key == "distanceFogEnabled" && fog) { fog->distanceEnabled = enabled; return; }
-    if (key == "bloomEnabled" && bloom) { bloom->isEnabled = enabled; return; }
+    if (key == "fogEnabled" && fog) { fog->isEnabled = isEnabled; return true; }
+    if (key == "distanceFogEnabled" && fog) { fog->distanceEnabled = isEnabled; return true; }
+    if (key == "bloomEnabled" && bloom) { bloom->isEnabled = isEnabled; return true; }
     if (key.starts_with("pass.")) {
-        const int type = std::atoi(key.c_str() + 5);
+        char* typeEnd = nullptr;
+        const long type = std::strtol(key.c_str() + 5, &typeEnd, 10);
+        if (typeEnd == key.c_str() + 5 || *typeEnd != '\0') { return false; }
         for (const auto& pass : SceneManager::GetInstance()->GetPostEffects()) {
             if (static_cast<int>(pass.type) == type) {
-                passOverrides_[type] = enabled;
-                SceneManager::GetInstance()->SetPostEffectEnabled(pass.type, enabled);
-                break;
+                passOverrides_[type] = isEnabled;
+                SceneManager::GetInstance()->SetPostEffectEnabled(pass.type, isEnabled);
+                return true;
             }
         }
-        return;
+        return false;
     }
-    const float number = parse();
-    if (!std::isfinite(number)) return;
-    if (key == "volumeIntensity") { volumetricLightRenderer_->SetLightIntensity(number); return; }
-    if (key == "volumeDensity") { volumetricLightRenderer_->SetFogDensity(number); return; }
-    if (key == "volumeDistance") { volumetricLightRenderer_->SetMaxDistance(number); return; }
-    if (key == "volumeAnisotropy") { volumetricLightRenderer_->SetAnisotropy(number); return; }
-    if (key == "volumeSamples") { volumetricLightRenderer_->SetSampleCount(static_cast<int32_t>(std::clamp(number, 8.0f, 64.0f))); return; }
+    char* numberEnd = nullptr;
+    const float number = std::strtof(value.c_str(), &numberEnd);
+    if (numberEnd == value.c_str() || *numberEnd != '\0' || !std::isfinite(number)) { return false; }
+    if (key == "volumeIntensity") { volumetricLightRenderer_->SetLightIntensity(number); return true; }
+    if (key == "volumeDensity") { volumetricLightRenderer_->SetFogDensity(number); return true; }
+    if (key == "volumeDistance") { volumetricLightRenderer_->SetMaxDistance(number); return true; }
+    if (key == "volumeAnisotropy") { volumetricLightRenderer_->SetAnisotropy(number); return true; }
+    if (key == "volumeSamples") { volumetricLightRenderer_->SetSampleCount(static_cast<int32_t>(std::clamp(number, 8.0f, 64.0f))); return true; }
     if (key == "volumeColorR" || key == "volumeColorG" || key == "volumeColorB") {
         Vector3 color = volumetricLightRenderer_->GetParameters().lightColor;
         if (key == "volumeColorR") { color.x = number; }
         if (key == "volumeColorG") { color.y = number; }
         if (key == "volumeColorB") { color.z = number; }
         volumetricLightRenderer_->SetLightColor(color);
-        return;
+        return true;
     }
-#define SET_FLOAT(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return; }
-#define SET_INT(name, field, low, high) if (key == name) { field = static_cast<int>(std::clamp(number, float(low), float(high))); return; }
-    SET_FLOAT("toneExposure", p.toneExposure, 0.1f, 4.0f)
-    SET_FLOAT("toneContrast", p.toneContrast, 0.5f, 1.5f)
-    SET_FLOAT("toneSaturation", p.toneSaturation, 0.0f, 2.0f)
-    SET_FLOAT("fxaaStrength", p.fxaaStrength, 0.0f, 1.0f)
-    SET_FLOAT("fxaaSubpixel", p.fxaaSubpixel, 0.0f, 1.0f)
-    SET_FLOAT("fxaaEdgeThreshold", p.fxaaEdgeThreshold, 0.01f, 0.5f)
-    SET_FLOAT("fxaaEdgeThresholdMin", p.fxaaEdgeThresholdMin, 0.0f, 0.2f)
-    SET_FLOAT("pixelSize", p.pixelSize, 1.0f, 64.0f)
-    SET_FLOAT("colorBrightness", p.colorBrightness, -1.0f, 1.0f)
-    SET_FLOAT("colorContrast", p.colorContrast, 0.0f, 3.0f)
-    SET_FLOAT("colorSaturation", p.colorSaturation, 0.0f, 3.0f)
-    SET_FLOAT("focusDepth", p.focusDepth, 0.0f, 1.0f)
-    SET_FLOAT("focusRange", p.focusRange, 0.0001f, 0.2f)
-    SET_FLOAT("depthOfFieldRadius", p.depthOfFieldRadius, 0.0f, 32.0f)
-    SET_FLOAT("motionBlurDirectionX", p.motionBlurDirection.x, -1.0f, 1.0f)
-    SET_FLOAT("motionBlurDirectionY", p.motionBlurDirection.y, -1.0f, 1.0f)
-    SET_FLOAT("motionBlurStrength", p.motionBlurStrength, 0.0f, 0.1f)
-    SET_INT("motionBlurSampleCount", p.motionBlurSampleCount, 1, 32)
-    SET_FLOAT("chromaticAberrationStrength", p.chromaticAberrationStrength, 0.0f, 0.05f)
-    SET_FLOAT("lensDistortionStrength", p.lensDistortionStrength, -1.0f, 1.0f)
-    SET_FLOAT("filmGrainStrength", p.filmGrainStrength, 0.0f, 0.5f)
-    SET_FLOAT("lensDirtStrength", p.lensDirtStrength, 0.0f, 3.0f)
-    SET_FLOAT("bokehRadius", p.bokehRadius, 0.0f, 32.0f)
-    SET_INT("bokehSides", p.bokehSides, 3, 12)
-    SET_FLOAT("fisheyeStrength", p.fisheyeStrength, 0.01f, 3.0f)
-    SET_FLOAT("lightThreshold", p.lightThreshold, 0.0f, 2.0f)
-    SET_FLOAT("lightStrength", p.lightStrength, 0.0f, 5.0f)
-    SET_FLOAT("lightRadius", p.lightRadius, 0.01f, 1.0f)
-    SET_FLOAT("outlineNormalThreshold", p.outlineNormalThreshold, 0.0f, 1.0f)
-    SET_FLOAT("outlineNormalSoftness", p.outlineNormalSoftness, 0.001f, 1.0f)
-    SET_FLOAT("outlineNormalStrength", p.outlineNormalStrength, 0.0f, 1.0f)
+#define SET_FLOAT(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return true; }
+#define SET_INT(name, field, low, high) if (key == name) { field = static_cast<int>(std::clamp(number, float(low), float(high))); return true; }
+    SET_FLOAT("toneExposure", parameters.toneExposure, 0.1f, 4.0f)
+    SET_FLOAT("toneContrast", parameters.toneContrast, 0.5f, 1.5f)
+    SET_FLOAT("toneSaturation", parameters.toneSaturation, 0.0f, 2.0f)
+    SET_FLOAT("fxaaStrength", parameters.fxaaStrength, 0.0f, 1.0f)
+    SET_FLOAT("fxaaSubpixel", parameters.fxaaSubpixel, 0.0f, 1.0f)
+    SET_FLOAT("fxaaEdgeThreshold", parameters.fxaaEdgeThreshold, 0.01f, 0.5f)
+    SET_FLOAT("fxaaEdgeThresholdMin", parameters.fxaaEdgeThresholdMin, 0.0f, 0.2f)
+    SET_FLOAT("pixelSize", parameters.pixelSize, 1.0f, 64.0f)
+    SET_FLOAT("colorBrightness", parameters.colorBrightness, -1.0f, 1.0f)
+    SET_FLOAT("colorContrast", parameters.colorContrast, 0.0f, 3.0f)
+    SET_FLOAT("colorSaturation", parameters.colorSaturation, 0.0f, 3.0f)
+    SET_FLOAT("focusDepth", parameters.focusDepth, 0.0f, 1.0f)
+    SET_FLOAT("focusRange", parameters.focusRange, 0.0001f, 0.2f)
+    SET_FLOAT("depthOfFieldRadius", parameters.depthOfFieldRadius, 0.0f, 32.0f)
+    SET_FLOAT("motionBlurDirectionX", parameters.motionBlurDirection.x, -1.0f, 1.0f)
+    SET_FLOAT("motionBlurDirectionY", parameters.motionBlurDirection.y, -1.0f, 1.0f)
+    SET_FLOAT("motionBlurStrength", parameters.motionBlurStrength, 0.0f, 0.1f)
+    SET_INT("motionBlurSampleCount", parameters.motionBlurSampleCount, 1, 32)
+    SET_FLOAT("chromaticAberrationStrength", parameters.chromaticAberrationStrength, 0.0f, 0.05f)
+    SET_FLOAT("lensDistortionStrength", parameters.lensDistortionStrength, -1.0f, 1.0f)
+    SET_FLOAT("filmGrainStrength", parameters.filmGrainStrength, 0.0f, 0.5f)
+    SET_FLOAT("lensDirtStrength", parameters.lensDirtStrength, 0.0f, 3.0f)
+    SET_FLOAT("bokehRadius", parameters.bokehRadius, 0.0f, 32.0f)
+    SET_INT("bokehSides", parameters.bokehSides, 3, 12)
+    SET_FLOAT("fisheyeStrength", parameters.fisheyeStrength, 0.01f, 3.0f)
+    SET_FLOAT("lightThreshold", parameters.lightThreshold, 0.0f, 2.0f)
+    SET_FLOAT("lightStrength", parameters.lightStrength, 0.0f, 5.0f)
+    SET_FLOAT("lightRadius", parameters.lightRadius, 0.01f, 1.0f)
+    SET_FLOAT("outlineNormalThreshold", parameters.outlineNormalThreshold, 0.0f, 1.0f)
+    SET_FLOAT("outlineNormalSoftness", parameters.outlineNormalSoftness, 0.001f, 1.0f)
+    SET_FLOAT("outlineNormalStrength", parameters.outlineNormalStrength, 0.0f, 1.0f)
     if (key == "cameraShakeStrength") {
         cameraShakeOverride_ = std::clamp(number, 0.0f, 0.05f);
         SceneManager::GetInstance()->SetCameraShakeStrength(*cameraShakeOverride_);
-        return;
+        return true;
     }
     if (fog) {
         SET_FLOAT("fogColorR", fog->color.x, 0.0f, 1.0f)
@@ -190,6 +424,7 @@ void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
     }
 #undef SET_FLOAT
 #undef SET_INT
+    return false;
 }
 #endif
 

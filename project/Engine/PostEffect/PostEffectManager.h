@@ -1,4 +1,7 @@
 #pragma once
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+#include "externals/json.hpp"
+#endif
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/PostEffect/CopyImageRenderer.h"
@@ -28,8 +31,14 @@ public:
     void SetFxaaEnabled(bool enabled) { fxaaEnabled_ = enabled; }
     bool IsFxaaEnabled() const { return fxaaEnabled_; }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
+    void RegisterDevelopmentPanel();
+    nlohmann::json GetDevelopmentControls() const;
+    bool SetDevelopmentBool(const std::string& key, bool isEnabled);
+    bool SetDevelopmentNumber(const std::string& key, double value);
+    bool ExecuteDevelopmentCommand(const std::string& key);
+    nlohmann::json GetDevelopmentSettings() const;
     std::string GetDevelopmentSettingsJson() const;
-    void ApplyDevelopmentSetting(const std::string& key, const std::string& value);
+    bool ApplyDevelopmentSetting(const std::string& key, const std::string& value);
     void ClearDevelopmentPassOverrides() { passOverrides_.clear(); cameraShakeOverride_.reset(); }
 #endif
 

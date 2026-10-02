@@ -3,7 +3,7 @@
 #include "App/Game/Player/Bullet/HomingMissileBullet.h"
 #include "App/Game/Player/Bullet/NormalBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
-#include "App/Game/Audio/GameSfx.h"
+#include "Engine/audio/SoundManager.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -115,7 +115,7 @@ void Player::Update()
     isBoosting_ = !isDebugMode &&
         (input->IsKeyPressed(DIK_LSHIFT) || input->IsMousePressed(1));
     if (isBoosting_ && !wasBoosting) {
-        GameSfx::GetInstance()->Play(GameSfxId::BoostStart);
+        SoundManager::GetInstance()->Play("BoostStart");
     }
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
@@ -284,7 +284,7 @@ bool Player::ApplyDamage(int damage)
     }
 
     currentHp_ -= damage;
-    GameSfx::GetInstance()->Play(GameSfxId::PlayerDamage);
+    SoundManager::GetInstance()->Play("PlayerDamage");
     if (currentHp_ < 0) {
         currentHp_ = 0;
     }
@@ -327,7 +327,7 @@ bool Player::Heal(int amount)
     }
 
     currentHp_ += amount;
-    GameSfx::GetInstance()->Play(GameSfxId::HealPickup);
+    SoundManager::GetInstance()->Play("HealPickup");
     if (currentHp_ > maxHp_) {
         currentHp_ = maxHp_;
     }
@@ -434,7 +434,7 @@ void Player::FireBullet(const Camera& activeCamera)
 
     if (currentWeapon_ == kWeaponHomingMissile &&
         !lockedHomingTargets_.empty()) {
-        GameSfx::GetInstance()->Play(GameSfxId::MissileShot);
+        SoundManager::GetInstance()->Play("MissileShot");
         for (BaseEnemy* target : lockedHomingTargets_) {
             FireSingleBullet(activeCamera, target);
         }
@@ -444,13 +444,13 @@ void Player::FireBullet(const Camera& activeCamera)
     switch (currentWeapon_) {
     case kWeaponMissileBullet:
     case kWeaponHomingMissile:
-        GameSfx::GetInstance()->Play(GameSfxId::MissileShot);
+        SoundManager::GetInstance()->Play("MissileShot");
         break;
     case kWeaponMinigun:
-        GameSfx::GetInstance()->Play(GameSfxId::MinigunShot);
+        SoundManager::GetInstance()->Play("MinigunShot");
         break;
     default:
-        GameSfx::GetInstance()->Play(GameSfxId::NormalShot);
+        SoundManager::GetInstance()->Play("NormalShot");
         break;
     }
     FireSingleBullet(activeCamera, nullptr);
@@ -699,7 +699,7 @@ void Player::UpdateHomingTarget(bool isLocking)
         }
     }
     if (lockedHomingTargets_.size() > previousLockCount) {
-        GameSfx::GetInstance()->Play(GameSfxId::HomingLock);
+        SoundManager::GetInstance()->Play("HomingLock");
     }
 }
 
