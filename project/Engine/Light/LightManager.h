@@ -95,6 +95,7 @@ public:
     void ClearDynamicSpotLights();
 
     void SetAmbientColor(const Vector3& color);
+    void SetHemisphereColors(const Vector3& sky, const Vector3& ground);
     Vector3 GetAmbientColor() const;
     void SetAmbientIntensity(float intensity);
     float GetAmbientIntensity() const;

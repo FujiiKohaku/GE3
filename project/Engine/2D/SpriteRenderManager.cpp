@@ -263,6 +263,9 @@ void SpriteRenderManager::CreateFrameParameterBuffer()
 
 void SpriteRenderManager::UpdateFrameParameters()
 {
+#if defined(KOHAKU_RENDER_TESTS)
+    if (freezeFrameTimeForTests_) { return; }
+#endif
     const std::chrono::steady_clock::time_point currentTime = std::chrono::steady_clock::now();
     frameParameterData_->elapsedTime =
         std::chrono::duration<float>(currentTime - startTime_).count();

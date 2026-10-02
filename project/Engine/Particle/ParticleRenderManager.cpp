@@ -212,7 +212,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     pipelineStateDesc.RasterizerState = rasterizerDesc;
     pipelineStateDesc.DepthStencilState = depthStencilDesc;
     pipelineStateDesc.NumRenderTargets = 1;
-    pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     pipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     pipelineStateDesc.SampleDesc.Count = 1;
     pipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;

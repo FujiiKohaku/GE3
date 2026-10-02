@@ -48,7 +48,7 @@ PixelShaderOutput main(JellyfishPixelInput input)
     // Retain the ice texture softly so the body does not look like opaque stone.
     float3 textureTint = lerp(float3(0.80f, 0.90f, 1.0f), textureColor.rgb, 0.35f);
     float3 bodyTint = gMaterial.color.rgb * textureTint;
-    float3 ambient = gAmbientLight.color.rgb * gAmbientLight.color.a;
+    float3 ambient = HemisphereAmbient(gAmbientLight, N);
     float3 illumination = float3(0.18f, 0.23f, 0.30f) + ambient + lightColor * NdotL * 0.50f;
     float3 color = bodyTint * illumination;
 
@@ -58,7 +58,8 @@ PixelShaderOutput main(JellyfishPixelInput input)
 
     float specular = pow(saturate(dot(N, H)), max(gMaterial.shininess, 1.0f));
     specular *= smoothstep(0.0f, 0.15f, NdotL);
-    color += lightColor * float3(0.82f, 0.96f, 1.0f) * specular * kSpecularStrength;
+    color += lightColor * float3(0.82f, 0.96f, 1.0f) *
+        SurfaceSpecular(gMaterial, bodyTint, N, V, L);
     if (input.surface.z > 0.5f) {
         float broadGlaze = pow(saturate(dot(N, H)), 24.0f);
         float flowingGlaze = 0.85f + 0.15f * sin(input.texcoord.y * 5.0f - input.surface.x * 1.2f + input.surface.y);

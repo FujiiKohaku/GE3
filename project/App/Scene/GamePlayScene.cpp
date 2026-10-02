@@ -677,6 +677,7 @@ void GamePlayScene::Initialize()
         floorObj_ = std::make_unique<Object3d>();
         floorObj_->Initialize(Object3dManager::GetInstance());
         floorObj_->SetModel(floorModel);
+        floorObj_->SetSurfaceProperties(0.90f, 0.0f, 0.10f);
         floorObj_->SetTranslate({
             0.0f,
             stageSettings_.floorHeight,

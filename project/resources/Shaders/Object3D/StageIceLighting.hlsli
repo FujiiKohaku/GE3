@@ -22,5 +22,5 @@ float3 GetStageIceDiffuseLighting(float3 normal, float visibility)
     float diffuseBand = lerp(0.08f, 0.60f, middleBand);
     diffuseBand = lerp(diffuseBand, 1.0f, lightBand);
     // Shadows reduce direct light; ambient light keeps shaded faces readable.
-    return GetStageIceAmbientRadiance() + GetStageIceDirectRadiance(visibility) * diffuseBand * 0.85f;
+    return HemisphereAmbient(gAmbientLight, normal) * 1.7f + GetStageIceDirectRadiance(visibility) * diffuseBand * 0.85f;
 }

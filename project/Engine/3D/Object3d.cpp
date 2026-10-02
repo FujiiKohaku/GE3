@@ -1,4 +1,5 @@
 #include "Object3d.h"
+#include <algorithm>
 #include "Engine/math/MatrixMath.h"
 #include "Model.h"
 #include "ModelManager.h"
@@ -40,6 +41,10 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
+    materialData_->roughness = 0.55f;
+    materialData_->metallic = 0.0f;
+    materialData_->specularStrength = 0.35f;
+    materialData_->surfacePadding = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // ================================
@@ -157,6 +162,14 @@ void Object3d::Draw()
 void Object3d::SetMaterial(const std::string& materialFolderPath)
 {
     pixelShaderPath_ = materialFolderPath + "/Render.PS.hlsl";
+    if (materialFolderPath.find("Floor") != std::string::npos || materialFolderPath.find("Ground") != std::string::npos) {
+        SetSurfaceProperties(0.90f, 0.0f, 0.10f);
+    } else if (materialFolderPath.find("Ice") != std::string::npos) {
+        SetSurfaceProperties(0.25f, 0.0f, 0.85f);
+
+    } else if (materialFolderPath.find("Brass") != std::string::npos) {
+        SetSurfaceProperties(0.32f, 0.80f, 0.90f);
+    }
 }
 
 void Object3d::SetEnableLighting(bool enable)
@@ -375,6 +388,14 @@ void Object3d::SetModel(const std::string& filePath)
 
     model_ = ModelManager::GetInstance()->FindModel(filePath);
     modelFilePath_ = filePath;
+    SetSurfaceProperties(0.58f, 0.0f, 0.32f);
+    if (filePath.find("Ice") != std::string::npos || filePath.find("ice") != std::string::npos) {
+        SetSurfaceProperties(0.22f, 0.0f, 0.85f);
+    } else if (filePath.find("Player") != std::string::npos || filePath.find("Enemy") != std::string::npos || filePath.find("Boss") != std::string::npos) {
+        SetSurfaceProperties(0.30f, 0.72f, 0.90f);
+    } else if (filePath.find("ground") != std::string::npos || filePath.find("floor") != std::string::npos || filePath.find("island") != std::string::npos) {
+        SetSurfaceProperties(0.88f, 0.0f, 0.12f);
+    }
 }
 Node Object3d::ReadNode(aiNode* node)
 {
@@ -465,4 +486,12 @@ void Object3d::DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentSha
         renderer.BindObject(worldMatrix_);
     }
     model_->DrawDepth();
+}
+
+void Object3d::SetSurfaceProperties(float roughness, float metallic, float specularStrength)
+{
+    if (materialData_ == nullptr) { return; }
+    materialData_->roughness = std::clamp(roughness, 0.08f, 1.0f);
+    materialData_->metallic = std::clamp(metallic, 0.0f, 1.0f);
+    materialData_->specularStrength = std::clamp(specularStrength, 0.0f, 2.0f);
 }

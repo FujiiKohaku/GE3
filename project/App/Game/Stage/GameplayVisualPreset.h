@@ -32,6 +32,11 @@ inline void ApplyLighting(const std::string& stageId)
     lightManager->SetDirectional(lighting.color, lighting.direction, lighting.intensity);
     lightManager->SetAmbientColor({ lighting.ambient.x, lighting.ambient.y, lighting.ambient.z });
     lightManager->SetAmbientIntensity(lighting.ambient.w);
+    if (stageId == "stage03") {
+        lightManager->SetHemisphereColors({ 0.80f, 1.00f, 1.20f }, { 0.40f, 0.55f, 0.70f });
+    } else {
+        lightManager->SetHemisphereColors({ 0.78f, 0.90f, 1.10f }, { 0.42f, 0.38f, 0.34f });
+    }
     lightManager->SetPointRadius(10.0f);
     lightManager->SetPointDecay(1.0f);
     lightManager->SetPointLight({ 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 2.0f, 0.0f }, 0.0f);
@@ -59,7 +64,7 @@ inline void ConfigurePostEffects(bool boosting)
     if (boosting) {
         sceneManager->AddPostEffect(PostEffectType::RadialBlur, PostEffectStage::BeforeParticle);
         sceneManager->AddPostEffect(PostEffectType::FocusLine, PostEffectStage::BeforeParticle);
-        sceneManager->AddPostEffect(PostEffectType::Bloom, PostEffectStage::BeforeParticle);
+        // Bloom is applied globally after particles by PostEffectManager.
     }
 }
 

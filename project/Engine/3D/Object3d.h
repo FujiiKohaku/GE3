@@ -37,6 +37,7 @@ public:
 
     // setter
     void SetModel(Model* model) { model_ = model; }
+    void SetSurfaceProperties(float roughness, float metallic, float specularStrength);
     // === setter ===
     void SetScale(const Vector3& scale) { transform.scale = scale; useCustomWorldMatrix_ = false; }
     void SetRotate(const Vector3& rotate) { transform.rotate = rotate; useQuaternionRotation_ = false; useCustomWorldMatrix_ = false; }

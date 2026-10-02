@@ -1,4 +1,4 @@
-﻿#include "CopyImageRenderer.h"
+#include "CopyImageRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
@@ -72,8 +72,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
     maskTextureHandle_ =
         TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png");
-    pipelineStates_[PostEffectType::Copy] =
-        CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
+    GetOrCreateGraphicsPipeline(PostEffectType::Copy);
 }
 
 void CopyImageRenderer::CreateRootSignature()
@@ -188,7 +187,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
     pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
     pipelineStateDesc.NumRenderTargets = 1;
-    pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    pipelineStateDesc.RTVFormats[0] = outputFormat_;
     pipelineStateDesc.SampleDesc.Count = 1;
     pipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
 
@@ -211,8 +210,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
 Microsoft::WRL::ComPtr<ID3D12PipelineState>
 CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
 {
-    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator iterator =
-        pipelineStates_.find(type);
+    const uint64_t key = (uint64_t(outputFormat_) << 32) | uint64_t(type);
+    auto iterator = pipelineStates_.find(key);
     if (iterator != pipelineStates_.end()) {
         return iterator->second;
     }
@@ -220,7 +219,7 @@ CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
     const wchar_t* pixelShaderPath = GetPixelShaderPath(type);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState =
         CreateGraphicsPipeline(pixelShaderPath);
-    pipelineStates_[type] = pipelineState;
+    pipelineStates_[key] = pipelineState;
     return pipelineState;
 }
 
@@ -259,6 +258,10 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
         return L"resources/Shaders/PostEffect/Fisheye.PS.hlsl";
     case PostEffectType::Pixelate:
         return L"resources/Shaders/PostEffect/Pixelate.PS.hlsl";
+    case PostEffectType::ToneMap:
+        return L"resources/Shaders/PostEffect/ToneMap.PS.hlsl";
+    case PostEffectType::FXAA:
+        return L"resources/Shaders/PostEffect/FXAA.PS.hlsl";
     case PostEffectType::ColorAdjust:
         return L"resources/Shaders/PostEffect/ColorAdjust.PS.hlsl";
     case PostEffectType::smoothing:
@@ -363,6 +366,14 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterResource_->Map(0,nullptr,reinterpret_cast<void**>(&postEffectParameterData_));
 
     postEffectParameterData_->grayScaleStrength = 1.0f;
+    postEffectParameterData_->toneMapEnabled = 1;
+    postEffectParameterData_->toneExposure = 1.05f;
+    postEffectParameterData_->toneContrast = 1.02f;
+    postEffectParameterData_->toneSaturation = 1.03f;
+    postEffectParameterData_->fxaaStrength = 1.0f;
+    postEffectParameterData_->fxaaSubpixel = 0.65f;
+    postEffectParameterData_->fxaaEdgeThreshold = 0.125f;
+    postEffectParameterData_->fxaaEdgeThresholdMin = 0.0312f;
     postEffectParameterData_->vignetteStrength = 1.0f;
     postEffectParameterData_->outlineScale = 1000.0f;
     postEffectParameterData_->outlineNearClip = 0.1f;

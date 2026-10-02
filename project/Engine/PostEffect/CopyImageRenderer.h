@@ -78,6 +78,14 @@ public:
         float outlineNormalSoftness;
         float outlineNormalStrength;
         float outlineNormalPadding;
+        float fxaaStrength;
+        float fxaaSubpixel;
+        float fxaaEdgeThreshold;
+        float fxaaEdgeThresholdMin;
+        int32_t toneMapEnabled;
+        float toneExposure;
+        float toneContrast;
+        float toneSaturation;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(
@@ -86,6 +94,7 @@ public:
         D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle);
 
     void SetPostEffectType(PostEffectType postEffectType);
+    void SetOutputFormat(DXGI_FORMAT format) { outputFormat_ = format; }
 
     void SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     PostEffectParameter& GetPostEffectParameter();
@@ -99,7 +108,8 @@ private:
 
 private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
-    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelineStates_;
+    std::unordered_map<uint64_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelineStates_;
+    DXGI_FORMAT outputFormat_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     DirectXCommon* dxCommon_ = nullptr;
     PostEffectType currentPostEffectType_ = PostEffectType::Copy;
 

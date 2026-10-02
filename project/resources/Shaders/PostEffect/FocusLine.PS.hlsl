@@ -59,6 +59,6 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float3 darkenedColor = textureColor.rgb * (1.0f - lineStrength * 0.06f);
     float3 outputColor = darkenedColor + lineColor * lineStrength * 0.38f;
 
-    textureColor.rgb = saturate(outputColor);
+    textureColor.rgb = max(outputColor, 0.0f);
     return textureColor;
 }

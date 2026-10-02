@@ -23,7 +23,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
 {
     float3 N = normalize(normal);
     float3 V = normalize(gCamera.worldPosition - worldPosition);
-    float3 ambient = baseColor * gAmbientLight.color.rgb * gAmbientLight.color.a;
+    float3 ambient = baseColor * HemisphereAmbient(gAmbientLight, N);
     float3 Ld = normalize(-gDirectionalLight.direction);
     float NdotLd = saturate(dot(N, Ld));
     float visibility = 1.0f;
@@ -35,7 +35,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
     if (gMaterial.shininess > 0.0f)
     {
         result += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
-            pow(saturate(dot(N, Hd)), gMaterial.shininess) * visibility;
+            SurfaceSpecular(gMaterial, baseColor, N, V, Ld) * visibility;
     }
 
     for (uint32_t i = 0; i < kMaxPointLights; ++i)
@@ -49,7 +49,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
         result += baseColor * lightColor * saturate(dot(N, L));
         if (gMaterial.shininess > 0.0f)
         {
-            result += lightColor * pow(saturate(dot(N, normalize(L + V))), gMaterial.shininess);
+            result += lightColor * SurfaceSpecular(gMaterial, baseColor, N, V, L);
         }
     }
 
@@ -67,7 +67,7 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition)
         result += baseColor * lightColor * saturate(dot(N, L));
         if (gMaterial.shininess > 0.0f)
         {
-            result += lightColor * pow(saturate(dot(N, normalize(L + V))), gMaterial.shininess);
+            result += lightColor * SurfaceSpecular(gMaterial, baseColor, N, V, L);
         }
     }
     return result;
@@ -118,6 +118,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     output.color.rgb = ShadeToonSurface(baseColor, input.normal,
         gCamera.worldPosition - input.worldPosition, -gDirectionalLight.direction,
         gDirectionalLight.color.rgb, gDirectionalLight.intensity);
+    float3 toonN = normalize(input.normal);
+    float3 toonV = normalize(gCamera.worldPosition - input.worldPosition);
+    output.color.rgb += baseColor * HemisphereAmbient(gAmbientLight, toonN) * 0.30f;
+    output.color.rgb += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
+        SurfaceSpecular(gMaterial, baseColor, toonN, toonV, normalize(-gDirectionalLight.direction));
 #elif OBJECT3D_MATERIAL_TYPE == 2
     float3 N = normalize(input.normal);
     float faceLight = saturate(dot(N, normalize(float3(-0.6f, 0.8f, -0.5f))) * 0.5f + 0.5f);

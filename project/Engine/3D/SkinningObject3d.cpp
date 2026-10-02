@@ -51,6 +51,10 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
+    materialData_->roughness = 0.55f;
+    materialData_->metallic = 0.0f;
+    materialData_->specularStrength = 0.35f;
+    materialData_->surfacePadding = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // =====================================================

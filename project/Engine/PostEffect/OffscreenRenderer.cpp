@@ -18,7 +18,7 @@ OffscreenRenderer::~OffscreenRenderer()
 
 void OffscreenRenderer::Initialize()
 {
-    format_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    format_ = DXGI_FORMAT_R16G16B16A16_FLOAT;
     clearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
 
     CreateRenderTexture();

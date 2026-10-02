@@ -42,6 +42,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     color.rgb = QuantizeAnimeParticleColor(color.rgb);
 
     color.a *= saturate(0.50f + impactMask * 1.20f + outlineMask * 0.85f);
+    color.rgb *= 2.2f;
     color = ApplyParticleFog(color, input);
 
     return MakeParticlePixelOutput(color);

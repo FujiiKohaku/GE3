@@ -17,6 +17,10 @@ struct Material
     float shininess;
     float environmentCoefficient;
     float4x4 uvTransform;
+    float roughness;
+    float metallic;
+    float specularStrength;
+    float surfacePadding;
 };
 
 static const int kShadingUnlit = 0;
@@ -79,6 +83,8 @@ struct DirectionalLight
 struct AmbientLight
 {
     float4 color;
+    float4 skyColor;
+    float4 groundColor;
 };
 struct Camera
 {
@@ -125,3 +131,5 @@ struct SpotLightCollection
     uint32_t activeCount;
     float32_t3 padding;
 };
+
+#include "SurfaceResponse.hlsli"

@@ -49,6 +49,7 @@ void Player::Initialize(Model* model)
     object_->SetReceiveShadow(true);
     object_->SetEnableLighting(true);
     object_->SetModel(model);
+    object_->SetSurfaceProperties(0.30f, 0.72f, 0.90f);
 
     if (camera_ != nullptr) {
         object_->SetCamera(camera_);

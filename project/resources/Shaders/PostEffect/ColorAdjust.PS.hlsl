@@ -13,6 +13,6 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float luminance = dot(adjustedColor, float3(0.2125f, 0.7154f, 0.0721f));
     adjustedColor = lerp(float3(luminance, luminance, luminance), adjustedColor, colorSaturation);
 
-    outputColor.rgb = saturate(adjustedColor);
+    outputColor.rgb = max(adjustedColor, 0.0f);
     return outputColor;
 }

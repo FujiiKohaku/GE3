@@ -34,6 +34,11 @@ std::string PostEffectManager::GetDevelopmentSettingsJson() const
     const auto* bloom = bloomRenderer_->GetBloomParameter();
     nlohmann::json state = {
         {"animationEnabled", isAnimationEnabled_},
+        {"toneMapEnabled", p.toneMapEnabled != 0}, {"toneExposure", p.toneExposure},
+        {"toneContrast", p.toneContrast}, {"toneSaturation", p.toneSaturation},
+        {"fxaaEnabled", fxaaEnabled_}, {"fxaaStrength", p.fxaaStrength},
+        {"fxaaSubpixel", p.fxaaSubpixel}, {"fxaaEdgeThreshold", p.fxaaEdgeThreshold},
+        {"fxaaEdgeThresholdMin", p.fxaaEdgeThresholdMin},
         {"pixelSize", p.pixelSize}, {"colorBrightness", p.colorBrightness},
         {"colorContrast", p.colorContrast}, {"colorSaturation", p.colorSaturation},
         {"focusDepth", p.focusDepth}, {"focusRange", p.focusRange},
@@ -83,6 +88,12 @@ void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
     auto& p = copyImageRenderer_->GetPostEffectParameter();
     FogData* fog = fogManager_->GetEditableFogData();
     auto* bloom = bloomRenderer_->GetEditableBloomParameter();
+    if (key == "toneMapEnabled") {
+        p.toneMapEnabled = 0;
+        if (enabled) { p.toneMapEnabled = 1; }
+        return;
+    }
+    if (key == "fxaaEnabled") { fxaaEnabled_ = enabled; return; }
     if (key == "animationEnabled") {
         isAnimationEnabled_ = enabled;
         p.animationEnabled = enabled ? 1 : 0;
@@ -106,6 +117,13 @@ void PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
     if (!std::isfinite(number)) return;
 #define SET_FLOAT(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return; }
 #define SET_INT(name, field, low, high) if (key == name) { field = static_cast<int>(std::clamp(number, float(low), float(high))); return; }
+    SET_FLOAT("toneExposure", p.toneExposure, 0.1f, 4.0f)
+    SET_FLOAT("toneContrast", p.toneContrast, 0.5f, 1.5f)
+    SET_FLOAT("toneSaturation", p.toneSaturation, 0.0f, 2.0f)
+    SET_FLOAT("fxaaStrength", p.fxaaStrength, 0.0f, 1.0f)
+    SET_FLOAT("fxaaSubpixel", p.fxaaSubpixel, 0.0f, 1.0f)
+    SET_FLOAT("fxaaEdgeThreshold", p.fxaaEdgeThreshold, 0.01f, 0.5f)
+    SET_FLOAT("fxaaEdgeThresholdMin", p.fxaaEdgeThresholdMin, 0.0f, 0.2f)
     SET_FLOAT("pixelSize", p.pixelSize, 1.0f, 64.0f)
     SET_FLOAT("colorBrightness", p.colorBrightness, -1.0f, 1.0f)
     SET_FLOAT("colorContrast", p.colorContrast, 0.0f, 3.0f)
@@ -230,6 +248,19 @@ void PostEffectManager::DrawImGui()
     ImGui::Begin("Post Effects");
 
     CopyImageRenderer::PostEffectParameter& parameter = copyImageRenderer_->GetPostEffectParameter();
+    bool toneEnabled = parameter.toneMapEnabled != 0;
+    if (ImGui::Checkbox("Tone Mapping", &toneEnabled)) {
+        parameter.toneMapEnabled = 0;
+        if (toneEnabled) { parameter.toneMapEnabled = 1; }
+    }
+    ImGui::SliderFloat("Exposure", &parameter.toneExposure, 0.1f, 4.0f);
+    ImGui::SliderFloat("Final Contrast", &parameter.toneContrast, 0.5f, 1.5f);
+    ImGui::SliderFloat("Final Saturation", &parameter.toneSaturation, 0.0f, 2.0f);
+    ImGui::Checkbox("FXAA", &fxaaEnabled_);
+    ImGui::SliderFloat("FXAA Strength", &parameter.fxaaStrength, 0.0f, 1.0f);
+    ImGui::SliderFloat("FXAA Subpixel", &parameter.fxaaSubpixel, 0.0f, 1.0f);
+    ImGui::SliderFloat("FXAA Edge Threshold", &parameter.fxaaEdgeThreshold, 0.01f, 0.5f);
+    ImGui::SliderFloat("FXAA Minimum Threshold", &parameter.fxaaEdgeThresholdMin, 0.0f, 0.2f);
     const char* animationButtonLabel = "Animated Effects: OFF";
     if (isAnimationEnabled_) {
         animationButtonLabel = "Animated Effects: ON";
@@ -376,72 +407,8 @@ void PostEffectManager::UpdatePostEffectParameters(
 
 void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
 {
-    if (sceneManager == nullptr) {
-        CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-        postEffectParameter.radialBlurCenter = { 0.5f, 0.5f };
-
-        SetBackBufferRenderTarget();
-        ApplyPostEffectToCurrentTarget(PostEffectType::Copy, sceneColorHandle);
-        return;
-    }
-
-    UpdatePostEffectParameters(sceneManager);
-
-    const std::vector<PostEffectInfo>& postEffects = sceneManager->GetPostEffects();
-    int enabledCount = 0;
-    for (const PostEffectInfo& postEffect : postEffects) {
-        if (postEffect.enabled) {
-            enabledCount++;
-        }
-    }
-
-    if (enabledCount == 0) {
-        SetBackBufferRenderTarget();
-        ApplyPostEffectToCurrentTarget(PostEffectType::Copy, sceneColorHandle);
-        return;
-    }
-
-    D3D12_GPU_DESCRIPTOR_HANDLE inputHandle = sceneColorHandle;
-    uint32_t pingPongIndex = 0;
-    int appliedCount = 0;
-
-    for (const PostEffectInfo& postEffect : postEffects) {
-        if (!postEffect.enabled) {
-            continue;
-        }
-
-        appliedCount++;
-        if (appliedCount == enabledCount) {
-            if (postEffect.type == PostEffectType::Bloom && bloomRenderer_->IsEnabled()) {
-                bloomRenderer_->Generate(inputHandle);
-                SetBackBufferRenderTarget();
-                bloomRenderer_->Composite(inputHandle);
-                continue;
-            }
-
-            SetBackBufferRenderTarget();
-            ApplyPostEffectToCurrentTarget(postEffect.type, inputHandle);
-        } else {
-            RenderTarget& renderTarget = pingPongRenderTargets_[pingPongIndex];
-            if (postEffect.type == PostEffectType::Bloom && bloomRenderer_->IsEnabled()) {
-                bloomRenderer_->Generate(inputHandle);
-                renderTarget.BeginRender();
-                bloomRenderer_->Composite(inputHandle);
-                renderTarget.EndRender();
-
-                inputHandle = renderTarget.GetSrvHandleGPU();
-                pingPongIndex = GetNextPingPongIndex(pingPongIndex);
-                continue;
-            }
-
-            renderTarget.BeginRender();
-            ApplyPostEffectToCurrentTarget(postEffect.type, inputHandle);
-            renderTarget.EndRender();
-
-            inputHandle = renderTarget.GetSrvHandleGPU();
-            pingPongIndex = GetNextPingPongIndex(pingPongIndex);
-        }
-    }
+    PrepareSceneForParticleDraw(sceneManager, sceneColorHandle);
+    ApplyAfterParticleDraw(sceneManager);
 }
 
 void PostEffectManager::PrepareSceneForParticleDraw(
@@ -472,7 +439,8 @@ void PostEffectManager::PrepareSceneForParticleDraw(
     bool appliedSceneEffect = false;
 
     for (const PostEffectInfo& postEffect : postEffects) {
-        if (!postEffect.enabled) {
+        if (!postEffect.enabled || postEffect.type == PostEffectType::FXAA ||
+            postEffect.type == PostEffectType::ToneMap || postEffect.type == PostEffectType::Bloom) {
             continue;
         }
 
@@ -484,19 +452,9 @@ void PostEffectManager::PrepareSceneForParticleDraw(
         RenderTarget& renderTarget =
             pingPongRenderTargets_[targetIndex];
 
-        if (postEffect.type == PostEffectType::Bloom &&
-            bloomRenderer_->IsEnabled()) {
-            bloomRenderer_->Generate(inputHandle);
-            renderTarget.BeginRender();
-            bloomRenderer_->Composite(inputHandle);
-            renderTarget.EndRender();
-        } else {
-            renderTarget.BeginRender();
-            ApplyPostEffectToCurrentTarget(
-                postEffect.type,
-                inputHandle);
-            renderTarget.EndRender();
-        }
+        renderTarget.BeginRender();
+        ApplyPostEffectToCurrentTarget(postEffect.type, inputHandle);
+        renderTarget.EndRender();
 
         inputHandle = renderTarget.GetSrvHandleGPU();
         particleCompositionTargetIndex_ = targetIndex;
@@ -528,96 +486,42 @@ void PostEffectManager::EndParticleDraw()
         .EndRender();
 }
 
-void PostEffectManager::ApplyAfterParticleDraw(
-    SceneManager* sceneManager)
+void PostEffectManager::ApplyAfterParticleDraw(SceneManager* sceneManager)
 {
     D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
-        pingPongRenderTargets_[particleCompositionTargetIndex_]
-            .GetSrvHandleGPU();
-
-    if (sceneManager == nullptr) {
-        SetBackBufferRenderTarget();
-        ApplyPostEffectToCurrentTarget(
-            PostEffectType::Copy,
-            inputHandle);
-        return;
+        pingPongRenderTargets_[particleCompositionTargetIndex_].GetSrvHandleGPU();
+    uint32_t targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_);
+    if (sceneManager != nullptr) {
+        for (const PostEffectInfo& effect : sceneManager->GetPostEffects()) {
+            if (!effect.enabled || effect.stage != PostEffectStage::AfterParticle ||
+                effect.type == PostEffectType::FXAA || effect.type == PostEffectType::ToneMap ||
+                effect.type == PostEffectType::Bloom) { continue; }
+            RenderTarget& target = pingPongRenderTargets_[targetIndex];
+            target.BeginRender();
+            ApplyPostEffectToCurrentTarget(effect.type, inputHandle);
+            target.EndRender();
+            inputHandle = target.GetSrvHandleGPU();
+            particleCompositionTargetIndex_ = targetIndex;
+            targetIndex = GetNextPingPongIndex(targetIndex);
+        }
     }
+    FinishSceneColor(inputHandle);
+}
 
-    const std::vector<PostEffectInfo>& postEffects =
-        sceneManager->GetPostEffects();
-
-    int enabledCount = 0;
-    for (const PostEffectInfo& postEffect : postEffects) {
-        if (!postEffect.enabled) {
-            continue;
-        }
-
-        if (postEffect.stage !=
-            PostEffectStage::AfterParticle) {
-            continue;
-        }
-
-        enabledCount += 1;
+void PostEffectManager::FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle)
+{
+    if (bloomRenderer_->IsEnabled()) {
+        bloomRenderer_->Generate(inputHandle);
+        RenderTarget& target = pingPongRenderTargets_[GetNextPingPongIndex(particleCompositionTargetIndex_)];
+        target.BeginRender();
+        bloomRenderer_->Composite(inputHandle);
+        target.EndRender();
+        inputHandle = target.GetSrvHandleGPU();
     }
-
-    if (enabledCount == 0) {
-        SetBackBufferRenderTarget();
-        ApplyPostEffectToCurrentTarget(
-            PostEffectType::Copy,
-            inputHandle);
-        return;
-    }
-
-    uint32_t targetIndex =
-        GetNextPingPongIndex(
-            particleCompositionTargetIndex_);
-    int appliedCount = 0;
-
-    for (const PostEffectInfo& postEffect : postEffects) {
-        if (!postEffect.enabled) {
-            continue;
-        }
-
-        if (postEffect.stage !=
-            PostEffectStage::AfterParticle) {
-            continue;
-        }
-
-        appliedCount += 1;
-        if (appliedCount == enabledCount) {
-            if (postEffect.type == PostEffectType::Bloom &&
-                bloomRenderer_->IsEnabled()) {
-                bloomRenderer_->Generate(inputHandle);
-                SetBackBufferRenderTarget();
-                bloomRenderer_->Composite(inputHandle);
-            } else {
-                SetBackBufferRenderTarget();
-                ApplyPostEffectToCurrentTarget(
-                    postEffect.type,
-                    inputHandle);
-            }
-            continue;
-        }
-
-        RenderTarget& renderTarget =
-            pingPongRenderTargets_[targetIndex];
-        if (postEffect.type == PostEffectType::Bloom &&
-            bloomRenderer_->IsEnabled()) {
-            bloomRenderer_->Generate(inputHandle);
-            renderTarget.BeginRender();
-            bloomRenderer_->Composite(inputHandle);
-            renderTarget.EndRender();
-        } else {
-            renderTarget.BeginRender();
-            ApplyPostEffectToCurrentTarget(
-                postEffect.type,
-                inputHandle);
-            renderTarget.EndRender();
-        }
-
-        inputHandle = renderTarget.GetSrvHandleGPU();
-        targetIndex = GetNextPingPongIndex(targetIndex);
-    }
+    SetBackBufferRenderTarget();
+    PostEffectType finalType = PostEffectType::ToneMap;
+    if (fxaaEnabled_) { finalType = PostEffectType::FXAA; }
+    ApplyPostEffectToCurrentTarget(finalType, inputHandle);
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE PostEffectManager::GetDepthDSVHandle() const
@@ -632,6 +536,11 @@ D3D12_GPU_VIRTUAL_ADDRESS PostEffectManager::GetFogConstantBufferView() const
 
 void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle)
 {
+    DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    if (type == PostEffectType::FXAA || type == PostEffectType::ToneMap) {
+        format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    }
+    copyImageRenderer_->SetOutputFormat(format);
     if (type == PostEffectType::Fog) {
         D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = fogManager_->GetConstantBufferView();
         if (fogConstantBufferView == 0) {

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 enum class PostEffectStage {
     BeforeParticle,
@@ -50,6 +50,8 @@ enum class PostEffectType {
     HexShield,
     BlackHoleDistortion,
     ArchiveAtmosphere,
+    FXAA,
+    ToneMap,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

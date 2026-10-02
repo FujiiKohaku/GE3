@@ -38,6 +38,10 @@ struct Material {
     float shininess;
     float environmentCoefficient;
     Matrix4x4 uvTransform;
+    float roughness;
+    float metallic;
+    float specularStrength;
+    float surfacePadding;
 };
 
 // 変換行列データ（GPU定数バッファ用）

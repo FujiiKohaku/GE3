@@ -18,6 +18,7 @@ std::unique_ptr<Object3d> CreatePart(Model* model, const Vector3& scale, const V
     part->SetCastShadow(true);
     part->SetReceiveShadow(true);
     part->SetModel(model);
+    part->SetSurfaceProperties(0.36f, 0.65f, 0.80f);
     part->SetScale(scale);
     part->SetColor(color);
     part->SetEnableLighting(true);

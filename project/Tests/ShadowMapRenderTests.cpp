@@ -6,6 +6,8 @@
 #include "Engine/Light/LightManager.h"
 #include "Engine/PostEffect/OffscreenRenderer.h"
 #include "Engine/PostEffect/CopyImageRenderer.h"
+#include "Engine/PostEffect/PostEffectManager.h"
+#include "Engine/PostEffect/Bloom/BloomRenderer.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "App/Game/Stage/StageCatalog.h"
@@ -345,8 +347,144 @@ int RunGameStageShadowTest(const std::string& stageId)
     }
 }
 
+class FxaaRenderTest {
+public:
+    static PostEffectManager* GetManager(Game& game)
+    {
+        return game.renderer_->GetPostEffectManager();
+    }
+};
+
+int RunFxaaTest()
+{
+    const std::filesystem::path directory = "captures/ShadowMapTests";
+    std::filesystem::create_directories(directory);
+    Microsoft::WRL::ComPtr<ID3D12Debug> debug;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
+    Game game;
+    bool initialized = false;
+    try {
+        game.Initialize();
+        initialized = true;
+        ShowWindow(WinApp::GetInstance()->GetHwnd(), SW_HIDE);
+        game.Update();
+        game.Draw();
+        auto* dx = DirectXCommon::GetInstance();
+        auto* manager = FxaaRenderTest::GetManager(game);
+        Microsoft::WRL::ComPtr<ID3D12InfoQueue> info;
+        dx->GetDevice()->QueryInterface(IID_PPV_ARGS(&info));
+        if (info) { info->ClearStoredMessages(); }
+        ShadowTestStage* stage = nullptr;
+        for (int view = 0; view < 3; ++view) {
+            if (view == 1) {
+                TimeManager::GetInstance()->SetTimeScale(1.0f);
+                auto scene = std::make_unique<ShadowTestStage>("stage03");
+                stage = scene.get();
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::move(scene)));
+                bool ready = false;
+                for (int frame = 0; frame < 400; ++frame) {
+                    game.Update(); game.Draw();
+                    if (SceneManager::GetInstance()->GetShadowSettings().enabled) { ready = true; break; }
+                }
+                Require(ready, "FXAA stage loading failed");
+            }
+            if (view == 2) { stage->PrepareBossCapture(); }
+            TimeManager::GetInstance()->SetTimeScale(0.0f);
+            SpriteManager::GetInstance()->GetRenderManager()->FreezeFrameTimeForTests(true);
+            std::vector<uint8_t> captures[3];
+            const char* modes[] = { "off", "on", "zero" };
+            const char* views[] = { "title", "stage03", "jellyfish" };
+            for (int mode = 0; mode < 3; ++mode) {
+                manager->SetFxaaEnabled(mode != 0);
+                auto& parameter = manager->GetCopyImageRenderer()->GetPostEffectParameter();
+                parameter.fxaaStrength = 1.0f;
+                if (mode == 2) { parameter.fxaaStrength = 0.0f; }
+                for (int frame = 0; frame < 3; ++frame) { game.Draw(); }
+                auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
+                    D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                dx->GetCommandList()->ResourceBarrier(1, &barrier);
+                captures[mode] = ReadFrame(dx, directory / ("fxaa-" + std::string(views[view]) + "-" + modes[mode] + ".png"));
+            }
+            Require(ChangedPixels(captures[0], captures[1]) > 100, "FXAA did not affect scene edges");
+            Require(captures[0] == captures[2], "FXAA strength zero must exactly match OFF");
+            if (view != 0) {
+                const size_t width = dx->GetCurrentBackBuffer()->GetDesc().Width;
+                for (size_t y = 44; y < 56; ++y) {
+                    for (size_t x = 1050; x < 1230; ++x) {
+                        const size_t offset = (y * width + x) * 4;
+                        for (size_t channel = 0; channel < 4; ++channel) {
+                            Require(captures[0][offset + channel] == captures[1][offset + channel], "FXAA modified opaque HUD pixels");
+                        }
+                    }
+                }
+            }
+        }
+        D3D12_QUERY_HEAP_DESC queryDesc {};
+        queryDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+        queryDesc.Count = 2;
+        Microsoft::WRL::ComPtr<ID3D12QueryHeap> query;
+        Require(SUCCEEDED(dx->GetDevice()->CreateQueryHeap(&queryDesc, IID_PPV_ARGS(&query))), "GPU timer creation failed");
+        D3D12_HEAP_PROPERTIES heap {};
+        heap.Type = D3D12_HEAP_TYPE_READBACK;
+        auto bufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(UINT64) * 2);
+        Microsoft::WRL::ComPtr<ID3D12Resource> timerReadback;
+        Require(SUCCEEDED(dx->GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE,
+            &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&timerReadback))), "GPU timer readback failed");
+        UINT64 frequency = 0;
+        Require(SUCCEEDED(dx->GetCommandQueue()->GetTimestampFrequency(&frequency)), "GPU timer frequency failed");
+        double averages[3] {};
+        manager->GetCopyImageRenderer()->GetPostEffectParameter().fxaaStrength = 1.0f;
+        for (int mode = 0; mode < 3; ++mode) {
+            manager->SetFxaaEnabled(mode != 0);
+            manager->GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = 0;
+            if (mode == 2) { manager->GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = 1; }
+            for (int sample = 0; sample < 24; ++sample) {
+                dx->PreDraw();
+                SrvManager::GetInstance()->PreDraw();
+                dx->GetCommandList()->EndQuery(query.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+                manager->ApplyAfterParticleDraw(nullptr);
+                dx->GetCommandList()->EndQuery(query.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+                dx->GetCommandList()->ResolveQueryData(query.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, timerReadback.Get(), 0);
+                dx->PostDraw();
+                UINT64* ticks = nullptr;
+                D3D12_RANGE range { 0, sizeof(UINT64) * 2 };
+                Require(SUCCEEDED(timerReadback->Map(0, &range, reinterpret_cast<void**>(&ticks))), "GPU timer map failed");
+                if (sample >= 4) { averages[mode] += double(ticks[1] - ticks[0]) * 1000.0 / double(frequency) / 20.0; }
+                D3D12_RANGE written { 0, 0 };
+                timerReadback->Unmap(0, &written);
+            }
+        }
+        std::ofstream(directory / "fxaa-timing.txt") << "1280x720, isolated HDR finishing, debug layer enabled, 20 samples\nToneMap ms: "
+            << averages[0] << "\nToneMap + FXAA ms: " << averages[1] << "\nBloom + ToneMap + FXAA ms: " << averages[2]
+            << "\nBloom difference ms: " << averages[2] - averages[1] << "\n";
+        if (info) {
+            for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
+                SIZE_T size = 0;
+                info->GetMessage(index, nullptr, &size);
+                std::vector<uint8_t> storage(size);
+                auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data());
+                info->GetMessage(index, message, &size);
+                if (message->Severity <= D3D12_MESSAGE_SEVERITY_ERROR) {
+                    Logger::Log(message->pDescription);
+                    throw std::runtime_error("FXAA D3D12 validation failed");
+                }
+            }
+        }
+        game.Finalize();
+        std::ofstream(directory / "fxaa-result.txt") << "PASS: title, stage03, jellyfish; FXAA ON/OFF, exact strength zero, opaque HUD unchanged, no D3D12 errors\n";
+        Logger::Finalize();
+        return 0;
+    } catch (const std::exception& error) {
+        std::ofstream(directory / "fxaa-result.txt") << "FAIL: " << error.what();
+        if (initialized) { game.Finalize(); }
+        Logger::Finalize();
+        return 1;
+    }
+}
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
+    if (std::string(commandLine).find("--fxaa") != std::string::npos) { return RunFxaaTest(); }
     if (std::string(commandLine).find("--title") != std::string::npos) { return RunTitleShadowTest(); }
     if (std::string(commandLine).find("--stage01") != std::string::npos) { return RunGameStageShadowTest("stage01"); }
     if (std::string(commandLine).find("--stage02") != std::string::npos) { return RunGameStageShadowTest("stage02"); }
@@ -381,7 +519,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(StageCatalog::GetInstance()->Load(), "Stage catalog failed");
             const StageSettings* stage = StageCatalog::GetInstance()->Find("stage03");
             Require(stage != nullptr && stage->shadows.enabled, "Stage03 must enable shadows");
-            Require(!StageCatalog::GetInstance()->Find("stage01")->shadows.enabled, "Other stage should keep shadows off");
+            Require(StageCatalog::GetInstance()->Find("stage01")->shadows.enabled, "Stage01 shadow support regressed");
             ShadowSettings settings = stage->shadows;
             settings.distance = 180.0f;
             ShadowMapRenderer shadows;
@@ -469,6 +607,83 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 Require(ChangedPixels(lightImages[3], lightImages[4]) > 500, "Ambient color did not affect material");
                 Logger::Log(prefix + "PASS: directional intensity, ambient intensity and ambient color");
             }
+            // Verify the actual HDR image path retains distinct radiance above one.
+            copy.SetPostEffectType(PostEffectType::ToneMap);
+            int highlightValues[3] {};
+            const float radiances[] = { 1.0f, 2.0f, 4.0f };
+            for (int sample = 0; sample < 3; ++sample) {
+                float radiance = radiances[sample];
+                offscreen.SetClearColor({ radiance, radiance, radiance, 1.0f });
+                SrvManager::GetInstance()->PreDraw();
+                offscreen.PreDraw(dx->GetDSVHandle());
+                offscreen.PostDraw();
+                dx->PreDraw();
+                copy.Draw(offscreen.GetSrvHandleGPU(), shadows.GetSrv(), offscreen.GetNormalSrvHandleGPU());
+                auto pixels = ReadFrame(dx, directory / ("hdr-radiance-" + std::to_string(sample) + ".png"));
+                highlightValues[sample] = pixels[(360 * 1280 + 640) * 4];
+            }
+            Require(highlightValues[0] < highlightValues[1] && highlightValues[1] < highlightValues[2],
+                "HDR highlights above one were clipped before tone mapping");
+            Require(highlightValues[2] < 255, "HDR highlight shoulder failed");
+
+            // Compare material roughness/metallic and sky/ground lighting on geometry.
+            offscreen.SetClearColor({ 0.04f, 0.04f, 0.04f, 1.0f });
+            ice.SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+            ice.SetColor({ 0.50f, 0.60f, 0.70f, 1.0f });
+            std::vector<uint8_t> surfaceImages[4];
+            for (int mode = 0; mode < 4; ++mode) {
+                GameplayVisualPreset::ApplyLighting("stage03");
+                ice.SetSurfaceProperties(0.18f, 0.75f, 1.0f);
+                if (mode == 1) { ice.SetSurfaceProperties(0.90f, 0.0f, 0.10f); }
+                if (mode >= 2) {
+                    LightManager::GetInstance()->SetIntensity(0.0f);
+                    LightManager::GetInstance()->SetAmbientIntensity(0.65f);
+                    LightManager::GetInstance()->SetHemisphereColors({ 1.0f, 0.1f, 0.1f }, { 0.1f, 0.1f, 1.0f });
+                    if (mode == 3) {
+                        LightManager::GetInstance()->SetHemisphereColors({ 0.1f, 0.1f, 1.0f }, { 1.0f, 0.1f, 0.1f });
+                    }
+                }
+                SrvManager::GetInstance()->PreDraw();
+                offscreen.PreDraw(dx->GetDSVHandle());
+                dx->GetCommandList()->ClearDepthStencilView(dx->GetDSVHandle(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+                Object3dManager::GetInstance()->PreDraw();
+                ice.Draw();
+                offscreen.PostDraw();
+                dx->PreDraw();
+                copy.Draw(offscreen.GetSrvHandleGPU(), shadows.GetSrv(), offscreen.GetNormalSrvHandleGPU());
+                surfaceImages[mode] = ReadFrame(dx, directory / ("surface-response-" + std::to_string(mode) + ".png"));
+            }
+            Require(ChangedPixels(surfaceImages[0], surfaceImages[1]) > 100, "Material response did not change highlights");
+            Require(ChangedPixels(surfaceImages[2], surfaceImages[3]) > 500, "Hemisphere colors did not affect surface normals");
+
+            PostEffectManager post;
+            post.Initialize(dx);
+            post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
+            post.PostDrawDepth();
+            post.SetFxaaEnabled(false);
+            Logger::Log("HDR bloom test initialized");
+            Logger::Flush();
+            std::vector<uint8_t> bloomImages[2];
+            for (int mode = 0; mode < 2; ++mode) {
+                post.GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = mode;
+                SrvManager::GetInstance()->PreDraw();
+                offscreen.SetClearColor({ 0.0f, 0.0f, 0.0f, 1.0f });
+                offscreen.PreDraw(dx->GetDSVHandle());
+                D3D12_RECT brightRectangle { 600, 300, 680, 420 };
+                const float brightColor[] = { 4.0f, 2.0f, 0.5f, 1.0f };
+                dx->GetCommandList()->ClearRenderTargetView(dx->GetRTVHandle(2), brightColor, 1, &brightRectangle);
+                offscreen.PostDraw();
+                dx->PreDraw();
+                post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                bloomImages[mode] = ReadFrame(dx, directory / ("bloom-halo-" + std::to_string(mode) + ".png"));
+            }
+            const size_t haloPixel = (360 * 1280 + 596) * 4;
+            Require(bloomImages[1][haloPixel] > bloomImages[0][haloPixel] + 5,
+                "HDR bloom did not spread outside the emissive surface");
+            const size_t verticalHaloPixel = (296 * 1280 + 640) * 4;
+            Require(bloomImages[1][verticalHaloPixel] > bloomImages[0][verticalHaloPixel] + 5,
+                "HDR bloom did not spread vertically");
+            Logger::Log("Graphics tests PASS: HDR highlight separation, material reflection, hemisphere lighting, emissive bloom halo");
             GameplayVisualPreset::ApplyAtmosphere("stage03");
             Require(SceneManager::GetInstance()->GetSceneDistanceFog().start == 450.0f,
                 "Ice atmosphere preset was not applied");
@@ -484,13 +699,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 std::vector<uint8_t> storage(size);
                 auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data());
                 info->GetMessage(index, message, &size);
+                // Synthetic HDR clears deliberately differ from the optimized creation color.
+                if (message->ID == D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE) { continue; }
                 if (message->Severity <= D3D12_MESSAGE_SEVERITY_WARNING) {
                     Logger::Log(message->pDescription);
                     throw std::runtime_error("D3D12 debug validation failed");
                 }
             }
         }
-        std::ofstream(directory / "result.txt") << "PASS: shadows, ice/floor directional and ambient controls, stage fog presets, D3D12 validation\n";
+        std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, D3D12 validation\n";
         ModelManager::Finalize();
         Object3dManager::Finalize();
         LightManager::Finalize();
@@ -502,6 +719,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     } catch (const std::exception& error) {
         std::ofstream("captures/ShadowMapTests/result.txt") << "FAIL: " << error.what();
         Logger::Log(error.what());
+        Logger::Flush();
+        ModelManager::Finalize();
+        Object3dManager::Finalize();
+        LightManager::Finalize();
+        TextureManager::GetInstance()->Finalize();
+        SrvManager::GetInstance()->Finalize();
+        DirectXCommon::Finalize();
+        WinApp::FinalizeInstance();
+        Logger::Finalize();
         exitCode = 1;
     }
     return exitCode;

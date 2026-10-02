@@ -318,7 +318,7 @@ void Object3dManager::CreateGraphicsPipeline()
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
-    baseDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    baseDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     baseDesc.NumRenderTargets = 2;
     baseDesc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     baseDesc.DepthStencilState = depthStencilDesc;
@@ -398,7 +398,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
         }
     }
     desc.NumRenderTargets = 2;
-    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;

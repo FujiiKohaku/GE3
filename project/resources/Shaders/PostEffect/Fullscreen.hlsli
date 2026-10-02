@@ -64,4 +64,12 @@ cbuffer PostEffectParameter : register(b0)
     float outlineNormalSoftness;
     float outlineNormalStrength;
     float outlineNormalPadding;
+    float fxaaStrength;
+    float fxaaSubpixel;
+    float fxaaEdgeThreshold;
+    float fxaaEdgeThresholdMin;
+    int toneMapEnabled;
+    float toneExposure;
+    float toneContrast;
+    float toneSaturation;
 };

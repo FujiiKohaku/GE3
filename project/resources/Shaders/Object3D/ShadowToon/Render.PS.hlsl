@@ -28,7 +28,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float diffuse = lerp(0.10f, 0.65f, middleBand);
     diffuse = lerp(diffuse, 1.0f, lightBand);
     float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, N));
-    float3 ambient = max(gAmbientLight.color.rgb, 0.0f) * max(gAmbientLight.color.a, 0.0f) * 1.2f;
+    float3 ambient = HemisphereAmbient(gAmbientLight, N) * 1.2f;
     float3 direct = max(gDirectionalLight.color.rgb, 0.0f) *
         max(gDirectionalLight.intensity, 0.0f) * visibility;
     float3 color = baseColor * (ambient + direct * diffuse);
@@ -38,7 +38,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     H *= rsqrt(max(dot(H, H), 0.000001f));
     float highlight = step(0.955f, saturate(dot(N, H))) * saturate(dot(N, L));
     float rim = smoothstep(0.72f, 0.88f, 1.0f - saturate(dot(N, V)));
-    color += direct * highlight * 0.14f;
+    color += direct * SurfaceSpecular(gMaterial, baseColor, N, V, L);
     color += baseColor * ambient * rim * 0.12f;
 
     PixelShaderOutput output;

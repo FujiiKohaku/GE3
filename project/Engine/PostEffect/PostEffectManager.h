@@ -24,6 +24,8 @@ public:
     void Initialize(DirectXCommon* dxCommon);
     void Update(Camera* camera);
     void DrawImGui();
+    void SetFxaaEnabled(bool enabled) { fxaaEnabled_ = enabled; }
+    bool IsFxaaEnabled() const { return fxaaEnabled_; }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     std::string GetDevelopmentSettingsJson() const;
     void ApplyDevelopmentSetting(const std::string& key, const std::string& value);
@@ -50,6 +52,7 @@ public:
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthDSVHandle() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
     CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
+    BloomRenderer* GetBloomRenderer() const { return bloomRenderer_.get(); }
 
 private:
     class RenderTarget {
@@ -75,11 +78,12 @@ private:
         D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
         D3D12_VIEWPORT viewport_ {};
         D3D12_RECT scissorRect_ {};
-        DXGI_FORMAT format_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        DXGI_FORMAT format_ = DXGI_FORMAT_R16G16B16A16_FLOAT;
         float clearColor_[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     };
 
 private:
+    void FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle);
     void ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle);
     void UpdatePostEffectParameters(SceneManager* sceneManager);
     void SetBackBufferRenderTarget();
@@ -97,6 +101,7 @@ private:
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;
+    bool fxaaEnabled_ = true;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     std::unordered_map<int, bool> passOverrides_;
     std::optional<float> cameraShakeOverride_;

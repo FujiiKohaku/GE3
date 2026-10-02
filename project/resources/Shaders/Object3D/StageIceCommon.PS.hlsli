@@ -66,7 +66,7 @@ float3 ShadeStageIceSurface(StageIceLighting lighting, float3 iceColor,
     halfVector *= rsqrt(max(dot(halfVector, halfVector), 0.000001f));
     float normalHalf = saturate(dot(lighting.normal, halfVector));
     float lightVisibility = smoothstep(0.0f, 0.15f, saturate(dot(lighting.normal, L)));
-    float sharpHighlight = pow(normalHalf, max(gMaterial.shininess, 1.0f)) * lightVisibility;
+    float sharpHighlight = pow(normalHalf, max(2.0f / max(gMaterial.roughness * gMaterial.roughness, 0.01f) - 2.0f, 1.0f)) * lightVisibility * gMaterial.specularStrength;
     float broadHighlight = pow(normalHalf, 12.0f) * lightVisibility;
     float frostHighlight = pow(normalHalf, 18.0f);
     // Keep frost blue and retain the material tint instead of replacing it with white.

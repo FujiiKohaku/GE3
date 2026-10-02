@@ -9,6 +9,8 @@ struct DirectionalLight {
 
 struct AmbientLight {
     Vector4 color;
+    Vector4 skyColor;
+    Vector4 groundColor;
 };
 
 struct PointLight {

@@ -470,7 +470,7 @@ void DebugRenderer::CreateGraphicsPipeline()
     desc.DepthStencilState = depthStencilDesc;
     desc.BlendState = CreateBlendDesc(kBlendModeNormal);
     desc.NumRenderTargets = 1;
-    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;

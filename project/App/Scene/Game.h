@@ -81,6 +81,9 @@ public:
     bool IsEndRequest() const { return endRequest_; }
 
 private:
+#if defined(KOHAKU_RENDER_TESTS)
+    friend class FxaaRenderTest;
+#endif
     void LockCursorToWindow();
     void UnlockCursor();
 

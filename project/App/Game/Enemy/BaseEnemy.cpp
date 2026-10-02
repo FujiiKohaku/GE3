@@ -24,6 +24,7 @@ void BaseEnemy::Initialize(Model* model)
         2.0f
     };
     object_->SetModel(model);
+    object_->SetSurfaceProperties(0.38f, 0.60f, 0.75f);
 
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);

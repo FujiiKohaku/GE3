@@ -73,6 +73,8 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     ambientLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&ambientLightData_));
     ambientLightResource_->SetName(L"Object3d::AmbientLightCB");
     ambientLightData_->color = { 1.0f, 1.0f, 1.0f, 0.25f };
+    ambientLightData_->skyColor = { 0.78f, 0.90f, 1.10f, 1.0f };
+    ambientLightData_->groundColor = { 0.42f, 0.38f, 0.34f, 1.0f };
 
     pointLightResource_ = dxCommon_->CreateBufferResource(sizeof(PointLightCollection));
     pointLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&pointLightData_));
@@ -543,4 +545,10 @@ void LightManager::Bind(ID3D12GraphicsCommandList* cmd)
     cmd->SetGraphicsRootConstantBufferView(
         RootParameterIndex(Object3dRootParameter::AmbientLight),
         ambientLightResource_->GetGPUVirtualAddress());
+}
+
+void LightManager::SetHemisphereColors(const Vector3& sky, const Vector3& ground)
+{
+    ambientLightData_->skyColor = { sky.x, sky.y, sky.z, 1.0f };
+    ambientLightData_->groundColor = { ground.x, ground.y, ground.z, 1.0f };
 }

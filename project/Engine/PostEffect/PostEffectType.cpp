@@ -1,8 +1,12 @@
-﻿#include "PostEffectType.h"
+#include "PostEffectType.h"
 
 const char* GetPostEffectTypeName(PostEffectType type)
 {
     switch (type) {
+    case PostEffectType::ToneMap:
+        return "ToneMap";
+    case PostEffectType::FXAA:
+        return "FXAA";
     case PostEffectType::ArchiveAtmosphere:
         return "ArchiveAtmosphere";
     case PostEffectType::Copy:
