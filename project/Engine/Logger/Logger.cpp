@@ -10,7 +10,7 @@ std::ofstream Logger::logFile_;
 
 void Logger::Initialize()
 {
-    std::filesystem::create_directory("logs");
+    std::filesystem::create_directories("runtime/logs");
 
     std::string time = GetTimeString();
 
@@ -24,7 +24,7 @@ void Logger::Initialize()
         }
     }
 
-    std::string filePath = "logs/EngineLog_" + time + ".txt";
+    std::string filePath = "runtime/logs/EngineLog_" + time + ".txt";
 
     logFile_.open(filePath, std::ios::out);
 }

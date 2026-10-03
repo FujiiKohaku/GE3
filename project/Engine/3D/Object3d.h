@@ -11,6 +11,7 @@
 #include <wrl.h>
 #include "Engine/LevelEditor/LevelData.h"
 #include "Engine/CollisionManager/BoxCollider.h"
+#include "Engine/Shadow/ShadowMaterialSettings.h"
 
 #include "../Animation/PlayAnimation.h"
 #include "Engine/math/object3Dstruct.h"
@@ -29,6 +30,9 @@ public:
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
     void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
+    bool SetShadowMaterial(const ShadowMaterialSettings& settings);
+    void SetShadowBoundsPadding(float boundsPadding);
+    float GetModelBoundsRadius() const;
     void SetCastShadow(bool enabled) { castShadow_ = enabled; }
     void SetReceiveShadow(bool enabled) { receiveShadow_ = enabled; }
     bool GetCastShadow() const { return castShadow_; }
@@ -196,6 +200,7 @@ private:
         "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
     std::string vertexShaderPath_ = "resources/Shaders/Object3D/Object3d.VS.hlsl";
     Vector4 vertexShaderParameters_ = {};
+    ShadowMaterialSettings shadowMaterial_;
     bool castShadow_ = false;
     bool receiveShadow_ = false;
     bool transparent_ = false;

@@ -27,6 +27,7 @@ public:
     void Finish();
     bool IsReady() const { return isReady_; }
     bool HasValidFrame() const { return hasValidFrame_; }
+    const LocalShadowConstants& GetFrameConstants() const { return frameConstants_; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrv() const { return srv_; }
     D3D12_GPU_VIRTUAL_ADDRESS GetConstantsAddress() const { return constantsResource_->GetGPUVirtualAddress(); }
 private:

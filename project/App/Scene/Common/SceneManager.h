@@ -7,6 +7,15 @@
 
 #include "Engine/PostEffect/PostEffectType.h"
 #include "Engine/PostEffect/Fog/FogData.h"
+#include "Engine/PostEffect/PostEffectSettings.h"
+#include <unordered_map>
+
+struct AtmospherePreset {
+    float exposure = 1.0f;
+    DistanceFogData distanceFog { 380.0f, 720.0f, 1.0f, 1.2f };
+    bool shouldApplyFogColor = false;
+    Vector4 fogColor { 0.58f, 0.80f, 0.96f, 1.0f };
+};
 
 struct PostEffectInfo {
     PostEffectType type = PostEffectType::Copy;
@@ -44,8 +53,12 @@ public:
         SetNextScene(std::move(loadingScene));
     }
 
-    void SetArchiveApproach(float progress) { archiveApproach_ = progress; }
-    float GetArchiveApproach() const { return archiveApproach_; }
+    bool SetRadialBlurSettings(const RadialBlurSettings& settings);
+    const RadialBlurSettings& GetRadialBlurSettings() const { return radialBlurSettings_; }
+    void SetPostEffectParameters(PostEffectType type, const Vector3& parameters) { effectParameters_[type] = parameters; }
+    const Vector3* FindPostEffectParameters(PostEffectType type) const;
+    void ApplyAtmospherePreset(const AtmospherePreset& preset);
+    void ApplyPostEffectChain(const std::vector<PostEffectInfo>& effects);
     void Update();
     void Finalize();
     void DrawImGui();
@@ -66,8 +79,6 @@ public:
     const std::vector<PostEffectInfo>& GetPostEffects() const;
     void SetPostEffectCenter(const Vector2& center);
     const Vector2& GetPostEffectCenter() const;
-    void SetPostEffectKickStrength(float strength);
-    float GetPostEffectKickStrength() const;
     void SetCameraShakeStrength(float strength);
     float GetCameraShakeStrength() const;
     void SetPaintProgress(float progress) { paintProgress_ = progress; }
@@ -119,7 +130,6 @@ private:
     PostEffectType postEffectType_ = PostEffectType::Copy;
     std::vector<PostEffectInfo> postEffects_;
     Vector2 postEffectCenter_ = { 0.5f, 0.5f };
-    float postEffectKickStrength_ = 0.0f;
     float cameraShakeStrength_ = kDefaultCameraShakeStrength;
     float vignetteStrength_ = 1.0f;
     float sonicBoomProgress_ = 0.0f;
@@ -128,7 +138,8 @@ private:
     float blackHoleRadius_ = 0.16f;
     float blackHoleStrength_ = 1.0f;
     float waterEffectIntensity_ = 0.0f;
-    float archiveApproach_ = 0.0f;
+    RadialBlurSettings radialBlurSettings_;
+    std::unordered_map<PostEffectType, Vector3> effectParameters_;
     PageTransition::RevealOverlay pageReveal_;
     float paintProgress_ = 0.0f;
     float paintIntensity_ = 0.0f;

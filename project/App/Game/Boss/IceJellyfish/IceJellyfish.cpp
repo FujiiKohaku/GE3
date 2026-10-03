@@ -29,6 +29,10 @@ void ConfigureJellyfishBodyMaterial(Object3d& object)
     object.SetMaterial("resources/Shaders/Object3D/IceJellyfish");
     object.SetNormalMap("resources/Textures/Normals/ice_detail.png", 0.18f);
     object.SetVertexShaderPath("resources/Shaders/Object3D/IceJellyfish/Render.VS.hlsl");
+    ShadowMaterialSettings shadowMaterial;
+    shadowMaterial.vertexShaderPath = L"resources/Shaders/ShadowMap/JellyfishDepth.VS.hlsl";
+    shadowMaterial.isDoubleSided = true;
+    object.SetShadowMaterial(shadowMaterial);
     object.SetTransparent(true);
     object.SetTransparentDepthWrite(true);
     object.SetEnableEnvironmentMap(true);
@@ -761,6 +765,8 @@ void IceJellyfish::UpdatePartTransforms()
     bell_->SetCustomWorldMatrix(MatrixMath::Multiply(bellLocal, bodyMatrix));
     bell_->SetColor({ 0.65f, 0.86f, 1.0f, kBodyAlpha });
     bell_->SetVertexShaderParameters({ animationTime_, kBellWaveAmplitude, 0.0f, 0.0f });
+    bell_->SetShadowBoundsPadding(kBellWaveAmplitude *
+        (1.2f + bell_->GetModelBoundsRadius() * 0.020f));
     bell_->Update();
 
     const float coreScale = 1.0f - contractionAmount * 0.10f;
@@ -889,6 +895,8 @@ void IceJellyfish::UpdatePartTransforms()
             object.SetColor(tentacleColor);
             object.SetVertexShaderParameters({ animationTime_, kTentacleWaveAmplitude,
                 tentacleWavePhase_[tentacle] - waveDelay, 1.0f + endRatio });
+            object.SetShadowBoundsPadding(kTentacleWaveAmplitude *
+                (1.2f + object.GetModelBoundsRadius() * 0.020f));
             object.Update();
             if (IsSegmentAlive(tentacle, segment)) {
                 tentacleColliders_.push_back(IceJellyfishCollision::TransformBox(

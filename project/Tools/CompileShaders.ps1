@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 $projectRootPath = [System.IO.Path]::GetFullPath($ProjectRoot)
 $resourcesPath = Join-Path $projectRootPath "resources"
 $outputRootPath = Join-Path $resourcesPath "CompiledShaders"
-$logDirectoryPath = Join-Path $projectRootPath "logs"
+$logDirectoryPath = Join-Path $projectRootPath "runtime/logs"
 $logFilePath = Join-Path $logDirectoryPath "ShaderCompile.log"
 
 New-Item -ItemType Directory -Path $outputRootPath -Force | Out-Null

@@ -1,6 +1,38 @@
 #include "Common.hlsli"
 Texture2D<float> gShadow : register(t2);
+Texture2DArray<float> gLocalShadows : register(t4);
 SamplerComparisonState gShadowSampler : register(s1);
+float SpotShadowVisibility(VolumetricSpotConstants light, float3 relativePosition) {
+    int shadowFace = int(light.decayAndFalloffAndShadow.z);
+    if (shadowFace < 0) { return 1.0f; }
+    float4 clip = mul(float4(cameraAndDistance.xyz + relativePosition, 1.0f), light.lightViewProjection);
+    if (clip.w <= 0.000001f) { return 0.0f; }
+    float3 projected = clip.xyz / clip.w;
+    float2 uv = projected.xy * float2(0.5f, -0.5f) + 0.5f;
+    if (any(uv <= 0.0f) || any(uv >= 1.0f) || projected.z <= 0.0f || projected.z >= 1.0f) { return 0.0f; }
+    return gLocalShadows.SampleCmpLevelZero(gShadowSampler,
+        float3(uv, shadowFace), projected.z - spotCountAndBias.y);
+}
+float3 SpotScattering(float3 relativePosition, float3 ray, float anisotropy) {
+    float3 radiance = 0.0f;
+    for (int lightIndex = 0; lightIndex < int(spotCountAndBias.x); ++lightIndex) {
+        VolumetricSpotConstants light = spotLights[lightIndex];
+        float3 delta = relativePosition - light.positionAndDistance.xyz;
+        float distance = length(delta);
+        if (distance < 0.00001f || distance >= light.positionAndDistance.w) { continue; }
+        float3 direction = delta / distance;
+        float cone = saturate((dot(direction, light.directionAndCosAngle.xyz) - light.directionAndCosAngle.w) /
+            max(light.decayAndFalloffAndShadow.y - light.directionAndCosAngle.w, 0.001f));
+        if (cone <= 0.0f) { continue; }
+        float attenuation = pow(saturate(1.0f - distance / light.positionAndDistance.w), light.decayAndFalloffAndShadow.x);
+        float cosAngle = dot(ray, -direction);
+        float phase = (1.0f - anisotropy * anisotropy) /
+            pow(max(1.0f + anisotropy * anisotropy - 2.0f * anisotropy * cosAngle, 0.04f), 1.5f);
+        radiance += light.colorAndIntensity.rgb * light.colorAndIntensity.w * cone * attenuation * phase *
+            SpotShadowVisibility(light, relativePosition);
+    }
+    return radiance;
+}
 float ShadowVisibility(float3 worldPosition) {
     float4 clip = mul(float4(worldPosition, 1.0f), lightViewProjection);
     if (clip.w <= 0.000001f) { return 0.0f; }
@@ -76,6 +108,7 @@ RaymarchOutput main(VertexShaderOutput input) {
     float cosAngle = dot(ray, -lightDirectionAndDensity.xyz);
     float phase = (1.0f - g * g) / pow(max(1.0f + g * g - 2.0f * g * cosAngle, 0.04f), 1.5f);
     float scattering = 0.0f;
+    float3 spotScattering = 0.0f;
     float transmittance = 1.0f;
     for (int index = 0; index < samples; ++index) {
         float travel = (index + 0.5f) * stepLength;
@@ -86,10 +119,13 @@ RaymarchOutput main(VertexShaderOutput input) {
         if (settings.w != 0.0f && lightColorAndIntensity.w > 0.0f) {
             scattering += ShadowVisibility(cameraAndDistance.xyz + relativePosition) * transmittance * (1.0f - segmentTransmittance);
         }
+        if (spotCountAndBias.x > 0.0f) {
+            spotScattering += SpotScattering(relativePosition, ray, g) * transmittance * (1.0f - segmentTransmittance);
+        }
         transmittance *= segmentTransmittance;
         if (transmittance < 0.001f) { break; }
     }
-    float3 color = scattering * phase * lightColorAndIntensity.rgb * lightColorAndIntensity.w;
+    float3 color = scattering * phase * lightColorAndIntensity.rgb * lightColorAndIntensity.w + spotScattering;
     RaymarchOutput output;
     output.scatteringAndDepth = float4(clamp(color, 0.0f, 8.0f), surfaceDistance);
     output.transmittance = 1.0f;

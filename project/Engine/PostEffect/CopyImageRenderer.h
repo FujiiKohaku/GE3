@@ -3,6 +3,7 @@
 #include "Engine/math/EngineStruct.h"
 #include "PostEffectType.h"
 #include <d3d12.h>
+#include <cstddef>
 #include <unordered_map>
 #include <wrl.h>
 
@@ -23,15 +24,15 @@ public:
         float dissolveEdgeStrength;
         float dissolvePadding;
 
-        float boostKickStrength;
+        float radialBlurImpulseStrength;
         float pixelSize;
         float colorBrightness;
         float colorContrast;
 
         float colorSaturation;
-        float padding0;
-        float padding1;
-        float padding2;
+        float customParameter0;
+        float customParameter1;
+        float customParameter2;
 
         float focusDepth;
         float focusRange;
@@ -122,6 +123,10 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12Resource> postEffectParameterResource_;
     PostEffectParameter* postEffectParameterData_ = nullptr;
+    static constexpr size_t kDrawParameterStride = (sizeof(PostEffectParameter) + 255) & ~size_t(255);
+    static constexpr size_t kDrawParameterCount = static_cast<size_t>(PostEffectType::ScreenLighting) + 1;
+    Microsoft::WRL::ComPtr<ID3D12Resource> drawParameterResource_;
+    unsigned char* drawParameterData_ = nullptr;
     // マスクテクスチャのGPUディスクリプタハンドル
     D3D12_GPU_DESCRIPTOR_HANDLE maskTextureHandle_ {};
 };

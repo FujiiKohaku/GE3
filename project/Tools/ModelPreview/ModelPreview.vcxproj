@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <!-- Share the engine's source/dependency list, but use a separate entry point and objects. -->
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{AAF76E07-733C-48E4-B9D3-63A7D49E493F}</ProjectGuid>
+    <ProjectName>ModelPreview</ProjectName>
+    <TargetName>ModelPreview</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\ModelPreview\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>ModelPreview.exe</TargetFileName>
+    <TargetPath>$(OutDir)ModelPreview.exe</TargetPath>
+    <LocalDebuggerWorkingDirectory>$(projectRootPath)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>USE_IMGUI;MODEL_PREVIEW_APP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="$(projectRootPath)App\main.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreview.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewApp.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewModels.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewCamera.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewControls.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewUpdate.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewRender.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\PreviewSmokeTest.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\PreviewCapture.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\ModelPreview\PreviewGif.cpp" />
+    <ClInclude Include="$(projectRootPath)Tools\ModelPreview\PreviewCapture.h" />
+    <ClInclude Include="$(projectRootPath)Tools\ModelPreview\ModelPreviewApp.h" />
+    <ClInclude Include="$(projectRootPath)Tools\ModelPreview\PreviewItem.h" />
+    <ClInclude Include="$(projectRootPath)Tools\ModelPreview\PreviewSmokeTest.h" />
+    <ClInclude Include="$(projectRootPath)Tools\ModelPreview\PreviewGif.h" />
+  </ItemGroup>
+</Project>

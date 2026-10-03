@@ -6,6 +6,7 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/OceanSurface.h"
 #include "Engine/Camera/Camera.h"
+#include "Engine/Light/LightManager.h"
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -92,6 +93,7 @@ private:
     static float EaseOutBack(float value);
 
     std::unique_ptr<Camera> camera_;
+    SpotLightHandle windowLightHandle_ = kInvalidSpotLightHandle;
     std::unique_ptr<OceanSurface> oceanSurface_;
     std::unique_ptr<Object3d> aircraft_;
     std::vector<std::unique_ptr<Object3d>> baseObjects_;

@@ -68,7 +68,6 @@ void Game::Initialize()
     Logger::Log("Game Initialize Start");
     ShowCursor(FALSE); // カーソルを消す
     SetUnhandledExceptionFilter(Utility::ExportDump);
-    std::filesystem::create_directory("logs");
 
     // Profilerの初期化とBoot計測開始
     Profiler::GetInstance()->Initialize();

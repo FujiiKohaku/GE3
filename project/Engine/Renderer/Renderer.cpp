@@ -13,7 +13,6 @@
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Screenshot/ScreenshotManager.h"
 #include "Engine/TextureManager/TextureManager.h"
-#include "Engine/input/Input.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/Light/LightManager.h"
@@ -119,7 +118,12 @@ void Renderer::Draw(SceneManager* sceneManager)
     // Always clear/supply frame inputs, including frames with shadows disabled.
     const ShadowMapRenderer* volumetricShadows = nullptr;
     if (shadows.enabled) { volumetricShadows = shadowRenderer_.get(); }
-    postEffectManager_->GetVolumetricLightRenderer()->SetFrameInputs(defaultCamera, volumetricShadows);
+    const LocalShadowRenderer* volumetricLocalShadows = nullptr;
+    if (hasLocalShadows && localShadowRenderer_ && localShadowRenderer_->HasValidFrame()) {
+        volumetricLocalShadows = localShadowRenderer_.get();
+    }
+    postEffectManager_->GetVolumetricLightRenderer()->SetFrameInputs(
+        defaultCamera, volumetricShadows, volumetricLocalShadows);
 
     // Offscreen draw start
     postEffectManager_->PreDrawDepth();
@@ -134,8 +138,6 @@ void Renderer::Draw(SceneManager* sceneManager)
     DirectXCommon::GetInstance()->PreDraw();
     
     // Post effect apply
-    const bool isBoosting = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT);
-    postEffectManager_->SetBoostRadialBlurParameters(isBoosting);
     postEffectManager_->PrepareSceneForParticleDraw(
         sceneManager,
         offscreenRenderer_->GetSrvHandleGPU());

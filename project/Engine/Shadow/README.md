@@ -57,7 +57,7 @@ shared skinning slot indices do not change.
 light (b1) and ambient light (b5) for ice diffuse shading and the matte floor.
 Ambient color/intensity also controls the ice glaze and rim; these are not
 emissive. Shadow visibility attenuates only the direct contribution.
-`App/Game/Stage/GameplayVisualPreset.h` owns the Stage03 light and fog presets.
+`resources/Graphics/visual-presets.json` owns the Stage03 light and fog presets.
 The game, development-light reset controls and model preview share the light
 preset. Stage03 distance fog starts at 450 and reaches full density at 1000;
 other stages retain their previous fog distances. Scene changes reset the fog
@@ -75,12 +75,12 @@ and bounds tests run on the CPU each frame. GPU time depends on scene coverage.
 Build the game Release x64 through KohakuEngine.sln. Optional rendering tests:
 
 ```powershell
-MSBuild project/ShadowMapTests.vcxproj /m /p:Configuration=Release /p:Platform=x64 /p:SolutionDir=C:\Projects\KohakuEngine\project\
+MSBuild project/Tests/Projects/ShadowMapTests.vcxproj /m /p:Configuration=Release /p:Platform=x64 /p:SolutionDir=C:\Projects\KohakuEngine\project\
 ```
 
 Run `generated/outputs/Release/ShadowMapTests.exe` with working directory `project`.
 It exports ON/OFF/CastShadow-OFF/ReceiveShadow-OFF PNGs under
-`captures/ShadowMapTests`, compares actual GPU pixels and checks D3D12 warnings
+`runtime/captures/ShadowMapTests`, compares actual GPU pixels and checks D3D12 warnings
 and errors when the debug layer is available. `--stage` follows the normal
 Title -> Loading -> Stage03 path, renders the actual game scene with shadows
 ON/OFF, exports PNGs and checks D3D12 errors. This is a separate validation binary;

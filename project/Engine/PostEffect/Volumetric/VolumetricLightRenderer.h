@@ -6,6 +6,7 @@
 #include <wrl.h>
 class Camera;
 class ShadowMapRenderer;
+class LocalShadowRenderer;
 
 enum class FogVolumeShape { Sphere, Box };
 
@@ -40,10 +41,16 @@ struct VolumetricLightParameters {
     int32_t sampleCount = 32;
 };
 
+struct FogPreset {
+    LocalFogParameters parameters;
+    std::array<FogVolumeSettings, 8> volumes {};
+};
+
 // One directional light. The scene owns its direction and its matching shadow map.
 class VolumetricLightRenderer {
 public:
     static constexpr uint32_t kMaxFogVolumes = 8;
+    static constexpr uint32_t kMaxVolumetricSpotLights = 2;
     ~VolumetricLightRenderer();
     bool Initialize(DirectXCommon* dxCommon);
     void SetEnabled(bool enabled) { parameters_.enabled = enabled; }
@@ -56,6 +63,7 @@ public:
     void SetSampleCount(int32_t samples);
     const VolumetricLightParameters& GetParameters() const { return parameters_; }
     void SetLocalFogEnabled(bool isEnabled) { localFog_.isEnabled = isEnabled; }
+    bool ApplyFogPreset(const FogPreset& preset);
     bool SetFogVolume(uint32_t volumeIndex, const FogVolumeSettings& settings);
     const std::array<FogVolumeSettings, kMaxFogVolumes>& GetFogVolumes() const { return fogVolumes_; }
     const LocalFogParameters& GetLocalFogParameters() const { return localFog_; }
@@ -65,7 +73,8 @@ public:
     bool SetNoiseParameters(float scale, float strength, const Vector3& velocity);
     bool SetFogColor(const Vector3& color);
     // Must be supplied after shadow rendering, for every frame.
-    void SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows);
+    void SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows,
+        const LocalShadowRenderer* localShadows = nullptr);
     bool Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, bool depthReady);
     void Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
     void DrawImGui();
@@ -89,6 +98,15 @@ private:
         Vector4 noiseScaleAndOffset {};
         Vector4 noiseSettings {};
         std::array<FogVolumeConstants, kMaxFogVolumes> volumes {};
+        Vector4 spotCountAndBias {};
+        struct SpotConstants {
+            Matrix4x4 lightViewProjection {};
+            Vector4 positionAndDistance {};
+            Vector4 directionAndCosAngle {};
+            Vector4 colorAndIntensity {};
+            Vector4 decayAndFalloffAndShadow {};
+        };
+        std::array<SpotConstants, kMaxVolumetricSpotLights> spotLights {};
     };
     void CreateResources();
     void CreatePipelines();
@@ -115,6 +133,8 @@ private:
     D3D12_GPU_DESCRIPTOR_HANDLE volumeSrv_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE depthSrv_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE shadowSrv_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE localShadowSrv_ {};
+    uint32_t localShadowFallbackSrvIndex_ = 0xffffffffu;
     D3D12_RESOURCE_STATES textureState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
     bool ready_ = false;
     bool frameValid_ = false;

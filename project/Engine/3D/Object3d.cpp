@@ -471,7 +471,6 @@ Object3d::~Object3d()
 void Object3d::DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow)
 {
     if (!castShadow_ || (transparent_ && !opaqueTransparentShadow) || model_ == nullptr) { return; }
-    const bool jellyfish = vertexShaderPath_ == "resources/Shaders/Object3D/IceJellyfish/Render.VS.hlsl";
     Vector3 center = MatrixMath::Transform(model_->GetBoundsCenter(), worldMatrix_);
     float squaredScale = 0.0f;
     for (int row = 0; row < 3; ++row) {
@@ -480,18 +479,10 @@ void Object3d::DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentSha
         }
     }
     float localRadius = model_->GetBoundsRadius();
-    if (jellyfish) {
-        // Include wave displacement and bell pulse in conservative caster bounds.
-        float amplitude = std::abs(vertexShaderParameters_.y);
-        localRadius += amplitude * 1.2f + localRadius * amplitude * 0.020f;
-    }
+    localRadius += shadowMaterial_.boundsPadding;
     float radius = localRadius * std::sqrt(squaredScale);
     if (!renderer.Intersects(center, radius)) { return; }
-    if (jellyfish) {
-        renderer.BindJellyfishObject(worldMatrix_, vertexShaderParameters_);
-    } else {
-        renderer.BindObject(worldMatrix_);
-    }
+    renderer.BindObject(worldMatrix_, shadowMaterial_, vertexShaderParameters_);
     model_->DrawDepth();
 }
 
@@ -501,6 +492,24 @@ void Object3d::SetSurfaceProperties(float roughness, float metallic, float specu
     materialData_->roughness = std::clamp(roughness, 0.08f, 1.0f);
     materialData_->metallic = std::clamp(metallic, 0.0f, 1.0f);
     materialData_->specularStrength = std::clamp(specularStrength, 0.0f, 2.0f);
+}
+
+void Object3d::SetShadowBoundsPadding(float boundsPadding)
+{
+    if (std::isfinite(boundsPadding) && boundsPadding >= 0.0f) {
+        shadowMaterial_.boundsPadding = boundsPadding;
+    }
+}
+bool Object3d::SetShadowMaterial(const ShadowMaterialSettings& settings)
+{
+    if (!std::isfinite(settings.boundsPadding) || settings.boundsPadding < 0.0f) { return false; }
+    shadowMaterial_ = settings;
+    return true;
+}
+float Object3d::GetModelBoundsRadius() const
+{
+    if (model_ == nullptr) { return 0.0f; }
+    return model_->GetBoundsRadius();
 }
 
 void Object3d::SetNormalMap(const std::string& filePath, float strength, bool flipY)

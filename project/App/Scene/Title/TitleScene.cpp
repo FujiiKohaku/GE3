@@ -6,10 +6,11 @@
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Input/Input.h"
 #include "Engine/Light/LightManager.h"
+#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include "Engine/Time/TimeManager.h"
 #include "Engine/audio/SoundManager.h"
 #include "App/Game/Stage/StageCatalog.h"
-#include "App/Game/Stage/GameplayVisualPreset.h"
+#include "App/Game/VisualPresetLibrary.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Scene/Loading/LoadingScene.h"
 #include "App/Scene/Common/SceneManager.h"
@@ -182,9 +183,39 @@ void TitleScene::Initialize()
     Object3dManager::GetInstance()->SetDefaultCamera(camera_.get());
 
     InitializeLaunchBase();
+    // Light enters the open upper frame and falls diagonally across the hangar.
+    LightManager* lights = LightManager::GetInstance();
+    windowLightHandle_ = lights->AddSpotLight(
+        { 1.0f, 0.86f, 0.65f, 1.0f }, { 14.0f, 22.0f, 4.0f },
+        { -0.30f, -0.28f, -0.91f }, 5.0f, 100.0f, 1.0f, 0.97f);
+    lights->SetSpotLightCosFalloffStart(windowLightHandle_, 0.99f);
+    lights->SetSpotLightShadowEnabled(windowLightHandle_, true);
+    lights->SetSpotLightVolumetricEnabled(windowLightHandle_, true);
     InitializeInterface();
     InitializeStageSelection();
     UpdateInterface(0.0f);
+
+    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+        FogPreset fogPreset;
+        fogPreset.parameters.isEnabled = true;
+        fogPreset.parameters.color = { 0.68f, 0.60f, 0.50f };
+        fogPreset.parameters.noiseScale = 0.025f;
+        FogVolumeSettings& floorFog = fogPreset.volumes[0];
+        floorFog.isEnabled = true;
+        floorFog.shape = FogVolumeShape::Box;
+        floorFog.center = { 0.0f, 1.0f, -30.0f };
+        floorFog.halfExtents = { 45.0f, 5.0f, 70.0f };
+        floorFog.density = 0.0015f;
+        floorFog.edgeSoftness = 3.0f;
+        FogVolumeSettings& windowFog = fogPreset.volumes[1];
+        windowFog.isEnabled = true;
+        windowFog.shape = FogVolumeShape::Box;
+        windowFog.center = { 0.0f, 10.0f, -22.0f };
+        windowFog.halfExtents = { 18.0f, 10.0f, 26.0f };
+        windowFog.density = 0.0015f;
+        windowFog.edgeSoftness = 5.0f;
+        volume->ApplyFogPreset(fogPreset);
+    }
 
     UpdateSceneLighting();
 
@@ -550,8 +581,8 @@ void TitleScene::InitializeStageRoomSets()
             static_cast<float>(index) * 0.025f);
         ice->SetColor({ 0.68f, 0.88f, 1.0f, 1.0f });
         const std::string modelPath = std::string(kIceEnvironment) + iceProps[index].model;
-        ice->SetMaterial(GameplayVisualPreset::IceMaterialFolder(modelPath));
-        ice->GetMaterial()->shininess = GameplayVisualPreset::kIceShininess;
+        ice->SetMaterial(VisualPresetLibrary::GetInstance().GetMaterial(modelPath));
+        ice->GetMaterial()->shininess = VisualPresetLibrary::GetInstance().GetShininess("ice");
         ice->SetEnableEnvironmentMap(false);
         ice->SetEnvironmentMapStrength(0.0f);
     }
@@ -1435,7 +1466,17 @@ void TitleScene::UpdateSceneLighting()
         roomAmount = 1.0f - SmoothStep(animationTime_ / kStageReturnDuration);
     }
     const float frozenAmount = Clamp01(frozenRoomAmount_) * roomAmount;
-    const auto ice = GameplayVisualPreset::GetLighting("stage03");
+    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+        volume->SetFogColor(Lerp(Vector3 { 0.68f, 0.60f, 0.50f },
+            Vector3 { 0.58f, 0.80f, 0.96f }, frozenAmount));
+        FogVolumeSettings floorFog = volume->GetFogVolumes()[0];
+        floorFog.density = std::lerp(0.0015f, 0.006f, frozenAmount);
+        volume->SetFogVolume(0, floorFog);
+        FogVolumeSettings windowFog = volume->GetFogVolumes()[1];
+        windowFog.density = std::lerp(0.0015f, 0.0025f, frozenAmount);
+        volume->SetFogVolume(1, windowFog);
+    }
+    const auto ice = VisualPresetLibrary::GetInstance().GetLighting("stage03");
     const Vector3 color = Lerp(Vector3 { 0.98f, 0.80f, 0.64f },
         Vector3 { ice.color.x, ice.color.y, ice.color.z }, frozenAmount);
     const Vector3 ambient = Lerp(Vector3 { 0.34f, 0.42f, 0.56f },
@@ -1445,6 +1486,10 @@ void TitleScene::UpdateSceneLighting()
         { -0.55f, -0.70f, 0.45f }, std::lerp(0.95f, ice.intensity, frozenAmount));
     lights->SetAmbientColor(ambient);
     lights->SetAmbientIntensity(std::lerp(0.32f, 0.28f, frozenAmount));
+    lights->SetSpotLightColor(windowLightHandle_, {
+        std::lerp(1.0f, 0.72f, frozenAmount),
+        std::lerp(0.86f, 0.88f, frozenAmount),
+        std::lerp(0.65f, 1.0f, frozenAmount), 1.0f });
     const Vector3 fog = Lerp(Vector3 { 0.22f, 0.38f, 0.54f },
         Vector3 { 0.58f, 0.80f, 0.96f }, frozenAmount);
     SceneManager::GetInstance()->SetSceneFogColor({ fog.x, fog.y, fog.z, 1.0f });
@@ -1452,6 +1497,8 @@ void TitleScene::UpdateSceneLighting()
 
 void TitleScene::Finalize()
 {
+    LightManager::GetInstance()->RemoveSpotLight(windowLightHandle_);
+    windowLightHandle_ = kInvalidSpotLightHandle;
     ShowCursor(TRUE);
     ClipCursor(nullptr);
     Object3dManager::GetInstance()->SetDefaultCamera(nullptr);

@@ -39,4 +39,4 @@ DevelopmentWebPanel::GetInstance().UnregisterOwner(this);
 
 ## 検証
 
-`project/DevelopmentWebPanelTests.vcxproj`のRelease x64をビルドし、`project`を作業ディレクトリとして`generated/outputs/Release/DevelopmentWebPanelTests.exe`を実行します。実HTTP通信、送信詰まり、型・範囲検証、Setter呼出し、登録解除とシーン切替を検証します。
+`project/Tests/Projects/DevelopmentWebPanelTests.vcxproj`のRelease x64をビルドし、`project`を作業ディレクトリとして`generated/outputs/Release/DevelopmentWebPanelTests.exe`を実行します。実HTTP通信、送信詰まり、型・範囲検証、Setter呼出し、登録解除とシーン切替を検証します。

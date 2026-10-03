@@ -18,9 +18,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <charconv>
-#if defined(ENABLE_DEVELOPMENT_TOOLS)
+#include <fstream>
+#include <stdexcept>
 #include "externals/json.hpp"
-#endif
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
@@ -476,6 +476,22 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 
     copyImageRenderer_ = std::make_unique<CopyImageRenderer>();
     copyImageRenderer_->Initialize(dxCommon_);
+    std::ifstream presetFile("resources/Graphics/visual-presets.json");
+    if (!presetFile) { throw std::runtime_error("Cannot open post effect preset data"); }
+    const auto presetData = nlohmann::json::parse(presetFile);
+    for (const auto& entry : presetData.at("effectParameters").items()) {
+        bool isFound = false;
+        for (int typeIndex = 0; typeIndex <= static_cast<int>(PostEffectType::ScreenLighting); ++typeIndex) {
+            const auto type = static_cast<PostEffectType>(typeIndex);
+            if (entry.key() == GetPostEffectTypeName(type)) {
+                defaultEffectParameters_[type] = { entry.value().at(0).get<float>(),
+                    entry.value().at(1).get<float>(), entry.value().at(2).get<float>() };
+                isFound = true;
+                break;
+            }
+        }
+        if (!isFound) { throw std::runtime_error("Unknown post effect parameter preset: " + entry.key()); }
+    }
 
     bloomRenderer_ = std::make_unique<BloomRenderer>();
     bloomRenderer_->Initialize(dxCommon_);
@@ -505,6 +521,9 @@ bool PostEffectManager::SetSsao(bool isEnabled, float strength, float radius, fl
 
 void PostEffectManager::Update(Camera* camera)
 {
+    auto& animationParameters = copyImageRenderer_->GetPostEffectParameter();
+    if (isAnimationEnabled_) { animationParameters.time += TimeManager::GetInstance()->GetDeltaTime(); }
+    if (animationParameters.time > 1000.0f) { animationParameters.time = 0.0f; }
     auto& screenParameters = copyImageRenderer_->GetPostEffectParameter();
     screenParameters.screenCameraSettings.z = 0.0f;
     LightManager* lights = LightManager::GetInstance();
@@ -675,32 +694,6 @@ void PostEffectManager::PrepareDepthForParticleDraw()
     fogRenderer_->PrepareDepthForParticleDraw();
 }
 
-void PostEffectManager::SetBoostRadialBlurParameters(bool isBoosting)
-{
-    CopyImageRenderer::PostEffectParameter& postEffectParameter = copyImageRenderer_->GetPostEffectParameter();
-    if (isAnimationEnabled_) {
-        postEffectParameter.time += TimeManager::GetInstance()->GetDeltaTime();
-    }
-    if (postEffectParameter.time > 1000.0f) {
-        postEffectParameter.time = 0.0f;
-    }
-
-    float boostKickStrength = SceneManager::GetInstance()->GetPostEffectKickStrength();
-    postEffectParameter.boostKickStrength = boostKickStrength;
-
-    if (isBoosting) {
-        postEffectParameter.radialBlurSampleCount = 48;
-        if (boostKickStrength > 0.0f) {
-            postEffectParameter.radialBlurSampleCount = 64;
-        }
-        postEffectParameter.radialBlurWidth = 0.25f + 0.28f * boostKickStrength;
-    } else {
-        postEffectParameter.radialBlurSampleCount = 32;
-        postEffectParameter.radialBlurWidth = 0.05f;
-        postEffectParameter.boostKickStrength = 0.0f;
-    }
-}
-
 void PostEffectManager::UpdatePostEffectParameters(
     SceneManager* sceneManager)
 {
@@ -710,10 +703,11 @@ void PostEffectManager::UpdatePostEffectParameters(
 
     CopyImageRenderer::PostEffectParameter& postEffectParameter =
         copyImageRenderer_->GetPostEffectParameter();
-    // ArchiveAtmosphere uses the existing reserved slots; the buffer layout stays intact.
-    postEffectParameter.padding0 = 16.5f;
-    postEffectParameter.padding1 = 2.3f;
-    postEffectParameter.padding2 = sceneManager->GetArchiveApproach();
+    const RadialBlurSettings& blur = sceneManager->GetRadialBlurSettings();
+    postEffectParameter.radialBlurSampleCount = blur.sampleCount;
+    postEffectParameter.radialBlurWidth = blur.width;
+    postEffectParameter.radialBlurImpulseStrength = blur.impulseStrength;
+
     postEffectParameter.radialBlurCenter =
         sceneManager->GetPostEffectCenter();
     postEffectParameter.cameraShakeStrength =
@@ -901,6 +895,15 @@ D3D12_GPU_VIRTUAL_ADDRESS PostEffectManager::GetFogConstantBufferView() const
 
 void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle)
 {
+    Vector3 customParameters {};
+    const auto defaults = defaultEffectParameters_.find(type);
+    if (defaults != defaultEffectParameters_.end()) { customParameters = defaults->second; }
+    const Vector3* overrides = SceneManager::GetInstance()->FindPostEffectParameters(type);
+    if (overrides != nullptr) { customParameters = *overrides; }
+    auto& parameters = copyImageRenderer_->GetPostEffectParameter();
+    parameters.customParameter0 = customParameters.x;
+    parameters.customParameter1 = customParameters.y;
+    parameters.customParameter2 = customParameters.z;
     DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     if (type == PostEffectType::FXAA || type == PostEffectType::ToneMap) {
         format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;

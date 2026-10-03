@@ -14,7 +14,7 @@
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "App/Game/Stage/StageCatalog.h"
-#include "App/Game/Stage/GameplayVisualPreset.h"
+#include "App/Game/VisualPresetLibrary.h"
 #include "App/Scene/Application/Game.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Scene/Common/SceneManager.h"
@@ -169,6 +169,11 @@ public:
         Require(title.viewState_ == TitleScene::ViewState::Title, "Title camera did not return to overview");
         Refresh(title);
     }
+    static void SetWindowScattering(TitleScene& title, bool isEnabled)
+    {
+        Require(LightManager::GetInstance()->SetSpotLightVolumetricEnabled(
+            title.windowLightHandle_, isEnabled), "Title window light handle is invalid");
+    }
 private:
     static void Refresh(TitleScene& title)
     {
@@ -194,7 +199,7 @@ private:
 int RunTitleShadowTest()
 {
     Logger::Initialize();
-    const std::filesystem::path directory = "captures/ShadowMapTests";
+    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
     std::filesystem::create_directories(directory);
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -221,9 +226,10 @@ int RunTitleShadowTest()
             if (view == 2) { TitleSceneRenderTest::StartRoomSwitch(*title); }
             if (view == 3) { TitleSceneRenderTest::FinishRoomSwitch(*title); }
             if (view == 4) { TitleSceneRenderTest::ReturnToOverview(*title); }
-            std::vector<uint8_t> captures[2];
-            for (int mode = 0; mode < 2; ++mode) {
-                title->SetShadowEnabled(mode == 0);
+            std::vector<uint8_t> captures[3];
+            for (int mode = 0; mode < 3; ++mode) {
+                title->SetShadowEnabled(mode != 1);
+                TitleSceneRenderTest::SetWindowScattering(*title, mode != 2);
                 // Present rotates the back buffer. Fill both buffers before reading
                 // the current one so ON/OFF captures cannot reuse the previous mode.
                 for (int frame = 0; frame < 3; ++frame) { game.Draw(); }
@@ -232,11 +238,16 @@ int RunTitleShadowTest()
                 dx->GetCommandList()->ResourceBarrier(1, &barrier);
                 std::string name = "title-" + std::string(views[view]) + "-enabled.png";
                 if (mode == 1) { name = "title-" + std::string(views[view]) + "-disabled.png"; }
+                if (mode == 2) { name = "title-" + std::string(views[view]) + "-spot-fog-disabled.png"; }
                 captures[mode] = ReadFrame(dx, directory / name);
             }
             const size_t changed = ChangedPixels(captures[0], captures[1]);
             Logger::Log("Title shadow " + std::string(views[view]) + ": affected pixels=" + std::to_string(changed));
             Require(changed > 500, "Title shadow did not affect enough pixels");
+            if (view == 1 || view == 3) {
+                Require(ChangedPixels(captures[0], captures[2]) > 100,
+                    "Title spotlight did not scatter through the fog");
+            }
         }
         if (info) {
             for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
@@ -268,7 +279,7 @@ int RunTitleShadowTest()
 int RunGameStageShadowTest(const std::string& stageId)
 {
     Logger::Initialize();
-    std::filesystem::create_directories("captures/ShadowMapTests");
+    std::filesystem::create_directories("runtime/captures/ShadowMapTests");
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
     Game game;
@@ -309,15 +320,15 @@ int RunGameStageShadowTest(const std::string& stageId)
                 auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
                     D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
                 dx->GetCommandList()->ResourceBarrier(1, &barrier);
-                std::filesystem::path file = "captures/ShadowMapTests/" + stageId + "-enabled.png";
-                if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-disabled.png"; }
+                std::filesystem::path file = "runtime/captures/ShadowMapTests/" + stageId + "-enabled.png";
+                if (mode == 1) { file = "runtime/captures/ShadowMapTests/" + stageId + "-disabled.png"; }
                 if (view == 1) {
-                    file = "captures/ShadowMapTests/" + stageId + "-boss-enabled.png";
-                    if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-boss-disabled.png"; }
+                    file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-enabled.png";
+                    if (mode == 1) { file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-disabled.png"; }
                 }
                 if (view == 2) {
-                    file = "captures/ShadowMapTests/" + stageId + "-boss-motion-enabled.png";
-                    if (mode == 1) { file = "captures/ShadowMapTests/" + stageId + "-boss-motion-disabled.png"; }
+                    file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-motion-enabled.png";
+                    if (mode == 1) { file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-motion-disabled.png"; }
                 }
                 if (mode == 0) { enabledFrame = ReadFrame(dx, file); }
                 else { disabledFrame = ReadFrame(dx, file); }
@@ -339,11 +350,11 @@ int RunGameStageShadowTest(const std::string& stageId)
             }
         }
         game.Finalize();
-        std::ofstream("captures/ShadowMapTests/stage-result.txt") << "PASS: actual " << stageId << " game render, shadow ON/OFF, no D3D12 errors\n";
+        std::ofstream("runtime/captures/ShadowMapTests/stage-result.txt") << "PASS: actual " << stageId << " game render, shadow ON/OFF, no D3D12 errors\n";
         Logger::Finalize();
         return 0;
     } catch (const std::exception& error) {
-        std::ofstream("captures/ShadowMapTests/stage-result.txt") << "FAIL: " << error.what();
+        std::ofstream("runtime/captures/ShadowMapTests/stage-result.txt") << "FAIL: " << error.what();
         Logger::Log(error.what());
         if (initialized) { game.Finalize(); }
         Logger::Finalize();
@@ -361,7 +372,7 @@ public:
 
 int RunFxaaTest()
 {
-    const std::filesystem::path directory = "captures/ShadowMapTests";
+    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
     std::filesystem::create_directories(directory);
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -496,7 +507,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     if (std::string(commandLine).find("--stage") != std::string::npos) { return RunGameStageShadowTest("stage03"); }
     int exitCode = 0;
     try {
-        std::filesystem::path directory = "captures/ShadowMapTests";
+        std::filesystem::path directory = "runtime/captures/ShadowMapTests";
         std::filesystem::create_directories(directory);
         Logger::Initialize();
         Microsoft::WRL::ComPtr<ID3D12Debug> debug;
@@ -519,7 +530,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             camera.LookAt({ 0.0f, 40.0f, -95.0f }, { 0.0f, 0.0f, 35.0f });
             camera.Update();
             Object3dManager::GetInstance()->SetDefaultCamera(&camera);
-            GameplayVisualPreset::ApplyLighting("stage03");
+            LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting("stage03"));
             Require(StageCatalog::GetInstance()->Load(), "Stage catalog failed");
             const StageSettings* stage = StageCatalog::GetInstance()->Find("stage03");
             Require(stage != nullptr && stage->shadows.enabled, "Stage03 must enable shadows");
@@ -589,7 +600,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 std::string prefix = "floor-lighting-";
                 if (objectIndex == 1) { prefix = "ice-lighting-"; }
                 for (int mode = 0; mode < 5; ++mode) {
-                    GameplayVisualPreset::ApplyLighting("stage03");
+                    LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting("stage03"));
                     LightManager* lights = LightManager::GetInstance();
                     if (mode >= 1) { lights->SetIntensity(0.0f); }
                     if (mode == 2) { lights->SetAmbientIntensity(0.0f); }
@@ -636,7 +647,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             ice.SetColor({ 0.50f, 0.60f, 0.70f, 1.0f });
             std::vector<uint8_t> surfaceImages[4];
             for (int mode = 0; mode < 4; ++mode) {
-                GameplayVisualPreset::ApplyLighting("stage03");
+                LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting("stage03"));
                 ice.SetSurfaceProperties(0.18f, 0.75f, 1.0f);
                 if (mode == 1) { ice.SetSurfaceProperties(0.90f, 0.0f, 0.10f); }
                 if (mode >= 2) {
@@ -661,7 +672,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(ChangedPixels(surfaceImages[2], surfaceImages[3]) > 500, "Hemisphere colors did not affect surface normals");
 
             // Verify linear decoding, a visible lighting response and zero-strength equivalence.
-            GameplayVisualPreset::ApplyLighting("stage03");
+            LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting("stage03"));
             std::vector<uint8_t> normalImages[3];
             std::vector<uint8_t> outlineNormalImages[3];
             for (int mode = 0; mode < 3; ++mode) {
@@ -751,7 +762,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             volume->SetSampleCount(100000);
             Require(volume->GetParameters().fogDensity == 0.0f && volume->GetParameters().lightIntensity == 0.0f &&
                 volume->GetParameters().sampleCount == 64, "Unsafe volume parameters were accepted");
-            GameplayVisualPreset::ApplyLighting("stage03");
+            LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting("stage03"));
             ice.SetCastShadow(true);
             floor.SetReceiveShadow(false);
             ice.SetReceiveShadow(false);
@@ -873,6 +884,47 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             volume->ResetLocalFog();
             Require(!volume->GetLocalFogParameters().isEnabled && !volume->GetFogVolumes()[0].isEnabled, "Local fog reset retained settings");
             Logger::Log("Local fog PASS: sphere, box, height, noise, stable frames, camera inside, shadow fallback, invalid settings and reset");
+            FogPreset fogPreset;
+            fogPreset.parameters.isEnabled = true;
+            fogPreset.parameters.color = { 0.4f, 0.5f, 0.6f };
+            fogPreset.volumes[0] = testFog;
+            Require(volume->ApplyFogPreset(fogPreset), "Valid generic fog preset was rejected");
+            fogPreset.parameters.color = { 0.8f, 0.7f, 0.6f };
+            fogPreset.volumes[7].edgeSoftness = -1.0f;
+            Require(!volume->ApplyFogPreset(fogPreset), "Invalid generic fog preset was accepted");
+            Require(volume->GetLocalFogParameters().color.x == 0.4f &&
+                volume->GetFogVolumes()[0].density == testFog.density,
+                "Invalid preset partially changed active fog settings");
+            Require(volume->ApplyFogPreset(FogPreset {}), "Empty fog preset was rejected");
+            Require(!volume->GetLocalFogParameters().isEnabled && !volume->GetFogVolumes()[0].isEnabled,
+                "Empty preset retained previous fog volumes");
+            SceneManager* sceneManager = SceneManager::GetInstance();
+            RadialBlurSettings invalidBlur;
+            invalidBlur.width = std::numeric_limits<float>::quiet_NaN();
+            Require(!sceneManager->SetRadialBlurSettings(invalidBlur), "Invalid generic radial blur was accepted");
+            ShadowMaterialSettings invalidShadowMaterial;
+            invalidShadowMaterial.boundsPadding = -1.0f;
+            Require(!ice.SetShadowMaterial(invalidShadowMaterial), "Invalid shadow bounds padding was accepted");
+            Require(VisualPresetLibrary::GetInstance().GetLighting("unknown-preset").intensity ==
+                VisualPresetLibrary::GetInstance().GetLighting("default").intensity,
+                "Unknown lighting preset did not use the data fallback");
+            std::vector<uint8_t> customEffectImages[2];
+            sceneManager->SetPostEffectType(PostEffectType::ArchiveAtmosphere);
+            for (int mode = 0; mode < 2; ++mode) {
+                sceneManager->SetPostEffectParameters(PostEffectType::ArchiveAtmosphere,
+                    { 16.5f, 2.3f, static_cast<float>(mode) });
+                volume->SetEnabled(false);
+                SrvManager::GetInstance()->PreDraw();
+                post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth();
+                dx->PreDraw(); post.Apply(sceneManager, offscreen.GetSrvHandleGPU());
+                customEffectImages[mode] = ReadFrame(dx, directory / ("custom-effect-" + std::to_string(mode) + ".png"));
+            }
+            Require(ChangedPixels(customEffectImages[0], customEffectImages[1]) > 100,
+                "Generic effect parameters did not reach the shader");
+            sceneManager->ClearPostEffects();
+            sceneManager->SetPostEffectParameters(PostEffectType::ArchiveAtmosphere, { 16.5f, 2.3f, 0.0f });
 
             auto* lights = LightManager::GetInstance();
             lights->ClearDynamicPointLights(); lights->ClearDynamicSpotLights();
@@ -954,6 +1006,72 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Object3dManager::GetInstance()->SetLocalShadowRenderer(nullptr);
             lights->ClearDynamicPointLights(); lights->ClearDynamicSpotLights();
             Require(!lights->SetPointLightIntensity(pointHandle, 2.0f), "Cleared light handle remained valid");
+            Require(!lights->SetSpotLightVolumetricEnabled(spotHandle, true), "Stale spot handle enabled fog scattering");
+            const SpotLightHandle fogSpotHandle = lights->AddSpotLight(
+                { 1.0f, 0.8f, 0.6f, 1.0f }, { -20.0f, 65.0f, -20.0f },
+                { 0.2f, -0.8f, 0.6f }, 4.0f, 220.0f, 2.0f, 0.65f);
+            Require(fogSpotHandle != kInvalidSpotLightHandle, "Fog spot registration failed");
+            volume->SetEnabled(true);
+            volume->ResetLocalFog();
+            volume->SetLocalFogEnabled(true);
+            volume->SetLightIntensity(0.35f);
+            volume->SetSampleCount(32);
+            FogVolumeSettings spotFog = testFog;
+            spotFog.radius = 65.0f;
+            spotFog.center = { 0.0f, 20.0f, 25.0f };
+            spotFog.density = 0.006f;
+            volume->SetFogVolume(0, spotFog);
+            std::vector<uint8_t> spotFogImages[5];
+            double spotFogAveragesMs[5] {};
+            for (int mode = 0; mode < 5; ++mode) {
+                for (int sampleIndex = 0; sampleIndex < 24; ++sampleIndex) {
+                    lights->SetSpotLightShadowEnabled(fogSpotHandle, true);
+                    localShadows.Prepare(*lights);
+                    for (uint32_t passIndex = 0; passIndex < localShadows.GetPassCount(); ++passIndex) {
+                        ShadowMapRenderer& pass = localShadows.GetPass(passIndex);
+                        pass.BeginShadowPass(); ice.DrawShadow(pass); pass.EndShadowPass();
+                    }
+                    localShadows.Finish();
+                    SrvManager::GetInstance()->PreDraw();
+                    post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                    Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                    offscreen.PostDraw(); post.PostDrawDepth();
+                    lights->SetSpotLightVolumetricEnabled(fogSpotHandle, mode != 0);
+                    if (mode == 1) { lights->SetSpotLightShadowEnabled(fogSpotHandle, false); }
+                    const LocalShadowRenderer* fogShadows = &localShadows;
+                    if (mode == 3) { fogShadows = nullptr; }
+                    if (mode == 4) { localShadows.Prepare(*lights); }
+                    volume->SetFrameInputs(&camera, nullptr, fogShadows);
+                    dx->PreDraw();
+                    dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0);
+                    post.Apply(nullptr, offscreen.GetSrvHandleGPU());
+                    dx->GetCommandList()->EndQuery(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 1);
+                    dx->GetCommandList()->ResolveQueryData(localQuery.Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, 2, localTimer.Get(), 0);
+                    if (sampleIndex == 23) {
+                        spotFogImages[mode] = ReadFrame(dx, directory / ("spot-fog-" + std::to_string(mode) + ".png"));
+                    } else { dx->PostDraw(); }
+                    UINT64* ticks = nullptr;
+                    D3D12_RANGE readRange { 0, sizeof(UINT64) * 2 };
+                    Require(SUCCEEDED(localTimer->Map(0, &readRange, reinterpret_cast<void**>(&ticks))), "Spot fog timer map failed");
+                    if (sampleIndex >= 4) {
+                        spotFogAveragesMs[mode] += double(ticks[1] - ticks[0]) * 1000.0 / double(localFrequency) / 20.0;
+                    }
+                    D3D12_RANGE noWrites { 0, 0 }; localTimer->Unmap(0, &noWrites);
+                }
+            }
+            Require(ChangedPixels(spotFogImages[0], spotFogImages[1]) > 100, "Spotlight fog produced no light");
+            Require(ChangedPixels(spotFogImages[1], spotFogImages[2]) > 20, "Spotlight fog ignored occluders");
+            Require(spotFogImages[0] == spotFogImages[3], "Missing local shadow leaked fog light");
+            Require(spotFogImages[0] == spotFogImages[4], "Incomplete local shadow reused a previous frame");
+            std::ofstream spotFogTimingFile(directory / "spot-fog-timing.txt");
+            spotFogTimingFile << "1280x720, half-resolution, 32 samples, 20 measured frames; post processing only\n";
+            for (int mode = 0; mode < 5; ++mode) {
+                spotFogTimingFile << "Mode " << mode << " ms: " << spotFogAveragesMs[mode] << "\n";
+            }
+            spotFogTimingFile << "Added shadowed spot ms: " << spotFogAveragesMs[2] - spotFogAveragesMs[0] << "\n";
+            lights->ClearDynamicSpotLights();
+            volume->ResetLocalFog();
+            Logger::Log("Spot fog PASS: scattering ON/OFF, shadow occlusion, missing/incomplete shadows, stale handles");
             std::ofstream localTimingFile(directory / "local-light-timing.txt");
             localTimingFile << "1280x720, 512 shadow faces, debug layer enabled, 20 samples; shadow passes + geometry + post processing\n";
             for (int mode = 0; mode < 6; ++mode) { localTimingFile << "Mode " << mode << " ms: " << localAverages[mode] << "\n"; }
@@ -1117,10 +1235,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Logger::Log("Volumetric PASS: lighting, missing/disabled shadows, missing camera/depth, zero/NaN intensity, zero density, consumed frame inputs");
 
             Logger::Log("Graphics tests PASS: HDR highlight separation, material reflection, hemisphere lighting, emissive bloom halo");
-            GameplayVisualPreset::ApplyAtmosphere("stage03");
+            SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere("stage03"));
             Require(SceneManager::GetInstance()->GetSceneDistanceFog().start == 450.0f,
                 "Ice atmosphere preset was not applied");
-            GameplayVisualPreset::ApplyAtmosphere("stage01");
+            SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere("stage01"));
             Require(SceneManager::GetInstance()->GetSceneDistanceFog().start == 380.0f,
                 "Ice fog preset leaked into another stage");
             dx->WaitForGPU();
@@ -1150,7 +1268,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         WinApp::FinalizeInstance();
         Logger::Finalize();
     } catch (const std::exception& error) {
-        std::ofstream("captures/ShadowMapTests/result.txt") << "FAIL: " << error.what();
+        std::ofstream("runtime/captures/ShadowMapTests/result.txt") << "FAIL: " << error.what();
         Logger::Log(error.what());
         Logger::Flush();
         ModelManager::Finalize();

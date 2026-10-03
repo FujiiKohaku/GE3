@@ -4,6 +4,13 @@ struct FogVolumeConstants {
     float4 extentsAndDensity;
     float4 radiusAndSoftness;
 };
+struct VolumetricSpotConstants {
+    row_major float4x4 lightViewProjection;
+    float4 positionAndDistance;
+    float4 directionAndCosAngle;
+    float4 colorAndIntensity;
+    float4 decayAndFalloffAndShadow;
+};
 cbuffer VolumeConstants : register(b0) {
     row_major float4x4 inverseViewProjection;
     row_major float4x4 lightViewProjection;
@@ -16,6 +23,8 @@ cbuffer VolumeConstants : register(b0) {
     float4 noiseScaleAndOffset;
     float4 noiseSettings;
     FogVolumeConstants volumes[8];
+    float4 spotCountAndBias;
+    VolumetricSpotConstants spotLights[2];
 };
 Texture2D<float4> gColor : register(t0);
 Texture2D<float> gDepth : register(t1);

@@ -18,7 +18,6 @@
 # Build results
 #[Dd]ebug/
 generated/
-project/captures/ModelPreview/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -315,7 +314,6 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 DirectXGame/DirectXGame.exe
-project/imgui.ini
 project/Tools/UIAnimationEditor/ai_settings.json
 # DirectXTex build output
 **/DirectXTex/Bin/
@@ -327,4 +325,6 @@ project/Tools/UIAnimationEditor/ai_settings.json
 logs/
 !project/resources/**/*.obj
 
-project/captures/ShadowMapTests/
+
+# プロジェクト内の実行時出力・旧ファイルの退避
+/project/runtime/

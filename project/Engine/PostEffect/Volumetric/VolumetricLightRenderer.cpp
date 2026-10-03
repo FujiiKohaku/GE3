@@ -1,6 +1,7 @@
 #include "VolumetricLightRenderer.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
+#include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/math/MatrixMath.h"
@@ -92,6 +93,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* 
 VolumetricLightRenderer::~VolumetricLightRenderer() {
     if (srvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(srvIndex_); }
     if (transmittanceSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(transmittanceSrvIndex_); }
+    if (localShadowFallbackSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(localShadowFallbackSrvIndex_); }
 }
 bool VolumetricLightRenderer::Initialize(DirectXCommon* dxCommon) {
     if (dxCommon == nullptr) { return false; }
@@ -132,6 +134,27 @@ bool VolumetricLightRenderer::SetFogVolume(uint32_t volumeIndex, const FogVolume
     return true;
 }
 void VolumetricLightRenderer::ClearFogVolumes() { fogVolumes_ = {}; }
+bool VolumetricLightRenderer::ApplyFogPreset(const FogPreset& preset) {
+    const LocalFogParameters previousParameters = localFog_;
+    const auto previousVolumes = fogVolumes_;
+    const LocalFogParameters& settings = preset.parameters;
+    bool isValid = SetFogColor(settings.color) &&
+        SetHeightFog(settings.baseHeight, settings.heightDensity, settings.heightFalloff) &&
+        SetNoiseParameters(settings.noiseScale, settings.noiseStrength, settings.noiseVelocity);
+    for (uint32_t volumeIndex = 0; isValid && volumeIndex < kMaxFogVolumes; ++volumeIndex) {
+        isValid = SetFogVolume(volumeIndex, preset.volumes[volumeIndex]);
+    }
+    if (!isValid) {
+        localFog_ = previousParameters;
+        fogVolumes_ = previousVolumes;
+        return false;
+    }
+    localFog_.isEnabled = settings.isEnabled;
+    noiseOffset_ = {};
+    frameValid_ = false;
+    generated_ = false;
+    return true;
+}
 void VolumetricLightRenderer::ResetLocalFog() {
     ClearFogVolumes();
     localFog_ = {};
@@ -171,10 +194,14 @@ void VolumetricLightRenderer::SetLightDirection(const Vector3& direction) {
     // The next shadow pass must use the changed direction before this effect can run.
     frameValid_ = false;
 }
-void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows) {
+void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows,
+    const LocalShadowRenderer* localShadows) {
     frameValid_ = false;
     generated_ = false;
     shadowSrv_ = {};
+    localShadowSrv_ = {};
+    frameConstants_.spotCountAndBias = {};
+    frameConstants_.spotLights = {};
     if (!ready_ || camera == nullptr) { return; }
     bool hasValidShadow = false;
     Vector3 direction { 0.0f, -1.0f, 0.0f };
@@ -205,7 +232,45 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
             }
         }
     }
-    if (!hasValidShadow && !localFog_.isEnabled) { return; }
+    if (LightManager::GetInstance()->IsInitialized()) {
+        const LightManager* lights = LightManager::GetInstance();
+        uint32_t spotCount = 0;
+        for (uint32_t lightIndex = 0; lightIndex < LightManager::kMaxSpotLights &&
+            spotCount < kMaxVolumetricSpotLights; ++lightIndex) {
+            if (!lights->IsSpotLightVolumetricEnabled(lightIndex)) { continue; }
+            const SpotLight light = lights->GetSpotLight(lightIndex);
+            if (light.isActive == 0 || light.intensity <= 0.0f || light.distance <= 0.0f) { continue; }
+            int shadowFace = -1;
+            if (lights->IsSpotLightShadowEnabled(lightIndex)) {
+                // A requested shadow must be complete this frame; never leak light through walls on failure.
+                if (localShadows == nullptr || !localShadows->HasValidFrame() || localShadows->GetSrv().ptr == 0) { continue; }
+                const Vector4& slots = localShadows->GetFrameConstants().spotSlots[lightIndex / 4];
+                float slot = slots.x;
+                if (lightIndex % 4 == 1) { slot = slots.y; }
+                else if (lightIndex % 4 == 2) { slot = slots.z; }
+                else if (lightIndex % 4 == 3) { slot = slots.w; }
+                shadowFace = static_cast<int>(slot);
+                if (shadowFace < 0 || shadowFace >= static_cast<int>(localShadows->GetPassCount())) { continue; }
+                localShadowSrv_ = localShadows->GetSrv();
+                frameConstants_.spotCountAndBias.y = localShadows->GetFrameConstants().parameters.y;
+            }
+            Constants::SpotConstants& destination = frameConstants_.spotLights[spotCount];
+            if (shadowFace >= 0) {
+                destination.lightViewProjection = localShadows->GetFrameConstants().matrices[shadowFace];
+            }
+            const Matrix4x4& cameraWorld = camera->GetWorldMatrix();
+            const Vector3 position { cameraWorld.m[3][0], cameraWorld.m[3][1], cameraWorld.m[3][2] };
+            destination.positionAndDistance = { light.position.x - position.x,
+                light.position.y - position.y, light.position.z - position.z, light.distance };
+            destination.directionAndCosAngle = { light.direction.x, light.direction.y, light.direction.z, light.cosAngle };
+            destination.colorAndIntensity = { light.color.x, light.color.y, light.color.z,
+                light.intensity * parameters_.lightIntensity };
+            destination.decayAndFalloffAndShadow = { light.decay, light.cosFalloffStart, static_cast<float>(shadowFace), 0.0f };
+            ++spotCount;
+        }
+        frameConstants_.spotCountAndBias.x = static_cast<float>(spotCount);
+    }
+    if (!hasValidShadow && !localFog_.isEnabled && frameConstants_.spotCountAndBias.x == 0.0f) { return; }
     if (!hasValidShadow) { direction = { 0.0f, -1.0f, 0.0f }; }
     if (camera->GetNearClip() <= 0.0f || camera->GetFarClip() <= camera->GetNearClip()) { return; }
     const auto& world = camera->GetWorldMatrix();
@@ -298,6 +363,16 @@ void VolumetricLightRenderer::CreateResources() {
     transmittanceSrvIndex_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforTexture2D(transmittanceSrvIndex_, transmittanceTexture_.Get(), desc.Format, 1);
     transmittanceSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(transmittanceSrvIndex_);
+    if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Local fog shadow SRV heap full"); }
+    localShadowFallbackSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    D3D12_SHADER_RESOURCE_VIEW_DESC nullShadowDesc {};
+    nullShadowDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    nullShadowDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+    nullShadowDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    nullShadowDesc.Texture2DArray.ArraySize = LocalShadowRenderer::kMaxFaces;
+    nullShadowDesc.Texture2DArray.MipLevels = 1;
+    device->CreateShaderResourceView(nullptr, &nullShadowDesc,
+        SrvManager::GetInstance()->GetCPUDescriptorHandle(localShadowFallbackSrvIndex_));
     D3D12_HEAP_PROPERTIES uploadHeap {}; uploadHeap.Type = D3D12_HEAP_TYPE_UPLOAD;
     auto buffer = CD3DX12_RESOURCE_DESC::Buffer((sizeof(Constants) + 255) & ~size_t(255));
     CheckVolume(device->CreateCommittedResource(&uploadHeap, D3D12_HEAP_FLAG_NONE, &buffer,
@@ -305,8 +380,8 @@ void VolumetricLightRenderer::CreateResources() {
     CheckVolume(constantsResource_->Map(0, nullptr, reinterpret_cast<void**>(&constantsData_)));
 }
 void VolumetricLightRenderer::CreatePipelines() {
-    D3D12_DESCRIPTOR_RANGE ranges[4] {};
-    D3D12_ROOT_PARAMETER root[5] {};
+    D3D12_DESCRIPTOR_RANGE ranges[5] {};
+    D3D12_ROOT_PARAMETER root[6] {};
     for (uint32_t index = 0; index < 4; ++index) {
         ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -317,6 +392,13 @@ void VolumetricLightRenderer::CreatePipelines() {
     }
     root[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     root[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; root[4].Descriptor.ShaderRegister = 0;
+    ranges[4].BaseShaderRegister = 4;
+    ranges[4].NumDescriptors = 1;
+    ranges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    ranges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+    root[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    root[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    root[5].DescriptorTable = { 1, &ranges[4] };
     D3D12_STATIC_SAMPLER_DESC samplers[2] {};
     for (uint32_t index = 0; index < 2; ++index) {
         samplers[index].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -330,7 +412,7 @@ void VolumetricLightRenderer::CreatePipelines() {
     samplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
     samplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
     D3D12_ROOT_SIGNATURE_DESC desc {};
-    desc.NumParameters = 5; desc.pParameters = root;
+    desc.NumParameters = 6; desc.pParameters = root;
     desc.NumStaticSamplers = 2; desc.pStaticSamplers = samplers;
     Microsoft::WRL::ComPtr<ID3DBlob> blob, errors;
     CheckVolume(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
@@ -358,6 +440,11 @@ void VolumetricLightRenderer::Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESC
     if (pipeline == compositePipeline_.Get()) { transmittance = transmittanceSrv_; }
     cmd->SetGraphicsRootDescriptorTable(3, transmittance);
     cmd->SetGraphicsRootConstantBufferView(4, constantsResource_->GetGPUVirtualAddress());
+    D3D12_GPU_DESCRIPTOR_HANDLE localShadow = localShadowSrv_;
+    if (localShadow.ptr == 0) {
+        localShadow = SrvManager::GetInstance()->GetGPUDescriptorHandle(localShadowFallbackSrvIndex_);
+    }
+    cmd->SetGraphicsRootDescriptorTable(5, localShadow);
     cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(3, 1, 0, 0);
 }
@@ -366,7 +453,8 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     bool valid = frameValid_;
     frameValid_ = false; // Consume the frame; a missing update never reuses old shadows.
     if (!ready_ || !valid || !depthReady || depthHandle.ptr == 0 || !parameters_.enabled ||
-        (!localFog_.isEnabled && (parameters_.fogDensity <= 0.0f || frameConstants_.lightColorAndIntensity.w <= 0.0f))) { return false; }
+        (!localFog_.isEnabled && (parameters_.fogDensity <= 0.0f ||
+            (frameConstants_.lightColorAndIntensity.w <= 0.0f && frameConstants_.spotCountAndBias.x == 0.0f)))) { return false; }
     if (shadowSrv_.ptr == 0) { shadowSrv_ = depthHandle; }
     *constantsData_ = frameConstants_;
     depthSrv_ = depthHandle;

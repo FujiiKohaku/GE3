@@ -174,6 +174,7 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     for (uint32_t lightIndex = 0; lightIndex < kMaxSpotLights; ++lightIndex) {
         spotLightData_->lights[lightIndex] = {};
         spotShadowEnabled_[lightIndex] = false;
+        spotVolumetricEnabled_[lightIndex] = false;
     }
 
     SpotLight& defaultSpotLight = spotLightData_->lights[0];
@@ -591,6 +592,7 @@ bool LightManager::RemoveSpotLight(SpotLightHandle handle)
 
     spotLightData_->lights[handle & kLightIndexMask] = {};
     spotShadowEnabled_[handle & kLightIndexMask] = false;
+    spotVolumetricEnabled_[handle & kLightIndexMask] = false;
     if (spotLightData_->activeCount > 0) {
         spotLightData_->activeCount--;
     }
@@ -603,6 +605,7 @@ void LightManager::ClearDynamicSpotLights()
     for (uint32_t lightIndex = 1; lightIndex < kMaxSpotLights; ++lightIndex) {
         spotLightData_->lights[lightIndex] = {};
         spotShadowEnabled_[lightIndex] = false;
+        spotVolumetricEnabled_[lightIndex] = false;
     }
 
     spotLightData_->activeCount = 0;
@@ -686,6 +689,26 @@ bool LightManager::SetSpotLightShadowEnabled(SpotLightHandle handle, bool isEnab
     if (handle != 0 && !IsValidDynamicSpotLightHandle(handle)) { return false; }
     spotShadowEnabled_[handle & kLightIndexMask] = isEnabled;
     return true;
+}
+void LightManager::ApplyLightingPreset(const LightingPreset& preset)
+{
+    SetDirectional(preset.color, preset.direction, preset.intensity);
+    SetAmbientColor({ preset.ambient.x, preset.ambient.y, preset.ambient.z });
+    SetAmbientIntensity(preset.ambient.w);
+    SetHemisphereColors(preset.skyColor, preset.groundColor);
+    SetPointRadius(preset.pointRadius);
+    SetPointDecay(preset.pointDecay);
+    SetPointLight(preset.pointColor, preset.pointPosition, preset.pointIntensity);
+    SetSpotLightIntensity(preset.spotIntensity);
+}
+bool LightManager::SetSpotLightVolumetricEnabled(SpotLightHandle handle, bool isEnabled) {
+    if (!IsInitialized()) { return false; }
+    if (handle != 0 && !IsValidDynamicSpotLightHandle(handle)) { return false; }
+    spotVolumetricEnabled_[handle & kLightIndexMask] = isEnabled;
+    return true;
+}
+bool LightManager::IsSpotLightVolumetricEnabled(uint32_t lightIndex) const {
+    return lightIndex < kMaxSpotLights && spotVolumetricEnabled_[lightIndex];
 }
 bool LightManager::IsPointLightShadowEnabled(uint32_t lightIndex) const {
     return lightIndex < kMaxPointLights && pointShadowEnabled_[lightIndex];

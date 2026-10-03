@@ -17,7 +17,7 @@
 
 #include "externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
-#include "App/Game/Stage/GameplayVisualPreset.h"
+#include "App/Game/VisualPresetLibrary.h"
 #include <fstream>
 #include <string_view>
 
@@ -258,21 +258,31 @@ void GamePlayScene::Initialize()
 
     ApplyStageVisualPreset();
 
-    GameplayVisualPreset::ApplyAtmosphere(stageId_);
-    if (stageId_ == "stage03") {
-        if (auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
-            volume->SetLocalFogEnabled(true);
-            volume->SetFogColor({ 0.58f, 0.80f, 0.96f });
-            volume->SetNoiseParameters(0.025f, 0.35f, { 0.8f, 0.0f, 0.3f });
-            FogVolumeSettings footFog;
+    SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere(stageId_));
+    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+        FogPreset fogPreset;
+        if (stageId_ == "stage01") {
+            fogPreset.parameters.isEnabled = true;
+            fogPreset.parameters.color = { 0.68f, 0.65f, 0.58f };
+            fogPreset.parameters.noiseScale = 0.025f;
+            fogPreset.parameters.baseHeight = stageSettings_.floorHeight + 6.0f;
+            fogPreset.parameters.heightDensity = 0.0015f;
+            fogPreset.parameters.heightFalloff = 0.16f;
+        } else if (stageId_ == "stage03") {
+            fogPreset.parameters.isEnabled = true;
+            fogPreset.parameters.color = { 0.58f, 0.80f, 0.96f };
+            fogPreset.parameters.noiseScale = 0.025f;
+            fogPreset.parameters.noiseStrength = 0.35f;
+            fogPreset.parameters.noiseVelocity = { 0.8f, 0.0f, 0.3f };
+            FogVolumeSettings& footFog = fogPreset.volumes[0];
             footFog.isEnabled = true;
             footFog.shape = FogVolumeShape::Box;
             footFog.center = { stageSettings_.bossPosition.x, 4.0f, stageSettings_.bossPosition.z };
             footFog.halfExtents = { 75.0f, 12.0f, 75.0f };
             footFog.density = 0.006f;
             footFog.edgeSoftness = 10.0f;
-            volume->SetFogVolume(0, footFog);
         }
+        volume->ApplyFogPreset(fogPreset);
     }
     if (stageId_ == "stage03") {
         auto* lights = LightManager::GetInstance();
@@ -1460,7 +1470,7 @@ void GamePlayScene::Update()
 
     // ---- リセットボタン（向きだけ元に戻す）---
     if (ImGui::Button("Reset Direction")) {
-        lightDir = GameplayVisualPreset::GetLighting(stageId_).direction;
+        lightDir = VisualPresetLibrary::GetInstance().GetLighting(stageId_).direction;
     }
 
     ImGui::SameLine();
@@ -2912,7 +2922,7 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
     if (key == "pointEnabled") { pointEnabled_ = isEnabled; ApplyDevelopmentLighting(); return true; }
     if (key == "spotEnabled") { spotEnabled_ = isEnabled; ApplyDevelopmentLighting(); return true; }
     if (key == "resetLightDirection") {
-        lightDir_ = GameplayVisualPreset::GetLighting(stageId_).direction;
+        lightDir_ = VisualPresetLibrary::GetInstance().GetLighting(stageId_).direction;
         ApplyDevelopmentLighting();
         return true;
     }
@@ -3202,7 +3212,18 @@ void GamePlayScene::Finalize()
 
 void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
 {
-    GameplayVisualPreset::ConfigurePostEffects(isPlayerBoosting);
+    std::string presetId = "default";
+    RadialBlurSettings blur;
+    if (isPlayerBoosting) {
+        presetId = "boost";
+        blur.sampleCount = 48;
+        if (boostKickStrength_ > 0.0f) { blur.sampleCount = 64; }
+        blur.width = 0.25f + 0.28f * boostKickStrength_;
+        blur.impulseStrength = boostKickStrength_;
+    }
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    sceneManager->ApplyPostEffectChain(VisualPresetLibrary::GetInstance().GetPostEffects(presetId));
+    sceneManager->SetRadialBlurSettings(blur);
 }
 
 void GamePlayScene::ApplyDevelopmentLighting()
@@ -3211,7 +3232,7 @@ void GamePlayScene::ApplyDevelopmentLighting()
     if (lightManager == nullptr) return;
     Vector3 direction = Normalize(lightDir_);
     if (std::abs(direction.x) + std::abs(direction.y) + std::abs(direction.z) < 0.001f) {
-        direction = GameplayVisualPreset::GetLighting(stageId_).direction;
+        direction = VisualPresetLibrary::GetInstance().GetLighting(stageId_).direction;
     }
     lightManager->SetDirectional(lightColor_, direction, lightEnabled_ ? lightIntensity_ : 0.0f);
     lightManager->SetAmbientColor({ ambientColor_.x, ambientColor_.y, ambientColor_.z });
@@ -3237,12 +3258,12 @@ void GamePlayScene::ApplyDevelopmentLighting()
 
 void GamePlayScene::ApplyStageVisualPreset()
 {
-    const GameplayVisualPreset::LightingPreset lighting = GameplayVisualPreset::GetLighting(stageId_);
+    const LightingPreset lighting = VisualPresetLibrary::GetInstance().GetLighting(stageId_);
     lightColor_ = lighting.color;
     lightDir_ = lighting.direction;
     lightIntensity_ = lighting.intensity;
     ambientColor_ = lighting.ambient;
-    GameplayVisualPreset::ApplyLighting(stageId_);
+    LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting(stageId_));
 }
 
 void GamePlayScene::ResetGameplayPostEffects()
@@ -3251,7 +3272,7 @@ void GamePlayScene::ResetGameplayPostEffects()
     justDodgeSlowTimer_ = 0.0f;
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
-    SceneManager::GetInstance()->SetPostEffectKickStrength(0.0f);
+    SceneManager::GetInstance()->SetRadialBlurSettings({});
     SceneManager::GetInstance()->SetCameraShakeStrength(
         SceneManager::kDefaultCameraShakeStrength);
 
@@ -3464,7 +3485,6 @@ void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
     if (!isPlayerBoosting) {
         boostKickTimer_ = 0.0f;
         boostKickStrength_ = 0.0f;
-        SceneManager::GetInstance()->SetPostEffectKickStrength(boostKickStrength_);
         return;
     }
 
@@ -3477,8 +3497,6 @@ void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
             boostKickTimer_ = 0.0f;
         }
     }
-
-    SceneManager::GetInstance()->SetPostEffectKickStrength(boostKickStrength_);
 }
 
 void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting)
@@ -3599,8 +3617,8 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             if (stageId_ == "stage03" && isIceModel) {
                 levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);
-                levelObject->SetMaterial(GameplayVisualPreset::IceMaterialFolder(objData.fileName));
-                levelObject->GetMaterial()->shininess = GameplayVisualPreset::kIceShininess;
+                levelObject->SetMaterial(VisualPresetLibrary::GetInstance().GetMaterial(objData.fileName));
+                levelObject->GetMaterial()->shininess = VisualPresetLibrary::GetInstance().GetShininess("ice");
                 levelObject->SetEnableEnvironmentMap(false);
                 levelObject->SetEnvironmentMapStrength(0.0f);
                 levelObject->SetCastShadow(true);

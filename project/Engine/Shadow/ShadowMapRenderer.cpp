@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 namespace {
+const std::wstring kDefaultDepthShaderPath = L"resources/Shaders/ShadowMap/Depth.VS.hlsl";
 void CheckShadow(HRESULT result)
 {
     if (FAILED(result)) { throw std::runtime_error("Shadow map resource/pipeline creation failed"); }
@@ -99,10 +100,10 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution, ID3D1
     pso.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     pso.SampleDesc.Count = 1;
     CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipeline_)));
-    auto jellyfishShader = dx_->LoadCompiledShader(L"resources/Shaders/ShadowMap/JellyfishDepth.VS.hlsl");
-    pso.VS = { jellyfishShader->GetBufferPointer(), jellyfishShader->GetBufferSize() };
-    pso.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-    CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&jellyfishPipeline_)));
+    pipelineDescription_ = pso;
+    // Local shader/input-layout pointers are rebuilt when a custom material is first used.
+    pipelineDescription_.VS = {};
+    pipelineDescription_.InputLayout = {};
 }
 
 void ShadowMapRenderer::Update(const Camera& camera, const Vector3& direction, const ShadowSettings& settings)
@@ -143,12 +144,38 @@ void ShadowMapRenderer::BindObject(const Matrix4x4& world)
     dx_->GetCommandList()->SetGraphicsRoot32BitConstants(0, 16, &world, 0);
 }
 
-void ShadowMapRenderer::BindJellyfishObject(const Matrix4x4& world, const Vector4& animation)
+void ShadowMapRenderer::BindObject(const Matrix4x4& world,
+    const ShadowMaterialSettings& material, const Vector4& parameters)
 {
+    if (material.vertexShaderPath.empty() && !material.isDoubleSided) {
+        BindObject(world);
+        return;
+    }
+    const std::wstring* shaderPath = &material.vertexShaderPath;
+    if (shaderPath->empty()) { shaderPath = &kDefaultDepthShaderPath; }
+    auto pipelineEntry = materialPipelines_.find(*shaderPath);
+    if (pipelineEntry == materialPipelines_.end()) {
+        pipelineEntry = materialPipelines_.emplace(*shaderPath,
+            std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, 2> {}).first;
+    }
+    uint32_t sidedIndex = 0;
+    if (material.isDoubleSided) { sidedIndex = 1; }
+    auto& pipeline = pipelineEntry->second[sidedIndex];
+    if (!pipeline) {
+        const auto shader = dx_->LoadCompiledShader(*shaderPath);
+        D3D12_INPUT_ELEMENT_DESC position {};
+        position.SemanticName = "POSITION";
+        position.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC description = pipelineDescription_;
+        description.InputLayout = { &position, 1 };
+        description.VS = { shader->GetBufferPointer(), shader->GetBufferSize() };
+        if (material.isDoubleSided) { description.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; }
+        CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&description, IID_PPV_ARGS(&pipeline)));
+    }
     auto* commandList = dx_->GetCommandList();
-    commandList->SetPipelineState(jellyfishPipeline_.Get());
+    commandList->SetPipelineState(pipeline.Get());
     commandList->SetGraphicsRoot32BitConstants(0, 16, &world, 0);
-    commandList->SetGraphicsRoot32BitConstants(2, 4, &animation, 0);
+    commandList->SetGraphicsRoot32BitConstants(2, 4, &parameters, 0);
 }
 
 void ShadowMapRenderer::EndShadowPass()

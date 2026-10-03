@@ -46,7 +46,8 @@ void SceneManager::Update()
         SetSceneExposure(1.0f);
         if (volumetricLightRenderer_ != nullptr) { volumetricLightRenderer_->ResetLocalFog(); }
         RemovePostEffect(PostEffectType::ArchiveAtmosphere);
-        archiveApproach_ = 0.0f;
+        radialBlurSettings_ = {};
+        effectParameters_.clear();
         // 時間帯を持たないシーンに、前シーンの空色を残さない。
         sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
         sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
@@ -168,6 +169,32 @@ void SceneManager::ClearPostEffects()
     postEffects_.clear();
     postEffectType_ = PostEffectType::Copy;
 }
+const Vector3* SceneManager::FindPostEffectParameters(PostEffectType type) const
+{
+    const auto parameters = effectParameters_.find(type);
+    if (parameters == effectParameters_.end()) { return nullptr; }
+    return &parameters->second;
+}
+bool SceneManager::SetRadialBlurSettings(const RadialBlurSettings& settings)
+{
+    if (!std::isfinite(settings.width) || !std::isfinite(settings.impulseStrength) ||
+        settings.width < 0.0f || settings.width > 1.0f || settings.impulseStrength < 0.0f ||
+        settings.impulseStrength > 1.0f || settings.sampleCount < 8 || settings.sampleCount > 128) { return false; }
+    radialBlurSettings_ = settings;
+    return true;
+}
+void SceneManager::ApplyAtmospherePreset(const AtmospherePreset& preset)
+{
+    SetSceneExposure(preset.exposure);
+    SetSceneDistanceFog(preset.distanceFog);
+    if (preset.shouldApplyFogColor) { SetSceneFogColor(preset.fogColor); }
+}
+void SceneManager::ApplyPostEffectChain(const std::vector<PostEffectInfo>& effects)
+{
+    postEffects_ = effects;
+    postEffectType_ = PostEffectType::Copy;
+    if (!postEffects_.empty()) { postEffectType_ = postEffects_.front().type; }
+}
 
 void SceneManager::SetPostEffectEnabled(PostEffectType type, bool enable)
 {
@@ -192,23 +219,6 @@ void SceneManager::SetPostEffectCenter(const Vector2& center)
 const Vector2& SceneManager::GetPostEffectCenter() const
 {
     return postEffectCenter_;
-}
-
-void SceneManager::SetPostEffectKickStrength(float strength)
-{
-    postEffectKickStrength_ = strength;
-    if (postEffectKickStrength_ < 0.0f) {
-        postEffectKickStrength_ = 0.0f;
-    }
-
-    if (postEffectKickStrength_ > 1.0f) {
-        postEffectKickStrength_ = 1.0f;
-    }
-}
-
-float SceneManager::GetPostEffectKickStrength() const
-{
-    return postEffectKickStrength_;
 }
 
 void SceneManager::SetCameraShakeStrength(float strength)

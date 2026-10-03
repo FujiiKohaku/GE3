@@ -42,11 +42,11 @@ NaN・無限大、ゼロの方向、不正な距離や角度を拒否します�
 
 物体側は `SetCastShadow(true)` と `SetReceiveShadow(true)` を設定します。通常材質、ShadowToon、氷の地形・床、クラゲボスが局所ライトとその影を受けます。既存の影用描画に対応していないモデルは影を落としません。従来のスキニング用シェーダーは局所照明に対応しますが、局所影の受け取りは未対応です。発光・Unlit材質は照明の影響を受けません。ポイントライトの面境界には低解像度による継ぎ目が出る場合があります。
 
-この初期版では局所ライトをボリューメトリックフォグへ散乱させません。霧の光の筋は既存の太陽光を使用します。
+スポットライトは `SetSpotLightVolumetricEnabled(handle, true)` で立体霧へ散乱できます（最大2灯、初期状態は無効）。影を有効にしたライトでは当該フレームの局所影を参照し、影が未完了・上限外なら散乱を省略します。点光源の霧への散乱は未対応です。詳細は `Engine/PostEffect/Volumetric/README.md` を参照してください。
 
 ## 見た目の調整
 
-`GameplayVisualPreset` で太陽光と環境光を調整しています。stage03では環境光を抑え、クラゲボスへ薄い青のスポットライトと補助のポイントライトを配置しました。クラゲの反射も抑え、表面の形が読みやすい設定にしています。
+`resources/Graphics/visual-presets.json` で太陽光と環境光を調整しています。stage03では環境光を抑え、クラゲボスへ薄い青のスポットライトと補助のポイントライトを配置しました。クラゲの反射も抑え、表面の形が読みやすい設定にしています。
 
 シーンの露出は `SceneManager::SetSceneExposure()` で0.1～4を指定します。シーン切替時に1へ戻し、`PostEffectManager` が変更時だけ反映するため、開発パネルで露出を調整した値は毎フレーム上書きされません。stage03の既定値は0.95です。
 
@@ -67,7 +67,7 @@ NaN・無限大、ゼロの方向、不正な距離や角度を拒否します�
 | スポットライト、影あり | 0.181ms |
 | ポイント＋スポット、両方影あり | 0.225ms |
 
-これは実ゲームの保証値ではありません。ライトと影の差は影なしを基準に約0.05ms／約0.03msですが、実ゲームでは影を描く物体数に応じて増えます。テスト結果は `captures/ShadowMapTests/local-light-timing.txt` に出力します。
+これは実ゲームの保証値ではありません。ライトと影の差は影なしを基準に約0.05ms／約0.03msですが、実ゲームでは影を描く物体数に応じて増えます。テスト結果は `runtime/captures/ShadowMapTests/local-light-timing.txt` に出力します。
 
 ## 間接光・大気散乱・Clustered（④〜⑥）
 
@@ -115,7 +115,7 @@ lightManager->SetClusteredLightingEnabled(true);
 
 `ShadowMapTests` でSSAOの効果、静止画像の一致、強度0／法線欠落のフォールバック、大気散乱と環境光の画像差、38灯のClustered ON／OFFを確認します。カメラ3方向でClusteredと全走査の画像が完全一致することを必須にしています。
 
-測定は1280×720、床＋氷モデル、デバッグレイヤー有効、ウォームアップ後20回平均です。GPUの物体描画＋後処理、CPUのクラスタ分類を別々に記録します。実ゲームの性能保証ではありません。結果は `captures/ShadowMapTests/screen-lighting-report.txt` と `clustered-lighting-report.txt` に出力します。
+測定は1280×720、床＋氷モデル、デバッグレイヤー有効、ウォームアップ後20回平均です。GPUの物体描画＋後処理、CPUのクラスタ分類を別々に記録します。実ゲームの性能保証ではありません。結果は `runtime/captures/ShadowMapTests/screen-lighting-report.txt` と `clustered-lighting-report.txt` に出力します。
 
 今回の測定値（GPUは物体描画＋後処理を含む）：
 

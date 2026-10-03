@@ -16,14 +16,14 @@ cbuffer PostEffectParameter : register(b0)
     float dissolveEdgeWidth;
     float dissolveEdgeStrength;
     float dissolvePadding;
-    float boostKickStrength;
+    float radialBlurImpulseStrength;
     float pixelSize;
     float colorBrightness;
     float colorContrast;
     float colorSaturation;
-    float padding0;
-    float padding1;
-    float padding2;
+    float customParameter0;
+    float customParameter1;
+    float customParameter2;
     float focusDepth;
     float focusRange;
     float depthOfFieldRadius;

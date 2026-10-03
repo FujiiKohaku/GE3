@@ -1,9 +1,9 @@
-﻿#include "Fullscreen.hlsli"
+#include "Fullscreen.hlsli"
 
 // Reuse the three reserved floats without changing the shared shader layout.
-#define archiveFocusDistance padding0
-#define archiveFocusRange padding1
-#define archiveApproach padding2
+#define archiveFocusDistance customParameter0
+#define archiveFocusRange customParameter1
+#define archiveApproach customParameter2
 
 Texture2D<float4> gTexture : register(t0);
 Texture2D<float> gDepthTexture : register(t1);

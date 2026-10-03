@@ -1,19 +1,19 @@
-#include "ModelPreview/PreviewGif.h"
+#include "Tools/ModelPreview/PreviewGif.h"
 #include <iostream>
 #include <stdexcept>
 
 int main()
 {
     try {
-        std::filesystem::create_directories("generated/preview-gif-tests");
+        std::filesystem::create_directories("runtime/preview-gif-tests");
         PreviewGif gif;
         bool rejected = false;
-        try { gif.Begin("generated/preview-gif-tests/invalid.gif", 0, 1); }
+        try { gif.Begin("runtime/preview-gif-tests/invalid.gif", 0, 1); }
         catch (const std::exception&) { rejected = true; }
         if (!rejected) { throw std::runtime_error("Zero-sized GIF was accepted"); }
-        gif.Begin("generated/preview-gif-tests/patterns.gif", 193, 65);
+        gif.Begin("runtime/preview-gif-tests/patterns.gif", 193, 65);
         std::vector<std::uint8_t> frame(193 * 65);
-        std::ofstream expected("generated/preview-gif-tests/expected.rgb", std::ios::binary);
+        std::ofstream expected("runtime/preview-gif-tests/expected.rgb", std::ios::binary);
         unsigned int random = 731;
         for (int pattern = 0; pattern < 3; ++pattern) {
             for (std::size_t index = 0; index < frame.size(); ++index) {
@@ -37,7 +37,7 @@ int main()
         gif.Finish();
         gif.Finish();
         // Reuse a writer, including the one-pixel and partial-byte cases.
-        gif.Begin("generated/preview-gif-tests/single.gif", 1, 1);
+        gif.Begin("runtime/preview-gif-tests/single.gif", 1, 1);
         gif.AddFrame(std::vector<std::uint8_t>(1, 251), 10);
         gif.Finish();
         std::cout << "PASS: GIF writer, dimensions, reuse, long runs, repeated dictionary resets\n";

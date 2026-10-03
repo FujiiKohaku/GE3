@@ -51,7 +51,6 @@ public:
         normalTextureHandle_ = handle;
     }
 
-    void SetBoostRadialBlurParameters(bool isBoosting);
     void Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
     void PrepareSceneForParticleDraw(
         SceneManager* sceneManager,
@@ -98,6 +97,7 @@ private:
     void FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle);
     void ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle);
     void UpdatePostEffectParameters(SceneManager* sceneManager);
+    std::unordered_map<PostEffectType, Vector3> defaultEffectParameters_;
     void SetBackBufferRenderTarget();
     uint32_t GetNextPingPongIndex(uint32_t currentIndex) const;
 

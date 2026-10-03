@@ -15,6 +15,21 @@ inline constexpr SpotLightHandle kInvalidSpotLightHandle = 0xffffffffu;
 
 class Camera;
 
+struct LightingPreset {
+    Vector4 color { 1.0f, 1.0f, 1.0f, 1.0f };
+    Vector3 direction { 0.0f, -1.0f, 0.0f };
+    float intensity = 1.0f;
+    Vector4 ambient { 1.0f, 1.0f, 1.0f, 0.2f };
+    Vector3 skyColor { 1.0f, 1.0f, 1.0f };
+    Vector3 groundColor { 1.0f, 1.0f, 1.0f };
+    float pointRadius = 10.0f;
+    float pointDecay = 1.0f;
+    Vector4 pointColor { 1.0f, 1.0f, 1.0f, 1.0f };
+    Vector3 pointPosition { 0.0f, 2.0f, 0.0f };
+    float pointIntensity = 0.0f;
+    float spotIntensity = 0.0f;
+};
+
 class LightManager {
 public:
     static constexpr uint32_t kMaxPointLights = 32;
@@ -26,6 +41,7 @@ public:
     void Initialize(DirectXCommon* dxCommon);
     bool IsInitialized() const { return dxCommon_ != nullptr; }
     void Update();
+    void ApplyLightingPreset(const LightingPreset& preset);
     void UpdateClusters(const Camera* camera);
     void SetClusteredLightingEnabled(bool isEnabled);
     bool IsClusteredLightingEnabled() const { return isClusteredLightingEnabled_; }
@@ -108,6 +124,8 @@ public:
     void ClearDynamicSpotLights();
     bool SetPointLightShadowEnabled(PointLightHandle handle, bool isEnabled);
     bool SetSpotLightShadowEnabled(SpotLightHandle handle, bool isEnabled);
+    bool SetSpotLightVolumetricEnabled(SpotLightHandle handle, bool isEnabled);
+    bool IsSpotLightVolumetricEnabled(uint32_t lightIndex) const;
     bool IsPointLightShadowEnabled(uint32_t lightIndex) const;
     bool IsSpotLightShadowEnabled(uint32_t lightIndex) const;
     PointLight GetPointLight(uint32_t lightIndex) const;
@@ -155,6 +173,7 @@ private:
     std::array<uint32_t, kMaxSpotLights> spotGenerations_ {};
     std::array<bool, kMaxPointLights> pointShadowEnabled_ {};
     std::array<bool, kMaxSpotLights> spotShadowEnabled_ {};
+    std::array<bool, kMaxSpotLights> spotVolumetricEnabled_ {};
     bool isClusteredLightingEnabled_ = true;
     DirectXCommon* dxCommon_ = nullptr;
 

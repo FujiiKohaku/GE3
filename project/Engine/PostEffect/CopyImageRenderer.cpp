@@ -352,9 +352,13 @@ void CopyImageRenderer::Draw(
     if (normalTextureHandle.ptr == 0) { normalTextureHandle = maskTextureHandle_; }
     commandList->SetGraphicsRootDescriptorTable(2, normalTextureHandle);
 
+    size_t parameterIndex = static_cast<size_t>(currentPostEffectType_);
+    if (parameterIndex >= kDrawParameterCount) { parameterIndex = 0; }
+    const size_t parameterOffset = kDrawParameterStride * parameterIndex;
+    memcpy(drawParameterData_ + parameterOffset, postEffectParameterData_, sizeof(PostEffectParameter));
     commandList->SetGraphicsRootConstantBufferView(
         3,
-        postEffectParameterResource_->GetGPUVirtualAddress());
+        drawParameterResource_->GetGPUVirtualAddress() + parameterOffset);
 
     commandList->DrawInstanced(3, 1, 0, 0);
 }
@@ -367,6 +371,8 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterResource_ = dxCommon_->CreateBufferResource(sizeof(PostEffectParameter));
 
     postEffectParameterResource_->Map(0,nullptr,reinterpret_cast<void**>(&postEffectParameterData_));
+    drawParameterResource_ = dxCommon_->CreateBufferResource(kDrawParameterStride * kDrawParameterCount);
+    drawParameterResource_->Map(0, nullptr, reinterpret_cast<void**>(&drawParameterData_));
 
     *postEffectParameterData_ = {};
     postEffectParameterData_->ssaoSettings = { 0.25f, 6.0f, 0.08f, 1.0f };
@@ -399,14 +405,14 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->dissolveEdgeWidth = 0.05f;
     postEffectParameterData_->dissolveEdgeStrength = 2.0f;
     postEffectParameterData_->dissolvePadding = 0.0f;
-    postEffectParameterData_->boostKickStrength = 0.0f;
+    postEffectParameterData_->radialBlurImpulseStrength = 0.0f;
     postEffectParameterData_->pixelSize = 8.0f;
     postEffectParameterData_->colorBrightness = 0.03f;
     postEffectParameterData_->colorContrast = 1.15f;
     postEffectParameterData_->colorSaturation = 1.25f;
-    postEffectParameterData_->padding0 = 0.0f;
-    postEffectParameterData_->padding1 = 0.0f;
-    postEffectParameterData_->padding2 = 0.0f;
+    postEffectParameterData_->customParameter0 = 0.0f;
+    postEffectParameterData_->customParameter1 = 0.0f;
+    postEffectParameterData_->customParameter2 = 0.0f;
     postEffectParameterData_->focusDepth = 0.99f;
     postEffectParameterData_->focusRange = 0.01f;
     postEffectParameterData_->depthOfFieldRadius = 8.0f;
