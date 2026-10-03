@@ -30,6 +30,10 @@
 #include <vector>
 #include <cmath>
 #include <chrono>
+#include <DirectXPackedVector.h>
+#include "Engine/MotionVector/MotionVectorRenderer.h"
+#include "Engine/3D/SkinningObject3d.h"
+#include "Engine/3D/SkinningObject3dManager.h"
 
 namespace {
 void Require(bool value, const char* message)
@@ -85,6 +89,202 @@ size_t ChangedPixels(const std::vector<uint8_t>& a, const std::vector<uint8_t>& 
         if (difference > 6) { ++changed; }
     }
     return changed;
+}
+
+Vector2 ReadMotionCenter(DirectXCommon* dx, MotionVectorRenderer& renderer)
+{
+    auto* source = renderer.GetTexture();
+    auto description = source->GetDesc();
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout = {};
+    UINT64 size = 0;
+    dx->GetDevice()->GetCopyableFootprints(&description, 0, 1, 0, &layout, nullptr, nullptr, &size);
+    D3D12_HEAP_PROPERTIES heap = {};
+    heap.Type = D3D12_HEAP_TYPE_READBACK;
+    auto bufferDescription = CD3DX12_RESOURCE_DESC::Buffer(size);
+    Microsoft::WRL::ComPtr<ID3D12Resource> readback;
+    Require(SUCCEEDED(dx->GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE,
+        &bufferDescription, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback))), "Motion readback allocation failed");
+    auto before = CD3DX12_RESOURCE_BARRIER::Transition(source, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    dx->GetCommandList()->ResourceBarrier(1, &before);
+    D3D12_TEXTURE_COPY_LOCATION destination = {};
+    destination.pResource = readback.Get();
+    destination.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+    destination.PlacedFootprint = layout;
+    D3D12_TEXTURE_COPY_LOCATION origin = {};
+    origin.pResource = source;
+    origin.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+    dx->GetCommandList()->CopyTextureRegion(&destination, 0, 0, 0, &origin, nullptr);
+    auto after = CD3DX12_RESOURCE_BARRIER::Transition(source, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    dx->GetCommandList()->ResourceBarrier(1, &after);
+    dx->PostDraw();
+    unsigned char* bytes = nullptr;
+    D3D12_RANGE range = {0, static_cast<SIZE_T>(size)};
+    Require(SUCCEEDED(readback->Map(0, &range, reinterpret_cast<void**>(&bytes))), "Motion readback map failed");
+    auto* pixel = reinterpret_cast<const DirectX::PackedVector::HALF*>(bytes + layout.Offset
+        + layout.Footprint.RowPitch * (description.Height / 2) + 4 * (description.Width / 2));
+    Vector2 result = {DirectX::PackedVector::XMConvertHalfToFloat(pixel[0]), DirectX::PackedVector::XMConvertHalfToFloat(pixel[1])};
+    D3D12_RANGE written = {0, 0};
+    readback->Unmap(0, &written);
+    return result;
+}
+
+void CheckMotionVectors(DirectXCommon* dx, PostEffectManager& post, OffscreenRenderer& offscreen)
+{
+    Logger::Log("Motion vectors: starting GPU checks");
+    Logger::Flush();
+    Microsoft::WRL::ComPtr<ID3D12InfoQueue> info;
+    dx->GetDevice()->QueryInterface(IID_PPV_ARGS(&info));
+    if (info) {
+        info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, false);
+        info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, false);
+        info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+    }
+    Camera camera;
+    camera.Initialize();
+    camera.LookAt({0, 0, -10}, {0, 0, 0});
+    camera.Update();
+    MotionVectorRenderer renderer;
+    renderer.Initialize();
+    MotionVectorHistory history;
+    Vector4 positions[] = {{-2, -2, 0, 1}, {0, 2, 0, 1}, {2, -2, 0, 1}};
+    auto currentBuffer = dx->CreateBufferResource(sizeof(positions));
+    auto previousBuffer = dx->CreateBufferResource(sizeof(positions));
+    void* mapped = nullptr;
+    currentBuffer->Map(0, nullptr, &mapped);
+    memcpy(mapped, positions, sizeof(positions));
+    currentBuffer->Unmap(0, nullptr);
+    previousBuffer->Map(0, nullptr, &mapped);
+    memcpy(mapped, positions, sizeof(positions));
+    previousBuffer->Unmap(0, nullptr);
+    D3D12_VERTEX_BUFFER_VIEW currentVertices = {currentBuffer->GetGPUVirtualAddress(), sizeof(positions), sizeof(Vector4)};
+    D3D12_VERTEX_BUFFER_VIEW previousVertices = {previousBuffer->GetGPUVirtualAddress(), sizeof(positions), sizeof(Vector4)};
+    Matrix4x4 world = MatrixMath::MakeIdentity4x4();
+    for (int mode = 0; mode < 8; ++mode) {
+        Logger::Log("Motion vectors: displacement mode " + std::to_string(mode));
+        Logger::Flush();
+        if (mode == 2) { world.m[3][0] = 0.5f; }
+        if (mode == 4) { camera.LookAt({0.5f, 0, -10}, {0.5f, 0, 0}); camera.Update(); }
+        if (mode == 5) { camera.LookAt({1, 0, -10}, {1, 0, 0}); camera.Update(); camera.ResetMotionHistory(); }
+        if (mode == 6) {
+            // A pose changes with no world or camera movement: previous-position stream must capture it.
+            for (auto& position : positions) { position.x += 0.5f; }
+            currentBuffer->Map(0, nullptr, &mapped);
+            memcpy(mapped, positions, sizeof(positions));
+            currentBuffer->Unmap(0, nullptr);
+        }
+        if (mode == 7) { renderer.ResetHistory(); }
+        SrvManager::GetInstance()->PreDraw();
+        post.PreDrawDepth();
+        offscreen.PreDraw(post.GetDepthDSVHandle());
+        renderer.BeginFrame();
+        if (mode == 6) {
+            renderer.Queue(currentVertices, previousVertices, {}, 3, 0, world, camera, history, L"", {}, true);
+        } else { renderer.Queue(currentVertices, currentVertices, {}, 3, 0, world, camera, history, L"", {}, true); }
+        renderer.EndFrame(post.GetDepthDSVHandle());
+        renderer.CommitHistory(history, world, camera, {});
+        offscreen.PostDraw();
+        post.PostDrawDepth();
+        dx->PreDraw();
+        Vector2 velocity = ReadMotionCenter(dx, renderer);
+        float expected = 0;
+        if (mode == 2) { expected = 0.5f * camera.GetProjectionMatrix().m[0][0] / 10.0f * 0.5f; }
+        if (mode == 4) { expected = -0.5f * camera.GetProjectionMatrix().m[0][0] / 10.0f * 0.5f; }
+        if (mode == 6) { expected = 0.5f * camera.GetProjectionMatrix().m[0][0] / 10.0f * 0.5f; }
+        Require(std::abs(velocity.x - expected) < 0.0002f && std::abs(velocity.y) < 0.0002f,
+            "Motion vector displacement, sign, stationary or history reset failed");
+        if (mode == 2 || mode == 6) {
+            renderer.SetSettings({true, true});
+            dx->PreDraw();
+            renderer.DrawDebug();
+            std::filesystem::path file = "runtime/captures/ShadowMapTests/motion-object.png";
+            if (mode == 6) { file = "runtime/captures/ShadowMapTests/motion-pose.png"; }
+            ReadFrame(dx, file);
+            renderer.SetSettings({true, false});
+        }
+    }
+    Logger::Log("Motion vectors PASS: GPU readback, object motion, camera motion, previous skinned positions, stationary and history reset");
+    camera.LookAt({0, 0, -10}, {0, 0, 0});
+    camera.Update();
+    SkinningObject3dManager::GetInstance()->Initialize(dx);
+    SkinningObject3dManager::GetInstance()->SetDefaultCamera(&camera);
+    SkinningObject3dManager::GetInstance()->SetEnvironmentTexture(Object3dManager::GetInstance()->GetEnvironmentTexture());
+    Model* model = ModelManager::GetInstance()->CreatePlane("resources/Textures/white.png");
+    Skeleton skeleton = Skeleton::CreateSkeleton(model->GetModelData().rootNode);
+    skeleton.UpdateSkeleton();
+    PlayAnimation animation;
+    animation.SetSkeleton(&skeleton);
+    {
+        SkinningObject3d object;
+        object.SetModel(model);
+        object.SetAnimation(&animation);
+        object.Initialize(SkinningObject3dManager::GetInstance());
+        for (auto& influence : object.GetSkinCluster().mappedInfluence) {
+            influence.weights[0] = 1;
+            influence.jointIndices[0] = skeleton.root;
+        }
+        for (int mode = 0; mode < 4; ++mode) {
+            Logger::Log("Motion vectors: skinning mode " + std::to_string(mode));
+            Logger::Flush();
+            if (mode == 1) { skeleton.joints[skeleton.root].transform.translate.x += 0.5f; skeleton.UpdateSkeleton(); }
+            if (mode == 3) { skeleton.joints[skeleton.root].transform.translate.x += 0.5f; skeleton.UpdateSkeleton(); object.ResetMotionHistory(); }
+            object.Update();
+            SrvManager::GetInstance()->PreDraw();
+            post.PreDrawDepth();
+            offscreen.PreDraw(post.GetDepthDSVHandle());
+            renderer.BeginFrame();
+            SkinningObject3dManager::GetInstance()->PreDraw();
+            object.Draw();
+            renderer.EndFrame(post.GetDepthDSVHandle());
+            offscreen.PostDraw();
+            post.PostDrawDepth();
+            dx->PreDraw();
+            Vector2 velocity = ReadMotionCenter(dx, renderer);
+            float expected = 0;
+            if (mode == 1) { expected = 0.5f * camera.GetProjectionMatrix().m[0][0] / 10.0f * 0.5f; }
+            Require(std::abs(velocity.x - expected) < 0.0002f && std::abs(velocity.y) < 0.0002f,
+                "Actual GPU skinning motion or pose history copy/reset failed");
+        }
+    }
+    SkinningObject3dManager::GetInstance()->SetDefaultCamera(nullptr);
+    Logger::Log("Motion vectors PASS: actual GPU skinning, previous vertex buffer copy, stationary pose and reset");
+    {
+        Object3d object;
+        object.Initialize(Object3dManager::GetInstance());
+        object.SetCamera(&camera);
+        object.SetModel(model);
+        for (int mode = 0; mode < 4; ++mode) {
+            if (mode == 1) { object.SetTranslate({0.5f, 0, 0}); }
+            if (mode == 3) { object.SetTranslate({1, 0, 0}); object.ResetMotionHistory(); }
+            object.Update();
+            SrvManager::GetInstance()->PreDraw();
+            post.PreDrawDepth();
+            offscreen.PreDraw(post.GetDepthDSVHandle());
+            renderer.BeginFrame();
+            Object3dManager::GetInstance()->PreDraw();
+            object.Draw();
+            renderer.EndFrame(post.GetDepthDSVHandle());
+            offscreen.PostDraw(); post.PostDrawDepth();
+            dx->PreDraw();
+            Vector2 velocity = ReadMotionCenter(dx, renderer);
+            float expected = 0;
+            if (mode == 1) { expected = 0.5f * camera.GetProjectionMatrix().m[0][0] / 10.0f * 0.5f; }
+            Require(std::abs(velocity.x - expected) < 0.0002f && std::abs(velocity.y) < 0.0002f,
+                "Actual Object3d motion capture or history reset failed");
+        }
+    }
+    Logger::Log("Motion vectors PASS: actual Object3d draw capture, stationary and reset");
+    Logger::Flush();
+    if (info) {
+        for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
+            SIZE_T size = 0;
+            info->GetMessage(index, nullptr, &size);
+            std::vector<uint8_t> storage(size);
+            auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data());
+            info->GetMessage(index, message, &size);
+            if (message->Severity <= D3D12_MESSAGE_SEVERITY_WARNING) { Logger::Log(message->pDescription); }
+        }
+        Logger::Flush();
+    }
 }
 }
 
@@ -522,7 +722,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         ModelManager::GetInstance()->Initialize(dx);
         Microsoft::WRL::ComPtr<ID3D12InfoQueue> info;
         dx->GetDevice()->QueryInterface(IID_PPV_ARGS(&info));
-        if (info) { info->ClearStoredMessages(); }
+        if (info) {
+            info->ClearStoredMessages();
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, false);
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, false);
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+        }
         {
             Camera camera;
             camera.Initialize();
@@ -712,6 +917,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
             post.PostDrawDepth();
             post.SetFxaaEnabled(false);
+            CheckMotionVectors(dx, post, offscreen);
             Logger::Log("HDR bloom test initialized");
             Logger::Flush();
             std::vector<uint8_t> bloomImages[2];

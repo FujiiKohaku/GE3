@@ -119,6 +119,7 @@ public:
     float GetSceneExposure() const { return sceneExposure_; }
     uint64_t GetSceneExposureRevision() const { return sceneExposureRevision_; }
     uint64_t GetSceneFogRevision() const { return sceneFogRevision_; }
+    uint64_t GetSceneRevision() const { return sceneRevision_; }
 
 private:
     VolumetricLightRenderer* volumetricLightRenderer_ = nullptr;
@@ -155,6 +156,7 @@ private:
 
 private:
     std::unique_ptr<BaseScene> scene_;
+    uint64_t sceneRevision_ = 0;
     std::unique_ptr<BaseScene> nextScene_;
     std::unique_ptr<BaseScene> retiredScene_;
 };

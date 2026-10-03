@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/Math/MathStruct.h"
 #include "Engine/Math/MatrixMath.h"
@@ -15,6 +16,8 @@ public:
     // 更新
     void Update();
     void DrawImGui();
+    void ResetMotionHistory() { motionHistoryId_ = nextMotionHistoryId_++; }
+    uint64_t GetMotionHistoryId() const { return motionHistoryId_; }
     // ===============================
     // setter（外部から値を設定）
     // ===============================
@@ -54,6 +57,8 @@ public:
     }
 
 private:
+    inline static uint64_t nextMotionHistoryId_ = 1;
+    uint64_t motionHistoryId_ = nextMotionHistoryId_++;
     struct CameraForGPU {
         Vector3 worldPosition;
     };

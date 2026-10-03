@@ -1,4 +1,5 @@
 #include "Engine/Renderer/Renderer.h"
+#include "Engine/MotionVector/MotionVectorRenderer.h"
 
 #include "App/Scene/Common/SceneManager.h"
 #include "Engine/3D/Object3dManager.h"
@@ -31,6 +32,8 @@ void Renderer::Initialize()
     // Offscreen renderer setup
     offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
     offscreenRenderer_->Initialize();
+    motionVectorRenderer_ = std::make_unique<MotionVectorRenderer>();
+    motionVectorRenderer_->Initialize();
 
     // Post effect chain setup
     postEffectManager_ = std::make_unique<PostEffectManager>();
@@ -48,6 +51,16 @@ void Renderer::Update()
 void Renderer::DrawImGui()
 {
     postEffectManager_->DrawImGui();
+#ifdef USE_IMGUI
+    if (ImGui::Begin("Motion vectors")) {
+        MotionVectorSettings settings = motionVectorRenderer_->GetSettings();
+        ImGui::Checkbox("Enabled", &settings.isEnabled);
+        ImGui::Checkbox("Visualize UV displacement", &settings.isDebugVisible);
+        motionVectorRenderer_->SetSettings(settings);
+        if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); }
+    }
+    ImGui::End();
+#endif
 }
 
 void Renderer::Draw(SceneManager* sceneManager)
@@ -129,8 +142,14 @@ void Renderer::Draw(SceneManager* sceneManager)
     postEffectManager_->PreDrawDepth();
     offscreenRenderer_->SetClearColor(sceneManager->GetSceneClearColor());
     offscreenRenderer_->PreDraw(postEffectManager_->GetDepthDSVHandle());
+    if (motionSceneRevision_ != sceneManager->GetSceneRevision()) {
+        motionVectorRenderer_->ResetHistory();
+        motionSceneRevision_ = sceneManager->GetSceneRevision();
+    }
+    motionVectorRenderer_->BeginFrame();
     sceneManager->Draw3D();
     DebugRenderer::GetInstance()->Draw();
+    motionVectorRenderer_->EndFrame(postEffectManager_->GetDepthDSVHandle());
     postEffectManager_->PostDrawDepth();
     offscreenRenderer_->PostDraw();
 
@@ -149,6 +168,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     postEffectManager_->PostDrawDepth();
 
     postEffectManager_->ApplyAfterParticleDraw(sceneManager);
+    motionVectorRenderer_->DrawDebug();
 
     // 2D draw
     sceneManager->Draw2D();

@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "../3D/SkinCluster.h"
 #include "../Animation/PlayAnimation.h"
 #include "Engine/Camera/Camera.h"
@@ -24,6 +25,8 @@ public:
     void Initialize(SkinningObject3dManager* skinningObject3DManager);
     void Update();
     void Draw();
+    void QueueMotionVectors();
+    void ResetMotionHistory() { motionHistory_.Reset(); }
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
     ~SkinningObject3d();
@@ -121,6 +124,8 @@ public:
     }
 
 private:
+    MotionVectorHistory motionHistory_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> previousSkinnedVertexResource_;
     // ===============================
     // メンバ変数
     // ===============================

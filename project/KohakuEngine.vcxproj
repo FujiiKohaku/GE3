@@ -189,6 +189,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Fog\FogManager.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Fog\FogRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Renderer\Renderer.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\MotionVector\MotionVectorRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\ShadowCamera.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\ShadowMapRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\LocalShadowRenderer.cpp" />
@@ -670,6 +671,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\VisualPresetLibrary.h" />
     <ClInclude Include="$(projectRootPath)Engine\Shadow\ShadowMaterialSettings.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\PostEffectSettings.h" />
+    <ClInclude Include="$(projectRootPath)Engine\MotionVector\MotionVectorRenderer.h" />
+    <None Include="$(projectRootPath)Engine\MotionVector\README.md" />
+    <None Include="$(projectRootPath)resources\Shaders\MotionVector\Common.hlsli" />
+    <None Include="$(projectRootPath)resources\Shaders\MotionVector\MotionVector.VS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\MotionVector\MotionVector.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\MotionVector\Debug.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\Object3D\IceJellyfish\MotionVector.VS.hlsl" />
     <None Include="$(projectRootPath)resources\Graphics\visual-presets.json" />
     <None Include="$(projectRootPath)resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
     <None Include="$(projectRootPath)resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />

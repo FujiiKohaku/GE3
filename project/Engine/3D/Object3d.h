@@ -12,6 +12,7 @@
 #include "Engine/LevelEditor/LevelData.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/Shadow/ShadowMaterialSettings.h"
+#include "Engine/MotionVector/MotionVectorRenderer.h"
 
 #include "../Animation/PlayAnimation.h"
 #include "Engine/math/object3Dstruct.h"
@@ -27,6 +28,9 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
+    void QueueMotionVectors();
+    void ResetMotionHistory() { motionHistory_.Reset(); }
+    void SetMotionVectorShader(const std::wstring& shaderPath) { motionVectorShaderPath_ = shaderPath; ResetMotionHistory(); }
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
     void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
@@ -42,7 +46,7 @@ public:
     // static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
     // setter
-    void SetModel(Model* model) { model_ = model; }
+    void SetModel(Model* model) { model_ = model; ResetMotionHistory(); }
     void SetSurfaceProperties(float roughness, float metallic, float specularStrength);
     // === setter ===
     void SetScale(const Vector3& scale) { transform.scale = scale; useCustomWorldMatrix_ = false; }
@@ -157,6 +161,8 @@ public:
     BoxCollider* GetCollider() const { return collider_; }
 
 private:
+    MotionVectorHistory motionHistory_;
+    std::wstring motionVectorShaderPath_;
     // ===============================
     // メンバ変数
     // ===============================

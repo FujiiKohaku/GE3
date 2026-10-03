@@ -54,6 +54,7 @@ void SceneManager::Update()
         SetSceneDistanceFog({ 380.0f, 720.0f, 1.0f, 1.2f });
     }
     if (ChangeScene(scene_, nextScene_, retiredScene_)) {
+        ++sceneRevision_;
         pageReveal_.InitializeIfRequested();
     }
     pageReveal_.Update(TimeManager::GetInstance()->GetDeltaTime());

@@ -9,6 +9,7 @@
 #include <cassert>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #pragma region
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
@@ -223,6 +224,44 @@ void SkinningObject3d::Draw()
 
         vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
     }
+    QueueMotionVectors();
+}
+
+void SkinningObject3d::QueueMotionVectors()
+{
+    auto* renderer = MotionVectorRenderer::GetActive();
+    if (renderer == nullptr || model_ == nullptr || camera_ == nullptr) { return; }
+    if (renderer->IsQueued(motionHistory_)) { return; }
+    if (!previousSkinnedVertexResource_) {
+        D3D12_HEAP_PROPERTIES heap = {};
+        heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+        auto description = skinnedVertexResource_->GetDesc();
+        description.Flags = D3D12_RESOURCE_FLAG_NONE;
+        HRESULT result = DirectXCommon::GetInstance()->GetDevice()->CreateCommittedResource(
+            &heap, D3D12_HEAP_FLAG_NONE, &description, D3D12_RESOURCE_STATE_COMMON,
+            nullptr, IID_PPV_ARGS(&previousSkinnedVertexResource_));
+        if (FAILED(result)) { throw std::runtime_error("Previous skinned vertex buffer creation failed"); }
+        previousSkinnedVertexResource_->SetName(L"MotionVector::PreviousSkinnedVertices");
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(previousSkinnedVertexResource_.Get(),
+            D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        DirectXCommon::GetInstance()->GetCommandList()->ResourceBarrier(1, &barrier);
+        ResetMotionHistory();
+    }
+    uint32_t vertexOffset = 0;
+    for (const auto& primitive : model_->GetModelData().primitives) {
+        D3D12_VERTEX_BUFFER_VIEW currentVertices = {};
+        currentVertices.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
+        currentVertices.SizeInBytes = static_cast<UINT>(sizeof(VertexData) * primitive.vertices.size());
+        currentVertices.StrideInBytes = sizeof(VertexData);
+        auto previousVertices = currentVertices;
+        previousVertices.BufferLocation = previousSkinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
+        renderer->Queue(currentVertices, previousVertices, primitive.ibView,
+            static_cast<uint32_t>(primitive.vertices.size()), static_cast<uint32_t>(primitive.indices.size()),
+            worldMatrix_, *camera_, motionHistory_, L"", {});
+        vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
+    }
+    renderer->QueueVertexHistoryCopy(skinnedVertexResource_.Get(), previousSkinnedVertexResource_.Get());
+    renderer->CommitHistory(motionHistory_, worldMatrix_, *camera_, {});
 }
 
 void SkinningObject3d::SetMaterial(const std::string& materialFolderPath)
@@ -301,6 +340,8 @@ SkinningObject3d::~SkinningObject3d()
 }
 void SkinningObject3d::CreateSkinningResources()
 {
+    previousSkinnedVertexResource_.Reset();
+    ResetMotionHistory();
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
     assert(model_);

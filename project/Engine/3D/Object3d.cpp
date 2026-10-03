@@ -164,6 +164,23 @@ void Object3d::Draw()
     if (model_) {
         model_->Draw();
     }
+    QueueMotionVectors();
+}
+
+void Object3d::QueueMotionVectors()
+{
+    auto* renderer = MotionVectorRenderer::GetActive();
+    if (renderer == nullptr || model_ == nullptr || camera_ == nullptr || transparent_) { return; }
+    if (renderer->IsQueued(motionHistory_)) { return; }
+    // Custom deformation requires an explicitly supplied matching motion shader.
+    if (vertexShaderPath_ != "resources/Shaders/Object3D/Object3d.VS.hlsl" && motionVectorShaderPath_.empty()) { return; }
+    for (const auto& primitive : model_->GetModelData().primitives) {
+        if (primitive.mode != PrimitiveMode::Triangles) { continue; }
+        renderer->Queue(primitive.vbView, primitive.vbView, primitive.ibView,
+            static_cast<uint32_t>(primitive.vertices.size()), static_cast<uint32_t>(primitive.indices.size()),
+            worldMatrix_, *camera_, motionHistory_, motionVectorShaderPath_, vertexShaderParameters_, shadowMaterial_.isDoubleSided);
+    }
+    renderer->CommitHistory(motionHistory_, worldMatrix_, *camera_, vertexShaderParameters_);
 }
 
 void Object3d::SetMaterial(const std::string& materialFolderPath)
@@ -392,6 +409,7 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
 void Object3d::SetModel(const std::string& filePath)
 {
+    ResetMotionHistory();
 
     model_ = ModelManager::GetInstance()->FindModel(filePath);
     modelFilePath_ = filePath;

@@ -29,6 +29,7 @@ void ConfigureJellyfishBodyMaterial(Object3d& object)
     object.SetMaterial("resources/Shaders/Object3D/IceJellyfish");
     object.SetNormalMap("resources/Textures/Normals/ice_detail.png", 0.18f);
     object.SetVertexShaderPath("resources/Shaders/Object3D/IceJellyfish/Render.VS.hlsl");
+    object.SetMotionVectorShader(L"resources/Shaders/Object3D/IceJellyfish/MotionVector.VS.hlsl");
     ShadowMaterialSettings shadowMaterial;
     shadowMaterial.vertexShaderPath = L"resources/Shaders/ShadowMap/JellyfishDepth.VS.hlsl";
     shadowMaterial.isDoubleSided = true;
