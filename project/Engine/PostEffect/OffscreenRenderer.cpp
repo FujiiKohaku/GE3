@@ -6,6 +6,9 @@
 
 OffscreenRenderer::~OffscreenRenderer()
 {
+    if (materialSrvIndex_ != kInvalidDescriptorIndex) {
+        SrvManager::GetInstance()->Free(materialSrvIndex_);
+    }
     if (indirectSrvIndex_ != kInvalidDescriptorIndex) {
         SrvManager::GetInstance()->Free(indirectSrvIndex_);
     }
@@ -75,10 +78,20 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
         commandList->ResourceBarrier(1, &barrier);
         indirectCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
     }
+    if (materialCurrentState_ != D3D12_RESOURCE_STATE_RENDER_TARGET) {
+        D3D12_RESOURCE_BARRIER barrier {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = materialTextureResource_.Get();
+        barrier.Transition.StateBefore = materialCurrentState_;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &barrier);
+        materialCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    }
     commandList->RSSetViewports(1, &viewport_);
     commandList->RSSetScissorRects(1, &scissorRect_);
     const D3D12_CPU_DESCRIPTOR_HANDLE renderTargets[] = {
-        rtvHandle_, normalRtvHandle_, indirectRtvHandle_
+        rtvHandle_, normalRtvHandle_, indirectRtvHandle_, materialRtvHandle_
     };
     commandList->OMSetRenderTargets(_countof(renderTargets), renderTargets, false, &dsvHandle);
 
@@ -91,6 +104,7 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
     commandList->ClearRenderTargetView(rtvHandle_, clearColor, 0, nullptr);
     const float kIndirectClearColor[] = { 0, 0, 0, 0 };
     commandList->ClearRenderTargetView(indirectRtvHandle_, kIndirectClearColor, 0, nullptr);
+    commandList->ClearRenderTargetView(materialRtvHandle_, kIndirectClearColor, 0, nullptr);
     const float normalClearColor[] = { 0.5f, 0.5f, 1.0f, -1.0f };
     commandList->ClearRenderTargetView(normalRtvHandle_, normalClearColor, 0, nullptr);
 }
@@ -118,6 +132,14 @@ void OffscreenRenderer::PostDraw()
     indirectBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     commandList->ResourceBarrier(1, &indirectBarrier);
     indirectCurrentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_BARRIER materialBarrier {};
+    materialBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    materialBarrier.Transition.pResource = materialTextureResource_.Get();
+    materialBarrier.Transition.StateBefore = materialCurrentState_;
+    materialBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    materialBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    commandList->ResourceBarrier(1, &materialBarrier);
+    materialCurrentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
     if (normalCurrentState_ != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) {
         D3D12_RESOURCE_BARRIER normalBarrier = {};
@@ -190,6 +212,9 @@ void OffscreenRenderer::CreateRenderTexture()
         WinApp::kClientHeight,
         format_,
         clearColor_);
+    materialTextureResource_ = CreateRenderTextureResource(
+        DirectXCommon::GetInstance()->GetDevice(), WinApp::kClientWidth, WinApp::kClientHeight,
+        DXGI_FORMAT_R8G8B8A8_UNORM, { 0, 0, 0, 0 });
     indirectTextureResource_ = CreateRenderTextureResource(
         DirectXCommon::GetInstance()->GetDevice(), WinApp::kClientWidth, WinApp::kClientHeight,
         DXGI_FORMAT_R16G16B16A16_FLOAT, { 0, 0, 0, 0 });
@@ -214,6 +239,10 @@ void OffscreenRenderer::CreateDescriptorViews()
 
     indirectRtvHandle_ = directXCommon->GetRTVHandle(9);
     device->CreateRenderTargetView(indirectTextureResource_.Get(), &rtvDesc, indirectRtvHandle_);
+    materialRtvHandle_ = directXCommon->GetRTVHandle(10);
+    D3D12_RENDER_TARGET_VIEW_DESC materialRtvDesc = rtvDesc;
+    materialRtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    device->CreateRenderTargetView(materialTextureResource_.Get(), &materialRtvDesc, materialRtvHandle_);
     normalRtvHandle_ = directXCommon->GetRTVHandle(8);
     D3D12_RENDER_TARGET_VIEW_DESC normalRtvDesc = {};
     normalRtvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -227,6 +256,12 @@ void OffscreenRenderer::CreateDescriptorViews()
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
 
+    materialSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    materialSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(materialSrvIndex_);
+    D3D12_SHADER_RESOURCE_VIEW_DESC materialSrvDesc = srvDesc;
+    materialSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    device->CreateShaderResourceView(materialTextureResource_.Get(), &materialSrvDesc,
+        SrvManager::GetInstance()->GetCPUDescriptorHandle(materialSrvIndex_));
     indirectSrvIndex_ = SrvManager::GetInstance()->Allocate();
     indirectSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(indirectSrvIndex_);
     device->CreateShaderResourceView(indirectTextureResource_.Get(), &srvDesc,

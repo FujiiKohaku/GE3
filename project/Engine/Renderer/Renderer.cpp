@@ -1,4 +1,5 @@
 #include "Engine/Reflection/ScreenSpaceReflection.h"
+#include "Engine/Lighting/ScreenSpaceGlobalIllumination.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "Engine/SuperResolution/DlssSuperResolution.h"
@@ -53,6 +54,8 @@ void Renderer::Initialize()
     dlssSuperResolution_->Initialize();
     screenSpaceReflection_ = std::make_unique<ScreenSpaceReflection>();
     screenSpaceReflection_->Initialize();
+    screenSpaceGlobalIllumination_ = std::make_unique<ScreenSpaceGlobalIllumination>();
+    screenSpaceGlobalIllumination_->Initialize();
     frameTimer_.Initialize();
     dlaaTimer_.Initialize();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -72,13 +75,14 @@ void Renderer::DrawImGui()
 {
     postEffectManager_->DrawImGui();
     screenSpaceReflection_->DrawImGui();
+    screenSpaceGlobalIllumination_->DrawImGui();
 #ifdef USE_IMGUI
     if (ImGui::Begin("Motion vectors")) {
         MotionVectorSettings settings = motionVectorRenderer_->GetSettings();
         ImGui::Checkbox("Enabled", &settings.isEnabled);
         ImGui::Checkbox("Visualize UV displacement", &settings.isDebugVisible);
         motionVectorRenderer_->SetSettings(settings);
-        if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); screenSpaceReflection_->ResetHistory(); }
+        if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); screenSpaceReflection_->ResetHistory(); screenSpaceGlobalIllumination_->ResetHistory(); }
     }
     ImGui::End();
     ImGui::SetNextWindowSize(ImVec2(570, 390), ImGuiCond_FirstUseEver);
@@ -139,7 +143,14 @@ void Renderer::Draw(SceneManager* sceneManager)
     if (previousLightingComponents_ != kCurrentLightingComponents) {
         dlssSuperResolution_->ResetHistory();
         screenSpaceReflection_->ResetHistory();
+        screenSpaceGlobalIllumination_->ResetHistory();
         previousLightingComponents_ = kCurrentLightingComponents;
+    }
+    uint64_t globalIlluminationSettingsRevision = screenSpaceGlobalIllumination_->GetSettingsRevision();
+    if (previousGlobalIlluminationSettingsRevision_ != globalIlluminationSettingsRevision) {
+        dlssSuperResolution_->ResetHistory();
+        screenSpaceReflection_->ResetHistory();
+        previousGlobalIlluminationSettingsRevision_ = globalIlluminationSettingsRevision;
     }
     SuperResolutionHistoryInputs historyInputs;
     historyInputs.hasCamera = defaultCamera != nullptr;
@@ -151,7 +162,8 @@ void Renderer::Draw(SceneManager* sceneManager)
     postEffectManager_->UpdateCameraInputs(defaultCamera);
     const auto motionSettings = motionVectorRenderer_->GetSettings();
     if (dlssSuperResolution_->IsActive() ||
-        (screenSpaceReflection_->IsEnabled() && screenSpaceReflection_->GetSettings().shouldUseTemporalHistory)) {
+        (screenSpaceReflection_->IsEnabled() && screenSpaceReflection_->GetSettings().shouldUseTemporalHistory) ||
+        (screenSpaceGlobalIllumination_->IsEnabled() && screenSpaceGlobalIllumination_->GetSettings().shouldUseTemporalHistory)) {
         auto settings = motionVectorRenderer_->GetSettings();
         settings.isEnabled = true;
         motionVectorRenderer_->SetSettings(settings);
@@ -238,7 +250,31 @@ void Renderer::Draw(SceneManager* sceneManager)
     postEffectManager_->PostDrawDepth();
     offscreenRenderer_->PostDraw();
     DirectXCommon::GetInstance()->PreDraw();
-    postEffectManager_->PrepareSceneForTemporalResolve(sceneManager, offscreenRenderer_->GetSrvHandleGPU());
+    ScreenSpaceGlobalIlluminationInputs globalIlluminationInputs;
+    globalIlluminationInputs.colorSrv = offscreenRenderer_->GetSrvHandleGPU();
+    globalIlluminationInputs.depthSrv = postEffectManager_->GetDepthSrv();
+    globalIlluminationInputs.normalSrv = offscreenRenderer_->GetNormalSrvHandleGPU();
+    globalIlluminationInputs.materialSrv = offscreenRenderer_->GetMaterialSrvHandleGPU();
+    globalIlluminationInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle();
+    globalIlluminationInputs.camera = defaultCamera;
+    globalIlluminationInputs.sceneRevision = sceneManager->GetSceneRevision();
+    bool isLightingComponentView = lights->GetLightingComponents().w > 0.5f;
+    if (isLightingComponentView) { globalIlluminationInputs.camera = nullptr; }
+    if (screenSpaceGlobalIllumination_->IsEnabled() &&
+        screenSpaceGlobalIllumination_->GetSettings().shouldUseHierarchicalDepth && !isLightingComponentView) {
+        ScreenSpaceReflectionInputs depthInputs;
+        depthInputs.colorSrv = globalIlluminationInputs.colorSrv;
+        depthInputs.depthSrv = globalIlluminationInputs.depthSrv;
+        depthInputs.normalSrv = globalIlluminationInputs.normalSrv;
+        depthInputs.camera = defaultCamera;
+        screenSpaceReflection_->PrepareDepthPyramid(depthInputs);
+        globalIlluminationInputs.depthPyramidSrv = screenSpaceReflection_->GetDepthPyramidSrv();
+    }
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneWithIndirectLight = screenSpaceGlobalIllumination_->Draw(globalIlluminationInputs);
+    bool isGlobalIlluminationDebugView = screenSpaceGlobalIllumination_->IsEnabled() &&
+        screenSpaceGlobalIllumination_->GetSettings().debugMode != ScreenSpaceGlobalIlluminationDebugMode::None;
+    postEffectManager_->SetIndirectLightingDebugVisible(isGlobalIlluminationDebugView);
+    postEffectManager_->PrepareSceneForTemporalResolve(sceneManager, sceneWithIndirectLight);
 
     ScreenSpaceReflectionInputs reflectionInputs;
     reflectionInputs.colorSrv = postEffectManager_->GetSceneColorSrv();
@@ -248,7 +284,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     reflectionInputs.sceneRevision = sceneManager->GetSceneRevision();
     reflectionInputs.camera = defaultCamera;
     // Reflection is a separate lighting contribution; isolate the selected source view.
-    if (lights->GetLightingComponents().w > 0.5f) { reflectionInputs.camera = nullptr; }
+    if (isLightingComponentView || isGlobalIlluminationDebugView) { reflectionInputs.camera = nullptr; }
     postEffectManager_->ReplaceSceneColor(screenSpaceReflection_->Draw(reflectionInputs));
 
     SuperResolutionFrameInputs frameInputs;
@@ -294,6 +330,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     frameTimer_.ReadCompleted();
     dlaaTimer_.ReadCompleted();
     screenSpaceReflection_->ReadCompleted();
+    screenSpaceGlobalIllumination_->ReadCompleted();
     postEffectManager_->ReadCompletedGpuTiming();
     RecordGpuSample();
     ScreenshotManager::GetInstance()->CompleteCapture();
@@ -307,6 +344,7 @@ void Renderer::SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled)
     dlssSuperResolution_->ResetHistory();
     motionVectorRenderer_->ResetHistory();
     screenSpaceReflection_->ResetHistory();
+    screenSpaceGlobalIllumination_->ResetHistory();
     warmupFrames_ = 32;
     previousAntiAliasingMode_ = UINT_MAX;
 }

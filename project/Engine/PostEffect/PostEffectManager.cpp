@@ -817,7 +817,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     UpdatePostEffectParameters(sceneManager);
 
     particleCompositionTargetIndex_ = 0;
-    if (LightManager::GetInstance()->GetLightingComponents().w > 0.5f) {
+    if (LightManager::GetInstance()->GetLightingComponents().w > 0.5f || isIndirectLightingDebugVisible_) {
         RenderTarget& target = pingPongRenderTargets_[0];
         target.BeginRender();
         ApplyPostEffectToCurrentTarget(PostEffectType::Copy, sceneColorHandle);

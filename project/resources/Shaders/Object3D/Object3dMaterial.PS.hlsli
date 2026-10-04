@@ -19,6 +19,7 @@ struct PixelShaderOutput
     float32_t4 color : SV_Target0;
     float32_t4 encodedNormal : SV_Target1;
     float4 indirectColor : SV_Target2;
+    float4 surfaceMaterial : SV_Target3;
 };
 
 float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, float3 geometricNormal, out float3 indirectColor)
@@ -134,5 +135,9 @@ PixelShaderOutput main(VertexShaderOutput input)
         indirectColor += environmentColor;
     }
     output.indirectColor = float4(indirectColor, output.color.a);
+    output.surfaceMaterial = 0;
+#if OBJECT3D_MATERIAL_TYPE == 1 || OBJECT3D_MATERIAL_TYPE == 6
+    output.surfaceMaterial = float4(saturate(baseColor), (1 + saturate(gMaterial.metallic) * 254) / 255);
+#endif
     return output;
 }

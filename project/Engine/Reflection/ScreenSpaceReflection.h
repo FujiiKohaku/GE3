@@ -37,6 +37,8 @@ public:
     void Initialize();
     D3D12_GPU_DESCRIPTOR_HANDLE Draw(const ScreenSpaceReflectionInputs& inputs);
     void DrawImGui();
+    void PrepareDepthPyramid(const ScreenSpaceReflectionInputs& inputs);
+    D3D12_GPU_DESCRIPTOR_HANDLE GetDepthPyramidSrv() const;
     void SetDebugVisible(bool isDebugVisible) {
         settings_.debugMode = ScreenSpaceReflectionDebugMode::None;
         if (isDebugVisible) { settings_.debugMode = ScreenSpaceReflectionDebugMode::Reflection; }
@@ -84,6 +86,7 @@ private:
     std::array<D3D12_CPU_DESCRIPTOR_HANDLE, kTargetCount> rtvHandles_ = {};
     std::array<D3D12_GPU_DESCRIPTOR_HANDLE, kTargetCount> srvHandles_ = {};
     bool hasHistory_ = false;
+    bool isDepthPyramidPrepared_ = false;
     uint32_t historyWriteIndex_ = 3;
     uint32_t reflectionIndex_ = 0;
     const Camera* historyCamera_ = nullptr;

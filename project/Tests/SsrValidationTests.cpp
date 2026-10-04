@@ -1,4 +1,5 @@
 #include "Engine/Reflection/ScreenSpaceReflection.h"
+#include "Engine/Lighting/ScreenSpaceGlobalIllumination.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/ModelManager.h"
@@ -110,6 +111,87 @@ float DecodeSrgb(uint8_t value)
     float encoded = static_cast<float>(value) / 255.0f;
     if (encoded <= 0.04045f) { return encoded / 12.92f; }
     return std::pow((encoded + 0.055f) / 1.055f, 2.4f);
+}
+struct GlobalIlluminationTestScene {
+    DirectXCommon* dxCommon;
+    Camera* camera;
+    OffscreenRenderer* offscreen;
+    PostEffectManager* post;
+    MotionVectorRenderer* motion;
+    ScreenSpaceReflection* reflection;
+    std::array<Object3d*, 4> objects;
+    bool isRedVisible = true;
+    bool hasMotion = true;
+    bool hasMaterial = true;
+    uint64_t sceneRevision = 0;
+};
+std::vector<uint8_t> CaptureGlobalIllumination(GlobalIlluminationTestScene& scene,
+    ScreenSpaceGlobalIllumination& illumination, const std::filesystem::path& path)
+{
+    auto* dxCommon = scene.dxCommon;
+    scene.camera->Update();
+    scene.post->UpdateCameraInputs(scene.camera);
+    for (auto* object : scene.objects) { object->Update(); }
+    TextureManager::GetInstance()->FlushUploads(); SrvManager::GetInstance()->PreDraw();
+    scene.post->PreDrawDepth(); scene.offscreen->PreDraw(scene.post->GetDepthDSVHandle());
+    scene.motion->BeginFrame(); Object3dManager::GetInstance()->PreDraw();
+    for (size_t index = 0; index < scene.objects.size(); ++index) {
+        if (index == 1 && !scene.isRedVisible) { continue; }
+        scene.objects[index]->Draw();
+    }
+    scene.motion->EndFrame(scene.post->GetDepthDSVHandle());
+    scene.offscreen->PostDraw(); scene.post->PostDrawDepth(); dxCommon->PreDraw();
+    ScreenSpaceGlobalIlluminationInputs inputs;
+    inputs.colorSrv = scene.offscreen->GetSrvHandleGPU();
+    inputs.depthSrv = scene.post->GetDepthSrv();
+    inputs.normalSrv = scene.offscreen->GetNormalSrvHandleGPU();
+    if (scene.hasMaterial) { inputs.materialSrv = scene.offscreen->GetMaterialSrvHandleGPU(); }
+    if (scene.hasMotion) { inputs.motionVectorSrv = scene.motion->GetSrvHandle(); }
+    inputs.camera = scene.camera; inputs.sceneRevision = scene.sceneRevision;
+    if (illumination.IsEnabled() && illumination.GetSettings().shouldUseHierarchicalDepth) {
+        ScreenSpaceReflectionInputs depthInputs;
+        depthInputs.colorSrv = inputs.colorSrv; depthInputs.depthSrv = inputs.depthSrv;
+        depthInputs.normalSrv = inputs.normalSrv; depthInputs.camera = inputs.camera;
+        scene.reflection->PrepareDepthPyramid(depthInputs);
+        inputs.depthPyramidSrv = scene.reflection->GetDepthPyramidSrv();
+    }
+    auto result = illumination.Draw(inputs);
+    if (!illumination.IsEnabled() || !scene.hasMaterial || illumination.GetSettings().strength == 0) {
+        RequireSsr(result.ptr == inputs.colorSrv.ptr, "SSGI bypass did not return its original input");
+    }
+    dxCommon->SetBackBufferRenderTarget(dxCommon->GetDSVHandle());
+    auto* copy = scene.post->GetCopyImageRenderer();
+    copy->SetPostEffectType(PostEffectType::Copy);
+    copy->Draw(result, inputs.depthSrv, inputs.normalSrv);
+    auto frame = CaptureSsrFrame(dxCommon, path);
+    illumination.ReadCompleted();
+    return frame;
+}
+size_t CountIndirectColor(const std::vector<uint8_t>& frame, Vector2 contact, uint32_t channel)
+{
+    size_t coloredPixels = 0;
+    for (int pixelY = static_cast<int>(contact.y) + 3; pixelY <= static_cast<int>(contact.y) + 70; ++pixelY) {
+        for (int pixelX = static_cast<int>(contact.x) - 70; pixelX <= static_cast<int>(contact.x) + 70; ++pixelX) {
+            if (pixelX < 0 || pixelY < 0 || pixelX >= WinApp::kClientWidth || pixelY >= WinApp::kClientHeight) { continue; }
+            size_t offset = (static_cast<size_t>(pixelY) * WinApp::kClientWidth + pixelX) * 4;
+            uint32_t otherChannel = (channel + 1) % 3;
+            if (frame[offset + channel] > 5 && frame[offset + channel] > frame[offset + otherChannel] * 2) { ++coloredPixels; }
+        }
+    }
+    return coloredPixels;
+}
+uint64_t IndirectDifference(const std::vector<uint8_t>& first, const std::vector<uint8_t>& second)
+{
+    uint64_t difference = 0;
+    for (uint32_t pixelY = 380; pixelY < 500; ++pixelY) {
+        for (uint32_t pixelX = 400; pixelX < 820; ++pixelX) {
+            size_t offset = (static_cast<size_t>(pixelY) * WinApp::kClientWidth + pixelX) * 4;
+            for (uint32_t channel = 0; channel < 3; ++channel) {
+                difference += static_cast<uint64_t>(std::abs(int(first[offset + channel]) - int(second[offset + channel])));
+            }
+        }
+    }
+    return difference;
 }
 void FinalizeSsrValidation()
 {
@@ -265,6 +347,122 @@ int RunSsrValidation()
             RequireSsr(occludedPixels > 100, "Ambient-only SSAO did not darken contact regions");
             report << "Ambient-only SSAO affected pixels: " << occludedPixels << '\n';
             lights->SetLightingComponents(1, 1, 1, 0);
+            {
+                ScreenSpaceGlobalIllumination illumination; illumination.Initialize();
+                RequireSsr(illumination.IsEnabled(), "SSGI must start enabled");
+                ScreenSpaceGlobalIlluminationSettings giSettings;
+                giSettings.shouldUseTemporalHistory = false;
+                RequireSsr(illumination.SetSettings(giSettings), "Default SSGI settings rejected");
+                auto invalidGiSettings = giSettings; invalidGiSettings.rayCount = 0;
+                RequireSsr(!illumination.SetSettings(invalidGiSettings), "SSGI accepted zero rays");
+                invalidGiSettings = giSettings; invalidGiSettings.strength = std::nanf("");
+                RequireSsr(!illumination.SetSettings(invalidGiSettings), "SSGI accepted NaN strength");
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+                RequireSsr(illumination.SetDevelopmentNumber("strength", 0.65), "SSGI panel strength control failed");
+                RequireSsr(!illumination.SetDevelopmentNumber("rayCount", 4.5), "SSGI accepted fractional ray count");
+                RequireSsr(!illumination.SetDevelopmentNumber("gpuMs", 1), "SSGI GPU metric accepted an edit");
+#endif
+                floor.SetColor({0.75f, 0.75f, 0.75f, 1}); floor.Update();
+                GlobalIlluminationTestScene giScene = {dxCommon, &camera, &offscreen, &post, &motion, &reflection, {&floor, &box, &pillar, &rail}};
+                illumination.SetEnabled(false);
+                auto giOff = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-off.png");
+                illumination.SetEnabled(true);
+                auto giOn = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-on.png");
+                report << "SSGI default GPU ms: " << illumination.GetGpuTimeMs() << '\n';
+                RequireSsr(IndirectDifference(giOff, giOn) > 1000, "SSGI did not add indirect light");
+                for (size_t offset = 0; offset < giOff.size(); offset += 4) {
+                    for (size_t channel = 0; channel < 3; ++channel) {
+                        RequireSsr(giOn[offset + channel] >= giOff[offset + channel], "SSGI darkened direct lighting");
+                    }
+                }
+                giSettings.strength = 0;
+                illumination.SetSettings(giSettings);
+                RequireSsr(CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-zero.png") == giOff,
+                    "Zero-strength SSGI changed the image");
+                giSettings.strength = 0.65f;
+                giSettings.debugMode = ScreenSpaceGlobalIlluminationDebugMode::IndirectLight;
+                illumination.SetSettings(giSettings);
+                auto giOnly = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-indirect.png");
+                Vector2 boxContact = camera.WorldToScreen({-4, 0, 5});
+                Vector2 pillarContact = camera.WorldToScreen({4, 0, 10});
+                size_t redBouncePixels = CountIndirectColor(giOnly, boxContact, 0);
+                size_t greenBouncePixels = CountIndirectColor(giOnly, pillarContact, 1);
+                report << "SSGI red bounce pixels: " << redBouncePixels << "\nSSGI green bounce pixels: " << greenBouncePixels << '\n';
+                RequireSsr(redBouncePixels > 100, "Red box did not illuminate the floor red");
+                RequireSsr(greenBouncePixels > 100, "Green pillar did not illuminate the floor green");
+                for (size_t pixelY = 0; pixelY < 30; ++pixelY) {
+                    for (size_t pixelX = 0; pixelX < WinApp::kClientWidth; ++pixelX) {
+                        size_t offset = (pixelY * WinApp::kClientWidth + pixelX) * 4;
+                        RequireSsr(giOnly[offset] == 0 && giOnly[offset + 1] == 0 && giOnly[offset + 2] == 0,
+                            "SSGI leaked into the background");
+                    }
+                }
+                giSettings.shouldUseHierarchicalDepth = false;
+                illumination.SetSettings(giSettings);
+                auto giWithoutHiZ = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-no-hiz.png");
+                RequireSsr(giOnly == giWithoutHiZ, "Hi-Z changed the indirect lighting result");
+                giSettings.shouldUseHierarchicalDepth = true;
+                illumination.SetSettings(giSettings);
+                floor.SetSurfaceProperties(0.18f, 1, 0.65f);
+                auto giMetallic = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-metallic.png");
+                // Below the nearest box face, every visible surface is the floor.
+                for (size_t pixelY = 390; pixelY < 550; ++pixelY) {
+                    for (size_t pixelX = 400; pixelX < 820; ++pixelX) {
+                        size_t offset = (pixelY * WinApp::kClientWidth + pixelX) * 4;
+                        RequireSsr(giMetallic[offset] == 0 && giMetallic[offset + 1] == 0 && giMetallic[offset + 2] == 0,
+                            "Metallic floor received diffuse indirect light");
+                    }
+                }
+                floor.SetSurfaceProperties(0.18f, 0, 0.65f);
+                giSettings.debugMode = ScreenSpaceGlobalIlluminationDebugMode::None;
+                illumination.SetSettings(giSettings);
+                giScene.hasMaterial = false;
+                RequireSsr(CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-no-material.png") == giOff,
+                    "Missing material data did not bypass SSGI");
+                giScene.hasMaterial = true;
+                uint64_t giVariations[2] {};
+                giSettings.shouldUseTemporalHistory = true;
+                giSettings.shouldBlur = false;
+                giSettings.debugMode = ScreenSpaceGlobalIlluminationDebugMode::IndirectLight;
+                for (uint32_t mode = 0; mode < 2; ++mode) {
+                    giSettings.historyWeight = 0;
+                    if (mode == 1) { giSettings.historyWeight = 0.85f; }
+                    illumination.SetSettings(giSettings); illumination.ResetHistory();
+                    motion.ResetHistory(); camera.SetProjectionJitter({});
+                    std::vector<uint8_t> previousFrame;
+                    for (uint32_t frameIndex = 0; frameIndex < 20; ++frameIndex) {
+                        Vector2 jitter = {0.00065f, 0.0012f};
+                        if (frameIndex % 2 == 0) { jitter = {-0.00065f, -0.0012f}; }
+                        camera.SetProjectionJitter(jitter);
+                        auto frame = CaptureGlobalIllumination(giScene, illumination,
+                            directory / ("ssgi-history-" + std::to_string(mode) + "-" + std::to_string(frameIndex) + ".png"));
+                        if (frameIndex >= 4) { giVariations[mode] += IndirectDifference(frame, previousFrame); }
+                        previousFrame = std::move(frame);
+                    }
+                }
+                report << "SSGI raw variation: " << giVariations[0] << "\nSSGI temporal variation: " << giVariations[1] << '\n';
+                RequireSsr(giVariations[1] < giVariations[0], "SSGI temporal history did not reduce noise");
+                giScene.isRedVisible = false;
+                auto giNoBox = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-removed-box.png");
+                RequireSsr(CountIndirectColor(giNoBox, boxContact, 0) < 20, "Removed box left an indirect light trail");
+                giScene.isRedVisible = true;
+                camera.ResetMotionHistory();
+                auto resetFrame = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-camera-reset.png");
+                illumination.ResetHistory();
+                auto freshFrame = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-fresh.png");
+                RequireSsr(resetFrame == freshFrame, "Camera history reset reused old SSGI light");
+                ++giScene.sceneRevision;
+                auto sceneResetFrame = CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-scene-reset.png");
+                illumination.ResetHistory();
+                RequireSsr(sceneResetFrame == CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-scene-fresh.png"),
+                    "Scene revision did not reset SSGI history");
+                giScene.hasMotion = false;
+                CaptureGlobalIllumination(giScene, illumination, directory / "ssgi-no-motion.png");
+                RequireSsr(!illumination.HasHistory(), "Missing motion retained SSGI history");
+                camera.SetProjectionJitter({}); camera.Update(); motion.ResetHistory();
+                floor.SetColor({0.15f, 0.2f, 0.3f, 1}); floor.Update();
+                dxCommon->WaitForGPU();
+            }
             report << "Box mirror center: " << boxMirror.x << ',' << boxMirror.y << "\nPillar mirror center: " << pillarMirror.x << ',' << pillarMirror.y << '\n';
             const ScreenSpaceReflectionDebugMode kModes[] = {ScreenSpaceReflectionDebugMode::None, ScreenSpaceReflectionDebugMode::Reflection,
                 ScreenSpaceReflectionDebugMode::ViewDepth, ScreenSpaceReflectionDebugMode::RayDirection,
@@ -437,7 +635,7 @@ int RunSsrValidation()
                 if (message->Severity <= D3D12_MESSAGE_SEVERITY_ERROR) { Logger::Log(message->pDescription); throw std::runtime_error("SSR D3D12 validation failed"); }
             }
         }
-        std::ofstream(directory / "result.txt") << "PASS: direct/ambient composition and controls, ice ambient gain, material roughness blur, foreground edges preserved, temporal jitter reduction, default ON, no D3D12 errors\n";
+        std::ofstream(directory / "result.txt") << "PASS: SSGI colored bounce, OFF/zero/missing input, metallic, shared Hi-Z parity, temporal noise reduction, no trails, history reset; direct/ambient composition and controls, ice ambient gain, material roughness blur, foreground edges preserved, temporal jitter reduction, default ON, no D3D12 errors\n";
         FinalizeSsrValidation(); return 0;
     } catch (const std::exception& error) {
         std::ofstream(directory / "result.txt") << "FAIL: " << error.what();

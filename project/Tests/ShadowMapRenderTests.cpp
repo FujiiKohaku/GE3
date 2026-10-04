@@ -1,4 +1,5 @@
 #include "Engine/Reflection/ScreenSpaceReflection.h"
+#include "Engine/Lighting/ScreenSpaceGlobalIllumination.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/3D/Object3d.h"
@@ -785,6 +786,45 @@ int RunDlssTest()
         stage->PrepareReflectionCapture();
         // Compare SSR at a frozen camera with temporal AA disabled to isolate reflection.
         renderer->SetAntiAliasing(false, false);
+        auto* illumination = renderer->GetScreenSpaceGlobalIllumination();
+        Require(illumination->IsEnabled(), "SSGI must be enabled in the renderer by default");
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+        Require(DevelopmentWebPanelTests::ApplyAction("ssgi/strength", "0.65"), "SSGI web panel strength failed");
+        Require(!DevelopmentWebPanelTests::ApplyAction("ssgi/rayCount", "4.5"), "SSGI panel accepted fractional rays");
+#endif
+        for (int frame = 0; frame < 16; ++frame) { game.Update(); game.Draw(); }
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto indirectStageFrame = ReadFrame(dx, directory / "ssgi-stage03-on.png");
+        double indirectGpuMs = illumination->GetGpuTimeMs();
+        Require(indirectGpuMs > 0 && illumination->HasHistory(), "SSGI renderer timing or history unavailable");
+        illumination->SetEnabled(false);
+        for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
+        Require(!illumination->HasHistory(), "Disabled SSGI retained history");
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto noIndirectStageFrame = ReadFrame(dx, directory / "ssgi-stage03-off.png");
+        Require(ChangedPixels(indirectStageFrame, noIndirectStageFrame) > 100, "Stage SSGI had no visible effect");
+        auto indirectSettings = illumination->GetSettings();
+        indirectSettings.isEnabled = true;
+        indirectSettings.debugMode = ScreenSpaceGlobalIlluminationDebugMode::IndirectLight;
+        Require(illumination->SetSettings(indirectSettings), "SSGI stage debug settings rejected");
+        for (int frame = 0; frame < 16; ++frame) { game.Update(); game.Draw(); }
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto indirectOnlyStageFrame = ReadFrame(dx, directory / "ssgi-stage03-indirect.png");
+        size_t indirectGroundPixels = 0;
+        for (size_t pixelY = 390; pixelY < 600; ++pixelY) {
+            for (size_t pixelX = 200; pixelX < 1100; ++pixelX) {
+                size_t offset = (pixelY * WinApp::kClientWidth + pixelX) * 4;
+                if (indirectOnlyStageFrame[offset] > 5 || indirectOnlyStageFrame[offset + 1] > 5 || indirectOnlyStageFrame[offset + 2] > 5) { ++indirectGroundPixels; }
+            }
+        }
+        Require(indirectGroundPixels > 100, "SSGI did not illuminate the actual stage floor");
+        std::ofstream(directory / "ssgi-result.txt") << "PASS: stage colored indirect light, default ON, controls, OFF/re-enable, debug view; groundPixels="
+            << indirectGroundPixels << "; gpuMs=" << indirectGpuMs << '\n';
+        indirectSettings.debugMode = ScreenSpaceGlobalIlluminationDebugMode::None;
+        illumination->SetSettings(indirectSettings);
         auto* reflection = renderer->GetScreenSpaceReflection();
         reflection->SetEnabled(true);
         for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
@@ -821,6 +861,7 @@ int RunDlssTest()
             Require(LightManager::GetInstance()->SetLightingComponents(1, 1, 1, lightingView), "Stage lighting view failed");
             for (int frame = 0; frame < 2; ++frame) { game.Update(); game.Draw(); }
             Require(!reflection->HasHistory(), "Component view retained SSR history");
+            Require(!illumination->HasHistory(), "Component view retained SSGI history");
             barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
             dx->GetCommandList()->ResourceBarrier(1, &barrier);
             std::string name = "lighting-stage03-direct.png";

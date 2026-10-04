@@ -17,6 +17,7 @@ struct PixelShaderOutput
     float4 color : SV_Target0;
     float4 encodedNormal : SV_Target1;
     float4 indirectColor : SV_Target2;
+    float4 surfaceMaterial : SV_Target3;
 };
 
 struct JellyfishPixelInput
@@ -93,6 +94,7 @@ PixelShaderOutput main(JellyfishPixelInput input)
     float opacity = gMaterial.color.a * lerp(kFaceOpacityScale, 1.0f, edge);
     output.color = float4(color, saturate(opacity * textureColor.a));
     output.indirectColor = float4(indirectColor, output.color.a);
+    output.surfaceMaterial = float4(saturate(bodyTint * output.color.a), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     if (input.surface.z > 0.5f) {
         // Tag tentacle normals so outline preserves the silhouette but softens internal joints.

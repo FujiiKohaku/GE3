@@ -129,7 +129,9 @@ void ScreenSpaceReflection::Render(uint32_t index, const ScreenSpaceReflectionIn
 }
 D3D12_GPU_DESCRIPTOR_HANDLE ScreenSpaceReflection::Draw(const ScreenSpaceReflectionInputs& inputs) {
     timer_.ResetSample();
-    if (!settings_.isEnabled || inputs.camera == nullptr) { ResetHistory(); return inputs.colorSrv; }
+    if (!settings_.isEnabled || inputs.camera == nullptr) {
+        isDepthPyramidPrepared_ = false; ResetHistory(); return inputs.colorSrv;
+    }
     bool shouldResolveHistory = settings_.shouldUseTemporalHistory && inputs.motionVectorSrv.ptr != 0 &&
         static_cast<uint32_t>(settings_.debugMode) <= 1;
     if (!shouldResolveHistory || historyCamera_ != inputs.camera || cameraHistoryId_ != inputs.camera->GetMotionHistoryId() ||
@@ -159,7 +161,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE ScreenSpaceReflection::Draw(const ScreenSpaceReflect
         parameterData_->temporal.x = 1;
     }
     timer_.Begin();
-    if (settings_.shouldUseHierarchicalDepth) { BuildDepthPyramid(inputs); }
+    if (settings_.shouldUseHierarchicalDepth && !isDepthPyramidPrepared_) { BuildDepthPyramid(inputs); }
+    isDepthPyramidPrepared_ = false;
     Render(0, inputs);
     reflectionIndex_ = 0;
     if (shouldResolveHistory) {
@@ -181,6 +184,21 @@ D3D12_GPU_DESCRIPTOR_HANDLE ScreenSpaceReflection::Draw(const ScreenSpaceReflect
     }
     return srvHandles_[1];
 }
+D3D12_GPU_DESCRIPTOR_HANDLE ScreenSpaceReflection::GetDepthPyramidSrv() const
+{
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(depthSrvIndex_);
+}
+
+void ScreenSpaceReflection::PrepareDepthPyramid(const ScreenSpaceReflectionInputs& inputs)
+{
+    isDepthPyramidPrepared_ = false;
+    if (inputs.camera == nullptr || inputs.depthSrv.ptr == 0) { return; }
+    parameterData_->projection = inputs.camera->GetProjectionMatrix();
+    parameterData_->inverseProjection = MatrixMath::Inverse(parameterData_->projection);
+    BuildDepthPyramid(inputs);
+    isDepthPyramidPrepared_ = true;
+}
+
 void ScreenSpaceReflection::CreateDepthPyramid() {
     auto* dxCommon = DirectXCommon::GetInstance();
     auto* device = dxCommon->GetDevice();

@@ -15,6 +15,7 @@ struct PixelShaderOutput
     float4 color : SV_Target0;
     float4 encodedNormal : SV_Target1;
     float4 indirectColor : SV_Target2;
+    float4 surfaceMaterial : SV_Target3;
 };
 
 PixelShaderOutput main(VertexShaderOutput input)
@@ -49,6 +50,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     PixelShaderOutput output;
     output.indirectColor = float4(baseColor * ambient * (1.0f + rim * 0.12f), gMaterial.color.a * textureColor.a);
     output.color = float4(color, gMaterial.color.a * textureColor.a);
+    output.surfaceMaterial = float4(saturate(baseColor), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     return output;
 }

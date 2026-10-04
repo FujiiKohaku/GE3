@@ -686,6 +686,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <None Include="$(projectRootPath)resources\Graphics\visual-presets.json" />
     <None Include="$(projectRootPath)resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
     <None Include="$(projectRootPath)resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\Blur.hlsli" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\BlurHorizontal.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\BlurVertical.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\Common.hlsli" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\Composite.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\Temporal.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\Trace.PS.hlsl" />
   </ItemGroup>
   <PropertyGroup>
     <DlssNgxLibrary>$(projectRootPath)externals\DLSS\lib\Windows_x86_64\x64\nvsdk_ngx_s.lib</DlssNgxLibrary>
@@ -702,6 +709,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </Target>
   <ItemGroup>
     <ClCompile Include="$(projectRootPath)Engine\Reflection\ScreenSpaceReflection.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Lighting\ScreenSpaceGlobalIllumination.cpp" />
     <ClInclude Include="$(projectRootPath)Engine\Reflection\ScreenSpaceReflection.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Lighting\ScreenSpaceGlobalIllumination.h" />
   </ItemGroup>
 </Project>

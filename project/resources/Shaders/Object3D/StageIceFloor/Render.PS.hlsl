@@ -15,6 +15,7 @@ struct FloorPixelOutput
     float4 color : SV_Target0;
     float4 encodedNormal : SV_Target1;
     float4 indirectColor : SV_Target2;
+    float4 surfaceMaterial : SV_Target3;
 };
 
 FloorPixelOutput main(VertexShaderOutput input)
@@ -54,6 +55,7 @@ FloorPixelOutput main(VertexShaderOutput input)
     output.color = float4(color, gMaterial.color.a * textureColor.a);
     output.indirectColor = float4(indirectColor, output.color.a);
     // Preserve normal direction and depth while carrying material roughness in its length.
+    output.surfaceMaterial = float4(saturate(gMaterial.color.rgb * textureColor.rgb * kFloorTint), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normal * (1 + saturate(gMaterial.roughness)) * 0.5f + 0.5f, 2.0f + input.position.z);
     return output;
 }

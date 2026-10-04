@@ -353,9 +353,10 @@ void Object3dManager::CreateGraphicsPipeline()
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
     baseDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
-    baseDesc.NumRenderTargets = 3;
+    baseDesc.NumRenderTargets = 4;
     baseDesc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     baseDesc.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    baseDesc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
     baseDesc.DepthStencilState = depthStencilDesc;
     baseDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     baseDesc.SampleDesc.Count = 1;
@@ -366,6 +367,7 @@ void Object3dManager::CreateGraphicsPipeline()
     baseDesc.BlendState.IndependentBlendEnable = TRUE;
     baseDesc.BlendState.RenderTarget[2] = baseDesc.BlendState.RenderTarget[0];
     baseDesc.BlendState.RenderTarget[2].RenderTargetWriteMask = 0;
+    baseDesc.BlendState.RenderTarget[3].RenderTargetWriteMask = 0;
 
     for (int i = 0; i < kCountOfBlendMode; i++) {
 
@@ -378,6 +380,7 @@ void Object3dManager::CreateGraphicsPipeline()
             glowDesc.BlendState = CreateBlendDesc(static_cast<BlendMode>(i));
             glowDesc.BlendState.IndependentBlendEnable = TRUE;
             glowDesc.BlendState.RenderTarget[2].RenderTargetWriteMask = 0;
+            glowDesc.BlendState.RenderTarget[3].RenderTargetWriteMask = 0;
 
             dxCommon_->GetDevice()->CreateGraphicsPipelineState(&glowDesc, IID_PPV_ARGS(&glowPipelineStates[i]));
         }
@@ -429,6 +432,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     desc.BlendState = CreateBlendDesc(blendMode);
     desc.BlendState.IndependentBlendEnable = TRUE;
     desc.BlendState.RenderTarget[2] = desc.BlendState.RenderTarget[0];
+    desc.BlendState.RenderTarget[3] = desc.BlendState.RenderTarget[0];
+    desc.BlendState.RenderTarget[3].BlendEnable = FALSE;
     // Normal/depth metadata must never use the color target's alpha blending.
     desc.BlendState.IndependentBlendEnable = TRUE;
     desc.BlendState.RenderTarget[1] = desc.BlendState.RenderTarget[0];
@@ -436,14 +441,17 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     if (transparent) {
         // Write unblended normals only when this surface also writes depth.
         desc.BlendState.RenderTarget[1].RenderTargetWriteMask = 0;
+        desc.BlendState.RenderTarget[3].RenderTargetWriteMask = 0;
         if (transparentDepthWrite) {
             desc.BlendState.RenderTarget[1].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+            desc.BlendState.RenderTarget[3].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
         }
     }
-    desc.NumRenderTargets = 3;
+    desc.NumRenderTargets = 4;
     desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    desc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;

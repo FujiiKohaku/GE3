@@ -21,6 +21,7 @@ struct StageIcePixelOutput
     float32_t4 color : SV_Target0;
     float32_t4 encodedNormal : SV_Target1;
     float4 indirectColor : SV_Target2;
+    float4 surfaceMaterial : SV_Target3;
 };
 
 static float3 indirectLightingColor = 0.0f;
@@ -51,6 +52,8 @@ StageIcePixelOutput FinishStageIce(VertexShaderOutput input, float3 color, float
     color += ShadeLocalLights(gMaterial.color.rgb, normal, view, input.worldPosition, normal, true);
     output.color = float4(color, gMaterial.color.a * textureAlpha);
     output.indirectColor = float4(indirectLightingColor, output.color.a);
+    float3 baseColor = gMaterial.color.rgb * SampleStageIceTexture(input).rgb;
+    output.surfaceMaterial = float4(saturate(baseColor), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     return output;
 }

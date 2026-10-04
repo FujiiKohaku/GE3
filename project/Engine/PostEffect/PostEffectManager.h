@@ -50,6 +50,7 @@ public:
     void PreDrawDepth();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
+    void SetIndirectLightingDebugVisible(bool isVisible) { isIndirectLightingDebugVisible_ = isVisible; }
     void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     void SetNormalTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
     {
@@ -121,6 +122,7 @@ private:
     std::unique_ptr<BloomRenderer> bloomRenderer_;
     std::unique_ptr<VolumetricLightRenderer> volumetricLightRenderer_;
     bool sceneDepthReady_ = false;
+    bool isIndirectLightingDebugVisible_ = false;
     std::unique_ptr<FogManager> fogManager_;
     std::unique_ptr<FogRenderer> fogRenderer_;
     uint64_t sceneFogRevision_ = 0;

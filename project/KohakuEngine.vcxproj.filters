@@ -906,4 +906,15 @@
     <None Include="resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
     <None Include="resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Engine\Lighting\ScreenSpaceGlobalIllumination.cpp"><Filter>ソース ファイル</Filter></ClCompile>
+    <ClInclude Include="Engine\Lighting\ScreenSpaceGlobalIllumination.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
+    <None Include="resources\Shaders\GlobalIllumination\Blur.hlsli" />
+    <None Include="resources\Shaders\GlobalIllumination\BlurHorizontal.PS.hlsl" />
+    <None Include="resources\Shaders\GlobalIllumination\BlurVertical.PS.hlsl" />
+    <None Include="resources\Shaders\GlobalIllumination\Common.hlsli" />
+    <None Include="resources\Shaders\GlobalIllumination\Composite.PS.hlsl" />
+    <None Include="resources\Shaders\GlobalIllumination\Temporal.PS.hlsl" />
+    <None Include="resources\Shaders\GlobalIllumination\Trace.PS.hlsl" />
+  </ItemGroup>
 </Project>
