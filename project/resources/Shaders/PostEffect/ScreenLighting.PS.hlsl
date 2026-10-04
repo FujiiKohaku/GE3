@@ -3,6 +3,7 @@
 Texture2D<float4> gTexture : register(t0);
 Texture2D<float> gDepthTexture : register(t1);
 Texture2D<float4> gNormalTexture : register(t2);
+Texture2D<float4> gIndirectTexture : register(t3);
 SamplerState gSampler : register(s0);
 
 float3 ReconstructPosition(float2 uv, float depth) {
@@ -44,8 +45,10 @@ float4 main(VertexShaderOutput input) : SV_TARGET {
                 float elevation = max(dot(normal, delta / distance) - ssaoSettings.z / distance, 0.0f);
                 occlusion += elevation * (1.0f - smoothstep(ssaoSettings.y * 0.5f, ssaoSettings.y, distance));
             }
-            // 合成済みForward色への適用なので直接光も弱く減衰する。強度上限で黒つぶれを防ぐ。
-            scene.rgb *= 1.0f - saturate(occlusion * 4.0f / float(kSsaoSamples)) * ssaoSettings.x;
+            float occlusionStrength = saturate(occlusion * 4.0f / float(kSsaoSamples)) * ssaoSettings.x;
+            float3 indirectColor = gIndirectTexture.Load(int3(pixel, 0)).rgb;
+            // Remove only occluded ambient lighting; direct light and SSR stay intact.
+            scene.rgb = max(scene.rgb - indirectColor * occlusionStrength, 0.0f);
         }
     }
     if (atmosphereSettings.x > 0.5f) {

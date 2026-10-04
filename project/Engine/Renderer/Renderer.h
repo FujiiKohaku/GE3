@@ -60,6 +60,7 @@ private:
     std::unique_ptr<DlssSuperResolution> dlssSuperResolution_;
     std::unique_ptr<ScreenSpaceReflection> screenSpaceReflection_;
     uint64_t motionSceneRevision_ = 0;
+    std::array<float, 4> previousLightingComponents_ = {-1, -1, -1, -1};
     std::unique_ptr<LocalShadowRenderer> localShadowRenderer_;
     std::unique_ptr<ShadowMapRenderer> shadowRenderer_;
     std::unique_ptr<OffscreenRenderer> offscreenRenderer_;

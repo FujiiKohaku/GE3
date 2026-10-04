@@ -145,6 +145,7 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     ambientLightResource_->Map(0, nullptr, reinterpret_cast<void**>(&ambientLightData_));
     ambientLightResource_->SetName(L"Object3d::AmbientLightCB");
     *ambientLightData_ = {};
+    ambientLightData_->componentSettings = {1.0f, 1.0f, 1.0f, 0.0f};
     ambientLightData_->environmentSettings = { 0.12f, 0.20f, 0.0f, 0.0f };
     ambientLightData_->atmosphereSettings = { 1.0f, 0.00035f, 0.45f, 0.65f };
     ambientLightData_->color = { 1.0f, 1.0f, 1.0f, 0.25f };
@@ -743,6 +744,15 @@ bool LightManager::SetEnvironmentLighting(float diffuseStrength, float specularS
     if (!IsInitialized() || !std::isfinite(diffuseStrength) || !std::isfinite(specularStrength) ||
         diffuseStrength < 0.0f || diffuseStrength > 2.0f || specularStrength < 0.0f || specularStrength > 2.0f) { return false; }
     ambientLightData_->environmentSettings = { diffuseStrength, specularStrength, 0.0f, 0.0f };
+    return true;
+}
+
+bool LightManager::SetLightingComponents(float directStrength, float indirectStrength, float iceAmbientMultiplier, uint32_t viewMode)
+{
+    if (!IsInitialized() || !std::isfinite(directStrength) || !std::isfinite(indirectStrength) || !std::isfinite(iceAmbientMultiplier) ||
+        directStrength < 0 || directStrength > 2 || indirectStrength < 0 || indirectStrength > 2 ||
+        iceAmbientMultiplier < 0 || iceAmbientMultiplier > 2 || viewMode > 2) { return false; }
+    ambientLightData_->componentSettings = {directStrength, indirectStrength, iceAmbientMultiplier, static_cast<float>(viewMode)};
     return true;
 }
 

@@ -18,6 +18,7 @@ uint2 GetClusterLightMasks(float3 worldPosition) {
 
 float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 worldPosition,
     float3 geometricNormal, bool hasSpecular) {
+    if (GetDirectLightingStrength(gAmbientLight) <= 0) { return 0; }
     float3 result = 0.0f;
     uint2 masks = GetClusterLightMasks(worldPosition);
     while (masks.x != 0) {
@@ -58,6 +59,6 @@ float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 wor
         result += baseColor * radiance * saturate(dot(normal, direction));
         if (hasSpecular) { result += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
     }
-    return result;
+    return result * GetDirectLightingStrength(gAmbientLight);
 }
 #endif

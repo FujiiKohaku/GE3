@@ -18,6 +18,7 @@ public:
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetNormalSrvHandleGPU() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetIndirectSrvHandleGPU() const { return indirectSrvHandleGPU_; }
     ID3D12Resource* GetColorTexture() const { return renderTextureResource_.Get(); }
     ID3D12Resource* GetNormalTexture() const { return normalTextureResource_.Get(); }
     D3D12_CPU_DESCRIPTOR_HANDLE GetNormalRtvHandle() const { return normalRtvHandle_; }
@@ -29,6 +30,12 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> normalTextureResource_;
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_;
     D3D12_CPU_DESCRIPTOR_HANDLE normalRtvHandle_;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> indirectTextureResource_;
+    D3D12_CPU_DESCRIPTOR_HANDLE indirectRtvHandle_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectSrvHandleGPU_ {};
+    uint32_t indirectSrvIndex_ = kInvalidDescriptorIndex;
+    D3D12_RESOURCE_STATES indirectCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
     DXGI_FORMAT format_;
     Vector4 clearColor_;

@@ -6,6 +6,9 @@
 
 OffscreenRenderer::~OffscreenRenderer()
 {
+    if (indirectSrvIndex_ != kInvalidDescriptorIndex) {
+        SrvManager::GetInstance()->Free(indirectSrvIndex_);
+    }
     if (srvIndex_ != kInvalidDescriptorIndex) {
         SrvManager::GetInstance()->Free(srvIndex_);
         srvIndex_ = kInvalidDescriptorIndex;
@@ -62,10 +65,20 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
         normalCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
     }
 
+    if (indirectCurrentState_ != D3D12_RESOURCE_STATE_RENDER_TARGET) {
+        D3D12_RESOURCE_BARRIER barrier {};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = indirectTextureResource_.Get();
+        barrier.Transition.StateBefore = indirectCurrentState_;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &barrier);
+        indirectCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    }
     commandList->RSSetViewports(1, &viewport_);
     commandList->RSSetScissorRects(1, &scissorRect_);
     const D3D12_CPU_DESCRIPTOR_HANDLE renderTargets[] = {
-        rtvHandle_, normalRtvHandle_
+        rtvHandle_, normalRtvHandle_, indirectRtvHandle_
     };
     commandList->OMSetRenderTargets(_countof(renderTargets), renderTargets, false, &dsvHandle);
 
@@ -76,6 +89,8 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
         clearColor_.w
     };
     commandList->ClearRenderTargetView(rtvHandle_, clearColor, 0, nullptr);
+    const float kIndirectClearColor[] = { 0, 0, 0, 0 };
+    commandList->ClearRenderTargetView(indirectRtvHandle_, kIndirectClearColor, 0, nullptr);
     const float normalClearColor[] = { 0.5f, 0.5f, 1.0f, -1.0f };
     commandList->ClearRenderTargetView(normalRtvHandle_, normalClearColor, 0, nullptr);
 }
@@ -95,6 +110,14 @@ void OffscreenRenderer::PostDraw()
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     commandList->ResourceBarrier(1, &barrier);
     currentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_BARRIER indirectBarrier {};
+    indirectBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    indirectBarrier.Transition.pResource = indirectTextureResource_.Get();
+    indirectBarrier.Transition.StateBefore = indirectCurrentState_;
+    indirectBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    indirectBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    commandList->ResourceBarrier(1, &indirectBarrier);
+    indirectCurrentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
     if (normalCurrentState_ != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) {
         D3D12_RESOURCE_BARRIER normalBarrier = {};
@@ -167,6 +190,9 @@ void OffscreenRenderer::CreateRenderTexture()
         WinApp::kClientHeight,
         format_,
         clearColor_);
+    indirectTextureResource_ = CreateRenderTextureResource(
+        DirectXCommon::GetInstance()->GetDevice(), WinApp::kClientWidth, WinApp::kClientHeight,
+        DXGI_FORMAT_R16G16B16A16_FLOAT, { 0, 0, 0, 0 });
     normalTextureResource_ = CreateRenderTextureResource(
         DirectXCommon::GetInstance()->GetDevice(),
         WinApp::kClientWidth,
@@ -186,6 +212,8 @@ void OffscreenRenderer::CreateDescriptorViews()
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
     device->CreateRenderTargetView(renderTextureResource_.Get(), &rtvDesc, rtvHandle_);
 
+    indirectRtvHandle_ = directXCommon->GetRTVHandle(9);
+    device->CreateRenderTargetView(indirectTextureResource_.Get(), &rtvDesc, indirectRtvHandle_);
     normalRtvHandle_ = directXCommon->GetRTVHandle(8);
     D3D12_RENDER_TARGET_VIEW_DESC normalRtvDesc = {};
     normalRtvDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -199,6 +227,10 @@ void OffscreenRenderer::CreateDescriptorViews()
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
 
+    indirectSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    indirectSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(indirectSrvIndex_);
+    device->CreateShaderResourceView(indirectTextureResource_.Get(), &srvDesc,
+        SrvManager::GetInstance()->GetCPUDescriptorHandle(indirectSrvIndex_));
     srvIndex_ = SrvManager::GetInstance()->Allocate();
     srvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(srvIndex_);
     srvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);

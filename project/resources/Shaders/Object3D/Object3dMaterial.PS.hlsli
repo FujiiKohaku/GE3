@@ -18,25 +18,27 @@ struct PixelShaderOutput
 {
     float32_t4 color : SV_Target0;
     float32_t4 encodedNormal : SV_Target1;
+    float4 indirectColor : SV_Target2;
 };
 
-float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, float3 geometricNormal)
+float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, float3 geometricNormal, out float3 indirectColor)
 {
     float3 N = normalize(normal);
     float3 V = normalize(gCamera.worldPosition - worldPosition);
     float3 ambient = baseColor * HemisphereAmbient(gAmbientLight, N) + EnvironmentLighting(baseColor, N, V, true);
+    indirectColor = ambient;
     float3 Ld = normalize(-gDirectionalLight.direction);
     float NdotLd = saturate(dot(N, Ld));
     float visibility = 1.0f;
 #if defined(KOHAKU_MATERIAL_SHADOWS)
     visibility = ShadowDirectFactor(SampleShadowVisibility(worldPosition, geometricNormal));
 #endif
-    float3 result = ambient + baseColor * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity * visibility;
+    float3 result = ambient + baseColor * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity * visibility * GetDirectLightingStrength(gAmbientLight);
     float3 Hd = normalize(Ld + V);
     if (gMaterial.shininess > 0.0f)
     {
         result += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
-            SurfaceSpecular(gMaterial, baseColor, N, V, Ld) * visibility;
+            SurfaceSpecular(gMaterial, baseColor, N, V, Ld) * visibility * GetDirectLightingStrength(gAmbientLight);
     }
 
     result += ShadeLocalLights(baseColor, N, V, worldPosition, geometricNormal, gMaterial.shininess > 0.0f);
@@ -80,6 +82,7 @@ float3 ShadeArchive(float3 baseColor, float3 normal, float3 worldPosition, float
 PixelShaderOutput main(VertexShaderOutput input)
 {
     PixelShaderOutput output;
+    float3 indirectColor = 0.0f;
     float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
     float3 baseColor = gMaterial.color.rgb * textureColor.rgb;
@@ -88,12 +91,13 @@ PixelShaderOutput main(VertexShaderOutput input)
 #if OBJECT3D_MATERIAL_TYPE == 6
     output.color.rgb = ShadeToonSurface(baseColor, surfaceNormal,
         gCamera.worldPosition - input.worldPosition, -gDirectionalLight.direction,
-        gDirectionalLight.color.rgb, gDirectionalLight.intensity);
+        gDirectionalLight.color.rgb, gDirectionalLight.intensity) * GetDirectLightingStrength(gAmbientLight);
     float3 toonN = surfaceNormal;
     float3 toonV = normalize(gCamera.worldPosition - input.worldPosition);
-    output.color.rgb += baseColor * HemisphereAmbient(gAmbientLight, toonN) * 0.30f;
+    indirectColor = baseColor * HemisphereAmbient(gAmbientLight, toonN) * 0.30f;
+    output.color.rgb += indirectColor;
     output.color.rgb += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
-        SurfaceSpecular(gMaterial, baseColor, toonN, toonV, normalize(-gDirectionalLight.direction));
+        SurfaceSpecular(gMaterial, baseColor, toonN, toonV, normalize(-gDirectionalLight.direction)) * GetDirectLightingStrength(gAmbientLight);
     output.color.rgb += ShadeLocalLights(baseColor, toonN, toonV, input.worldPosition, input.normal, true);
 #elif OBJECT3D_MATERIAL_TYPE == 2
     float3 N = surfaceNormal;
@@ -109,7 +113,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 #elif OBJECT3D_MATERIAL_TYPE >= 3 && OBJECT3D_MATERIAL_TYPE <= 5
     output.color.rgb = ShadeArchive(baseColor, surfaceNormal, input.worldPosition, transformedUV.xy);
 #elif OBJECT3D_MATERIAL_TYPE == 1
-    output.color.rgb = ShadeStandard(baseColor, surfaceNormal, input.worldPosition, input.normal);
+    output.color.rgb = ShadeStandard(baseColor, surfaceNormal, input.worldPosition, input.normal, indirectColor);
 #else
     output.color.rgb = baseColor;
 #endif
@@ -124,8 +128,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     {
         float3 N = surfaceNormal;
         float3 reflected = reflect(normalize(input.worldPosition - gCamera.worldPosition), N);
-        output.color.rgb += gEnvironmentTexture.SampleLevel(gSampler, reflected, saturate(gMaterial.roughness) * 5.0f).rgb *
-            gMaterial.environmentCoefficient;
+        float3 environmentColor = gEnvironmentTexture.SampleLevel(gSampler, reflected, saturate(gMaterial.roughness) * 5.0f).rgb *
+            gMaterial.environmentCoefficient * GetIndirectLightingStrength(gAmbientLight);
+        output.color.rgb += environmentColor;
+        indirectColor += environmentColor;
     }
+    output.indirectColor = float4(indirectColor, output.color.a);
     return output;
 }

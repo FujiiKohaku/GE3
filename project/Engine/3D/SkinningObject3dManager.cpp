@@ -272,9 +272,10 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     baseDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
     baseDesc.RasterizerState = rasterizerDesc;
     baseDesc.DepthStencilState = depthStencilDesc;
-    baseDesc.NumRenderTargets = 2;
+    baseDesc.NumRenderTargets = 3;
     baseDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     baseDesc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    baseDesc.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     baseDesc.DepthStencilState = depthStencilDesc;
     baseDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     baseDesc.SampleDesc.Count = 1;
@@ -282,6 +283,9 @@ void SkinningObject3dManager::CreateGraphicsPipeline()
     baseDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     // ・ｽu・ｽ・ｽ・ｽ・ｽ・ｽh・ｽﾝ抵ｿｽi・ｽﾆりあ・ｽ・ｽ・ｽ・ｽ・ｽﾈゑｿｽ・ｽﾅ擾ｿｽ・ｽ・ｽ・ｽ・ｽ・ｽj
     baseDesc.BlendState = CreateBlendDesc(kBlendModeNone);
+    baseDesc.BlendState.IndependentBlendEnable = TRUE;
+    baseDesc.BlendState.RenderTarget[2] = baseDesc.BlendState.RenderTarget[0];
+    baseDesc.BlendState.RenderTarget[2].RenderTargetWriteMask = 0;
     for (int i = 0; i < kCountOfBlendMode; ++i) {
         const auto blendMode = static_cast<BlendMode>(i);
         materialPipelineCache_.emplace(
@@ -326,9 +330,14 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> SkinningObject3dManager::CreateMater
     desc.RasterizerState = rasterizerDesc;
     desc.DepthStencilState = depthStencilDesc;
     desc.BlendState = CreateBlendDesc(blendMode);
-    desc.NumRenderTargets = 2;
+    desc.BlendState.IndependentBlendEnable = TRUE;
+    desc.BlendState.RenderTarget[2] = desc.BlendState.RenderTarget[0];
+    desc.BlendState.RenderTarget[1] = desc.BlendState.RenderTarget[0];
+    desc.BlendState.RenderTarget[1].BlendEnable = FALSE;
+    desc.NumRenderTargets = 3;
     desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    desc.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;

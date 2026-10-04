@@ -19,9 +19,10 @@ struct AmbientLight {
     Vector4 clusterSettings;
     // 12×8タイル、対数分割した16層。各要素はポイント／スポットのビット集合。
     uint32_t clusterMasks[1536][4];
+    Vector4 componentSettings;
 };
 
-static_assert(sizeof(AmbientLight) == 24800);
+static_assert(sizeof(AmbientLight) == 24816);
 
 struct PointLight {
     Vector4 color; // ライトの色

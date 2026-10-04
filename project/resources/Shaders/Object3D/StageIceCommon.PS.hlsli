@@ -20,7 +20,10 @@ struct StageIcePixelOutput
 {
     float32_t4 color : SV_Target0;
     float32_t4 encodedNormal : SV_Target1;
+    float4 indirectColor : SV_Target2;
 };
+
+static float3 indirectLightingColor = 0.0f;
 
 struct StageIceLighting
 {
@@ -28,6 +31,7 @@ struct StageIceLighting
     float3 view;
     float directVisibility;
     float3 shade;
+    float3 indirectShade;
 };
 
 float4 SampleStageIceTexture(VertexShaderOutput input)
@@ -41,9 +45,12 @@ StageIcePixelOutput FinishStageIce(VertexShaderOutput input, float3 color, float
     StageIcePixelOutput output;
     float3 normal = normalize(input.normal);
     float3 view = normalize(gCamera.worldPosition - input.worldPosition);
-    color += EnvironmentLighting(gMaterial.color.rgb, normal, view, true);
+    float3 environmentColor = EnvironmentLighting(gMaterial.color.rgb, normal, view, true);
+    color += environmentColor;
+    indirectLightingColor += environmentColor;
     color += ShadeLocalLights(gMaterial.color.rgb, normal, view, input.worldPosition, normal, true);
     output.color = float4(color, gMaterial.color.a * textureAlpha);
+    output.indirectColor = float4(indirectLightingColor, output.color.a);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     return output;
 }
@@ -55,12 +62,13 @@ StageIceLighting GetStageIceLighting(VertexShaderOutput input)
     lighting.normal = ApplyNormalMap(input.worldPosition, input.normal, uv);
     lighting.view = normalize(gCamera.worldPosition - input.worldPosition);
     lighting.directVisibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
+    lighting.indirectShade = HemisphereAmbient(gAmbientLight, lighting.normal) * gAmbientLight.componentSettings.z;
     lighting.shade = GetStageIceDiffuseLighting(lighting.normal, lighting.directVisibility);
     return lighting;
 }
 
 float3 ShadeStageIceSurface(StageIceLighting lighting, float3 iceColor,
-    float frostCoverage, float rimStrength)
+    float frostCoverage, float rimStrength, float3 indirectIceColor)
 {
     // A smooth frost layer keeps the surface free of cracks and plate boundaries.
     float frost = saturate(frostCoverage * 0.22f);
@@ -81,12 +89,16 @@ float3 ShadeStageIceSurface(StageIceLighting lighting, float3 iceColor,
     // Keep frost blue and retain the material tint instead of replacing it with white.
     float3 frostColor = lerp(iceColor, lighting.shade * float3(0.52f, 0.72f, 0.84f), 0.45f);
     float3 surface = lerp(iceColor * float3(0.82f, 0.88f, 0.92f), frostColor, frost);
+    float3 indirectFrostColor = lerp(indirectIceColor, lighting.indirectShade * float3(0.52f, 0.72f, 0.84f), 0.45f);
+    indirectLightingColor = lerp(indirectIceColor * float3(0.82f, 0.88f, 0.92f), indirectFrostColor, frost);
     float clearSurface = 1.0f - frost;
     // Highlights stay visible even on darker material/texture colors.
     float3 ambientRadiance = GetStageIceAmbientRadiance();
     surface += ambientRadiance * float3(0.75f, 0.90f, 1.0f) * glaze * 0.55f * clearSurface;
     surface += ambientRadiance * fresnel *
         (0.50f + rimStrength * 3.0f) * clearSurface;
+    indirectLightingColor += ambientRadiance * float3(0.75f, 0.90f, 1.0f) * glaze * 0.55f * clearSurface;
+    indirectLightingColor += ambientRadiance * fresnel * (0.50f + rimStrength * 3.0f) * clearSurface;
     float3 lightColor = GetStageIceDirectRadiance(lighting.directVisibility);
     surface += lightColor * float3(0.82f, 0.96f, 1.0f) *
         ((sharpHighlight * 0.85f + broadHighlight * 0.38f) * clearSurface +
@@ -100,7 +112,8 @@ float3 ShadeStageIceIsland(VertexShaderOutput input, float3 textureColor)
     float snow = smoothstep(0.72f, 0.88f, lighting.normal.y);
     float3 blueIce = lighting.shade * float3(0.57f, 0.82f, 0.99f);
     return ShadeStageIceSurface(lighting,
-        gMaterial.color.rgb * textureColor * blueIce, snow, 0.045f);
+        gMaterial.color.rgb * textureColor * blueIce, snow, 0.045f,
+        gMaterial.color.rgb * textureColor * lighting.indirectShade * float3(0.57f, 0.82f, 0.99f));
 }
 
 float3 ShadeStageIceStructure(VertexShaderOutput input, float3 textureColor,
@@ -109,5 +122,5 @@ float3 ShadeStageIceStructure(VertexShaderOutput input, float3 textureColor,
     StageIceLighting lighting = GetStageIceLighting(input);
     return ShadeStageIceSurface(lighting,
         gMaterial.color.rgb * textureColor * lighting.shade * materialTint,
-        0.0f, rimStrength);
+        0.0f, rimStrength, gMaterial.color.rgb * textureColor * lighting.indirectShade * materialTint);
 }

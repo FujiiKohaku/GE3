@@ -104,6 +104,7 @@ public:
     void SetPostEffectType(PostEffectType postEffectType);
     void SetOutputFormat(DXGI_FORMAT format) { outputFormat_ = format; }
 
+    void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { indirectTextureHandle_ = handle; }
     void SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     PostEffectParameter& GetPostEffectParameter();
 
@@ -128,5 +129,6 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> drawParameterResource_;
     unsigned char* drawParameterData_ = nullptr;
     // マスクテクスチャのGPUディスクリプタハンドル
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectTextureHandle_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE maskTextureHandle_ {};
 };

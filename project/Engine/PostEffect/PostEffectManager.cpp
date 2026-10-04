@@ -71,6 +71,11 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
         {{"key", "ssaoRadius"}, {"label", "SSAO半径"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0.1}, {"maximum", 30}, {"step", 0.1}},
         {{"key", "ssaoBias"}, {"label", "SSAOバイアス"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
         {{"key", "environmentDiffuse"}, {"label", "環境光の拡散"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "lightingView"}, {"label", "照明表示"}, {"group", "照明成分"}, {"type", "select"},
+            {"options", nlohmann::json::array({{{"value", 0}, {"label", "合成"}}, {{"value", 1}, {"label", "直接光のみ"}}, {{"value", 2}, {"label", "環境光のみ"}}})}},
+        {{"key", "directLightingStrength"}, {"label", "直接光の倍率"}, {"group", "照明成分"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "indirectLightingStrength"}, {"label", "環境光の倍率"}, {"group", "照明成分"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
+        {{"key", "iceAmbientMultiplier"}, {"label", "氷の環境光補正"}, {"group", "照明成分"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
         {{"key", "environmentSpecular"}, {"label", "環境光の反射"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
         {{"key", "atmosphereDensity"}, {"label", "大気の密度"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.01}, {"step", 5e-05}},
         {{"key", "atmosphereStrength"}, {"label", "大気散乱の強度"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
@@ -205,6 +210,14 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
     if (key == "ssaoBias") { return SetSsao(ssao.w > 0.5f, ssao.x, ssao.y, number); }
     LightManager* lights = LightManager::GetInstance();
     const Vector4 environment = lights->GetEnvironmentLighting();
+    const Vector4 components = lights->GetLightingComponents();
+    if (key == "directLightingStrength") { return lights->SetLightingComponents(number, components.y, components.z, static_cast<uint32_t>(components.w)); }
+    if (key == "indirectLightingStrength") { return lights->SetLightingComponents(components.x, number, components.z, static_cast<uint32_t>(components.w)); }
+    if (key == "iceAmbientMultiplier") { return lights->SetLightingComponents(components.x, components.y, number, static_cast<uint32_t>(components.w)); }
+    if (key == "lightingView") {
+        if (number < 0 || number > 2 || std::floor(number) != number) { return false; }
+        return lights->SetLightingComponents(components.x, components.y, components.z, static_cast<uint32_t>(number));
+    }
     if (key == "environmentDiffuse") { return lights->SetEnvironmentLighting(number, environment.y); }
     if (key == "environmentSpecular") { return lights->SetEnvironmentLighting(environment.x, number); }
     const Vector4 atmosphere = lights->GetAtmosphereSettings();
@@ -263,6 +276,7 @@ nlohmann::json PostEffectManager::GetDevelopmentSettings() const
     const auto& p = copyImageRenderer_->GetPostEffectParameter();
     const LightManager* lights = LightManager::GetInstance();
     const Vector4 environment = lights->GetEnvironmentLighting();
+    const Vector4 components = lights->GetLightingComponents();
     const Vector4 atmosphere = lights->GetAtmosphereSettings();
     const FogData& fog = fogManager_->GetFogData();
     const auto* bloom = bloomRenderer_->GetBloomParameter();
@@ -278,6 +292,8 @@ nlohmann::json PostEffectManager::GetDevelopmentSettings() const
         {"ssaoEnabled", p.ssaoSettings.w > 0.5f}, {"ssaoStrength", p.ssaoSettings.x},
         {"ssaoRadius", p.ssaoSettings.y}, {"ssaoBias", p.ssaoSettings.z},
         {"environmentDiffuse", environment.x}, {"environmentSpecular", environment.y},
+        {"lightingView", components.w}, {"directLightingStrength", components.x},
+        {"indirectLightingStrength", components.y}, {"iceAmbientMultiplier", components.z},
         {"atmosphereEnabled", atmosphere.x > 0.5f}, {"atmosphereDensity", atmosphere.y},
         {"atmosphereStrength", atmosphere.z}, {"atmosphereAnisotropy", atmosphere.w},
         {"clusteredLightingEnabled", lights->IsClusteredLightingEnabled()},
@@ -605,6 +621,20 @@ void PostEffectManager::Update(Camera* camera)
 
 void PostEffectManager::DrawImGui()
 {
+#ifdef USE_IMGUI
+    if (ImGui::Begin("Lighting components")) {
+        auto* lights = LightManager::GetInstance();
+        Vector4 components = lights->GetLightingComponents();
+        int viewMode = static_cast<int>(components.w);
+        const char* kViewNames[] = {"Combined", "Direct only", "Ambient only"};
+        bool hasChanges = ImGui::Combo("View", &viewMode, kViewNames, 3);
+        if (ImGui::SliderFloat("Direct strength", &components.x, 0, 2)) { hasChanges = true; }
+        if (ImGui::SliderFloat("Ambient strength", &components.y, 0, 2)) { hasChanges = true; }
+        if (ImGui::SliderFloat("Ice ambient gain", &components.z, 0, 2)) { hasChanges = true; }
+        if (hasChanges) { lights->SetLightingComponents(components.x, components.y, components.z, static_cast<uint32_t>(viewMode)); }
+    }
+    ImGui::End();
+#endif
     fogManager_->DrawImGui();
     bloomRenderer_->DrawImGui();
     volumetricLightRenderer_->DrawImGui();
@@ -787,10 +817,17 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     UpdatePostEffectParameters(sceneManager);
 
     particleCompositionTargetIndex_ = 0;
+    if (LightManager::GetInstance()->GetLightingComponents().w > 0.5f) {
+        RenderTarget& target = pingPongRenderTargets_[0];
+        target.BeginRender();
+        ApplyPostEffectToCurrentTarget(PostEffectType::Copy, sceneColorHandle);
+        target.EndRender();
+        return;
+    }
     bool volumeApplied = false;
     auto& screenSettings = copyImageRenderer_->GetPostEffectParameter();
     screenSettings.screenCameraSettings.w = 0.0f;
-    if (normalTextureHandle_.ptr != 0) { screenSettings.screenCameraSettings.w = 1.0f; }
+    if (normalTextureHandle_.ptr != 0 && indirectTextureHandle_.ptr != 0) { screenSettings.screenCameraSettings.w = 1.0f; }
     if (sceneDepthReady_ && screenSettings.screenCameraSettings.z > 0.5f &&
         ((screenSettings.ssaoSettings.w > 0.5f && normalTextureHandle_.ptr != 0) || screenSettings.atmosphereSettings.x > 0.5f)) {
         RenderTarget& target = pingPongRenderTargets_[0];
@@ -934,6 +971,12 @@ ID3D12Resource* PostEffectManager::GetDepthTexture() const
 D3D12_GPU_VIRTUAL_ADDRESS PostEffectManager::GetFogConstantBufferView() const
 {
     return fogManager_->GetConstantBufferView();
+}
+
+void PostEffectManager::SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
+{
+    indirectTextureHandle_ = handle;
+    copyImageRenderer_->SetIndirectTextureHandle(handle);
 }
 
 void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle)

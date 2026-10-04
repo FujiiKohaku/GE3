@@ -48,6 +48,7 @@ void Renderer::Initialize()
     postEffectManager_->Initialize(DirectXCommon::GetInstance());
     postEffectManager_->SetNormalTextureHandle(
         offscreenRenderer_->GetNormalSrvHandleGPU());
+    postEffectManager_->SetIndirectTextureHandle(offscreenRenderer_->GetIndirectSrvHandleGPU());
     dlssSuperResolution_ = std::make_unique<DlssSuperResolution>();
     dlssSuperResolution_->Initialize();
     screenSpaceReflection_ = std::make_unique<ScreenSpaceReflection>();
@@ -133,6 +134,13 @@ void Renderer::Draw(SceneManager* sceneManager)
     SrvManager::GetInstance()->PreDraw();
 
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
+    Vector4 lightingComponents = LightManager::GetInstance()->GetLightingComponents();
+    const std::array<float, 4> kCurrentLightingComponents = {lightingComponents.x, lightingComponents.y, lightingComponents.z, lightingComponents.w};
+    if (previousLightingComponents_ != kCurrentLightingComponents) {
+        dlssSuperResolution_->ResetHistory();
+        screenSpaceReflection_->ResetHistory();
+        previousLightingComponents_ = kCurrentLightingComponents;
+    }
     SuperResolutionHistoryInputs historyInputs;
     historyInputs.hasCamera = defaultCamera != nullptr;
     historyInputs.cameraId = reinterpret_cast<uintptr_t>(defaultCamera);
@@ -239,6 +247,8 @@ void Renderer::Draw(SceneManager* sceneManager)
     reflectionInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle();
     reflectionInputs.sceneRevision = sceneManager->GetSceneRevision();
     reflectionInputs.camera = defaultCamera;
+    // Reflection is a separate lighting contribution; isolate the selected source view.
+    if (lights->GetLightingComponents().w > 0.5f) { reflectionInputs.camera = nullptr; }
     postEffectManager_->ReplaceSceneColor(screenSpaceReflection_->Draw(reflectionInputs));
 
     SuperResolutionFrameInputs frameInputs;

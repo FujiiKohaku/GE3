@@ -50,6 +50,7 @@ public:
     void PreDrawDepth();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
+    void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     void SetNormalTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
     {
         normalTextureHandle_ = handle;
@@ -134,4 +135,5 @@ private:
     std::optional<float> cameraShakeOverride_;
 #endif
     D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectTextureHandle_ {};
 };

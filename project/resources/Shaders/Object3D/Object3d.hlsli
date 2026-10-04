@@ -95,6 +95,7 @@ struct AmbientLight
     float4x4 clusterProjection;
     float4 clusterSettings;
     uint4 clusterMasks[1536];
+    float4 componentSettings;
 };
 struct Camera
 {

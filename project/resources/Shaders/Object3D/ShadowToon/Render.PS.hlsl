@@ -14,6 +14,7 @@ struct PixelShaderOutput
 {
     float4 color : SV_Target0;
     float4 encodedNormal : SV_Target1;
+    float4 indirectColor : SV_Target2;
 };
 
 PixelShaderOutput main(VertexShaderOutput input)
@@ -32,7 +33,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
     float3 ambient = HemisphereAmbient(gAmbientLight, N) * 1.2f;
     float3 direct = max(gDirectionalLight.color.rgb, 0.0f) *
-        max(gDirectionalLight.intensity, 0.0f) * visibility;
+        max(gDirectionalLight.intensity, 0.0f) * visibility * GetDirectLightingStrength(gAmbientLight);
     float3 color = baseColor * (ambient + direct * diffuse);
 
     // Keep the title's graphic highlight, using the same light and shadow as the surface.
@@ -46,6 +47,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     color += ShadeLocalLights(baseColor, N, V, input.worldPosition, normalize(input.normal), true);
 
     PixelShaderOutput output;
+    output.indirectColor = float4(baseColor * ambient * (1.0f + rim * 0.12f), gMaterial.color.a * textureColor.a);
     output.color = float4(color, gMaterial.color.a * textureColor.a);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
     return output;

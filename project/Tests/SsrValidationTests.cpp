@@ -9,6 +9,7 @@
 #include "Engine/Light/LightManager.h"
 #include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "Engine/Logger/Logger.h"
+#include "Engine/Debug/GpuTimestampTimer.h"
 #include "App/Game/VisualPresetLibrary.h"
 #include "DirectXTex/DirectXTex.h"
 #include <d3d12sdklayers.h>
@@ -20,6 +21,8 @@
 #include <vector>
 #include <cstdlib>
 #include <utility>
+#include <cmath>
+#include <algorithm>
 
 namespace {
 void RequireSsr(bool isValid, const char* message)
@@ -102,6 +105,12 @@ void RequireUnchangedForeground(const std::vector<uint8_t>& first, const std::ve
         }
     }
 }
+float DecodeSrgb(uint8_t value)
+{
+    float encoded = static_cast<float>(value) / 255.0f;
+    if (encoded <= 0.04045f) { return encoded / 12.92f; }
+    return std::pow((encoded + 0.055f) / 1.055f, 2.4f);
+}
 void FinalizeSsrValidation()
 {
     ModelManager::Finalize(); Object3dManager::Finalize(); LightManager::Finalize();
@@ -144,6 +153,7 @@ int RunSsrValidation()
             OffscreenRenderer offscreen; offscreen.Initialize(); offscreen.SetClearColor({0.025f, 0.03f, 0.05f, 1});
             PostEffectManager post; post.Initialize(dxCommon);
             post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU()); post.UpdateCameraInputs(&camera);
+            post.SetIndirectTextureHandle(offscreen.GetIndirectSrvHandleGPU());
             auto* copy = post.GetCopyImageRenderer();
             ScreenSpaceReflection reflection; reflection.Initialize();
             MotionVectorRenderer motion; motion.Initialize();
@@ -171,6 +181,90 @@ int RunSsrValidation()
             Vector2 boxMirror = camera.WorldToScreen({-4, -3, 3.5f});
             Vector2 pillarMirror = camera.WorldToScreen({4, -5, 9});
             std::ofstream report(directory / "diagnostics.txt");
+            RequireSsr(lights->GetLightingComponents().z == 1.0f, "Ice ambient gain must start at one");
+            RequireSsr(!lights->SetLightingComponents(-1, 1, 1, 0), "Invalid direct lighting strength was accepted");
+            RequireSsr(!lights->SetLightingComponents(1, 1, 1, 3), "Invalid lighting view was accepted");
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+            RequireSsr(post.SetDevelopmentNumber("lightingView", 1), "Lighting view panel control failed");
+            RequireSsr(!post.SetDevelopmentNumber("lightingView", 1.5), "Lighting view accepted a fractional selection");
+            RequireSsr(post.GetDevelopmentSettings().at("lightingView").get<float>() == 1, "Lighting view panel state does not match");
+            RequireSsr(post.SetDevelopmentNumber("lightingView", 0), "Lighting view panel could not restore combined mode");
+#endif
+            std::array<std::vector<uint8_t>, 6> lightingFrames;
+            const char* kLightingNames[] = {"lighting-combined", "lighting-direct", "lighting-ambient", "lighting-legacy-gain", "lighting-no-ambient", "lighting-no-direct"};
+            for (uint32_t lightingIndex = 0; lightingIndex < 6; ++lightingIndex) {
+                uint32_t viewMode = 0;
+                float directStrength = 1;
+                float indirectStrength = 1;
+                float iceMultiplier = 1;
+                if (lightingIndex == 1 || lightingIndex == 2) { viewMode = lightingIndex; }
+                if (lightingIndex == 3) { iceMultiplier = 1.7f; }
+                if (lightingIndex == 4) { indirectStrength = 0; }
+                if (lightingIndex == 5) { directStrength = 0; }
+                RequireSsr(lights->SetLightingComponents(directStrength, indirectStrength, iceMultiplier, viewMode), "Lighting settings failed");
+                TextureManager::GetInstance()->FlushUploads(); SrvManager::GetInstance()->PreDraw();
+                post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw(); floor.Draw(); box.Draw(); pillar.Draw(); rail.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth(); dxCommon->PreDraw();
+                dxCommon->SetBackBufferRenderTarget(dxCommon->GetDSVHandle());
+                copy->SetPostEffectType(PostEffectType::Copy);
+                copy->Draw(offscreen.GetSrvHandleGPU(), post.GetDepthSrv(), offscreen.GetNormalSrvHandleGPU());
+                lightingFrames[lightingIndex] = CaptureSsrFrame(dxCommon, directory / (std::string(kLightingNames[lightingIndex]) + ".png"));
+            }
+            float maximumLightingError = 0;
+            for (uint32_t pixelY = 440; pixelY < 480; ++pixelY) {
+                for (uint32_t pixelX = 600; pixelX < 680; ++pixelX) {
+                    size_t offset = (static_cast<size_t>(pixelY) * WinApp::kClientWidth + pixelX) * 4;
+                    for (uint32_t channel = 0; channel < 3; ++channel) {
+                        float combined = DecodeSrgb(lightingFrames[0][offset + channel]);
+                        float components = DecodeSrgb(lightingFrames[1][offset + channel]) + DecodeSrgb(lightingFrames[2][offset + channel]);
+                        float error = std::abs(combined - components);
+                        if (error > maximumLightingError) { maximumLightingError = error; }
+                    }
+                }
+            }
+            report << "Direct + ambient composition error: " << maximumLightingError << '\n';
+            RequireSsr(maximumLightingError < 0.005f, "Direct and ambient sources do not sum to combined floor lighting");
+            RequireSsr(lightingFrames[1] == lightingFrames[4], "Ambient strength zero did not isolate direct lighting");
+            RequireSsr(lightingFrames[2] == lightingFrames[5], "Direct strength zero did not isolate ambient lighting");
+            RequireSsr(ReflectionDifference(lightingFrames[0], lightingFrames[3]) > 1000, "Ice ambient gain control has no effect");
+            GpuTimestampTimer aoTimer;
+            aoTimer.Initialize();
+            std::array<std::vector<uint8_t>, 4> aoFrames;
+            const char* kAoNames[] = { "ssao-combined-off", "ssao-combined-on", "ssao-direct-off", "ssao-direct-on" };
+            for (uint32_t frameIndex = 0; frameIndex < 4; ++frameIndex) {
+                float indirectStrength = 1;
+                if (frameIndex >= 2) { indirectStrength = 0; }
+                lights->SetLightingComponents(1, indirectStrength, 1, 0);
+                TextureManager::GetInstance()->FlushUploads(); SrvManager::GetInstance()->PreDraw();
+                post.PreDrawDepth(); offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw(); floor.Draw(); box.Draw(); pillar.Draw(); rail.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth(); dxCommon->PreDraw();
+                dxCommon->SetBackBufferRenderTarget(dxCommon->GetDSVHandle());
+                auto& parameters = copy->GetPostEffectParameter();
+                parameters.ssaoSettings = { 0.6f, 5.0f, 0.02f, 0 };
+                if (frameIndex == 1 || frameIndex == 3) { parameters.ssaoSettings.w = 1; }
+                parameters.atmosphereSettings.x = 0;
+                parameters.screenCameraSettings.w = 1;
+                copy->SetPostEffectType(PostEffectType::ScreenLighting);
+                aoTimer.Begin();
+                copy->Draw(offscreen.GetSrvHandleGPU(), post.GetDepthSrv(), offscreen.GetNormalSrvHandleGPU());
+                aoTimer.End();
+                aoFrames[frameIndex] = CaptureSsrFrame(dxCommon, directory / (std::string(kAoNames[frameIndex]) + ".png"));
+                aoTimer.ReadCompleted();
+                report << kAoNames[frameIndex] << " GPU ms: " << aoTimer.GetDurationMs() << '\n';
+            }
+            RequireSsr(aoFrames[2] == aoFrames[3], "SSAO changed direct light with ambient disabled");
+            size_t occludedPixels = 0;
+            for (size_t offset = 0; offset < aoFrames[0].size(); offset += 4) {
+                for (size_t channel = 0; channel < 3; ++channel) {
+                    RequireSsr(aoFrames[1][offset + channel] <= aoFrames[0][offset + channel], "SSAO unexpectedly brightened a pixel");
+                }
+                if (aoFrames[1][offset] < aoFrames[0][offset]) { ++occludedPixels; }
+            }
+            RequireSsr(occludedPixels > 100, "Ambient-only SSAO did not darken contact regions");
+            report << "Ambient-only SSAO affected pixels: " << occludedPixels << '\n';
+            lights->SetLightingComponents(1, 1, 1, 0);
             report << "Box mirror center: " << boxMirror.x << ',' << boxMirror.y << "\nPillar mirror center: " << pillarMirror.x << ',' << pillarMirror.y << '\n';
             const ScreenSpaceReflectionDebugMode kModes[] = {ScreenSpaceReflectionDebugMode::None, ScreenSpaceReflectionDebugMode::Reflection,
                 ScreenSpaceReflectionDebugMode::ViewDepth, ScreenSpaceReflectionDebugMode::RayDirection,
@@ -343,7 +437,7 @@ int RunSsrValidation()
                 if (message->Severity <= D3D12_MESSAGE_SEVERITY_ERROR) { Logger::Log(message->pDescription); throw std::runtime_error("SSR D3D12 validation failed"); }
             }
         }
-        std::ofstream(directory / "result.txt") << "PASS: material roughness blur, sharp minimum roughness, foreground edges preserved, mirror positions, temporal jitter reduction, history resets, default ON, no D3D12 errors\n";
+        std::ofstream(directory / "result.txt") << "PASS: direct/ambient composition and controls, ice ambient gain, material roughness blur, foreground edges preserved, temporal jitter reduction, default ON, no D3D12 errors\n";
         FinalizeSsrValidation(); return 0;
     } catch (const std::exception& error) {
         std::ofstream(directory / "result.txt") << "FAIL: " << error.what();

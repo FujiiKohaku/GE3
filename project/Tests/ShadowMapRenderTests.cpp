@@ -817,6 +817,17 @@ int RunDlssTest()
         std::ofstream(directory / "ssr-result.txt") << "PASS: changedPixels=" << reflectionChangedPixels << "; reflectionHitPixels=" << reflectionHitPixels << "; traceAndCompositeGpuMs=" << reflectionGpuMs << '\n';
         reflection->SetEnabled(true);
         std::ofstream timingReport(directory / "aa-gpu-times.csv");
+        for (uint32_t lightingView = 1; lightingView <= 2; ++lightingView) {
+            Require(LightManager::GetInstance()->SetLightingComponents(1, 1, 1, lightingView), "Stage lighting view failed");
+            for (int frame = 0; frame < 2; ++frame) { game.Update(); game.Draw(); }
+            Require(!reflection->HasHistory(), "Component view retained SSR history");
+            barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            dx->GetCommandList()->ResourceBarrier(1, &barrier);
+            std::string name = "lighting-stage03-direct.png";
+            if (lightingView == 2) { name = "lighting-stage03-ambient.png"; }
+            ReadFrame(dx, directory / name);
+        }
+        LightManager::GetInstance()->SetLightingComponents(1, 1, 1, 0);
         timingReport << "mode,drawGpuMs,dlaaAndCopyMs,toneMapAndFxaaMs\n";
         for (uint32_t mode = 0; mode < 4; ++mode) {
             bool isDlaaEnabled = (mode & 1) != 0;
@@ -1084,6 +1095,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             PostEffectManager post;
             post.Initialize(dx);
             post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
+            post.SetIndirectTextureHandle(offscreen.GetIndirectSrvHandleGPU());
             post.PostDrawDepth();
             post.SetFxaaEnabled(false);
             CheckMotionVectors(dx, post, offscreen);
@@ -1465,6 +1477,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 lights->SetAtmosphere(false, 0.002f, 0.7f, 0.65f);
                 lights->SetEnvironmentLighting(0.0f, 0.0f);
                 post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
+            post.SetIndirectTextureHandle(offscreen.GetIndirectSrvHandleGPU());
                 if (mode == 1 || mode == 2 || mode == 5) { post.SetSsao(true, 0.35f, 8.0f, 0.08f); }
                 if (mode == 3 || mode == 5) { lights->SetAtmosphere(true, 0.002f, 0.7f, 0.65f); }
                 if (mode == 4 || mode == 5) { lights->SetEnvironmentLighting(0.25f, 0.4f); }
@@ -1502,6 +1515,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(screenImages[0] == screenImages[6], "Zero-strength SSAO changed the image");
             Require(screenImages[0] == screenImages[7], "Missing-normal SSAO fallback changed the image");
             post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
+            post.SetIndirectTextureHandle(offscreen.GetIndirectSrvHandleGPU());
             post.SetSsao(false, 0.25f, 6.0f, 0.08f);
             lights->SetAtmosphere(false, 0.00035f, 0.45f, 0.65f);
             lights->SetEnvironmentLighting(0.0f, 0.0f);

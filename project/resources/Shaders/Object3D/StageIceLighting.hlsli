@@ -5,13 +5,14 @@ ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 
 float3 GetStageIceAmbientRadiance()
 {
-    return max(gAmbientLight.color.rgb, 0.0f) * max(gAmbientLight.color.a, 0.0f) * 1.7f;
+    return max(gAmbientLight.color.rgb, 0.0f) * max(gAmbientLight.color.a, 0.0f) *
+        gAmbientLight.componentSettings.z * GetIndirectLightingStrength(gAmbientLight);
 }
 
 float3 GetStageIceDirectRadiance(float visibility)
 {
     return max(gDirectionalLight.color.rgb, 0.0f) *
-        max(gDirectionalLight.intensity, 0.0f) * visibility;
+        max(gDirectionalLight.intensity, 0.0f) * visibility * GetDirectLightingStrength(gAmbientLight);
 }
 
 float3 GetStageIceDiffuseLighting(float3 normal, float visibility)
@@ -22,5 +23,6 @@ float3 GetStageIceDiffuseLighting(float3 normal, float visibility)
     float diffuseBand = lerp(0.08f, 0.60f, middleBand);
     diffuseBand = lerp(diffuseBand, 1.0f, lightBand);
     // Shadows reduce direct light; ambient light keeps shaded faces readable.
-    return HemisphereAmbient(gAmbientLight, normal) * 1.7f + GetStageIceDirectRadiance(visibility) * diffuseBand * 0.85f;
+    return HemisphereAmbient(gAmbientLight, normal) * gAmbientLight.componentSettings.z +
+        GetStageIceDirectRadiance(visibility) * diffuseBand * 0.85f;
 }
