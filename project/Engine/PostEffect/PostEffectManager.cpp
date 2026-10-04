@@ -471,6 +471,7 @@ bool PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
 
 void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 {
+    finalPassTimer_.Initialize();
     assert(dxCommon != nullptr);
     dxCommon_ = dxCommon;
 
@@ -519,11 +520,8 @@ bool PostEffectManager::SetSsao(bool isEnabled, float strength, float radius, fl
     return true;
 }
 
-void PostEffectManager::Update(Camera* camera)
+void PostEffectManager::UpdateCameraInputs(Camera* camera)
 {
-    auto& animationParameters = copyImageRenderer_->GetPostEffectParameter();
-    if (isAnimationEnabled_) { animationParameters.time += TimeManager::GetInstance()->GetDeltaTime(); }
-    if (animationParameters.time > 1000.0f) { animationParameters.time = 0.0f; }
     auto& screenParameters = copyImageRenderer_->GetPostEffectParameter();
     screenParameters.screenCameraSettings.z = 0.0f;
     LightManager* lights = LightManager::GetInstance();
@@ -544,8 +542,20 @@ void PostEffectManager::Update(Camera* camera)
                     !std::isfinite(screenParameters.screenCameraRotation.m[row][column])) { isFiniteCamera = false; }
             }
         }
-        if (isFiniteCamera) { screenParameters.screenCameraSettings = { camera->GetNearClip(), camera->GetFarClip(), 1.0f, 0.0f }; }
+        if (isFiniteCamera) {
+            float hasNormals = 0.0f;
+            if (normalTextureHandle_.ptr != 0) { hasNormals = 1.0f; }
+            screenParameters.screenCameraSettings = { camera->GetNearClip(), camera->GetFarClip(), 1.0f, hasNormals };
+        }
     }
+}
+
+void PostEffectManager::Update(Camera* camera)
+{
+    auto& animationParameters = copyImageRenderer_->GetPostEffectParameter();
+    if (isAnimationEnabled_) { animationParameters.time += TimeManager::GetInstance()->GetDeltaTime(); }
+    if (animationParameters.time > 1000.0f) { animationParameters.time = 0.0f; }
+    UpdateCameraInputs(camera);
     SceneManager* sceneManager = SceneManager::GetInstance();
     if (sceneExposureRevision_ != sceneManager->GetSceneExposureRevision()) {
         copyImageRenderer_->GetPostEffectParameter().toneExposure = sceneManager->GetSceneExposure();
@@ -744,7 +754,33 @@ void PostEffectManager::Apply(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_H
     ApplyAfterParticleDraw(sceneManager);
 }
 
-void PostEffectManager::PrepareSceneForParticleDraw(
+void PostEffectManager::PrepareSceneForParticleDraw(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
+{
+    PrepareSceneForTemporalResolve(sceneManager, sceneColorHandle);
+}
+
+ID3D12Resource* PostEffectManager::GetSceneColorTexture() const
+{
+    return pingPongRenderTargets_[particleCompositionTargetIndex_].GetTexture();
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE PostEffectManager::GetSceneColorSrv() const
+{
+    return pingPongRenderTargets_[particleCompositionTargetIndex_].GetSrvHandleGPU();
+}
+
+void PostEffectManager::ReplaceSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv)
+{
+    if (colorSrv.ptr == GetSceneColorSrv().ptr) { return; }
+    uint32_t targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_);
+    RenderTarget& target = pingPongRenderTargets_[targetIndex];
+    target.BeginRender();
+    ApplyPostEffectToCurrentTarget(PostEffectType::Copy, colorSrv);
+    target.EndRender();
+    particleCompositionTargetIndex_ = targetIndex;
+}
+
+void PostEffectManager::PrepareSceneForTemporalResolve(
     SceneManager* sceneManager,
     D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
 {
@@ -804,7 +840,7 @@ void PostEffectManager::PrepareSceneForParticleDraw(
         }
 
         if (postEffect.stage !=
-            PostEffectStage::BeforeParticle) {
+            PostEffectStage::BeforeParticle || !IsTemporalResolveInputEffect(postEffect.type)) {
             continue;
         }
 
@@ -852,7 +888,8 @@ void PostEffectManager::ApplyAfterParticleDraw(SceneManager* sceneManager)
     uint32_t targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_);
     if (sceneManager != nullptr) {
         for (const PostEffectInfo& effect : sceneManager->GetPostEffects()) {
-            if (!effect.enabled || effect.stage != PostEffectStage::AfterParticle ||
+            if (!effect.enabled || (effect.stage != PostEffectStage::AfterParticle &&
+                (effect.stage != PostEffectStage::BeforeParticle || IsTemporalResolveInputEffect(effect.type))) ||
                 effect.type == PostEffectType::FXAA || effect.type == PostEffectType::ToneMap ||
                 effect.type == PostEffectType::Bloom) { continue; }
             RenderTarget& target = pingPongRenderTargets_[targetIndex];
@@ -880,12 +917,18 @@ void PostEffectManager::FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle
     SetBackBufferRenderTarget();
     PostEffectType finalType = PostEffectType::ToneMap;
     if (fxaaEnabled_) { finalType = PostEffectType::FXAA; }
+    finalPassTimer_.Begin();
     ApplyPostEffectToCurrentTarget(finalType, inputHandle);
+    finalPassTimer_.End();
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE PostEffectManager::GetDepthDSVHandle() const
 {
     return fogRenderer_->GetDepthDSVHandle();
+}
+ID3D12Resource* PostEffectManager::GetDepthTexture() const
+{
+    return fogRenderer_->GetDepthTexture();
 }
 
 D3D12_GPU_VIRTUAL_ADDRESS PostEffectManager::GetFogConstantBufferView() const

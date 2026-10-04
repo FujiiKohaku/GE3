@@ -18,6 +18,9 @@ public:
     void DrawImGui();
     void ResetMotionHistory() { motionHistoryId_ = nextMotionHistoryId_++; }
     uint64_t GetMotionHistoryId() const { return motionHistoryId_; }
+    void SetProjectionJitter(const Vector2& jitterNdc) { projectionJitterNdc_ = jitterNdc; RecalculateMatrices(); }
+    const Matrix4x4& GetUnjitteredViewProjectionMatrix() const { return unjitteredViewProjectionMatrix_; }
+    const Vector2& GetProjectionJitter() const { return projectionJitterNdc_; }
     // ===============================
     // setter（外部から値を設定）
     // ===============================
@@ -71,6 +74,8 @@ private:
     Matrix4x4 viewMatrix_;
     Matrix4x4 projectionMatrix_;
     Matrix4x4 viewProjectionMatrix_;
+    Matrix4x4 unjitteredViewProjectionMatrix_ = viewProjectionMatrix_;
+    Vector2 projectionJitterNdc_ = {};
     // プロジェクション計算用パラメータ
     float fovY_ = 0.45f; // 垂直方向の視野角
     float aspectRatio_ = static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight);

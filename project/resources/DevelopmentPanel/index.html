@@ -69,6 +69,8 @@ function MakeControl(group, control, container) {
     if (control.type === 'action') {
         input = document.createElement('button'); input.textContent = '実行';
         input.addEventListener('click', QueueCommand);
+    } else if (control.type === 'metric') {
+        input = document.createElement('output');
     } else if (control.type === 'select') {
         input = document.createElement('select');
         for (const option of control.options) {

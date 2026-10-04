@@ -47,9 +47,9 @@ void MotionVectorRenderer::Initialize() {
     srvIndex_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, texture_.Get(), description.Format, 1);
 
-    D3D12_ROOT_PARAMETER parameters[4] = {};
-    const uint32_t counts[] = {16, 16, 4, 4};
-    for (uint32_t index = 0; index < 4; ++index) {
+    D3D12_ROOT_PARAMETER parameters[5] = {};
+    const uint32_t counts[] = {16, 16, 4, 4, 2};
+    for (uint32_t index = 0; index < 5; ++index) {
         parameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
         parameters[index].Constants.ShaderRegister = index;
         parameters[index].Constants.Num32BitValues = counts[index];
@@ -57,7 +57,7 @@ void MotionVectorRenderer::Initialize() {
     }
     D3D12_ROOT_SIGNATURE_DESC signature = {};
     signature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    signature.NumParameters = 4;
+    signature.NumParameters = 5;
     signature.pParameters = parameters;
     Microsoft::WRL::ComPtr<ID3DBlob> blob;
     Microsoft::WRL::ComPtr<ID3DBlob> errors;
@@ -148,7 +148,7 @@ bool MotionVectorRenderer::HasHistory(const MotionVectorHistory& history, const 
         && history.cameraHistoryId == camera.GetMotionHistoryId();
 }
 void MotionVectorRenderer::CommitHistory(MotionVectorHistory& history, const Matrix4x4& world, const Camera& camera, const Vector4& parameters) {
-    history.previousWorldViewProjection = MatrixMath::Multiply(world, camera.GetViewProjectionMatrix());
+    history.previousWorldViewProjection = MatrixMath::Multiply(world, camera.GetUnjitteredViewProjectionMatrix());
     history.previousParameters = parameters;
     history.frameId = frameId_;
     history.camera = &camera;
@@ -162,7 +162,8 @@ void MotionVectorRenderer::Queue(const D3D12_VERTEX_BUFFER_VIEW& currentVertices
     entry.vertices[0] = currentVertices;
     entry.vertices[1] = previousVertices;
     entry.indices = indices; entry.vertexCount = vertexCount; entry.indexCount = indexCount;
-    entry.currentWorldViewProjection = MatrixMath::Multiply(world, camera.GetViewProjectionMatrix());
+    entry.currentWorldViewProjection = MatrixMath::Multiply(world, camera.GetUnjitteredViewProjectionMatrix());
+    entry.jitterNdc = camera.GetProjectionJitter();
     entry.previousWorldViewProjection = entry.currentWorldViewProjection;
     entry.parameters = parameters; entry.previousParameters = parameters;
     if (HasHistory(history, camera)) {
@@ -191,6 +192,7 @@ void MotionVectorRenderer::EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle) {
         commandList->SetGraphicsRoot32BitConstants(1, 16, &entry.previousWorldViewProjection, 0);
         commandList->SetGraphicsRoot32BitConstants(2, 4, &entry.parameters, 0);
         commandList->SetGraphicsRoot32BitConstants(3, 4, &entry.previousParameters, 0);
+        commandList->SetGraphicsRoot32BitConstants(4, 2, &entry.jitterNdc, 0);
         commandList->IASetVertexBuffers(0, 2, entry.vertices);
         if (entry.indexCount != 0) {
             commandList->IASetIndexBuffer(&entry.indices);

@@ -190,6 +190,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Fog\FogRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Renderer\Renderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\MotionVector\MotionVectorRenderer.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\SuperResolution\DlssSuperResolution.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\ShadowCamera.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\ShadowMapRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\LocalShadowRenderer.cpp" />
@@ -487,6 +488,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <ItemGroup>
     <ProjectReference Include="$(projectRootPath)externals\imgui\imgui.vcxproj">
       <Project>{dab7df7c-5aa7-4179-9aef-a0f34fc521b5}</Project>
+      <SetConfiguration Condition="'$(Configuration)'=='Development'">Configuration=Release</SetConfiguration>
     </ProjectReference>
     <ProjectReference Include="$(projectRootPath)externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">
       <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
@@ -672,6 +674,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Shadow\ShadowMaterialSettings.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\PostEffectSettings.h" />
     <ClInclude Include="$(projectRootPath)Engine\MotionVector\MotionVectorRenderer.h" />
+    <ClInclude Include="$(projectRootPath)Engine\SuperResolution\DlssSuperResolution.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Debug\GpuTimestampTimer.h" />
+    <None Include="$(projectRootPath)Engine\SuperResolution\README.md" />
     <None Include="$(projectRootPath)Engine\MotionVector\README.md" />
     <None Include="$(projectRootPath)resources\Shaders\MotionVector\Common.hlsli" />
     <None Include="$(projectRootPath)resources\Shaders\MotionVector\MotionVector.VS.hlsl" />
@@ -682,6 +687,19 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <None Include="$(projectRootPath)resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
     <None Include="$(projectRootPath)resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
   </ItemGroup>
+  <PropertyGroup>
+    <DlssNgxLibrary>$(projectRootPath)externals\DLSS\lib\Windows_x86_64\x64\nvsdk_ngx_s.lib</DlssNgxLibrary>
+    <DlssNgxLibrary Condition="'$(Configuration)'=='Debug'">$(projectRootPath)externals\DLSS\lib\Windows_x86_64\x64\nvsdk_ngx_s_dbg.lib</DlssNgxLibrary>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link><AdditionalDependencies>$(DlssNgxLibrary);%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <Target Name="CopyDlssRuntime" AfterTargets="Build">
+    <Copy SourceFiles="$(projectRootPath)externals\DLSS\lib\Windows_x86_64\rel\nvngx_dlss.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="CopyShaderCompilerRuntime" AfterTargets="Build">
+    <Copy SourceFiles="$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxcompiler.dll;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
 
 

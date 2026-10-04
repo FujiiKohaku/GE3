@@ -34,6 +34,8 @@
 #include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "Engine/3D/SkinningObject3d.h"
 #include "Engine/3D/SkinningObject3dManager.h"
+#include "Engine/SuperResolution/DlssSuperResolution.h"
+#include "Engine/Development/DevelopmentWebPanel.h"
 
 namespace {
 void Require(bool value, const char* message)
@@ -562,8 +564,18 @@ int RunGameStageShadowTest(const std::string& stageId)
     }
 }
 
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+class DevelopmentWebPanelTests {
+public:
+    static bool ApplyAction(const std::string& key, const std::string& value) {
+        return DevelopmentWebPanel::GetInstance().ApplyAction(key, value);
+    }
+};
+#endif
+
 class FxaaRenderTest {
 public:
+    static Renderer* GetRenderer(Game& game) { return game.renderer_.get(); }
     static PostEffectManager* GetManager(Game& game)
     {
         return game.renderer_->GetPostEffectManager();
@@ -697,8 +709,119 @@ int RunFxaaTest()
     }
 }
 
+int RunDlssTest()
+{
+    Logger::Initialize();
+    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+    std::filesystem::create_directories(directory);
+    Microsoft::WRL::ComPtr<ID3D12Debug> debug;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
+    Game game;
+    bool isInitialized = false;
+    try {
+        game.Initialize(); isInitialized = true;
+        ShowWindow(WinApp::GetInstance()->GetHwnd(), SW_HIDE);
+        game.Update(); game.Draw();
+        auto* renderer = FxaaRenderTest::GetRenderer(game);
+        auto* dlss = renderer->GetDlssSuperResolution();
+        auto* dx = DirectXCommon::GetInstance();
+        Microsoft::WRL::ComPtr<ID3D12InfoQueue> info;
+        dx->GetDevice()->QueryInterface(IID_PPV_ARGS(&info));
+        if (info) {
+            info->ClearStoredMessages();
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, false);
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, false);
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+        }
+        Require(dlss->IsAvailable(), dlss->GetStatus().c_str());
+        TimeManager::GetInstance()->SetTimeScale(0);
+        dlss->SetEnabled(true);
+        for (int frame = 0; frame < 32; ++frame) { game.Update(); game.Draw(); }
+        Require(dlss->IsActive() && dlss->GetEvaluationCount() >= 32, "DLSS was enabled but did not execute");
+        Require(dlss->GetRenderWidth() == WinApp::kClientWidth && dlss->GetRenderHeight() == WinApp::kClientHeight, "DLAA must preserve native resolution");
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto enabledFrame = ReadFrame(dx, directory / "dlss-title-enabled.png");
+        dlss->SetEnabled(false);
+        for (int frame = 0; frame < 3; ++frame) { game.Update(); game.Draw(); }
+        Require(!dlss->IsActive(), "DLSS OFF remained active");
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto disabledFrame = ReadFrame(dx, directory / "dlss-title-disabled.png");
+        Require(ChangedPixels(enabledFrame, disabledFrame) > 100, "DLSS image is indistinguishable from bypass");
+        dlss->SetEnabled(true);
+        for (int frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+        Require(dlss->IsActive(), "DLSS re-enable failed");
+        TimeManager::GetInstance()->SetTimeScale(1.0f);
+        auto scene = std::make_unique<ShadowTestStage>("stage03");
+        auto* stage = scene.get();
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::move(scene)));
+        bool isReady = false;
+        for (int frame = 0; frame < 400; ++frame) {
+            game.Update(); game.Draw();
+            if (SceneManager::GetInstance()->GetShadowSettings().enabled) { isReady = true; break; }
+        }
+        Require(isReady, "DLSS stage loading failed");
+        TimeManager::GetInstance()->SetTimeScale(0.0f);
+        for (int view = 0; view < 2; ++view) {
+            if (view == 1) { stage->PrepareBossCapture(); dlss->ResetHistory(); }
+            for (int frame = 0; frame < 32; ++frame) { game.Update(); game.Draw(); }
+            Require(dlss->IsActive(), "DLSS scene transition failed");
+            barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            dx->GetCommandList()->ResourceBarrier(1, &barrier);
+            std::string name = "dlss-stage03.png";
+            if (view == 1) { name = "dlss-jellyfish.png"; }
+            ReadFrame(dx, directory / name);
+        }
+        std::ofstream timingReport(directory / "aa-gpu-times.csv");
+        timingReport << "mode,drawGpuMs,dlaaAndCopyMs,toneMapAndFxaaMs\n";
+        for (uint32_t mode = 0; mode < 4; ++mode) {
+            bool isDlaaEnabled = (mode & 1) != 0;
+            bool isFxaaEnabled = (mode & 2) != 0;
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+            const char* kCommands[] = {"aaOff", "aaDlaa", "aaFxaa", "aaBoth"};
+            Require(DevelopmentWebPanelTests::ApplyAction(std::string("antialiasing/") + kCommands[mode], ""), "AA development panel command failed");
+            Require(!DevelopmentWebPanelTests::ApplyAction("antialiasing/frameGpuMs", "0"), "GPU metric accepted an edit");
+#else
+            renderer->SetAntiAliasing(isDlaaEnabled, isFxaaEnabled);
+#endif
+            for (int frame = 0; frame < 64; ++frame) { game.Update(); game.Draw(); }
+            Require(dlss->IsEnabled() == isDlaaEnabled && renderer->GetPostEffectManager()->IsFxaaEnabled() == isFxaaEnabled, "AA preset state mismatch");
+            Require(renderer->HasGpuTimingSample() && std::isfinite(renderer->GetFrameGpuTimeMs()) && renderer->GetFrameGpuTimeMs() > 0, "Draw GPU timing unavailable");
+            if (isDlaaEnabled) { Require(renderer->GetDlaaGpuTimeMs() > 0, "DLAA GPU timing unavailable"); }
+            else { Require(renderer->GetDlaaGpuTimeMs() == 0, "Disabled DLAA retained stale timing"); }
+            Require(renderer->GetPostEffectManager()->GetFinalPassGpuTimeMs() > 0, "Final pass GPU timing unavailable");
+            timingReport << mode << ',' << renderer->GetFrameGpuTimeMs() << ',' << renderer->GetDlaaGpuTimeMs() << ','
+                << renderer->GetPostEffectManager()->GetFinalPassGpuTimeMs() << '\n';
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+            auto state = renderer->GetDevelopmentState();
+            Require(state["warmupFrames"] == 0 && state["averages"][mode]["samples"].get<uint32_t>() >= 32, "AA averages did not warm up");
+#endif
+        }
+        if (info) {
+            for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
+                SIZE_T size = 0; info->GetMessage(index, nullptr, &size);
+                std::vector<uint8_t> storage(size);
+                auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data());
+                info->GetMessage(index, message, &size);
+                if (message->Severity <= D3D12_MESSAGE_SEVERITY_ERROR) { Logger::Log(message->pDescription); throw std::runtime_error("DLSS D3D12 validation failed"); }
+            }
+        }
+        std::ofstream(directory / "dlss-result.txt") << "PASS: actual NGX DLAA, " << dlss->GetRenderWidth() << "x" << dlss->GetRenderHeight()
+            << " -> " << WinApp::kClientWidth << "x" << WinApp::kClientHeight << "; evaluations=" << dlss->GetEvaluationCount()
+            << "; title/stage03/jellyfish, ON/OFF/re-enable, no D3D12 errors\n";
+        game.Finalize(); Logger::Finalize(); return 0;
+    } catch (const std::exception& error) {
+        std::ofstream(directory / "dlss-result.txt") << "FAIL: " << error.what();
+        Logger::Log(error.what()); Logger::Flush();
+        if (isInitialized) { game.Finalize(); }
+        Logger::Finalize(); return 1;
+    }
+}
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
+    if (std::string(commandLine).find("--dlss") != std::string::npos) { return RunDlssTest(); }
     if (std::string(commandLine).find("--fxaa") != std::string::npos) { return RunFxaaTest(); }
     if (std::string(commandLine).find("--title") != std::string::npos) { return RunTitleShadowTest(); }
     if (std::string(commandLine).find("--stage01") != std::string::npos) { return RunGameStageShadowTest("stage01"); }

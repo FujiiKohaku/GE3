@@ -53,6 +53,7 @@ private:
         Vector4 previousParameters = {};
         std::wstring shaderPath;
         bool isDoubleSided = false;
+        Vector2 jitterNdc = {};
     };
     struct VertexHistoryCopy {
         ID3D12Resource* currentVertices = nullptr;

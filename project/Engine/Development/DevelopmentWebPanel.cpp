@@ -180,6 +180,7 @@ bool DevelopmentWebPanel::ApplyAction(const std::string& key, const std::string&
         for (const auto& control : controls) {
             if (control.at("key") != itemKey) { continue; }
             const std::string type = control.at("type");
+            if (type == "metric") { return false; }
             if (type == "action") { return registration.source->Execute(itemKey); }
             if (type == "bool") {
                 if (value == "true") { return registration.source->SetBool(itemKey, true); }

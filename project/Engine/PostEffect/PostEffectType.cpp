@@ -1,5 +1,19 @@
 #include "PostEffectType.h"
 
+bool IsTemporalResolveInputEffect(PostEffectType type) {
+    switch (type) {
+    case PostEffectType::Copy:
+    case PostEffectType::ScreenLighting:
+    case PostEffectType::DepthOutline:
+    case PostEffectType::LuminanceBasedOutline:
+    case PostEffectType::Outline:
+    case PostEffectType::Fog:
+        return true;
+    default:
+        return false;
+    }
+}
+
 const char* GetPostEffectTypeName(PostEffectType type)
 {
     switch (type) {

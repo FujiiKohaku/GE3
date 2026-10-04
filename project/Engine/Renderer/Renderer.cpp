@@ -1,5 +1,9 @@
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/MotionVector/MotionVectorRenderer.h"
+#include "Engine/SuperResolution/DlssSuperResolution.h"
+#include "Engine/Time/TimeManager.h"
+#include "Engine/Development/DevelopmentWebPanel.h"
+#include <cmath>
 
 #include "App/Scene/Common/SceneManager.h"
 #include "Engine/3D/Object3dManager.h"
@@ -23,6 +27,9 @@ Renderer::Renderer() = default;
 
 Renderer::~Renderer()
 {
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().UnregisterOwner(this);
+#endif
     Object3dManager::GetInstance()->SetShadowRenderer(nullptr);
     Object3dManager::GetInstance()->SetLocalShadowRenderer(nullptr);
 }
@@ -40,6 +47,15 @@ void Renderer::Initialize()
     postEffectManager_->Initialize(DirectXCommon::GetInstance());
     postEffectManager_->SetNormalTextureHandle(
         offscreenRenderer_->GetNormalSrvHandleGPU());
+    dlssSuperResolution_ = std::make_unique<DlssSuperResolution>();
+    dlssSuperResolution_->Initialize();
+    frameTimer_.Initialize();
+    dlaaTimer_.Initialize();
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+    DevelopmentWebPanel::GetInstance().RegisterSource<Renderer>(this, "antialiasing", "アンチエイリアス比較", false,
+        &Renderer::GetDevelopmentState, &Renderer::GetDevelopmentControls, &Renderer::SetDevelopmentBool,
+        nullptr, &Renderer::ExecuteDevelopmentCommand);
+#endif
 }
 
 void Renderer::Update()
@@ -60,11 +76,51 @@ void Renderer::DrawImGui()
         if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); }
     }
     ImGui::End();
+    ImGui::SetNextWindowSize(ImVec2(570, 390), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Anti-aliasing comparison")) {
+        if (ImGui::Button("OFF")) { SetAntiAliasing(false, false); }
+        ImGui::SameLine();
+        if (ImGui::Button("FXAA")) { SetAntiAliasing(false, true); }
+        ImGui::SameLine();
+        if (ImGui::Button("DLAA")) { SetAntiAliasing(true, false); }
+        ImGui::SameLine();
+        if (ImGui::Button("DLAA + FXAA")) { SetAntiAliasing(true, true); }
+        bool isEnabled = dlssSuperResolution_->IsEnabled();
+        if (ImGui::Checkbox("DLAA (Native resolution)", &isEnabled)) {
+            SetAntiAliasing(isEnabled, postEffectManager_->IsFxaaEnabled());
+        }
+        bool isFxaaEnabled = postEffectManager_->IsFxaaEnabled();
+        if (ImGui::Checkbox("FXAA", &isFxaaEnabled)) { SetAntiAliasing(isEnabled, isFxaaEnabled); }
+        ImGui::TextWrapped("%s", dlssSuperResolution_->GetStatus().c_str());
+        if (!frameTimer_.IsAvailable()) { ImGui::TextUnformatted("GPU timing unavailable"); }
+        else {
+            ImGui::Text("GPU draw: %.3f ms", GetFrameGpuTimeMs());
+            ImGui::Text("DLAA + copy: %.3f ms", GetDlaaGpuTimeMs());
+            ImGui::Text("Tone map / FXAA: %.3f ms", postEffectManager_->GetFinalPassGpuTimeMs());
+            ImGui::Text("Warmup: %u frames remaining", warmupFrames_);
+            const char* kModeNames[] = {"OFF", "DLAA", "FXAA", "DLAA + FXAA"};
+            for (uint32_t index = 0; index < antiAliasingSamples_.size(); ++index) {
+                const auto& sample = antiAliasingSamples_[index];
+                if (sample.sampleCount == 0) { ImGui::Text("%s: no samples", kModeNames[index]); continue; }
+                ImGui::Text("%s (%u): frame %.3f / DLAA %.3f / final %.3f ms", kModeNames[index], sample.sampleCount,
+                    sample.frameTotalMs / sample.sampleCount, sample.dlaaTotalMs / sample.sampleCount,
+                    sample.finalPassTotalMs / sample.sampleCount);
+            }
+            ImGui::TextWrapped("Same camera/scene for comparison. Final pass includes tone mapping; DLAA includes the composition copy. GPU draw excludes update commands, CPU and Present wait.");
+        }
+    }
+    ImGui::End();
 #endif
 }
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    if (comparisonSceneRevision_ != sceneManager->GetSceneRevision()) {
+        antiAliasingSamples_ = {};
+        warmupFrames_ = 32;
+        comparisonSceneRevision_ = sceneManager->GetSceneRevision();
+    }
+    frameTimer_.Begin();
     FontManager::GetInstance()->FlushAtlasUpdates();
     // シーンやモデルが予約したテクスチャ転送を、描画前に一度だけまとめて実行する。
     TextureManager::GetInstance()->FlushUploads();
@@ -73,12 +129,26 @@ void Renderer::Draw(SceneManager* sceneManager)
     SrvManager::GetInstance()->PreDraw();
 
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
+    SuperResolutionHistoryInputs historyInputs;
+    historyInputs.hasCamera = defaultCamera != nullptr;
+    historyInputs.cameraId = reinterpret_cast<uintptr_t>(defaultCamera);
+    historyInputs.sceneRevision = sceneManager->GetSceneRevision();
+    if (defaultCamera != nullptr) { historyInputs.cameraHistoryId = defaultCamera->GetMotionHistoryId(); }
+    dlssSuperResolution_->BeginFrame(historyInputs);
+    if (defaultCamera != nullptr) { defaultCamera->SetProjectionJitter(dlssSuperResolution_->GetProjectionJitterNdc()); }
+    postEffectManager_->UpdateCameraInputs(defaultCamera);
+    const auto motionSettings = motionVectorRenderer_->GetSettings();
+    if (dlssSuperResolution_->IsActive()) {
+        auto settings = motionVectorRenderer_->GetSettings();
+        settings.isEnabled = true;
+        motionVectorRenderer_->SetSettings(settings);
+    }
+    SrvManager::GetInstance()->PreDraw();
     LightManager::GetInstance()->UpdateClusters(defaultCamera);
     EffectManager* effectManager = EffectManager::GetInstance();
     if (effectManager->IsInitialized()) {
         if (defaultCamera != nullptr) {
             effectManager->SetCamera(defaultCamera);
-            effectManager->UpdatePerView();
         }
 
         D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView =
@@ -142,6 +212,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     postEffectManager_->PreDrawDepth();
     offscreenRenderer_->SetClearColor(sceneManager->GetSceneClearColor());
     offscreenRenderer_->PreDraw(postEffectManager_->GetDepthDSVHandle());
+    dlssSuperResolution_->SetSceneViewport();
     if (motionSceneRevision_ != sceneManager->GetSceneRevision()) {
         motionVectorRenderer_->ResetHistory();
         motionSceneRevision_ = sceneManager->GetSceneRevision();
@@ -150,16 +221,27 @@ void Renderer::Draw(SceneManager* sceneManager)
     sceneManager->Draw3D();
     DebugRenderer::GetInstance()->Draw();
     motionVectorRenderer_->EndFrame(postEffectManager_->GetDepthDSVHandle());
+    motionVectorRenderer_->SetSettings(motionSettings);
     postEffectManager_->PostDrawDepth();
     offscreenRenderer_->PostDraw();
-
-    // BackBuffer draw start
     DirectXCommon::GetInstance()->PreDraw();
-    
-    // Post effect apply
-    postEffectManager_->PrepareSceneForParticleDraw(
-        sceneManager,
-        offscreenRenderer_->GetSrvHandleGPU());
+    postEffectManager_->PrepareSceneForTemporalResolve(sceneManager, offscreenRenderer_->GetSrvHandleGPU());
+
+    SuperResolutionFrameInputs frameInputs;
+    frameInputs.colorTexture = postEffectManager_->GetSceneColorTexture();
+    frameInputs.depthTexture = postEffectManager_->GetDepthTexture();
+    frameInputs.motionVectorTexture = motionVectorRenderer_->GetTexture();
+    frameInputs.colorSrv = postEffectManager_->GetSceneColorSrv();
+    frameInputs.frameTimeDeltaMs = TimeManager::GetInstance()->GetUnscaledDeltaTime() * 1000;
+    bool isDlaaActive = dlssSuperResolution_->IsActive();
+    dlaaTimer_.ResetSample();
+    if (isDlaaActive) { dlaaTimer_.Begin(); }
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle = dlssSuperResolution_->Evaluate(frameInputs);
+    postEffectManager_->ReplaceSceneColor(sceneColorHandle);
+    if (isDlaaActive) { dlaaTimer_.End(); }
+    if (defaultCamera != nullptr) { defaultCamera->SetProjectionJitter({}); }
+    postEffectManager_->UpdateCameraInputs(defaultCamera);
+    if (effectManager->IsInitialized() && defaultCamera != nullptr) { effectManager->UpdatePerView(); }
 
     postEffectManager_->PrepareDepthForParticleDraw();
     postEffectManager_->BeginParticleDraw();
@@ -182,6 +264,107 @@ void Renderer::Draw(SceneManager* sceneManager)
     ScreenshotManager::GetInstance()->PrepareCapture();
 
     // Present
+    frameTimer_.End();
     DirectXCommon::GetInstance()->PostDraw();
+    // PostDraw waits for its GPU fence before resetting the command list.
+    frameTimer_.ReadCompleted();
+    dlaaTimer_.ReadCompleted();
+    postEffectManager_->ReadCompletedGpuTiming();
+    RecordGpuSample();
     ScreenshotManager::GetInstance()->CompleteCapture();
 }
+
+void Renderer::SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled)
+{
+    if (dlssSuperResolution_->IsEnabled() == isDlaaEnabled && postEffectManager_->IsFxaaEnabled() == isFxaaEnabled) { return; }
+    dlssSuperResolution_->SetEnabled(isDlaaEnabled);
+    postEffectManager_->SetFxaaEnabled(isFxaaEnabled);
+    dlssSuperResolution_->ResetHistory();
+    motionVectorRenderer_->ResetHistory();
+    warmupFrames_ = 32;
+    previousAntiAliasingMode_ = UINT_MAX;
+}
+
+uint32_t Renderer::GetAntiAliasingMode() const
+{
+    uint32_t mode = 0;
+    if (dlssSuperResolution_->IsEnabled()) { mode += 1; }
+    if (postEffectManager_->IsFxaaEnabled()) { mode += 2; }
+    return mode;
+}
+
+void Renderer::RecordGpuSample()
+{
+    uint32_t mode = GetAntiAliasingMode();
+    if (previousAntiAliasingMode_ != mode) {
+        antiAliasingSamples_[mode] = {};
+        previousAntiAliasingMode_ = mode;
+        warmupFrames_ = 32;
+    }
+    if (!frameTimer_.HasSample()) { return; }
+    if (warmupFrames_ > 0) { --warmupFrames_; return; }
+    if (dlssSuperResolution_->IsEnabled() && !dlssSuperResolution_->IsActive()) { return; }
+    auto& sample = antiAliasingSamples_[mode];
+    ++sample.sampleCount;
+    sample.frameTotalMs += GetFrameGpuTimeMs();
+    sample.dlaaTotalMs += GetDlaaGpuTimeMs();
+    sample.finalPassTotalMs += postEffectManager_->GetFinalPassGpuTimeMs();
+}
+
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+nlohmann::json Renderer::GetDevelopmentState() const
+{
+    nlohmann::json averages = nlohmann::json::array();
+    const char* kModeNames[] = {"OFF", "DLAA", "FXAA", "DLAA + FXAA"};
+    for (uint32_t index = 0; index < antiAliasingSamples_.size(); ++index) {
+        const auto& sample = antiAliasingSamples_[index];
+        double frameMs = 0, dlaaMs = 0, finalMs = 0;
+        if (sample.sampleCount > 0) {
+            frameMs = sample.frameTotalMs / sample.sampleCount;
+            dlaaMs = sample.dlaaTotalMs / sample.sampleCount;
+            finalMs = sample.finalPassTotalMs / sample.sampleCount;
+        }
+        averages.push_back({{"mode", kModeNames[index]}, {"samples", sample.sampleCount},
+            {"frameMs", frameMs}, {"dlaaMs", dlaaMs}, {"finalPassMs", finalMs}});
+    }
+    return {{"dlaaEnabled", dlssSuperResolution_->IsEnabled()}, {"fxaaEnabled", postEffectManager_->IsFxaaEnabled()},
+        {"dlaaActive", dlssSuperResolution_->IsActive()}, {"status", dlssSuperResolution_->GetStatus()},
+        {"gpuTimingAvailable", frameTimer_.IsAvailable()}, {"warmupFrames", warmupFrames_},
+        {"frameGpuMs", std::round(GetFrameGpuTimeMs() * 1000) / 1000},
+        {"dlaaGpuMs", std::round(GetDlaaGpuTimeMs() * 1000) / 1000},
+        {"finalPassGpuMs", std::round(postEffectManager_->GetFinalPassGpuTimeMs() * 1000) / 1000}, {"averages", averages}};
+}
+
+nlohmann::json Renderer::GetDevelopmentControls() const
+{
+    return nlohmann::json::array({
+        {{"key", "aaOff"}, {"label", "AAなし"}, {"type", "action"}},
+        {{"key", "aaFxaa"}, {"label", "FXAAのみ"}, {"type", "action"}},
+        {{"key", "aaDlaa"}, {"label", "DLAAのみ"}, {"type", "action"}},
+        {{"key", "aaBoth"}, {"label", "DLAA + FXAA"}, {"type", "action"}},
+        {{"key", "dlaaEnabled"}, {"label", "DLAAを有効"}, {"type", "bool"}},
+        {{"key", "fxaaEnabled"}, {"label", "FXAAを有効"}, {"type", "bool"}},
+        {{"key", "status"}, {"label", "DLAA状態"}, {"type", "metric"}},
+        {{"key", "frameGpuMs"}, {"label", "描画区間 GPU (ms)"}, {"type", "metric"}},
+        {{"key", "dlaaGpuMs"}, {"label", "DLAA + 合成コピー (ms)"}, {"type", "metric"}},
+        {{"key", "finalPassGpuMs"}, {"label", "トーンマッピング / FXAA (ms)"}, {"type", "metric"}},
+        {{"key", "warmupFrames"}, {"label", "平均計測までの残りフレーム"}, {"type", "metric"}}
+    });
+}
+
+bool Renderer::SetDevelopmentBool(const std::string& key, bool isEnabled)
+{
+    if (key == "dlaaEnabled") { SetAntiAliasing(isEnabled, postEffectManager_->IsFxaaEnabled()); return true; }
+    if (key == "fxaaEnabled") { SetAntiAliasing(dlssSuperResolution_->IsEnabled(), isEnabled); return true; }
+    return false;
+}
+
+bool Renderer::ExecuteDevelopmentCommand(const std::string& key)
+{
+    if (key == "aaOff") { SetAntiAliasing(false, false); return true; }
+    if (key == "aaFxaa") { SetAntiAliasing(false, true); return true; }
+    if (key == "aaDlaa") { SetAntiAliasing(true, false); return true; }
+    if (key == "aaBoth") { SetAntiAliasing(true, true); return true; }
+    return false;
+}
+#endif

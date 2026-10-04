@@ -56,3 +56,4 @@ enum class PostEffectType {
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);
+bool IsTemporalResolveInputEffect(PostEffectType type);

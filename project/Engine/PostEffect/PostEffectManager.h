@@ -5,6 +5,7 @@
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/PostEffect/CopyImageRenderer.h"
+#include "Engine/Debug/GpuTimestampTimer.h"
 #include <array>
 #include <cstdint>
 #include <memory>
@@ -27,10 +28,13 @@ public:
 
     void Initialize(DirectXCommon* dxCommon);
     void Update(Camera* camera);
+    void UpdateCameraInputs(Camera* camera);
     bool SetSsao(bool isEnabled, float strength, float radius, float bias);
     void DrawImGui();
     void SetFxaaEnabled(bool enabled) { fxaaEnabled_ = enabled; }
     bool IsFxaaEnabled() const { return fxaaEnabled_; }
+    double GetFinalPassGpuTimeMs() const { return finalPassTimer_.GetDurationMs(); }
+    void ReadCompletedGpuTiming() { finalPassTimer_.ReadCompleted(); }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     void RegisterDevelopmentPanel();
     nlohmann::json GetDevelopmentControls() const;
@@ -55,11 +59,16 @@ public:
     void PrepareSceneForParticleDraw(
         SceneManager* sceneManager,
         D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
+    void PrepareSceneForTemporalResolve(SceneManager* sceneManager, D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
+    ID3D12Resource* GetSceneColorTexture() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetSceneColorSrv() const;
+    void ReplaceSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv);
     void BeginParticleDraw();
     void EndParticleDraw();
     void ApplyAfterParticleDraw(SceneManager* sceneManager);
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthDSVHandle() const;
+    ID3D12Resource* GetDepthTexture() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
     CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
     BloomRenderer* GetBloomRenderer() const { return bloomRenderer_.get(); }
@@ -74,6 +83,7 @@ private:
             D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
         void EndRender();
         D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;
+        ID3D12Resource* GetTexture() const { return resource_.Get(); }
 
     private:
         void CreateResource();
@@ -117,6 +127,7 @@ private:
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;
     bool fxaaEnabled_ = true;
+    GpuTimestampTimer finalPassTimer_;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     std::unordered_map<int, bool> passOverrides_;
     std::optional<float> cameraShakeOverride_;
