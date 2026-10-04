@@ -47,6 +47,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float nearestDepth = max(outlineFarClip, 0.0001f);
     float4 centerNormalSample = gNormalTexture.Load(int3(centerPixel, 0));
     float centerRawDepth = gDepthTexture.Load(int3(centerPixel, 0));
+    if (centerNormalSample.a >= 2.0f) { centerNormalSample.a -= 2.0f; }
     bool softSurface = centerNormalSample.a <= -2.0f;
     if (softSurface) { centerNormalSample.a = -centerNormalSample.a - 2.0f; }
     float3 centerNormal = normalize(centerNormalSample.xyz * 2.0f - 1.0f);
@@ -68,6 +69,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
             difference.y += depth * kPrewittVerticalKernel[x][y];
 
             float4 normalSample = gNormalTexture.Load(int3(pixel, 0));
+            if (normalSample.a >= 2.0f) { normalSample.a -= 2.0f; }
             if (normalSample.a <= -2.0f) { normalSample.a = -normalSample.a - 2.0f; }
             bool neighborNormalValid = normalSample.a >= 0.0f &&
                 abs(normalSample.a - rawDepth) < 0.002f;

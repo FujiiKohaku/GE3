@@ -21,6 +21,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET {
     float3 position = ReconstructPosition(input.texcoord, depth);
     if (ssaoSettings.w > 0.5f && ssaoSettings.x > 0.0f && screenCameraSettings.w > 0.5f) {
         float4 encoded = gNormalTexture.Load(int3(pixel, 0));
+        if (encoded.a >= 2.0f) { encoded.a -= 2.0f; }
         if (encoded.a <= -2.0f) { encoded.a = -encoded.a - 2.0f; }
         if (encoded.a >= 0.0f && abs(encoded.a - depth) < 0.002f) {
             float3 normal = normalize(encoded.xyz * 2.0f - 1.0f);

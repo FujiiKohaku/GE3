@@ -1127,3 +1127,7 @@ void PostEffectManager::RenderTarget::Transition(D3D12_RESOURCE_STATES nextState
     dxCommon_->GetCommandList()->ResourceBarrier(1, &barrier);
     currentState_ = nextState;
 }
+D3D12_GPU_DESCRIPTOR_HANDLE PostEffectManager::GetDepthSrv() const
+{
+    return fogRenderer_->GetDepthSRVHandle();
+}

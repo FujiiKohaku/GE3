@@ -3,6 +3,7 @@
 #include "../StageIceLighting.hlsli"
 
 ConstantBuffer<Material> gMaterial : register(b0);
+ConstantBuffer<Camera> gCamera : register(b2);
 #include "../LocalLighting.hlsli"
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
@@ -22,19 +23,29 @@ FloorPixelOutput main(VertexShaderOutput input)
 
     float2 uv = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform).xy;
     float4 textureColor = gTexture.Sample(gSampler, uv);
-    float3 N = normalize(input.normal);
-    float direct = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, N));
-    float3 shade = GetStageIceDiffuseLighting(N, direct);
+    float3 normal = normalize(input.normal);
+    float3 viewDirection = normalize(gCamera.worldPosition - input.worldPosition);
+    if (dot(normal, viewDirection) < 0) { normal = -normal; }
+    float direct = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normal));
+    float3 shade = GetStageIceDiffuseLighting(normal, direct);
     float3 color = gMaterial.color.rgb * textureColor.rgb * shade * kFloorTint *
-        float3(0.82f, 0.88f, 0.92f);
+        float3(0.45f, 0.58f, 0.70f);
 
-    color += EnvironmentLighting(gMaterial.color.rgb * textureColor.rgb * kFloorTint, N, float3(0, 0, 1), false);
-    color += ShadeLocalLights(gMaterial.color.rgb * textureColor.rgb * kFloorTint, N, float3(0, 0, 1), input.worldPosition, N, false);
+    color += 0.65f * EnvironmentLighting(gMaterial.color.rgb * textureColor.rgb * kFloorTint, normal, float3(0, 0, 1), false);
+    color += ShadeLocalLights(gMaterial.color.rgb * textureColor.rgb * kFloorTint, normal, viewDirection, input.worldPosition, normal, true);
+    float3 lightDirection = normalize(-gDirectionalLight.direction);
+    color += GetStageIceDirectRadiance(direct) *
+        SurfaceSpecular(gMaterial, gMaterial.color.rgb * textureColor.rgb, normal, viewDirection, lightDirection);
+    // A restrained blue glaze gives unreflected areas a view-dependent ice sheen.
+    float facing = saturate(dot(normal, viewDirection));
+    float grazing = pow(1 - facing, 5);
+    color += GetStageIceAmbientRadiance() * float3(0.65f, 0.85f, 1.0f) * grazing * 0.22f;
 
-    // The floor is matte: no environment reflection, specular highlight or rim glow.
+    // SSR supplies the floor reflection after the forward pass.
 
     FloorPixelOutput output;
     output.color = float4(color, gMaterial.color.a * textureColor.a);
-    output.encodedNormal = float4(N * 0.5f + 0.5f, input.position.z);
+    // Preserve normal direction and depth while carrying material roughness in its length.
+    output.encodedNormal = float4(normal * (1 + saturate(gMaterial.roughness)) * 0.5f + 0.5f, 2.0f + input.position.z);
     return output;
 }

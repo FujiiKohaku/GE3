@@ -742,10 +742,11 @@ void GamePlayScene::Initialize()
             floorObj_->SetReceiveShadow(true);
         }
         if (stageId_ == "stage03") {
-            // The floor is matte; ice objects use their own reflective material.
+            // A polished ice floor receives direct specular light and screen-space reflections.
             floorObj_->SetColor({ 0.54f, 0.73f, 0.86f, 1.0f });
             floorObj_->SetShadingMode(MaterialShadingMode::Ice);
             floorObj_->SetMaterial("resources/Shaders/Object3D/StageIceFloor");
+            floorObj_->SetSurfaceProperties(0.18f, 0.0f, 0.65f);
             floorObj_->GetMaterial()->shininess = 0.0f;
             floorObj_->SetEnableEnvironmentMap(false);
             floorObj_->SetEnvironmentMapStrength(0.0f);

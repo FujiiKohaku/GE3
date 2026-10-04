@@ -421,11 +421,12 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     desc.RasterizerState = rasterizerDesc;
     desc.DepthStencilState = depthStencilDesc;
     desc.BlendState = CreateBlendDesc(blendMode);
+    // Normal/depth metadata must never use the color target's alpha blending.
+    desc.BlendState.IndependentBlendEnable = TRUE;
+    desc.BlendState.RenderTarget[1] = desc.BlendState.RenderTarget[0];
+    desc.BlendState.RenderTarget[1].BlendEnable = FALSE;
     if (transparent) {
         // Write unblended normals only when this surface also writes depth.
-        desc.BlendState.IndependentBlendEnable = TRUE;
-        desc.BlendState.RenderTarget[1] = desc.BlendState.RenderTarget[0];
-        desc.BlendState.RenderTarget[1].BlendEnable = FALSE;
         desc.BlendState.RenderTarget[1].RenderTargetWriteMask = 0;
         if (transparentDepthWrite) {
             desc.BlendState.RenderTarget[1].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;

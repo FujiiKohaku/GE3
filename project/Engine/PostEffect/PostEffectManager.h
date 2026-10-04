@@ -69,6 +69,7 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthDSVHandle() const;
     ID3D12Resource* GetDepthTexture() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetDepthSrv() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
     CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
     BloomRenderer* GetBloomRenderer() const { return bloomRenderer_.get(); }

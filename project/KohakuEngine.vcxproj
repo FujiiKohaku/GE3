@@ -700,6 +700,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   <Target Name="CopyShaderCompilerRuntime" AfterTargets="Build">
     <Copy SourceFiles="$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxcompiler.dll;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
+  <ItemGroup>
+    <ClCompile Include="$(projectRootPath)Engine\Reflection\ScreenSpaceReflection.cpp" />
+    <ClInclude Include="$(projectRootPath)Engine\Reflection\ScreenSpaceReflection.h" />
+  </ItemGroup>
 </Project>
-
-

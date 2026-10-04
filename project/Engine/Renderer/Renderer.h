@@ -15,6 +15,7 @@ class ShadowMapRenderer;
 class LocalShadowRenderer;
 class MotionVectorRenderer;
 class DlssSuperResolution;
+class ScreenSpaceReflection;
 
 class Renderer {
 public:
@@ -28,6 +29,7 @@ public:
     PostEffectManager* GetPostEffectManager() const { return postEffectManager_.get(); }
     MotionVectorRenderer* GetMotionVectorRenderer() const { return motionVectorRenderer_.get(); }
     DlssSuperResolution* GetDlssSuperResolution() const { return dlssSuperResolution_.get(); }
+    ScreenSpaceReflection* GetScreenSpaceReflection() const { return screenSpaceReflection_.get(); }
     void SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled);
     double GetFrameGpuTimeMs() const { return frameTimer_.GetDurationMs(); }
     double GetDlaaGpuTimeMs() const { return dlaaTimer_.GetDurationMs(); }
@@ -56,6 +58,7 @@ private:
     uint64_t comparisonSceneRevision_ = UINT64_MAX;
     std::unique_ptr<MotionVectorRenderer> motionVectorRenderer_;
     std::unique_ptr<DlssSuperResolution> dlssSuperResolution_;
+    std::unique_ptr<ScreenSpaceReflection> screenSpaceReflection_;
     uint64_t motionSceneRevision_ = 0;
     std::unique_ptr<LocalShadowRenderer> localShadowRenderer_;
     std::unique_ptr<ShadowMapRenderer> shadowRenderer_;

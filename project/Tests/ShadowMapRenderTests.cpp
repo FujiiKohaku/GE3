@@ -1,3 +1,4 @@
+#include "Engine/Reflection/ScreenSpaceReflection.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/3D/Object3d.h"
@@ -308,6 +309,14 @@ public:
         }
         TimeManager::GetInstance()->SetTimeScale(0.0f);
         camera_->LookAt(bossPosition + Vector3 { 70.0f, 65.0f, -180.0f }, bossPosition);
+        camera_->Update();
+    }
+    void PrepareReflectionCapture()
+    {
+        Vector3 target = stageSettings_.bossPosition;
+        target.y = stageSettings_.floorHeight + 10.0f;
+        camera_->SetFovY(0.7f);
+        camera_->LookAt(target + Vector3 { 35.0f, 20.0f, -220.0f }, target);
         camera_->Update();
     }
     void AdvanceBossCapture()
@@ -773,6 +782,40 @@ int RunDlssTest()
             if (view == 1) { name = "dlss-jellyfish.png"; }
             ReadFrame(dx, directory / name);
         }
+        stage->PrepareReflectionCapture();
+        // Compare SSR at a frozen camera with temporal AA disabled to isolate reflection.
+        renderer->SetAntiAliasing(false, false);
+        auto* reflection = renderer->GetScreenSpaceReflection();
+        reflection->SetEnabled(true);
+        for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto reflectionFrame = ReadFrame(dx, directory / "ssr-enabled.png");
+        double reflectionGpuMs = reflection->GetGpuTimeMs();
+        reflection->SetDebugVisible(true);
+        for (int frame = 0; frame < 2; ++frame) { game.Update(); game.Draw(); }
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto reflectionOnlyFrame = ReadFrame(dx, directory / "ssr-reflection.png");
+        size_t reflectionHitPixels = 0;
+        // Ground region excludes the animated HUD, reticle and particles.
+        for (size_t pixelY = 390; pixelY < 600; ++pixelY) {
+            for (size_t pixelX = 200; pixelX < 1100; ++pixelX) {
+                size_t pixelOffset = (pixelY * WinApp::kClientWidth + pixelX) * 4;
+                if (reflectionOnlyFrame[pixelOffset] > 20 || reflectionOnlyFrame[pixelOffset + 1] > 20 || reflectionOnlyFrame[pixelOffset + 2] > 20) { ++reflectionHitPixels; }
+            }
+        }
+        Require(reflectionHitPixels > 100, "SSR trace found no objects in the floor region");
+        reflection->SetDebugVisible(false);
+        reflection->SetEnabled(false);
+        for (int frame = 0; frame < 4; ++frame) { game.Update(); game.Draw(); }
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier);
+        auto unreflectedFrame = ReadFrame(dx, directory / "ssr-disabled.png");
+        size_t reflectionChangedPixels = ChangedPixels(reflectionFrame, unreflectedFrame);
+        Require(reflectionChangedPixels > 100, "SSR produced no visible floor reflection");
+        std::ofstream(directory / "ssr-result.txt") << "PASS: changedPixels=" << reflectionChangedPixels << "; reflectionHitPixels=" << reflectionHitPixels << "; traceAndCompositeGpuMs=" << reflectionGpuMs << '\n';
+        reflection->SetEnabled(true);
         std::ofstream timingReport(directory / "aa-gpu-times.csv");
         timingReport << "mode,drawGpuMs,dlaaAndCopyMs,toneMapAndFxaaMs\n";
         for (uint32_t mode = 0; mode < 4; ++mode) {
@@ -819,8 +862,11 @@ int RunDlssTest()
     }
 }
 
+int RunSsrValidation();
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
+    if (std::string(commandLine).find("--ssr") != std::string::npos) { return RunSsrValidation(); }
     if (std::string(commandLine).find("--dlss") != std::string::npos) { return RunDlssTest(); }
     if (std::string(commandLine).find("--fxaa") != std::string::npos) { return RunFxaaTest(); }
     if (std::string(commandLine).find("--title") != std::string::npos) { return RunTitleShadowTest(); }

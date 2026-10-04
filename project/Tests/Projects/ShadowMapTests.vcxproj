@@ -22,5 +22,6 @@
   <ItemGroup>
     <ClCompile Remove="$(projectRootPath)App\main.cpp" />
     <ClCompile Include="$(projectRootPath)Tests\ShadowMapRenderTests.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\SsrValidationTests.cpp" />
   </ItemGroup>
 </Project>

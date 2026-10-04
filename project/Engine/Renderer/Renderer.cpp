@@ -1,3 +1,4 @@
+#include "Engine/Reflection/ScreenSpaceReflection.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "Engine/SuperResolution/DlssSuperResolution.h"
@@ -49,6 +50,8 @@ void Renderer::Initialize()
         offscreenRenderer_->GetNormalSrvHandleGPU());
     dlssSuperResolution_ = std::make_unique<DlssSuperResolution>();
     dlssSuperResolution_->Initialize();
+    screenSpaceReflection_ = std::make_unique<ScreenSpaceReflection>();
+    screenSpaceReflection_->Initialize();
     frameTimer_.Initialize();
     dlaaTimer_.Initialize();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -67,13 +70,14 @@ void Renderer::Update()
 void Renderer::DrawImGui()
 {
     postEffectManager_->DrawImGui();
+    screenSpaceReflection_->DrawImGui();
 #ifdef USE_IMGUI
     if (ImGui::Begin("Motion vectors")) {
         MotionVectorSettings settings = motionVectorRenderer_->GetSettings();
         ImGui::Checkbox("Enabled", &settings.isEnabled);
         ImGui::Checkbox("Visualize UV displacement", &settings.isDebugVisible);
         motionVectorRenderer_->SetSettings(settings);
-        if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); }
+        if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); screenSpaceReflection_->ResetHistory(); }
     }
     ImGui::End();
     ImGui::SetNextWindowSize(ImVec2(570, 390), ImGuiCond_FirstUseEver);
@@ -138,7 +142,8 @@ void Renderer::Draw(SceneManager* sceneManager)
     if (defaultCamera != nullptr) { defaultCamera->SetProjectionJitter(dlssSuperResolution_->GetProjectionJitterNdc()); }
     postEffectManager_->UpdateCameraInputs(defaultCamera);
     const auto motionSettings = motionVectorRenderer_->GetSettings();
-    if (dlssSuperResolution_->IsActive()) {
+    if (dlssSuperResolution_->IsActive() ||
+        (screenSpaceReflection_->IsEnabled() && screenSpaceReflection_->GetSettings().shouldUseTemporalHistory)) {
         auto settings = motionVectorRenderer_->GetSettings();
         settings.isEnabled = true;
         motionVectorRenderer_->SetSettings(settings);
@@ -227,6 +232,15 @@ void Renderer::Draw(SceneManager* sceneManager)
     DirectXCommon::GetInstance()->PreDraw();
     postEffectManager_->PrepareSceneForTemporalResolve(sceneManager, offscreenRenderer_->GetSrvHandleGPU());
 
+    ScreenSpaceReflectionInputs reflectionInputs;
+    reflectionInputs.colorSrv = postEffectManager_->GetSceneColorSrv();
+    reflectionInputs.depthSrv = postEffectManager_->GetDepthSrv();
+    reflectionInputs.normalSrv = offscreenRenderer_->GetNormalSrvHandleGPU();
+    reflectionInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle();
+    reflectionInputs.sceneRevision = sceneManager->GetSceneRevision();
+    reflectionInputs.camera = defaultCamera;
+    postEffectManager_->ReplaceSceneColor(screenSpaceReflection_->Draw(reflectionInputs));
+
     SuperResolutionFrameInputs frameInputs;
     frameInputs.colorTexture = postEffectManager_->GetSceneColorTexture();
     frameInputs.depthTexture = postEffectManager_->GetDepthTexture();
@@ -269,6 +283,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     // PostDraw waits for its GPU fence before resetting the command list.
     frameTimer_.ReadCompleted();
     dlaaTimer_.ReadCompleted();
+    screenSpaceReflection_->ReadCompleted();
     postEffectManager_->ReadCompletedGpuTiming();
     RecordGpuSample();
     ScreenshotManager::GetInstance()->CompleteCapture();
@@ -281,6 +296,7 @@ void Renderer::SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled)
     postEffectManager_->SetFxaaEnabled(isFxaaEnabled);
     dlssSuperResolution_->ResetHistory();
     motionVectorRenderer_->ResetHistory();
+    screenSpaceReflection_->ResetHistory();
     warmupFrames_ = 32;
     previousAntiAliasingMode_ = UINT_MAX;
 }
@@ -332,12 +348,15 @@ nlohmann::json Renderer::GetDevelopmentState() const
         {"gpuTimingAvailable", frameTimer_.IsAvailable()}, {"warmupFrames", warmupFrames_},
         {"frameGpuMs", std::round(GetFrameGpuTimeMs() * 1000) / 1000},
         {"dlaaGpuMs", std::round(GetDlaaGpuTimeMs() * 1000) / 1000},
+        {"ssrGpuMs", screenSpaceReflection_->GetGpuTimeMs()}, {"ssrEnabled", screenSpaceReflection_->IsEnabled()},
         {"finalPassGpuMs", std::round(postEffectManager_->GetFinalPassGpuTimeMs() * 1000) / 1000}, {"averages", averages}};
 }
 
 nlohmann::json Renderer::GetDevelopmentControls() const
 {
     return nlohmann::json::array({
+        {{"key", "ssrEnabled"}, {"label", "床のSSRを有効"}, {"type", "bool"}},
+        {{"key", "ssrGpuMs"}, {"label", "SSR 探索 + 合成 (ms)"}, {"type", "metric"}},
         {{"key", "aaOff"}, {"label", "AAなし"}, {"type", "action"}},
         {{"key", "aaFxaa"}, {"label", "FXAAのみ"}, {"type", "action"}},
         {{"key", "aaDlaa"}, {"label", "DLAAのみ"}, {"type", "action"}},
@@ -354,6 +373,7 @@ nlohmann::json Renderer::GetDevelopmentControls() const
 
 bool Renderer::SetDevelopmentBool(const std::string& key, bool isEnabled)
 {
+    if (key == "ssrEnabled") { screenSpaceReflection_->SetEnabled(isEnabled); return true; }
     if (key == "dlaaEnabled") { SetAntiAliasing(isEnabled, postEffectManager_->IsFxaaEnabled()); return true; }
     if (key == "fxaaEnabled") { SetAntiAliasing(dlssSuperResolution_->IsEnabled(), isEnabled); return true; }
     return false;
