@@ -231,6 +231,7 @@ private:
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
+    std::unique_ptr<Sprite> overheatGaugeSprite_;
     std::vector<std::unique_ptr<Sprite>> homingLockSprites_;
     std::unique_ptr<Sprite> weaponHudBgSprite_;
     std::vector<std::unique_ptr<Sprite>> weaponHudFrameSprites_;

@@ -105,6 +105,10 @@ public:
     float GetBlackHoleStrength() const { return blackHoleStrength_; }
     void SetWaterEffectIntensity(float intensity) { waterEffectIntensity_ = intensity; }
     float GetWaterEffectIntensity() const { return waterEffectIntensity_; }
+    void SetBoostSparkIntensity(float intensity) { boostSparkIntensity_ = intensity; }
+    float GetBoostSparkIntensity() const { return boostSparkIntensity_; }
+    void SetBoostSparkElapsedSeconds(float elapsedSeconds) { boostSparkElapsedSeconds_ = elapsedSeconds; }
+    float GetBoostSparkElapsedSeconds() const { return boostSparkElapsedSeconds_; }
     void SetSceneClearColor(const Vector4& color) { sceneClearColor_ = color; }
     const Vector4& GetSceneClearColor() const { return sceneClearColor_; }
     void SetSceneFogColor(const Vector4& color) { sceneFogColor_ = color; }
@@ -139,6 +143,8 @@ private:
     float blackHoleRadius_ = 0.16f;
     float blackHoleStrength_ = 1.0f;
     float waterEffectIntensity_ = 0.0f;
+    float boostSparkIntensity_ = 0.0f;
+    float boostSparkElapsedSeconds_ = 0.0f;
     RadialBlurSettings radialBlurSettings_;
     std::unordered_map<PostEffectType, Vector3> effectParameters_;
     PageTransition::RevealOverlay pageReveal_;

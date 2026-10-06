@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>PlayerMovementPartsTests</ProjectName>
+    <TargetName>PlayerMovementPartsTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\PlayerMovementPartsTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>PlayerMovementPartsTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)PlayerMovementPartsTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link><SubSystem>Console</SubSystem></Link>
+    <ClCompile><UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerRollController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerSteeringController.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\PlayerMovementPartsTests.cpp" />
+  </ItemGroup>
+</Project>

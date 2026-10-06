@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="Engine\Development\DevelopmentWebPanel.cpp"><Filter>ソース ファイル</Filter></ClCompile>
-    <ClInclude Include="Engine\Development\DevelopmentWebPanel.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
+    <ClCompile Include="Engine\Development\DevelopmentWebPanel.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClInclude Include="Engine\Development\DevelopmentWebPanel.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClCompile Include="Engine\Screenshot\ScreenshotManager.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -84,6 +88,24 @@
     </Filter>
     <Filter Include="Renderer">
       <UniqueIdentifier>{31A1888E-8B1B-4DAF-8F0D-79A38E5F6A7B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player">
+      <UniqueIdentifier>{0a321359-6667-4f8c-b0dc-d2d513976287}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Aim">
+      <UniqueIdentifier>{0f052af1-6067-4a10-aa03-f7ea983000a8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Movement">
+      <UniqueIdentifier>{5a69857f-c53b-42fb-a191-9178be7f485a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Weapon">
+      <UniqueIdentifier>{65703d92-c1ef-45d7-aec2-a890830802ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Health">
+      <UniqueIdentifier>{8f56e3d7-e380-4713-ac9e-d9a5f9d0cb35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Bullet">
+      <UniqueIdentifier>{0d9a3e83-416c-4c37-859a-6c6cb810deac}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -276,8 +298,35 @@
     <ClCompile Include="Engine\Particle\ParticleData.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Player\Weapon\PlayerHomingLock.cpp">
+      <Filter>Player\Weapon</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
+      <Filter>Player\Weapon</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Movement\PlayerScreenConstraint.cpp">
+      <Filter>Player\Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Movement\PlayerRollController.cpp">
+      <Filter>Player\Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Movement\PlayerSteeringController.cpp">
+      <Filter>Player\Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Movement\PlayerMovementController.cpp">
+      <Filter>Player\Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Health\PlayerHealth.cpp">
+      <Filter>Player\Health</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Aim\PlayerAimController.cpp">
+      <Filter>Player\Aim</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponHeat.cpp">
+      <Filter>Player\Weapon</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Player\Player.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\BaseBoss.cpp">
       <Filter>ソース ファイル</Filter>
@@ -328,7 +377,7 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClCompile>
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp">
       <Filter>ソース ファイル</Filter>
@@ -421,7 +470,7 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Player.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\BaseBoss.cpp">
       <Filter>ソース ファイル</Filter>
@@ -472,7 +521,7 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClCompile>
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp">
       <Filter>ソース ファイル</Filter>
@@ -540,13 +589,13 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Bullet\HomingMissileBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -733,8 +782,35 @@
     <ClInclude Include="Engine\Particle\ParticleData.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Player\Weapon\PlayerHomingLock.h">
+      <Filter>Player\Weapon</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponController.h">
+      <Filter>Player\Weapon</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Movement\PlayerScreenConstraint.h">
+      <Filter>Player\Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Movement\PlayerRollController.h">
+      <Filter>Player\Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Movement\PlayerSteeringController.h">
+      <Filter>Player\Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Movement\PlayerMovementController.h">
+      <Filter>Player\Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Health\PlayerHealth.h">
+      <Filter>Player\Health</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Aim\PlayerAimController.h">
+      <Filter>Player\Aim</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponHeat.h">
+      <Filter>Player\Weapon</Filter>
+    </ClInclude>
     <ClInclude Include="App\Game\Player\Player.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Player</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\BaseBoss.h">
       <Filter>ヘッダー ファイル</Filter>
@@ -788,7 +864,7 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClInclude>
     <ClInclude Include="Engine\LevelEditor\LevelData.h">
       <Filter>ヘッダー ファイル</Filter>
@@ -852,13 +928,13 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Bullet\HomingMissileBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>Player\Bullet</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -898,17 +974,26 @@
     <ClInclude Include="Engine\PostEffect\PostEffectManager.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Shadow\LocalShadowRenderer.cpp"><Filter>ソース ファイル</Filter></ClCompile>
-    <ClInclude Include="Engine\Shadow\LocalShadowRenderer.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
+    <ClCompile Include="Engine\Shadow\LocalShadowRenderer.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClInclude Include="Engine\Shadow\LocalShadowRenderer.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\Shaders\Atmosphere\Scattering.hlsli" />
     <None Include="resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
     <None Include="resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
+    <None Include="resources\Shaders\PostEffect\BoostSparks.PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Engine\Lighting\ScreenSpaceGlobalIllumination.cpp"><Filter>ソース ファイル</Filter></ClCompile>
-    <ClInclude Include="Engine\Lighting\ScreenSpaceGlobalIllumination.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
+    <ClCompile Include="Engine\Lighting\ScreenSpaceGlobalIllumination.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClInclude Include="Engine\Lighting\ScreenSpaceGlobalIllumination.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <None Include="resources\Shaders\GlobalIllumination\Blur.hlsli" />
     <None Include="resources\Shaders\GlobalIllumination\BlurHorizontal.PS.hlsl" />
     <None Include="resources\Shaders\GlobalIllumination\BlurVertical.PS.hlsl" />

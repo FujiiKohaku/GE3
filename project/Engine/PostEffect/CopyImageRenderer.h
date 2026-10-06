@@ -65,7 +65,8 @@ public:
         Vector3 paintColor;
         float sonicBoomProgress;
         Vector2 sonicBoomCenter;
-        Vector2 paddingSonicBoom;
+        float boostSparkIntensity;
+        float boostSparkElapsedSeconds;
         Vector2 blackHoleCenter;
         float blackHoleRadius;
         float blackHoleStrength;

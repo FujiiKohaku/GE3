@@ -317,6 +317,17 @@ void GamePlayScene::Initialize()
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
+    overheatGaugeSprite_ = std::make_unique<Sprite>();
+    overheatGaugeSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+    overheatGaugeSprite_->SetShaderPaths(
+        "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+        "resources/Shaders/Sprite/Overheat/Sprite.PS.hlsl");
+    overheatGaugeSprite_->SetSize({ 96.0f, 96.0f });
+    overheatGaugeSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    overheatGaugeSprite_->SetEffectThreshold(0.0f);
+    overheatGaugeSprite_->SetEffectStrength(0.0f);
+    overheatGaugeSprite_->SetPosition(aimSprite_->GetPosition());
+    overheatGaugeSprite_->Update();
 
     constexpr size_t kHomingMarkerCount = 6;
     homingLockSprites_.reserve(kHomingMarkerCount);
@@ -1380,6 +1391,14 @@ void GamePlayScene::Update()
     // レティクル（AimSprite）のスクリーン位置更新
     aimSprite_->SetPosition(player_->GetAimScreenPosition());
     aimSprite_->Update();
+    overheatGaugeSprite_->SetPosition(player_->GetAimScreenPosition());
+    overheatGaugeSprite_->SetEffectThreshold(player_->GetHeatRatio());
+    float overheatStrength = 0.0f;
+    if (player_->IsOverheated()) {
+        overheatStrength = 1.0f;
+    }
+    overheatGaugeSprite_->SetEffectStrength(overheatStrength);
+    overheatGaugeSprite_->Update();
     std::vector<Vector3> homingLockPositions;
     player_->GetHomingLockPositions(homingLockPositions);
     const size_t markerCount =
@@ -2127,7 +2146,7 @@ void GamePlayScene::Draw2D()
     SpriteManager::GetInstance()->PreDraw();
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
-        aimSprite_->Draw();
+        overheatGaugeSprite_->Draw();
         std::vector<Vector3> homingLockPositions;
         player_->GetHomingLockPositions(homingLockPositions);
         const size_t markerCount =
@@ -3225,6 +3244,27 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
     SceneManager* sceneManager = SceneManager::GetInstance();
     sceneManager->ApplyPostEffectChain(VisualPresetLibrary::GetInstance().GetPostEffects(presetId));
     sceneManager->SetRadialBlurSettings(blur);
+    constexpr float kSparkFadeRate = 12.0f;
+    constexpr float kSparkStopThreshold = 0.01f;
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    float targetIntensity = 0.0f;
+    if (isPlayerBoosting) {
+        targetIntensity = 1.0f + 0.5f * boostKickStrength_;
+    }
+    float sparkIntensity = sceneManager->GetBoostSparkIntensity();
+    sparkIntensity += (targetIntensity - sparkIntensity) *
+        (1.0f - std::exp(-kSparkFadeRate * deltaTimeSeconds));
+    if (!isPlayerBoosting && sparkIntensity < kSparkStopThreshold) {
+        sparkIntensity = 0.0f;
+    }
+    sceneManager->SetBoostSparkIntensity(sparkIntensity);
+    if (sparkIntensity > 0.0f) {
+        sceneManager->SetBoostSparkElapsedSeconds(
+            sceneManager->GetBoostSparkElapsedSeconds() + deltaTimeSeconds);
+        sceneManager->AddPostEffect(PostEffectType::BoostSparks, PostEffectStage::AfterParticle);
+    } else {
+        sceneManager->SetBoostSparkElapsedSeconds(0.0f);
+    }
 }
 
 void GamePlayScene::ApplyDevelopmentLighting()
@@ -3274,6 +3314,8 @@ void GamePlayScene::ResetGameplayPostEffects()
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
     SceneManager::GetInstance()->SetRadialBlurSettings({});
+    SceneManager::GetInstance()->SetBoostSparkIntensity(0.0f);
+    SceneManager::GetInstance()->SetBoostSparkElapsedSeconds(0.0f);
     SceneManager::GetInstance()->SetCameraShakeStrength(
         SceneManager::kDefaultCameraShakeStrength);
 

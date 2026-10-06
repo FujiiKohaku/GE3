@@ -766,6 +766,8 @@ void PostEffectManager::UpdatePostEffectParameters(
         sceneManager->GetBlackHoleStrength();
     postEffectParameter.waterEffectIntensity =
         sceneManager->GetWaterEffectIntensity();
+    postEffectParameter.boostSparkIntensity = sceneManager->GetBoostSparkIntensity();
+    postEffectParameter.boostSparkElapsedSeconds = sceneManager->GetBoostSparkElapsedSeconds();
     postEffectParameter.paintProgress =
         sceneManager->GetPaintProgress();
     postEffectParameter.paintIntensity =

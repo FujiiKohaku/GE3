@@ -52,6 +52,7 @@ enum class PostEffectType {
     ArchiveAtmosphere,
     FXAA,
     ToneMap,
+    BoostSparks,
     ScreenLighting,
 };
 

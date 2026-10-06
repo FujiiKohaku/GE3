@@ -289,6 +289,15 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="$(projectRootPath)Engine\Winapp\WinApp.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Player.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponHeat.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerHomingLock.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerScreenConstraint.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerRollController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerSteeringController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerMovementController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Health\PlayerHealth.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Aim\PlayerAimController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Hazard\WaterPillarHazard.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\BaseBoss.cpp" />
@@ -453,6 +462,15 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Winapp\WinApp.h" />
     <ClInclude Include="$(projectRootPath)Engine\Time\TimeManager.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Player.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponHeat.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerHomingLock.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerScreenConstraint.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerRollController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerSteeringController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerMovementController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Health\PlayerHealth.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Aim\PlayerAimController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\BaseBoss.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\OffscreenRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoardMesh.h" />
@@ -686,6 +704,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <None Include="$(projectRootPath)resources\Graphics\visual-presets.json" />
     <None Include="$(projectRootPath)resources\Shaders\Object3D\EnvironmentLighting.hlsli" />
     <None Include="$(projectRootPath)resources\Shaders\PostEffect\ScreenLighting.PS.hlsl" />
+    <None Include="$(projectRootPath)resources\Shaders\PostEffect\BoostSparks.PS.hlsl" />
     <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\Blur.hlsli" />
     <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\BlurHorizontal.PS.hlsl" />
     <None Include="$(projectRootPath)resources\Shaders\GlobalIllumination\BlurVertical.PS.hlsl" />

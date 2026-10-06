@@ -62,6 +62,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::Shockwave] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Shockwave.PS.hlsl");
     pipelineStates_[PostEffectType::HeatHaze] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl");
     pipelineStates_[PostEffectType::SonicBoom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl");
+    pipelineStates_[PostEffectType::BoostSparks] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BoostSparks.PS.hlsl");
     pipelineStates_[PostEffectType::RainDrops] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/RainDrops.PS.hlsl");
     pipelineStates_[PostEffectType::CyberScanline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/CyberScanline.PS.hlsl");
     pipelineStates_[PostEffectType::HexShield] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HexShield.PS.hlsl");
@@ -316,6 +317,8 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
         return L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl";
     case PostEffectType::SonicBoom:
         return L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl";
+    case PostEffectType::BoostSparks:
+        return L"resources/Shaders/PostEffect/BoostSparks.PS.hlsl";
     case PostEffectType::RainDrops:
         return L"resources/Shaders/PostEffect/RainDrops.PS.hlsl";
     case PostEffectType::CyberScanline:
