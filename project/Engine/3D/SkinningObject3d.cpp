@@ -1,12 +1,15 @@
+#include <algorithm>
 #include "SkinningObject3d.h"
 #include "Engine/math/MatrixMath.h"
 #include "Model.h"
 #include "ModelManager.h"
 #include "SkinCluster.h"
 #include "SkinningObject3dManager.h"
+#include "Object3dRootParameter.h"
 #include <cassert>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #pragma region
 void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManager)
 {
@@ -50,6 +53,14 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
+    materialData_->roughness = 0.55f;
+    materialData_->metallic = 0.0f;
+    materialData_->specularStrength = 0.35f;
+    materialData_->surfacePadding = 0.0f;
+    materialData_->normalMapEnabled = 0;
+    materialData_->normalMapStrength = 0.0f;
+    materialData_->normalMapFlipY = 0.0f;
+    materialData_->normalMapPadding = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // =====================================================
@@ -160,12 +171,28 @@ void SkinningObject3d::Update()
 #pragma region
 void SkinningObject3d::Draw()
 {
+    // Keep the frozen pose while applying the current debug camera.
+    if (camera_) {
+        transformationMatrixData->WVP = MatrixMath::Multiply(
+            worldMatrix_, camera_->GetViewProjectionMatrix());
+    }
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
+    skinningObject3dManager_->BindPipeline(pixelShaderPath_);
 
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
-    commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
-    commandList->SetGraphicsRootDescriptorTable(8, SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Material),
+        materialResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::TransformationMatrix),
+        transformationMatrixResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::NormalTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_));
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
+        SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
 
     uint32_t vertexOffset = 0;
 
@@ -175,7 +202,8 @@ void SkinningObject3d::Draw()
 
         const MaterialData& material = model_->GetMaterial(primitive.materialIndex);
         D3D12_GPU_DESCRIPTOR_HANDLE textureHandle = TextureManager::GetInstance()->GetSrvHandleGPU(material.textureFilePath);
-        commandList->SetGraphicsRootDescriptorTable(2, textureHandle);
+        commandList->SetGraphicsRootDescriptorTable(
+            RootParameterIndex(Object3dRootParameter::Texture), textureHandle);
 
         D3D12_VERTEX_BUFFER_VIEW vbView = {};
         vbView.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
@@ -195,6 +223,86 @@ void SkinningObject3d::Draw()
         }
 
         vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
+    }
+    QueueMotionVectors();
+}
+
+void SkinningObject3d::QueueMotionVectors()
+{
+    auto* renderer = MotionVectorRenderer::GetActive();
+    if (renderer == nullptr || model_ == nullptr || camera_ == nullptr) { return; }
+    if (renderer->IsQueued(motionHistory_)) { return; }
+    if (!previousSkinnedVertexResource_) {
+        D3D12_HEAP_PROPERTIES heap = {};
+        heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+        auto description = skinnedVertexResource_->GetDesc();
+        description.Flags = D3D12_RESOURCE_FLAG_NONE;
+        HRESULT result = DirectXCommon::GetInstance()->GetDevice()->CreateCommittedResource(
+            &heap, D3D12_HEAP_FLAG_NONE, &description, D3D12_RESOURCE_STATE_COMMON,
+            nullptr, IID_PPV_ARGS(&previousSkinnedVertexResource_));
+        if (FAILED(result)) { throw std::runtime_error("Previous skinned vertex buffer creation failed"); }
+        previousSkinnedVertexResource_->SetName(L"MotionVector::PreviousSkinnedVertices");
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(previousSkinnedVertexResource_.Get(),
+            D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+        DirectXCommon::GetInstance()->GetCommandList()->ResourceBarrier(1, &barrier);
+        ResetMotionHistory();
+    }
+    uint32_t vertexOffset = 0;
+    for (const auto& primitive : model_->GetModelData().primitives) {
+        D3D12_VERTEX_BUFFER_VIEW currentVertices = {};
+        currentVertices.BufferLocation = skinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
+        currentVertices.SizeInBytes = static_cast<UINT>(sizeof(VertexData) * primitive.vertices.size());
+        currentVertices.StrideInBytes = sizeof(VertexData);
+        auto previousVertices = currentVertices;
+        previousVertices.BufferLocation = previousSkinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
+        renderer->Queue(currentVertices, previousVertices, primitive.ibView,
+            static_cast<uint32_t>(primitive.vertices.size()), static_cast<uint32_t>(primitive.indices.size()),
+            worldMatrix_, *camera_, motionHistory_, L"", {});
+        vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
+    }
+    renderer->QueueVertexHistoryCopy(skinnedVertexResource_.Get(), previousSkinnedVertexResource_.Get());
+    renderer->CommitHistory(motionHistory_, worldMatrix_, *camera_, {});
+}
+
+void SkinningObject3d::SetMaterial(const std::string& materialFolderPath)
+{
+    pixelShaderPath_ = materialFolderPath + "/Render.PS.hlsl";
+}
+
+void SkinningObject3d::SetEnableLighting(bool enable)
+{
+    SetShadingMode(enable ? MaterialShadingMode::Toon : MaterialShadingMode::Unlit);
+}
+
+void SkinningObject3d::SetShadingMode(MaterialShadingMode mode)
+{
+    if (materialData_) {
+        materialData_->enableLighting = static_cast<int32_t>(mode);
+    }
+
+    switch (mode) {
+    case MaterialShadingMode::Standard:
+        SetMaterial("resources/Shaders/Object3D/Standard");
+        break;
+    case MaterialShadingMode::Ice:
+        SetMaterial("resources/Shaders/Object3D/Ice");
+        break;
+    case MaterialShadingMode::ArchivePaper:
+        SetMaterial("resources/Shaders/Object3D/ArchivePaper");
+        break;
+    case MaterialShadingMode::ArchiveLeather:
+        SetMaterial("resources/Shaders/Object3D/ArchiveLeather");
+        break;
+    case MaterialShadingMode::ArchiveBrass:
+        SetMaterial("resources/Shaders/Object3D/ArchiveBrass");
+        break;
+    case MaterialShadingMode::Toon:
+        SetMaterial("resources/Shaders/Object3D/Toon");
+        break;
+    case MaterialShadingMode::Unlit:
+    default:
+        SetMaterial("resources/Shaders/Object3D/Unlit");
+        break;
     }
 }
 SkinningObject3d::~SkinningObject3d()
@@ -232,6 +340,8 @@ SkinningObject3d::~SkinningObject3d()
 }
 void SkinningObject3d::CreateSkinningResources()
 {
+    previousSkinnedVertexResource_.Reset();
+    ResetMotionHistory();
     assert(skinningObject3dManager_);
     assert(skinningObject3dManager_->GetDxCommon());
     assert(model_);
@@ -481,3 +591,23 @@ void SkinningObject3d::DispatchSkinning()
     skinnedVertexState_ = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 }
 #pragma endregion
+
+void SkinningObject3d::SetNormalMap(const std::string& filePath, float strength, bool flipY)
+{
+    if (materialData_ == nullptr) { return; }
+    normalMapTextureKey_.clear();
+    materialData_->normalMapEnabled = 0;
+    if (!filePath.empty()) {
+        normalMapTextureKey_ = TextureManager::GetInstance()->LoadLinearTexture(filePath);
+        if (!normalMapTextureKey_.empty()) { materialData_->normalMapEnabled = 1; }
+    }
+    SetNormalMapStrength(strength);
+    materialData_->normalMapFlipY = 0.0f;
+    if (flipY) { materialData_->normalMapFlipY = 1.0f; }
+}
+
+void SkinningObject3d::SetNormalMapStrength(float strength)
+{
+    if (materialData_ == nullptr) { return; }
+    materialData_->normalMapStrength = std::clamp(strength, 0.0f, 2.0f);
+}

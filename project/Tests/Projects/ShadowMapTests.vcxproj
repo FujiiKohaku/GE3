@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{2845638C-C623-480F-88D1-F988AA810E5A}</ProjectGuid>
+    <ProjectName>ShadowMapTests</ProjectName>
+    <LocalDebuggerWorkingDirectory>$(projectRootPath)</LocalDebuggerWorkingDirectory>
+    <TargetName>ShadowMapTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\ShadowMapTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>ShadowMapTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)ShadowMapTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>KOHAKU_RENDER_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="$(projectRootPath)App\main.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\ShadowMapRenderTests.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\SsrValidationTests.cpp" />
+  </ItemGroup>
+</Project>

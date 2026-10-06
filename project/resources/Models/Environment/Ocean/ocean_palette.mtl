@@ -1,0 +1,90 @@
+# Shared material palette for Stage01 ocean scenery
+newmtl rock_dark
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/rock_dark.png
+
+newmtl rock_light
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/rock_light.png
+
+newmtl sand
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/sand.png
+
+newmtl grass
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/grass.png
+
+newmtl coral_orange
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/coral_orange.png
+
+newmtl coral_pink
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/coral_pink.png
+
+newmtl coral_gold
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/coral_gold.png
+
+newmtl wood_dark
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/wood_dark.png
+
+newmtl wood_light
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/wood_light.png
+
+newmtl leaf_green
+Ka 1.000 1.000 1.000
+Kd 1.000 1.000 1.000
+Ks 0.080 0.080 0.080
+Ns 12.0
+d 1.0
+illum 2
+map_Kd textures/leaf_green.png

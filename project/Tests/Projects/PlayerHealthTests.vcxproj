@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>PlayerHealthTests</ProjectName>
+    <TargetName>PlayerHealthTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\PlayerHealthTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>PlayerHealthTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)PlayerHealthTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link><SubSystem>Console</SubSystem></Link>
+    <ClCompile><UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)Engine\audio\SoundManager.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\StringUtility\StringUtility.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Logger\Logger.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Health\PlayerHealth.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\PlayerHealthTests.cpp" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>エンジン開発パネル</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#101722;color:#e4ecf7}body{max-width:1100px;margin:0 auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{font-size:24px}#connection{color:#8fb7e1;font-size:14px}section{background:#172231;border:1px solid #2c4157;border-radius:12px;padding:20px;margin:18px 0}h2{margin:0 0 16px;font-size:20px}details{border-top:1px solid #304256;padding:12px 0}summary{cursor:pointer;font-weight:600}.row{display:grid;grid-template-columns:minmax(160px,1fr) minmax(220px,1.5fr);align-items:center;gap:16px;padding:9px 0}.editor{display:flex;align-items:center;gap:12px}input,select,button{font:inherit;border:1px solid #425a73;border-radius:6px;background:#111d2b;color:#e4ecf7;padding:7px}input[type=range]{width:100%;padding:0}input[type=number]{width:110px}input[type=checkbox]{width:20px;height:20px}button{cursor:pointer;background:#274c72}button:hover{background:#346491}:disabled{opacity:.4;cursor:default}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#a7bdd5}.empty{color:#9cafc6;padding:24px}footer{font-size:13px;color:#9cafc6}@media(max-width:650px){body{padding:12px}.row{grid-template-columns:1fr;gap:6px}header{display:block}.editor{width:100%}}
+</style>
+</head>
+<body>
+<header><h1>エンジン開発パネル</h1><span id="connection">接続しています…</span></header>
+<main id="groups"></main>
+<footer>登録された項目を表示しています。変更はゲームのスレッドでセッターを通して反映されます。</footer>
+<script>
+const token = '__PANEL_TOKEN__';
+const groupsRoot = document.getElementById('groups');
+const connection = document.getElementById('connection');
+const bindings = new Map();
+const pendingValues = new Map();
+let schemaSignature = '';
+let isRefreshing = false;
+let isSending = false;
+let sendTimer = null;
+
+function QueueValue(event) {
+    const input = event.currentTarget;
+    const key = input.dataset.key;
+    let value = input.value;
+    if (input.type === 'checkbox') { value = String(input.checked); }
+    if (input.type === 'number' && !input.checkValidity()) { return; }
+    const binding = bindings.get(key);
+    if (binding && binding.slider) {
+        binding.slider.value = value;
+        binding.input.value = value;
+    }
+    pendingValues.set(key, value);
+    if (sendTimer === null) { sendTimer = setTimeout(SendPending, 80); }
+}
+
+function QueueCommand(event) {
+    pendingValues.set(event.currentTarget.dataset.key, '');
+    void SendPending();
+}
+
+async function SendPending() {
+    if (sendTimer !== null) { clearTimeout(sendTimer); sendTimer = null; }
+    if (isSending) { return; }
+    isSending = true;
+    try {
+        while (pendingValues.size > 0) {
+            const entry = pendingValues.entries().next().value;
+            pendingValues.delete(entry[0]);
+            const url = '/api/action?key=' + encodeURIComponent(entry[0]) +
+                '&value=' + encodeURIComponent(entry[1]) + '&token=' + encodeURIComponent(token);
+            const response = await fetch(url, {method:'POST'});
+            if (!response.ok) { connection.textContent = '操作を適用できませんでした（' + response.status + '）'; }
+        }
+    } catch (error) { connection.textContent = '接続が切れました'; }
+    finally { isSending = false; }
+}
+
+function MakeControl(group, control, container) {
+    const key = group.id + '/' + control.key;
+    const row = document.createElement('div'); row.className = 'row';
+    const caption = document.createElement('label'); caption.textContent = control.label;
+    const editor = document.createElement('div'); editor.className = 'editor';
+    let input;
+    let slider = null;
+    if (control.type === 'action') {
+        input = document.createElement('button'); input.textContent = '実行';
+        input.addEventListener('click', QueueCommand);
+    } else if (control.type === 'metric') {
+        input = document.createElement('output');
+    } else if (control.type === 'select') {
+        input = document.createElement('select');
+        for (const option of control.options) {
+            const element = document.createElement('option');
+            element.value = String(option.value); element.textContent = option.label; input.append(element);
+        }
+        input.addEventListener('change', QueueValue);
+    } else {
+        input = document.createElement('input');
+        if (control.type === 'bool') { input.type = 'checkbox'; }
+        else {
+            input.type = 'number'; input.min = control.minimum; input.max = control.maximum; input.step = control.step;
+            slider = document.createElement('input'); slider.type = 'range';
+            slider.min = control.minimum; slider.max = control.maximum; slider.step = control.step;
+            slider.dataset.key = key; slider.addEventListener('input', QueueValue); editor.append(slider);
+        }
+        input.addEventListener('change', QueueValue);
+    }
+    input.id = key; input.dataset.key = key; caption.htmlFor = key;
+    editor.append(input); row.append(caption, editor); container.append(row);
+    bindings.set(key, {input:input,slider:slider,control:control});
+}
+
+function BuildGroups(groups) {
+    bindings.clear(); pendingValues.clear(); groupsRoot.replaceChildren();
+    if (groups.length === 0) {
+        const empty = document.createElement('p'); empty.className = 'empty';
+        empty.textContent = '開発項目が登録されると、ここに表示されます。'; groupsRoot.append(empty); return;
+    }
+    for (const group of groups) {
+        const section = document.createElement('section');
+        const heading = document.createElement('h2'); heading.textContent = group.label; section.append(heading);
+        const categories = new Map();
+        for (const control of group.controls) {
+            let category = control.group;
+            if (!category) { category = '設定'; }
+            if (!categories.has(category)) {
+                const details = document.createElement('details'); details.open = true;
+                const summary = document.createElement('summary'); summary.textContent = category;
+                details.append(summary); section.append(details); categories.set(category, details);
+            }
+            MakeControl(group, control, categories.get(category));
+        }
+        const details = document.createElement('details');
+        const summary = document.createElement('summary'); summary.textContent = '状態の確認';
+        const state = document.createElement('pre'); state.dataset.source = group.id;
+        details.append(summary,state); section.append(details); groupsRoot.append(section);
+    }
+}
+
+async function Refresh() {
+    if (isRefreshing) { return; }
+    isRefreshing = true;
+    try {
+        const response = await fetch('/api/state', {cache:'no-store'});
+        if (!response.ok) { throw new Error('offline'); }
+        const state = await response.json();
+        const schemas = [];
+        for (const group of state.groups) { schemas.push({id:group.id,label:group.label,controls:group.controls}); }
+        const nextSignature = JSON.stringify(schemas);
+        if (schemaSignature !== nextSignature) { schemaSignature = nextSignature; BuildGroups(state.groups); }
+        for (const group of state.groups) {
+            for (const control of group.controls) {
+                const binding = bindings.get(group.id + '/' + control.key);
+                if (!binding) { continue; }
+                let valueKey = control.key;
+                if (control.valueKey) { valueKey = control.valueKey; }
+                let value = group.values[valueKey];
+                if (value === null && control.type === 'select') { value = -1; }
+                const isAction = control.type === 'action';
+                binding.input.disabled = !isAction && value === undefined;
+                if (binding.slider) { binding.slider.disabled = binding.input.disabled; }
+                if (!isAction && value !== undefined && document.activeElement !== binding.input && document.activeElement !== binding.slider && !pendingValues.has(group.id+'/'+control.key)) {
+                    if (control.type === 'bool') { binding.input.checked = Boolean(value); }
+                    else { binding.input.value = value; }
+                    if (binding.slider) { binding.slider.value = value; }
+                }
+            }
+            for (const element of document.querySelectorAll('[data-source]')) {
+                if (element.dataset.source === group.id) { element.textContent = JSON.stringify(group.values,null,2); }
+            }
+        }
+        connection.textContent = '接続中 · 登録グループ ' + state.groups.length;
+    } catch (error) {
+        connection.textContent = 'ゲームとの接続が切れました';
+        for (const binding of bindings.values()) { binding.input.disabled = true; if (binding.slider) { binding.slider.disabled = true; } }
+    } finally { isRefreshing = false; }
+}
+setInterval(Refresh,500);
+void Refresh();
+</script>
+</body>
+</html>

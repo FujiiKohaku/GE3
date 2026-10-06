@@ -1,0 +1,21 @@
+{
+  "scene": [
+    { "name": "AllRangeStart", "type": "PlayerSpawn", "transform": { "translation": [0.0, -180.0, 35.0], "rotation": [0.0, 0.0, 0.0] } },
+    { "name": "Island_West", "type": "MESH", "file_name": "Environment/Ocean/tropical_island.obj", "transform": { "translation": [-250.0, 70.0, 0.0], "rotation": [0.0, 0.0, 0.4], "scale": [3.0, 3.0, 3.0] } },
+    { "name": "Island_East", "type": "MESH", "file_name": "Environment/Ocean/tropical_island.obj", "transform": { "translation": [280.0, -150.0, 0.0], "rotation": [0.0, 0.0, -0.7], "scale": [2.5, 2.5, 2.5] } },
+    { "name": "Island_North", "type": "MESH", "file_name": "Environment/Ocean/palm_islet.obj", "transform": { "translation": [80.0, 360.0, 0.0], "rotation": [0.0, 0.0, 1.2], "scale": [3.0, 3.0, 3.0] } },
+    { "name": "Island_South", "type": "MESH", "file_name": "Environment/Ocean/palm_islet.obj", "transform": { "translation": [-100.0, -390.0, 0.0], "rotation": [0.0, 0.0, -0.4], "scale": [2.5, 2.5, 2.5] } },
+    { "name": "Rock_CenterLeft", "type": "MESH", "file_name": "Environment/Ocean/sea_stack.obj", "transform": { "translation": [-75.0, 20.0, 0.0], "rotation": [0.0, 0.0, 0.2], "scale": [2.0, 2.0, 2.8] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 12.0], "size": [25.0, 25.0, 45.0] } },
+    { "name": "Rock_CenterRight", "type": "MESH", "file_name": "Environment/Ocean/sea_stack.obj", "transform": { "translation": [110.0, 140.0, 0.0], "rotation": [0.0, 0.0, -0.5], "scale": [2.4, 2.4, 3.2] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 16.0], "size": [28.0, 28.0, 52.0] } },
+    { "name": "Rock_NorthWest", "type": "MESH", "file_name": "Environment/Ocean/sea_stack.obj", "transform": { "translation": [-320.0, 330.0, 0.0], "rotation": [0.0, 0.0, 0.8], "scale": [3.0, 3.0, 4.0] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 20.0], "size": [38.0, 38.0, 62.0] } },
+    { "name": "Rock_SouthEast", "type": "MESH", "file_name": "Environment/Ocean/sea_stack.obj", "transform": { "translation": [310.0, -330.0, 0.0], "rotation": [0.0, 0.0, 0.6], "scale": [2.5, 2.5, 3.5] }, "collider": { "type": "BOX", "center": [0.0, 0.0, 18.0], "size": [30.0, 30.0, 55.0] } },
+    { "name": "Arch_North", "type": "MESH", "file_name": "Environment/Ocean/rock_arch.obj", "transform": { "translation": [0.0, 230.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [2.8, 2.8, 2.8] } },
+    { "name": "Arch_West", "type": "MESH", "file_name": "Environment/Ocean/rock_arch.obj", "transform": { "translation": [-370.0, -190.0, 0.0], "rotation": [0.0, 0.0, 1.57], "scale": [2.5, 2.5, 2.5] } },
+    { "name": "Wreck_East", "type": "MESH", "file_name": "Environment/Ocean/shipwreck.obj", "transform": { "translation": [390.0, 190.0, 1.0], "rotation": [0.0, 0.0, 0.65], "scale": [2.2, 2.2, 2.2] } },
+    { "name": "Wreck_South", "type": "MESH", "file_name": "Environment/Ocean/shipwreck.obj", "transform": { "translation": [90.0, -310.0, 1.0], "rotation": [0.0, 0.0, -0.35], "scale": [1.8, 1.8, 1.8] } },
+    { "name": "Reef_NorthEast", "type": "MESH", "file_name": "Environment/Ocean/reef_cluster.obj", "transform": { "translation": [280.0, 350.0, 0.0], "rotation": [0.0, 0.0, 0.25], "scale": [3.0, 3.0, 3.0] } },
+    { "name": "Reef_SouthWest", "type": "MESH", "file_name": "Environment/Ocean/reef_cluster.obj", "transform": { "translation": [-290.0, -330.0, 0.0], "rotation": [0.0, 0.0, -0.8], "scale": [3.5, 3.5, 3.5] } },
+    { "name": "Coral_West", "type": "MESH", "file_name": "Environment/Ocean/coral_garden.obj", "transform": { "translation": [-170.0, -100.0, -0.5], "rotation": [0.0, 0.0, 0.1], "scale": [2.0, 2.0, 2.0] } },
+    { "name": "Coral_East", "type": "MESH", "file_name": "Environment/Ocean/coral_garden.obj", "transform": { "translation": [200.0, 30.0, -0.5], "rotation": [0.0, 0.0, -0.4], "scale": [2.0, 2.0, 2.0] } }
+  ]
+}

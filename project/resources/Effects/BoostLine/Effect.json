@@ -5,43 +5,46 @@
     "Vertex": "Render.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
-
   "Emitter": {
     "Shape": "Sphere",
     "Count": 3,
     "Radius": 0.18,
     "Frequency": 0.08
   },
-
   "Particle": {
     "LifeTime": 0.46,
-
     "StartScale": 3.2,
     "EndScale": 4.8,
-
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
-
-    "Velocity": [ 0.0, 0.0, -1.6 ],
-
-    "StartColor": [ 0.86, 0.94, 1.0, 0.20 ],
-    "EndColor": [ 0.55, 0.82, 1.0, 0.0 ]
+    "Velocity": [
+      0.0,
+      0.0,
+      -1.6
+    ],
+    "StartColor": [
+      0.86,
+      0.94,
+      1.0,
+      0.2
+    ],
+    "EndColor": [
+      0.55,
+      0.82,
+      1.0,
+      0.0
+    ]
   },
-
   "Simulation": {
     "EnableGravity": false,
     "Gravity": 0.0,
-
     "EnableDrag": true,
     "Drag": 0.99,
-
     "EnableNoise": false,
     "NoiseStrength": 0.0,
-
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },
-
   "Render": {
     "Texture": "speedCone.png",
     "MeshType": "Board",
@@ -49,7 +52,6 @@
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",
-
     "Loop": true,
     "Duration": -1.0
   }

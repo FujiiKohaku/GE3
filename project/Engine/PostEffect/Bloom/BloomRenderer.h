@@ -27,6 +27,8 @@ public:
     void Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
 
     bool IsEnabled() const;
+    const BloomParameter* GetBloomParameter() const { return parameterData_; }
+    BloomParameter* GetEditableBloomParameter() { return parameterData_; }
 
 private:
     class RenderTarget {
@@ -57,7 +59,7 @@ private:
         D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
         D3D12_VIEWPORT viewport_ {};
         D3D12_RECT scissorRect_ {};
-        DXGI_FORMAT format_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+        DXGI_FORMAT format_ = DXGI_FORMAT_R16G16B16A16_FLOAT;
         float clearColor_[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
     };
 
@@ -103,7 +105,9 @@ private:
     std::array<RenderTarget, BloomRenderTargetCount> renderTargets_;
     Microsoft::WRL::ComPtr<ID3D12Resource> parameterResource_;
     BloomParameter* parameterData_ = nullptr;
-    DXGI_FORMAT format_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 4> passParameterResources_;
+    std::array<BloomParameter*, 4> passParameterData_ {};
+    DXGI_FORMAT format_ = DXGI_FORMAT_R16G16B16A16_FLOAT;
     D3D12_VIEWPORT fullScreenViewport_ {};
     D3D12_RECT fullScreenScissorRect_ {};
 };

@@ -74,10 +74,24 @@ void MoveEnemy::Attack()
     }
 
     Vector3 playerPosition = player_->GetTranslate();
-    Vector3 difference = playerPosition - transform_.translate;
-    float distance = Vector3Length(difference);
+    Vector3 toEnemy = transform_.translate - playerPosition;
 
-    if (distance <= 100.0f) {
+    Vector3 playerVelocity = player_->GetAutomaticWorldVelocity();
+    Vector3 forward = { 0.0f, 0.0f, 1.0f };
+    float speedLength = Vector3Length(playerVelocity);
+    if (speedLength > 0.001f) {
+        forward = Normalize(playerVelocity);
+    }
+
+    float dot = toEnemy.x * forward.x + toEnemy.y * forward.y + toEnemy.z * forward.z;
+
+    if (dot <= 0.0f) {
+        return;
+    }
+
+    float distance = Vector3Length(toEnemy);
+
+    if (distance <= 120.0f) {
         fireTimer_ = fireTimer_ + 1;
 
         if (fireTimer_ >= fireInterval_) {
@@ -129,7 +143,6 @@ void MoveEnemy::DrawImGui()
     ImGui::SliderFloat("Frequency", &frequency_, 0.0f, 10.0f);
     
     if (ImGui::Button("Reset Position")) {
-        moveTime_ = 0.0f;
-        transform_.translate = startPosition_;
+        ResetPosition();
     }
 }

@@ -11,12 +11,15 @@
 #include <wrl.h>
 #include "Engine/LevelEditor/LevelData.h"
 #include "Engine/CollisionManager/BoxCollider.h"
+#include "Engine/Shadow/ShadowMaterialSettings.h"
+#include "Engine/MotionVector/MotionVectorRenderer.h"
 
 #include "../Animation/PlayAnimation.h"
 #include "Engine/math/object3Dstruct.h"
 class Object3dManager;
 class Model;
 class BoxCollider;
+class ShadowMapRenderer;
 class Object3d {
 public:
     // ===============================
@@ -25,12 +28,26 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
+    void QueueMotionVectors();
+    void ResetMotionHistory() { motionHistory_.Reset(); }
+    void SetMotionVectorShader(const std::wstring& shaderPath) { motionVectorShaderPath_ = shaderPath; ResetMotionHistory(); }
+    void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
+    void SetNormalMapStrength(float strength);
+    void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
+    bool SetShadowMaterial(const ShadowMaterialSettings& settings);
+    void SetShadowBoundsPadding(float boundsPadding);
+    float GetModelBoundsRadius() const;
+    void SetCastShadow(bool enabled) { castShadow_ = enabled; }
+    void SetReceiveShadow(bool enabled) { receiveShadow_ = enabled; }
+    bool GetCastShadow() const { return castShadow_; }
+    bool GetReceiveShadow() const { return receiveShadow_; }
     ~Object3d();
     static ModelData LoadModeFile(const std::string& directoryPath, const std::string filename);
     // static MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const std::string& filename);
 
     // setter
-    void SetModel(Model* model) { model_ = model; }
+    void SetModel(Model* model) { model_ = model; ResetMotionHistory(); }
+    void SetSurfaceProperties(float roughness, float metallic, float specularStrength);
     // === setter ===
     void SetScale(const Vector3& scale) { transform.scale = scale; useCustomWorldMatrix_ = false; }
     void SetRotate(const Vector3& rotate) { transform.rotate = rotate; useQuaternionRotation_ = false; useCustomWorldMatrix_ = false; }
@@ -56,16 +73,32 @@ public:
         }
     }
 
-    void SetEnableLighting(bool enable)
+    void SetEnableLighting(bool enable);
+    void SetShadingMode(MaterialShadingMode mode);
+    void SetMaterial(const std::string& materialFolderPath);
+    void SetPixelShaderPath(const std::string& pixelShaderPath)
     {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableLighting = 1;
-            } else {
-                materialData_->enableLighting = 0;
-            }
-        }
+        pixelShaderPath_ = pixelShaderPath;
     }
+    const std::string& GetPixelShaderPath() const { return pixelShaderPath_; }
+
+    void SetVertexShaderPath(const std::string& vertexShaderPath)
+    {
+        vertexShaderPath_ = vertexShaderPath;
+    }
+    const std::string& GetVertexShaderPath() const { return vertexShaderPath_; }
+    // Four floats at VS b1. Their meaning is defined by the selected shader.
+    void SetVertexShaderParameters(const Vector4& parameters)
+    {
+        vertexShaderParameters_ = parameters;
+    }
+
+    // Transparent objects use alpha blending without writing depth by default.
+    // The caller must draw them after opaque objects, from back to front.
+    void SetTransparent(bool transparent) { transparent_ = transparent; }
+    bool IsTransparent() const { return transparent_; }
+    // Depth writing is an approximation for nearly opaque, sorted surfaces.
+    void SetTransparentDepthWrite(bool enable) { transparentDepthWrite_ = enable; }
 
     void SetAnimation(PlayAnimation* anim);
     const Node& GetRootNode() const;
@@ -128,6 +161,8 @@ public:
     BoxCollider* GetCollider() const { return collider_; }
 
 private:
+    MotionVectorHistory motionHistory_;
+    std::wstring motionVectorShaderPath_;
     // ===============================
     // メンバ変数
     // ===============================
@@ -167,6 +202,15 @@ private:
     std::string environmentTextureFilePath_;
     std::string name_ = "Object[nameNull]";
     std::string modelFilePath_;
+    std::string pixelShaderPath_ =
+        "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
+    std::string vertexShaderPath_ = "resources/Shaders/Object3D/Object3d.VS.hlsl";
+    Vector4 vertexShaderParameters_ = {};
+    ShadowMaterialSettings shadowMaterial_;
+    bool castShadow_ = false;
+    bool receiveShadow_ = false;
+    bool transparent_ = false;
+    bool transparentDepthWrite_ = false;
 
     LevelData::ObjectData::GimmickData gimmick_ {};
     Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };
@@ -174,4 +218,5 @@ private:
     int collisionDamage_ = 1;
     BoxCollider* collider_ = nullptr;
     Vector3 colliderOffset_ = { 0.0f, 0.0f, 0.0f };
+    std::string normalMapTextureKey_;
 };

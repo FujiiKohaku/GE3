@@ -14,7 +14,11 @@ std::unique_ptr<Object3d> CreatePart(Model* model, const Vector3& scale, const V
 {
     auto part = std::make_unique<Object3d>();
     part->Initialize(Object3dManager::GetInstance());
+    part->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    part->SetCastShadow(true);
+    part->SetReceiveShadow(true);
     part->SetModel(model);
+    part->SetSurfaceProperties(0.36f, 0.65f, 0.80f);
     part->SetScale(scale);
     part->SetColor(color);
     part->SetEnableLighting(true);
@@ -291,7 +295,7 @@ void AngerBlockBoss::FireCoreBurst(bool spread)
             targetDirection + Vector3 { static_cast<float>(index) * 0.16f, 0.0f, 0.0f });
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * 0.85f);
-        bullet->SetColor({ 1.0f, 0.12f, 0.02f, 1.0f });
+        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
         bullet->SetDamage(1);
         AddEnemyBullet(std::move(bullet));
     }
@@ -338,6 +342,14 @@ void AngerBlockBoss::UpdatePartTransforms()
         rightHand_->SetTranslate(rightHandPosition_);
         rightHand_->Update();
     }
+}
+
+void AngerBlockBoss::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (body_) { body_->DrawShadow(renderer); }
+    if (core_) { core_->DrawShadow(renderer); }
+    if (leftHand_ && leftHandHp_ > 0.0f) { leftHand_->DrawShadow(renderer); }
+    if (rightHand_ && rightHandHp_ > 0.0f) { rightHand_->DrawShadow(renderer); }
 }
 
 void AngerBlockBoss::Draw()

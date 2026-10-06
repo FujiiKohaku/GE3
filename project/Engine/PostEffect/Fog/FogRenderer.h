@@ -17,6 +17,7 @@ public:
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetDepthDSVHandle() const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetDepthSRVHandle() const;
+    ID3D12Resource* GetDepthTexture() const { return depthResource_.Get(); }
 
 private:
     void CreateRootSignature();

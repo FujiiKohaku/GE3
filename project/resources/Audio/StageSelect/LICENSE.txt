@@ -1,0 +1,33 @@
+Stage Select UI sound effects
+
+Source:
+https://opengameart.org/content/ui-sound-effects-button-clicks-user-feedback-notifications
+
+Author: Robin Lamb
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The source pack states that it contains public-domain samples from VCSL and
+VSCO 2 CE, with some sounds modified by the pack author in Audacity.
+
+Files used and renamed:
+- click_2.wav -> page_turn.wav
+- Ding.wav -> confirm.wav
+- negative_sound2.wav -> back.wav
+
+Downloaded on 2026-09-01.
+
+Paper and book page sounds
+
+Source:
+https://opengameart.org/content/book-flip-sounds
+
+Author: Voltiment555
+License: Creative Commons Zero (CC0 1.0)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Files used and renamed:
+- BookFlip4.wav -> page_flip.wav
+- BookFlip3.wav -> page_riffle.wav
+
+Downloaded on 2026-09-01.

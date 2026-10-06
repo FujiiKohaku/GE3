@@ -1,4 +1,5 @@
 #include "OceanSurface.h"
+#include "Object3dManager.h"
 
 #include "Engine/Camera/Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
@@ -38,13 +39,14 @@ void OceanSurface::Update(float deltaTime)
     constants_->viewProjection = camera_->GetViewProjectionMatrix();
     const Vector3 scale = { width_, 1.0f, length_ };
     const Vector3 rotation = { 0.0f, 0.0f, 0.0f };
-    const Vector3 translation = { 0.0f, height_, length_ * 0.5f };
+    const Vector3 translation = {
+        0.0f, height_, startZ_ + length_ * 0.5f };
     constants_->world = MatrixMath::MakeAffineMatrix(scale, rotation, translation);
     const Vector3 cameraPosition = camera_->GetTranslate();
     constants_->cameraPositionAndTime = { cameraPosition.x, cameraPosition.y, cameraPosition.z, time_ };
     constants_->waveParameters = { waveAmplitude_, waveFrequency_, 0.0f, 0.0f };
-    constants_->deepColor = { 0.006f, 0.055f, 0.19f, 1.0f };
-    constants_->crestColor = { 0.025f, 0.43f, 0.64f, 1.0f };
+    constants_->deepColor = deepColor_;
+    constants_->crestColor = crestColor_;
 }
 
 void OceanSurface::Draw()
@@ -53,10 +55,14 @@ void OceanSurface::Draw()
         return;
     }
 
+    // Refresh the view without advancing the waves during a pause.
+    Update(0.0f);
+
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
     commandList->SetPipelineState(pipelineState_.Get());
     commandList->SetGraphicsRootConstantBufferView(0, constantResource_->GetGPUVirtualAddress());
+    Object3dManager::GetInstance()->BindShadowResources(true, 1, 2, 3);
     commandList->IASetVertexBuffers(0, 1, &vertexBufferView_);
     commandList->IASetIndexBuffer(&indexBufferView_);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -111,14 +117,41 @@ void OceanSurface::CreateMesh(uint32_t columns, uint32_t rows)
 
 void OceanSurface::CreateRootSignature()
 {
-    D3D12_ROOT_PARAMETER rootParameter {};
+    D3D12_ROOT_PARAMETER rootParameters[4] {};
+    auto& rootParameter = rootParameters[0];
     rootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameter.Descriptor.ShaderRegister = 0;
 
+    rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[1].Descriptor.ShaderRegister = 6;
+    D3D12_DESCRIPTOR_RANGE shadowRange {};
+    shadowRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    shadowRange.NumDescriptors = 1;
+    shadowRange.BaseShaderRegister = 2;
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[2].DescriptorTable = { 1, &shadowRange };
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[3].Constants = { 7, 0, 1 };
+    D3D12_STATIC_SAMPLER_DESC shadowSampler {};
+    shadowSampler.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+    shadowSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    shadowSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    shadowSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    shadowSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    shadowSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+    shadowSampler.MaxLOD = D3D12_FLOAT32_MAX;
+    shadowSampler.ShaderRegister = 1;
+    shadowSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
     D3D12_ROOT_SIGNATURE_DESC desc {};
-    desc.pParameters = &rootParameter;
-    desc.NumParameters = 1;
+    desc.pParameters = rootParameters;
+    desc.NumParameters = 4;
+    desc.pStaticSamplers = &shadowSampler;
+    desc.NumStaticSamplers = 1;
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
@@ -172,7 +205,7 @@ void OceanSurface::CreatePipelineState()
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     desc.NumRenderTargets = 1;
-    desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    desc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;
 

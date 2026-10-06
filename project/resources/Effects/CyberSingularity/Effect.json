@@ -7,19 +7,33 @@
   },
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 160,
+    "Count": 32,
     "Radius": 4.5,
-    "Frequency": 0.02
+    "Frequency": 0.025
   },
   "Particle": {
     "LifeTime": 2.0,
-    "StartScale": 0.35,
-    "EndScale": 0.02,
+    "StartScale": 0.595,
+    "EndScale": 0.034,
     "StartRotation": 0.0,
     "RotationSpeed": 6.0,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [0.75, 0.05, 1.0, 1.0],
-    "EndColor": [0.0, 0.85, 1.0, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.75,
+      0.05,
+      1.0,
+      1.0
+    ],
+    "EndColor": [
+      0.0,
+      0.85,
+      1.0,
+      0.0
+    ]
   },
   "Simulation": {
     "EnableGravity": false,
@@ -45,11 +59,20 @@
   "Light": {
     "Enabled": true,
     "Type": "Point",
-    "Color": [0.65, 0.05, 1.0, 1.0],
+    "Color": [
+      0.65,
+      0.05,
+      1.0,
+      1.0
+    ],
     "Intensity": 16.0,
     "Radius": 14.0,
     "Decay": 1.4,
-    "Offset": [0.0, 0.0, 0.0],
+    "Offset": [
+      0.0,
+      0.0,
+      0.0
+    ],
     "FollowEmitter": true,
     "FadeOut": false,
     "FadeDuration": 0.0

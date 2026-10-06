@@ -17,6 +17,9 @@ public:
     void Initialize(ModelCommon* modelCommon, const std::string& directorypath, const std::string& filename); // 初期化（共通設定の受け取り）
     void Initialize(ModelCommon* modelCommon, const ModelData& modelData);
     void Draw(); // 描画
+    void DrawDepth();
+    const Vector3& GetBoundsCenter() const { return boundsCenter_; }
+    float GetBoundsRadius() const { return boundsRadius_; }
 
     // ===============================
     // 構造体定義
@@ -36,6 +39,8 @@ public:
 
 private:
     void CreateMeshResources();
+    Vector3 boundsCenter_ {};
+    float boundsRadius_ = 0.0f;
 
     // 共通設定へのポインタ（DirectXデバイス・コマンドなどを使う）
     ModelCommon* modelCommon_ = nullptr;

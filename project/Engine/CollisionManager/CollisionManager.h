@@ -51,6 +51,12 @@ struct RaycastSphereTarget {
     CollisionLayer category = 1u;
 };
 
+struct RaycastObbTarget {
+    CollisionObjectId objectId = kInvalidCollisionObjectId;
+    OBB box {};
+    CollisionLayer category = 1u;
+};
+
 class CollisionManager {
 public:
     static CollisionManager* GetInstance();
@@ -60,6 +66,9 @@ public:
     CollisionManager& operator=(const CollisionManager&) = delete;
 
     void ClearRaycastSphereTargets();
+    void ClearRaycastObbTargets();
+    void RegisterRaycastObbTarget(
+        CollisionObjectId objectId, const OBB& box, CollisionLayer category = 1u);
     void RegisterRaycastSphereTarget(
         CollisionObjectId objectId,
         const Sphere& sphere,
@@ -101,5 +110,6 @@ private:
     static std::unique_ptr<CollisionManager> instance_;
 
     std::vector<RaycastSphereTarget> raycastSphereTargets_;
+    std::vector<RaycastObbTarget> raycastObbTargets_;
     std::vector<std::unique_ptr<BoxCollider>> colliders_;
 };

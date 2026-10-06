@@ -284,6 +284,10 @@ void BloomRenderer::CreateConstantBuffer()
     parameterResource_ = dxCommon_->CreateBufferResource(sizeof(BloomParameter));
     parameterResource_->SetName(L"BloomRenderer::BloomParameterCB");
     parameterResource_->Map(0, nullptr, reinterpret_cast<void**>(&parameterData_));
+    for (uint32_t index = 0; index < passParameterResources_.size(); ++index) {
+        passParameterResources_[index] = dxCommon_->CreateBufferResource(sizeof(BloomParameter));
+        passParameterResources_[index]->Map(0, nullptr, reinterpret_cast<void**>(&passParameterData_[index]));
+    }
 }
 
 void BloomRenderer::SetDefaultParameter()
@@ -293,10 +297,10 @@ void BloomRenderer::SetDefaultParameter()
     }
 
     parameterData_->isEnabled = 1;
-    parameterData_->threshold = 0.85f;
-    parameterData_->blurRadius = 8;
-    parameterData_->blurSigma = 4.0f;
-    parameterData_->intensity = 0.75f;
+    parameterData_->threshold = 1.0f;
+    parameterData_->blurRadius = 5;
+    parameterData_->blurSigma = 2.5f;
+    parameterData_->intensity = 0.18f;
     parameterData_->blurDirection = 0;
     parameterData_->padding0 = 0.0f;
     parameterData_->padding1 = 0.0f;
@@ -320,9 +324,17 @@ void BloomRenderer::DrawFullScreen(
 
     commandList->SetGraphicsRootDescriptorTable(0, firstTextureHandle);
     commandList->SetGraphicsRootDescriptorTable(1, secondTextureHandle);
+    uint32_t parameterIndex = 0;
+    if (pipelineType == PipelineTypeBlur) {
+        parameterIndex = 1;
+        if (parameterData_->blurDirection != 0) { parameterIndex = 2; }
+    } else if (pipelineType == PipelineTypeComposite) {
+        parameterIndex = 3;
+    }
+    *passParameterData_[parameterIndex] = *parameterData_;
     commandList->SetGraphicsRootConstantBufferView(
         2,
-        parameterResource_->GetGPUVirtualAddress());
+        passParameterResources_[parameterIndex]->GetGPUVirtualAddress());
 
     commandList->DrawInstanced(3, 1, 0, 0);
 }

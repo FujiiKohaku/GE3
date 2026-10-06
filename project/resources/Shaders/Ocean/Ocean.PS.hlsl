@@ -1,4 +1,5 @@
 #include "Ocean.hlsli"
+#include "../Object3D/ShadowSampling.hlsli"
 
 float HashNoise(float2 p)
 {
@@ -56,9 +57,11 @@ float4 main(OceanVertexOutput input) : SV_TARGET
     water = lerp(water, float3(0.24f, 0.67f, 0.88f), fresnel * 0.76f);
 
     float3 lightDirection = normalize(float3(-0.35f, 0.82f, -0.44f));
+    float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, input.normal));
+    water *= lerp(0.55f, 1.0f, visibility);
     float3 halfVector = normalize(lightDirection + V);
     float sunGlint = pow(saturate(dot(N, halfVector)), 190.0f);
-    water += float3(1.0f, 0.92f, 0.72f) * sunGlint * 1.4f;
+    water += float3(1.0f, 0.92f, 0.72f) * sunGlint * 1.4f * visibility;
 
     // Advected, domain-warped FBM breaks crest lines into unrelated patches.
     // Large noise controls groups of foam while smaller noise cuts holes and

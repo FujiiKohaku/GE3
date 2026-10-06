@@ -102,6 +102,39 @@ bool StageCatalog::LoadStageSettings(
     settings.description = json.value("description", "");
     settings.layoutFile = json.value("layout", "");
 
+    if (json.contains("shadows")) {
+        const auto& shadows = json["shadows"];
+        settings.shadows.enabled = shadows.value("enabled", false);
+        settings.shadows.resolution = shadows.value("resolution", 2048u);
+        settings.shadows.distance = shadows.value("distance", 350.0f);
+        settings.shadows.casterMargin = shadows.value("caster_margin", 220.0f);
+        settings.shadows.strength = shadows.value("strength", 0.65f);
+        settings.shadows.depthBias = shadows.value("depth_bias", 0.00025f);
+        settings.shadows.normalBias = shadows.value("normal_bias", 0.18f);
+        settings.shadows.pcfRadius = shadows.value("pcf_radius", 1.0f);
+        if (settings.shadows.resolution < 256 || settings.shadows.resolution > 4096 ||
+            settings.shadows.distance <= 1.0f || settings.shadows.casterMargin < 0.0f ||
+            settings.shadows.strength < 0.0f || settings.shadows.strength > 1.0f ||
+            settings.shadows.depthBias < 0.0f || settings.shadows.normalBias < 0.0f ||
+            settings.shadows.pcfRadius < 0.0f || settings.shadows.pcfRadius > 4.0f) {
+            lastError_ = "Invalid shadow settings: " + settings.id;
+            return false;
+        }
+    }
+
+    if (json.contains("flight")) {
+        const nlohmann::json& flight = json["flight"];
+        settings.allRangeMode = flight.value("mode", "rail") == "all_range";
+        settings.flightAreaRadius = flight.value("area_radius", settings.flightAreaRadius);
+        settings.flightMinHeight = flight.value("min_height", settings.flightMinHeight);
+        settings.flightMaxHeight = flight.value("max_height", settings.flightMaxHeight);
+        if (settings.flightAreaRadius <= 100.0f ||
+            settings.flightMinHeight >= settings.flightMaxHeight) {
+            lastError_ = "Invalid flight area: " + settings.id;
+            return false;
+        }
+    }
+
     if (json.contains("rail")) {
         const nlohmann::json& rail = json["rail"];
         settings.railLength = rail.value("length", settings.railLength);

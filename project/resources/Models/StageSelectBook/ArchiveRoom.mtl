@@ -1,0 +1,5 @@
+newmtl ArchivePalette
+Ka 1 1 1
+Kd 1 1 1
+illum 1
+map_Kd ArchivePalette.png

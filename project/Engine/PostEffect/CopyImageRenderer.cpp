@@ -62,6 +62,7 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     pipelineStates_[PostEffectType::Shockwave] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Shockwave.PS.hlsl");
     pipelineStates_[PostEffectType::HeatHaze] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl");
     pipelineStates_[PostEffectType::SonicBoom] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl");
+    pipelineStates_[PostEffectType::BoostSparks] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/BoostSparks.PS.hlsl");
     pipelineStates_[PostEffectType::RainDrops] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/RainDrops.PS.hlsl");
     pipelineStates_[PostEffectType::CyberScanline] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/CyberScanline.PS.hlsl");
     pipelineStates_[PostEffectType::HexShield] = CreateGraphicsPipeline(L"resources/Shaders/PostEffect/HexShield.PS.hlsl");
@@ -72,15 +73,14 @@ void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
     TextureManager::GetInstance()->LoadTexture("resources/Textures/noise0.png");
     maskTextureHandle_ =
         TextureManager::GetInstance()->GetSrvHandleGPU("resources/Textures/noise0.png");
-    pipelineStates_[PostEffectType::Copy] =
-        CreateGraphicsPipeline(L"resources/Shaders/PostEffect/Fullscreen.PS.hlsl");
+    GetOrCreateGraphicsPipeline(PostEffectType::Copy);
 }
 
 void CopyImageRenderer::CreateRootSignature()
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    D3D12_DESCRIPTOR_RANGE descriptorRange[2] = {};
+    D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
 
     descriptorRange[0].BaseShaderRegister = 0;
     descriptorRange[0].NumDescriptors = 1;
@@ -92,7 +92,12 @@ void CopyImageRenderer::CreateRootSignature()
     descriptorRange[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRange[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameter[3] = {};
+    descriptorRange[2].BaseShaderRegister = 2;
+    descriptorRange[2].NumDescriptors = 1;
+    descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    descriptorRange[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER rootParameter[5] = {};
 
     rootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -104,9 +109,18 @@ void CopyImageRenderer::CreateRootSignature()
     rootParameter[1].DescriptorTable.pDescriptorRanges = &descriptorRange[1];
     rootParameter[1].DescriptorTable.NumDescriptorRanges = 1;
 
-    rootParameter[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameter[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameter[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    rootParameter[2].Descriptor.ShaderRegister = 0;
+    rootParameter[2].DescriptorTable.pDescriptorRanges = &descriptorRange[2];
+    rootParameter[2].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameter[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameter[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameter[3].Descriptor.ShaderRegister = 0;
+    descriptorRange[3] = descriptorRange[2];
+    descriptorRange[3].BaseShaderRegister = 3;
+    rootParameter[4] = rootParameter[2];
+    rootParameter[4].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -119,7 +133,7 @@ void CopyImageRenderer::CreateRootSignature()
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
     rootSignatureDesc.pParameters = rootParameter;
-    rootSignatureDesc.NumParameters = 3;
+    rootSignatureDesc.NumParameters = _countof(rootParameter);
     rootSignatureDesc.pStaticSamplers = &staticSampler;
     rootSignatureDesc.NumStaticSamplers = 1;
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -178,7 +192,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
     pipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
     pipelineStateDesc.NumRenderTargets = 1;
-    pipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    pipelineStateDesc.RTVFormats[0] = outputFormat_;
     pipelineStateDesc.SampleDesc.Count = 1;
     pipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
 
@@ -201,8 +215,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
 Microsoft::WRL::ComPtr<ID3D12PipelineState>
 CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
 {
-    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator iterator =
-        pipelineStates_.find(type);
+    const uint64_t key = (uint64_t(outputFormat_) << 32) | uint64_t(type);
+    auto iterator = pipelineStates_.find(key);
     if (iterator != pipelineStates_.end()) {
         return iterator->second;
     }
@@ -210,13 +224,17 @@ CopyImageRenderer::GetOrCreateGraphicsPipeline(PostEffectType type)
     const wchar_t* pixelShaderPath = GetPixelShaderPath(type);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState =
         CreateGraphicsPipeline(pixelShaderPath);
-    pipelineStates_[type] = pipelineState;
+    pipelineStates_[key] = pipelineState;
     return pipelineState;
 }
 
 const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
 {
     switch (type) {
+    case PostEffectType::ScreenLighting:
+        return L"resources/Shaders/PostEffect/ScreenLighting.PS.hlsl";
+    case PostEffectType::ArchiveAtmosphere:
+        return L"resources/Shaders/PostEffect/ArchiveAtmosphere.PS.hlsl";
     case PostEffectType::Copy:
         [[fallthrough]];
     case PostEffectType::Bloom:
@@ -247,6 +265,10 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
         return L"resources/Shaders/PostEffect/Fisheye.PS.hlsl";
     case PostEffectType::Pixelate:
         return L"resources/Shaders/PostEffect/Pixelate.PS.hlsl";
+    case PostEffectType::ToneMap:
+        return L"resources/Shaders/PostEffect/ToneMap.PS.hlsl";
+    case PostEffectType::FXAA:
+        return L"resources/Shaders/PostEffect/FXAA.PS.hlsl";
     case PostEffectType::ColorAdjust:
         return L"resources/Shaders/PostEffect/ColorAdjust.PS.hlsl";
     case PostEffectType::smoothing:
@@ -295,6 +317,8 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
         return L"resources/Shaders/PostEffect/HeatHaze.PS.hlsl";
     case PostEffectType::SonicBoom:
         return L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl";
+    case PostEffectType::BoostSparks:
+        return L"resources/Shaders/PostEffect/BoostSparks.PS.hlsl";
     case PostEffectType::RainDrops:
         return L"resources/Shaders/PostEffect/RainDrops.PS.hlsl";
     case PostEffectType::CyberScanline:
@@ -310,7 +334,8 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
 
 void CopyImageRenderer::Draw(
     D3D12_GPU_DESCRIPTOR_HANDLE textureHandle,
-    D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle)
+    D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle,
+    D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle)
 {
     ID3D12GraphicsCommandList* commandList = DirectXCommon::GetInstance()->GetCommandList();
 
@@ -331,10 +356,20 @@ void CopyImageRenderer::Draw(
 
     commandList->SetGraphicsRootDescriptorTable(0, textureHandle);
     commandList->SetGraphicsRootDescriptorTable(1, secondTextureHandle);
+    if (normalTextureHandle.ptr == 0) { normalTextureHandle = maskTextureHandle_; }
+    commandList->SetGraphicsRootDescriptorTable(2, normalTextureHandle);
 
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectHandle = indirectTextureHandle_;
+    if (indirectHandle.ptr == 0) { indirectHandle = maskTextureHandle_; }
+    commandList->SetGraphicsRootDescriptorTable(4, indirectHandle);
+
+    size_t parameterIndex = static_cast<size_t>(currentPostEffectType_);
+    if (parameterIndex >= kDrawParameterCount) { parameterIndex = 0; }
+    const size_t parameterOffset = kDrawParameterStride * parameterIndex;
+    memcpy(drawParameterData_ + parameterOffset, postEffectParameterData_, sizeof(PostEffectParameter));
     commandList->SetGraphicsRootConstantBufferView(
-        2,
-        postEffectParameterResource_->GetGPUVirtualAddress());
+        3,
+        drawParameterResource_->GetGPUVirtualAddress() + parameterOffset);
 
     commandList->DrawInstanced(3, 1, 0, 0);
 }
@@ -347,14 +382,30 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterResource_ = dxCommon_->CreateBufferResource(sizeof(PostEffectParameter));
 
     postEffectParameterResource_->Map(0,nullptr,reinterpret_cast<void**>(&postEffectParameterData_));
+    drawParameterResource_ = dxCommon_->CreateBufferResource(kDrawParameterStride * kDrawParameterCount);
+    drawParameterResource_->Map(0, nullptr, reinterpret_cast<void**>(&drawParameterData_));
 
+    *postEffectParameterData_ = {};
+    postEffectParameterData_->ssaoSettings = { 0.25f, 6.0f, 0.08f, 1.0f };
     postEffectParameterData_->grayScaleStrength = 1.0f;
+    postEffectParameterData_->toneMapEnabled = 1;
+    postEffectParameterData_->toneExposure = 1.05f;
+    postEffectParameterData_->toneContrast = 1.02f;
+    postEffectParameterData_->toneSaturation = 1.03f;
+    postEffectParameterData_->fxaaStrength = 1.0f;
+    postEffectParameterData_->fxaaSubpixel = 0.65f;
+    postEffectParameterData_->fxaaEdgeThreshold = 0.125f;
+    postEffectParameterData_->fxaaEdgeThresholdMin = 0.0312f;
     postEffectParameterData_->vignetteStrength = 1.0f;
     postEffectParameterData_->outlineScale = 1000.0f;
     postEffectParameterData_->outlineNearClip = 0.1f;
     postEffectParameterData_->outlineFarClip = 1000.0f;
-    postEffectParameterData_->outlineThreshold = 0.02f;
-    postEffectParameterData_->outlineSoftness = 0.04f;
+    postEffectParameterData_->outlineThreshold = 0.012f;
+    postEffectParameterData_->outlineSoftness = 0.016f;
+    postEffectParameterData_->outlineNormalThreshold = 0.08f;
+    postEffectParameterData_->outlineNormalSoftness = 0.14f;
+    postEffectParameterData_->outlineNormalStrength = 0.60f;
+    postEffectParameterData_->outlineNormalPadding = 0.0f;
     postEffectParameterData_->time = 0.0f;
 
     postEffectParameterData_->radialBlurCenter = { 0.5f, 0.5f };
@@ -365,14 +416,14 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->dissolveEdgeWidth = 0.05f;
     postEffectParameterData_->dissolveEdgeStrength = 2.0f;
     postEffectParameterData_->dissolvePadding = 0.0f;
-    postEffectParameterData_->boostKickStrength = 0.0f;
+    postEffectParameterData_->radialBlurImpulseStrength = 0.0f;
     postEffectParameterData_->pixelSize = 8.0f;
     postEffectParameterData_->colorBrightness = 0.03f;
     postEffectParameterData_->colorContrast = 1.15f;
     postEffectParameterData_->colorSaturation = 1.25f;
-    postEffectParameterData_->padding0 = 0.0f;
-    postEffectParameterData_->padding1 = 0.0f;
-    postEffectParameterData_->padding2 = 0.0f;
+    postEffectParameterData_->customParameter0 = 0.0f;
+    postEffectParameterData_->customParameter1 = 0.0f;
+    postEffectParameterData_->customParameter2 = 0.0f;
     postEffectParameterData_->focusDepth = 0.99f;
     postEffectParameterData_->focusRange = 0.01f;
     postEffectParameterData_->depthOfFieldRadius = 8.0f;

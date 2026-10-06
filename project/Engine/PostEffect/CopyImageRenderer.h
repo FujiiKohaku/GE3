@@ -3,6 +3,7 @@
 #include "Engine/math/EngineStruct.h"
 #include "PostEffectType.h"
 #include <d3d12.h>
+#include <cstddef>
 #include <unordered_map>
 #include <wrl.h>
 
@@ -23,15 +24,15 @@ public:
         float dissolveEdgeStrength;
         float dissolvePadding;
 
-        float boostKickStrength;
+        float radialBlurImpulseStrength;
         float pixelSize;
         float colorBrightness;
         float colorContrast;
 
         float colorSaturation;
-        float padding0;
-        float padding1;
-        float padding2;
+        float customParameter0;
+        float customParameter1;
+        float customParameter2;
 
         float focusDepth;
         float focusRange;
@@ -64,7 +65,8 @@ public:
         Vector3 paintColor;
         float sonicBoomProgress;
         Vector2 sonicBoomCenter;
-        Vector2 paddingSonicBoom;
+        float boostSparkIntensity;
+        float boostSparkElapsedSeconds;
         Vector2 blackHoleCenter;
         float blackHoleRadius;
         float blackHoleStrength;
@@ -74,12 +76,36 @@ public:
         float outlineFarClip;
         float outlineThreshold;
         float outlineSoftness;
+        float outlineNormalThreshold;
+        float outlineNormalSoftness;
+        float outlineNormalStrength;
+        float outlineNormalPadding;
+        float fxaaStrength;
+        float fxaaSubpixel;
+        float fxaaEdgeThreshold;
+        float fxaaEdgeThresholdMin;
+        int32_t toneMapEnabled;
+        float toneExposure;
+        float toneContrast;
+        float toneSaturation;
+        Matrix4x4 screenInverseProjection;
+        Matrix4x4 screenCameraRotation;
+        Vector4 ssaoSettings;
+        Vector4 screenCameraSettings;
+        Vector4 atmosphereSettings;
+        Vector4 screenSunDirection;
+        Vector4 screenSunColor;
     };
     void Initialize(DirectXCommon* dxCommon);
-    void Draw(D3D12_GPU_DESCRIPTOR_HANDLE textureHandle, D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle);
+    void Draw(
+        D3D12_GPU_DESCRIPTOR_HANDLE textureHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE depthTextureHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE normalTextureHandle);
 
     void SetPostEffectType(PostEffectType postEffectType);
+    void SetOutputFormat(DXGI_FORMAT format) { outputFormat_ = format; }
 
+    void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { indirectTextureHandle_ = handle; }
     void SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     PostEffectParameter& GetPostEffectParameter();
 
@@ -92,12 +118,18 @@ private:
 
 private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
-    std::unordered_map<PostEffectType, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelineStates_;
+    std::unordered_map<uint64_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelineStates_;
+    DXGI_FORMAT outputFormat_ = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     DirectXCommon* dxCommon_ = nullptr;
     PostEffectType currentPostEffectType_ = PostEffectType::Copy;
 
     Microsoft::WRL::ComPtr<ID3D12Resource> postEffectParameterResource_;
     PostEffectParameter* postEffectParameterData_ = nullptr;
+    static constexpr size_t kDrawParameterStride = (sizeof(PostEffectParameter) + 255) & ~size_t(255);
+    static constexpr size_t kDrawParameterCount = static_cast<size_t>(PostEffectType::ScreenLighting) + 1;
+    Microsoft::WRL::ComPtr<ID3D12Resource> drawParameterResource_;
+    unsigned char* drawParameterData_ = nullptr;
     // マスクテクスチャのGPUディスクリプタハンドル
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectTextureHandle_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE maskTextureHandle_ {};
 };

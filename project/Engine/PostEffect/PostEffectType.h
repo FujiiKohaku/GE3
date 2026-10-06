@@ -49,6 +49,12 @@ enum class PostEffectType {
     CyberScanline,
     HexShield,
     BlackHoleDistortion,
+    ArchiveAtmosphere,
+    FXAA,
+    ToneMap,
+    BoostSparks,
+    ScreenLighting,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);
+bool IsTemporalResolveInputEffect(PostEffectType type);

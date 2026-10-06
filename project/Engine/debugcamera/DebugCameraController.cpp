@@ -1,10 +1,33 @@
 #include "DebugCameraController.h"
 #include "Engine/input/Input.h"
+#include "Engine/Time/TimeManager.h"
+#include <algorithm>
 #include <cmath>
 
 void DebugCameraController::SetTargetCamera(Camera* camera)
 {
     targetCamera_ = camera;
+}
+
+void DebugCameraController::SetDebugMode(bool isDebugMode)
+{
+    if (isDebugMode_ == isDebugMode) return;
+    if (targetCamera_ != nullptr) {
+        if (isDebugMode) {
+            normalFarClip_ = targetCamera_->GetFarClip();
+            targetCamera_->SetFarClip((std::max)(normalFarClip_, 3000.0f));
+        } else {
+            targetCamera_->SetFarClip(normalFarClip_);
+        }
+    }
+    isDebugMode_ = isDebugMode;
+}
+
+void DebugCameraController::SetMoveSpeed(float speed)
+{
+    if (std::isfinite(speed)) {
+        moveSpeed_ = std::clamp(speed, 1.0f, 1200.0f);
+    }
 }
 
 void DebugCameraController::Update()
@@ -15,7 +38,7 @@ void DebugCameraController::Update()
 
     if (Input::GetInstance()->IsKeyPressed(DIK_F1)) {
         if (!isToggleKeyPressed_) {
-            isDebugMode_ = !isDebugMode_;
+            SetDebugMode(!isDebugMode_);
             isToggleKeyPressed_ = true;
         }
     } else {
@@ -26,7 +49,25 @@ void DebugCameraController::Update()
         return;
     }
 
-    const float moveSpeed = 0.1f;
+    const bool isUsingImGuiMouse =
+#ifdef USE_IMGUI
+        ImGui::GetIO().WantCaptureMouse;
+#else
+        false;
+#endif
+    if (!isUsingImGuiMouse) {
+        const LONG wheel = Input::GetInstance()->GetMouseWheel();
+        if (wheel != 0) {
+            moveSpeed_ = std::clamp(
+                moveSpeed_ * std::pow(1.25f, static_cast<float>(wheel) / 120.0f),
+                1.0f, 1200.0f);
+        }
+    }
+    const float deltaTime = std::clamp(
+        TimeManager::GetInstance()->GetUnscaledDeltaTime(), 0.0f, 0.1f);
+    const float moveSpeed = moveSpeed_ * deltaTime *
+        (Input::GetInstance()->IsKeyPressed(DIK_LSHIFT) ||
+         Input::GetInstance()->IsKeyPressed(DIK_RSHIFT) ? 5.0f : 1.0f);
     const float rotateSpeed = 0.05f;
     const float mouseSensitivity = 0.001f;
 
@@ -79,12 +120,6 @@ void DebugCameraController::Update()
             cameraRotate.x -= rotateSpeed;
         }
     }
-
-    bool isUsingImGuiMouse = false;
-
-#ifdef USE_IMGUI
-    isUsingImGuiMouse = ImGui::GetIO().WantCaptureMouse;
-#endif
 
     if (isUsingImGuiMouse) {
         Input::GetInstance()->ResetMouseDelta();

@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "../3D/SkinCluster.h"
 #include "../Animation/PlayAnimation.h"
 #include "Engine/Camera/Camera.h"
@@ -24,6 +25,10 @@ public:
     void Initialize(SkinningObject3dManager* skinningObject3DManager);
     void Update();
     void Draw();
+    void QueueMotionVectors();
+    void ResetMotionHistory() { motionHistory_.Reset(); }
+    void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
+    void SetNormalMapStrength(float strength);
     ~SkinningObject3d();
     // setter
     void SetModel(Model* model) { model_ = model; }
@@ -91,16 +96,14 @@ public:
         }
     }
 
-    void SetEnableLighting(bool enable)
+    void SetEnableLighting(bool enable);
+    void SetShadingMode(MaterialShadingMode mode);
+    void SetMaterial(const std::string& materialFolderPath);
+    void SetPixelShaderPath(const std::string& pixelShaderPath)
     {
-        if (materialData_) {
-            if (enable) {
-                materialData_->enableLighting = 1;
-            } else {
-                materialData_->enableLighting = 0;
-            }
-        }
+        pixelShaderPath_ = pixelShaderPath;
     }
+    const std::string& GetPixelShaderPath() const { return pixelShaderPath_; }
 
     const Matrix4x4& GetWorldMatrix() const
     {
@@ -121,6 +124,8 @@ public:
     }
 
 private:
+    MotionVectorHistory motionHistory_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> previousSkinnedVertexResource_;
     // ===============================
     // メンバ変数
     // ===============================
@@ -154,6 +159,8 @@ private:
     // SkinCluster skinCluster_;
     SkinCluster::SkinClusterData skinClusterData_;
     PlayAnimation* playAnimation_ = nullptr;
+    std::string pixelShaderPath_ =
+        "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
     // D3D12_GPU_DESCRIPTOR_HANDLE environmentTextureHandle_ {};
 
     // コンピュートシェーダー用のバッファとSRV/UAV
@@ -180,4 +187,5 @@ private:
     void CreateSkinningResources();
     void DispatchSkinning();
     std::vector<D3D12_VERTEX_BUFFER_VIEW> skinnedPrimitiveVertexBufferViews_;
+    std::string normalMapTextureKey_;
 };

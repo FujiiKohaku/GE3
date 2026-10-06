@@ -3,8 +3,10 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Player/Bullet/PlayerBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
 #include "App/Game/Enemy/Bullet/PaintBullet.h"
+#include "Engine/audio/SoundManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -22,9 +24,80 @@ float VectorLength(const Vector3& value)
     return std::sqrt(Dot(value, value));
 }
 
+bool EnemyBlocksJellyfishHit(const BaseEnemy* enemy, const Sphere& bullet,
+    const Vector3& movement, float jellyfishHitTime)
+{
+    if (enemy == nullptr || enemy->IsDead()) {
+        return false;
+    }
+    std::vector<EnemyCollisionPart> parts;
+    enemy->GetCollisionParts(parts);
+    for (const EnemyCollisionPart& part : parts) {
+        const SweepHit hit = CollisionManager::SweepSphere(
+            bullet, movement, Sphere { part.position, part.radius });
+        if (hit.isHit && hit.time <= jellyfishHitTime) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
+    const std::vector<std::unique_ptr<BaseEnemy>>& enemies)
+{
+    for (const auto& bullet : player.GetBullets()) {
+        if (!bullet->IsAlive()) {
+            continue;
+        }
+        const Sphere sphere { bullet->GetPreviousPosition(), bullet->GetCollisionRadius() };
+        const Vector3 movement = bullet->GetPosition() - bullet->GetPreviousPosition();
+        int32_t partIndex = 100;
+        const SweepHit hit = jellyfish.SweepBullet(sphere, movement, partIndex);
+        if (!hit.isHit) {
+            continue;
+        }
+        bool blockedByEnemy = false;
+        for (const auto& enemy : enemies) {
+            if (EnemyBlocksJellyfishHit(enemy.get(), sphere, movement, hit.time)) {
+                blockedByEnemy = true;
+                break;
+            }
+        }
+        if (blockedByEnemy) {
+            continue;
+        }
+        if (jellyfish.IsCollisionPartDamageable(partIndex)) {
+            bullet->OnHitEnemy(hit.position);
+            SoundManager::GetInstance()->Play("EnemyHit");
+        } else {
+            SoundManager::GetInstance()->Play("ArmorDeflect");
+        }
+        const bool wasDead = jellyfish.IsDead();
+        jellyfish.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
+        if (!wasDead && jellyfish.IsDead()) {
+            SoundManager::GetInstance()->Play("BossDestroyed");
+        }
+        bullet->SetDead();
+    }
+}
+
+void RegisterEnemyRaycastParts(CollisionManager& manager,
+    CollisionObjectId& nextObjectId, const BaseEnemy* enemy)
+{
+    if (enemy == nullptr || enemy->IsDead()) {
+        return;
+    }
+    std::vector<EnemyCollisionPart> parts;
+    enemy->GetCollisionParts(parts);
+    for (const EnemyCollisionPart& part : parts) {
+        manager.RegisterRaycastSphereTarget(nextObjectId++, Sphere { part.position, part.radius });
+    }
+}
+
 void CheckPlayerBulletsAgainstEnemy(
     Player& player,
-    BaseEnemy& enemy)
+    BaseEnemy& enemy,
+    bool isBoss = false)
 {
     if (enemy.IsDead()) {
         return;
@@ -54,11 +127,21 @@ void CheckPlayerBulletsAgainstEnemy(
 
             if (enemy.IsCollisionPartDamageable(part.partIndex)) {
                 bullet->OnHitEnemy(part.position);
+                const bool wasDead = enemy.IsDead();
                 enemy.ApplyDamageToPart(
                     part.partIndex,
                     static_cast<float>(bullet->GetDamage()));
+                SoundManager::GetInstance()->Play("EnemyHit");
+                if (!wasDead && enemy.IsDead()) {
+                    if (isBoss) {
+                        SoundManager::GetInstance()->Play("BossDestroyed");
+                    } else {
+                        SoundManager::GetInstance()->Play("EnemyDestroyed");
+                    }
+                }
             } else {
                 enemy.OnCollisionPartGuarded(part.partIndex, part.position);
+                SoundManager::GetInstance()->Play("ArmorDeflect");
             }
             bullet->SetDead();
             break;
@@ -142,6 +225,7 @@ void GameplayCollisionSystem::UpdateStageCollisions(
             collider->GetRotation());
         if (CollisionManager::Intersect(playerSphere, obstacleBox).isHit) {
             if (player.ApplyDamage(levelObject->GetCollisionDamage())) {
+                SoundManager::GetInstance()->Play("EnvironmentCollision");
                 EffectManager::GetInstance()->PlayEffect(
                     "DamageHit",
                     playerPosition);
@@ -247,7 +331,11 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
 
     if (boss != nullptr) {
         if (!boss->IsDead()) {
-            CheckPlayerBulletsAgainstEnemy(player, *boss);
+            if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(boss)) {
+                CheckPlayerBulletsAgainstJellyfish(player, *iceJellyfish, enemies);
+            } else {
+                CheckPlayerBulletsAgainstEnemy(player, *boss, true);
+            }
         }
     }
     CheckEnemyBulletsAgainstPlayer(player, independentBullets, events);
@@ -293,24 +381,15 @@ void GameplayCollisionSystem::SyncRaycastTargets(
 {
     CollisionManager* collisionManager = CollisionManager::GetInstance();
     collisionManager->ClearRaycastSphereTargets();
+    collisionManager->ClearRaycastObbTargets();
 
     CollisionObjectId nextObjectId = 1;
-    const auto registerEnemyParts =
-        [&collisionManager, &nextObjectId](const BaseEnemy* enemy) {
-            if (enemy == nullptr || enemy->IsDead()) {
-                return;
-            }
-            std::vector<EnemyCollisionPart> collisionParts;
-            enemy->GetCollisionParts(collisionParts);
-            for (const EnemyCollisionPart& part : collisionParts) {
-                collisionManager->RegisterRaycastSphereTarget(
-                    nextObjectId++,
-                    Sphere { part.position, part.radius });
-            }
-        };
-
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies) {
-        registerEnemyParts(enemy.get());
+        RegisterEnemyRaycastParts(*collisionManager, nextObjectId, enemy.get());
     }
-    registerEnemyParts(boss);
+    if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(boss)) {
+        iceJellyfish->RegisterRaycastTargets(nextObjectId);
+    } else {
+        RegisterEnemyRaycastParts(*collisionManager, nextObjectId, boss);
+    }
 }

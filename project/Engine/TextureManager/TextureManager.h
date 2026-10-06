@@ -22,6 +22,7 @@ public:
     // 初期化・読み込み
     void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager);
     void LoadTexture(const std::string& filePath);
+    std::string LoadLinearTexture(const std::string& filePath);
     void LoadTextureFromMemory(const std::string& textureKey, const uint8_t* data, size_t dataSize);
     void LoadTextureFromBGRA(
         const std::string& textureKey,

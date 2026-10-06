@@ -14,26 +14,51 @@ public:
     void Initialize();
     void PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
     void PostDraw();
+    void SetClearColor(const Vector4& color) { clearColor_ = color; }
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandleGPU() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetNormalSrvHandleGPU() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetIndirectSrvHandleGPU() const { return indirectSrvHandleGPU_; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetMaterialSrvHandleGPU() const { return materialSrvHandleGPU_; }
+    ID3D12Resource* GetColorTexture() const { return renderTextureResource_.Get(); }
+    ID3D12Resource* GetNormalTexture() const { return normalTextureResource_.Get(); }
+    D3D12_CPU_DESCRIPTOR_HANDLE GetNormalRtvHandle() const { return normalRtvHandle_; }
 
 private:
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateRenderTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device,uint32_t width,uint32_t height,DXGI_FORMAT format,const Vector4& clearColor);
     
     Microsoft::WRL::ComPtr<ID3D12Resource> renderTextureResource_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> normalTextureResource_;
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_;
+    D3D12_CPU_DESCRIPTOR_HANDLE normalRtvHandle_;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> indirectTextureResource_;
+    D3D12_CPU_DESCRIPTOR_HANDLE indirectRtvHandle_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectSrvHandleGPU_ {};
+    uint32_t indirectSrvIndex_ = kInvalidDescriptorIndex;
+    D3D12_RESOURCE_STATES indirectCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialTextureResource_;
+    D3D12_CPU_DESCRIPTOR_HANDLE materialRtvHandle_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE materialSrvHandleGPU_ {};
+    uint32_t materialSrvIndex_ = kInvalidDescriptorIndex;
+    D3D12_RESOURCE_STATES materialCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
     DXGI_FORMAT format_;
     Vector4 clearColor_;
 
     static constexpr uint32_t kInvalidDescriptorIndex = (std::numeric_limits<uint32_t>::max)();
     uint32_t srvIndex_ = kInvalidDescriptorIndex;
+    uint32_t normalSrvIndex_ = kInvalidDescriptorIndex;
     D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_ {};
+    D3D12_GPU_DESCRIPTOR_HANDLE normalSrvHandleGPU_ {};
 
     D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_ {};
+    D3D12_CPU_DESCRIPTOR_HANDLE normalSrvHandleCPU_ {};
 
 
     D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    D3D12_RESOURCE_STATES normalCurrentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
     D3D12_VIEWPORT viewport_ = {};
     D3D12_RECT scissorRect_ = {};

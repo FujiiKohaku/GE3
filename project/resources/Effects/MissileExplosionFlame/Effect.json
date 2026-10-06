@@ -5,43 +5,46 @@
     "Vertex": "Render.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
-
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 56,
+    "Count": 12,
     "Radius": 1.25,
     "Frequency": 0.001
   },
-
   "Particle": {
     "LifeTime": 0.92,
-
-    "StartScale": 0.55,
-    "EndScale": 3.8,
-
+    "StartScale": 0.7975,
+    "EndScale": 5.51,
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
-
-    "Velocity": [0.0, 0.0, 0.0],
-
-    "StartColor": [1.0, 0.48, 0.08, 0.9],
-    "EndColor": [0.18, 0.04, 0.0, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.6,
+      0.94,
+      1.0,
+      0.9
+    ],
+    "EndColor": [
+      0.04,
+      0.2,
+      0.42,
+      0.0
+    ]
   },
-
   "Simulation": {
     "EnableGravity": false,
     "Gravity": 0.0,
-
     "EnableDrag": true,
     "Drag": 0.9,
-
     "EnableNoise": false,
     "NoiseStrength": 0.0,
-
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },
-
   "Render": {
     "Texture": "resources/Effects/MissileExplosion/missileExplosion.png",
     "MeshType": "Board",
@@ -49,7 +52,6 @@
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",
-
     "Loop": false,
     "Duration": 1.1
   }

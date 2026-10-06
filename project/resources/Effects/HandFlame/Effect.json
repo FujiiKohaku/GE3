@@ -9,17 +9,31 @@
     "Shape": "Sphere",
     "Count": 20,
     "Radius": 0.06,
-    "Frequency": 0.015
+    "Frequency": 0.025
   },
   "Particle": {
     "LifeTime": 0.35,
-    "StartScale": 0.08,
-    "EndScale": 0.26,
+    "StartScale": 0.116,
+    "EndScale": 0.377,
     "StartRotation": 0.0,
     "RotationSpeed": 6.0,
-    "Velocity": [0.0, 0.5, 0.0],
-    "StartColor": [1.0, 0.85, 0.3, 0.95],
-    "EndColor": [0.9, 0.25, 0.0, 0.0]
+    "Velocity": [
+      0.0,
+      0.5,
+      0.0
+    ],
+    "StartColor": [
+      1.0,
+      0.85,
+      0.3,
+      0.95
+    ],
+    "EndColor": [
+      0.9,
+      0.25,
+      0.0,
+      0.0
+    ]
   },
   "Simulation": {
     "EnableGravity": true,

@@ -13,13 +13,27 @@
   },
   "Particle": {
     "LifeTime": 0.28,
-    "StartScale": 0.40,
+    "StartScale": 0.4,
     "EndScale": 5.2,
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [0.86, 0.97, 1.0, 1.0],
-    "EndColor": [0.10, 0.52, 1.0, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.86,
+      0.97,
+      1.0,
+      1.0
+    ],
+    "EndColor": [
+      0.1,
+      0.52,
+      1.0,
+      0.0
+    ]
   },
   "Simulation": {
     "EnableGravity": false,

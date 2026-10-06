@@ -9,4 +9,4 @@ spelling_languages = en-US
 #自分の辞書を作れるように標準の除外辞書設定はそのまま使用
 spelling_use_default_exclusion_dictionary=true
 #自分の除外辞書を指定
-spelling_exclusion_path = ./exclussion.dic
+spelling_exclusion_path = ./Docs/exclusion.dic

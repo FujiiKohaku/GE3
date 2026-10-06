@@ -1,0 +1,24 @@
+{
+  "lighting": {
+    "default": { "color": [1.0,0.97,0.90,1.0], "direction": [-0.28,-0.86,0.42], "intensity": 0.95, "ambient": [0.52,0.60,0.68,0.22], "skyColor": [0.78,0.90,1.10], "groundColor": [0.42,0.38,0.34] },
+    "stage03": { "color": [0.90,0.96,1.0,1.0], "direction": [-0.52,-0.76,0.39], "intensity": 0.90, "ambient": [0.38,0.50,0.67,0.16], "skyColor": [0.72,0.94,1.16], "groundColor": [0.24,0.36,0.50] }
+  },
+  "atmosphere": {
+    "default": { "exposure": 1.0, "distanceFog": [380.0,720.0,1.0,1.2] },
+    "stage03": { "exposure": 0.95, "distanceFog": [450.0,1000.0,1.0,1.35], "fogColor": [0.58,0.80,0.96,1.0] }
+  },
+  "defaultMaterial": "resources/Shaders/Object3D/StageIceSpire",
+  "materials": {
+    "Environment/Ice/ice_island.obj": "resources/Shaders/Object3D/StageIceIsland",
+    "Environment/Ice/ice_boulder.obj": "resources/Shaders/Object3D/StageIceBoulder",
+    "Environment/Ice/ice_slab.obj": "resources/Shaders/Object3D/StageIceSlab",
+    "Environment/Ice/ice_arch.obj": "resources/Shaders/Object3D/StageIceArch",
+    "Environment/Ice/crystal.obj": "resources/Shaders/Object3D/StageIceCrystal"
+  },
+  "shininess": { "ice": 96.0 },
+  "effectParameters": { "ArchiveAtmosphere": [16.5, 2.3, 0.0] },
+  "effectChains": {
+    "default": ["DepthOutline", "Fog"],
+    "boost": ["DepthOutline", "Fog", "RadialBlur", "FocusLine"]
+  }
+}

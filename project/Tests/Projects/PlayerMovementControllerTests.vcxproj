@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>PlayerMovementControllerTests</ProjectName>
+    <TargetName>PlayerMovementControllerTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\PlayerMovementControllerTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>PlayerMovementControllerTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)PlayerMovementControllerTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link><SubSystem>Console</SubSystem></Link>
+    <ClCompile><UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="$(projectRootPath)App\main.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\PlayerMovementControllerTests.cpp" />
+  </ItemGroup>
+</Project>

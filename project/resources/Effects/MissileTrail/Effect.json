@@ -5,43 +5,46 @@
     "Vertex": "Trail.VS.hlsl",
     "Pixel": "Render.PS.hlsl"
   },
-
   "Emitter": {
     "Shape": "Cone",
-    "Count": 34,
+    "Count": 24,
     "Radius": 0.035,
-    "Frequency": 0.008
+    "Frequency": 0.025
   },
-
   "Particle": {
     "LifeTime": 0.48,
-
-    "StartScale": 0.22,
-    "EndScale": 1.25,
-
+    "StartScale": 0.319,
+    "EndScale": 1.8125,
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
-
-    "Velocity": [0.0, 0.0, -14.0],
-
-    "StartColor": [1.0, 0.95, 0.65, 0.95],
-    "EndColor": [1.0, 0.16, 0.02, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      -14.0
+    ],
+    "StartColor": [
+      0.82,
+      0.98,
+      1.0,
+      0.95
+    ],
+    "EndColor": [
+      0.12,
+      0.66,
+      0.92,
+      0.0
+    ]
   },
-
   "Simulation": {
     "EnableGravity": false,
     "Gravity": 0.0,
-
     "EnableDrag": true,
     "Drag": 0.94,
-
     "EnableNoise": false,
     "NoiseStrength": 0.0,
-
     "EnableAttraction": false,
     "AttractionStrength": 0.0
   },
-
   "Render": {
     "Texture": "resources/Effects/Jet/jet.png",
     "Type": "Trail",
@@ -49,12 +52,10 @@
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",
-    "EmissionStrength": 2.4,
-
+    "EmissionStrength": 1.35,
     "Loop": true,
     "Duration": -1.0
   },
-
   "Trail": {
     "MaxPoints": 64,
     "LifeTime": 0.42,
@@ -62,21 +63,39 @@
     "BreakDistance": 5.0,
     "StartWidth": 1.8,
     "EndWidth": 0.15,
-    "StartColor": [1.0, 1.0, 0.88, 1.0],
-    "EndColor": [0.9, 0.08, 0.01, 0.0],
+    "StartColor": [
+      0.82,
+      0.98,
+      1.0,
+      1.0
+    ],
+    "EndColor": [
+      0.12,
+      0.66,
+      0.92,
+      0.0
+    ],
     "TextureTiling": 2.0,
     "RootExtension": 0.7,
     "FaceCamera": true
   },
-
   "Light": {
     "Enabled": true,
     "Type": "Point",
-    "Color": [1.0, 0.22, 0.03, 1.0],
+    "Color": [
+      0.325,
+      0.847,
+      0.91,
+      1.0
+    ],
     "Intensity": 5.0,
     "Radius": 8.0,
     "Decay": 2.0,
-    "Offset": [0.0, 0.0, 0.0],
+    "Offset": [
+      0.0,
+      0.0,
+      0.0
+    ],
     "FollowEmitter": true,
     "FadeOut": true,
     "FadeDuration": 0.35

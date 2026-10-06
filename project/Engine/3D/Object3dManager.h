@@ -4,9 +4,29 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/blend/blendutil.h"
 #include "Engine/TextureManager/TextureManager.h"
+#include "Object3dRootParameter.h"
+#include <string>
+#include <unordered_map>
+
+class ShadowMapRenderer;
+class LocalShadowRenderer;
 
 class Object3dManager {
 public:
+    // Append the static-object VS parameters after the shared root slots.
+    static constexpr uint32_t kVertexShaderParametersRootIndex =
+        RootParameterIndex(Object3dRootParameter::Count);
+    static constexpr uint32_t kShadowConstantsRootIndex = kVertexShaderParametersRootIndex + 1;
+    static constexpr uint32_t kShadowTextureRootIndex = kShadowConstantsRootIndex + 1;
+    static constexpr uint32_t kShadowReceiverRootIndex = kShadowTextureRootIndex + 1;
+    static constexpr uint32_t kLocalShadowConstantsRootIndex = kShadowReceiverRootIndex + 1;
+    static constexpr uint32_t kLocalShadowTextureRootIndex = kLocalShadowConstantsRootIndex + 1;
+    void SetLocalShadowRenderer(LocalShadowRenderer* renderer) { localShadowRenderer_ = renderer; }
+    void SetShadowRenderer(ShadowMapRenderer* renderer) { shadowRenderer_ = renderer; }
+    void BindShadowResources(bool receiveShadow,
+        uint32_t constantsIndex = kShadowConstantsRootIndex,
+        uint32_t textureIndex = kShadowTextureRootIndex,
+        uint32_t receiverIndex = kShadowReceiverRootIndex);
     // Singleton インターフェース
     static Object3dManager* GetInstance();
     static void Finalize();
@@ -34,6 +54,11 @@ public:
     }
     void SetNormalPSO();
     void SetGlowPSO();
+    // Call between frames, after waiting for GPU work to finish.
+    void ReloadMaterialPipelines();
+    void BindPipeline(const std::string& pixelShaderPath, bool transparent = false,
+        bool transparentDepthWrite = false,
+        const std::string& vertexShaderPath = "resources/Shaders/Object3D/Object3d.VS.hlsl");
 
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture();
@@ -52,13 +77,22 @@ public:
         friend class Object3dManager;
     };
     explicit Object3dManager(ConstructorKey);
-    ~Object3dManager() = default;
+    ~Object3dManager();
 
 private:
     void CreateRootSignature();
     void CreateGraphicsPipeline();
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateMaterialPipeline(
+        const std::string& pixelShaderPath, BlendMode blendMode, bool transparent,
+        bool transparentDepthWrite, const std::string& vertexShaderPath);
 
 private:
+    ShadowMapRenderer* shadowRenderer_ = nullptr;
+    LocalShadowRenderer* localShadowRenderer_ = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> disabledLocalShadowConstants_;
+    uint32_t nullLocalShadowSrv_ = 0xffffffffu;
+    Microsoft::WRL::ComPtr<ID3D12Resource> disabledShadowConstants_;
+    uint32_t nullShadowSrv_ = 0xffffffffu;
     DirectXCommon* dxCommon_ = nullptr;
     Camera* defaultCamera_ = nullptr;
 
@@ -68,7 +102,7 @@ private:
     // PSOを保存する配列
 
     // 通常描画
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineStates[kCountOfBlendMode];
+    std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> materialPipelineCache_;
 
     // Glow描画
     Microsoft::WRL::ComPtr<ID3D12PipelineState> glowPipelineStates[kCountOfBlendMode];

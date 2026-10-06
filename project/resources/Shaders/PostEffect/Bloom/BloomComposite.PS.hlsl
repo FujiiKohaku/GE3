@@ -14,5 +14,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         outputColor = sceneColor.rgb + bloomColor * intensity;
     }
 
-    return float4(saturate(outputColor), sceneColor.a);
+    return float4(max(outputColor, 0.0f), sceneColor.a);
 }

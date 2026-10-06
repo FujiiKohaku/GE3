@@ -1,4 +1,5 @@
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "Engine/audio/SoundManager.h"
 
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Time/TimeManager.h"
@@ -14,12 +15,17 @@ void BaseEnemy::Initialize(Model* model)
     object_->Initialize(
         Object3dManager::GetInstance());
     object_->SetEnableLighting(true);
+    object_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    object_->SetNormalMap("resources/Textures/Normals/metal_detail.png", 0.2f);
+    object_->SetCastShadow(true);
+    object_->SetReceiveShadow(true);
     transform_.scale = {
         2.0f,
         2.0f,
         2.0f
     };
     object_->SetModel(model);
+    object_->SetSurfaceProperties(0.38f, 0.60f, 0.75f);
 
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
@@ -52,6 +58,11 @@ void BaseEnemy::Draw()
 
 }
 
+void BaseEnemy::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (!isDead_ && object_ != nullptr) { object_->DrawShadow(renderer); }
+}
+
 void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
 {
     bulletManager_ = bulletManager;
@@ -60,6 +71,7 @@ void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
 void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet)
 {
     if (bulletManager_ != nullptr) {
+        SoundManager::GetInstance()->Play("EnemyShot");
         bulletManager_->Add(std::move(bullet));
     }
 }

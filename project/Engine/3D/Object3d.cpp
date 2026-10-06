@@ -1,13 +1,17 @@
 #include "Object3d.h"
+#include <algorithm>
 #include "Engine/math/MatrixMath.h"
 #include "Model.h"
 #include "ModelManager.h"
 #include "Object3dManager.h"
+#include "Object3dRootParameter.h"
 #include "Engine/Time/TimeManager.h"
 #include <cassert>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include "Engine/Shadow/ShadowMapRenderer.h"
+#include <cmath>
 #pragma region
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
@@ -37,6 +41,14 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->enableLighting = false;
     materialData_->uvTransform = MatrixMath::MakeIdentity4x4();
     materialData_->shininess = 32.0f;
+    materialData_->roughness = 0.55f;
+    materialData_->metallic = 0.0f;
+    materialData_->specularStrength = 0.35f;
+    materialData_->surfacePadding = 0.0f;
+    materialData_->normalMapEnabled = 0;
+    materialData_->normalMapStrength = 0.0f;
+    materialData_->normalMapFlipY = 0.0f;
+    materialData_->normalMapPadding = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // ================================
@@ -112,18 +124,112 @@ void Object3d::Update()
 #pragma region
 void Object3d::Draw()
 {
+    if (receiveShadow_) {
+        if (pixelShaderPath_ == "resources/Shaders/Object3D/Toon/Render.PS.hlsl") {
+            SetMaterial("resources/Shaders/Object3D/ShadowToon");
+        } else if (pixelShaderPath_ == "resources/Shaders/Object3D/Standard/Render.PS.hlsl") {
+            SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+        }
+    }
+    // The camera can move while gameplay updates are paused.
+    if (camera_) {
+        transformationMatrixData->WVP = MatrixMath::Multiply(
+            worldMatrix_, camera_->GetViewProjectionMatrix());
+    }
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
+    object3dManager_->BindPipeline(
+        pixelShaderPath_, transparent_, transparentDepthWrite_, vertexShaderPath_);
+    commandList->SetGraphicsRoot32BitConstants(
+        Object3dManager::kVertexShaderParametersRootIndex, 4, &vertexShaderParameters_, 0);
     
-    commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Material),
+        materialResource->GetGPUVirtualAddress());
 
-    commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResource->GetGPUVirtualAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::TransformationMatrix),
+        transformationMatrixResource->GetGPUVirtualAddress());
 
-    commandList->SetGraphicsRootConstantBufferView(4, camera_->GetGPUAddress());
+    commandList->SetGraphicsRootConstantBufferView(
+        RootParameterIndex(Object3dRootParameter::Camera), camera_->GetGPUAddress());
 
-    commandList->SetGraphicsRootDescriptorTable(8,Object3dManager::GetInstance()->GetEnvironmentTexture());
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::NormalTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_));
+    commandList->SetGraphicsRootDescriptorTable(
+        RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
+        Object3dManager::GetInstance()->GetEnvironmentTexture());
 
+    object3dManager_->BindShadowResources(receiveShadow_);
     if (model_) {
         model_->Draw();
+    }
+    QueueMotionVectors();
+}
+
+void Object3d::QueueMotionVectors()
+{
+    auto* renderer = MotionVectorRenderer::GetActive();
+    if (renderer == nullptr || model_ == nullptr || camera_ == nullptr || transparent_) { return; }
+    if (renderer->IsQueued(motionHistory_)) { return; }
+    // Custom deformation requires an explicitly supplied matching motion shader.
+    if (vertexShaderPath_ != "resources/Shaders/Object3D/Object3d.VS.hlsl" && motionVectorShaderPath_.empty()) { return; }
+    for (const auto& primitive : model_->GetModelData().primitives) {
+        if (primitive.mode != PrimitiveMode::Triangles) { continue; }
+        renderer->Queue(primitive.vbView, primitive.vbView, primitive.ibView,
+            static_cast<uint32_t>(primitive.vertices.size()), static_cast<uint32_t>(primitive.indices.size()),
+            worldMatrix_, *camera_, motionHistory_, motionVectorShaderPath_, vertexShaderParameters_, shadowMaterial_.isDoubleSided);
+    }
+    renderer->CommitHistory(motionHistory_, worldMatrix_, *camera_, vertexShaderParameters_);
+}
+
+void Object3d::SetMaterial(const std::string& materialFolderPath)
+{
+    pixelShaderPath_ = materialFolderPath + "/Render.PS.hlsl";
+    if (materialFolderPath.find("Floor") != std::string::npos || materialFolderPath.find("Ground") != std::string::npos) {
+        SetSurfaceProperties(0.90f, 0.0f, 0.10f);
+    } else if (materialFolderPath.find("Ice") != std::string::npos) {
+        SetSurfaceProperties(0.25f, 0.0f, 0.85f);
+
+    } else if (materialFolderPath.find("Brass") != std::string::npos) {
+        SetSurfaceProperties(0.32f, 0.80f, 0.90f);
+    }
+}
+
+void Object3d::SetEnableLighting(bool enable)
+{
+    SetShadingMode(enable ? MaterialShadingMode::Toon : MaterialShadingMode::Unlit);
+}
+
+void Object3d::SetShadingMode(MaterialShadingMode mode)
+{
+    if (materialData_) {
+        materialData_->enableLighting = static_cast<int32_t>(mode);
+    }
+
+    switch (mode) {
+    case MaterialShadingMode::Standard:
+        SetMaterial("resources/Shaders/Object3D/Standard");
+        break;
+    case MaterialShadingMode::Ice:
+        SetMaterial("resources/Shaders/Object3D/Ice");
+        break;
+    case MaterialShadingMode::ArchivePaper:
+        SetMaterial("resources/Shaders/Object3D/ArchivePaper");
+        break;
+    case MaterialShadingMode::ArchiveLeather:
+        SetMaterial("resources/Shaders/Object3D/ArchiveLeather");
+        break;
+    case MaterialShadingMode::ArchiveBrass:
+        SetMaterial("resources/Shaders/Object3D/ArchiveBrass");
+        break;
+    case MaterialShadingMode::Toon:
+        SetMaterial("resources/Shaders/Object3D/Toon");
+        break;
+    case MaterialShadingMode::Unlit:
+    default:
+        SetMaterial("resources/Shaders/Object3D/Unlit");
+        break;
     }
 }
 #pragma endregion
@@ -156,7 +262,8 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
     const aiScene* scene = importer.ReadFile(
         filePath.c_str(),
-        aiProcess_Triangulate | aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
+        aiProcess_Triangulate | aiProcess_GenSmoothNormals |
+            aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
 
     assert(scene);
     assert(scene->HasMeshes());
@@ -177,9 +284,10 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
             VertexData vertex {};
 
             aiVector3D pos = mesh->mVertices[v];
-            aiVector3D nrm = mesh->HasNormals()
-                ? mesh->mNormals[v]
-                : aiVector3D(0, 1, 0);
+            aiVector3D nrm(0, 1, 0);
+            if (mesh->HasNormals()) {
+                nrm = mesh->mNormals[v];
+            }
 
             aiVector3D uv = mesh->HasTextureCoords(0)
                 ? mesh->mTextureCoords[0][v]
@@ -301,9 +409,18 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
 void Object3d::SetModel(const std::string& filePath)
 {
+    ResetMotionHistory();
 
     model_ = ModelManager::GetInstance()->FindModel(filePath);
     modelFilePath_ = filePath;
+    SetSurfaceProperties(0.58f, 0.0f, 0.32f);
+    if (filePath.find("Ice") != std::string::npos || filePath.find("ice") != std::string::npos) {
+        SetSurfaceProperties(0.22f, 0.0f, 0.85f);
+    } else if (filePath.find("Player") != std::string::npos || filePath.find("Enemy") != std::string::npos || filePath.find("Boss") != std::string::npos) {
+        SetSurfaceProperties(0.30f, 0.72f, 0.90f);
+    } else if (filePath.find("ground") != std::string::npos || filePath.find("floor") != std::string::npos || filePath.find("island") != std::string::npos) {
+        SetSurfaceProperties(0.88f, 0.0f, 0.12f);
+    }
 }
 Node Object3d::ReadNode(aiNode* node)
 {
@@ -367,4 +484,68 @@ Object3d::~Object3d()
     if (materialResource) {
         materialResource->Unmap(0, nullptr);
     }
+}
+
+void Object3d::DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow)
+{
+    if (!castShadow_ || (transparent_ && !opaqueTransparentShadow) || model_ == nullptr) { return; }
+    Vector3 center = MatrixMath::Transform(model_->GetBoundsCenter(), worldMatrix_);
+    float squaredScale = 0.0f;
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            squaredScale += worldMatrix_.m[row][column] * worldMatrix_.m[row][column];
+        }
+    }
+    float localRadius = model_->GetBoundsRadius();
+    localRadius += shadowMaterial_.boundsPadding;
+    float radius = localRadius * std::sqrt(squaredScale);
+    if (!renderer.Intersects(center, radius)) { return; }
+    renderer.BindObject(worldMatrix_, shadowMaterial_, vertexShaderParameters_);
+    model_->DrawDepth();
+}
+
+void Object3d::SetSurfaceProperties(float roughness, float metallic, float specularStrength)
+{
+    if (materialData_ == nullptr) { return; }
+    materialData_->roughness = std::clamp(roughness, 0.08f, 1.0f);
+    materialData_->metallic = std::clamp(metallic, 0.0f, 1.0f);
+    materialData_->specularStrength = std::clamp(specularStrength, 0.0f, 2.0f);
+}
+
+void Object3d::SetShadowBoundsPadding(float boundsPadding)
+{
+    if (std::isfinite(boundsPadding) && boundsPadding >= 0.0f) {
+        shadowMaterial_.boundsPadding = boundsPadding;
+    }
+}
+bool Object3d::SetShadowMaterial(const ShadowMaterialSettings& settings)
+{
+    if (!std::isfinite(settings.boundsPadding) || settings.boundsPadding < 0.0f) { return false; }
+    shadowMaterial_ = settings;
+    return true;
+}
+float Object3d::GetModelBoundsRadius() const
+{
+    if (model_ == nullptr) { return 0.0f; }
+    return model_->GetBoundsRadius();
+}
+
+void Object3d::SetNormalMap(const std::string& filePath, float strength, bool flipY)
+{
+    if (materialData_ == nullptr) { return; }
+    normalMapTextureKey_.clear();
+    materialData_->normalMapEnabled = 0;
+    if (!filePath.empty()) {
+        normalMapTextureKey_ = TextureManager::GetInstance()->LoadLinearTexture(filePath);
+        if (!normalMapTextureKey_.empty()) { materialData_->normalMapEnabled = 1; }
+    }
+    SetNormalMapStrength(strength);
+    materialData_->normalMapFlipY = 0.0f;
+    if (flipY) { materialData_->normalMapFlipY = 1.0f; }
+}
+
+void Object3d::SetNormalMapStrength(float strength)
+{
+    if (materialData_ == nullptr) { return; }
+    materialData_->normalMapStrength = std::clamp(strength, 0.0f, 2.0f);
 }

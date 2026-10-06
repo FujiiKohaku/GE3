@@ -106,7 +106,7 @@ constexpr float kSegmentRotationOffset = 0.35f;
 constexpr float kDamageHitFlashDuration = 0.10f;
 constexpr float kGuardHitFlashDuration = 0.08f;
 constexpr float kHeadAimFollowRate = 0.18f;
-constexpr Vector4 kChargedBulletColor = { 1.0f, 0.12f, 0.02f, 1.0f };
+constexpr Vector4 kChargedBulletColor = { 1.0f, 0.353f, 0.239f, 1.0f };
 constexpr float kChargedBulletLifeTime = 20.0f;
 constexpr float kHeadMuzzleOffset = 4.2f;
 constexpr float kMinimumHealth = 0.0001f;
@@ -141,6 +141,9 @@ void FearWormEnemy::InitializeSegments(Model* model)
         Segment segment { };
         segment.object = std::make_unique<Object3d>();
         segment.object->Initialize(Object3dManager::GetInstance());
+        segment.object->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+        segment.object->SetCastShadow(true);
+        segment.object->SetReceiveShadow(true);
         segment.object->SetModel(model);
         segment.object->SetEnableLighting(false);
         segment.isHead = false;
@@ -800,6 +803,14 @@ void FearWormEnemy::Draw()
     }
 
     DrawBeam();
+}
+
+void FearWormEnemy::DrawShadow(ShadowMapRenderer& renderer)
+{
+    if (state_ == BossState::Wait) { return; }
+    for (Segment& segment : segments_) {
+        if (segment.isAlive && segment.object != nullptr) { segment.object->DrawShadow(renderer); }
+    }
 }
 
 bool FearWormEnemy::IsDeathSequenceFinished() const

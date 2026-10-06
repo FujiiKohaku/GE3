@@ -28,8 +28,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     uint32_t particleIndex = gFreeList[freeListIndex];
 
-    // 床（地表 Y = -4.9f）に貼り付く水平な氷結晶
-    gParticles[particleIndex].translate = float32_t3(gEmitter.translate.x, -4.9f, gEmitter.translate.z);
+    // 呼び出し側から渡された床の高さに貼り付く水平な氷結晶
+    gParticles[particleIndex].translate = gEmitter.translate;
     gParticles[particleIndex].velocity = float32_t3(0.0f, 0.0f, 0.0f);
     gParticles[particleIndex].scale = float32_t3(gEffectSettings.startScale, gEffectSettings.startScale, gEffectSettings.startScale);
     gParticles[particleIndex].lifeTime = gEffectSettings.lifeTime;

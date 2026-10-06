@@ -53,12 +53,12 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float lineStrength = lineShape * radialMask;
     lineStrength *= 0.18f + randomStrength * 0.32f;
     lineStrength *= 0.10f + segmentMask * 0.48f;
-    lineStrength *= 1.0f + boostKickStrength * 1.25f;
+    lineStrength *= 1.0f + radialBlurImpulseStrength * 1.25f;
 
     float3 lineColor = float3(0.62f, 0.82f, 1.0f);
     float3 darkenedColor = textureColor.rgb * (1.0f - lineStrength * 0.06f);
     float3 outputColor = darkenedColor + lineColor * lineStrength * 0.38f;
 
-    textureColor.rgb = saturate(outputColor);
+    textureColor.rgb = max(outputColor, 0.0f);
     return textureColor;
 }

@@ -28,17 +28,24 @@ std::filesystem::path MakeCompiledShaderPath(const std::filesystem::path& hlslPa
 
 std::wstring GetShaderProfile(const std::filesystem::path& sourcePath)
 {
-    const std::wstring fileName = sourcePath.filename().wstring();
-    if (fileName.ends_with(L".VS.hlsl")) {
+    std::wstring fileName = sourcePath.filename().wstring();
+    // Material paths may be normalized to lowercase. Windows accepts either
+    // spelling, so shader stage detection must accept either spelling too.
+    for (wchar_t& character : fileName) {
+        if (character >= L'A' && character <= L'Z') {
+            character += L'a' - L'A';
+        }
+    }
+    if (fileName.ends_with(L".vs.hlsl")) {
         return L"vs_6_0";
     }
-    if (fileName.ends_with(L".PS.hlsl")) {
+    if (fileName.ends_with(L".ps.hlsl")) {
         return L"ps_6_0";
     }
-    if (fileName.ends_with(L".CS.hlsl")) {
+    if (fileName.ends_with(L".cs.hlsl")) {
         return L"cs_6_0";
     }
-    if (fileName.ends_with(L".GS.hlsl")) {
+    if (fileName.ends_with(L".gs.hlsl")) {
         return L"gs_6_0";
     }
     return {};
@@ -233,7 +240,10 @@ void DirectXCommon::InitializeDevice()
         D3D12_MESSAGE_ID denyIds[] = {
             // windows11でのDXGIデバックレイヤーとDX12デバックレイヤーの相互作用バグによるエラーメッセージ
             // https://stackoverflow.com/questions/69805245/directx-12-application-is-crashing-in-windows-11
-            D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE
+            D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+            // シーンごとに背景色を変更するため、作成時の最適化用クリア色とは異なる。
+            // 描画結果に問題のない性能警告のみ除外し、他の警告・エラーでは停止する。
+            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE
         };
         // 抑制するレベル
         D3D12_MESSAGE_SEVERITY severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
@@ -373,7 +383,7 @@ void DirectXCommon::InitializeDescriptorHeaps()
     descriptorSizeRTV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     descriptorSizeDSV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
     // RTV用のヒープ（Shaderからは使わないのでfalse）
-    rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 8, false);
+    rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 11, false);
 
     // DSV用のヒープ（Shaderからは使わないのでfalse）
     dsvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV,3,false);
@@ -561,6 +571,16 @@ void DirectXCommon::SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHan
     commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
     commandList->RSSetViewports(1, &viewport);
     commandList->RSSetScissorRects(1, &scissorRect);
+}
+
+ID3D12Resource* DirectXCommon::GetCurrentBackBuffer() const
+{
+    if (swapChain == nullptr) {
+        return nullptr;
+    }
+
+    const UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+    return swapChainResources[backBufferIndex].Get();
 }
 #pragma endregion
 #pragma region

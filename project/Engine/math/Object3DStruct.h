@@ -15,6 +15,21 @@ struct VertexData {
 struct MaterialData {
 	std::string textureFilePath;
 };
+
+// Keep these values in sync with the shading mode constants in
+// resources/Shaders/Object3D/Object3d.hlsli. The value is stored in the
+// existing material constant buffer, so adding Toon does not change its GPU
+// layout.
+enum class MaterialShadingMode : int32_t {
+    Unlit = 0,
+    Standard = 1,
+    Ice = 2,
+    ArchivePaper = 3,
+    ArchiveLeather = 4,
+    ArchiveBrass = 5,
+    Toon = 6,
+};
+
 // マテリアルデータ（色情報など）
 struct Material {
     Vector4 color;
@@ -23,6 +38,14 @@ struct Material {
     float shininess;
     float environmentCoefficient;
     Matrix4x4 uvTransform;
+    float roughness;
+    float metallic;
+    float specularStrength;
+    float surfacePadding;
+    int32_t normalMapEnabled;
+    float normalMapStrength;
+    float normalMapFlipY;
+    float normalMapPadding;
 };
 
 // 変換行列データ（GPU定数バッファ用）

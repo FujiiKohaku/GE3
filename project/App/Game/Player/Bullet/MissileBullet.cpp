@@ -5,6 +5,8 @@
 void MissileBullet::Initialize(Model* model)
 {
     PlayerBullet::Initialize(model);
+    SetEnableLighting(false);
+    SetColor({ 0.325f, 0.847f, 0.910f, 1.0f });
 
     damage_ = 10;
 

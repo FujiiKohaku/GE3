@@ -1053,6 +1053,22 @@ bool EffectManager::SetEffectVelocity(EffectHandle handle, const Vector3& veloci
     return true;
 }
 
+bool EffectManager::SetEffectDirection(EffectHandle handle, const Vector3& direction)
+{
+    const size_t index = FindActiveEffectIndex(handle);
+    if (index == static_cast<size_t>(-1)) {
+        return false;
+    }
+
+    EmitterSphere* emitter = activeResources_[index].emitterData;
+    if (!emitter) {
+        return false;
+    }
+
+    emitter->direction = direction;
+    return true;
+}
+
 bool EffectManager::SetEffectSkeletonPose(
     EffectHandle handle,
     const EffectSkeletonPose& skeletonPose)
@@ -1394,6 +1410,8 @@ void EffectManager::ResetActiveEffectResource(
     resource.emitterData->padding2[0] = 0;
     resource.emitterData->padding2[1] = 0;
     resource.emitterData->padding2[2] = 0;
+    resource.emitterData->direction = { 0.0f, 0.0f, -1.0f };
+    resource.emitterData->padding3 = 0.0f;
 
     resource.perFrameData->time = 0.0f;
     resource.perFrameData->deltaTime = deltaTime_;

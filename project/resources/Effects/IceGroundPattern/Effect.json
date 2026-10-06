@@ -17,9 +17,23 @@
     "EndScale": 24.0,
     "StartRotation": 0.0,
     "RotationSpeed": 0.12,
-    "Velocity": [0.0, 0.0, 0.0],
-    "StartColor": [0.3, 0.85, 1.0, 0.95],
-    "EndColor": [0.0, 0.4, 0.9, 0.0]
+    "Velocity": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "StartColor": [
+      0.3,
+      0.85,
+      1.0,
+      0.95
+    ],
+    "EndColor": [
+      0.0,
+      0.4,
+      0.9,
+      0.0
+    ]
   },
   "Simulation": {
     "EnableGravity": false,

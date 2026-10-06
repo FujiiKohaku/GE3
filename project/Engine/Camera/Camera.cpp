@@ -117,6 +117,9 @@ void Camera::RecalculateMatrices()
     worldMatrix_ = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
     viewMatrix_ = MatrixMath::Inverse(worldMatrix_);
     projectionMatrix_ = MatrixMath::MakePerspectiveFovMatrix(fovY_, aspectRatio_, nearClip_, farClip_);
+    unjitteredViewProjectionMatrix_ = MatrixMath::Multiply(viewMatrix_, projectionMatrix_);
+    projectionMatrix_.m[2][0] += projectionJitterNdc_.x;
+    projectionMatrix_.m[2][1] += projectionJitterNdc_.y;
     viewProjectionMatrix_ = MatrixMath::Multiply(viewMatrix_, projectionMatrix_);
 }
 

@@ -2,6 +2,7 @@
 #include "Engine/StringUtility/StringUtility.h"
 
 #include <cassert>
+#include "Engine/Light/LightManager.h"
 
 #include <dxcapi.h>
 #pragma comment(lib, "dxcompiler.lib")
@@ -28,6 +29,7 @@ void SkyBoxManager::Initialize(DirectXCommon* dxCommon)
 {
     assert(dxCommon != nullptr);
     dxCommon_ = dxCommon;
+    LightManager::GetInstance()->Initialize(dxCommon_);
 
     CreateRootSignature();
     CreateGraphicsPipeline();
@@ -41,6 +43,9 @@ void SkyBoxManager::PreDraw()
     commandList->SetGraphicsRootSignature(rootSignature_.Get());
     commandList->SetPipelineState(graphicsPipelineState_.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    LightManager* lights = LightManager::GetInstance();
+    commandList->SetGraphicsRootConstantBufferView(2, lights->GetDirectionalGpuAddress());
+    commandList->SetGraphicsRootConstantBufferView(3, lights->GetAmbientGpuAddress());
 }
 
 ID3D12RootSignature* SkyBoxManager::GetRootSignature() const
@@ -68,7 +73,7 @@ void SkyBoxManager::CreateRootSignature()
     descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[2] = {};
+    D3D12_ROOT_PARAMETER rootParameters[4] = {};
 
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
@@ -78,6 +83,13 @@ void SkyBoxManager::CreateRootSignature()
     rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     rootParameters[1].DescriptorTable.pDescriptorRanges = descriptorRange;
     rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+
+    rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[2].Descriptor.ShaderRegister = 1;
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[3].Descriptor.ShaderRegister = 5;
 
     D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
     staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -91,7 +103,7 @@ void SkyBoxManager::CreateRootSignature()
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
     rootSignatureDesc.pParameters = rootParameters;
-    rootSignatureDesc.NumParameters = 2;
+    rootSignatureDesc.NumParameters = 4;
     rootSignatureDesc.pStaticSamplers = &staticSamplerDesc;
     rootSignatureDesc.NumStaticSamplers = 1;
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -173,7 +185,7 @@ void SkyBoxManager::CreateGraphicsPipeline()
     graphicsPipelineStateDesc.DepthStencilState = depthStencilDesc;
     graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     graphicsPipelineStateDesc.NumRenderTargets = 1;
-    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    graphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     graphicsPipelineStateDesc.SampleDesc.Count = 1;
     graphicsPipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
     graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;

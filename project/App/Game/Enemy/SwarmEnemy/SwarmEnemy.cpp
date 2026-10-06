@@ -223,7 +223,7 @@ void SwarmEnemy::FireMovingBullet()
     bullet->SetWavePhase(static_cast<float>(slotIndex_) * 0.72f);
 
     AddEnemyBullet(std::move(bullet));
-    EffectManager::GetInstance()->PlayEffect("ShotBullet", transform_.translate);
+    EffectManager::GetInstance()->PlayEffect("WormShotFlash", transform_.translate);
 }
 
 Vector3 SwarmEnemy::CalculateFormationOffset() const

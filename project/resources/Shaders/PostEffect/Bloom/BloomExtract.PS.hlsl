@@ -1,23 +1,14 @@
 #include "Bloom.hlsli"
-
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
-
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
-    float4 sceneColor = gTexture.Sample(gSampler, input.texcoord);
-
-    float luminance = dot(
-        sceneColor.rgb,
-        float3(0.2126f, 0.7152f, 0.0722f));
-
-    float3 outputColor = float3(0.0f, 0.0f, 0.0f);
-
-    if (bloomEnabled != 0) {
-        if (luminance > threshold) {
-            outputColor = sceneColor.rgb;
-        }
-    }
-
-    return float4(outputColor, 1.0f);
+    float3 color = max(gTexture.Sample(gSampler, input.texcoord).rgb, 0.0f);
+    float brightness = max(color.r, max(color.g, color.b));
+    float knee = max(threshold * 0.25f, 0.0001f);
+    float soft = clamp(brightness - threshold + knee, 0.0f, 2.0f * knee);
+    soft = soft * soft / (4.0f * knee);
+    float contribution = max(brightness - threshold, soft) / max(brightness, 0.0001f);
+    if (bloomEnabled == 0) { contribution = 0.0f; }
+    return float4(color * contribution, 1.0f);
 }

@@ -35,6 +35,7 @@ public:
 
     float GetFrequency() const { return frequency_; }
     void SetFrequency(float frequency) { frequency_ = frequency; }
+    void ResetPosition() { moveTime_ = 0.0f; transform_.translate = startPosition_; }
 
 private:
     void Move() override;

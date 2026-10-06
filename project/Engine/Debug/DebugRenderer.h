@@ -83,6 +83,8 @@ public:
 
     void SetVisible(bool visible) { isVisible_ = visible; }
     bool IsVisible() const { return isVisible_; }
+    void SetWireframeOverlay(bool overlay) { wireframeOverlay_ = overlay; }
+    bool IsWireframeOverlay() const { return wireframeOverlay_; }
 
     ~DebugRenderer();
 
@@ -134,6 +136,7 @@ private:
 
     bool isInitialized_ = false;
     bool isVisible_ = true;
+    bool wireframeOverlay_ = false;
 
     // 1フレーム分のライン情報を保持
     // ------------------------------------------------------------

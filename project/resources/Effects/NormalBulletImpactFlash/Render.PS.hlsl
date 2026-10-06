@@ -52,6 +52,7 @@ PixelShaderOutput main(VertexShaderOutput input)
         discard;
     }
 
+    color.rgb *= 2.2f;
     color = ApplyParticleFog(color, input);
 
     return MakeParticlePixelOutput(color);

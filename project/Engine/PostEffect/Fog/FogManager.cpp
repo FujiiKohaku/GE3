@@ -159,10 +159,10 @@ void FogManager::SetDefaultData()
         return;
     }
 
-    fogData_->color = { 0.65f, 0.75f, 0.85f, 1.0f };
+    fogData_->color = { 0.58f, 0.80f, 0.96f, 1.0f };
 
-    fogData_->distance.start = 350.0f;
-    fogData_->distance.end = 600.0f;
+    fogData_->distance.start = 380.0f;
+    fogData_->distance.end = 720.0f;
     fogData_->distance.density = 1.0f;
     fogData_->distance.curve = 1.2f;
 

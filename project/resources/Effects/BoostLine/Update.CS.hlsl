@@ -48,8 +48,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         gParticles[particleIndex].velocity * gPerFrame.deltaTime;
     gParticles[particleIndex].currentTime += gPerFrame.deltaTime;
 
-    float lifeRate =
-        saturate(gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime);
+    float lifeRate =saturate(gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime);
     float pulse = sin(gPerFrame.time * 18.0f + (float) particleIndex * 1.7f) * 0.035f;
     float noise = sin(gPerFrame.time * 9.0f + (float) particleIndex * 2.3f) * 0.025f;
     float width = gEffectSettings.startScale * (1.0f + pulse);

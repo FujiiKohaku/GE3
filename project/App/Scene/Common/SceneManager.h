@@ -1,0 +1,168 @@
+#pragma once
+#include "App/Scene/Common/BaseScene.h"
+#include "App/Scene/Common/PageTransition.h"
+#include "Engine/Math/MathStruct.h"
+#include <memory>
+#include <vector>
+
+#include "Engine/PostEffect/PostEffectType.h"
+#include "Engine/PostEffect/Fog/FogData.h"
+#include "Engine/PostEffect/PostEffectSettings.h"
+#include <unordered_map>
+
+struct AtmospherePreset {
+    float exposure = 1.0f;
+    DistanceFogData distanceFog { 380.0f, 720.0f, 1.0f, 1.2f };
+    bool shouldApplyFogColor = false;
+    Vector4 fogColor { 0.58f, 0.80f, 0.96f, 1.0f };
+};
+
+struct PostEffectInfo {
+    PostEffectType type = PostEffectType::Copy;
+    PostEffectStage stage = PostEffectStage::BeforeParticle;
+    bool enabled = true;
+    int priority = 0;
+};
+
+class VolumetricLightRenderer;
+
+class SceneManager {
+public:
+    void SetVolumetricLightRenderer(VolumetricLightRenderer* renderer) { volumetricLightRenderer_ = renderer; }
+    VolumetricLightRenderer* GetVolumetricLightRenderer() const { return volumetricLightRenderer_; }
+    static constexpr float kDefaultCameraShakeStrength = 0.008f;
+
+    static SceneManager* GetInstance()
+    {
+        static SceneManager instance;
+        return &instance;
+    }
+
+    // unique_ptrで受け取る
+    void SetNextScene(std::unique_ptr<BaseScene> nextScene)
+    {
+        nextScene_ = std::move(nextScene);
+    }
+
+    // ロード画面を挟んでシーン遷移するテンプレート関数
+    template <typename TLoadingScene, typename TTargetScene, typename... Args>
+    void SetNextSceneWithLoading(Args&&... args)
+    {
+        auto targetScene = std::make_unique<TTargetScene>(std::forward<Args>(args)...);
+        auto loadingScene = std::make_unique<TLoadingScene>(std::move(targetScene));
+        SetNextScene(std::move(loadingScene));
+    }
+
+    bool SetRadialBlurSettings(const RadialBlurSettings& settings);
+    const RadialBlurSettings& GetRadialBlurSettings() const { return radialBlurSettings_; }
+    void SetPostEffectParameters(PostEffectType type, const Vector3& parameters) { effectParameters_[type] = parameters; }
+    const Vector3* FindPostEffectParameters(PostEffectType type) const;
+    void ApplyAtmospherePreset(const AtmospherePreset& preset);
+    void ApplyPostEffectChain(const std::vector<PostEffectInfo>& effects);
+    void Update();
+    void Finalize();
+    void DrawImGui();
+    void Draw2D();
+    void Draw3D();
+    void DrawShadow(ShadowMapRenderer& renderer);
+    ShadowSettings GetShadowSettings() const;
+    void DrawParticle();
+    // PostEffectTypeのセッターとゲッター
+    void SetPostEffectType(PostEffectType postEffectType);
+    PostEffectType GetPostEffectType() const;
+    void AddPostEffect(
+        PostEffectType type,
+        PostEffectStage stage = PostEffectStage::BeforeParticle);
+    void RemovePostEffect(PostEffectType type);
+    void ClearPostEffects();
+    void SetPostEffectEnabled(PostEffectType type, bool enable);
+    const std::vector<PostEffectInfo>& GetPostEffects() const;
+    void SetPostEffectCenter(const Vector2& center);
+    const Vector2& GetPostEffectCenter() const;
+    void SetCameraShakeStrength(float strength);
+    float GetCameraShakeStrength() const;
+    void SetPaintProgress(float progress) { paintProgress_ = progress; }
+    float GetPaintProgress() const { return paintProgress_; }
+    void SetPaintIntensity(float intensity) { paintIntensity_ = intensity; }
+    float GetPaintIntensity() const { return paintIntensity_; }
+    void SetPaintSeed(float seed) { paintSeed_ = seed; }
+    float GetPaintSeed() const { return paintSeed_; }
+    void SetPaintPatternType(int type) { paintPatternType_ = type; }
+    int GetPaintPatternType() const { return paintPatternType_; }
+    void SetPaintColor(const Vector3& color) { paintColor_ = color; }
+    const Vector3& GetPaintColor() const { return paintColor_; }
+    void SetVignetteStrength(float strength) { vignetteStrength_ = strength; }
+    float GetVignetteStrength() const { return vignetteStrength_; }
+    void SetSonicBoomProgress(float progress) { sonicBoomProgress_ = progress; }
+    float GetSonicBoomProgress() const { return sonicBoomProgress_; }
+    void SetSonicBoomCenter(const Vector2& center) { sonicBoomCenter_ = center; }
+    const Vector2& GetSonicBoomCenter() const { return sonicBoomCenter_; }
+    void SetBlackHoleCenter(const Vector2& center) { blackHoleCenter_ = center; }
+    const Vector2& GetBlackHoleCenter() const { return blackHoleCenter_; }
+    void SetBlackHoleRadius(float radius) { blackHoleRadius_ = radius; }
+    float GetBlackHoleRadius() const { return blackHoleRadius_; }
+    void SetBlackHoleStrength(float strength) { blackHoleStrength_ = strength; }
+    float GetBlackHoleStrength() const { return blackHoleStrength_; }
+    void SetWaterEffectIntensity(float intensity) { waterEffectIntensity_ = intensity; }
+    float GetWaterEffectIntensity() const { return waterEffectIntensity_; }
+    void SetBoostSparkIntensity(float intensity) { boostSparkIntensity_ = intensity; }
+    float GetBoostSparkIntensity() const { return boostSparkIntensity_; }
+    void SetBoostSparkElapsedSeconds(float elapsedSeconds) { boostSparkElapsedSeconds_ = elapsedSeconds; }
+    float GetBoostSparkElapsedSeconds() const { return boostSparkElapsedSeconds_; }
+    void SetSceneClearColor(const Vector4& color) { sceneClearColor_ = color; }
+    const Vector4& GetSceneClearColor() const { return sceneClearColor_; }
+    void SetSceneFogColor(const Vector4& color) { sceneFogColor_ = color; }
+    const Vector4& GetSceneFogColor() const { return sceneFogColor_; }
+    void SetSceneDistanceFog(const DistanceFogData& fog)
+    {
+        sceneDistanceFog_ = fog;
+        ++sceneFogRevision_;
+    }
+    const DistanceFogData& GetSceneDistanceFog() const { return sceneDistanceFog_; }
+    void SetSceneExposure(float exposure);
+    float GetSceneExposure() const { return sceneExposure_; }
+    uint64_t GetSceneExposureRevision() const { return sceneExposureRevision_; }
+    uint64_t GetSceneFogRevision() const { return sceneFogRevision_; }
+    uint64_t GetSceneRevision() const { return sceneRevision_; }
+
+private:
+    VolumetricLightRenderer* volumetricLightRenderer_ = nullptr;
+    SceneManager() = default;
+    ~SceneManager() = default;
+
+    SceneManager(const SceneManager&) = delete;
+    SceneManager& operator=(const SceneManager&) = delete;
+    PostEffectType postEffectType_ = PostEffectType::Copy;
+    std::vector<PostEffectInfo> postEffects_;
+    Vector2 postEffectCenter_ = { 0.5f, 0.5f };
+    float cameraShakeStrength_ = kDefaultCameraShakeStrength;
+    float vignetteStrength_ = 1.0f;
+    float sonicBoomProgress_ = 0.0f;
+    Vector2 sonicBoomCenter_ = { 0.5f, 0.5f };
+    Vector2 blackHoleCenter_ = { 0.5f, 0.5f };
+    float blackHoleRadius_ = 0.16f;
+    float blackHoleStrength_ = 1.0f;
+    float waterEffectIntensity_ = 0.0f;
+    float boostSparkIntensity_ = 0.0f;
+    float boostSparkElapsedSeconds_ = 0.0f;
+    RadialBlurSettings radialBlurSettings_;
+    std::unordered_map<PostEffectType, Vector3> effectParameters_;
+    PageTransition::RevealOverlay pageReveal_;
+    float paintProgress_ = 0.0f;
+    float paintIntensity_ = 0.0f;
+    float paintSeed_ = 0.0f;
+    int paintPatternType_ = 0;
+    Vector3 paintColor_ = { 0.95f, 0.10f, 0.58f };
+    Vector4 sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
+    Vector4 sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
+    DistanceFogData sceneDistanceFog_ { 380.0f, 720.0f, 1.0f, 1.2f };
+    uint64_t sceneFogRevision_ = 1;
+    float sceneExposure_ = 1.0f;
+    uint64_t sceneExposureRevision_ = 1;
+
+private:
+    std::unique_ptr<BaseScene> scene_;
+    uint64_t sceneRevision_ = 0;
+    std::unique_ptr<BaseScene> nextScene_;
+    std::unique_ptr<BaseScene> retiredScene_;
+};

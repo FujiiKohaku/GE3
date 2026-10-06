@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/Math/MathStruct.h"
 #include "Engine/Math/MatrixMath.h"
@@ -15,11 +16,17 @@ public:
     // 更新
     void Update();
     void DrawImGui();
+    void ResetMotionHistory() { motionHistoryId_ = nextMotionHistoryId_++; }
+    uint64_t GetMotionHistoryId() const { return motionHistoryId_; }
+    void SetProjectionJitter(const Vector2& jitterNdc) { projectionJitterNdc_ = jitterNdc; RecalculateMatrices(); }
+    const Matrix4x4& GetUnjitteredViewProjectionMatrix() const { return unjitteredViewProjectionMatrix_; }
+    const Vector2& GetProjectionJitter() const { return projectionJitterNdc_; }
     // ===============================
     // setter（外部から値を設定）
     // ===============================
     void SetRotate(const Vector3& rotate) { transform_.rotate = rotate; }
     void SetTranslate(const Vector3& translate) { transform_.translate = translate; }
+    void SetScale(const Vector3& scale) { transform_.scale = scale; }
     void SetFovY(float fovY) { fovY_ = fovY; }
     void SetAspectRatio(float aspectRatio) { aspectRatio_ = aspectRatio; }
     void SetNearClip(float nearClip) { nearClip_ = nearClip; }
@@ -39,6 +46,7 @@ public:
     // 各種Transform情報
     const Vector3& GetRotate() const { return transform_.rotate; }
     const Vector3& GetTranslate() const { return transform_.translate; }
+    const Vector3& GetScale() const { return transform_.scale; }
     Vector3& GetTranslate() { return transform_.translate; }
     Vector3& GetRotate() { return transform_.rotate; }
     // 各種プロジェクション設定値
@@ -52,6 +60,8 @@ public:
     }
 
 private:
+    inline static uint64_t nextMotionHistoryId_ = 1;
+    uint64_t motionHistoryId_ = nextMotionHistoryId_++;
     struct CameraForGPU {
         Vector3 worldPosition;
     };
@@ -64,6 +74,8 @@ private:
     Matrix4x4 viewMatrix_;
     Matrix4x4 projectionMatrix_;
     Matrix4x4 viewProjectionMatrix_;
+    Matrix4x4 unjitteredViewProjectionMatrix_ = viewProjectionMatrix_;
+    Vector2 projectionJitterNdc_ = {};
     // プロジェクション計算用パラメータ
     float fovY_ = 0.45f; // 垂直方向の視野角
     float aspectRatio_ = static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight);

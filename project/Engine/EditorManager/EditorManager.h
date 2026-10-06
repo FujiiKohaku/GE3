@@ -27,6 +27,9 @@ public:
     void LoadJson(const std::string& filePath);
 
     void SetSelectedObject(Object3d* object);
+    Object3d* GetSelectedObject() const { return selectedObject_; }
+    GizmoMode GetGizmoMode() const { return gizmoMode_; }
+    void SetGizmoMode(GizmoMode mode) { gizmoMode_ = mode; }
     void DrawGizmo(Camera* camera);
 
     //void AddObject(Object3d* object);

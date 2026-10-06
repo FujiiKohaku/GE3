@@ -21,6 +21,9 @@ struct SpriteGraphicsPipelineDesc {
 
 class SpriteRenderManager {
 public:
+#if defined(KOHAKU_RENDER_TESTS)
+    void FreezeFrameTimeForTests(bool frozen) { freezeFrameTimeForTests_ = frozen; }
+#endif
     void Initialize(DirectXCommon* dxCommon);
     void PreDraw();
     void BindPipeline(const SpriteGraphicsPipelineDesc& desc);
@@ -38,6 +41,9 @@ private:
     void UpdateFrameParameters();
 
 private:
+#if defined(KOHAKU_RENDER_TESTS)
+    bool freezeFrameTimeForTests_ = false;
+#endif
     DirectXCommon* dxCommon_ = nullptr;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelineStateCache_;

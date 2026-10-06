@@ -14,6 +14,7 @@ public:
     void SetCameraInfo(float nearClip, float farClip, float fovY, float aspectRatio);
 
     const FogData& GetFogData() const;
+    FogData* GetEditableFogData() { return fogData_; }
     D3D12_GPU_VIRTUAL_ADDRESS GetConstantBufferView() const;
 
 private:
