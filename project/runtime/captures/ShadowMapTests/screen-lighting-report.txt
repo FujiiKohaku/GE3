@@ -1,0 +1,11 @@
+SSAO changed pixels: 808
+Atmosphere changed pixels: 435879
+Environment changed pixels: 436058
+Mode 0 GPU ms: 0.904192
+Mode 1 GPU ms: 2.17032
+Mode 2 GPU ms: 2.17206
+Mode 3 GPU ms: 0.949402
+Mode 4 GPU ms: 1.05569
+Mode 5 GPU ms: 2.42775
+Mode 6 GPU ms: 0.914483
+Mode 7 GPU ms: 0.906957

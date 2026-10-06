@@ -1,0 +1,1 @@
+PASS: SSGI colored bounce, OFF/zero/missing input, metallic, shared Hi-Z parity, temporal noise reduction, no trails, history reset; direct/ambient composition and controls, ice ambient gain, material roughness blur, foreground edges preserved, temporal jitter reduction, default ON, no D3D12 errors

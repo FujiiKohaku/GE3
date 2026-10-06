@@ -1,0 +1,1 @@
+PASS: actual NGX DLAA, 1280x720 -> 1280x720; evaluations=235; title/stage03/jellyfish, ON/OFF/re-enable, no D3D12 errors

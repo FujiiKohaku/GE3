@@ -1,0 +1,1 @@
+PASS: actual stage01 game render, shadow ON/OFF, no D3D12 errors

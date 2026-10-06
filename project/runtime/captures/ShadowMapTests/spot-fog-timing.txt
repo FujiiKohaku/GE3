@@ -1,0 +1,7 @@
+1280x720, half-resolution, 32 samples, 20 measured frames; post processing only
+Mode 0 ms: 1.05165
+Mode 1 ms: 1.41645
+Mode 2 ms: 1.71525
+Mode 3 ms: 1.30673
+Mode 4 ms: 1.30816
+Added shadowed spot ms: 0.663603

@@ -4,9 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 18.5.11801.241
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KohakuEngine", "CG2_LE2C_FUJII.vcxproj", "{363657A6-518D-4D5C-90B2-3D50B381F493}"
-	ProjectSection(ProjectDependencies) = postProject
-		{DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5} = {DAB7DF7C-5AA7-4179-9AEF-A0F34FC521B5}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{2022CB0F-8BAF-F49E-0C48-8EF4C96EC109}"
 	ProjectSection(SolutionItems) = preProject

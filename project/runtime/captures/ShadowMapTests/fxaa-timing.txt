@@ -1,0 +1,5 @@
+1280x720, isolated HDR finishing, debug layer enabled, 20 samples
+ToneMap ms: 0.0281088
+ToneMap + FXAA ms: 0.111053
+Bloom + ToneMap + FXAA ms: 0.21248
+Bloom difference ms: 0.101427

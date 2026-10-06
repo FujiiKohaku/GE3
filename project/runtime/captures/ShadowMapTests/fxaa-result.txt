@@ -1,0 +1,1 @@
+PASS: title, stage03, jellyfish; FXAA ON/OFF, exact strength zero, opaque HUD unchanged, no D3D12 errors

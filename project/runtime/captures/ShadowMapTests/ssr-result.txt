@@ -1,0 +1,1 @@
+PASS: changedPixels=121831; reflectionHitPixels=79975; traceAndCompositeGpuMs=0.254976

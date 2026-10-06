@@ -1,0 +1,33 @@
+Direct + ambient composition error: 0.00231761
+ssao-combined-off GPU ms: 0.0256
+ssao-combined-on GPU ms: 0.267264
+ssao-direct-off GPU ms: 0.0256
+ssao-direct-on GPU ms: 0.267264
+Ambient-only SSAO affected pixels: 28368
+SSGI default GPU ms: 0.989184
+SSGI red bounce pixels: 9489
+SSGI green bounce pixels: 7744
+SSGI raw variation: 8075724
+SSGI temporal variation: 3014675
+Box mirror center: 508.56,473.263
+Pillar mirror center: 744.7,472.109
+Hi-Z thin rail pixels: 814
+Red mirror pixels: 1369
+Green mirror pixels: 1369
+SSR GPU ms: 0.360448
+Legacy thin rail pixels: 592
+Legacy GPU ms: 0.344064
+Temporal GPU ms: 0.273408
+Raw GPU ms: 0.259072
+Raw sequence variation: 5146212
+Temporal sequence variation: 4927522
+History difference: 277770
+sharp-0 GPU ms: 0.26112
+blur-0 GPU ms: 0.277504
+Roughness 0.08 blur difference: 0
+sharp-1 GPU ms: 0.257024
+blur-1 GPU ms: 0.354304
+Roughness 0.18 blur difference: 40716
+sharp-2 GPU ms: 0.260096
+blur-2 GPU ms: 0.350208
+Roughness 0.75 blur difference: 299160

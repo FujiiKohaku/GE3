@@ -1,0 +1,5 @@
+Box mirror center: 508.56,473.263
+Pillar mirror center: 744.7,472.109
+Red mirror pixels: 1369
+Green mirror pixels: 1369
+SSR GPU ms: 0.19456
