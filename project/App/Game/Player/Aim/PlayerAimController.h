@@ -16,8 +16,8 @@ public:
     const Vector2& GetAimScreenPosition() const { return aimScreenPosition_; }
 
 private:
-    static constexpr float kAimConvergenceDistance = 220.0f;
-    static constexpr float kAimDistanceFollowSpeed = 12.0f;
+    const float kAimConvergenceDistance = 220.0f;
+    const float kAimDistanceFollowSpeed = 12.0f;
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
     float smoothedAimDistance_ = kAimConvergenceDistance;
 };
