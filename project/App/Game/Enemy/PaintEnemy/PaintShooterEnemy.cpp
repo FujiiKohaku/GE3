@@ -8,7 +8,7 @@ void PaintShooterEnemy::Initialize(Model* model, Model* bulletModel, Player* pla
     BaseEnemy::Initialize(model);
     bulletModel_ = bulletModel;
     player_ = player;
-    hp_ = 2.0f; // 少し高めのHP
+    hp_ = 7.0f;
 }
 
 void PaintShooterEnemy::Update()

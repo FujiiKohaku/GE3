@@ -12,6 +12,7 @@ void NormalEnemy::Initialize(
     Player* player)
 {
     BaseEnemy::Initialize(model);
+    hp_ = 4.0f;
 
     bulletModel_ = bulletModel;
 

@@ -10,6 +10,7 @@
 void MoveEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
     BaseEnemy::Initialize(model);
+    hp_ = 4.0f;
 
     bulletModel_ = bulletModel;
     player_ = player;
