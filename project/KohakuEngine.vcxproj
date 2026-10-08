@@ -292,9 +292,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponHeat.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerHomingLock.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerScreenConstraint.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerRollController.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerSteeringController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\Roll\PlayerRollController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\Steering\PlayerSteeringController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerMovementController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Health\PlayerHealth.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Aim\PlayerAimController.cpp" />
@@ -465,9 +465,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponHeat.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerHomingLock.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerScreenConstraint.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerRollController.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerSteeringController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\Roll\PlayerRollController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\Steering\PlayerSteeringController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerMovementController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Health\PlayerHealth.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Aim\PlayerAimController.h" />

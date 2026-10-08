@@ -107,6 +107,15 @@
     <Filter Include="Player\Bullet">
       <UniqueIdentifier>{0d9a3e83-416c-4c37-859a-6c6cb810deac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Player\Movement\Roll">
+      <UniqueIdentifier>{d85e35b7-10ab-4e1a-881c-0c968e6ab3ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Movement\Steering">
+      <UniqueIdentifier>{726816da-ede0-4b9a-9529-a873f4510cfe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Movement\ScreenConstraint">
+      <UniqueIdentifier>{6e6e725f-6394-4a13-a637-2539a7368413}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App\main.cpp">
@@ -304,14 +313,14 @@
     <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
       <Filter>Player\Weapon</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\PlayerScreenConstraint.cpp">
-      <Filter>Player\Movement</Filter>
+    <ClCompile Include="App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.cpp">
+      <Filter>Player\Movement\ScreenConstraint</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\PlayerRollController.cpp">
-      <Filter>Player\Movement</Filter>
+    <ClCompile Include="App\Game\Player\Movement\Roll\PlayerRollController.cpp">
+      <Filter>Player\Movement\Roll</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\PlayerSteeringController.cpp">
-      <Filter>Player\Movement</Filter>
+    <ClCompile Include="App\Game\Player\Movement\Steering\PlayerSteeringController.cpp">
+      <Filter>Player\Movement\Steering</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Movement\PlayerMovementController.cpp">
       <Filter>Player\Movement</Filter>
@@ -788,14 +797,14 @@
     <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponController.h">
       <Filter>Player\Weapon</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\PlayerScreenConstraint.h">
-      <Filter>Player\Movement</Filter>
+    <ClInclude Include="App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.h">
+      <Filter>Player\Movement\ScreenConstraint</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\PlayerRollController.h">
-      <Filter>Player\Movement</Filter>
+    <ClInclude Include="App\Game\Player\Movement\Roll\PlayerRollController.h">
+      <Filter>Player\Movement\Roll</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\PlayerSteeringController.h">
-      <Filter>Player\Movement</Filter>
+    <ClInclude Include="App\Game\Player\Movement\Steering\PlayerSteeringController.h">
+      <Filter>Player\Movement\Steering</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Movement\PlayerMovementController.h">
       <Filter>Player\Movement</Filter>

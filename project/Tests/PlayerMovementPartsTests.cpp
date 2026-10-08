@@ -1,5 +1,5 @@
-#include "App/Game/Player/Movement/PlayerRollController.h"
-#include "App/Game/Player/Movement/PlayerSteeringController.h"
+#include "App/Game/Player/Movement/Roll/PlayerRollController.h"
+#include "App/Game/Player/Movement/Steering/PlayerSteeringController.h"
 #include <cassert>
 #include <cmath>
 
@@ -53,6 +53,27 @@ void TestRollTapExpiry()
     assert(!roll.IsRolling());
 }
 
+void TestRollAtDifferentFrameRates()
+{
+    const int frameRates[] = { 30, 120 };
+    for (int framesPerSecond : frameRates) {
+        PlayerRollController roll;
+        EulerTransform transform{};
+        const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
+        roll.Update(transform, true, false, deltaTimeSeconds);
+        roll.Update(transform, true, false, deltaTimeSeconds);
+        assert(roll.IsRolling());
+        const int durationFrames = framesPerSecond / 2;
+        for (int frameIndex = 0; frameIndex < durationFrames - 1; ++frameIndex) {
+            roll.Update(transform, false, false, deltaTimeSeconds);
+        }
+        assert(roll.IsRolling());
+        roll.Update(transform, false, false, deltaTimeSeconds);
+        assert(!roll.IsRolling());
+        assert(transform.rotate.z == 0.0f);
+    }
+}
+
 void TestSteeringDeadZoneAndReset()
 {
     PlayerSteeringController steering;
@@ -93,6 +114,7 @@ int main()
 {
     TestRollDurationAndCooldown();
     TestRollTapExpiry();
+    TestRollAtDifferentFrameRates();
     TestSteeringDeadZoneAndReset();
     TestAllRangeSteeringTimeStep();
 }

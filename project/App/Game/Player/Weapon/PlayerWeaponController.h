@@ -22,7 +22,7 @@ public:
     void Initialize();
     void SetCamera(Camera* camera);
     void UpdateInput(Input* input, bool isDebugMode);
-    void FireBullet(const Camera& activeCamera);
+    bool FireBullet(const Camera& activeCamera);
     void UpdateBullets();
     void RemoveDeadBullets();
     void DrawBullets();
@@ -68,13 +68,13 @@ private:
     float bulletSpeed_ = 5.8f;
     int currentWeapon_ = kWeaponNormalBullet;
     static constexpr int kNormalBulletDamage = 3;
-    static constexpr int kNormalFireIntervalFrames = 10;
-    int normalFireCooldownFrames_ = 0;
-    static constexpr int kMissileFireIntervalFrames = 120;
-    int missileFireCooldownFrames_ = kMissileFireIntervalFrames;
+    static constexpr float kNormalFireIntervalSeconds = 10.0f / 60.0f;
+    float normalFireCooldownSeconds_ = 0;
+    static constexpr float kMissileFireIntervalSeconds = 2.0f;
+    float missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
     static constexpr int kMinigunDamage = 1;
-    static constexpr int kMinigunFireIntervalFrames = 3;
-    int minigunFireCooldownFrames_ = 0;
+    static constexpr float kMinigunFireIntervalSeconds = 3.0f / 60.0f;
+    float minigunFireCooldownSeconds_ = 0;
 #ifdef _DEBUG
     bool shouldDrawDebugLines_ = false;
     Vector3 debugAimRayOrigin_ = {};

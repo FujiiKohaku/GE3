@@ -27,6 +27,12 @@ void TestRailFrameAndAreaForce()
     assert(transform.translate.y == 8.0f);
     assert(transform.translate.z == 50.0f);
     assert(movement.GetAutomaticWorldVelocity().x == -0.5f);
+    transform.translate = { 4.0f, 5.0f, 6.0f };
+    movement.SynchronizePosition();
+    movement.ApplyRailPosition();
+    assert(transform.translate.x == 4.0f);
+    assert(transform.translate.y == 5.0f);
+    assert(transform.translate.z == 6.0f);
 }
 
 void TestAllRangeAndControls()
@@ -57,6 +63,11 @@ void TestAllRangeAndControls()
     assert(movement.GetMouseSensitivity() == 2.0f);
     movement.SetControlMode(PlayerMovementController::ControlMode::KeyboardAndMouse);
     assert(movement.GetControlMode() == PlayerMovementController::ControlMode::KeyboardAndMouse);
+    transform.rotate = { 0.3f, -0.5f, 0.0f };
+    movement.SynchronizeOrientation();
+    const Vector3 synchronizedForward = movement.GetFlightForward();
+    assert(IsNear(synchronizedForward.x, std::sin(0.5f) * std::cos(-0.3f)));
+    assert(IsNear(synchronizedForward.y, std::sin(-0.3f)));
 }
 
 void TestScreenConstraintWithCamera()

@@ -32,15 +32,18 @@ void Player::Initialize(Model* model)
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
 
+    // プレイヤー初期化時に、照準を画面中央へ置き、狙う距離を基準値に戻す。
     aimController_.Initialize();
 }
 
 void Player::Update()
 {
     if (object_ == nullptr || TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
+        // 未初期化・時間停止中は、入力や弾を含めて更新を進めない。
         return;
     }
     if (!health_.IsAlive()) {
+        // 死亡後は通常操作へ進まず、落下演出と残っている弾だけを更新する。
         UpdateDeath();
         return;
     }
@@ -48,24 +51,29 @@ void Player::Update()
     if (input == nullptr) {
         return;
     }
-    if (camera_ != nullptr) {
-        aimController_.UpdateSmoothedAimDistance(*camera_, TimeManager::GetInstance()->GetDeltaTime());
-    }
-    health_.UpdateInvincibility();
+    health_.UpdateInvincibility(TimeManager::GetInstance()->GetDeltaTime());
     if (debugCameraController_ != nullptr) {
         isDebugMode_ = debugCameraController_->GetDebugMode();
     }
 
     movementController_.UpdateBoost(input, isDebugMode_);
-    weaponController_.UpdateInput(input, isDebugMode_);
     if (!isDebugMode_) {
+        // 照準を先に確定してから操舵し、発射と表示で参照する位置を揃える。
+        // 最新のマウス位置を取得し、この後の操舵とレティクル表示に使う。
         aimController_.UpdateMouseAim();
-        movementController_.UpdateMovement(input);
         aimController_.ClampAimScreenPosition();
+        if (camera_ != nullptr) {
+            // 最新の照準位置で、発射に使う奥行きを確定する。
+            aimController_.UpdateSmoothedAimDistance(*camera_, TimeManager::GetInstance()->GetDeltaTime());
+        }
+        movementController_.UpdateMovement(input);
     }
     movementController_.ApplyRailPosition();
     ApplyTransform();
+    // 最新の照準と移動後の銃口から発射し、弾はこの後で1回だけ更新する。
+    weaponController_.UpdateInput(input, isDebugMode_);
     weaponController_.UpdateBullets();
+    // 寿命切れや命中で無効になった弾を一覧から取り除く。
     weaponController_.RemoveDeadBullets();
     object_->Update();
 #ifdef _DEBUG
@@ -75,6 +83,7 @@ void Player::Update()
 
 void Player::UpdateDeath()
 {
+    // 落下中だけ機体姿勢を変える。落下終了後の爆発はシーン側が担当する。
     if (health_.IsFalling()) {
         health_.UpdateDeathAnimation(transform_, TimeManager::GetInstance()->GetDeltaTime());
         ApplyTransform();
@@ -109,6 +118,8 @@ void Player::SetEnableLighting(bool isEnabled)
 void Player::SetTranslate(const Vector3& translate)
 {
     transform_.translate = translate;
+    // 次のレール位置計算で、外部から設定した位置が元へ戻らないようにする。
+    movementController_.SynchronizePosition();
     if (object_ != nullptr) {
         ApplyTransform();
         object_->Update();
@@ -120,8 +131,10 @@ void Player::SetRotate(const Vector3& rotate)
     transform_.rotate.x = rotate.x;
     transform_.rotate.y = rotate.y;
     if (!movementController_.IsRolling()) {
+        // シーン側の機体傾きで、ロール演出の回転を上書きしない。
         transform_.rotate.z = rotate.z;
     }
+    movementController_.SynchronizeOrientation();
 }
 
 void Player::SetRailFrame(const Vector3& railBasePosition, const Vector3& railRight,
@@ -147,6 +160,7 @@ bool Player::ApplyDamage(int damage)
 {
     const bool hasAppliedDamage = health_.ApplyDamage(damage, movementController_.IsRolling());
     if (hasAppliedDamage && health_.IsDead()) {
+        // 死亡状態への移行に合わせ、ブースト・ロール・ロックオンを解除する。
         movementController_.Stop();
         weaponController_.ResetHomingLock();
     }
@@ -159,6 +173,7 @@ void Player::Draw()
         return;
     }
     weaponController_.DrawBullets();
+    // 被弾後の点滅で機体を隠す場合も、発射済みの弾は表示する。
     if (health_.ShouldDraw()) {
         object_->Draw();
     }

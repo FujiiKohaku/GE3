@@ -66,6 +66,19 @@ void TestDevelopmentInvincibility()
 
 int main()
 {
+    // 更新頻度が変わっても、被弾後の無敵時間は1秒になる。
+    const int frameRates[] = { 30, 120 };
+    for (int framesPerSecond : frameRates) {
+        PlayerHealth health;
+        assert(health.ApplyDamage(1, false));
+        const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
+        for (int frameIndex = 0; frameIndex < framesPerSecond - 1; ++frameIndex) {
+            health.UpdateInvincibility(deltaTimeSeconds);
+        }
+        assert(!health.ApplyDamage(1, false));
+        health.UpdateInvincibility(deltaTimeSeconds);
+        assert(health.ApplyDamage(1, false));
+    }
     TestDamageAndInvincibility();
     TestHealingAndDeath();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)

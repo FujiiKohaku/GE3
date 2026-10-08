@@ -13,9 +13,31 @@ void PlayerMovementController::Initialize()
     railOffset_ = {};
 }
 
+void PlayerMovementController::SynchronizePosition()
+{
+    // 現在のオフセットを維持し、次のレール位置計算でも設定位置を再現する。
+    railBasePosition_ = transform_.translate - railRight_ * railOffset_.x -
+        railUp_ * railOffset_.y - railForward_ * railOffset_.z;
+}
+
+void PlayerMovementController::SynchronizeOrientation()
+{
+    if (!isAllRangeMode_) {
+        return;
+    }
+    flightYaw_ = -transform_.rotate.y;
+    flightPitch_ = -transform_.rotate.x;
+    railForward_ = { std::sin(flightYaw_) * std::cos(flightPitch_),
+        std::sin(flightPitch_), std::cos(flightYaw_) * std::cos(flightPitch_) };
+    railRight_ = Normalize(Cross(Vector3{ 0.0f, 1.0f, 0.0f }, railForward_));
+    railUp_ = Normalize(Cross(railForward_, railRight_));
+}
+
 void PlayerMovementController::UpdateMovement(Input* input)
 {
-    rollController_.Update(transform_, input->IsKeyTrigger(DIK_A), input->IsKeyTrigger(DIK_D));
+    // ロールは移動モードにかかわらず先に更新し、その後で移動処理を選ぶ。
+    rollController_.Update(transform_, input->IsKeyTrigger(DIK_A), input->IsKeyTrigger(DIK_D),
+        TimeManager::GetInstance()->GetDeltaTime());
     if (isAllRangeMode_) {
         UpdateAllRangeMove(input);
     } else if (controlMode_ == ControlMode::StarFox) {
@@ -34,6 +56,7 @@ void PlayerMovementController::ApplyRailPosition()
 
 void PlayerMovementController::Stop()
 {
+    // 死亡時に操作状態を解除する。速度や位置を0にする処理ではない。
     isBoosting_ = false;
     rollController_.Stop();
 }
@@ -65,6 +88,7 @@ void PlayerMovementController::ApplyRailAreaForce(const Vector3& force)
 void PlayerMovementController::SetControlMode(ControlMode mode)
 {
     if (controlMode_ != mode) {
+        // 操作方式を変えた直後に、前のマウス操舵が残らないようにする。
         steeringController_.Reset();
     }
     controlMode_ = mode;
@@ -75,8 +99,10 @@ void PlayerMovementController::UpdateBoost(Input* input, bool isDebugMode)
     isBoosting_ = !isDebugMode &&
         (input->IsKeyPressed(DIK_LSHIFT) || input->IsMousePressed(1));
     if (isBoosting_ && !wasBoosting) {
+        // 押し続けている間は繰り返さず、ブースト開始時だけ効果音を鳴らす。
         SoundManager::GetInstance()->Play("BoostStart");
     }
+    // 現在の入力に応じて前進速度と左右・上下の移動量を直接切り替える。
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
     if (isBoosting_) {
@@ -127,6 +153,7 @@ void PlayerMovementController::EnableAllRangeMode(float areaRadius, float minHei
     flightAreaRadius_ = areaRadius;
     flightMinHeight_ = minHeight;
     flightMaxHeight_ = maxHeight;
+    // 切り替え前の機体姿勢を引き継ぎ、飛行方向と直交する左右・上下の軸を作る。
     flightYaw_ = -transform_.rotate.y;
     flightPitch_ = -transform_.rotate.x;
     railForward_ = {
@@ -154,6 +181,7 @@ void PlayerMovementController::UpdateAllRangeMove(Input* input)
     }
 
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    // 手動旋回の後に範囲復帰と高度補正を加え、その姿勢で移動・傾きを更新する。
     UpdateFlightOrientation(steering, deltaTimeSeconds);
     UpdateFlightAreaReturn(steering, deltaTimeSeconds);
     UpdateFlightHeight(deltaTimeSeconds);
@@ -174,16 +202,18 @@ void PlayerMovementController::UpdateFlightOrientation(const Vector2& steering, 
 void PlayerMovementController::UpdateFlightAreaReturn(Vector2& steering, float deltaTimeSeconds)
 {
     constexpr float kYawSpeed = 1.35f;
-    // Begin an automatic inward turn early enough to keep the chase camera inside the ocean.
+    // 追従カメラも範囲内に収まるよう、機体が端に達する前に内側への旋回を始める。
     const float horizontalDistance = std::sqrt(
         transform_.translate.x * transform_.translate.x +
         transform_.translate.z * transform_.translate.z);
+    // 復帰開始と終了の距離に差を設け、境界付近で状態が頻繁に切り替わるのを防ぐ。
     if (horizontalDistance > flightAreaRadius_ - 90.0f) {
         isReturningToFlightArea_ = true;
     } else if (horizontalDistance < flightAreaRadius_ - 150.0f) {
         isReturningToFlightArea_ = false;
     }
     if (isReturningToFlightArea_) {
+        // 先に加えた手動の左右旋回を取り消し、原点方向へ自動旋回させる。
         flightYaw_ -= steering.x * kYawSpeed * deltaTimeSeconds;
         const float inwardYaw = std::atan2(-transform_.translate.x, -transform_.translate.z);
         const float yawDifference = std::remainder(
@@ -196,6 +226,7 @@ void PlayerMovementController::UpdateFlightAreaReturn(Vector2& steering, float d
 
 void PlayerMovementController::UpdateFlightHeight(float deltaTimeSeconds)
 {
+    // 高度の端へ向かう場合だけ、反対向きの緩やかなピッチへ近づける。
     if (transform_.translate.y < flightMinHeight_ + 12.0f && flightPitch_ < 0.0f) {
         flightPitch_ += (0.25f - flightPitch_) * (1.0f - std::exp(-4.0f * deltaTimeSeconds));
     }
@@ -213,11 +244,13 @@ void PlayerMovementController::UpdateFlightPosition(float deltaTimeSeconds)
     };
     railRight_ = Normalize(Cross(Vector3 { 0.0f, 1.0f, 0.0f }, railForward_));
     railUp_ = Normalize(Cross(railForward_, railRight_));
+    // 60FPS基準の前進量を経過秒数に換算し、フレームレートに応じて移動させる。
     transform_.translate += railForward_ * (velocity_.z * 60.0f * deltaTimeSeconds);
     const float distanceAfterMove = std::sqrt(
         transform_.translate.x * transform_.translate.x +
         transform_.translate.z * transform_.translate.z);
     if (distanceAfterMove > flightAreaRadius_) {
+        // 自動復帰でも範囲外へ出た場合は、水平位置を円の境界へ戻す。
         const float correction = flightAreaRadius_ / distanceAfterMove;
         transform_.translate.x *= correction;
         transform_.translate.z *= correction;
@@ -232,6 +265,7 @@ void PlayerMovementController::UpdateFlightPosition(float deltaTimeSeconds)
 void PlayerMovementController::UpdateFlightBank(const Vector2& steering, float deltaTimeSeconds)
 {
     if (!rollController_.IsRolling()) {
+        // ロールのZ回転を上書きせず、通常の旋回中だけ機体の傾きを補間する。
         const float targetBank = -steering.x * 0.65f;
         transform_.rotate.z += (targetBank - transform_.rotate.z) *
             (1.0f - std::exp(-7.0f * deltaTimeSeconds));
@@ -244,6 +278,7 @@ void PlayerMovementController::UpdateStarFoxSteering()
         static_cast<float>(WinApp::GetInstance()->GetClientWidth()),
         static_cast<float>(WinApp::GetInstance()->GetClientHeight())
     };
+    // 照準の画面中央からのずれを、機体を操舵する入力に変換する。
     steeringController_.Update(aimController_.GetAimScreenPosition(), screenSizePixels,
         isAllRangeMode_, TimeManager::GetInstance()->GetDeltaTime());
 }

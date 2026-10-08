@@ -18,8 +18,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Remove="@(ClCompile)" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerRollController.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\PlayerSteeringController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\Roll\PlayerRollController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Movement\Steering\PlayerSteeringController.cpp" />
     <ClCompile Include="$(projectRootPath)Tests\PlayerMovementPartsTests.cpp" />
   </ItemGroup>
 </Project>

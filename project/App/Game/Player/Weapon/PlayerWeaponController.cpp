@@ -12,6 +12,7 @@
 #include "Engine/audio/SoundManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Debug/DebugRenderer.h"
+#include <algorithm>
 
 void PlayerWeaponController::Initialize()
 {
@@ -33,10 +34,12 @@ void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
         UpdateWeaponSwitch(input);
     }
     const bool isFireHeld = input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0);
-    UpdateHomingFireInput(isFireHeld, isDebugMode);
-    if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
-        ++missileFireCooldownFrames_;
+    if (missileFireCooldownSeconds_ + 0.000001f < kMissileFireIntervalSeconds) {
+        missileFireCooldownSeconds_ = (std::min)(kMissileFireIntervalSeconds,
+            missileFireCooldownSeconds_ + TimeManager::GetInstance()->GetDeltaTime());
     }
+    // クールダウンを進めてから、発射可否を判定する。
+    UpdateHomingFireInput(isFireHeld, isDebugMode);
     UpdateWeaponHeat(isFireHeld, isDebugMode);
     UpdateFireInput(input, isDebugMode);
 }
@@ -44,10 +47,12 @@ void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
 void PlayerWeaponController::UpdateHomingFireInput(bool isFireHeld, bool isDebugMode)
 {
     const bool isEnabled = !isDebugMode && IsHomingMissileSelected();
+    // 画面上の照準位置を、ホーミングミサイルのロック対象を選ぶ基準に使う。
     if (homingLock_.UpdateFireInput(isFireHeld, isEnabled, camera_, transform_.translate,
         movementController_.GetFlightForward(), aimController_.GetAimScreenPosition())) {
-        FireBullet(*camera_);
-        homingLock_.ClearTargets();
+        if (FireBullet(*camera_)) {
+            homingLock_.ClearTargets();
+        }
     }
 }
 
@@ -82,17 +87,17 @@ void PlayerWeaponController::UpdateFireInput(Input* input, bool isDebugMode)
     if (!isDebugMode && (input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0))) {
         // ミニガンは高速連射、通常弾はそれより遅い連射にする
         if (currentWeapon_ == kWeaponMinigun) {
-            minigunFireCooldownFrames_++;
-            if (minigunFireCooldownFrames_ >= kMinigunFireIntervalFrames) {
-                minigunFireCooldownFrames_ = 0;
+            minigunFireCooldownSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
+            while (minigunFireCooldownSeconds_ + 0.000001f >= kMinigunFireIntervalSeconds) {
+                minigunFireCooldownSeconds_ = (std::max)(0.0f, minigunFireCooldownSeconds_ - kMinigunFireIntervalSeconds);
                 if (camera_) {
                     FireBullet(*camera_);
                 }
             }
         } else if (currentWeapon_ == kWeaponNormalBullet) {
-            normalFireCooldownFrames_++;
-            if (normalFireCooldownFrames_ >= kNormalFireIntervalFrames) {
-                normalFireCooldownFrames_ = 0;
+            normalFireCooldownSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
+            while (normalFireCooldownSeconds_ + 0.000001f >= kNormalFireIntervalSeconds) {
+                normalFireCooldownSeconds_ = (std::max)(0.0f, normalFireCooldownSeconds_ - kNormalFireIntervalSeconds);
                 if (camera_) {
                     FireBullet(*camera_);
                 }
@@ -107,23 +112,23 @@ void PlayerWeaponController::UpdateFireInput(Input* input, bool isDebugMode)
     }
 }
 
-void PlayerWeaponController::FireBullet(const Camera& activeCamera)
+bool PlayerWeaponController::FireBullet(const Camera& activeCamera)
 {
     const bool isHeatWeapon = currentWeapon_ == kWeaponNormalBullet ||
         currentWeapon_ == kWeaponMinigun;
     if (health_.IsDead() || (isHeatWeapon && weaponHeat_.IsOverheated())) {
-        return;
+        return false;
     }
     if (bulletModel_ == nullptr || camera_ == nullptr) {
-        return;
+        return false;
     }
 
     if (currentWeapon_ == kWeaponMissileBullet ||
         currentWeapon_ == kWeaponHomingMissile) {
-        if (missileFireCooldownFrames_ < kMissileFireIntervalFrames) {
-            return;
+        if (missileFireCooldownSeconds_ + 0.000001f < kMissileFireIntervalSeconds) {
+            return false;
         }
-        missileFireCooldownFrames_ = 0;
+        missileFireCooldownSeconds_ = 0;
     }
 
     if (currentWeapon_ == kWeaponHomingMissile &&
@@ -132,7 +137,7 @@ void PlayerWeaponController::FireBullet(const Camera& activeCamera)
         for (BaseEnemy* target : homingLock_.GetLockedTargets()) {
             FireSingleBullet(activeCamera, target);
         }
-        return;
+        return true;
     }
 
     switch (currentWeapon_) {
@@ -151,6 +156,7 @@ void PlayerWeaponController::FireBullet(const Camera& activeCamera)
     if (isHeatWeapon) {
         weaponHeat_.AddShotHeat(currentWeapon_ == kWeaponMinigun);
     }
+    return true;
 }
 
 void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget)
@@ -163,10 +169,8 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     bullet->SetCamera(camera_);
     if (currentWeapon_ == kWeaponMinigun) {
         bullet->SetDamage(kMinigunDamage);
-        minigunFireCooldownFrames_ = 0;
     } else if (currentWeapon_ == kWeaponNormalBullet) {
         bullet->SetDamage(kNormalBulletDamage);
-        normalFireCooldownFrames_ = 0;
     }
 
     Vector3 muzzlePosition = CalculateMuzzlePosition();
@@ -175,8 +179,10 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     bullet->SetTranslate(muzzlePosition);
 
     Ray aimRay {};
+    // 発射処理で、画面上の照準を3D空間の方向へ変換する。
     aimController_.CreateAimRay(aimRay, activeCamera);
 
+    // 銃口から弾を向ける位置を、補間済みの照準距離から求める。
     Vector3 aimPoint = aimController_.ResolveAimPoint(aimRay);
 
     if (HomingMissileBullet* missile = dynamic_cast<HomingMissileBullet*>(bullet.get())) {
@@ -190,6 +196,7 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     debugMuzzlePosition_ = muzzlePosition;
 
     Ray drawRay {};
+    // デバッグ描画用に照準レイと狙い位置を求め、発射方向との関係を表示する。
     aimController_.CreateAimRay(drawRay, *camera_);
     Vector3 drawAimPoint = aimController_.ResolveAimPoint(drawRay);
     debugDrawRayOrigin_ = drawRay.origin;
@@ -205,7 +212,6 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     bulletVelocity.z = bulletDirection.z * shotSpeed + worldPlayerVelocity.z;
 
     bullet->SetVelocity(bulletVelocity);
-    bullet->Update();
 
     bullets_.push_back(std::move(bullet));
 }

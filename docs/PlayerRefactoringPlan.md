@@ -260,3 +260,30 @@ project/App/Game/Player/
 - ロール時間・クールダウン・タップ期限、操舵デッドゾーン・感度・時間刻みのテスト成功。
 - 既存のレール移動・全方向飛行初期化に加え、Cameraを使った画面内補正とレール基準位置の更新のテスト成功。テストではSetProjectionJitterで行列を再計算し、GPU初期化は行わない。
 - 最終状態の通常Release/x64ビルドはPDB有効のままコンパイル・リンク成功。ログ：generated/PlayerMovementSplit-Release.log。ゲームを操作しての体感確認は未実施。
+
+### Movement内のフォルダー整理（2026-10-08）
+
+移動処理のまとめ役はMovement直下に残し、補助クラスは責務ごとに分けた。
+
+```text
+Movement/
+├─ PlayerMovementController.cpp / .h
+├─ Roll/             PlayerRollController.cpp / .h
+├─ Steering/         PlayerSteeringController.cpp / .h
+└─ ScreenConstraint/ PlayerScreenConstraint.cpp / .h
+```
+
+include、vcxproj、Visual Studioのフィルター、既存テストの参照を更新した。
+処理内容と実行コストは変更していない。
+移動後の通常Release/x64ビルドはコンパイル・リンク成功。ログ：generated/MovementFolderOrganization-Release.log。
+
+### Player更新と状態管理の修正（2026-10-08）
+
+- 最新の照準位置を取得・画面内制限・距離補間してから移動し、移動後の銃口から発射する順序に変更。
+- 生成直後の弾のUpdateを削除し、通常更新で1回だけ進める。
+- FireBulletは発射成功をboolで返す。ホーミングロックは発射成功時だけ解除する。
+- 連射間隔・ミサイル待機・ロール・被弾後の無敵を経過秒数に変更。60FPS時の長さを維持する。
+- SetTranslateでレール基準位置、SetRotateで全方向飛行の内部角度と方向を同期する。
+- ロールと無敵時間について30/60/120FPSで検証成功。既存HP・操舵・画面補正のテスト、位置・姿勢同期のテスト成功。
+- ゲーム操作による照準・発射・ホーミングの体感確認は未実施。
+最終状態の通常Release/x64ビルド成功。ログ：generated/PlayerDesignFix-Release.log。
