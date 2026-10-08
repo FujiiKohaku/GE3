@@ -22,6 +22,8 @@ public:
     virtual ~BaseEnemy() = default;
 
     virtual void Initialize(Model* model);
+    // ステージ固有のモデルへ差し替え、テクスチャ本来の色で表示する。
+    virtual void SetAppearance(Model* model);
     virtual void Update();
     virtual void Draw();
     virtual void DrawShadow(ShadowMapRenderer& renderer);

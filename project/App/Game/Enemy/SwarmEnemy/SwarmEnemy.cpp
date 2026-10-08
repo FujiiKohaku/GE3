@@ -144,6 +144,13 @@ void SwarmEnemy::Move()
     }
 }
 
+void SwarmEnemy::SetAppearance(Model* model)
+{
+    BaseEnemy::SetAppearance(model);
+    // フェードアウト中も、隊形の色で氷のテクスチャを上書きしない。
+    baseColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
+}
+
 void SwarmEnemy::Attack()
 {
     if (isDead_) {

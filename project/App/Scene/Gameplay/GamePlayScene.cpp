@@ -705,6 +705,7 @@ void GamePlayScene::Initialize()
         CalculateRailBasis(forward, right, up);
         float sideOffset = (i % 2 == 0) ? -8.0f : 8.0f;
         paintEnemy->SetPosition(railPosition + right * sideOffset + up * 2.0f);
+        ConfigureFrozenEnemyAppearance(*paintEnemy);
         enemies_.push_back(std::move(paintEnemy));
     }
 
@@ -3475,6 +3476,7 @@ void GamePlayScene::SpawnSwarmWave(
             formationType,
             slotIndex,
             travelDirection);
+        ConfigureFrozenEnemyAppearance(*swarmEnemy);
         enemies_.push_back(std::move(swarmEnemy));
     }
 }
@@ -3494,6 +3496,7 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
             enemy->SetAmplitude(8.0f);
             enemy->SetMoveSpeed(2.0f);
 
+            ConfigureFrozenEnemyAppearance(*enemy);
             enemies_.push_back(std::move(enemy));
         } else if (enemyData.fileName == "ArmoredEnemy") {
             std::unique_ptr<ArmoredEnemy> enemy =
@@ -3505,6 +3508,7 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
             enemy->SetPosition(enemyData.translation);
             enemy->SetRotate(enemyData.rotation);
 
+            ConfigureFrozenEnemyAppearance(*enemy);
             enemies_.push_back(std::move(enemy));
         } else {
             std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
@@ -3512,6 +3516,7 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
             enemy->SetPosition(enemyData.translation);
             enemy->SetRotate(enemyData.rotation);
 
+            ConfigureFrozenEnemyAppearance(*enemy);
             enemies_.push_back(std::move(enemy));
         }
     }
@@ -3741,6 +3746,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                     enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
                 }
 
+                ConfigureFrozenEnemyAppearance(*enemy);
                 enemies_.push_back(std::move(enemy));
             } else if (objData.fileName == "ArmoredEnemy") {
                 std::unique_ptr<ArmoredEnemy> enemy =
@@ -3757,6 +3763,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                         objData.patrolRoute.waypoints);
                 }
 
+                ConfigureFrozenEnemyAppearance(*enemy);
                 enemies_.push_back(std::move(enemy));
             } else {
                 std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
@@ -3768,6 +3775,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                     enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
                 }
 
+                ConfigureFrozenEnemyAppearance(*enemy);
                 enemies_.push_back(std::move(enemy));
             }
         }
@@ -3825,4 +3833,26 @@ void GamePlayScene::DrawShadow(ShadowMapRenderer& renderer)
     if (player_) { player_->DrawShadow(renderer); }
     for (const auto& enemy : enemies_) { enemy->DrawShadow(renderer); }
     if (GetActiveBoss() != nullptr) { GetActiveBoss()->DrawShadow(renderer); }
+}
+
+void GamePlayScene::ConfigureFrozenEnemyAppearance(BaseEnemy& enemy)
+{
+    if (stageId_ != "stage03") {
+        return;
+    }
+    std::string modelName = "NormalEnemy";
+    if (dynamic_cast<MoveEnemy*>(&enemy) != nullptr) {
+        modelName = "MoveEnemy";
+    } else if (dynamic_cast<ArmoredEnemy*>(&enemy) != nullptr) {
+        modelName = "ArmoredEnemy";
+    } else if (dynamic_cast<PaintShooterEnemy*>(&enemy) != nullptr) {
+        modelName = "PaintShooterEnemy";
+    } else if (dynamic_cast<SwarmEnemy*>(&enemy) != nullptr) {
+        modelName = "SwarmEnemy";
+    } else if (dynamic_cast<NormalEnemy*>(&enemy) == nullptr) {
+        return;
+    }
+    // ModelManagerが共有・キャッシュするため、同じ種類の出現ごとに読み込み直さない。
+    Model* model = ModelManager::GetInstance()->Load("Enemy/Frozen/" + modelName + ".obj");
+    enemy.SetAppearance(model);
 }

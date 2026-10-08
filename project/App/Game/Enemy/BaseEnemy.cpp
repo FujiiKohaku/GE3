@@ -50,6 +50,18 @@ void BaseEnemy::Update()
 
     object_->Update();
 }
+
+void BaseEnemy::SetAppearance(Model* model)
+{
+    if (object_ == nullptr || model == nullptr) {
+        return;
+    }
+    object_->SetModel(model);
+    object_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    object_->SetEnableLighting(true);
+    object_->SetNormalMapStrength(0.0f);
+    object_->SetSurfaceProperties(0.25f, 0.15f, 0.65f);
+}
 void BaseEnemy::Draw()
 {
     if (!isDead_) {

@@ -35,6 +35,7 @@ public:
         int32_t travelDirection);
 
     void Update() override;
+    void SetAppearance(Model* model) override;
     void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const override;
 
 private:

@@ -149,6 +149,7 @@ private:
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
     StageBoss* GetActiveBoss() const;
+    void ConfigureFrozenEnemyAppearance(BaseEnemy& enemy);
 
     // Updateメソッドの処理分割用ヘルパー関数
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);

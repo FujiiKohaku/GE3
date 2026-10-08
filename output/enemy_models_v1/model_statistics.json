@@ -1,0 +1,27 @@
+[
+  {
+    "Model": "ArmoredEnemy",
+    "Triangles": 840,
+    "MaterialPrimitives": 3
+  },
+  {
+    "Model": "MoveEnemy",
+    "Triangles": 1030,
+    "MaterialPrimitives": 3
+  },
+  {
+    "Model": "NormalEnemy",
+    "Triangles": 800,
+    "MaterialPrimitives": 3
+  },
+  {
+    "Model": "PaintShooterEnemy",
+    "Triangles": 1142,
+    "MaterialPrimitives": 4
+  },
+  {
+    "Model": "SwarmEnemy",
+    "Triangles": 70,
+    "MaterialPrimitives": 3
+  }
+]
