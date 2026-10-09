@@ -1,6 +1,8 @@
 #pragma once
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Camera/Camera.h"
+#include "Engine/Math/Object3DStruct.h"
+#include <tuple>
 #include <map>
 #include <vector>
 
@@ -39,7 +41,8 @@ public:
         const D3D12_VERTEX_BUFFER_VIEW& previousVertices,
         const D3D12_INDEX_BUFFER_VIEW& indices, uint32_t vertexCount, uint32_t indexCount,
         const Matrix4x4& world, const Camera& camera, MotionVectorHistory& history,
-        const std::wstring& shaderPath, const Vector4& parameters, bool isDoubleSided = false);
+        const std::wstring& shaderPath, const Vector4& parameters, bool isDoubleSided = false,
+        const Material* material = nullptr, D3D12_GPU_DESCRIPTOR_HANDLE textureSrv = {});
     void QueueVertexHistoryCopy(ID3D12Resource* currentVertices, ID3D12Resource* previousVertices);
 private:
     struct DrawEntry {
@@ -54,12 +57,14 @@ private:
         std::wstring shaderPath;
         bool isDoubleSided = false;
         Vector2 jitterNdc = {};
+        Material material = {};
+        D3D12_GPU_DESCRIPTOR_HANDLE textureSrv = {};
     };
     struct VertexHistoryCopy {
         ID3D12Resource* currentVertices = nullptr;
         ID3D12Resource* previousVertices = nullptr;
     };
-    ID3D12PipelineState* GetPipeline(const std::wstring& shaderPath, bool isDoubleSided);
+    ID3D12PipelineState* GetPipeline(const std::wstring& shaderPath, bool isDoubleSided, bool isAlphaMasked = false);
     inline static MotionVectorRenderer* active_ = nullptr;
     inline static uint64_t nextFrameId_ = 1;
     uint64_t frameId_ = 0;
@@ -70,7 +75,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> root_;
     Microsoft::WRL::ComPtr<ID3D12RootSignature> debugRoot_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> debugPipeline_;
-    std::map<std::pair<std::wstring, bool>, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;
+    std::map<std::tuple<std::wstring, bool, bool>, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> materialUpload_;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDescription_ = {};
     uint32_t srvIndex_ = UINT_MAX;
     std::vector<DrawEntry> draws_;

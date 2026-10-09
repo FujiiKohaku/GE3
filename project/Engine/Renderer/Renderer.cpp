@@ -1,4 +1,9 @@
 #include "Engine/Reflection/ScreenSpaceReflection.h"
+#include "Engine/Raytracing/DxrRenderer.h"
+#include "Engine/Raytracing/DxrShadowRenderer.h"
+#include "Engine/Raytracing/DxrReflectionRenderer.h"
+#include "Engine/Raytracing/DxrGlobalIlluminationRenderer.h"
+#include "Engine/Raytracing/DxrLocalShadowRenderer.h"
 #include "Engine/Lighting/ScreenSpaceGlobalIllumination.h"
 #include "Engine/Renderer/Renderer.h"
 #include "Engine/MotionVector/MotionVectorRenderer.h"
@@ -56,6 +61,15 @@ void Renderer::Initialize()
     screenSpaceReflection_->Initialize();
     screenSpaceGlobalIllumination_ = std::make_unique<ScreenSpaceGlobalIllumination>();
     screenSpaceGlobalIllumination_->Initialize();
+    dxrRenderer_ = std::make_unique<DxrRenderer>();
+    dxrRenderer_->Initialize();
+    dxrShadowRenderer_ = std::make_unique<DxrShadowRenderer>();
+    dxrShadowRenderer_->Initialize();
+    dxrReflectionRenderer_ = std::make_unique<DxrReflectionRenderer>();
+    dxrReflectionRenderer_->Initialize();
+    dxrGlobalIlluminationRenderer_ = std::make_unique<DxrGlobalIlluminationRenderer>();
+    dxrGlobalIlluminationRenderer_->Initialize();
+    dxrLocalShadowRenderer_ = std::make_unique<DxrLocalShadowRenderer>(); dxrLocalShadowRenderer_->Initialize();
     frameTimer_.Initialize();
     dlaaTimer_.Initialize();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -76,13 +90,22 @@ void Renderer::DrawImGui()
     postEffectManager_->DrawImGui();
     screenSpaceReflection_->DrawImGui();
     screenSpaceGlobalIllumination_->DrawImGui();
+    dxrRenderer_->DrawImGui();
+    dxrShadowRenderer_->DrawImGui();
+    dxrReflectionRenderer_->DrawImGui();
+    dxrGlobalIlluminationRenderer_->DrawImGui();
+    dxrLocalShadowRenderer_->DrawImGui();
 #ifdef USE_IMGUI
     if (ImGui::Begin("Motion vectors")) {
         MotionVectorSettings settings = motionVectorRenderer_->GetSettings();
         ImGui::Checkbox("Enabled", &settings.isEnabled);
         ImGui::Checkbox("Visualize UV displacement", &settings.isDebugVisible);
         motionVectorRenderer_->SetSettings(settings);
-        if (ImGui::Button("Reset history")) { motionVectorRenderer_->ResetHistory(); screenSpaceReflection_->ResetHistory(); screenSpaceGlobalIllumination_->ResetHistory(); }
+        if (ImGui::Button("Reset history")) {
+            motionVectorRenderer_->ResetHistory(); screenSpaceReflection_->ResetHistory(); screenSpaceGlobalIllumination_->ResetHistory();
+            dxrGlobalIlluminationRenderer_->ResetHistory(); dxrReflectionRenderer_->ResetHistory();
+            dxrLocalShadowRenderer_->ResetHistory();
+        }
     }
     ImGui::End();
     ImGui::SetNextWindowSize(ImVec2(570, 390), ImGuiCond_FirstUseEver);
@@ -152,6 +175,17 @@ void Renderer::Draw(SceneManager* sceneManager)
         screenSpaceReflection_->ResetHistory();
         previousGlobalIlluminationSettingsRevision_ = globalIlluminationSettingsRevision;
     }
+    uint64_t rtGlobalIlluminationSettingsRevision = dxrGlobalIlluminationRenderer_->GetSettingsRevision();
+    uint64_t localShadowSettingsRevision = dxrLocalShadowRenderer_->GetSettingsRevision();
+    if (previousLocalShadowSettingsRevision_ != localShadowSettingsRevision) {
+        dlssSuperResolution_->ResetHistory(); screenSpaceReflection_->ResetHistory();
+        dxrGlobalIlluminationRenderer_->ResetHistory(); dxrReflectionRenderer_->ResetHistory();
+        previousLocalShadowSettingsRevision_ = localShadowSettingsRevision;
+    }
+    if (previousRtGlobalIlluminationSettingsRevision_ != rtGlobalIlluminationSettingsRevision) {
+        dlssSuperResolution_->ResetHistory(); screenSpaceReflection_->ResetHistory(); dxrReflectionRenderer_->ResetHistory();
+        previousRtGlobalIlluminationSettingsRevision_ = rtGlobalIlluminationSettingsRevision;
+    }
     SuperResolutionHistoryInputs historyInputs;
     historyInputs.hasCamera = defaultCamera != nullptr;
     historyInputs.cameraId = reinterpret_cast<uintptr_t>(defaultCamera);
@@ -163,7 +197,12 @@ void Renderer::Draw(SceneManager* sceneManager)
     const auto motionSettings = motionVectorRenderer_->GetSettings();
     if (dlssSuperResolution_->IsActive() ||
         (screenSpaceReflection_->IsEnabled() && screenSpaceReflection_->GetSettings().shouldUseTemporalHistory) ||
-        (screenSpaceGlobalIllumination_->IsEnabled() && screenSpaceGlobalIllumination_->GetSettings().shouldUseTemporalHistory)) {
+        (screenSpaceGlobalIllumination_->IsEnabled() && screenSpaceGlobalIllumination_->GetSettings().shouldUseTemporalHistory) ||
+        (dxrReflectionRenderer_->GetSettings().isEnabled && dxrReflectionRenderer_->GetSettings().shouldUseTemporalHistory) ||
+        (dxrGlobalIlluminationRenderer_->GetSettings().isEnabled && dxrGlobalIlluminationRenderer_->GetSettings().shouldUseTemporalHistory) ||
+        (dxrLocalShadowRenderer_->GetSettings().isEnabled && dxrLocalShadowRenderer_->GetSettings().shouldUseTemporalHistory) ||
+        (dxrShadowRenderer_->GetSettings().isEnabled && dxrShadowRenderer_->GetSettings().isDenoisingEnabled
+            && dxrShadowRenderer_->GetSettings().shouldUseTemporalHistory)) {
         auto settings = motionVectorRenderer_->GetSettings();
         settings.isEnabled = true;
         motionVectorRenderer_->SetSettings(settings);
@@ -234,9 +273,20 @@ void Renderer::Draw(SceneManager* sceneManager)
         defaultCamera, volumetricShadows, volumetricLocalShadows);
 
     // Offscreen draw start
+    dxrRenderer_->BeginFrame();
+    dxrLocalShadowRenderer_->Prepare(*dxrRenderer_);
     postEffectManager_->PreDrawDepth();
     offscreenRenderer_->SetClearColor(sceneManager->GetSceneClearColor());
-    offscreenRenderer_->PreDraw(postEffectManager_->GetDepthDSVHandle());
+    bool shouldCaptureDirectionalLight = dxrRenderer_->IsReady() && dxrRenderer_->GetSettings().isEnabled
+        && dxrShadowRenderer_->GetSettings().isEnabled;
+    bool shouldCaptureReflections = dxrRenderer_->IsReady() && dxrRenderer_->GetSettings().isEnabled
+        && (dxrReflectionRenderer_->GetSettings().isEnabled || dxrGlobalIlluminationRenderer_->GetSettings().isEnabled);
+    bool shouldCaptureLocalShadows = dxrLocalShadowRenderer_->GetSelectedLightCount() > 0;
+    offscreenRenderer_->PreDraw(postEffectManager_->GetDepthDSVHandle(), shouldCaptureDirectionalLight, shouldCaptureReflections, shouldCaptureLocalShadows);
+    dxrRenderer_->SetDirectionalShadowCapture(offscreenRenderer_->IsDirectionalCaptureActive());
+    dxrRenderer_->SetReflectionCapture(offscreenRenderer_->IsReflectionCaptureActive());
+    dxrRenderer_->SetLocalShadowCapture(offscreenRenderer_->IsLocalShadowCaptureActive());
+    if (!offscreenRenderer_->IsLocalShadowCaptureActive()) { dxrRenderer_->SetLocalShadowParameters({}, 0); }
     dlssSuperResolution_->SetSceneViewport();
     if (motionSceneRevision_ != sceneManager->GetSceneRevision()) {
         motionVectorRenderer_->ResetHistory();
@@ -244,24 +294,74 @@ void Renderer::Draw(SceneManager* sceneManager)
     }
     motionVectorRenderer_->BeginFrame();
     sceneManager->Draw3D();
+    dxrRenderer_->EndFrame(defaultCamera, dxrRenderer_->GetSettings().isDebugVisible);
     DebugRenderer::GetInstance()->Draw();
     motionVectorRenderer_->EndFrame(postEffectManager_->GetDepthDSVHandle());
     motionVectorRenderer_->SetSettings(motionSettings);
     postEffectManager_->PostDrawDepth();
     offscreenRenderer_->PostDraw();
+    DxrShadowInputs rtShadowInputs;
+    rtShadowInputs.scene = dxrRenderer_.get();
+    rtShadowInputs.camera = defaultCamera;
+    rtShadowInputs.depthTexture = postEffectManager_->GetDepthTexture();
+    rtShadowInputs.normalTexture = offscreenRenderer_->GetNormalTexture();
+    rtShadowInputs.directionalLightTexture = offscreenRenderer_->GetDirectionalLightTexture();
+    rtShadowInputs.colorSrv = offscreenRenderer_->GetSrvHandleGPU();
+    rtShadowInputs.depthSrv = postEffectManager_->GetDepthSrv();
+    rtShadowInputs.normalSrv = offscreenRenderer_->GetNormalSrvHandleGPU();
+    rtShadowInputs.directionalLightSrv = offscreenRenderer_->GetDirectionalLightSrv();
+    rtShadowInputs.lightDirection = lights->GetDirectionalDirection();
+    rtShadowInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle();
+    rtShadowInputs.sceneRevision = sceneManager->GetSceneRevision();
+    D3D12_GPU_DESCRIPTOR_HANDLE sceneWithRtShadows = dxrShadowRenderer_->Draw(rtShadowInputs);
+    DxrLocalShadowInputs localShadowInputs;
+    localShadowInputs.scene = dxrRenderer_.get(); localShadowInputs.camera = defaultCamera;
+    if (lights->GetLightingComponents().w > 0.5f) { localShadowInputs.camera = nullptr; }
+    localShadowInputs.colorSrv = sceneWithRtShadows;
+    localShadowInputs.depthTexture = postEffectManager_->GetDepthTexture(); localShadowInputs.depthSrv = postEffectManager_->GetDepthSrv();
+    localShadowInputs.surfaceTexture = offscreenRenderer_->GetReflectionSurfaceTexture(); localShadowInputs.surfaceSrv = offscreenRenderer_->GetReflectionSurfaceSrv();
+    localShadowInputs.environmentTexture = offscreenRenderer_->GetReflectionEnvironmentTexture(); localShadowInputs.environmentSrv = offscreenRenderer_->GetReflectionEnvironmentSrv();
+    localShadowInputs.materialTexture = offscreenRenderer_->GetMaterialTexture(); localShadowInputs.materialSrv = offscreenRenderer_->GetMaterialSrvHandleGPU();
+    localShadowInputs.localLightTexture = offscreenRenderer_->GetLocalLightTexture(); localShadowInputs.localLightSrv = offscreenRenderer_->GetLocalLightSrv();
+    localShadowInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle(); localShadowInputs.sceneRevision = sceneManager->GetSceneRevision();
+    auto sceneWithLocalShadows = dxrLocalShadowRenderer_->Draw(localShadowInputs);
+    bool isRtLocalShadowActive = dxrLocalShadowRenderer_->HasValidFrame();
+    if (!isRtLocalShadowActive) { dxrRenderer_->SetLocalShadowParameters({}, 0); }
+    if (wasRtLocalShadowActive_ != isRtLocalShadowActive) {
+        screenSpaceGlobalIllumination_->ResetHistory(); screenSpaceReflection_->ResetHistory(); dlssSuperResolution_->ResetHistory();
+        dxrGlobalIlluminationRenderer_->ResetHistory(); dxrReflectionRenderer_->ResetHistory();
+        wasRtLocalShadowActive_ = isRtLocalShadowActive;
+    }
+    bool isLocalShadowDebugView = isRtLocalShadowActive && dxrLocalShadowRenderer_->GetSettings().isDebugVisible;
     DirectXCommon::GetInstance()->PreDraw();
     ScreenSpaceGlobalIlluminationInputs globalIlluminationInputs;
-    globalIlluminationInputs.colorSrv = offscreenRenderer_->GetSrvHandleGPU();
+    globalIlluminationInputs.colorSrv = sceneWithLocalShadows;
     globalIlluminationInputs.depthSrv = postEffectManager_->GetDepthSrv();
     globalIlluminationInputs.normalSrv = offscreenRenderer_->GetNormalSrvHandleGPU();
     globalIlluminationInputs.materialSrv = offscreenRenderer_->GetMaterialSrvHandleGPU();
     globalIlluminationInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle();
     globalIlluminationInputs.camera = defaultCamera;
     globalIlluminationInputs.sceneRevision = sceneManager->GetSceneRevision();
-    bool isLightingComponentView = lights->GetLightingComponents().w > 0.5f;
+    bool isLightingComponentView = lights->GetLightingComponents().w > 0.5f || isLocalShadowDebugView;
     if (isLightingComponentView) { globalIlluminationInputs.camera = nullptr; }
+    DxrGlobalIlluminationInputs rtGlobalIlluminationInputs;
+    rtGlobalIlluminationInputs.scene = dxrRenderer_.get(); rtGlobalIlluminationInputs.camera = globalIlluminationInputs.camera;
+    rtGlobalIlluminationInputs.colorSrv = sceneWithLocalShadows;
+    rtGlobalIlluminationInputs.depthTexture = postEffectManager_->GetDepthTexture(); rtGlobalIlluminationInputs.depthSrv = postEffectManager_->GetDepthSrv();
+    rtGlobalIlluminationInputs.surfaceTexture = offscreenRenderer_->GetReflectionSurfaceTexture(); rtGlobalIlluminationInputs.surfaceSrv = offscreenRenderer_->GetReflectionSurfaceSrv();
+    rtGlobalIlluminationInputs.environmentTexture = offscreenRenderer_->GetReflectionEnvironmentTexture(); rtGlobalIlluminationInputs.environmentSrv = offscreenRenderer_->GetReflectionEnvironmentSrv();
+    rtGlobalIlluminationInputs.materialTexture = offscreenRenderer_->GetMaterialTexture(); rtGlobalIlluminationInputs.materialSrv = offscreenRenderer_->GetMaterialSrvHandleGPU();
+    rtGlobalIlluminationInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle(); rtGlobalIlluminationInputs.sceneRevision = sceneManager->GetSceneRevision();
+    auto rtIndirectColor = dxrGlobalIlluminationRenderer_->Draw(rtGlobalIlluminationInputs);
+    bool isRtGlobalIlluminationActive = dxrGlobalIlluminationRenderer_->HasValidFrame();
+    if (wasRtGlobalIlluminationActive_ != isRtGlobalIlluminationActive) {
+        screenSpaceGlobalIllumination_->ResetHistory(); screenSpaceReflection_->ResetHistory();
+        dxrReflectionRenderer_->ResetHistory(); dlssSuperResolution_->ResetHistory();
+        wasRtGlobalIlluminationActive_ = isRtGlobalIlluminationActive;
+    }
+    if (isRtGlobalIlluminationActive) { globalIlluminationInputs.camera = nullptr; }
     if (screenSpaceGlobalIllumination_->IsEnabled() &&
-        screenSpaceGlobalIllumination_->GetSettings().shouldUseHierarchicalDepth && !isLightingComponentView) {
+        screenSpaceGlobalIllumination_->GetSettings().shouldUseHierarchicalDepth && !isLightingComponentView && !isRtGlobalIlluminationActive) {
         ScreenSpaceReflectionInputs depthInputs;
         depthInputs.colorSrv = globalIlluminationInputs.colorSrv;
         depthInputs.depthSrv = globalIlluminationInputs.depthSrv;
@@ -271,10 +371,23 @@ void Renderer::Draw(SceneManager* sceneManager)
         globalIlluminationInputs.depthPyramidSrv = screenSpaceReflection_->GetDepthPyramidSrv();
     }
     D3D12_GPU_DESCRIPTOR_HANDLE sceneWithIndirectLight = screenSpaceGlobalIllumination_->Draw(globalIlluminationInputs);
-    bool isGlobalIlluminationDebugView = screenSpaceGlobalIllumination_->IsEnabled() &&
+    if (isRtGlobalIlluminationActive) { sceneWithIndirectLight = rtIndirectColor; }
+    bool isGlobalIlluminationDebugView = !isRtGlobalIlluminationActive && screenSpaceGlobalIllumination_->IsEnabled() &&
         screenSpaceGlobalIllumination_->GetSettings().debugMode != ScreenSpaceGlobalIlluminationDebugMode::None;
+    if (isRtGlobalIlluminationActive && dxrGlobalIlluminationRenderer_->GetSettings().isDebugVisible) { isGlobalIlluminationDebugView = true; }
+    if (isLocalShadowDebugView) { isGlobalIlluminationDebugView = true; }
     postEffectManager_->SetIndirectLightingDebugVisible(isGlobalIlluminationDebugView);
-    postEffectManager_->PrepareSceneForTemporalResolve(sceneManager, sceneWithIndirectLight);
+    DxrReflectionInputs rtReflectionInputs;
+    rtReflectionInputs.scene = dxrRenderer_.get(); rtReflectionInputs.camera = defaultCamera;
+    rtReflectionInputs.colorSrv = sceneWithIndirectLight;
+    rtReflectionInputs.depthTexture = postEffectManager_->GetDepthTexture(); rtReflectionInputs.depthSrv = postEffectManager_->GetDepthSrv();
+    rtReflectionInputs.surfaceTexture = offscreenRenderer_->GetReflectionSurfaceTexture(); rtReflectionInputs.surfaceSrv = offscreenRenderer_->GetReflectionSurfaceSrv();
+    rtReflectionInputs.environmentTexture = offscreenRenderer_->GetReflectionEnvironmentTexture(); rtReflectionInputs.environmentSrv = offscreenRenderer_->GetReflectionEnvironmentSrv();
+    rtReflectionInputs.materialTexture = offscreenRenderer_->GetMaterialTexture(); rtReflectionInputs.materialSrv = offscreenRenderer_->GetMaterialSrvHandleGPU();
+    rtReflectionInputs.motionVectorSrv = motionVectorRenderer_->GetSrvHandle(); rtReflectionInputs.sceneRevision = sceneManager->GetSceneRevision();
+    if (isLightingComponentView || isGlobalIlluminationDebugView) { rtReflectionInputs.camera = nullptr; }
+    auto sceneWithRtReflections = dxrReflectionRenderer_->Draw(rtReflectionInputs);
+    postEffectManager_->PrepareSceneForTemporalResolve(sceneManager, sceneWithRtReflections);
 
     ScreenSpaceReflectionInputs reflectionInputs;
     reflectionInputs.colorSrv = postEffectManager_->GetSceneColorSrv();
@@ -311,6 +424,7 @@ void Renderer::Draw(SceneManager* sceneManager)
 
     postEffectManager_->ApplyAfterParticleDraw(sceneManager);
     motionVectorRenderer_->DrawDebug();
+    dxrRenderer_->DrawDebug();
 
     // 2D draw
     sceneManager->Draw2D();
@@ -331,6 +445,11 @@ void Renderer::Draw(SceneManager* sceneManager)
     dlaaTimer_.ReadCompleted();
     screenSpaceReflection_->ReadCompleted();
     screenSpaceGlobalIllumination_->ReadCompleted();
+    dxrRenderer_->ReadCompleted();
+    dxrReflectionRenderer_->ReadCompleted();
+    dxrGlobalIlluminationRenderer_->ReadCompleted();
+    dxrLocalShadowRenderer_->ReadCompleted();
+    dxrShadowRenderer_->ReadCompleted();
     postEffectManager_->ReadCompletedGpuTiming();
     RecordGpuSample();
     ScreenshotManager::GetInstance()->CompleteCapture();

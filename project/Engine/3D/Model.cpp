@@ -141,10 +141,14 @@ const MaterialData& Model::GetMaterial(uint32_t materialIndex) const
     return modelData_.materials[materialIndex];
 }
 
-void Model::DrawDepth()
+void Model::DrawDepth(uint32_t textureRootIndex)
 {
     auto* cmd = modelCommon_->GetDxCommon()->GetCommandList();
     for (const MeshPrimitive& primitive : modelData_.primitives) {
+        if (textureRootIndex != UINT_MAX) {
+            cmd->SetGraphicsRootDescriptorTable(textureRootIndex,
+                TextureManager::GetInstance()->GetSrvHandleGPU(GetMaterial(primitive.materialIndex).textureFilePath));
+        }
         cmd->IASetVertexBuffers(0, 1, &primitive.vbView);
         if (!primitive.indices.empty()) {
             cmd->IASetIndexBuffer(&primitive.ibView);

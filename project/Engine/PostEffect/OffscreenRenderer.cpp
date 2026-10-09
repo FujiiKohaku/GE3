@@ -1,11 +1,15 @@
 #include "OffscreenRenderer.h"
 
 #include <cassert>
+#include <stdexcept>
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 
 OffscreenRenderer::~OffscreenRenderer()
 {
+    if (localLightSrvIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(localLightSrvIndex_); }
+    for (uint32_t index : reflectionSrvIndices_) { if (index != UINT_MAX) { SrvManager::GetInstance()->Free(index); } }
+    if (directionalLightSrvIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(directionalLightSrvIndex_); }
     if (materialSrvIndex_ != kInvalidDescriptorIndex) {
         SrvManager::GetInstance()->Free(materialSrvIndex_);
     }
@@ -43,10 +47,42 @@ void OffscreenRenderer::Initialize()
     scissorRect_.bottom = WinApp::kClientHeight;
 }
 
-void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
+void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle, bool shouldCaptureDirectionalLight, bool shouldCaptureReflections, bool shouldCaptureLocalShadows)
 {
+    if (shouldCaptureLocalShadows) { shouldCaptureReflections = true; }
     DirectXCommon* directXCommon = DirectXCommon::GetInstance();
     ID3D12GraphicsCommandList* commandList = directXCommon->GetCommandList();
+    isDirectionalCaptureActive_ = false;
+    isReflectionCaptureActive_ = false;
+    isLocalShadowCaptureActive_ = false;
+    if (shouldCaptureDirectionalLight || shouldCaptureReflections) {
+        try {
+            if (!directionalLightTexture_) { CreateDirectionalLightTarget(); }
+            isDirectionalCaptureActive_ = shouldCaptureDirectionalLight;
+            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(directionalLightTexture_.Get(),
+                directionalLightState_, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            commandList->ResourceBarrier(1, &barrier);
+            directionalLightState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        } catch (const std::exception& error) { Logger::Error(error.what()); }
+    }
+    if (shouldCaptureReflections && directionalLightTexture_) {
+        try {
+            if (!reflectionRtvHeap_) { CreateReflectionTargets(); }
+            for (const auto& texture : reflectionTextures_) {
+                auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
+                    D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                commandList->ResourceBarrier(1, &barrier);
+            }
+            isReflectionRenderState_ = true; isReflectionCaptureActive_ = true;
+        } catch (const std::exception& error) { Logger::Error(error.what()); }
+    }
+    if (shouldCaptureLocalShadows && isReflectionCaptureActive_) {
+        try {
+            if (!localLightTexture_) { CreateLocalLightTarget(); }
+            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(localLightTexture_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            commandList->ResourceBarrier(1, &barrier); isLocalShadowCaptureActive_ = true;
+        } catch (const std::exception& error) { Logger::Error(error.what()); }
+    }
     if (currentState_ != D3D12_RESOURCE_STATE_RENDER_TARGET) {
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -90,10 +126,31 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
     }
     commandList->RSSetViewports(1, &viewport_);
     commandList->RSSetScissorRects(1, &scissorRect_);
-    const D3D12_CPU_DESCRIPTOR_HANDLE renderTargets[] = {
-        rtvHandle_, normalRtvHandle_, indirectRtvHandle_, materialRtvHandle_
+    D3D12_CPU_DESCRIPTOR_HANDLE renderTargets[8] = {
+        rtvHandle_, normalRtvHandle_, indirectRtvHandle_, materialRtvHandle_, {}, {}, {}, {}
     };
-    commandList->OMSetRenderTargets(_countof(renderTargets), renderTargets, false, &dsvHandle);
+    uint32_t renderTargetCount = 4;
+    if (isDirectionalCaptureActive_ || isReflectionCaptureActive_) {
+        renderTargets[4] = directionalLightRtvHeap_->GetCPUDescriptorHandleForHeapStart();
+        renderTargetCount = 5;
+        const float kDirectionalClear[] = {0, 0, 0, -1};
+        commandList->ClearRenderTargetView(renderTargets[4], kDirectionalClear, 0, nullptr);
+    }
+    if (isReflectionCaptureActive_) {
+        renderTargetCount = 7;
+        const float kSurfaceClear[] = {0, 0, 0, 1};
+        const float kEnvironmentClear[] = {0, 0, 0, -1};
+        uint32_t incrementBytes = directXCommon->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        renderTargets[5] = reflectionRtvHeap_->GetCPUDescriptorHandleForHeapStart();
+        renderTargets[6] = renderTargets[5]; renderTargets[6].ptr += incrementBytes;
+        commandList->ClearRenderTargetView(renderTargets[5], kSurfaceClear, 0, nullptr);
+        commandList->ClearRenderTargetView(renderTargets[6], kEnvironmentClear, 0, nullptr);
+    }
+    if (isLocalShadowCaptureActive_) {
+        renderTargetCount = 8; renderTargets[7] = localLightRtvHeap_->GetCPUDescriptorHandleForHeapStart();
+        const float kLocalClear[] = {0, 0, 0, -1}; commandList->ClearRenderTargetView(renderTargets[7], kLocalClear, 0, nullptr);
+    }
+    commandList->OMSetRenderTargets(renderTargetCount, renderTargets, false, &dsvHandle);
 
     float clearColor[] = {
         clearColor_.x,
@@ -111,6 +168,24 @@ void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
 
 void OffscreenRenderer::PostDraw()
 {
+    if (isLocalShadowCaptureActive_) {
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(localLightTexture_.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        DirectXCommon::GetInstance()->GetCommandList()->ResourceBarrier(1, &barrier);
+    }
+    if (isReflectionRenderState_) {
+        for (const auto& texture : reflectionTextures_) {
+            auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(texture.Get(),
+                D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+            DirectXCommon::GetInstance()->GetCommandList()->ResourceBarrier(1, &barrier);
+        }
+        isReflectionRenderState_ = false;
+    }
+    if (directionalLightState_ == D3D12_RESOURCE_STATE_RENDER_TARGET) {
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(directionalLightTexture_.Get(),
+            directionalLightState_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        DirectXCommon::GetInstance()->GetCommandList()->ResourceBarrier(1, &barrier);
+        directionalLightState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    }
     if (currentState_ == D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) {
         return;
     }
@@ -151,6 +226,83 @@ void OffscreenRenderer::PostDraw()
         commandList->ResourceBarrier(1, &normalBarrier);
         normalCurrentState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
     }
+}
+void OffscreenRenderer::CreateLocalLightTarget() {
+    auto* device = DirectXCommon::GetInstance()->GetDevice(); auto* srvManager = SrvManager::GetInstance();
+    if (!srvManager->CanAllocate()) { throw std::runtime_error("RT local capture descriptors exhausted"); }
+    auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, WinApp::kClientWidth, WinApp::kClientHeight,
+        1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    Microsoft::WRL::ComPtr<ID3D12Resource> texture;
+    auto rtvHeap = DirectXCommon::GetInstance()->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
+    if (FAILED(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&texture)))) {
+        throw std::runtime_error("RT local capture allocation failed");
+    }
+    localLightSrvIndex_ = srvManager->Allocate(); srvManager->CreateSRVforTexture2D(localLightSrvIndex_, texture.Get(), description.Format, 1);
+    device->CreateRenderTargetView(texture.Get(), nullptr, rtvHeap->GetCPUDescriptorHandleForHeapStart());
+    localLightTexture_ = texture; localLightRtvHeap_ = rtvHeap; localLightAllocationBytes_ = device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
+}
+D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetLocalLightSrv() const {
+    if (!isLocalShadowCaptureActive_) { return {}; }
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(localLightSrvIndex_);
+}
+void OffscreenRenderer::CreateReflectionTargets() {
+    auto* device = DirectXCommon::GetInstance()->GetDevice();
+    auto* srvManager = SrvManager::GetInstance();
+    if (!srvManager->CanAllocate(2)) { throw std::runtime_error("Reflection capture descriptors exhausted"); }
+    auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    const DXGI_FORMAT kFormats[] = {DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT};
+    auto rtvHeap = DirectXCommon::GetInstance()->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+    uint32_t incrementBytes = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    for (uint32_t index = 0; index < 2; ++index) {
+        auto description = CD3DX12_RESOURCE_DESC::Tex2D(kFormats[index], WinApp::kClientWidth, WinApp::kClientHeight,
+            1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+        HRESULT result = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&reflectionTextures_[index]));
+        if (FAILED(result)) { throw std::runtime_error("Reflection capture allocation failed"); }
+        reflectionAllocationBytes_ += device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
+        if (reflectionSrvIndices_[index] == UINT_MAX) { reflectionSrvIndices_[index] = srvManager->Allocate(); }
+        srvManager->CreateSRVforTexture2D(reflectionSrvIndices_[index], reflectionTextures_[index].Get(), kFormats[index], 1);
+        auto handle = rtvHeap->GetCPUDescriptorHandleForHeapStart(); handle.ptr += index * incrementBytes;
+        device->CreateRenderTargetView(reflectionTextures_[index].Get(), nullptr, handle);
+    }
+    reflectionRtvHeap_ = rtvHeap;
+}
+D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetReflectionSurfaceSrv() const {
+    if (!isReflectionCaptureActive_) { return {}; }
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(reflectionSrvIndices_[0]);
+}
+D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetReflectionEnvironmentSrv() const {
+    if (!isReflectionCaptureActive_) { return {}; }
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(reflectionSrvIndices_[1]);
+}
+
+void OffscreenRenderer::CreateDirectionalLightTarget() {
+    auto* device = DirectXCommon::GetInstance()->GetDevice();
+    auto* srvManager = SrvManager::GetInstance();
+    if (!srvManager->CanAllocate()) { throw std::runtime_error("RT directional capture descriptors exhausted"); }
+    D3D12_DESCRIPTOR_HEAP_DESC heapDescription = {};
+    heapDescription.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    heapDescription.NumDescriptors = 1;
+    if (FAILED(device->CreateDescriptorHeap(&heapDescription, IID_PPV_ARGS(&directionalLightRtvHeap_)))) {
+        throw std::runtime_error("RT directional capture RTV creation failed");
+    }
+    D3D12_HEAP_PROPERTIES heap = {};
+    heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+    auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32B32A32_FLOAT,
+        WinApp::kClientWidth, WinApp::kClientHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    if (FAILED(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&directionalLightTexture_)))) {
+        throw std::runtime_error("RT directional capture texture creation failed");
+    }
+    device->CreateRenderTargetView(directionalLightTexture_.Get(), nullptr, directionalLightRtvHeap_->GetCPUDescriptorHandleForHeapStart());
+    directionalLightAllocationBytes_ = device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
+    directionalLightSrvIndex_ = srvManager->Allocate();
+    srvManager->CreateSRVforTexture2D(directionalLightSrvIndex_, directionalLightTexture_.Get(), description.Format, 1);
+}
+D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetDirectionalLightSrv() const {
+    if (!isDirectionalCaptureActive_ || directionalLightSrvIndex_ == UINT_MAX) { return {}; }
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(directionalLightSrvIndex_);
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource> OffscreenRenderer::CreateRenderTextureResource(

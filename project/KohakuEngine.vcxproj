@@ -728,6 +728,18 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </Target>
   <ItemGroup>
     <ClCompile Include="$(projectRootPath)Engine\Reflection\ScreenSpaceReflection.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Raytracing\DxrRenderer.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Raytracing\DxrShadowRenderer.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Raytracing\DxrReflectionRenderer.cpp" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\DxrReflectionRenderer.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\DxrGlobalIlluminationRenderer.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\DxrLocalShadowParameters.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\DxrLocalShadowRenderer.h" />
+    <ClCompile Include="$(projectRootPath)Engine\Raytracing\DxrLocalShadowRenderer.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Raytracing\ShadowDenoiser.cpp" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\ShadowDenoiser.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\DxrShadowRenderer.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Raytracing\DxrRenderer.h" />
     <ClCompile Include="$(projectRootPath)Engine\Lighting\ScreenSpaceGlobalIllumination.cpp" />
     <ClInclude Include="$(projectRootPath)Engine\Reflection\ScreenSpaceReflection.h" />
     <ClInclude Include="$(projectRootPath)Engine\Lighting\ScreenSpaceGlobalIllumination.h" />

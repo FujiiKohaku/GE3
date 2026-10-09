@@ -48,6 +48,9 @@ std::wstring GetShaderProfile(const std::filesystem::path& sourcePath)
     if (fileName.ends_with(L".gs.hlsl")) {
         return L"gs_6_0";
     }
+    if (fileName.ends_with(L".lib.hlsl")) {
+        return L"lib_6_3";
+    }
     return {};
 }
 
@@ -663,9 +666,7 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShaderAndSaveCache(
 
     const std::wstring absoluteIncludeDirectory =
         std::filesystem::absolute(sourcePath).parent_path().wstring();
-    const wchar_t* arguments[] = {
-        L"-E",
-        L"main",
+    std::vector<const wchar_t*> arguments = {
         L"-T",
         shaderProfile.c_str(),
         L"-O3",
@@ -673,6 +674,10 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShaderAndSaveCache(
         L"-I",
         absoluteIncludeDirectory.c_str(),
     };
+    if (shaderProfile != L"lib_6_3") {
+        arguments.push_back(L"-E");
+        arguments.push_back(L"main");
+    }
 
     DxcBuffer sourceBuffer {};
     sourceBuffer.Ptr = sourceBlob->GetBufferPointer();
@@ -682,8 +687,8 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShaderAndSaveCache(
     Microsoft::WRL::ComPtr<IDxcResult> compileResult;
     hr = dxcCompiler->Compile(
         &sourceBuffer,
-        arguments,
-        _countof(arguments),
+        arguments.data(),
+        static_cast<UINT32>(arguments.size()),
         dxcIncludeHandler.Get(),
         IID_PPV_ARGS(&compileResult));
     if (FAILED(hr) || !compileResult) {

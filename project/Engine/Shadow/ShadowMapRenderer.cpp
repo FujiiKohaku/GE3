@@ -6,9 +6,10 @@
 
 namespace {
 const std::wstring kDefaultDepthShaderPath = L"resources/Shaders/ShadowMap/Depth.VS.hlsl";
-void CheckShadow(HRESULT result)
+void CheckShadow(HRESULT result, const char* operation = "Shadow map resource/pipeline creation")
 {
-    if (FAILED(result)) { throw std::runtime_error("Shadow map resource/pipeline creation failed"); }
+    if (FAILED(result)) { throw std::runtime_error(std::string(operation) + " failed (HRESULT "
+        + std::to_string(static_cast<uint32_t>(result)) + ")"); }
 }
 }
 
@@ -38,7 +39,7 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution, ID3D1
         depthSubresource_ = arraySlice;
     } else {
         CheckShadow(dx_->GetDevice()->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc,
-            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&depth_)));
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&depth_)), "Shadow depth creation");
     }
     depth_->SetName(L"ShadowMap::Depth");
     dsvHeap_ = dx_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
@@ -56,10 +57,10 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution, ID3D1
         SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, depth_.Get(), DXGI_FORMAT_R32_FLOAT, 1);
     }
     constantsBuffer_ = dx_->CreateBufferResource(sizeof(ShadowConstants));
-    CheckShadow(constantsBuffer_->Map(0, nullptr, reinterpret_cast<void**>(&constants_)));
+    CheckShadow(constantsBuffer_->Map(0, nullptr, reinterpret_cast<void**>(&constants_)), "Shadow constants mapping");
     *constants_ = {};
 
-    D3D12_ROOT_PARAMETER parameters[3] {};
+    D3D12_ROOT_PARAMETER parameters[5] {};
     parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     parameters[0].Constants.ShaderRegister = 0;
     parameters[0].Constants.Num32BitValues = 16;
@@ -71,20 +72,43 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution, ID3D1
     parameters[2].Constants.ShaderRegister = 2;
     parameters[2].Constants.Num32BitValues = 4;
     parameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    parameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    parameters[3].Descriptor.ShaderRegister = 3;
+    parameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_DESCRIPTOR_RANGE textureRange = {};
+    textureRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    textureRange.NumDescriptors = 1;
+    parameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    parameters[4].DescriptorTable = {1, &textureRange};
+    parameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_STATIC_SAMPLER_DESC sampler = {};
+    sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    sampler.MaxLOD = D3D12_FLOAT32_MAX;
+    sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     D3D12_ROOT_SIGNATURE_DESC signature {};
     signature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    signature.NumParameters = 3; signature.pParameters = parameters;
+    signature.NumParameters = 5; signature.pParameters = parameters;
+    signature.NumStaticSamplers = 1; signature.pStaticSamplers = &sampler;
     Microsoft::WRL::ComPtr<ID3DBlob> blob;
     Microsoft::WRL::ComPtr<ID3DBlob> errors;
-    CheckShadow(D3D12SerializeRootSignature(&signature, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
-    CheckShadow(dx_->GetDevice()->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&root_)));
+    HRESULT signatureResult = D3D12SerializeRootSignature(&signature, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors);
+    if (FAILED(signatureResult) && errors) {
+        throw std::runtime_error(std::string("Shadow root signature: ")
+            + static_cast<const char*>(errors->GetBufferPointer()));
+    }
+    CheckShadow(signatureResult);
+    CheckShadow(dx_->GetDevice()->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&root_)), "Shadow root creation");
     auto vertexShader = dx_->LoadCompiledShader(L"resources/Shaders/ShadowMap/Depth.VS.hlsl");
-    D3D12_INPUT_ELEMENT_DESC position {};
-    position.SemanticName = "POSITION";
-    position.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    D3D12_INPUT_ELEMENT_DESC inputs[2] = {};
+    inputs[0].SemanticName = "POSITION";
+    inputs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    inputs[1].SemanticName = "TEXCOORD";
+    inputs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+    inputs[1].AlignedByteOffset = 16;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pso {};
     pso.pRootSignature = root_.Get();
-    pso.InputLayout = { &position, 1 };
+    pso.InputLayout = { inputs, 2 };
     pso.VS = { vertexShader->GetBufferPointer(), vertexShader->GetBufferSize() };
     pso.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
     pso.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
@@ -99,7 +123,7 @@ void ShadowMapRenderer::Initialize(DirectXCommon* dx, uint32_t resolution, ID3D1
     pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     pso.DSVFormat = DXGI_FORMAT_D32_FLOAT;
     pso.SampleDesc.Count = 1;
-    CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipeline_)));
+    CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipeline_)), "Shadow depth pipeline creation");
     pipelineDescription_ = pso;
     // Local shader/input-layout pointers are rebuilt when a custom material is first used.
     pipelineDescription_.VS = {};
@@ -123,6 +147,7 @@ void ShadowMapRenderer::BeginShadowPass()
 {
     shadowPassComplete_ = false;
     auto* cmd = dx_->GetCommandList();
+    SrvManager::GetInstance()->PreDraw();
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthSubresource_);
     cmd->ResourceBarrier(1, &barrier);
     auto dsv = dsvHeap_->GetCPUDescriptorHandleForHeapStart();
@@ -163,11 +188,11 @@ void ShadowMapRenderer::BindObject(const Matrix4x4& world,
     auto& pipeline = pipelineEntry->second[sidedIndex];
     if (!pipeline) {
         const auto shader = dx_->LoadCompiledShader(*shaderPath);
-        D3D12_INPUT_ELEMENT_DESC position {};
-        position.SemanticName = "POSITION";
-        position.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        D3D12_INPUT_ELEMENT_DESC inputs[2] = {};
+        inputs[0].SemanticName = "POSITION"; inputs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        inputs[1].SemanticName = "TEXCOORD"; inputs[1].Format = DXGI_FORMAT_R32G32_FLOAT; inputs[1].AlignedByteOffset = 16;
         D3D12_GRAPHICS_PIPELINE_STATE_DESC description = pipelineDescription_;
-        description.InputLayout = { &position, 1 };
+        description.InputLayout = { inputs, 2 };
         description.VS = { shader->GetBufferPointer(), shader->GetBufferSize() };
         if (material.isDoubleSided) { description.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; }
         CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&description, IID_PPV_ARGS(&pipeline)));
@@ -183,6 +208,26 @@ void ShadowMapRenderer::EndShadowPass()
     shadowPassComplete_ = true;
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(depth_.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, depthSubresource_);
     dx_->GetCommandList()->ResourceBarrier(1, &barrier);
+}
+void ShadowMapRenderer::BindAlphaMaterial(D3D12_GPU_VIRTUAL_ADDRESS materialAddress, bool isDoubleSided) {
+    uint32_t sidedIndex = 0;
+    if (isDoubleSided) { sidedIndex = 1; }
+    auto& pipeline = alphaPipelines_[sidedIndex];
+    if (!pipeline) {
+        auto vertex = dx_->LoadCompiledShader(kDefaultDepthShaderPath);
+        auto pixel = dx_->LoadCompiledShader(L"resources/Shaders/ShadowMap/AlphaMask.PS.hlsl");
+        D3D12_INPUT_ELEMENT_DESC inputs[2] = {};
+        inputs[0].SemanticName = "POSITION"; inputs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        inputs[1].SemanticName = "TEXCOORD"; inputs[1].Format = DXGI_FORMAT_R32G32_FLOAT; inputs[1].AlignedByteOffset = 16;
+        auto description = pipelineDescription_;
+        description.InputLayout = {inputs, 2};
+        description.VS = {vertex->GetBufferPointer(), vertex->GetBufferSize()};
+        description.PS = {pixel->GetBufferPointer(), pixel->GetBufferSize()};
+        if (isDoubleSided) { description.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; }
+        CheckShadow(dx_->GetDevice()->CreateGraphicsPipelineState(&description, IID_PPV_ARGS(&pipeline)));
+    }
+    dx_->GetCommandList()->SetPipelineState(pipeline.Get());
+    dx_->GetCommandList()->SetGraphicsRootConstantBufferView(3, materialAddress);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE ShadowMapRenderer::GetSrv() const

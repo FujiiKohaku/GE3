@@ -27,8 +27,13 @@ public:
     void Draw();
     void QueueMotionVectors();
     void ResetMotionHistory() { motionHistory_.Reset(); }
+    void SetCastShadow(bool isEnabled) { shouldCastShadow_ = isEnabled; }
+    void SetReceiveShadow(bool isEnabled) { shouldReceiveShadow_ = isEnabled; }
+    bool GetCastShadow() const { return shouldCastShadow_; }
+    bool GetReceiveShadow() const { return shouldReceiveShadow_; }
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
+    bool SetAlphaCutoff(float alphaCutoff);
     ~SkinningObject3d();
     // setter
     void SetModel(Model* model) { model_ = model; }
@@ -124,6 +129,10 @@ public:
     }
 
 private:
+    bool shouldCastShadow_ = false;
+    bool shouldReceiveShadow_ = false;
+    uint64_t skinnedGeometryRevision_ = 0;
+    std::vector<SkinCluster::WellForGPU> previousDxrPalette_;
     MotionVectorHistory motionHistory_;
     Microsoft::WRL::ComPtr<ID3D12Resource> previousSkinnedVertexResource_;
     // ===============================

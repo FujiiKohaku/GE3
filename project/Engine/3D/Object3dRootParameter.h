@@ -13,6 +13,8 @@ enum class Object3dRootParameter : uint32_t {
     AmbientLight,
     EnvironmentTexture,
     NormalTexture,
+    RtLocalShadowSettings,
+    RtLocalShadowReceiver,
     Count
 };
 

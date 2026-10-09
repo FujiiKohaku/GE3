@@ -28,7 +28,11 @@ float3 EnvironmentLighting(float3 baseColor, float3 normal, float3 view, bool ha
         float3 reflection = gEnvironmentTexture.SampleLevel(gSampler, reflected, roughness * maxMip).rgb;
         float3 f0 = lerp(0.04f.xxx, saturate(baseColor), metallic);
         float3 fresnel = f0 + (1.0f - f0) * pow(1.0f - saturate(dot(normal, view)), 5.0f);
-        result += reflection * fresnel * gMaterial.specularStrength * gAmbientLight.environmentSettings.y * (1.0f - roughness * 0.5f);
+        float3 specular = reflection * fresnel * gMaterial.specularStrength * gAmbientLight.environmentSettings.y * (1.0f - roughness * 0.5f);
+        result += specular;
+#if defined(KOHAKU_RT_REFLECTION_CAPTURE)
+        capturedReflectionEnvironment += specular * GetIndirectLightingStrength(gAmbientLight);
+#endif
     }
     return result * GetIndirectLightingStrength(gAmbientLight);
 }

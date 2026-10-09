@@ -33,6 +33,7 @@ public:
     void SetMotionVectorShader(const std::wstring& shaderPath) { motionVectorShaderPath_ = shaderPath; ResetMotionHistory(); }
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
+    bool SetAlphaCutoff(float alphaCutoff);
     void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
     bool SetShadowMaterial(const ShadowMaterialSettings& settings);
     void SetShadowBoundsPadding(float boundsPadding);

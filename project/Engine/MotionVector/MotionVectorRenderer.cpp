@@ -1,6 +1,7 @@
 #include "MotionVectorRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include <stdexcept>
+#include <cstring>
 
 namespace {
 void CheckMotionVector(HRESULT result) {
@@ -47,7 +48,7 @@ void MotionVectorRenderer::Initialize() {
     srvIndex_ = SrvManager::GetInstance()->Allocate();
     SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, texture_.Get(), description.Format, 1);
 
-    D3D12_ROOT_PARAMETER parameters[5] = {};
+    D3D12_ROOT_PARAMETER parameters[7] = {};
     const uint32_t counts[] = {16, 16, 4, 4, 2};
     for (uint32_t index = 0; index < 5; ++index) {
         parameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -55,10 +56,23 @@ void MotionVectorRenderer::Initialize() {
         parameters[index].Constants.Num32BitValues = counts[index];
         parameters[index].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     }
+    parameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    parameters[5].Descriptor.ShaderRegister = 5;
+    parameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_DESCRIPTOR_RANGE textureRange = {};
+    textureRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; textureRange.NumDescriptors = 1;
+    parameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    parameters[6].DescriptorTable = {1, &textureRange};
+    parameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_STATIC_SAMPLER_DESC sampler = {};
+    sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+    sampler.MaxLOD = D3D12_FLOAT32_MAX; sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     D3D12_ROOT_SIGNATURE_DESC signature = {};
     signature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    signature.NumParameters = 5;
+    signature.NumParameters = 7;
     signature.pParameters = parameters;
+    signature.NumStaticSamplers = 1; signature.pStaticSamplers = &sampler;
     Microsoft::WRL::ComPtr<ID3DBlob> blob;
     Microsoft::WRL::ComPtr<ID3DBlob> errors;
     CheckMotionVector(D3D12SerializeRootSignature(&signature, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
@@ -93,6 +107,7 @@ void MotionVectorRenderer::Initialize() {
     debugParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     signature.NumParameters = 1;
     signature.pParameters = &debugParameter;
+    signature.NumStaticSamplers = 0; signature.pStaticSamplers = nullptr;
     CheckMotionVector(D3D12SerializeRootSignature(&signature, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
     CheckMotionVector(device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&debugRoot_)));
     auto debugVertexShader = dx->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
@@ -108,24 +123,28 @@ void MotionVectorRenderer::Initialize() {
     CheckMotionVector(device->CreateGraphicsPipelineState(&debugDescription, IID_PPV_ARGS(&debugPipeline_)));
 }
 
-ID3D12PipelineState* MotionVectorRenderer::GetPipeline(const std::wstring& shaderPath, bool isDoubleSided) {
+ID3D12PipelineState* MotionVectorRenderer::GetPipeline(const std::wstring& shaderPath, bool isDoubleSided, bool isAlphaMasked) {
     std::wstring resolvedPath = shaderPath;
     if (resolvedPath.empty()) { resolvedPath = kDefaultMotionShader; }
-    const auto key = std::make_pair(resolvedPath, isDoubleSided);
+    const auto key = std::make_tuple(resolvedPath, isDoubleSided, isAlphaMasked);
     auto found = pipelines_.find(key);
     if (found != pipelines_.end()) { return found->second.Get(); }
     auto* dx = DirectXCommon::GetInstance();
     auto vertexShader = dx->LoadCompiledShader(resolvedPath);
-    auto pixelShader = dx->LoadCompiledShader(L"resources/Shaders/MotionVector/MotionVector.PS.hlsl");
-    D3D12_INPUT_ELEMENT_DESC inputs[2] = {};
+    std::wstring pixelPath = L"resources/Shaders/MotionVector/MotionVector.PS.hlsl";
+    if (isAlphaMasked) { pixelPath = L"resources/Shaders/MotionVector/AlphaMask.PS.hlsl"; }
+    auto pixelShader = dx->LoadCompiledShader(pixelPath);
+    D3D12_INPUT_ELEMENT_DESC inputs[3] = {};
     for (uint32_t index = 0; index < 2; ++index) {
         inputs[index].SemanticName = "POSITION";
         inputs[index].SemanticIndex = index;
         inputs[index].InputSlot = index;
         inputs[index].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
     }
+    inputs[2].SemanticName = "TEXCOORD"; inputs[2].Format = DXGI_FORMAT_R32G32_FLOAT;
+    inputs[2].AlignedByteOffset = 16;
     auto description = pipelineDescription_;
-    description.InputLayout = {inputs, 2};
+    description.InputLayout = {inputs, 3};
     description.VS = {vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()};
     description.PS = {pixelShader->GetBufferPointer(), pixelShader->GetBufferSize()};
     if (isDoubleSided) { description.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; }
@@ -157,7 +176,9 @@ void MotionVectorRenderer::CommitHistory(MotionVectorHistory& history, const Mat
 void MotionVectorRenderer::Queue(const D3D12_VERTEX_BUFFER_VIEW& currentVertices,
     const D3D12_VERTEX_BUFFER_VIEW& previousVertices, const D3D12_INDEX_BUFFER_VIEW& indices,
     uint32_t vertexCount, uint32_t indexCount, const Matrix4x4& world, const Camera& camera,
-    MotionVectorHistory& history, const std::wstring& shaderPath, const Vector4& parameters, bool isDoubleSided) {
+    MotionVectorHistory& history, const std::wstring& shaderPath, const Vector4& parameters, bool isDoubleSided,
+    const Material* material, D3D12_GPU_DESCRIPTOR_HANDLE textureSrv) {
+    if (material && material->alphaCutoff > 0 && (!shaderPath.empty() || textureSrv.ptr == 0)) { return; }
     DrawEntry entry;
     entry.vertices[0] = currentVertices;
     entry.vertices[1] = previousVertices;
@@ -171,6 +192,7 @@ void MotionVectorRenderer::Queue(const D3D12_VERTEX_BUFFER_VIEW& currentVertices
         entry.previousParameters = history.previousParameters;
     } else { entry.vertices[1] = currentVertices; }
     entry.shaderPath = shaderPath; entry.isDoubleSided = isDoubleSided;
+    if (material) { entry.material = *material; entry.textureSrv = textureSrv; }
     draws_.push_back(entry);
 }
 void MotionVectorRenderer::QueueVertexHistoryCopy(ID3D12Resource* currentVertices, ID3D12Resource* previousVertices) {
@@ -179,6 +201,21 @@ void MotionVectorRenderer::QueueVertexHistoryCopy(ID3D12Resource* currentVertice
 void MotionVectorRenderer::EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle) {
     active_ = nullptr;
     auto* commandList = DirectXCommon::GetInstance()->GetCommandList();
+    bool hasMaskedDraws = false;
+    for (const auto& entry : draws_) { if (entry.material.alphaCutoff > 0) { hasMaskedDraws = true; break; } }
+    if (hasMaskedDraws) {
+        uint64_t uploadSizeBytes = draws_.size() * D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+        if (!materialUpload_ || materialUpload_->GetDesc().Width < uploadSizeBytes) {
+            materialUpload_ = DirectXCommon::GetInstance()->CreateBufferResource(uploadSizeBytes);
+        }
+        void* materialData = nullptr;
+        CheckMotionVector(materialUpload_->Map(0, nullptr, &materialData));
+        for (size_t index = 0; index < draws_.size(); ++index) {
+            std::memcpy(static_cast<uint8_t*>(materialData) + index * 256, &draws_[index].material, sizeof(Material));
+        }
+        materialUpload_->Unmap(0, nullptr);
+        SrvManager::GetInstance()->PreDraw();
+    }
     TransitionMotionResource(texture_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
     auto target = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
     const float clear[] = {0, 0, 0, 0};
@@ -186,8 +223,14 @@ void MotionVectorRenderer::EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle) {
     commandList->OMSetRenderTargets(1, &target, FALSE, &depthHandle);
     commandList->SetGraphicsRootSignature(root_.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    for (const auto& entry : draws_) {
-        commandList->SetPipelineState(GetPipeline(entry.shaderPath, entry.isDoubleSided));
+    for (size_t index = 0; index < draws_.size(); ++index) {
+        const auto& entry = draws_[index];
+        bool isAlphaMasked = entry.material.alphaCutoff > 0;
+        commandList->SetPipelineState(GetPipeline(entry.shaderPath, entry.isDoubleSided, isAlphaMasked));
+        if (isAlphaMasked) {
+            commandList->SetGraphicsRootConstantBufferView(5, materialUpload_->GetGPUVirtualAddress() + index * 256);
+            commandList->SetGraphicsRootDescriptorTable(6, entry.textureSrv);
+        }
         commandList->SetGraphicsRoot32BitConstants(0, 16, &entry.currentWorldViewProjection, 0);
         commandList->SetGraphicsRoot32BitConstants(1, 16, &entry.previousWorldViewProjection, 0);
         commandList->SetGraphicsRoot32BitConstants(2, 4, &entry.parameters, 0);

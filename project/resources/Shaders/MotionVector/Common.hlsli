@@ -6,17 +6,20 @@ cbuffer ProjectionJitter : register(b4) { float2 jitterNdc; };
 struct MotionVectorInput {
     float4 position : POSITION0;
     float4 previousPosition : POSITION1;
+    float2 texcoord : TEXCOORD0;
 };
 struct MotionVectorOutput {
     float4 position : SV_POSITION;
     float4 currentClip : TEXCOORD0;
     float4 previousClip : TEXCOORD1;
+    float2 texcoord : TEXCOORD2;
 };
-MotionVectorOutput BuildMotionVector(float4 position, float4 previousPosition) {
+MotionVectorOutput BuildMotionVector(float4 position, float4 previousPosition, float2 texcoord = float2(0, 0)) {
     MotionVectorOutput output;
     output.currentClip = mul(position, currentWorldViewProjection);
     output.previousClip = mul(previousPosition, previousWorldViewProjection);
     output.position = output.currentClip;
     output.position.xy += jitterNdc * output.position.w;
+    output.texcoord = texcoord;
     return output;
 }

@@ -6,6 +6,7 @@
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
+#include "Engine/Raytracing/DxrRenderer.h"
 
 namespace {
 constexpr const char* kDefaultObject3dPixelShader =
@@ -58,6 +59,10 @@ void Object3dManager::Initialize(DirectXCommon* dxCommon)
     LocalShadowConstants* disabledLocal = nullptr;
     disabledLocalShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabledLocal));
     *disabledLocal = {};
+    disabledRtLocalShadowConstants_ = dxCommon_->CreateBufferResource(sizeof(DxrLocalShadowParameters));
+    DxrLocalShadowParameters* disabledRtLocal = nullptr;
+    disabledRtLocalShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabledRtLocal));
+    *disabledRtLocal = {};
     nullLocalShadowSrv_ = SrvManager::GetInstance()->Allocate();
     D3D12_SHADER_RESOURCE_VIEW_DESC localNullDesc {};
     localNullDesc.Format = DXGI_FORMAT_R32_FLOAT;
@@ -227,6 +232,12 @@ void Object3dManager::CreateRootSignature()
     vertexShaderParameters.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
     vertexShaderParameters.Constants.ShaderRegister = 1;
     vertexShaderParameters.Constants.Num32BitValues = 4;
+    auto& rtLocalSettings = rootParameters[RootParameterIndex(Object3dRootParameter::RtLocalShadowSettings)];
+    rtLocalSettings.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rtLocalSettings.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; rtLocalSettings.Descriptor.ShaderRegister = 9;
+    auto& rtLocalReceiver = rootParameters[RootParameterIndex(Object3dRootParameter::RtLocalShadowReceiver)];
+    rtLocalReceiver.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    rtLocalReceiver.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; rtLocalReceiver.Constants = {10, 0, 1};
     auto& shadowConstants = rootParameters[kShadowConstantsRootIndex];
     shadowConstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     shadowConstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -452,6 +463,24 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     desc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    if (pixelShaderPath.find("/Raytracing/") != std::string::npos) {
+        desc.NumRenderTargets = 5;
+        desc.RTVFormats[4] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        if (pixelShaderPath.find("/Reflections") != std::string::npos || pixelShaderPath.find("/LocalShadows") != std::string::npos) {
+            desc.NumRenderTargets = 7;
+            desc.RTVFormats[5] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+            desc.RTVFormats[6] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            for (uint32_t index = 5; index < 7; ++index) {
+                desc.BlendState.RenderTarget[index].BlendEnable = FALSE;
+                desc.BlendState.RenderTarget[index].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+            }
+        }
+        if (pixelShaderPath.find("/LocalShadows") != std::string::npos) {
+            desc.NumRenderTargets = 8; desc.RTVFormats[7] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+            desc.BlendState.RenderTarget[7].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+        }
+        desc.BlendState.RenderTarget[4].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    }
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
@@ -488,6 +517,11 @@ Object3dManager::~Object3dManager()
     if (nullShadowSrv_ != 0xffffffffu) { SrvManager::GetInstance()->Free(nullShadowSrv_); }
 }
 
+D3D12_GPU_VIRTUAL_ADDRESS Object3dManager::GetRtLocalShadowConstantsAddress() const {
+    auto* scene = DxrRenderer::GetActive();
+    if (scene && scene->GetLocalShadowConstantsAddress() != 0) { return scene->GetLocalShadowConstantsAddress(); }
+    return disabledRtLocalShadowConstants_->GetGPUVirtualAddress();
+}
 void Object3dManager::BindShadowResources(bool receiveShadow,
     uint32_t constantsIndex, uint32_t textureIndex, uint32_t receiverIndex)
 {

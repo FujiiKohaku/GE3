@@ -33,8 +33,11 @@ sample shadows.
 ShadowMapRenderer creates a 2048-square R32_TYPELESS resource, D32_FLOAT DSV and
 R32_FLOAT SRV. A separate depth-only root signature/PSO uses world matrices as
 root constants and a shared light view/projection CBV. It does not overwrite the
-camera transform CBV. Mesh DrawDepth binds geometry without texture/material
-root bindings. The light map transitions from shader resource to depth write and
+camera transform CBV. Opaque Mesh DrawDepth binds geometry without texture/material
+root bindings. Alpha-masked Object3d uses a separate pixel shader, material CBV and
+per-primitive texture binding with the same UV transform/cutoff as regular rendering
+and DXR (see [alpha masks](../Raytracing/AlphaMasks.md)). Custom depth deformation
+does not yet support masks. The light map transitions from shader resource to depth write and
 back before regular offscreen rendering restores the viewport and targets.
 
 ShadowCamera fits a rotation-stable sphere around the camera frustum up to the

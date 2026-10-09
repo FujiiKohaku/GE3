@@ -1,6 +1,7 @@
 #include "SkinningObject3dManager.h"
 #include "Object3dRootParameter.h"
 #include "Engine/Light/LightManager.h"
+#include "Object3dManager.h"
 #include <cassert>
 #include <filesystem>
 
@@ -180,6 +181,12 @@ void SkinningObject3dManager::CreateRootSignature()
 
     // ===============================
     // RootSignatureDesc
+    auto& rtLocalSettings = rootParameters[RootParameterIndex(Object3dRootParameter::RtLocalShadowSettings)];
+    rtLocalSettings.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    rtLocalSettings.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; rtLocalSettings.Descriptor.ShaderRegister = 9;
+    auto& rtLocalReceiver = rootParameters[RootParameterIndex(Object3dRootParameter::RtLocalShadowReceiver)];
+    rtLocalReceiver.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    rtLocalReceiver.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL; rtLocalReceiver.Constants = {10, 0, 1};
     // ===============================
     D3D12_ROOT_SIGNATURE_DESC desc {};
     desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -343,6 +350,25 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> SkinningObject3dManager::CreateMater
     desc.RTVFormats[1] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[2] = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    if (pixelShaderPath.find("/Raytracing/") != std::string::npos) {
+        desc.NumRenderTargets = 5;
+        desc.RTVFormats[4] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        if (pixelShaderPath.find("/Reflections") != std::string::npos || pixelShaderPath.find("/LocalShadows") != std::string::npos) {
+            desc.NumRenderTargets = 7;
+            desc.RTVFormats[5] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+            desc.RTVFormats[6] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            for (uint32_t index = 5; index < 7; ++index) {
+                desc.BlendState.RenderTarget[index].BlendEnable = FALSE;
+                desc.BlendState.RenderTarget[index].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+            }
+        }
+        desc.BlendState.RenderTarget[4].BlendEnable = FALSE;
+        desc.BlendState.RenderTarget[4].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    }
+    if (pixelShaderPath.find("/LocalShadows") != std::string::npos) {
+        desc.NumRenderTargets = 8; desc.RTVFormats[7] = DXGI_FORMAT_R16G16B16A16_FLOAT;
+        desc.BlendState.RenderTarget[7].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    }
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;
     desc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;

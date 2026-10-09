@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "Engine/math/MatrixMath.h"
 #include "Model.h"
+#include "Engine/Raytracing/DxrRenderer.h"
 #include "ModelManager.h"
 #include "Object3dManager.h"
 #include "Object3dRootParameter.h"
@@ -49,6 +50,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     materialData_->normalMapStrength = 0.0f;
     materialData_->normalMapFlipY = 0.0f;
     materialData_->normalMapPadding = 0.0f;
+    materialData_->alphaCutoff = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // ================================
@@ -137,8 +139,38 @@ void Object3d::Draw()
             worldMatrix_, camera_->GetViewProjectionMatrix());
     }
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
+    auto* dxrRenderer = DxrRenderer::GetActive();
+    bool isDxrEligible = dxrRenderer != nullptr && model_ != nullptr && !transparent_ && materialData_ != nullptr
+        && (materialData_->color.w >= 1.0f || materialData_->alphaCutoff > 0)
+        && vertexShaderPath_ == "resources/Shaders/Object3D/Object3d.VS.hlsl";
+    std::string drawPixelShaderPath = pixelShaderPath_;
+    if (isDxrEligible && dxrRenderer->ShouldCaptureReflections()) {
+        const std::string kMaterialRoot = "resources/Shaders/Object3D/";
+        const std::string kMaterials[] = {"Standard", "ShadowStandard", "Toon", "ShadowToon"};
+        for (const auto& materialName : kMaterials) {
+            if (pixelShaderPath_ != kMaterialRoot + materialName + "/Render.PS.hlsl") { continue; }
+            std::string captureFolder = "Reflections";
+            if (receiveShadow_ && dxrRenderer->ShouldCaptureDirectionalShadows()) { captureFolder = "ReflectionsWithSun"; }
+            if (dxrRenderer->ShouldCaptureLocalShadows()) {
+                captureFolder = "LocalShadows";
+                if (receiveShadow_ && dxrRenderer->ShouldCaptureDirectionalShadows()) { captureFolder = "LocalShadowsWithSun"; }
+            }
+            drawPixelShaderPath = kMaterialRoot + "Raytracing/" + captureFolder + "/" + materialName + "/Render.PS.hlsl";
+            break;
+        }
+    }
+    else if (isDxrEligible && receiveShadow_ && dxrRenderer->ShouldCaptureDirectionalShadows()) {
+        const std::string kMaterialRoot = "resources/Shaders/Object3D/";
+        const std::string kSupportedMaterials[] = {"Standard", "ShadowStandard", "Toon", "ShadowToon"};
+        for (const std::string& materialName : kSupportedMaterials) {
+            if (pixelShaderPath_ == kMaterialRoot + materialName + "/Render.PS.hlsl") {
+                drawPixelShaderPath = kMaterialRoot + "Raytracing/" + materialName + "/Render.PS.hlsl";
+                break;
+            }
+        }
+    }
     object3dManager_->BindPipeline(
-        pixelShaderPath_, transparent_, transparentDepthWrite_, vertexShaderPath_);
+        drawPixelShaderPath, transparent_, transparentDepthWrite_, vertexShaderPath_);
     commandList->SetGraphicsRoot32BitConstants(
         Object3dManager::kVertexShaderParametersRootIndex, 4, &vertexShaderParameters_, 0);
     
@@ -161,10 +193,16 @@ void Object3d::Draw()
         Object3dManager::GetInstance()->GetEnvironmentTexture());
 
     object3dManager_->BindShadowResources(receiveShadow_);
+    commandList->SetGraphicsRootConstantBufferView(RootParameterIndex(Object3dRootParameter::RtLocalShadowSettings), object3dManager_->GetRtLocalShadowConstantsAddress());
+    uint32_t shouldReceiveLocalShadow = 0; if (receiveShadow_) { shouldReceiveLocalShadow = 1; }
+    commandList->SetGraphicsRoot32BitConstant(RootParameterIndex(Object3dRootParameter::RtLocalShadowReceiver), shouldReceiveLocalShadow, 0);
     if (model_) {
         model_->Draw();
     }
     QueueMotionVectors();
+    if (isDxrEligible) {
+        dxrRenderer->Queue(this, *model_, worldMatrix_, *materialData_, castShadow_, receiveShadow_);
+    }
 }
 
 void Object3d::QueueMotionVectors()
@@ -178,7 +216,8 @@ void Object3d::QueueMotionVectors()
         if (primitive.mode != PrimitiveMode::Triangles) { continue; }
         renderer->Queue(primitive.vbView, primitive.vbView, primitive.ibView,
             static_cast<uint32_t>(primitive.vertices.size()), static_cast<uint32_t>(primitive.indices.size()),
-            worldMatrix_, *camera_, motionHistory_, motionVectorShaderPath_, vertexShaderParameters_, shadowMaterial_.isDoubleSided);
+            worldMatrix_, *camera_, motionHistory_, motionVectorShaderPath_, vertexShaderParameters_, shadowMaterial_.isDoubleSided,
+            materialData_, TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetMaterial(primitive.materialIndex).textureFilePath));
     }
     renderer->CommitHistory(motionHistory_, worldMatrix_, *camera_, vertexShaderParameters_);
 }
@@ -501,7 +540,12 @@ void Object3d::DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentSha
     float radius = localRadius * std::sqrt(squaredScale);
     if (!renderer.Intersects(center, radius)) { return; }
     renderer.BindObject(worldMatrix_, shadowMaterial_, vertexShaderParameters_);
-    model_->DrawDepth();
+    if (materialData_ && materialData_->alphaCutoff > 0) {
+        // Custom depth deformation must supply a matching UV output before supporting masks.
+        if (!shadowMaterial_.vertexShaderPath.empty()) { return; }
+        renderer.BindAlphaMaterial(materialResource->GetGPUVirtualAddress(), shadowMaterial_.isDoubleSided);
+        model_->DrawDepth(ShadowMapRenderer::kAlphaTextureRootIndex);
+    } else { model_->DrawDepth(); }
 }
 
 void Object3d::SetSurfaceProperties(float roughness, float metallic, float specularStrength)
@@ -548,4 +592,10 @@ void Object3d::SetNormalMapStrength(float strength)
 {
     if (materialData_ == nullptr) { return; }
     materialData_->normalMapStrength = std::clamp(strength, 0.0f, 2.0f);
+}
+bool Object3d::SetAlphaCutoff(float alphaCutoff) {
+    if (!materialData_ || !std::isfinite(alphaCutoff) || alphaCutoff < 0 || alphaCutoff > 1) { return false; }
+    materialData_->alphaCutoff = alphaCutoff;
+    ResetMotionHistory();
+    return true;
 }

@@ -38,6 +38,7 @@ function Get-ShaderProfile {
     if ($FileName -match "\.VS\.hlsl$") { return "vs_6_0" }
     if ($FileName -match "\.PS\.hlsl$") { return "ps_6_0" }
     if ($FileName -match "\.GS\.hlsl$") { return "gs_6_0" }
+    if ($FileName -match "\.LIB\.hlsl$") { return "lib_6_3" }
     return $null
 }
 
@@ -128,10 +129,13 @@ while ($nextJobIndex -lt $compileJobs.Count -or $runningJobs.Count -gt 0) {
 
         New-Item -ItemType Directory -Path $compileJob.OutputDirectory -Force | Out-Null
 
-        $processArguments = '-E main -T {0} -O3 -Zpr -Fo "{1}" "{2}"' -f `
+        $processArguments = '-T {0} -O3 -Zpr -Fo "{1}" "{2}"' -f `
             $compileJob.Profile, `
             $compileJob.OutputPath, `
             $compileJob.SourcePath
+        if ($compileJob.Profile -ne "lib_6_3") {
+            $processArguments = '-E main ' + $processArguments
+        }
 
         $processStartInfo = New-Object System.Diagnostics.ProcessStartInfo
         $processStartInfo.FileName = $DxcPath

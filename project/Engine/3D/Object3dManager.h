@@ -62,6 +62,7 @@ public:
 
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetEnvironmentTexture();
+    D3D12_GPU_VIRTUAL_ADDRESS GetRtLocalShadowConstantsAddress() const;
     void SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle);
 
 private:
@@ -90,6 +91,7 @@ private:
     ShadowMapRenderer* shadowRenderer_ = nullptr;
     LocalShadowRenderer* localShadowRenderer_ = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> disabledLocalShadowConstants_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> disabledRtLocalShadowConstants_;
     uint32_t nullLocalShadowSrv_ = 0xffffffffu;
     Microsoft::WRL::ComPtr<ID3D12Resource> disabledShadowConstants_;
     uint32_t nullShadowSrv_ = 0xffffffffu;

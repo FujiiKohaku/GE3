@@ -5,8 +5,11 @@
 #include "ModelManager.h"
 #include "SkinCluster.h"
 #include "SkinningObject3dManager.h"
+#include "Object3dManager.h"
 #include "Object3dRootParameter.h"
+#include "Engine/Raytracing/DxrRenderer.h"
 #include <cassert>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -61,6 +64,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->normalMapStrength = 0.0f;
     materialData_->normalMapFlipY = 0.0f;
     materialData_->normalMapPadding = 0.0f;
+    materialData_->alphaCutoff = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
     // =====================================================
@@ -177,7 +181,40 @@ void SkinningObject3d::Draw()
             worldMatrix_, camera_->GetViewProjectionMatrix());
     }
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
-    skinningObject3dManager_->BindPipeline(pixelShaderPath_);
+    auto* dxrRenderer = DxrRenderer::GetActive();
+    bool isDxrEligible = dxrRenderer != nullptr && model_ != nullptr && materialData_ != nullptr
+        && (materialData_->color.w >= 1.0f || materialData_->alphaCutoff > 0) && skinnedGeometryRevision_ != 0
+        && skinningObject3dManager_->GetBlendMode() == kBlendModeNone;
+    std::string drawPixelShaderPath = pixelShaderPath_;
+    if (isDxrEligible && dxrRenderer->ShouldCaptureReflections()) {
+        const std::string kMaterialRoot = "resources/Shaders/Object3D/";
+        const std::string kMaterials[] = {"Standard", "Toon"};
+        for (const auto& materialName : kMaterials) {
+            if (pixelShaderPath_ != kMaterialRoot + materialName + "/Render.PS.hlsl") { continue; }
+            std::string captureFolder = "Reflections";
+            if (shouldReceiveShadow_ && dxrRenderer->ShouldCaptureDirectionalShadows()) { captureFolder = "ReflectionsWithSun"; }
+            if (dxrRenderer->ShouldCaptureLocalShadows()) {
+                captureFolder = "LocalShadows";
+                if (shouldReceiveShadow_ && dxrRenderer->ShouldCaptureDirectionalShadows()) { captureFolder = "LocalShadowsWithSun"; }
+            }
+            drawPixelShaderPath = kMaterialRoot + "Raytracing/" + captureFolder + "/" + materialName + "/Render.PS.hlsl";
+            break;
+        }
+    }
+    else if (isDxrEligible && shouldReceiveShadow_ && dxrRenderer->ShouldCaptureDirectionalShadows()) {
+        const std::string kMaterialRoot = "resources/Shaders/Object3D/";
+        const std::string kSupportedMaterials[] = {"Standard", "Toon"};
+        for (const std::string& materialName : kSupportedMaterials) {
+            if (pixelShaderPath_ == kMaterialRoot + materialName + "/Render.PS.hlsl") {
+                drawPixelShaderPath = kMaterialRoot + "Raytracing/" + materialName + "/Render.PS.hlsl";
+                break;
+            }
+        }
+    }
+    skinningObject3dManager_->BindPipeline(drawPixelShaderPath);
+    commandList->SetGraphicsRootConstantBufferView(RootParameterIndex(Object3dRootParameter::RtLocalShadowSettings), Object3dManager::GetInstance()->GetRtLocalShadowConstantsAddress());
+    uint32_t shouldReceiveLocalShadow = 0; if (shouldReceiveShadow_) { shouldReceiveLocalShadow = 1; }
+    commandList->SetGraphicsRoot32BitConstant(RootParameterIndex(Object3dRootParameter::RtLocalShadowReceiver), shouldReceiveLocalShadow, 0);
 
     commandList->SetGraphicsRootConstantBufferView(
         RootParameterIndex(Object3dRootParameter::Material),
@@ -225,6 +262,10 @@ void SkinningObject3d::Draw()
         vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
     }
     QueueMotionVectors();
+    if (isDxrEligible) {
+        dxrRenderer->QueueDeformed(this, *model_, worldMatrix_, *materialData_,
+            skinnedVertexResource_.Get(), skinnedGeometryRevision_, shouldCastShadow_, skinnedVertexState_, shouldReceiveShadow_);
+    }
 }
 
 void SkinningObject3d::QueueMotionVectors()
@@ -257,7 +298,8 @@ void SkinningObject3d::QueueMotionVectors()
         previousVertices.BufferLocation = previousSkinnedVertexResource_->GetGPUVirtualAddress() + sizeof(VertexData) * vertexOffset;
         renderer->Queue(currentVertices, previousVertices, primitive.ibView,
             static_cast<uint32_t>(primitive.vertices.size()), static_cast<uint32_t>(primitive.indices.size()),
-            worldMatrix_, *camera_, motionHistory_, L"", {});
+            worldMatrix_, *camera_, motionHistory_, L"", {}, false,
+            materialData_, TextureManager::GetInstance()->GetSrvHandleGPU(model_->GetMaterial(primitive.materialIndex).textureFilePath));
         vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
     }
     renderer->QueueVertexHistoryCopy(skinnedVertexResource_.Get(), previousSkinnedVertexResource_.Get());
@@ -340,6 +382,8 @@ SkinningObject3d::~SkinningObject3d()
 }
 void SkinningObject3d::CreateSkinningResources()
 {
+    previousDxrPalette_.clear();
+    skinnedGeometryRevision_ = 0;
     previousSkinnedVertexResource_.Reset();
     ResetMotionHistory();
     assert(skinningObject3dManager_);
@@ -589,6 +633,18 @@ void SkinningObject3d::DispatchSkinning()
 
     commandList->ResourceBarrier(1, &barrierAfter);
     skinnedVertexState_ = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    // Compare the small joint palette rather than reading GPU vertices back to the CPU.
+    const auto& palette = skinClusterData_.mappedPalette;
+    bool hasPoseChanged = previousDxrPalette_.size() != palette.size();
+    if (!hasPoseChanged && !palette.empty()) {
+        hasPoseChanged = std::memcmp(previousDxrPalette_.data(), palette.data(),
+            palette.size_bytes()) != 0;
+    }
+    if (hasPoseChanged) {
+        previousDxrPalette_.assign(palette.begin(), palette.end());
+        ++skinnedGeometryRevision_;
+        if (skinnedGeometryRevision_ == 0) { ++skinnedGeometryRevision_; }
+    }
 }
 #pragma endregion
 
@@ -610,4 +666,10 @@ void SkinningObject3d::SetNormalMapStrength(float strength)
 {
     if (materialData_ == nullptr) { return; }
     materialData_->normalMapStrength = std::clamp(strength, 0.0f, 2.0f);
+}
+bool SkinningObject3d::SetAlphaCutoff(float alphaCutoff) {
+    if (!materialData_ || !std::isfinite(alphaCutoff) || alphaCutoff < 0 || alphaCutoff > 1) { return false; }
+    materialData_->alphaCutoff = alphaCutoff;
+    ResetMotionHistory();
+    return true;
 }

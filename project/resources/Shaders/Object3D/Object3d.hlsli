@@ -25,6 +25,7 @@ struct Material
     float normalMapStrength;
     float normalMapFlipY;
     float normalMapPadding;
+    float alphaCutoff;
 };
 
 static const int kShadingUnlit = 0;

@@ -53,6 +53,10 @@ public:
     Vector4 GetAtmosphereSettings() const { return ambientLightData_->atmosphereSettings; }
     D3D12_GPU_VIRTUAL_ADDRESS GetAmbientGpuAddress() const { return ambientLightResource_->GetGPUVirtualAddress(); }
     D3D12_GPU_VIRTUAL_ADDRESS GetDirectionalGpuAddress() const { return lightResource_->GetGPUVirtualAddress(); }
+    D3D12_GPU_VIRTUAL_ADDRESS GetPointLightsGpuAddress() const { return pointLightResource_->GetGPUVirtualAddress(); }
+    D3D12_GPU_VIRTUAL_ADDRESS GetSpotLightsGpuAddress() const { return spotLightResource_->GetGPUVirtualAddress(); }
+    Vector4 GetHemisphereSkyColor() const { return ambientLightData_->skyColor; }
+    Vector4 GetHemisphereGroundColor() const { return ambientLightData_->groundColor; }
     void Bind(ID3D12GraphicsCommandList* cmd);
 
     void SetDirectional(const Vector4& color, const Vector3& dir, float intensity);

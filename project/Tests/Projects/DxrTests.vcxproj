@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{BC798A61-D6E9-4D32-B792-61083D08A1D4}</ProjectGuid>
+    <ProjectName>DxrTests</ProjectName>
+    <TargetName>DxrTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\DxrTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>DxrTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)DxrTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><PreprocessorDefinitions>KOHAKU_RENDER_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="$(projectRootPath)App\main.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\DxrValidationTests.cpp" />
+  </ItemGroup>
+</Project>

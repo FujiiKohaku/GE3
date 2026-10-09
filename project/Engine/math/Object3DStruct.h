@@ -46,6 +46,7 @@ struct Material {
     float normalMapStrength;
     float normalMapFlipY;
     float normalMapPadding;
+    float alphaCutoff = 0.0f;
 };
 
 // 変換行列データ（GPU定数バッファ用）

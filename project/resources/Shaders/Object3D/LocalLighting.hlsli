@@ -1,5 +1,8 @@
 #ifndef KOHAKU_LOCAL_LIGHTING
 #define KOHAKU_LOCAL_LIGHTING
+#if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)
+#include "RtLocalShadowSelection.hlsli"
+#endif
 ConstantBuffer<PointLightCollection> gPointLights : register(b3);
 ConstantBuffer<SpotLightCollection> gSpotLights : register(b4);
 
@@ -21,6 +24,9 @@ float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 wor
     if (GetDirectLightingStrength(gAmbientLight) <= 0) { return 0; }
     float3 result = 0.0f;
     uint2 masks = GetClusterLightMasks(worldPosition);
+#if defined(KOHAKU_RT_TRACE_LOCAL_SHADOWS)
+    if (shouldShadeSelectedLocalLights) { masks &= rtLocalLightMasks.xy; }
+#endif
     while (masks.x != 0) {
         uint lightIndex = firstbitlow(masks.x);
         masks.x &= masks.x - 1;
@@ -36,8 +42,14 @@ float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 wor
         visibility = PointShadowVisibility(lightIndex, light.position, worldPosition, geometricNormal);
 #endif
         float3 radiance = light.color.rgb * light.intensity * attenuation * visibility;
-        result += baseColor * radiance * saturate(dot(normal, direction));
-        if (hasSpecular) { result += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
+        float3 contribution = baseColor * radiance * saturate(dot(normal, direction));
+        if (hasSpecular) { contribution += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
+        result += contribution;
+#if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)
+        if (shouldReceiveRtLocalShadow != 0 && (rtLocalLightMasks.x & (1u << lightIndex)) != 0) {
+            capturedRtLocalLight += contribution * GetDirectLightingStrength(gAmbientLight);
+        }
+#endif
     }
     while (masks.y != 0) {
         uint lightIndex = firstbitlow(masks.y);
@@ -56,8 +68,14 @@ float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 wor
         visibility = SpotShadowVisibility(lightIndex, worldPosition, geometricNormal);
 #endif
         float3 radiance = light.color.rgb * light.intensity * attenuation * cone * visibility;
-        result += baseColor * radiance * saturate(dot(normal, direction));
-        if (hasSpecular) { result += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
+        float3 contribution = baseColor * radiance * saturate(dot(normal, direction));
+        if (hasSpecular) { contribution += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
+        result += contribution;
+#if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)
+        if (shouldReceiveRtLocalShadow != 0 && (rtLocalLightMasks.y & (1u << lightIndex)) != 0) {
+            capturedRtLocalLight += contribution * GetDirectLightingStrength(gAmbientLight);
+        }
+#endif
     }
     return result * GetDirectLightingStrength(gAmbientLight);
 }

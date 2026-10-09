@@ -1,4 +1,4 @@
 #include "Common.hlsli"
 MotionVectorOutput main(MotionVectorInput input) {
-    return BuildMotionVector(input.position, input.previousPosition);
+    return BuildMotionVector(input.position, input.previousPosition, input.texcoord);
 }

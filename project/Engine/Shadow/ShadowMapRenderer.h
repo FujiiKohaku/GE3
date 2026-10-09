@@ -17,6 +17,8 @@ public:
     void BindObject(const Matrix4x4& world);
     void BindObject(const Matrix4x4& world, const ShadowMaterialSettings& material,
         const Vector4& parameters);
+    void BindAlphaMaterial(D3D12_GPU_VIRTUAL_ADDRESS materialAddress, bool isDoubleSided);
+    static constexpr uint32_t kAlphaTextureRootIndex = 4;
     bool Intersects(const Vector3& center, float radius) const { return camera_.Intersects(center, radius); }
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrv() const;
     D3D12_GPU_VIRTUAL_ADDRESS GetConstantsAddress() const { return constantsBuffer_->GetGPUVirtualAddress(); }
@@ -44,4 +46,5 @@ private:
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipeline_;
     std::map<std::wstring, std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, 2>> materialPipelines_;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDescription_ {};
+    std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, 2> alphaPipelines_;
 };
