@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "ShadowDenoiser.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/SrvManager/SrvManager.h"
@@ -48,7 +49,7 @@ void ShadowDenoiser::CreateResources() {
         if (index < 4) {
             format = DXGI_FORMAT_R16G16B16A16_FLOAT;
         }
-        auto description = CD3DX12_RESOURCE_DESC::Tex2D(format, WinApp::kClientWidth, WinApp::kClientHeight,
+        auto description = CD3DX12_RESOURCE_DESC::Tex2D(format, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(),
             1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
         RequireDenoiseResult(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&textures_[index])), "Shadow denoiser texture creation failed");
@@ -59,21 +60,21 @@ void ShadowDenoiser::CreateResources() {
         rtvHandles_[index].ptr += static_cast<SIZE_T>(index) * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         device->CreateRenderTargetView(textures_[index].Get(), nullptr, rtvHandles_[index]);
     }
-    D3D12_DESCRIPTOR_RANGE ranges[7] = {};
-    D3D12_ROOT_PARAMETER parameters[9] = {};
-    for (uint32_t index = 0; index < 7; ++index) {
+    D3D12_DESCRIPTOR_RANGE ranges[9] = {};
+    D3D12_ROOT_PARAMETER parameters[11] = {};
+    for (uint32_t index = 0; index < 9; ++index) {
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         parameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         parameters[index].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
         parameters[index].DescriptorTable = {1, &ranges[index]};
     }
-    parameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    parameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    parameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    parameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    parameters[8].Constants = {1, 0, 1};
-    D3D12_ROOT_SIGNATURE_DESC signature = {9, parameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT};
+    parameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    parameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    parameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    parameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    parameters[10].Constants = {1, 0, 1};
+    D3D12_ROOT_SIGNATURE_DESC signature = {11, parameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT};
     Microsoft::WRL::ComPtr<ID3DBlob> blob, errors;
     RequireDenoiseResult(D3D12SerializeRootSignature(&signature, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors), "Shadow denoiser root serialization failed");
     RequireDenoiseResult(device->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&root_)), "Shadow denoiser root creation failed");
@@ -128,8 +129,11 @@ void ShadowDenoiser::DrawPass(const ShadowDenoiserInputs& inputs, uint32_t targe
     uint32_t geometryIndex = historyIndex_ * 2 + 1;
     if (!isTemporal) { geometryIndex = (1 - historyIndex_) * 2 + 1; }
     commandList->SetGraphicsRootDescriptorTable(6, SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndices_[geometryIndex]));
-    commandList->SetGraphicsRootConstantBufferView(7, parameters_->GetGPUVirtualAddress());
-    commandList->SetGraphicsRoot32BitConstant(8, step, 0);
+    auto reprojectionSrv = inputs.normalSrv; auto previousReprojectionSrv = inputs.normalSrv;
+    if (inputs.reprojectionSrv.ptr != 0 && inputs.previousReprojectionSrv.ptr != 0) { reprojectionSrv = inputs.reprojectionSrv; previousReprojectionSrv = inputs.previousReprojectionSrv; }
+    commandList->SetGraphicsRootDescriptorTable(7, reprojectionSrv); commandList->SetGraphicsRootDescriptorTable(8, previousReprojectionSrv);
+    commandList->SetGraphicsRootConstantBufferView(9, parameters_->GetGPUVirtualAddress());
+    commandList->SetGraphicsRoot32BitConstant(10, step, 0);
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->DrawInstanced(3, 1, 0, 0);
     for (uint32_t offset = 0; offset < targetCount; ++offset) {
@@ -139,6 +143,8 @@ void ShadowDenoiser::DrawPass(const ShadowDenoiserInputs& inputs, uint32_t targe
     }
 }
 D3D12_GPU_DESCRIPTOR_HANDLE ShadowDenoiser::Draw(const ShadowDenoiserInputs& inputs) {
+    if (textures_[0] && (textures_[0]->GetDesc().Width != SceneRenderResolution::GetWidth() || textures_[0]->GetDesc().Height != SceneRenderResolution::GetHeight())) { ReleaseResources(); }
+
     if (!inputs.camera || inputs.rawMaskSrv.ptr == 0 || inputs.depthSrv.ptr == 0
         || inputs.normalSrv.ptr == 0 || inputs.directionalLightSrv.ptr == 0 || inputs.maxHistoryFrames < 1
         || inputs.maxHistoryFrames > 64 || inputs.spatialPassCount > 3) { ResetHistory(); return inputs.rawMaskSrv; }
@@ -158,6 +164,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE ShadowDenoiser::Draw(const ShadowDenoiserInputs& inp
     parameters.hasSceneChanges = static_cast<uint32_t>(hasSceneChanges);
     parameters.hasHistory = static_cast<uint32_t>(hasUsedHistory_);
     parameters.hasMotionVectors = static_cast<uint32_t>(inputs.motionVectorSrv.ptr != 0);
+    if (parameters.hasMotionVectors != 0 && inputs.reprojectionSrv.ptr != 0 && inputs.previousReprojectionSrv.ptr != 0) { parameters.hasMotionVectors |= 2; }
     parameters.previousViewProjection = previousViewProjection_; parameters.previousView = previousView_;
     parameters.maxHistoryFrames = inputs.maxHistoryFrames;
     const Vector2& jitter = inputs.camera->GetProjectionJitter();
@@ -172,8 +179,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE ShadowDenoiser::Draw(const ShadowDenoiserInputs& inp
     }
     auto* commandList = DirectXCommon::GetInstance()->GetCommandList();
     SrvManager::GetInstance()->PreDraw();
-    D3D12_VIEWPORT viewport = {0, 0, static_cast<float>(WinApp::kClientWidth), static_cast<float>(WinApp::kClientHeight), 0, 1};
-    D3D12_RECT scissor = {0, 0, WinApp::kClientWidth, WinApp::kClientHeight};
+    D3D12_VIEWPORT viewport = {0, 0, static_cast<float>(SceneRenderResolution::GetWidth()), static_cast<float>(SceneRenderResolution::GetHeight()), 0, 1};
+    D3D12_RECT scissor = {0, 0, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight()};
     commandList->RSSetViewports(1, &viewport); commandList->RSSetScissorRects(1, &scissor);
     uint32_t writeIndex = 1 - historyIndex_;
     timer_.Begin();

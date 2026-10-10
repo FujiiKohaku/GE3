@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "VolumetricLightRenderer.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
@@ -15,6 +16,11 @@
 #include "externals/imgui/imgui.h"
 #endif
 namespace {
+uint64_t HashVolumeBytes(uint64_t hash, const void* value, size_t sizeBytes) {
+    const auto* bytes = static_cast<const uint8_t*>(value);
+    for (size_t index = 0; index < sizeBytes; ++index) { hash = (hash ^ bytes[index]) * 1099511628211ull; }
+    return hash;
+}
 void CheckVolume(HRESULT result) {
     if (FAILED(result)) { throw std::runtime_error("Volumetric light resource/pipeline creation failed"); }
 }
@@ -91,6 +97,8 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* 
 
 }
 VolumetricLightRenderer::~VolumetricLightRenderer() {
+    for (uint32_t index : historySrvIndices_) { if (index != UINT_MAX) { SrvManager::GetInstance()->Free(index); } }
+    for (uint32_t index : historyTransmittanceSrvIndices_) { if (index != UINT_MAX) { SrvManager::GetInstance()->Free(index); } }
     if (srvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(srvIndex_); }
     if (transmittanceSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(transmittanceSrvIndex_); }
     if (localShadowFallbackSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(localShadowFallbackSrvIndex_); }
@@ -101,12 +109,48 @@ bool VolumetricLightRenderer::Initialize(DirectXCommon* dxCommon) {
     try {
         CreateResources();
         CreatePipelines();
+        raymarchTimer_.Initialize(); temporalTimer_.Initialize(); compositeTimer_.Initialize();
         ready_ = true;
     } catch (const std::exception& error) {
         Logger::Error(error.what());
         ready_ = false;
     }
     return ready_;
+}
+void VolumetricLightRenderer::ResetHistory() { hasHistory_ = false; hasUsedHistory_ = false; }
+void VolumetricLightRenderer::ReadCompleted() { raymarchTimer_.ReadCompleted(); temporalTimer_.ReadCompleted(); compositeTimer_.ReadCompleted(); }
+void VolumetricLightRenderer::SetEnabled(bool isEnabled) {
+    if (parameters_.enabled != isEnabled) { ResetHistory(); }
+    parameters_.enabled = isEnabled;
+}
+void VolumetricLightRenderer::SetLocalFogEnabled(bool isEnabled) {
+    if (localFog_.isEnabled != isEnabled) { ResetHistory(); }
+    localFog_.isEnabled = isEnabled;
+}
+void VolumetricLightRenderer::SetTemporalEnabled(bool isEnabled) {
+    if (parameters_.shouldUseTemporalHistory != isEnabled) { ResetHistory(); }
+    parameters_.shouldUseTemporalHistory = isEnabled;
+}
+bool VolumetricLightRenderer::SetHistoryWeight(float weight) {
+    if (!std::isfinite(weight) || weight < 0 || weight > 0.95f) { return false; }
+    if (parameters_.historyWeight != weight) { ResetHistory(); }
+    parameters_.historyWeight = weight; return true;
+}
+bool VolumetricLightRenderer::SetScatteringAlbedo(float albedo) {
+    if (!std::isfinite(albedo) || albedo < 0 || albedo > 1) { return false; }
+    if (parameters_.scatteringAlbedo != albedo) { ResetHistory(); }
+    parameters_.scatteringAlbedo = albedo; return true;
+}
+bool VolumetricLightRenderer::SetQuality(VolumetricQuality quality) {
+    if (quality == VolumetricQuality::Low) { SetSampleCount(16); }
+    else if (quality == VolumetricQuality::Medium) { SetSampleCount(32); }
+    else if (quality == VolumetricQuality::High) { SetSampleCount(64); }
+    else if (quality != VolumetricQuality::Custom) { return false; }
+    parameters_.quality = quality; return true;
+}
+ID3D12Resource* VolumetricLightRenderer::GetFilteredTransmittanceTexture() const {
+    if (parameters_.shouldUseTemporalHistory && hasHistory_) { return historyTransmittanceTextures_[historyIndex_].Get(); }
+    return transmittanceTexture_.Get();
 }
 void VolumetricLightRenderer::SetLightColor(const Vector3& color) {
     parameters_.lightColor = { SafeVolumeValue(color.x, 0.0f, 4.0f, 1.0f),
@@ -116,7 +160,11 @@ void VolumetricLightRenderer::SetLightIntensity(float value) { parameters_.light
 void VolumetricLightRenderer::SetFogDensity(float value) { parameters_.fogDensity = SafeVolumeValue(value, 0.0f, 0.05f, 0.0f); }
 void VolumetricLightRenderer::SetMaxDistance(float value) { parameters_.maxDistance = SafeVolumeValue(value, 1.0f, 1000.0f, 240.0f); }
 void VolumetricLightRenderer::SetAnisotropy(float value) { parameters_.anisotropy = SafeVolumeValue(value, -0.8f, 0.8f, 0.0f); }
-void VolumetricLightRenderer::SetSampleCount(int32_t samples) { parameters_.sampleCount = std::clamp(samples, 8, 64); }
+void VolumetricLightRenderer::SetSampleCount(int32_t samples) {
+    int32_t sampleCount = std::clamp(samples, 8, 64);
+    if (parameters_.sampleCount != sampleCount) { ResetHistory(); }
+    parameters_.sampleCount = sampleCount; parameters_.quality = VolumetricQuality::Custom;
+}
 bool VolumetricLightRenderer::SetFogVolume(uint32_t volumeIndex, const FogVolumeSettings& settings) {
     if (volumeIndex >= kMaxFogVolumes || !IsFiniteVector(settings.center) || !IsFiniteVector(settings.halfExtents) ||
         !std::isfinite(settings.radius) || !std::isfinite(settings.density) || !std::isfinite(settings.edgeSoftness)) { return false; }
@@ -195,14 +243,16 @@ void VolumetricLightRenderer::SetLightDirection(const Vector3& direction) {
     frameValid_ = false;
 }
 void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows,
-    const LocalShadowRenderer* localShadows) {
+    const LocalShadowRenderer* localShadows, uint64_t sceneRevision) {
+    if (frameValid_) { ResetHistory(); }
+    ReadCompleted(); frameCamera_ = camera; frameSceneRevision_ = sceneRevision;
     frameValid_ = false;
     generated_ = false;
     shadowSrv_ = {};
     localShadowSrv_ = {};
     frameConstants_.spotCountAndBias = {};
-    frameConstants_.spotLights = {};
-    if (!ready_ || camera == nullptr) { return; }
+    frameConstants_.spotLights = {}; frameConstants_.volumes = {};
+    if (!ready_ || camera == nullptr) { ResetHistory(); return; }
     bool hasValidShadow = false;
     Vector3 direction { 0.0f, -1.0f, 0.0f };
     frameConstants_.lightColorAndIntensity = {};
@@ -270,34 +320,34 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
         }
         frameConstants_.spotCountAndBias.x = static_cast<float>(spotCount);
     }
-    if (!hasValidShadow && !localFog_.isEnabled && frameConstants_.spotCountAndBias.x == 0.0f) { return; }
+    if (!hasValidShadow && !localFog_.isEnabled && frameConstants_.spotCountAndBias.x == 0.0f) { ResetHistory(); return; }
     if (!hasValidShadow) { direction = { 0.0f, -1.0f, 0.0f }; }
-    if (camera->GetNearClip() <= 0.0f || camera->GetFarClip() <= camera->GetNearClip()) { return; }
+    if (camera->GetNearClip() <= 0.0f || camera->GetFarClip() <= camera->GetNearClip()) { ResetHistory(); return; }
     const auto& world = camera->GetWorldMatrix();
     const auto& projection = camera->GetProjectionMatrix();
     if (!FiniteMatrix(world) || !FiniteMatrix(projection) ||
-        !FiniteMatrix(camera->GetViewProjectionMatrix())) { return; }
+        !FiniteMatrix(camera->GetViewProjectionMatrix())) { ResetHistory(); return; }
     // Validate the camera basis without its translation. A translated VP inverse
     // loses precision and falsely toggles this effect as the camera moves.
     const double determinant =
         double(world.m[0][0]) * (double(world.m[1][1]) * world.m[2][2] - double(world.m[1][2]) * world.m[2][1]) -
         double(world.m[0][1]) * (double(world.m[1][0]) * world.m[2][2] - double(world.m[1][2]) * world.m[2][0]) +
         double(world.m[0][2]) * (double(world.m[1][0]) * world.m[2][1] - double(world.m[1][1]) * world.m[2][0]);
-    if (!std::isfinite(determinant) || std::abs(determinant) < 0.00000001) { return; }
+    if (!std::isfinite(determinant) || std::abs(determinant) < 0.00000001) { ResetHistory(); return; }
     const auto inverseProjection = MatrixMath::Inverse(projection);
-    if (!FiniteMatrix(inverseProjection)) { return; }
+    if (!FiniteMatrix(inverseProjection)) { ResetHistory(); return; }
     const auto identity = MatrixMath::Multiply(projection, inverseProjection);
     for (int row = 0; row < 4; ++row) {
         for (int column = 0; column < 4; ++column) {
             float expected = 0.0f;
             if (row == column) { expected = 1.0f; }
-            if (!std::isfinite(identity.m[row][column]) || std::abs(identity.m[row][column] - expected) > 0.001f) { return; }
+            if (!std::isfinite(identity.m[row][column]) || std::abs(identity.m[row][column] - expected) > 0.001f) { ResetHistory(); return; }
         }
     }
     Matrix4x4 relativeWorld = world;
     relativeWorld.m[3][0] = 0.0f; relativeWorld.m[3][1] = 0.0f; relativeWorld.m[3][2] = 0.0f;
     frameConstants_.inverseViewProjection = MatrixMath::Multiply(inverseProjection, relativeWorld);
-    if (!FiniteMatrix(frameConstants_.inverseViewProjection)) { return; }
+    if (!FiniteMatrix(frameConstants_.inverseViewProjection)) { ResetHistory(); return; }
     frameConstants_.cameraAndDistance = { world.m[3][0], world.m[3][1], world.m[3][2], parameters_.maxDistance };
     frameConstants_.lightDirectionAndDensity = { direction.x, direction.y, direction.z, parameters_.fogDensity };
     frameConstants_.fogColorAndEnabled = { localFog_.color.x, localFog_.color.y, localFog_.color.z, 0.0f };
@@ -335,36 +385,38 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
 void VolumetricLightRenderer::CreateResources() {
     auto* device = dxCommon_->GetDevice();
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc {};
-    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; heapDesc.NumDescriptors = 2;
+    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; heapDesc.NumDescriptors = 6;
     CheckVolume(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeap_)));
     D3D12_RESOURCE_DESC desc {};
     desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    desc.Width = WinApp::kClientWidth / 2; desc.Height = WinApp::kClientHeight / 2;
+    desc.Width = SceneRenderResolution::GetWidth() / 2; desc.Height = SceneRenderResolution::GetHeight() / 2;
     desc.DepthOrArraySize = 1; desc.MipLevels = 1; desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     desc.SampleDesc.Count = 1; desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     D3D12_HEAP_PROPERTIES heap {}; heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_CLEAR_VALUE clear {}; clear.Format = desc.Format;
     CheckVolume(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, textureState_, &clear, IID_PPV_ARGS(&volumeTexture_)));
+    allocationBytes_ += device->GetResourceAllocationInfo(0, 1, &desc).SizeInBytes;
     volumeTexture_->SetName(L"VolumetricLight::HalfResolutionScattering");
     device->CreateRenderTargetView(volumeTexture_.Get(), nullptr, rtvHeap_->GetCPUDescriptorHandleForHeapStart());
     if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Volumetric light SRV heap full"); }
-    srvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (srvIndex_ == UINT_MAX) { srvIndex_ = SrvManager::GetInstance()->Allocate(); }
     SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, volumeTexture_.Get(), desc.Format, 1);
     volumeSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
     desc.Format = DXGI_FORMAT_R16_FLOAT;
     clear.Format = desc.Format;
     clear.Color[0] = 1.0f;
     CheckVolume(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &desc, textureState_, &clear, IID_PPV_ARGS(&transmittanceTexture_)));
+    allocationBytes_ += device->GetResourceAllocationInfo(0, 1, &desc).SizeInBytes;
     transmittanceTexture_->SetName(L"VolumetricLight::HalfResolutionTransmittance");
     auto transmittanceRtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
     transmittanceRtv.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     device->CreateRenderTargetView(transmittanceTexture_.Get(), nullptr, transmittanceRtv);
     if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Fog transmittance SRV heap full"); }
-    transmittanceSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (transmittanceSrvIndex_ == UINT_MAX) { transmittanceSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
     SrvManager::GetInstance()->CreateSRVforTexture2D(transmittanceSrvIndex_, transmittanceTexture_.Get(), desc.Format, 1);
     transmittanceSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(transmittanceSrvIndex_);
     if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Local fog shadow SRV heap full"); }
-    localShadowFallbackSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (localShadowFallbackSrvIndex_ == UINT_MAX) { localShadowFallbackSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
     D3D12_SHADER_RESOURCE_VIEW_DESC nullShadowDesc {};
     nullShadowDesc.Format = DXGI_FORMAT_R32_FLOAT;
     nullShadowDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
@@ -380,8 +432,8 @@ void VolumetricLightRenderer::CreateResources() {
     CheckVolume(constantsResource_->Map(0, nullptr, reinterpret_cast<void**>(&constantsData_)));
 }
 void VolumetricLightRenderer::CreatePipelines() {
-    D3D12_DESCRIPTOR_RANGE ranges[5] {};
-    D3D12_ROOT_PARAMETER root[6] {};
+    D3D12_DESCRIPTOR_RANGE ranges[7] {};
+    D3D12_ROOT_PARAMETER root[8] {};
     for (uint32_t index = 0; index < 4; ++index) {
         ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -399,6 +451,14 @@ void VolumetricLightRenderer::CreatePipelines() {
     root[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     root[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     root[5].DescriptorTable = { 1, &ranges[4] };
+    for (uint32_t index = 5; index < 7; ++index) {
+        ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
+        ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        ranges[index].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+        root[index + 1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        root[index + 1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        root[index + 1].DescriptorTable = {1, &ranges[index]};
+    }
     D3D12_STATIC_SAMPLER_DESC samplers[2] {};
     for (uint32_t index = 0; index < 2; ++index) {
         samplers[index].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -412,13 +472,55 @@ void VolumetricLightRenderer::CreatePipelines() {
     samplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
     samplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
     D3D12_ROOT_SIGNATURE_DESC desc {};
-    desc.NumParameters = 6; desc.pParameters = root;
+    desc.NumParameters = 8; desc.pParameters = root;
     desc.NumStaticSamplers = 2; desc.pStaticSamplers = samplers;
     Microsoft::WRL::ComPtr<ID3DBlob> blob, errors;
     CheckVolume(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
     CheckVolume(dxCommon_->GetDevice()->CreateRootSignature(0, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&rootSignature_)));
     raymarchPipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Raymarch.PS.hlsl", true);
+    temporalPipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Temporal.PS.hlsl", true);
     compositePipeline_ = CreateVolumePipeline(dxCommon_, rootSignature_.Get(), L"resources/Shaders/PostEffect/Volumetric/Composite.PS.hlsl", false);
+}
+void VolumetricLightRenderer::CreateHistoryResources() {
+    if (historyTextures_[0]) { return; }
+    auto* device = dxCommon_->GetDevice(); auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    if (!SrvManager::GetInstance()->CanAllocate(4)) { throw std::runtime_error("Volumetric history descriptors exhausted"); }
+    for (uint32_t index = 0; index < 2; ++index) {
+        auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, SceneRenderResolution::GetWidth() / 2,
+            SceneRenderResolution::GetHeight() / 2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+        D3D12_CLEAR_VALUE clear = {}; clear.Format = description.Format;
+        CheckVolume(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&historyTextures_[index])));
+        allocationBytes_ += device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
+        if (historySrvIndices_[index] == UINT_MAX) { historySrvIndices_[index] = SrvManager::GetInstance()->Allocate(); }
+        SrvManager::GetInstance()->CreateSRVforTexture2D(historySrvIndices_[index], historyTextures_[index].Get(), description.Format, 1);
+        auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
+        rtv.ptr += (2 + index * 2) * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        device->CreateRenderTargetView(historyTextures_[index].Get(), nullptr, rtv);
+        description.Format = DXGI_FORMAT_R16_FLOAT; clear.Format = description.Format; clear.Color[0] = 1;
+        CheckVolume(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&historyTransmittanceTextures_[index])));
+        allocationBytes_ += device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
+        if (historyTransmittanceSrvIndices_[index] == UINT_MAX) { historyTransmittanceSrvIndices_[index] = SrvManager::GetInstance()->Allocate(); }
+        SrvManager::GetInstance()->CreateSRVforTexture2D(historyTransmittanceSrvIndices_[index], historyTransmittanceTextures_[index].Get(), description.Format, 1);
+        rtv.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        device->CreateRenderTargetView(historyTransmittanceTextures_[index].Get(), nullptr, rtv);
+    }
+}
+void VolumetricLightRenderer::RenderTemporal() {
+    uint32_t writeIndex = 1 - historyIndex_;
+    auto scatteringBarrier = CD3DX12_RESOURCE_BARRIER::Transition(historyTextures_[writeIndex].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    auto transmissionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(historyTransmittanceTextures_[writeIndex].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    const D3D12_RESOURCE_BARRIER barriers[] = {scatteringBarrier, transmissionBarrier};
+    auto* commandList = dxCommon_->GetCommandList(); commandList->ResourceBarrier(2, barriers);
+    auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
+    rtv.ptr += (2 + writeIndex * 2) * dxCommon_->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    commandList->OMSetRenderTargets(2, &rtv, TRUE, nullptr);
+    temporalTimer_.Begin(); Draw(temporalPipeline_.Get(), depthSrv_, depthSrv_, volumeSrv_); temporalTimer_.End();
+    scatteringBarrier = CD3DX12_RESOURCE_BARRIER::Transition(historyTextures_[writeIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    transmissionBarrier = CD3DX12_RESOURCE_BARRIER::Transition(historyTransmittanceTextures_[writeIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    const D3D12_RESOURCE_BARRIER completedBarriers[] = {scatteringBarrier, transmissionBarrier};
+    commandList->ResourceBarrier(2, completedBarriers); historyIndex_ = writeIndex; hasHistory_ = true;
 }
 void VolumetricLightRenderer::Transition(D3D12_RESOURCE_STATES state) {
     if (textureState_ == state) { return; }
@@ -437,7 +539,10 @@ void VolumetricLightRenderer::Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESC
     cmd->SetGraphicsRootDescriptorTable(0, color); cmd->SetGraphicsRootDescriptorTable(1, depth);
     cmd->SetGraphicsRootDescriptorTable(2, shadow);
     D3D12_GPU_DESCRIPTOR_HANDLE transmittance = depth;
-    if (pipeline == compositePipeline_.Get()) { transmittance = transmittanceSrv_; }
+    if (pipeline == compositePipeline_.Get() || pipeline == temporalPipeline_.Get()) { transmittance = transmittanceSrv_; }
+    if (pipeline == compositePipeline_.Get() && parameters_.shouldUseTemporalHistory && hasHistory_) {
+        transmittance = SrvManager::GetInstance()->GetGPUDescriptorHandle(historyTransmittanceSrvIndices_[historyIndex_]);
+    }
     cmd->SetGraphicsRootDescriptorTable(3, transmittance);
     cmd->SetGraphicsRootConstantBufferView(4, constantsResource_->GetGPUVirtualAddress());
     D3D12_GPU_DESCRIPTOR_HANDLE localShadow = localShadowSrv_;
@@ -445,38 +550,95 @@ void VolumetricLightRenderer::Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESC
         localShadow = SrvManager::GetInstance()->GetGPUDescriptorHandle(localShadowFallbackSrvIndex_);
     }
     cmd->SetGraphicsRootDescriptorTable(5, localShadow);
+    D3D12_GPU_DESCRIPTOR_HANDLE history = depth; D3D12_GPU_DESCRIPTOR_HANDLE historyTransmission = depth;
+    if (pipeline == temporalPipeline_.Get()) {
+        history = volumeSrv_; historyTransmission = transmittanceSrv_;
+        if (hasHistory_) {
+            history = SrvManager::GetInstance()->GetGPUDescriptorHandle(historySrvIndices_[historyIndex_]);
+            historyTransmission = SrvManager::GetInstance()->GetGPUDescriptorHandle(historyTransmittanceSrvIndices_[historyIndex_]);
+        }
+    }
+    cmd->SetGraphicsRootDescriptorTable(6, history); cmd->SetGraphicsRootDescriptorTable(7, historyTransmission);
     cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(3, 1, 0, 0);
 }
 bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, bool depthReady) {
-    generated_ = false;
+    generated_ = false; hasUsedHistory_ = false;
+    raymarchTimer_.ResetSample(); temporalTimer_.ResetSample(); compositeTimer_.ResetSample();
     bool valid = frameValid_;
     frameValid_ = false; // Consume the frame; a missing update never reuses old shadows.
     if (!ready_ || !valid || !depthReady || depthHandle.ptr == 0 || !parameters_.enabled ||
         (!localFog_.isEnabled && (parameters_.fogDensity <= 0.0f ||
-            (frameConstants_.lightColorAndIntensity.w <= 0.0f && frameConstants_.spotCountAndBias.x == 0.0f)))) { return false; }
+            (frameConstants_.lightColorAndIntensity.w <= 0.0f && frameConstants_.spotCountAndBias.x == 0.0f)))) { ResetHistory(); return false; }
     if (shadowSrv_.ptr == 0) { shadowSrv_ = depthHandle; }
+    uint64_t lightingHash = 14695981039346656037ull;
+    const Vector4 kValues[] = {frameConstants_.lightDirectionAndDensity, frameConstants_.lightColorAndIntensity,
+        frameConstants_.settings, frameConstants_.fogColorAndEnabled, frameConstants_.heightAndVolumeCount, frameConstants_.spotCountAndBias,
+        {localFog_.noiseScale, localFog_.noiseStrength, parameters_.scatteringAlbedo, parameters_.maxDistance}};
+    lightingHash = HashVolumeBytes(lightingHash, kValues, sizeof(kValues));
+    lightingHash = HashVolumeBytes(lightingHash, &frameConstants_.lightViewProjection, sizeof(Matrix4x4));
+    for (const auto& volume : fogVolumes_) {
+        lightingHash = HashVolumeBytes(lightingHash, &volume.center, sizeof(Vector3));
+        lightingHash = HashVolumeBytes(lightingHash, &volume.halfExtents, sizeof(Vector3));
+        const Vector4 kVolume = {volume.radius, volume.density, volume.edgeSoftness, static_cast<float>(volume.shape)};
+        lightingHash = HashVolumeBytes(lightingHash, &kVolume, sizeof(kVolume));
+        lightingHash = HashVolumeBytes(lightingHash, &volume.isEnabled, sizeof(bool));
+    }
+    for (uint32_t lightIndex = 0; lightIndex < static_cast<uint32_t>(frameConstants_.spotCountAndBias.x); ++lightIndex) {
+        auto light = frameConstants_.spotLights[lightIndex];
+        light.positionAndDistance.x += frameConstants_.cameraAndDistance.x;
+        light.positionAndDistance.y += frameConstants_.cameraAndDistance.y;
+        light.positionAndDistance.z += frameConstants_.cameraAndDistance.z;
+        lightingHash = HashVolumeBytes(lightingHash, &light, sizeof(light));
+    }
+    const auto& cameraWorld = frameCamera_->GetWorldMatrix();
+    Vector3 cameraPosition = {cameraWorld.m[3][0], cameraWorld.m[3][1], cameraWorld.m[3][2]};
+    Vector3 cameraDelta = cameraPosition - previousCameraPosition_;
+    Vector3 cameraForward = {cameraWorld.m[2][0], cameraWorld.m[2][1], cameraWorld.m[2][2]};
+    float forwardDot = cameraForward.x * previousCameraForward_.x + cameraForward.y * previousCameraForward_.y + cameraForward.z * previousCameraForward_.z;
+    float forwardLengthSquared = cameraForward.x * cameraForward.x + cameraForward.y * cameraForward.y + cameraForward.z * cameraForward.z;
+    float previousForwardLengthSquared = previousCameraForward_.x * previousCameraForward_.x + previousCameraForward_.y * previousCameraForward_.y + previousCameraForward_.z * previousCameraForward_.z;
+    if (hasHistory_ && forwardDot < 0.98f * std::sqrt(forwardLengthSquared * previousForwardLengthSquared)) { ResetHistory(); }
+    if (previousCamera_ != frameCamera_ || previousSceneRevision_ != frameSceneRevision_
+        || previousCameraHistoryId_ != frameCamera_->GetMotionHistoryId() || previousLightingHash_ != lightingHash
+        || cameraDelta.x * cameraDelta.x + cameraDelta.y * cameraDelta.y + cameraDelta.z * cameraDelta.z > 4) { ResetHistory(); }
+    frameConstants_.temporalControls = {0, parameters_.historyWeight, -1, parameters_.scatteringAlbedo};
+    frameConstants_.previousRelativeViewProjection = previousRelativeViewProjection_;
+    frameConstants_.previousCameraDelta = {cameraDelta.x, cameraDelta.y, cameraDelta.z, 0};
+    if (parameters_.shouldUseTemporalHistory) {
+        CreateHistoryResources(); frameConstants_.temporalControls.z = static_cast<float>(frameIndex_ & 63u);
+        if (hasHistory_) { frameConstants_.temporalControls.x = 1; hasUsedHistory_ = true; }
+    } else { ResetHistory(); }
     *constantsData_ = frameConstants_;
     depthSrv_ = depthHandle;
     Transition(D3D12_RESOURCE_STATE_RENDER_TARGET);
     auto* cmd = dxCommon_->GetCommandList();
-    D3D12_VIEWPORT viewport { 0, 0, float(WinApp::kClientWidth / 2), float(WinApp::kClientHeight / 2), 0, 1 };
-    D3D12_RECT scissor { 0, 0, WinApp::kClientWidth / 2, WinApp::kClientHeight / 2 };
+    D3D12_VIEWPORT viewport { 0, 0, float(SceneRenderResolution::GetWidth() / 2), float(SceneRenderResolution::GetHeight() / 2), 0, 1 };
+    D3D12_RECT scissor { 0, 0, SceneRenderResolution::GetWidth() / 2, SceneRenderResolution::GetHeight() / 2 };
     cmd->RSSetViewports(1, &viewport); cmd->RSSetScissorRects(1, &scissor);
     auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
     cmd->OMSetRenderTargets(2, &rtv, TRUE, nullptr);
+    raymarchTimer_.Begin();
     Draw(raymarchPipeline_.Get(), depthHandle, depthHandle, shadowSrv_);
+    raymarchTimer_.End();
     Transition(D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-    generated_ = true;
+    if (parameters_.shouldUseTemporalHistory) { RenderTemporal(); }
+    Matrix4x4 relativeWorld = cameraWorld; relativeWorld.m[3][0] = 0; relativeWorld.m[3][1] = 0; relativeWorld.m[3][2] = 0;
+    previousRelativeViewProjection_ = MatrixMath::Multiply(MatrixMath::Inverse(relativeWorld), frameCamera_->GetProjectionMatrix());
+    previousCameraForward_ = cameraForward; previousCameraPosition_ = cameraPosition; previousCamera_ = frameCamera_; previousSceneRevision_ = frameSceneRevision_;
+    previousCameraHistoryId_ = frameCamera_->GetMotionHistoryId(); previousLightingHash_ = lightingHash;
+    ++frameIndex_; generated_ = true;
     return true;
 }
 void VolumetricLightRenderer::Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle) {
     if (!generated_ || sceneColorHandle.ptr == 0) { return; }
-    D3D12_VIEWPORT viewport { 0, 0, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0, 1 };
-    D3D12_RECT scissor { 0, 0, WinApp::kClientWidth, WinApp::kClientHeight };
+    D3D12_VIEWPORT viewport { 0, 0, float(SceneRenderResolution::GetWidth()), float(SceneRenderResolution::GetHeight()), 0, 1 };
+    D3D12_RECT scissor { 0, 0, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight() };
     auto* cmd = dxCommon_->GetCommandList();
     cmd->RSSetViewports(1, &viewport); cmd->RSSetScissorRects(1, &scissor);
-    Draw(compositePipeline_.Get(), sceneColorHandle, depthSrv_, volumeSrv_);
+    D3D12_GPU_DESCRIPTOR_HANDLE scattering = volumeSrv_;
+    if (parameters_.shouldUseTemporalHistory && hasHistory_) { scattering = SrvManager::GetInstance()->GetGPUDescriptorHandle(historySrvIndices_[historyIndex_]); }
+    compositeTimer_.Begin(); Draw(compositePipeline_.Get(), sceneColorHandle, depthSrv_, scattering); compositeTimer_.End();
     generated_ = false;
 }
 void VolumetricLightRenderer::DrawImGui() {
@@ -496,7 +658,24 @@ void VolumetricLightRenderer::DrawImGui() {
     if (ImGui::SliderFloat("Anisotropy", &anisotropy, -0.8f, 0.8f)) { SetAnisotropy(anisotropy); }
     int samples = parameters_.sampleCount;
     if (ImGui::SliderInt("Samples", &samples, 8, 64)) { SetSampleCount(samples); }
+    bool shouldUseTemporalHistory = parameters_.shouldUseTemporalHistory;
+    if (ImGui::Checkbox("Temporal history", &shouldUseTemporalHistory)) { SetTemporalEnabled(shouldUseTemporalHistory); }
+    float weight = parameters_.historyWeight; if (ImGui::SliderFloat("History weight", &weight, 0, 0.95f)) { SetHistoryWeight(weight); }
+    float albedo = parameters_.scatteringAlbedo; if (ImGui::SliderFloat("Scattering albedo", &albedo, 0, 1)) { SetScatteringAlbedo(albedo); }
+    int quality = static_cast<int>(parameters_.quality);
+    if (ImGui::Combo("Quality", &quality, "Low (16)\0Medium (32)\0High (64)\0Custom\0") && quality < 4) { SetQuality(static_cast<VolumetricQuality>(quality)); }
+    ImGui::Text("GPU march %.3f / history %.3f / composite %.3f ms", GetRaymarchGpuTimeMs(), GetTemporalGpuTimeMs(), GetCompositeGpuTimeMs());
+    ImGui::Text("Image allocation %.2f MiB", static_cast<double>(allocationBytes_) / (1024 * 1024));
     ImGui::Text("Uses scene sun direction and current-frame shadows.");
     ImGui::End();
 #endif
+}
+
+void VolumetricLightRenderer::ResizeSceneTargets() {
+    if (!ready_ || (volumeTexture_->GetDesc().Width == SceneRenderResolution::GetWidth() / 2 && volumeTexture_->GetDesc().Height == SceneRenderResolution::GetHeight() / 2)) { return; }
+    ResetHistory(); allocationBytes_ = 0; historyIndex_ = 0;
+    for (auto& texture : historyTextures_) { texture.Reset(); }
+    for (auto& texture : historyTransmittanceTextures_) { texture.Reset(); }
+    textureState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    CreateResources();
 }

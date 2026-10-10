@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "DxrReflectionRenderer.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Light/LightManager.h"
@@ -37,7 +38,7 @@ uint64_t GetReflectionLightingHash(const LightManager& lights) {
     Vector3 ambient = lights.GetAmbientColor(); float intensity = lights.GetAmbientIntensity();
     hash = HashLightingBytes(hash, &ambient, sizeof(ambient)); hash = HashLightingBytes(hash, &intensity, sizeof(intensity));
     const Vector4 kSettings[] = {lights.GetHemisphereSkyColor(), lights.GetHemisphereGroundColor(),
-        lights.GetEnvironmentLighting(), lights.GetLightingComponents()};
+        lights.GetEnvironmentLighting(), lights.GetLightingComponents(), lights.GetAtmosphereSettings()};
     hash = HashLightingBytes(hash, kSettings, sizeof(kSettings));
     for (uint32_t index = 0; index < LightManager::kMaxPointLights; ++index) {
         PointLight point = lights.GetPointLight(index); hash = HashLightingBytes(hash, &point, sizeof(point));
@@ -81,14 +82,21 @@ void DxrReflectionRenderer::Initialize() {
 }
 bool DxrReflectionRenderer::SetSettings(const DxrReflectionSettings& settings) {
     if (settings.sampleCount < 1 || settings.sampleCount > 16 || settings.spatialPassCount > 3
+        || settings.maxReflectionBounces < 1 || settings.maxReflectionBounces > 2
         || !std::isfinite(settings.maxDistance) || settings.maxDistance <= 0 || settings.maxDistance > 100000
         || !std::isfinite(settings.maxRoughness) || settings.maxRoughness < 0 || settings.maxRoughness > 1
         || !std::isfinite(settings.normalBias) || settings.normalBias < 0 || settings.normalBias > 10
         || !std::isfinite(settings.rayBias) || settings.rayBias <= 0 || settings.rayBias >= settings.maxDistance
         || !std::isfinite(settings.strength) || settings.strength < 0 || settings.strength > 1
         || !std::isfinite(settings.historyWeight) || settings.historyWeight < 0 || settings.historyWeight > 0.95f
+        || !std::isfinite(settings.indirectDistanceFadeRatio) || settings.indirectDistanceFadeRatio < 0 || settings.indirectDistanceFadeRatio > 1
         || !std::isfinite(settings.maxRadiance) || settings.maxRadiance <= 0 || settings.maxRadiance > 65000) { return false; }
     if (settings.isEnabled != settings_.isEnabled || settings.shouldUseTemporalHistory != settings_.shouldUseTemporalHistory
+        || settings.shouldTraceMultipleReflections != settings_.shouldTraceMultipleReflections
+        || settings.maxReflectionBounces != settings_.maxReflectionBounces
+        || settings.shouldUseLowDiscrepancySampling != settings_.shouldUseLowDiscrepancySampling
+        || settings.indirectDistanceFadeRatio != settings_.indirectDistanceFadeRatio
+        || settings.shouldUseTextureMipmaps != settings_.shouldUseTextureMipmaps
         || settings.shouldTraceSunShadows != settings_.shouldTraceSunShadows || settings.sampleCount != settings_.sampleCount
         || settings.spatialPassCount != settings_.spatialPassCount || settings.maxDistance != settings_.maxDistance
         || settings.maxRoughness != settings_.maxRoughness || settings.normalBias != settings_.normalBias
@@ -113,10 +121,10 @@ void DxrReflectionRenderer::CreateResources() {
     auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     uint32_t incrementBytes = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     for (uint32_t index = 0; index < kTargetCount; ++index) {
-        uint32_t width = WinApp::kClientWidth / 2; uint32_t height = WinApp::kClientHeight / 2;
+        uint32_t width = SceneRenderResolution::GetWidth() / 2; uint32_t height = SceneRenderResolution::GetHeight() / 2;
         D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
         if (index < 2 || index == 9) { flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS; }
-        if (index == 8) { width = WinApp::kClientWidth; height = WinApp::kClientHeight; }
+        if (index == 8) { width = SceneRenderResolution::GetWidth(); height = SceneRenderResolution::GetHeight(); }
         DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;
         if (index >= 9) { format = DXGI_FORMAT_R32G32B32A32_FLOAT; }
         auto description = CD3DX12_RESOURCE_DESC::Tex2D(format, width, height, 1, 1, 1, 0, flags);
@@ -139,8 +147,8 @@ void DxrReflectionRenderer::CreateResources() {
     shaderTable_ = CreateReflectionUpload(256);
 }
 void DxrReflectionRenderer::CreatePipelines(const DxrRenderer& scene) {
-    D3D12_DESCRIPTOR_RANGE ranges[15] = {};
-    D3D12_ROOT_PARAMETER parameters[17] = {};
+    D3D12_DESCRIPTOR_RANGE ranges[18] = {};
+    D3D12_ROOT_PARAMETER parameters[20] = {};
     parameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
     for (uint32_t index = 0; index < 7; ++index) {
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; ranges[index].BaseShaderRegister = index + 1; ranges[index].NumDescriptors = 1;
@@ -166,7 +174,7 @@ void DxrReflectionRenderer::CreatePipelines(const DxrRenderer& scene) {
     D3D12_HIT_GROUP_DESC hitGroup = {};
     hitGroup.HitGroupExport = L"ReflectionHitGroup"; hitGroup.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
     hitGroup.ClosestHitShaderImport = L"ReflectionClosestHit"; hitGroup.AnyHitShaderImport = L"ReflectionAnyHit";
-    D3D12_RAYTRACING_SHADER_CONFIG shaderConfig = {24, 8}; D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig = {2};
+    D3D12_RAYTRACING_SHADER_CONFIG shaderConfig = {40, 8}; D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig = {3};
     ID3D12RootSignature* rayRoot = rayRoot_.Get(); ID3D12RootSignature* materialRoot = materialRoot_.Get();
     D3D12_STATE_SUBOBJECT subobjects[7] = {
         {D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &libraryDescription}, {D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitGroup},
@@ -179,19 +187,19 @@ void DxrReflectionRenderer::CreatePipelines(const DxrRenderer& scene) {
     D3D12_STATE_OBJECT_DESC stateDescription = {D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE, 7, subobjects};
     RequireReflection(device_->CreateStateObject(&stateDescription, IID_PPV_ARGS(&rayPipeline_)), "Reflection ray pipeline creation failed");
     RequireReflection(rayPipeline_.As(&rayProperties_), "Reflection identifiers unavailable");
-    for (uint32_t index = 0; index < 15; ++index) {
+    for (uint32_t index = 0; index < 18; ++index) {
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         parameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         parameters[index].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
         parameters[index].DescriptorTable = {1, &ranges[index]};
     }
-    parameters[15].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; parameters[15].Descriptor = {}; parameters[15].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    parameters[16].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    parameters[16].Constants = {1, 0, 1}; parameters[16].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    parameters[18].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; parameters[18].Descriptor = {}; parameters[18].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    parameters[19].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    parameters[19].Constants = {1, 0, 1}; parameters[19].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     D3D12_STATIC_SAMPLER_DESC sampler = {}; sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
     sampler.MaxLOD = D3D12_FLOAT32_MAX; sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-    root = {17, parameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT};
+    root = {20, parameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT};
     CreateReflectionRoot(device_.Get(), root, filterRoot_);
     const wchar_t* kPaths[] = {L"resources/Shaders/Raytracing/ReflectionTemporal.PS.hlsl",
         L"resources/Shaders/Raytracing/ReflectionSpatial.PS.hlsl", L"resources/Shaders/Raytracing/ReflectionComposite.PS.hlsl"};
@@ -222,12 +230,15 @@ void DxrReflectionRenderer::RenderFilter(uint32_t pipelineIndex, uint32_t signal
     auto* srvManager = SrvManager::GetInstance();
     auto motionSrv = inputs.surfaceSrv; if (inputs.motionVectorSrv.ptr != 0) { motionSrv = inputs.motionVectorSrv; }
     auto localLightSrv = inputs.surfaceSrv; if (inputs.localLightSrv.ptr != 0) { localLightSrv = inputs.localLightSrv; }
+    auto indirectSrv = inputs.surfaceSrv; if (inputs.indirectSrv.ptr != 0) { indirectSrv = inputs.indirectSrv; }
+    auto reprojectionSrv = inputs.surfaceSrv; auto previousReprojectionSrv = inputs.surfaceSrv;
+    if (inputs.reprojectionSrv.ptr != 0 && inputs.previousReprojectionSrv.ptr != 0) { reprojectionSrv = inputs.reprojectionSrv; previousReprojectionSrv = inputs.previousReprojectionSrv; }
     const D3D12_GPU_DESCRIPTOR_HANDLE kInputs[] = {srvManager->GetGPUDescriptorHandle(srvIndices_[signalIndex]),
         srvManager->GetGPUDescriptorHandle(srvIndices_[1]), srvManager->GetGPUDescriptorHandle(srvIndices_[readIndex]),
         srvManager->GetGPUDescriptorHandle(srvIndices_[readIndex + 2]), inputs.depthSrv, inputs.surfaceSrv,
         inputs.environmentSrv, inputs.colorSrv, motionSrv, inputs.materialSrv, localLightSrv,
         srvManager->GetGPUDescriptorHandle(srvIndices_[9]), srvManager->GetGPUDescriptorHandle(srvIndices_[readIndex + 8]),
-        srvManager->GetGPUDescriptorHandle(srvIndices_[readIndex + 10]), srvManager->GetGPUDescriptorHandle(srvIndices_[historyWriteIndex_ + 10])};
+        srvManager->GetGPUDescriptorHandle(srvIndices_[readIndex + 10]), srvManager->GetGPUDescriptorHandle(srvIndices_[historyWriteIndex_ + 10]), indirectSrv, reprojectionSrv, previousReprojectionSrv};
     uint32_t targetCount = 1; if (pipelineIndex == 0) { targetCount = 4; }
     uint32_t indices[] = {targetIndex, targetIndex + 2, targetIndex + 8, targetIndex + 10};
     D3D12_CPU_DESCRIPTOR_HANDLE targets[4] = {};
@@ -244,9 +255,9 @@ void DxrReflectionRenderer::RenderFilter(uint32_t pipelineIndex, uint32_t signal
     commandList_->RSSetViewports(1, &viewport); commandList_->RSSetScissorRects(1, &scissor);
     commandList_->OMSetRenderTargets(targetCount, targets, FALSE, nullptr);
     commandList_->SetGraphicsRootSignature(filterRoot_.Get()); commandList_->SetPipelineState(filterPipelines_[pipelineIndex].Get());
-    for (uint32_t index = 0; index < 15; ++index) { commandList_->SetGraphicsRootDescriptorTable(index, kInputs[index]); }
-    commandList_->SetGraphicsRootConstantBufferView(15, parameterBuffer_->GetGPUVirtualAddress());
-    commandList_->SetGraphicsRoot32BitConstant(16, filterStep, 0);
+    for (uint32_t index = 0; index < 18; ++index) { commandList_->SetGraphicsRootDescriptorTable(index, kInputs[index]); }
+    commandList_->SetGraphicsRootConstantBufferView(18, parameterBuffer_->GetGPUVirtualAddress());
+    commandList_->SetGraphicsRoot32BitConstant(19, filterStep, 0);
     commandList_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); commandList_->DrawInstanced(3, 1, 0, 0);
     for (uint32_t index = 0; index < targetCount; ++index) {
         auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(textures_[indices[index]].Get(),
@@ -255,6 +266,8 @@ void DxrReflectionRenderer::RenderFilter(uint32_t pipelineIndex, uint32_t signal
     }
 }
 D3D12_GPU_DESCRIPTOR_HANDLE DxrReflectionRenderer::Draw(const DxrReflectionInputs& inputs) {
+    if (textures_[8] && (textures_[8]->GetDesc().Width != SceneRenderResolution::GetWidth() || textures_[8]->GetDesc().Height != SceneRenderResolution::GetHeight())) { ResetResources(); }
+
     hasValidFrame_ = false; hasUsedHistory_ = false;
     traceTimer_.ResetSample(); filterTimer_.ResetSample(); compositeTimer_.ResetSample();
     auto* lights = LightManager::GetInstance();
@@ -265,7 +278,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrReflectionRenderer::Draw(const DxrReflectionInput
     }
     for (auto* texture : {inputs.depthTexture, inputs.surfaceTexture, inputs.environmentTexture, inputs.materialTexture}) {
         auto description = texture->GetDesc();
-        if (description.Width != WinApp::kClientWidth || description.Height != WinApp::kClientHeight) { ResetHistory(); return inputs.colorSrv; }
+        if (description.Width != SceneRenderResolution::GetWidth() || description.Height != SceneRenderResolution::GetHeight()) { ResetHistory(); return inputs.colorSrv; }
     }
     if (mode_ == DxrLightingMode::LocalShadow && (!inputs.localLightTexture || inputs.localLightSrv.ptr == 0
         || (inputs.scene->GetLocalShadowParameters().pointMask | inputs.scene->GetLocalShadowParameters().spotMask) == 0)) {
@@ -273,20 +286,35 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrReflectionRenderer::Draw(const DxrReflectionInput
     }
     if (mode_ == DxrLightingMode::LocalShadow) {
         auto description = inputs.localLightTexture->GetDesc();
-        if (description.Width != WinApp::kClientWidth || description.Height != WinApp::kClientHeight) { ResetHistory(); return inputs.colorSrv; }
+        if (description.Width != SceneRenderResolution::GetWidth() || description.Height != SceneRenderResolution::GetHeight()) { ResetHistory(); return inputs.colorSrv; }
     }
-    Parameters parameters = {}; parameters.localShadows = inputs.scene->GetLocalShadowParameters();
+    if (mode_ == DxrLightingMode::DiffuseIndirect) {
+        if (!inputs.indirectTexture || inputs.indirectSrv.ptr == 0) { ResetHistory(); return inputs.colorSrv; }
+        auto description = inputs.indirectTexture->GetDesc();
+        if (description.Width != SceneRenderResolution::GetWidth() || description.Height != SceneRenderResolution::GetHeight()) { ResetHistory(); return inputs.colorSrv; }
+    }
+    Parameters parameters = {}; parameters.indirectSampling.y = settings_.indirectDistanceFadeRatio;
+    if (settings_.shouldUseLowDiscrepancySampling) { parameters.indirectSampling.x = 1; }
+    if (mode_ == DxrLightingMode::Reflection && settings_.shouldTraceMultipleReflections) {
+        parameters.indirectSampling.z = static_cast<float>(settings_.maxReflectionBounces);
+    }
+    parameters.localShadows = inputs.scene->GetLocalShadowParameters();
     parameters.inverseViewProjection = MatrixMath::Inverse(inputs.camera->GetViewProjectionMatrix());
     parameters.view = inputs.camera->GetViewMatrix();
     if (!IsFiniteReflectionMatrix(parameters.inverseViewProjection) || !IsFiniteReflectionMatrix(parameters.view)) { ResetHistory(); return inputs.colorSrv; }
     uint64_t lightingHash = GetReflectionLightingHash(*lights);
     lightingHash = HashLightingBytes(lightingHash, &parameters.localShadows, sizeof(parameters.localShadows));
+    uint64_t skyLightingHash = 0;
+    if (lights->IsSkyLightingEnabled()) { skyLightingHash = lightingHash; }
+    if (previousSkyLightingHash_ != skyLightingHash) { ResetHistory(); }
     if (historyCamera_ != inputs.camera || historyScene_ != inputs.scene || cameraHistoryId_ != inputs.camera->GetMotionHistoryId()
         || previousSceneRevision_ != inputs.sceneRevision) { ResetHistory(); }
     if (previousGeometryRevision_ != inputs.scene->GetReflectionSceneRevision() || previousLightingHash_ != lightingHash) {
         parameters.historyValidation.x = 1;
     }
+    if (settings_.shouldUseTextureMipmaps) { parameters.historyValidation.w = 1; }
     if (settings_.shouldUseTemporalHistory) { parameters.historyValidation.y = 1; }
+    if (inputs.motionVectorSrv.ptr != 0 && inputs.reprojectionSrv.ptr != 0 && inputs.previousReprojectionSrv.ptr != 0) { parameters.historyValidation.z = 1; }
     parameters.previousViewProjection = previousViewProjection_; parameters.previousView = previousView_;
     auto world = inputs.camera->GetWorldMatrix(); parameters.cameraPosition = {world.m[3][0], world.m[3][1], world.m[3][2], 1};
     parameters.controls = {settings_.maxDistance, settings_.normalBias, settings_.rayBias, settings_.maxRoughness};
@@ -356,7 +384,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrReflectionRenderer::Draw(const DxrReflectionInput
     uint64_t address = shaderTable_->GetGPUVirtualAddress(); D3D12_DISPATCH_RAYS_DESC dispatch = {};
     dispatch.RayGenerationShaderRecord = {address, 32}; dispatch.MissShaderTable = {address + 64, 64, 64};
     dispatch.HitGroupTable = {address + 128, inputs.scene->GetStatistics().hitRecordCount * kHitStrideBytes, kHitStrideBytes};
-    dispatch.Width = WinApp::kClientWidth / 2; dispatch.Height = WinApp::kClientHeight / 2; dispatch.Depth = 1;
+    dispatch.Width = SceneRenderResolution::GetWidth() / 2; dispatch.Height = SceneRenderResolution::GetHeight() / 2; dispatch.Depth = 1;
     traceTimer_.Begin(); commandList_->DispatchRays(&dispatch); traceTimer_.End(); inputs.scene->EndMaterialRead(true);
     if (inputs.localLightTexture && inputs.localLightSrv.ptr != 0) {
         auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(inputs.localLightTexture, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -381,6 +409,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrReflectionRenderer::Draw(const DxrReflectionInput
     previousJitter_ = inputs.camera->GetProjectionJitter(); historyCamera_ = inputs.camera; historyScene_ = inputs.scene;
     cameraHistoryId_ = inputs.camera->GetMotionHistoryId(); previousGeometryRevision_ = inputs.scene->GetReflectionSceneRevision();
     previousSceneRevision_ = inputs.sceneRevision; previousLightingHash_ = lightingHash;
+    previousSkyLightingHash_ = skyLightingHash;
     hasValidFrame_ = true; status_ = "RT reflections ready (half resolution)";
     if (mode_ == DxrLightingMode::DiffuseIndirect) { status_ = "RT indirect light ready (half resolution)"; }
     if (mode_ == DxrLightingMode::LocalShadow) { status_ = "RT local shadows ready (half resolution)"; }
@@ -405,6 +434,17 @@ void DxrReflectionRenderer::DrawImGui() {
         hasChanged |= ImGui::Checkbox("Lighting contribution only", &settings.isDebugVisible);
         hasChanged |= ImGui::Checkbox("Temporal history", &settings.shouldUseTemporalHistory);
         hasChanged |= ImGui::Checkbox("Sun shadows at ray hits", &settings.shouldTraceSunShadows);
+        hasChanged |= ImGui::Checkbox("Ray texture mipmaps", &settings.shouldUseTextureMipmaps);
+        if (mode_ == DxrLightingMode::DiffuseIndirect) {
+            hasChanged |= ImGui::Checkbox("Low discrepancy sampling", &settings.shouldUseLowDiscrepancySampling);
+            hasChanged |= ImGui::SliderFloat("Distance fade ratio", &settings.indirectDistanceFadeRatio, 0, 1);
+        }
+        if (mode_ == DxrLightingMode::Reflection) {
+            hasChanged |= ImGui::Checkbox("Multiple reflections", &settings.shouldTraceMultipleReflections);
+            int bounces = static_cast<int>(settings.maxReflectionBounces);
+            hasChanged |= ImGui::SliderInt("Maximum reflection bounces", &bounces, 1, 2);
+            settings.maxReflectionBounces = static_cast<uint32_t>(bounces);
+        }
         int samples = static_cast<int>(settings.sampleCount); int spatialPasses = static_cast<int>(settings.spatialPassCount);
         hasChanged |= ImGui::SliderInt("Samples", &samples, 1, 16); settings.sampleCount = static_cast<uint32_t>(samples);
         hasChanged |= ImGui::SliderInt("Spatial passes", &spatialPasses, 0, 3); settings.spatialPassCount = static_cast<uint32_t>(spatialPasses);
@@ -425,6 +465,9 @@ void DxrReflectionRenderer::DrawImGui() {
 nlohmann::json DxrReflectionRenderer::GetDevelopmentState() const {
     return {{"status", status_}, {"isEnabled", settings_.isEnabled}, {"isDebugVisible", settings_.isDebugVisible},
         {"shouldUseTemporalHistory", settings_.shouldUseTemporalHistory}, {"shouldTraceSunShadows", settings_.shouldTraceSunShadows},
+        {"shouldUseTextureMipmaps", settings_.shouldUseTextureMipmaps},
+        {"shouldTraceMultipleReflections", settings_.shouldTraceMultipleReflections}, {"maxReflectionBounces", settings_.maxReflectionBounces},
+        {"shouldUseLowDiscrepancySampling", settings_.shouldUseLowDiscrepancySampling}, {"indirectDistanceFadeRatio", settings_.indirectDistanceFadeRatio},
         {"sampleCount", settings_.sampleCount}, {"spatialPassCount", settings_.spatialPassCount}, {"strength", settings_.strength},
         {"maxDistance", settings_.maxDistance}, {"maxRoughness", settings_.maxRoughness}, {"historyWeight", settings_.historyWeight}, {"maxRadiance", settings_.maxRadiance},
         {"traceGpuMs", GetTraceGpuTimeMs()}, {"filterGpuMs", GetFilterGpuTimeMs()}, {"compositeGpuMs", GetCompositeGpuTimeMs()},
@@ -454,6 +497,15 @@ nlohmann::json DxrReflectionRenderer::GetDevelopmentControls() const {
         controls[9] = {{"key", "maxRadiance"}, {"label", "最大放射輝度"}, {"type", "number"}, {"min", 0.1}, {"max", 100}, {"step", 0.1}};
         controls[14]["label"] = "間接光画像実割当 (bytes)";
     }
+    controls.push_back({{"key", "shouldUseTextureMipmaps"}, {"label", "命中先のMipフィルター"}, {"type", "bool"}});
+    if (mode_ == DxrLightingMode::DiffuseIndirect) {
+        controls.push_back({{"key", "shouldUseLowDiscrepancySampling"}, {"label", "均等なサンプル配分"}, {"type", "bool"}});
+        controls.push_back({{"key", "indirectDistanceFadeRatio"}, {"label", "探索距離の環境光への移行割合"}, {"type", "number"}, {"min", 0}, {"max", 1}, {"step", 0.05}});
+    }
+    if (mode_ == DxrLightingMode::Reflection) {
+        controls.push_back({{"key", "shouldTraceMultipleReflections"}, {"label", "多重反射"}, {"type", "bool"}});
+        controls.push_back({{"key", "maxReflectionBounces"}, {"label", "最大反射回数"}, {"type", "number"}, {"min", 1}, {"max", 2}, {"step", 1}});
+    }
     return controls;
 }
 bool DxrReflectionRenderer::SetDevelopmentBool(const std::string& key, bool isEnabled) {
@@ -461,6 +513,9 @@ bool DxrReflectionRenderer::SetDevelopmentBool(const std::string& key, bool isEn
     if (key == "isEnabled") { settings.isEnabled = isEnabled; }
     else if (key == "isDebugVisible") { settings.isDebugVisible = isEnabled; }
     else if (key == "shouldUseTemporalHistory") { settings.shouldUseTemporalHistory = isEnabled; }
+    else if (key == "shouldTraceMultipleReflections") { settings.shouldTraceMultipleReflections = isEnabled; }
+    else if (key == "shouldUseLowDiscrepancySampling") { settings.shouldUseLowDiscrepancySampling = isEnabled; }
+    else if (key == "shouldUseTextureMipmaps") { settings.shouldUseTextureMipmaps = isEnabled; }
     else if (key == "shouldTraceSunShadows") { settings.shouldTraceSunShadows = isEnabled; }
     else { return false; }
     return SetSettings(settings);
@@ -473,10 +528,15 @@ bool DxrReflectionRenderer::SetDevelopmentNumber(const std::string& key, double 
         if (key == "sampleCount") { settings.sampleCount = static_cast<uint32_t>(value); }
         else { settings.spatialPassCount = static_cast<uint32_t>(value); }
     }
+    else if (key == "maxReflectionBounces") {
+        if (value < 1 || value > 2 || std::floor(value) != value) { return false; }
+        settings.maxReflectionBounces = static_cast<uint32_t>(value);
+    }
     else if (key == "strength") { settings.strength = static_cast<float>(value); }
     else if (key == "maxDistance") { settings.maxDistance = static_cast<float>(value); }
     else if (key == "maxRoughness") { settings.maxRoughness = static_cast<float>(value); }
     else if (key == "historyWeight") { settings.historyWeight = static_cast<float>(value); }
+    else if (key == "indirectDistanceFadeRatio") { settings.indirectDistanceFadeRatio = static_cast<float>(value); }
     else if (key == "maxRadiance") { settings.maxRadiance = static_cast<float>(value); }
     else { return false; }
     return SetSettings(settings);

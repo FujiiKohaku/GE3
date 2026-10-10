@@ -2,14 +2,17 @@
 #include "../../Common/AlphaMask.hlsli"
 #include "../ShadowSampling.hlsli"
 
-ConstantBuffer<Material> gMaterial : register(b0);
+ConstantBuffer<Material> materialParameters : register(b0);
+static Material gMaterial;
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
 ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
+#include "../MaterialMaps.PS.hlsli"
 #include "../NormalMapping.PS.hlsli"
 #include "../LocalLighting.hlsli"
+#include "../SurfaceLighting.hlsli"
 
 struct PixelShaderOutput
 {
@@ -31,10 +34,12 @@ struct PixelShaderOutput
 
 PixelShaderOutput main(VertexShaderOutput input)
 {
+    gMaterial = materialParameters;
 #if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)
     capturedRtLocalLight = 0;
 #endif
     float2 uv = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform).xy;
+    gMaterial = ResolveRasterMaterial(gMaterial, uv);
     float4 textureColor = gTexture.Sample(gSampler, uv);
     if (gMaterial.alphaCutoff > 0) {
         float maskAlpha = gTexture.SampleLevel(gSampler, uv, 0).a;
@@ -44,37 +49,26 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 N = ApplyNormalMap(input.worldPosition, input.normal, uv);
     float3 L = normalize(-gDirectionalLight.direction);
     float3 V = normalize(gCamera.worldPosition - input.worldPosition);
-    float faceLight = saturate(dot(N, L) * 0.5f + 0.5f);
-    float middleBand = smoothstep(0.34f, 0.38f, faceLight);
-    float lightBand = smoothstep(0.68f, 0.72f, faceLight);
-    float diffuse = lerp(0.10f, 0.65f, middleBand);
-    diffuse = lerp(diffuse, 1.0f, lightBand);
     float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
 #if defined(KOHAKU_RT_CAPTURE)
     visibility = 1.0f;
 #endif
-    float3 ambient = HemisphereAmbient(gAmbientLight, N) * 1.2f;
     float3 direct = max(gDirectionalLight.color.rgb, 0.0f) *
         max(gDirectionalLight.intensity, 0.0f) * visibility * GetDirectLightingStrength(gAmbientLight);
-    float3 color = baseColor * (ambient + direct * diffuse);
+    float3 indirectColor = ShadowToonSurfaceIndirect(baseColor, N, V);
+    float3 directionalColor = ShadowToonSurfaceDirect(baseColor, N, V, L) * direct;
+    float3 color = indirectColor + directionalColor;
 
-    // Keep the title's graphic highlight, using the same light and shadow as the surface.
-    float3 H = L + V;
-    H *= rsqrt(max(dot(H, H), 0.000001f));
-    float highlight = step(0.955f, saturate(dot(N, H))) * saturate(dot(N, L));
-    float rim = smoothstep(0.72f, 0.88f, 1.0f - saturate(dot(N, V)));
-    color += direct * SurfaceSpecular(gMaterial, baseColor, N, V, L);
-    color += baseColor * ambient * rim * 0.12f;
 
     color += ShadeLocalLights(baseColor, N, V, input.worldPosition, normalize(input.normal), true);
 
     PixelShaderOutput output;
-    output.indirectColor = float4(baseColor * ambient * (1.0f + rim * 0.12f), gMaterial.color.a * textureColor.a);
+    output.indirectColor = float4(indirectColor, gMaterial.color.a * textureColor.a);
     output.color = float4(color, gMaterial.color.a * textureColor.a);
     output.surfaceMaterial = float4(saturate(baseColor), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
 #if defined(KOHAKU_RT_CAPTURE)
-    output.directionalLight = float4(direct * (baseColor * diffuse + SurfaceSpecular(gMaterial, baseColor, N, V, L)), input.position.z);
+    output.directionalLight = float4(directionalColor, input.position.z);
 #elif defined(KOHAKU_RT_REFLECTION_CAPTURE)
     output.directionalLight = float4(0, 0, 0, -1);
 #endif

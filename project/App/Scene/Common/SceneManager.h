@@ -64,6 +64,7 @@ public:
     void DrawImGui();
     void Draw2D();
     void Draw3D();
+    bool SubmitRaytracingScene(DxrRenderer& renderer);
     void DrawShadow(ShadowMapRenderer& renderer);
     ShadowSettings GetShadowSettings() const;
     void DrawParticle();

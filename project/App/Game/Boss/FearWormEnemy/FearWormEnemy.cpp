@@ -813,6 +813,17 @@ void FearWormEnemy::DrawShadow(ShadowMapRenderer& renderer)
     }
 }
 
+void FearWormEnemy::SubmitRaytracing(DxrRenderer& renderer) {
+    if (state_ == BossState::Wait) { return; }
+    for (const Segment& segment : segments_) {
+        if (segment.isAlive && segment.object) { segment.object->SubmitRaytracing(renderer); }
+    }
+    if (!segments_.empty() && segments_[0].isAlive && beamPlane_
+        && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut)) {
+        beamPlane_->SubmitRaytracing(renderer);
+    }
+}
+
 bool FearWormEnemy::IsDeathSequenceFinished() const
 {
     return isDeathSequenceFinished_;

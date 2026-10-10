@@ -2,6 +2,9 @@
 ByteAddressBuffer vertices : register(t1, space1);
 ByteAddressBuffer indices : register(t2, space1);
 Texture2D<float4> baseTexture : register(t3, space1);
+Texture2D<float4> normalTexture : register(t4, space1);
+Texture2D<float4> metallicRoughnessTexture : register(t5, space1);
+#include "../Object3D/NormalMappingCommon.hlsli"
 SamplerState textureSampler : register(s0, space1);
 cbuffer MaterialParameters : register(b1, space1) {
     float4 materialColor;
@@ -19,6 +22,9 @@ cbuffer MaterialParameters : register(b1, space1) {
     float normalMapFlipY;
     float normalMapPadding;
     float alphaCutoff;
+    int raytracingShadingVariant;
+    int metallicRoughnessMapEnabled;
+    float materialPadding;
 };
 cbuffer GeometryParameters : register(b2, space1) { uint hasIndices; uint shouldReceiveShadow; };
 static const uint kVertexStrideBytes = 36;

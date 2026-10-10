@@ -50,6 +50,10 @@ void BaseBullet::Draw()
     object_->Draw();
 }
 
+void BaseBullet::SubmitRaytracing(DxrRenderer& renderer) {
+    if (isAlive_ && object_) { object_->SubmitRaytracing(renderer); }
+}
+
 void BaseBullet::SetScale(const Vector3& scale)
 {
     transform_.scale = scale;

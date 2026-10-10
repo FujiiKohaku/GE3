@@ -11,7 +11,9 @@ static const float kWeights[9] = {
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
     float2 uv = input.texcoord;
-    float2 texelSize = float2(1.0f / 1280.0f, 1.0f / 720.0f); // テクセルサイズ
+    uint textureWidth, textureHeight;
+    gTexture.GetDimensions(textureWidth, textureHeight);
+    float2 texelSize = 1.0f / float2(textureWidth, textureHeight); // テクセルサイズ
 
     float4 blurredColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float totalWeight = 0.0f;

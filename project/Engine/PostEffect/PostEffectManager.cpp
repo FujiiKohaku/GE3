@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
@@ -65,6 +66,8 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
 {
     static const nlohmann::json kControls = nlohmann::json::array({
         {{"key", "ssaoEnabled"}, {"label", "SSAOを有効"}, {"group", "ライティング"}, {"type", "bool"}},
+        {{"key", "skyLightingEnabled"}, {"label", "天空と環境光を連動"}, {"group", "ライティング"}, {"type", "bool"}},
+        {{"key", "skyLightingStrength"}, {"label", "天空光の倍率"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
         {{"key", "atmosphereEnabled"}, {"label", "大気散乱を有効"}, {"group", "ライティング"}, {"type", "bool"}},
         {{"key", "clusteredLightingEnabled"}, {"label", "Clusteredを有効"}, {"group", "ライティング"}, {"type", "bool"}},
         {{"key", "ssaoStrength"}, {"label", "SSAO強度"}, {"group", "ライティング"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.6}, {"step", 0.01}},
@@ -106,6 +109,17 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
         {{"key", "bloomBlurRadius"}, {"label", "ぼかし半径"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 32}, {"step", 1}},
         {{"key", "bloomBlurSigma"}, {"label", "ぼかし Sigma"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 20}, {"step", 0.01}},
         {{"key", "bloomIntensity"}, {"label", "ブルーム強度"}, {"group", "霧・ブルーム"}, {"type", "number"}, {"minimum", 0}, {"maximum", 5}, {"step", 0.05}},
+        {{"key", "autoExposureEnabled"}, {"label", "自動露出"}, {"group", "HDR"}, {"type", "bool"}},
+        {{"key", "toneMappingMode"}, {"label", "トーン方式 (0:従来 1:色保持)"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 1}},
+        {{"key", "exposureCompensationEv"}, {"label", "露出補正 EV"}, {"group", "HDR"}, {"type", "number"}, {"minimum", -10}, {"maximum", 10}, {"step", 0.1}},
+        {{"key", "autoExposureMinimum"}, {"label", "自動露出 下限"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0.0001}, {"maximum", 128}, {"step", 0.01}},
+        {{"key", "autoExposureMaximum"}, {"label", "自動露出 上限"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0.0001}, {"maximum", 128}, {"step", 0.1}},
+        {{"key", "autoExposureBrightenSpeed"}, {"label", "暗所への適応速度"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 20}, {"step", 0.1}},
+        {{"key", "autoExposureDarkenSpeed"}, {"label", "明所への適応速度"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 20}, {"step", 0.1}},
+        {{"key", "bloomSoftKnee"}, {"label", "Bloom 抽出の滑らかさ"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
+        {{"key", "bloomMaxRadiance"}, {"label", "Bloom 抽出輝度上限"}, {"group", "HDR"}, {"type", "number"}, {"minimum", 0}, {"maximum", 65504}, {"step", 1}},
+        {{"key", "autoExposureGpuMs"}, {"label", "露出計測 GPU ms"}, {"group", "HDR"}, {"type", "metric"}},
+        {{"key", "autoExposureAllocationBytes"}, {"label", "露出資源 bytes"}, {"group", "HDR"}, {"type", "metric"}},
         {{"key", "toneMapEnabled"}, {"label", "トーンマッピング"}, {"group", "ポストエフェクト"}, {"type", "bool"}},
         {{"key", "toneExposure"}, {"label", "露出"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.1}, {"maximum", 4}, {"step", 0.01}},
         {{"key", "toneContrast"}, {"label", "最終コントラスト"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0.5}, {"maximum", 1.5}, {"step", 0.01}},
@@ -116,6 +130,14 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
         {{"key", "volumeDistance"}, {"label", "光の計算距離"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 1}, {"maximum", 1000}, {"step", 1}},
         {{"key", "volumeAnisotropy"}, {"label", "散乱方向性"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", -0.8}, {"maximum", 0.8}, {"step", 0.01}},
         {{"key", "volumeSamples"}, {"label", "光の計算サンプル数"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 8}, {"maximum", 64}, {"step", 1}},
+        {{"key", "volumeTemporal"}, {"label", "霧の時間蓄積"}, {"group", "立体霧"}, {"type", "bool"}},
+        {{"key", "volumeHistoryWeight"}, {"label", "霧の履歴重み"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.95}, {"step", 0.05}},
+        {{"key", "volumeScatteringAlbedo"}, {"label", "散乱の割合（残りは吸収）"}, {"group", "立体霧"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.05}},
+        {{"key", "volumeQuality"}, {"label", "霧の品質"}, {"group", "立体霧"}, {"type", "select"}, {"options", nlohmann::json::array({{{"value", 0}, {"label", "低（16）"}}, {{"value", 1}, {"label", "中（32）"}}, {{"value", 2}, {"label", "高（64）"}}, {{"value", 3}, {"label", "手動"}}})}},
+        {{"key", "volumeRaymarchGpuMs"}, {"label", "霧の探索 ms"}, {"group", "立体霧"}, {"type", "metric"}},
+        {{"key", "volumeTemporalGpuMs"}, {"label", "霧の時間蓄積 ms"}, {"group", "立体霧"}, {"type", "metric"}},
+        {{"key", "volumeCompositeGpuMs"}, {"label", "霧の合成 ms"}, {"group", "立体霧"}, {"type", "metric"}},
+        {{"key", "volumeAllocationBytes"}, {"label", "霧の画像実割当 bytes"}, {"group", "立体霧"}, {"type", "metric"}},
         {{"key", "volumeColorR"}, {"label", "空間の光 色 R"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
         {{"key", "volumeColorG"}, {"label", "空間の光 色 G"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
         {{"key", "volumeColorB"}, {"label", "空間の光 色 B"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 4}, {"step", 0.01}},
@@ -178,14 +200,23 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
 
 bool PostEffectManager::SetDevelopmentBool(const std::string& key, bool isEnabled)
 {
+    if (key == "autoExposureEnabled") {
+        auto settings = autoExposureRenderer_->GetSettings(); settings.isEnabled = isEnabled;
+        return autoExposureRenderer_->SetSettings(settings);
+    }
     LightManager* lights = LightManager::GetInstance();
     const Vector4 ssao = copyImageRenderer_->GetPostEffectParameter().ssaoSettings;
     if (key == "ssaoEnabled") { return SetSsao(isEnabled, ssao.x, ssao.y, ssao.z); }
     if (key == "clusteredLightingEnabled") { lights->SetClusteredLightingEnabled(isEnabled); return true; }
+    if (key == "skyLightingEnabled") {
+        float skyStrength = lights->GetEnvironmentLighting().w;
+        return lights->SetSkyLighting(isEnabled, skyStrength);
+    }
     if (key == "atmosphereEnabled") {
         const Vector4 atmosphere = lights->GetAtmosphereSettings();
         return lights->SetAtmosphere(isEnabled, atmosphere.y, atmosphere.z, atmosphere.w);
     }
+    if (key == "volumeTemporal") { volumetricLightRenderer_->SetTemporalEnabled(isEnabled); return true; }
     if (key == "localFogEnabled") { volumetricLightRenderer_->SetLocalFogEnabled(isEnabled); return true; }
     uint32_t volumeIndex = 0;
     std::string field;
@@ -204,6 +235,32 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
     if (!std::isfinite(value)) { return false; }
     const float number = static_cast<float>(value);
     if (!std::isfinite(number)) { return false; }
+    auto& finish = copyImageRenderer_->GetPostEffectParameter().colorFinishSettings;
+    if (key == "toneMappingMode") {
+        if (number < 0 || number > 1 || std::floor(number) != number) { return false; }
+        return SetToneMapping(static_cast<uint32_t>(number), finish.z);
+    }
+    if (key == "exposureCompensationEv") { return SetToneMapping(static_cast<uint32_t>(finish.x), number); }
+    if (key.starts_with("autoExposure")) {
+        auto settings = autoExposureRenderer_->GetSettings();
+        if (key == "autoExposureMinimum") { settings.minExposure = number; }
+        else if (key == "autoExposureMaximum") { settings.maxExposure = number; }
+        else if (key == "autoExposureBrightenSpeed") { settings.brightenSpeedPerSecond = number; }
+        else if (key == "autoExposureDarkenSpeed") { settings.darkenSpeedPerSecond = number; }
+        else { return false; }
+        return autoExposureRenderer_->SetSettings(settings);
+    }
+    if (key == "bloomSoftKnee" || key == "bloomMaxRadiance") {
+        auto* bloomSettings = bloomRenderer_->GetEditableBloomParameter();
+        if (key == "bloomSoftKnee") {
+            if (number < 0 || number > 1) { return false; }
+            bloomSettings->softKnee = number;
+        } else {
+            if (number < 0 || number > 65504) { return false; }
+            bloomSettings->maxRadiance = number;
+        }
+        return true;
+    }
     const Vector4 ssao = copyImageRenderer_->GetPostEffectParameter().ssaoSettings;
     if (key == "ssaoStrength") { return SetSsao(ssao.w > 0.5f, number, ssao.y, ssao.z); }
     if (key == "ssaoRadius") { return SetSsao(ssao.w > 0.5f, ssao.x, number, ssao.z); }
@@ -215,9 +272,10 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
     if (key == "indirectLightingStrength") { return lights->SetLightingComponents(components.x, number, components.z, static_cast<uint32_t>(components.w)); }
     if (key == "iceAmbientMultiplier") { return lights->SetLightingComponents(components.x, components.y, number, static_cast<uint32_t>(components.w)); }
     if (key == "lightingView") {
-        if (number < 0 || number > 2 || std::floor(number) != number) { return false; }
+        if (number < 0 || number > 3 || std::floor(number) != number) { return false; }
         return lights->SetLightingComponents(components.x, components.y, components.z, static_cast<uint32_t>(number));
     }
+    if (key == "skyLightingStrength") { return lights->SetSkyLighting(lights->IsSkyLightingEnabled(), number); }
     if (key == "environmentDiffuse") { return lights->SetEnvironmentLighting(number, environment.y); }
     if (key == "environmentSpecular") { return lights->SetEnvironmentLighting(environment.x, number); }
     const Vector4 atmosphere = lights->GetAtmosphereSettings();
@@ -246,6 +304,12 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
         return volumetricLightRenderer_->SetFogVolume(volumeIndex, settings);
     }
     LocalFogParameters fog = volumetricLightRenderer_->GetLocalFogParameters();
+    if (key == "volumeHistoryWeight") { return volumetricLightRenderer_->SetHistoryWeight(number); }
+    if (key == "volumeScatteringAlbedo") { return volumetricLightRenderer_->SetScatteringAlbedo(number); }
+    if (key == "volumeQuality") {
+        if (number < 0 || number > 2 || std::floor(number) != number) { return false; }
+        return volumetricLightRenderer_->SetQuality(static_cast<VolumetricQuality>(static_cast<int>(number)));
+    }
     if (key == "localFogHeight") { return volumetricLightRenderer_->SetHeightFog(number, fog.heightDensity, fog.heightFalloff); }
     if (key == "localFogHeightDensity") { return volumetricLightRenderer_->SetHeightFog(fog.baseHeight, number, fog.heightFalloff); }
     if (key == "localFogHeightFalloff") { return volumetricLightRenderer_->SetHeightFog(fog.baseHeight, fog.heightDensity, number); }
@@ -281,16 +345,29 @@ nlohmann::json PostEffectManager::GetDevelopmentSettings() const
     const FogData& fog = fogManager_->GetFogData();
     const auto* bloom = bloomRenderer_->GetBloomParameter();
     const auto& volume = volumetricLightRenderer_->GetParameters();
+    const auto& exposure = autoExposureRenderer_->GetSettings();
     nlohmann::json state = {
         {"volumeEnabled", volume.enabled}, {"volumeIntensity", volume.lightIntensity},
         {"volumeDensity", volume.fogDensity}, {"volumeDistance", volume.maxDistance},
+        {"volumeTemporal", volume.shouldUseTemporalHistory}, {"volumeHistoryWeight", volume.historyWeight},
+        {"volumeScatteringAlbedo", volume.scatteringAlbedo}, {"volumeQuality", static_cast<int>(volume.quality)},
+        {"volumeRaymarchGpuMs", volumetricLightRenderer_->GetRaymarchGpuTimeMs()}, {"volumeTemporalGpuMs", volumetricLightRenderer_->GetTemporalGpuTimeMs()},
+        {"volumeCompositeGpuMs", volumetricLightRenderer_->GetCompositeGpuTimeMs()}, {"volumeAllocationBytes", volumetricLightRenderer_->GetAllocationBytes()},
         {"volumeAnisotropy", volume.anisotropy}, {"volumeSamples", volume.sampleCount},
         {"volumeColorR", volume.lightColor.x}, {"volumeColorG", volume.lightColor.y}, {"volumeColorB", volume.lightColor.z},
         {"animationEnabled", isAnimationEnabled_},
+        {"autoExposureEnabled", exposure.isEnabled}, {"toneMappingMode", p.colorFinishSettings.x},
+        {"exposureCompensationEv", p.colorFinishSettings.z}, {"autoExposureMinimum", exposure.minExposure},
+        {"autoExposureMaximum", exposure.maxExposure}, {"autoExposureBrightenSpeed", exposure.brightenSpeedPerSecond},
+        {"autoExposureDarkenSpeed", exposure.darkenSpeedPerSecond},
+        {"autoExposureGpuMs", autoExposureRenderer_->GetGpuTimeMs()},
+        {"autoExposureAllocationBytes", autoExposureRenderer_->GetAllocationBytes()},
+        {"bloomSoftKnee", bloom->softKnee}, {"bloomMaxRadiance", bloom->maxRadiance},
         {"toneMapEnabled", p.toneMapEnabled != 0}, {"toneExposure", p.toneExposure},
         {"toneContrast", p.toneContrast}, {"toneSaturation", p.toneSaturation},
         {"ssaoEnabled", p.ssaoSettings.w > 0.5f}, {"ssaoStrength", p.ssaoSettings.x},
         {"ssaoRadius", p.ssaoSettings.y}, {"ssaoBias", p.ssaoSettings.z},
+        {"skyLightingEnabled", lights->IsSkyLightingEnabled()}, {"skyLightingStrength", environment.w},
         {"environmentDiffuse", environment.x}, {"environmentSpecular", environment.y},
         {"lightingView", components.w}, {"directLightingStrength", components.x},
         {"indirectLightingStrength", components.y}, {"iceAmbientMultiplier", components.z},
@@ -510,6 +587,7 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
         if (!isFound) { throw std::runtime_error("Unknown post effect parameter preset: " + entry.key()); }
     }
 
+    autoExposureRenderer_ = std::make_unique<AutoExposureRenderer>();
     bloomRenderer_ = std::make_unique<BloomRenderer>();
     bloomRenderer_->Initialize(dxCommon_);
     volumetricLightRenderer_ = std::make_unique<VolumetricLightRenderer>();
@@ -542,6 +620,9 @@ void PostEffectManager::UpdateCameraInputs(Camera* camera)
     screenParameters.screenCameraSettings.z = 0.0f;
     LightManager* lights = LightManager::GetInstance();
     screenParameters.atmosphereSettings = lights->GetAtmosphereSettings();
+    if (lights->IsSkyLightingEnabled()) {
+        screenParameters.atmosphereSettings.z *= lights->GetEnvironmentLighting().w;
+    }
     const DirectionalLight sun = lights->GetDirectionalLight();
     screenParameters.screenSunDirection = { -sun.direction.x, -sun.direction.y, -sun.direction.z, sun.intensity };
     screenParameters.screenSunColor = sun.color;
@@ -566,8 +647,21 @@ void PostEffectManager::UpdateCameraInputs(Camera* camera)
     }
 }
 
+bool PostEffectManager::SetToneMapping(uint32_t mode, float compensationEv)
+{
+    if (mode > 1 || !std::isfinite(compensationEv) || compensationEv < -10 || compensationEv > 10) { return false; }
+    auto& settings = copyImageRenderer_->GetPostEffectParameter().colorFinishSettings;
+    settings.x = static_cast<float>(mode); settings.z = compensationEv;
+    return true;
+}
+
 void PostEffectManager::Update(Camera* camera)
 {
+    exposureDeltaSeconds_ = TimeManager::GetInstance()->GetUnscaledDeltaTime();
+    uint64_t cameraHistoryId = 0;
+    if (camera != nullptr) { cameraHistoryId = camera->GetMotionHistoryId(); }
+    if (exposureCamera_ != camera || exposureCameraHistoryId_ != cameraHistoryId) { autoExposureRenderer_->ResetHistory(); }
+    exposureCamera_ = camera; exposureCameraHistoryId_ = cameraHistoryId;
     auto& animationParameters = copyImageRenderer_->GetPostEffectParameter();
     if (isAnimationEnabled_) { animationParameters.time += TimeManager::GetInstance()->GetDeltaTime(); }
     if (animationParameters.time > 1000.0f) { animationParameters.time = 0.0f; }
@@ -576,6 +670,7 @@ void PostEffectManager::Update(Camera* camera)
     if (sceneExposureRevision_ != sceneManager->GetSceneExposureRevision()) {
         copyImageRenderer_->GetPostEffectParameter().toneExposure = sceneManager->GetSceneExposure();
         sceneExposureRevision_ = sceneManager->GetSceneExposureRevision();
+        autoExposureRenderer_->ResetHistory();
     }
     if (FogData* fogData = fogManager_->GetEditableFogData()) {
         SceneManager* sceneManager = SceneManager::GetInstance();
@@ -648,6 +743,13 @@ void PostEffectManager::DrawImGui()
         parameter.toneMapEnabled = 0;
         if (toneEnabled) { parameter.toneMapEnabled = 1; }
     }
+    auto exposureSettings = autoExposureRenderer_->GetSettings();
+    if (ImGui::Checkbox("Auto Exposure", &exposureSettings.isEnabled)) { autoExposureRenderer_->SetSettings(exposureSettings); }
+    int toneMode = static_cast<int>(parameter.colorFinishSettings.x);
+    const char* kToneModes[] = {"Legacy filmic", "Hue preserving"};
+    if (ImGui::Combo("Tone Mode", &toneMode, kToneModes, 2)) { SetToneMapping(static_cast<uint32_t>(toneMode), parameter.colorFinishSettings.z); }
+    float compensationEv = parameter.colorFinishSettings.z;
+    if (ImGui::SliderFloat("Exposure Compensation EV", &compensationEv, -10, 10)) { SetToneMapping(static_cast<uint32_t>(toneMode), compensationEv); }
     ImGui::SliderFloat("Exposure", &parameter.toneExposure, 0.1f, 4.0f);
     ImGui::SliderFloat("Final Contrast", &parameter.toneContrast, 0.5f, 1.5f);
     ImGui::SliderFloat("Final Saturation", &parameter.toneSaturation, 0.0f, 2.0f);
@@ -719,19 +821,21 @@ void PostEffectManager::DrawImGui()
 void PostEffectManager::PreDrawDepth()
 {
     sceneDepthReady_ = false;
+    isNativeComposition_ = SceneRenderResolution::GetWidth() == WinApp::kClientWidth;
     fogRenderer_->PreDrawDepth();
 }
 
 void PostEffectManager::PostDrawDepth()
 {
-    fogRenderer_->PostDrawDepth();
+    if (isNativeComposition_) { fogRenderer_->FinishParticleDepth(); }
+    else { fogRenderer_->PostDrawDepth(); }
     sceneDepthReady_ = true;
 }
 
 void PostEffectManager::PrepareDepthForParticleDraw()
 {
     sceneDepthReady_ = false;
-    fogRenderer_->PrepareDepthForParticleDraw();
+    fogRenderer_->ResolveParticleDepth(particleDepthJitterUv_);
 }
 
 void PostEffectManager::UpdatePostEffectParameters(
@@ -793,19 +897,19 @@ void PostEffectManager::PrepareSceneForParticleDraw(SceneManager* sceneManager, 
 
 ID3D12Resource* PostEffectManager::GetSceneColorTexture() const
 {
-    return pingPongRenderTargets_[particleCompositionTargetIndex_].GetTexture();
+    return GetActiveTargets()[particleCompositionTargetIndex_].GetTexture();
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE PostEffectManager::GetSceneColorSrv() const
 {
-    return pingPongRenderTargets_[particleCompositionTargetIndex_].GetSrvHandleGPU();
+    return GetActiveTargets()[particleCompositionTargetIndex_].GetSrvHandleGPU();
 }
 
 void PostEffectManager::ReplaceSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv)
 {
     if (colorSrv.ptr == GetSceneColorSrv().ptr) { return; }
     uint32_t targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_);
-    RenderTarget& target = pingPongRenderTargets_[targetIndex];
+    RenderTarget& target = GetActiveTargets()[targetIndex];
     target.BeginRender();
     ApplyPostEffectToCurrentTarget(PostEffectType::Copy, colorSrv);
     target.EndRender();
@@ -816,11 +920,12 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     SceneManager* sceneManager,
     D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
 {
+    isNativeComposition_ = SceneRenderResolution::GetWidth() == WinApp::kClientWidth;
     UpdatePostEffectParameters(sceneManager);
 
     particleCompositionTargetIndex_ = 0;
     if (LightManager::GetInstance()->GetLightingComponents().w > 0.5f || isIndirectLightingDebugVisible_) {
-        RenderTarget& target = pingPongRenderTargets_[0];
+        RenderTarget& target = GetActiveTargets()[0];
         target.BeginRender();
         ApplyPostEffectToCurrentTarget(PostEffectType::Copy, sceneColorHandle);
         target.EndRender();
@@ -832,7 +937,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     if (normalTextureHandle_.ptr != 0 && indirectTextureHandle_.ptr != 0) { screenSettings.screenCameraSettings.w = 1.0f; }
     if (sceneDepthReady_ && screenSettings.screenCameraSettings.z > 0.5f &&
         ((screenSettings.ssaoSettings.w > 0.5f && normalTextureHandle_.ptr != 0) || screenSettings.atmosphereSettings.x > 0.5f)) {
-        RenderTarget& target = pingPongRenderTargets_[0];
+        RenderTarget& target = GetActiveTargets()[0];
         target.BeginRender();
         ApplyPostEffectToCurrentTarget(PostEffectType::ScreenLighting, sceneColorHandle);
         target.EndRender();
@@ -843,7 +948,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
         uint32_t targetIndex = 0;
         if (volumeApplied) { targetIndex = 1; }
         particleCompositionTargetIndex_ = targetIndex;
-        RenderTarget& target = pingPongRenderTargets_[targetIndex];
+        RenderTarget& target = GetActiveTargets()[targetIndex];
         target.BeginRender();
         volumetricLightRenderer_->Composite(sceneColorHandle);
         target.EndRender();
@@ -854,7 +959,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     if (sceneManager == nullptr) {
         if (volumeApplied) { return; }
         RenderTarget& renderTarget =
-            pingPongRenderTargets_[particleCompositionTargetIndex_];
+            GetActiveTargets()[particleCompositionTargetIndex_];
         renderTarget.BeginRender();
         ApplyPostEffectToCurrentTarget(
             PostEffectType::Copy,
@@ -884,7 +989,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
         }
 
         RenderTarget& renderTarget =
-            pingPongRenderTargets_[targetIndex];
+            GetActiveTargets()[targetIndex];
 
         renderTarget.BeginRender();
         ApplyPostEffectToCurrentTarget(postEffect.type, inputHandle);
@@ -899,7 +1004,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     if (!appliedSceneEffect) {
         particleCompositionTargetIndex_ = 0;
         RenderTarget& renderTarget =
-            pingPongRenderTargets_[particleCompositionTargetIndex_];
+            GetActiveTargets()[particleCompositionTargetIndex_];
         renderTarget.BeginRender();
         ApplyPostEffectToCurrentTarget(
             PostEffectType::Copy,
@@ -910,20 +1015,20 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
 
 void PostEffectManager::BeginParticleDraw()
 {
-    pingPongRenderTargets_[particleCompositionTargetIndex_]
-        .BeginRenderWithDepth(GetDepthDSVHandle());
+    GetActiveTargets()[particleCompositionTargetIndex_]
+        .BeginRenderWithDepth(fogRenderer_->GetParticleDepthDsv());
 }
 
 void PostEffectManager::EndParticleDraw()
 {
-    pingPongRenderTargets_[particleCompositionTargetIndex_]
+    GetActiveTargets()[particleCompositionTargetIndex_]
         .EndRender();
 }
 
 void PostEffectManager::ApplyAfterParticleDraw(SceneManager* sceneManager)
 {
     D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
-        pingPongRenderTargets_[particleCompositionTargetIndex_].GetSrvHandleGPU();
+        GetActiveTargets()[particleCompositionTargetIndex_].GetSrvHandleGPU();
     uint32_t targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_);
     if (sceneManager != nullptr) {
         for (const PostEffectInfo& effect : sceneManager->GetPostEffects()) {
@@ -931,7 +1036,7 @@ void PostEffectManager::ApplyAfterParticleDraw(SceneManager* sceneManager)
                 (effect.stage != PostEffectStage::BeforeParticle || IsTemporalResolveInputEffect(effect.type))) ||
                 effect.type == PostEffectType::FXAA || effect.type == PostEffectType::ToneMap ||
                 effect.type == PostEffectType::Bloom) { continue; }
-            RenderTarget& target = pingPongRenderTargets_[targetIndex];
+            RenderTarget& target = GetActiveTargets()[targetIndex];
             target.BeginRender();
             ApplyPostEffectToCurrentTarget(effect.type, inputHandle);
             target.EndRender();
@@ -945,9 +1050,16 @@ void PostEffectManager::ApplyAfterParticleDraw(SceneManager* sceneManager)
 
 void PostEffectManager::FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle)
 {
+    // Meter the HDR scene before Bloom, so glow does not feed back into exposure.
+    autoExposureRenderer_->Generate(GetSceneColorTexture(), inputHandle, exposureDeltaSeconds_);
+    auto& finishSettings = copyImageRenderer_->GetPostEffectParameter().colorFinishSettings;
+    finishSettings.y = 0;
+    D3D12_GPU_DESCRIPTOR_HANDLE exposureSrv = autoExposureRenderer_->GetExposureSrv();
+    if (exposureSrv.ptr != 0) { finishSettings.y = 1; }
+    copyImageRenderer_->SetExposureTextureHandle(exposureSrv);
     if (bloomRenderer_->IsEnabled()) {
         bloomRenderer_->Generate(inputHandle);
-        RenderTarget& target = pingPongRenderTargets_[GetNextPingPongIndex(particleCompositionTargetIndex_)];
+        RenderTarget& target = GetActiveTargets()[GetNextPingPongIndex(particleCompositionTargetIndex_)];
         target.BeginRender();
         bloomRenderer_->Composite(inputHandle);
         target.EndRender();
@@ -967,6 +1079,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE PostEffectManager::GetDepthDSVHandle() const
 }
 ID3D12Resource* PostEffectManager::GetDepthTexture() const
 {
+    if (isNativeComposition_) { return fogRenderer_->GetParticleDepthTexture(); }
     return fogRenderer_->GetDepthTexture();
 }
 
@@ -983,6 +1096,8 @@ void PostEffectManager::SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE han
 
 void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D12_GPU_DESCRIPTOR_HANDLE inputHandle)
 {
+    auto depthSrv = GetDepthSrv();
+    if (depthSrv.ptr == 0) { depthSrv = fogRenderer_->GetDepthSRVHandle(); }
     Vector3 customParameters {};
     const auto defaults = defaultEffectParameters_.find(type);
     if (defaults != defaultEffectParameters_.end()) { customParameters = defaults->second; }
@@ -1002,7 +1117,7 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
         if (fogConstantBufferView == 0) {
             copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
             copyImageRenderer_->Draw(
-                inputHandle, fogRenderer_->GetDepthSRVHandle(), normalTextureHandle_);
+                inputHandle, depthSrv, normalTextureHandle_);
             return;
         }
 
@@ -1013,13 +1128,13 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
     if (type == PostEffectType::Bloom) {
         copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
         copyImageRenderer_->Draw(
-            inputHandle, fogRenderer_->GetDepthSRVHandle(), normalTextureHandle_);
+            inputHandle, depthSrv, normalTextureHandle_);
         return;
     }
 
     copyImageRenderer_->SetPostEffectType(type);
     copyImageRenderer_->Draw(
-        inputHandle, fogRenderer_->GetDepthSRVHandle(), normalTextureHandle_);
+        inputHandle, depthSrv, normalTextureHandle_);
 }
 
 void PostEffectManager::SetBackBufferRenderTarget()
@@ -1037,16 +1152,16 @@ uint32_t PostEffectManager::GetNextPingPongIndex(uint32_t currentIndex) const
     return nextIndex;
 }
 
-void PostEffectManager::RenderTarget::Initialize(DirectXCommon* dxCommon, uint32_t rtvIndex)
+void PostEffectManager::RenderTarget::Initialize(DirectXCommon* dxCommon, uint32_t rtvIndex, uint32_t width, uint32_t height)
 {
     assert(dxCommon != nullptr);
-    dxCommon_ = dxCommon;
+    dxCommon_ = dxCommon; width_ = width; height_ = height;
 
     CreateResource();
     CreateViews(rtvIndex);
 
-    viewport_.Width = static_cast<float>(WinApp::kClientWidth);
-    viewport_.Height = static_cast<float>(WinApp::kClientHeight);
+    viewport_.Width = static_cast<float>(width_);
+    viewport_.Height = static_cast<float>(height_);
     viewport_.TopLeftX = 0.0f;
     viewport_.TopLeftY = 0.0f;
     viewport_.MinDepth = 0.0f;
@@ -1054,8 +1169,8 @@ void PostEffectManager::RenderTarget::Initialize(DirectXCommon* dxCommon, uint32
 
     scissorRect_.left = 0;
     scissorRect_.top = 0;
-    scissorRect_.right = WinApp::kClientWidth;
-    scissorRect_.bottom = WinApp::kClientHeight;
+    scissorRect_.right = width_;
+    scissorRect_.bottom = height_;
 }
 
 void PostEffectManager::RenderTarget::BeginRender()
@@ -1101,8 +1216,8 @@ void PostEffectManager::RenderTarget::CreateResource()
 
     D3D12_RESOURCE_DESC resourceDesc {};
     resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    resourceDesc.Width = WinApp::kClientWidth;
-    resourceDesc.Height = WinApp::kClientHeight;
+    resourceDesc.Width = width_;
+    resourceDesc.Height = height_;
     resourceDesc.DepthOrArraySize = 1;
     resourceDesc.MipLevels = 1;
     resourceDesc.Format = format_;
@@ -1136,7 +1251,9 @@ void PostEffectManager::RenderTarget::CreateViews(uint32_t rtvIndex)
 {
     ID3D12Device* device = dxCommon_->GetDevice();
 
-    rtvHandle_ = dxCommon_->GetRTVHandle(rtvIndex);
+    (void)rtvIndex;
+    if (!rtvHeap_) { rtvHeap_ = dxCommon_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false); }
+    rtvHandle_ = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
 
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc {};
     rtvDesc.Format = format_;
@@ -1149,7 +1266,7 @@ void PostEffectManager::RenderTarget::CreateViews(uint32_t rtvIndex)
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
 
-    srvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (srvIndex_ == UINT_MAX) { srvIndex_ = SrvManager::GetInstance()->Allocate(); }
     srvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(srvIndex_);
     srvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
     device->CreateShaderResourceView(resource_.Get(), &srvDesc, srvHandleCPU_);
@@ -1174,5 +1291,33 @@ void PostEffectManager::RenderTarget::Transition(D3D12_RESOURCE_STATES nextState
 }
 D3D12_GPU_DESCRIPTOR_HANDLE PostEffectManager::GetDepthSrv() const
 {
+    if (isNativeComposition_) { return fogRenderer_->GetParticleDepthSrv(); }
     return fogRenderer_->GetDepthSRVHandle();
+}
+
+PostEffectManager::RenderTarget::~RenderTarget() {
+    if (srvIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(srvIndex_); }
+}
+std::array<PostEffectManager::RenderTarget, PostEffectManager::kPingPongRenderTargetCount>& PostEffectManager::GetActiveTargets() {
+    if (isNativeComposition_) { return pingPongRenderTargets_; }
+    return sceneRenderTargets_;
+}
+const std::array<PostEffectManager::RenderTarget, PostEffectManager::kPingPongRenderTargetCount>& PostEffectManager::GetActiveTargets() const {
+    if (isNativeComposition_) { return pingPongRenderTargets_; }
+    return sceneRenderTargets_;
+}
+void PostEffectManager::ResizeSceneTargets() {
+    fogRenderer_->ResizeSceneTargets(); volumetricLightRenderer_->ResizeSceneTargets();
+    if (SceneRenderResolution::GetWidth() == WinApp::kClientWidth) { return; }
+    for (auto& target : sceneRenderTargets_) {
+        if (target.GetTexture() && target.GetTexture()->GetDesc().Width == SceneRenderResolution::GetWidth()
+            && target.GetTexture()->GetDesc().Height == SceneRenderResolution::GetHeight()) { continue; }
+        target.Initialize(dxCommon_, 0, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight());
+    }
+}
+void PostEffectManager::ResolveSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv) {
+    if (isNativeComposition_) { ReplaceSceneColor(colorSrv); return; }
+    isNativeComposition_ = true; particleCompositionTargetIndex_ = 0;
+    auto& target = pingPongRenderTargets_[0]; target.BeginRender();
+    ApplyPostEffectToCurrentTarget(PostEffectType::Copy, colorSrv); target.EndRender();
 }

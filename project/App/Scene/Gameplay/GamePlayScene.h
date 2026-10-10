@@ -73,6 +73,7 @@ public:
 
     void Draw2D() override;
     void Draw3D() override;
+    bool SubmitRaytracingScene(DxrRenderer& renderer) override;
     void DrawShadow(ShadowMapRenderer& renderer) override;
     ShadowSettings GetShadowSettings() const override { return stageSettings_.shadows; }
     void DrawParticle() override;

@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "ScreenSpaceReflection.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/WinApp/WinApp.h"
@@ -23,7 +24,7 @@ void ScreenSpaceReflection::CreateTarget(uint32_t index, uint32_t width, uint32_
     rtvHandles_[index].ptr += index * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     device->CreateRenderTargetView(textures_[index].Get(), nullptr, rtvHandles_[index]);
     auto* srvManager = SrvManager::GetInstance();
-    srvIndices_[index] = srvManager->Allocate();
+    if (srvIndices_[index] == UINT_MAX) { srvIndices_[index] = srvManager->Allocate(); }
     srvManager->CreateSRVforTexture2D(srvIndices_[index], textures_[index].Get(), desc.Format, 1);
     srvHandles_[index] = srvManager->GetGPUDescriptorHandle(srvIndices_[index]);
 }
@@ -31,10 +32,10 @@ void ScreenSpaceReflection::Initialize() {
     auto* dxCommon = DirectXCommon::GetInstance(); auto* device = dxCommon->GetDevice();
     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {}; heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; heapDesc.NumDescriptors = kTargetCount + kDepthMipCount;
     HRESULT result = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&rtvHeap_)); assert(SUCCEEDED(result));
-    CreateTarget(0, WinApp::kClientWidth / 2, WinApp::kClientHeight / 2);
-    CreateTarget(1, WinApp::kClientWidth, WinApp::kClientHeight);
+    CreateTarget(0, SceneRenderResolution::GetWidth() / 2, SceneRenderResolution::GetHeight() / 2);
+    CreateTarget(1, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight());
     for (uint32_t index = 2; index < kTargetCount; ++index) {
-        CreateTarget(index, WinApp::kClientWidth / 2, WinApp::kClientHeight / 2);
+        CreateTarget(index, SceneRenderResolution::GetWidth() / 2, SceneRenderResolution::GetHeight() / 2);
     }
     D3D12_DESCRIPTOR_RANGE ranges[9] = {}; D3D12_ROOT_PARAMETER roots[10] = {};
     for (uint32_t index = 0; index < 9; ++index) {
@@ -308,4 +309,15 @@ void ScreenSpaceReflection::DrawImGui() {
     }
     ImGui::End();
 #endif
+}
+
+void ScreenSpaceReflection::ResizeSceneTargets() {
+    if (textures_[1]->GetDesc().Width == SceneRenderResolution::GetWidth() && textures_[1]->GetDesc().Height == SceneRenderResolution::GetHeight()) { return; }
+    ResetHistory();
+    for (uint32_t index = 0; index < kTargetCount; ++index) {
+        uint32_t width = SceneRenderResolution::GetWidth() / 2;
+        uint32_t height = SceneRenderResolution::GetHeight() / 2;
+        if (index == 1) { width = SceneRenderResolution::GetWidth(); height = SceneRenderResolution::GetHeight(); }
+        CreateTarget(index, width, height);
+    }
 }

@@ -94,6 +94,11 @@ void SceneManager::Draw3D()
     }
 }
 
+bool SceneManager::SubmitRaytracingScene(DxrRenderer& renderer) {
+    if (!scene_) { return false; }
+    return scene_->SubmitRaytracingScene(renderer);
+}
+
 void SceneManager::DrawParticle()
 {
     if (scene_) {

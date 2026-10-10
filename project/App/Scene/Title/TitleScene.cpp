@@ -1412,6 +1412,28 @@ void TitleScene::DrawRoomObjects(
     }
 }
 
+void TitleScene::SubmitRaytracingRoom(const std::vector<StageRoomObject>* roomObjects, DxrRenderer& renderer) {
+    if (!roomObjects) { return; }
+    for (const StageRoomObject& roomObject : *roomObjects) {
+        if (roomObject.object) { roomObject.object->SubmitRaytracing(renderer); }
+    }
+}
+
+bool TitleScene::SubmitRaytracingScene(DxrRenderer& renderer) {
+    for (const auto& object : baseObjects_) {
+        if (object) { object->SubmitRaytracing(renderer); }
+    }
+    if (aircraft_) { aircraft_->SubmitRaytracing(renderer); }
+    if (!stages_.empty()) {
+        if (stageRoomTransitionActive_) {
+            float progress = Clamp01(stageRoomTransitionTime_ / kStageRoomTransitionDuration);
+            if (progress < 0.56f) { SubmitRaytracingRoom(FindStageRoomObjects(stages_[previousStageIndex_].id), renderer); }
+            if (progress >= 0.30f) { SubmitRaytracingRoom(FindStageRoomObjects(stages_[nextStageIndex_].id), renderer); }
+        } else { SubmitRaytracingRoom(FindStageRoomObjects(stages_[currentStageIndex_].id), renderer); }
+    }
+    return true;
+}
+
 void TitleScene::DrawVisibleRoomObjects(ShadowMapRenderer* shadows)
 {
 

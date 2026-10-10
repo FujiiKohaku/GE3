@@ -1002,6 +1002,29 @@ void IceJellyfish::Draw()
     }
 }
 
+void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
+    if (!bell_ || !camera_ || (isDead_ && deathTimer_ >= 2.0f)) { return; }
+    for (size_t crystalIndex = 0; crystalIndex < crystals_.size(); ++crystalIndex) {
+        if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystalIndex] > 0 && crystals_[crystalIndex]) {
+            crystals_[crystalIndex]->SubmitRaytracing(renderer);
+        }
+    }
+    if (icePillarModelSpawnedForWave_) {
+        for (const auto& pillar : icePillarModels_) {
+            if (pillar) { pillar->SubmitRaytracing(renderer); }
+        }
+    }
+    if (core_) { core_->SubmitRaytracing(renderer); }
+    bell_->SubmitRaytracing(renderer);
+    for (size_t tentacleIndex = 0; tentacleIndex < kTentacleCount; ++tentacleIndex) {
+        for (size_t segmentIndex = 0; segmentIndex < kSegmentsPerTentacle; ++segmentIndex) {
+            if (IsSegmentAlive(tentacleIndex, segmentIndex) && tentacles_[tentacleIndex][segmentIndex]) {
+                tentacles_[tentacleIndex][segmentIndex]->SubmitRaytracing(renderer);
+            }
+        }
+    }
+}
+
 SweepHit IceJellyfish::SweepBullet(
     const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const
 {

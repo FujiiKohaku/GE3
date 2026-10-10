@@ -35,6 +35,7 @@ class ScreenSpaceReflection {
 public:
     ~ScreenSpaceReflection();
     void Initialize();
+    void ResizeSceneTargets();
     D3D12_GPU_DESCRIPTOR_HANDLE Draw(const ScreenSpaceReflectionInputs& inputs);
     void DrawImGui();
     void PrepareDepthPyramid(const ScreenSpaceReflectionInputs& inputs);

@@ -1,4 +1,5 @@
 #include "Fullscreen.hlsli"
+#include "HdrColor.hlsli"
 Texture2D<float4> gTexture : register(t0); SamplerState gSampler : register(s0);
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
@@ -11,5 +12,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         float3 b = gTexture.Sample(gSampler, saturate(input.texcoord - off)).rgb;
         glare += (a + b) * smoothstep(lightThreshold, lightThreshold + 0.5f, max(max(a.r,a.g),a.b)) / float(i);
     }
-    return float4(saturate(base.rgb + glare * lightStrength * 0.035f), base.a);
+    return float4(SanitizeHdr(base.rgb + glare * lightStrength * 0.035f), base.a);
 }

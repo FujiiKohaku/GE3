@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "ScreenSpaceGlobalIllumination.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
@@ -35,7 +36,7 @@ void ScreenSpaceGlobalIllumination::CreateTarget(uint32_t index, uint32_t width,
     rtvHandles_[index].ptr += index * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     device->CreateRenderTargetView(textures_[index].Get(), nullptr, rtvHandles_[index]);
     auto* srvManager = SrvManager::GetInstance();
-    srvIndices_[index] = srvManager->Allocate();
+    if (srvIndices_[index] == UINT_MAX) { srvIndices_[index] = srvManager->Allocate(); }
     srvManager->CreateSRVforTexture2D(srvIndices_[index], textures_[index].Get(), description.Format, 1);
     srvHandles_[index] = srvManager->GetGPUDescriptorHandle(srvIndices_[index]);
 }
@@ -50,9 +51,9 @@ void ScreenSpaceGlobalIllumination::Initialize()
     HRESULT result = device->CreateDescriptorHeap(&heap, IID_PPV_ARGS(&rtvHeap_));
     assert(SUCCEEDED(result));
     for (uint32_t index = 0; index < kTargetCount; ++index) {
-        uint32_t width = WinApp::kClientWidth / 2;
-        uint32_t height = WinApp::kClientHeight / 2;
-        if (index == 8) { width = WinApp::kClientWidth; height = WinApp::kClientHeight; }
+        uint32_t width = SceneRenderResolution::GetWidth() / 2;
+        uint32_t height = SceneRenderResolution::GetHeight() / 2;
+        if (index == 8) { width = SceneRenderResolution::GetWidth(); height = SceneRenderResolution::GetHeight(); }
         CreateTarget(index, width, height);
     }
     D3D12_DESCRIPTOR_RANGE ranges[10] {};
@@ -366,3 +367,14 @@ bool ScreenSpaceGlobalIllumination::ExecuteDevelopmentCommand(const std::string&
     return true;
 }
 #endif
+
+void ScreenSpaceGlobalIllumination::ResizeSceneTargets() {
+    if (textures_[8]->GetDesc().Width == SceneRenderResolution::GetWidth() && textures_[8]->GetDesc().Height == SceneRenderResolution::GetHeight()) { return; }
+    ResetHistory();
+    for (uint32_t index = 0; index < kTargetCount; ++index) {
+        uint32_t width = SceneRenderResolution::GetWidth() / 2;
+        uint32_t height = SceneRenderResolution::GetHeight() / 2;
+        if (index == 8) { width = SceneRenderResolution::GetWidth(); height = SceneRenderResolution::GetHeight(); }
+        CreateTarget(index, width, height);
+    }
+}

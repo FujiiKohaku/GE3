@@ -80,7 +80,7 @@ void CopyImageRenderer::CreateRootSignature()
 {
     ID3D12Device* device = DirectXCommon::GetInstance()->GetDevice();
 
-    D3D12_DESCRIPTOR_RANGE descriptorRange[4] = {};
+    D3D12_DESCRIPTOR_RANGE descriptorRange[5] = {};
 
     descriptorRange[0].BaseShaderRegister = 0;
     descriptorRange[0].NumDescriptors = 1;
@@ -97,7 +97,7 @@ void CopyImageRenderer::CreateRootSignature()
     descriptorRange[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRange[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameter[5] = {};
+    D3D12_ROOT_PARAMETER rootParameter[6] = {};
 
     rootParameter[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameter[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -121,6 +121,10 @@ void CopyImageRenderer::CreateRootSignature()
     descriptorRange[3].BaseShaderRegister = 3;
     rootParameter[4] = rootParameter[2];
     rootParameter[4].DescriptorTable.pDescriptorRanges = &descriptorRange[3];
+    descriptorRange[4] = descriptorRange[3];
+    descriptorRange[4].BaseShaderRegister = 4;
+    rootParameter[5] = rootParameter[4];
+    rootParameter[5].DescriptorTable.pDescriptorRanges = &descriptorRange[4];
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -362,6 +366,9 @@ void CopyImageRenderer::Draw(
     D3D12_GPU_DESCRIPTOR_HANDLE indirectHandle = indirectTextureHandle_;
     if (indirectHandle.ptr == 0) { indirectHandle = maskTextureHandle_; }
     commandList->SetGraphicsRootDescriptorTable(4, indirectHandle);
+    D3D12_GPU_DESCRIPTOR_HANDLE exposureHandle = exposureTextureHandle_;
+    if (exposureHandle.ptr == 0) { exposureHandle = maskTextureHandle_; }
+    commandList->SetGraphicsRootDescriptorTable(5, exposureHandle);
 
     size_t parameterIndex = static_cast<size_t>(currentPostEffectType_);
     if (parameterIndex >= kDrawParameterCount) { parameterIndex = 0; }

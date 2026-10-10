@@ -4,7 +4,19 @@
 
 ## 操作
 
+RTのサンプル数・反射回数・霧の精度をまとめて変更する操作は [品質プリセット](../Renderer/RenderQuality.md) を参照してください。
+
 時間蓄積の画素ごとの判定、ノイズ量によるフィルター調整、実割当とGPU検証結果は [RTの履歴判定とノイズ除去](RTHistory.md) を参照してください。
+通常描画とRT命中先の法線・粗さ・金属度・照明の共通化は [RT材質](RTMaterials.md) を参照してください。
+拡散・鏡面の配分、環境光とRTGI・RT反射の置き換えは [照明の合成](RTLightingComposition.md) を参照してください。
+物体の移動・回転・スキニングの前深度・法線・IDによる履歴照合は [動く受け手の履歴](RTReceiverMotion.md) を参照してください。
+粗い反射のGGX VNDF・PDFに対応した重みと検証は [粗いRT反射の推定](RTRoughReflections.md) を参照してください。
+反射・RT GIの命中距離と光線幅によるマップのMip選択は [RTテクスチャのMip選択](RTTextureMips.md) を参照してください。
+RT GIのサンプル配分・距離の重みと環境光への移行は [GIのサンプル配分と探索範囲](RTDiffuseQuality.md) を参照してください。
+鏡の中の鏡を描く追加1回の反射と負荷の上限は [追加1回のRT反射](RTMultipleReflections.md) を参照してください。
+天空表示・環境光・RT命中先・大気遠近法の接続は [天空・大気と照明](../Light/SkyLighting.md) を参照してください。
+最終描画のGPU自動露出・色保持トーンマッピング・HDR Bloomは [HDRと露出](../PostEffect/Exposure/README.md) を参照してください。
+GPUに依存しないTAAと低解像度入力の再構成は [汎用時間再構成](../SuperResolution/TemporalResolution.md)、3D解像度のON/OFFとRT・霧・粒子への接続は [描画解像度](../Renderer/RenderResolution.md) を参照してください。
 
 - Debug：ImGuiの `DXR Foundation` で `Enabled` と `Show ray tracing output` をON。
 - Development：開発Webパネルの「DXR基盤」で有効化し、検証画像の表示をON。
@@ -15,7 +27,7 @@
 
 ## 対象と構成
 
-通常の `Object3d::Draw()` で提出された、標準頂点シェーダーを使う不透明・アルファ切り抜きモデルを登録します。加えて、ブレンドなしの `SkinningObject3d` はGPUスキニング済みの頂点を登録します。透明ブレンド、切り抜きOFFで物体色alphaが1未満、独自の頂点シェーダー変形は対象外です。`SetAlphaCutoff` を使った切り抜きではAnyHitで透明部分を通過します。設定と負荷は [アルファ切り抜き](AlphaMasks.md) を参照してください。光線は三角形の両面に命中します。カメラ外の物体もDrawが呼ばれていれば登録されますが、CPU側でDraw自体を省略した物体は登録されません。将来の影・反射では描画の可視性から独立した登録が必要です。
+`Object3d::SubmitRaytracing()` とシーンの専用提出入口から、標準頂点シェーダーを使う不透明・アルファ切り抜きモデルを登録します。ブレンドなしの `SkinningObject3d` はGPUスキニング済みの頂点を登録します。通常描画を省いた物体も提出できます。未対応シーンではDraw経由の互換登録を使用します。参加条件、通常描画とRTの別々の範囲判定、追加コストは [RTシーン登録](RTSceneSubmission.md) を参照してください。透明ブレンド、切り抜きOFFで物体色alphaが1未満、独自頂点変形は対象外です。`SetAlphaCutoff` による切り抜きはAnyHitで透明部分を通過します。設定と負荷は [アルファ切り抜き](AlphaMasks.md) を参照してください。光線は三角形の両面に命中します。
 
 静止モデルはモデルごとにBLASを共有し、複数プリミティブ、インデックスあり／なしの三角形に対応します。頂点バッファ・インデックスバッファを保持するため、モデル削除後にGPUが解放済みバッファを参照しません。GPUバッファの置き換えと要素数変更を検出してBLASを再構築します。通常の `Queue` では同一バッファの頂点内容だけを変更する操作は対象外です。
 
@@ -27,7 +39,7 @@ DXR Tier 1.0以上を対象に `ID3D12Device5` / `ID3D12GraphicsCommandList4`、
 
 ## 同期と寿命
 
-`BeginFrame` → 通常描画中の `Queue` → `EndFrame` → 必要なら `DrawDebug` → フェンス完了後の `ReadCompleted` の順です。`EndFrame(camera, false)` はシーンの構築だけを行い、検証用の光線探索を省きます。Rendererは検証画像を表示する場合だけ探索します。`HasValidScene()` と `GetSceneGpuAddress()` から、そのフレームのTLASをRTシャドウなどへ渡せます。`GetStatistics().hasValidFrame` は検証画像の有効性です。`Queue` の `shouldCastShadow` はデバッグ用とは別のインスタンスマスクへ反映し、Object3dでは既存のCastShadow設定を使用します。
+`BeginFrame` → RT範囲設定 → シーンからのモデル提出 → 通常描画 → `EndFrame` → 必要なら `DrawDebug` → フェンス完了後の `ReadCompleted` の順です。互換経路では通常描画中にもQueueします。`EndFrame(camera, false)` はシーン構築だけを行い、検証用の光線探索を省きます。Rendererは検証画像を表示する場合だけ探索します。`HasValidScene()` と `GetSceneGpuAddress()` から、そのフレームのTLASをRTシャドウなどへ渡せます。`GetStatistics().hasValidFrame` は検証画像の有効性です。`Queue` の `shouldCastShadow` はデバッグ用とは別のインスタンスマスクへ反映し、Object3dでは既存のCastShadow設定を使用します。
 
 `BeginFrame` は前フレームのGPU完了後に呼ぶ必要があります。既存の `DirectXCommon::PostDraw()` は毎フレームフェンスを待つため、その方式に合わせています。将来フレームを並列化するときはアップロード・TLAS・一時リソースをフレームごとに分離してください。
 
@@ -44,6 +56,8 @@ BLAS構築後、TLAS構築後にUAVバリアを入れます。出力はSRV→UAV
 - 計測：BLAS/TLASのGPU構築とDispatchRaysを別々に表示。CPU準備・確保、検証画像の合成時間は含みません。バッファ容量はリソース幅の合計で、ドライバー内部の使用量・ヒープ割当の丸め・既存モデル・画像コピー用リソースは含みません。
 
 ## 検証
+
+時間方向の画質確認と修正内容は [最終画質検証](../Renderer/FinalQualityValidation.md) を参照してください。
 
 `Tests/Projects/DxrTests.vcxproj` をDebug x64でビルドし、作業ディレクトリを `project` として `generated/outputs/Debug/DxrTests.exe` を実行します。結果と比較用PNGは `runtime/captures/DxrTests` に出力します。
 

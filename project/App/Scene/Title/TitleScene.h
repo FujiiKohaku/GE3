@@ -19,6 +19,7 @@ public:
     void Update() override;
     void Draw2D() override;
     void Draw3D() override;
+    bool SubmitRaytracingScene(DxrRenderer& renderer) override;
     void DrawShadow(ShadowMapRenderer& renderer) override;
     ShadowSettings GetShadowSettings() const override;
     void DrawParticle() override;
@@ -87,6 +88,7 @@ private:
     void UpdateSceneLighting();
     void DrawRoomObjects(const std::vector<StageRoomObject>* roomObjects, ShadowMapRenderer* shadows);
     void DrawVisibleRoomObjects(ShadowMapRenderer* shadows);
+    void SubmitRaytracingRoom(const std::vector<StageRoomObject>* roomObjects, DxrRenderer& renderer);
 
     static float Clamp01(float value);
     static float SmoothStep(float value);

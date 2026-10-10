@@ -170,6 +170,12 @@ void PirateShipMidBoss::Draw()
     rightCannons_->Draw();
 }
 
+void PirateShipMidBoss::SubmitRaytracing(DxrRenderer& renderer) {
+    hull_->SubmitRaytracing(renderer); deck_->SubmitRaytracing(renderer); cabin_->SubmitRaytracing(renderer);
+    mast_->SubmitRaytracing(renderer); sail_->SubmitRaytracing(renderer);
+    leftCannons_->SubmitRaytracing(renderer); rightCannons_->SubmitRaytracing(renderer);
+}
+
 void PirateShipMidBoss::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
 {
     parts.clear();

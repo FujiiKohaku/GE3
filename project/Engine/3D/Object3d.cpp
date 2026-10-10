@@ -36,6 +36,7 @@ void Object3d::Initialize(Object3dManager* object3DManager)
     // マテリアル初期化
     // 書き込み用アドレス取得
     materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData_));
+    *materialData_ = {};
 
 
     materialData_->color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -126,6 +127,7 @@ void Object3d::Update()
 #pragma region
 void Object3d::Draw()
 {
+    if (shouldUseFrustumCulling_ && camera_ && !IsVisible(*camera_)) { return; }
     if (receiveShadow_) {
         if (pixelShaderPath_ == "resources/Shaders/Object3D/Toon/Render.PS.hlsl") {
             SetMaterial("resources/Shaders/Object3D/ShadowToon");
@@ -140,9 +142,7 @@ void Object3d::Draw()
     }
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
     auto* dxrRenderer = DxrRenderer::GetActive();
-    bool isDxrEligible = dxrRenderer != nullptr && model_ != nullptr && !transparent_ && materialData_ != nullptr
-        && (materialData_->color.w >= 1.0f || materialData_->alphaCutoff > 0)
-        && vertexShaderPath_ == "resources/Shaders/Object3D/Object3d.VS.hlsl";
+    bool isDxrEligible = dxrRenderer != nullptr && IsRaytracingEligible();
     std::string drawPixelShaderPath = pixelShaderPath_;
     if (isDxrEligible && dxrRenderer->ShouldCaptureReflections()) {
         const std::string kMaterialRoot = "resources/Shaders/Object3D/";
@@ -188,6 +188,8 @@ void Object3d::Draw()
     commandList->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::NormalTexture),
         TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_));
+    commandList->SetGraphicsRootDescriptorTable(RootParameterIndex(Object3dRootParameter::MetallicRoughnessTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(metallicRoughnessTextureKey_));
     commandList->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
         Object3dManager::GetInstance()->GetEnvironmentTexture());
@@ -200,9 +202,38 @@ void Object3d::Draw()
         model_->Draw();
     }
     QueueMotionVectors();
-    if (isDxrEligible) {
-        dxrRenderer->Queue(this, *model_, worldMatrix_, *materialData_, castShadow_, receiveShadow_);
+    if (isDxrEligible && dxrRenderer->ShouldUseDrawSubmission()) { SubmitRaytracing(*dxrRenderer); }
+}
+
+bool Object3d::IsRaytracingEligible() const {
+    return isRaytracingEnabled_ && model_ && !transparent_ && materialData_
+        && (materialData_->color.w >= 1.0f || materialData_->alphaCutoff > 0)
+        && vertexShaderPath_ == "resources/Shaders/Object3D/Object3d.VS.hlsl";
+}
+void Object3d::SubmitRaytracing(DxrRenderer& renderer) const {
+    if (!IsRaytracingEligible()) { return; }
+    Material material = *materialData_;
+    if (pixelShaderPath_ == "resources/Shaders/Object3D/ShadowToon/Render.PS.hlsl"
+        || (receiveShadow_ && material.enableLighting == static_cast<int32_t>(MaterialShadingMode::Toon))) {
+        material.raytracingShadingVariant = 1;
     }
+    DxrMaterialTextures textures;
+    textures.normal = TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_);
+    textures.metallicRoughness = TextureManager::GetInstance()->GetSrvHandleGPU(metallicRoughnessTextureKey_);
+    renderer.Queue(this, *model_, worldMatrix_, material, castShadow_, receiveShadow_, &textures);
+}
+void Object3d::SetMetallicRoughnessMap(const std::string& filePath) {
+    if (!materialData_) { return; }
+    metallicRoughnessTextureKey_.clear(); materialData_->metallicRoughnessMapEnabled = 0;
+    if (!filePath.empty()) {
+        metallicRoughnessTextureKey_ = TextureManager::GetInstance()->LoadLinearTexture(filePath);
+        if (!metallicRoughnessTextureKey_.empty()) { materialData_->metallicRoughnessMapEnabled = 1; }
+    }
+}
+bool Object3d::IsVisible(const Camera& camera) const {
+    if (!model_ || vertexShaderPath_ != "resources/Shaders/Object3D/Object3d.VS.hlsl") { return true; }
+    auto bounds = TransformDxrSceneBounds({model_->GetBoundsCenter(), model_->GetBoundsRadius()}, worldMatrix_);
+    return IsDxrSceneBoundsVisible(bounds, camera.GetUnjitteredViewProjectionMatrix());
 }
 
 void Object3d::QueueMotionVectors()

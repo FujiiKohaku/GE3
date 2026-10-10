@@ -42,7 +42,13 @@ float4 main(PixelInput input) : SV_Target0 {
     if (composition.z > 0.5f && composition.z < 1.5f) {
         float4 material = materialTexture.Load(int3(fullPixel, 0));
         float metallicValue = saturate((material.a * 255 - 1) / 254);
-        contribution = reflection.rgb * max(material.rgb, 0) * (1 - metallicValue);
+        float3 viewDirection = normalize(cameraPosition.xyz - ReflectionWorld(input.texcoord, depth));
+        float specularStrength = saturate(length(surface.xyz * 2 - 1) - 1);
+        float3 diffuse = reflection.rgb * max(material.rgb, 0)
+            * SurfaceDiffuseWeight(material.rgb, metallicValue, specularStrength, dot(normal, viewDirection));
+        float3 capturedDiffuse = max(indirectLightingTexture.Load(int3(fullPixel, 0)).rgb - environment.rgb, 0);
+        contribution = diffuse - capturedDiffuse * saturate(reflection.a);
+        if (composition.y > 0.5f) { return float4(diffuse, 1); }
     }
     if (composition.z > 1.5f) { contribution = reflection.rgb - localLightTexture.Load(int3(fullPixel, 0)).rgb; }
     if (composition.y > 0.5f) {

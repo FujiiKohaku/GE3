@@ -71,6 +71,12 @@ void PlayerWeaponController::DrawBullets()
     }
 }
 
+void PlayerWeaponController::SubmitRaytracing(DxrRenderer& renderer) {
+    for (const auto& bullet : bullets_) {
+        if (bullet) { bullet->SubmitRaytracing(renderer); }
+    }
+}
+
 void PlayerWeaponController::UpdateWeaponHeat(bool isHomingFireHeld, bool isDebugMode)
 {
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();

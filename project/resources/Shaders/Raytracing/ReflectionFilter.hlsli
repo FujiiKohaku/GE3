@@ -14,6 +14,11 @@ Texture2D<float4> currentHit : register(t11);
 Texture2D<float4> previousHit : register(t12);
 Texture2D<float4> previousStatistics : register(t13);
 Texture2D<float4> currentStatistics : register(t14);
+Texture2D<float4> indirectLightingTexture : register(t15);
+#include "../Object3D/LightingEnergy.hlsli"
+Texture2D<float4> reprojectionTexture : register(t16);
+Texture2D<float4> previousReprojectionTexture : register(t17);
+#include "../MotionVector/Reprojection.hlsli"
 SamplerState linearSampler : register(s0);
 cbuffer FilterStep : register(b1) { uint filterStep; };
 struct PixelInput { float4 position : SV_POSITION; float2 texcoord : TEXCOORD0; };

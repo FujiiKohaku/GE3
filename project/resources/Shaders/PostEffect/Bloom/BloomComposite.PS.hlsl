@@ -1,4 +1,5 @@
 #include "Bloom.hlsli"
+#include "../HdrColor.hlsli"
 
 Texture2D<float4> gSceneTexture : register(t0);
 Texture2D<float4> gBloomTexture : register(t1);
@@ -14,5 +15,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         outputColor = sceneColor.rgb + bloomColor * intensity;
     }
 
-    return float4(max(outputColor, 0.0f), sceneColor.a);
+    return float4(SanitizeHdr(outputColor), sceneColor.a);
 }

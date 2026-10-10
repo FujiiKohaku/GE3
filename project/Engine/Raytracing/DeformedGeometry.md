@@ -7,7 +7,7 @@ GPUスキニング後の頂点をDXRへ渡し、アニメーションの姿勢�
 1. DXR基盤とRTシャドウを有効にする。
 2. 不透明なスキニングモデルの描画時に `SkinningObject3dManager::SetBlendMode(kBlendModeNone)` を使う。現在の既定ブレンドはNormalなので、明示的な指定が必要。
 3. 遮蔽物は `SkinningObject3d::SetCastShadow(true)`、影を受ける面は `SetReceiveShadow(true)` を設定する。両方の初期値はfalse。
-4. 通常どおり `Update()` → `Draw()` を呼ぶ。描画前に少なくとも1回Updateし、GPU頂点を生成する。
+4. 少なくとも1回 `Update()` してGPU頂点を生成し、`SubmitRaytracing(renderer)` で提出する。画面内の通常描画は別途 `Draw()` で行う。未対応シーンでは従来のUpdate→Drawによる登録も使用できる。[RTシーン登録](RTSceneSubmission.md) を参照。
 
 受け手の対応材質はStandardとToonです。通常の材質、法線マップ、環境・局所ライトを利用し、太陽光だけをRTの可視率で合成します。RT OFFでは元の描画へ戻ります。スキニングモデルのシャドウマップへの新規登録はこの工程に含みません。RT OFF時の既存の照明動作を維持します。
 

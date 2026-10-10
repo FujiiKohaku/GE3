@@ -47,6 +47,9 @@ struct Material {
     float normalMapFlipY;
     float normalMapPadding;
     float alphaCutoff = 0.0f;
+    int32_t raytracingShadingVariant = 0;
+    int32_t metallicRoughnessMapEnabled = 0;
+    float materialPadding = 0.0f;
 };
 
 // 変換行列データ（GPU定数バッファ用）

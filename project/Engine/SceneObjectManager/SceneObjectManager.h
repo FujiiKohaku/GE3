@@ -5,6 +5,7 @@
 #include <vector>
 
 class Object3d;
+class DxrRenderer;
 
 class SceneObjectManager {
 public:
@@ -24,6 +25,7 @@ public:
 
     void Update();
     void Draw();
+    void SubmitRaytracing(DxrRenderer& renderer);
 
 private:
     std::vector<std::unique_ptr<Object3d>> objects_;

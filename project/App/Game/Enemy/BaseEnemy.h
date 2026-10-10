@@ -26,6 +26,7 @@ public:
     virtual void SetAppearance(Model* model);
     virtual void Update();
     virtual void Draw();
+    virtual void SubmitRaytracing(DxrRenderer& renderer);
     virtual void DrawShadow(ShadowMapRenderer& renderer);
 
     virtual void Move();

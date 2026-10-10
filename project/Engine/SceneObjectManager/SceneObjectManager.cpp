@@ -72,3 +72,9 @@ void SceneObjectManager::Draw()
         object->Draw();
     }
 }
+
+void SceneObjectManager::SubmitRaytracing(DxrRenderer& renderer) {
+    for (const auto& object : objects_) {
+        if (object) { object->SubmitRaytracing(renderer); }
+    }
+}

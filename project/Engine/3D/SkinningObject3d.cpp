@@ -64,6 +64,9 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     materialData_->normalMapStrength = 0.0f;
     materialData_->normalMapFlipY = 0.0f;
     materialData_->normalMapPadding = 0.0f;
+    materialData_->raytracingShadingVariant = 0;
+    materialData_->metallicRoughnessMapEnabled = 0;
+    materialData_->materialPadding = 0;
     materialData_->alphaCutoff = 0.0f;
     materialData_->enableEnvironmentMap = false;
     materialData_->environmentCoefficient = 0.0f;
@@ -175,6 +178,7 @@ void SkinningObject3d::Update()
 #pragma region
 void SkinningObject3d::Draw()
 {
+    if (shouldUseFrustumCulling_ && camera_ && !IsVisible(*camera_)) { return; }
     // Keep the frozen pose while applying the current debug camera.
     if (camera_) {
         transformationMatrixData->WVP = MatrixMath::Multiply(
@@ -182,9 +186,7 @@ void SkinningObject3d::Draw()
     }
     ID3D12GraphicsCommandList* commandList = skinningObject3dManager_->GetDxCommon()->GetCommandList();
     auto* dxrRenderer = DxrRenderer::GetActive();
-    bool isDxrEligible = dxrRenderer != nullptr && model_ != nullptr && materialData_ != nullptr
-        && (materialData_->color.w >= 1.0f || materialData_->alphaCutoff > 0) && skinnedGeometryRevision_ != 0
-        && skinningObject3dManager_->GetBlendMode() == kBlendModeNone;
+    bool isDxrEligible = dxrRenderer != nullptr && IsRaytracingEligible();
     std::string drawPixelShaderPath = pixelShaderPath_;
     if (isDxrEligible && dxrRenderer->ShouldCaptureReflections()) {
         const std::string kMaterialRoot = "resources/Shaders/Object3D/";
@@ -227,6 +229,8 @@ void SkinningObject3d::Draw()
     commandList->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::NormalTexture),
         TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_));
+    commandList->SetGraphicsRootDescriptorTable(RootParameterIndex(Object3dRootParameter::MetallicRoughnessTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(metallicRoughnessTextureKey_));
     commandList->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::EnvironmentTexture),
         SkinningObject3dManager::GetInstance()->GetEnvironmentTexture());
@@ -262,10 +266,39 @@ void SkinningObject3d::Draw()
         vertexOffset += static_cast<uint32_t>(primitive.vertices.size());
     }
     QueueMotionVectors();
-    if (isDxrEligible) {
-        dxrRenderer->QueueDeformed(this, *model_, worldMatrix_, *materialData_,
-            skinnedVertexResource_.Get(), skinnedGeometryRevision_, shouldCastShadow_, skinnedVertexState_, shouldReceiveShadow_);
+    if (isDxrEligible && dxrRenderer->ShouldUseDrawSubmission()) { SubmitRaytracing(*dxrRenderer); }
+}
+
+bool SkinningObject3d::IsRaytracingEligible() const {
+    return isRaytracingEnabled_ && model_ && materialData_ && skinningObject3dManager_
+        && (materialData_->color.w >= 1.0f || materialData_->alphaCutoff > 0) && skinnedGeometryRevision_ != 0
+        && skinningObject3dManager_->GetBlendMode() == kBlendModeNone;
+}
+void SkinningObject3d::SubmitRaytracing(DxrRenderer& renderer) const {
+    if (!IsRaytracingEligible()) { return; }
+    auto bounds = TransformDxrSceneBounds(raytracingBounds_, worldMatrix_);
+    DxrMaterialTextures textures;
+    textures.normal = TextureManager::GetInstance()->GetSrvHandleGPU(normalMapTextureKey_);
+    textures.metallicRoughness = TextureManager::GetInstance()->GetSrvHandleGPU(metallicRoughnessTextureKey_);
+    renderer.QueueDeformed(this, *model_, worldMatrix_, *materialData_, skinnedVertexResource_.Get(),
+        skinnedGeometryRevision_, shouldCastShadow_, skinnedVertexState_, shouldReceiveShadow_, &bounds, &textures);
+}
+void SkinningObject3d::SetMetallicRoughnessMap(const std::string& filePath) {
+    if (!materialData_) { return; }
+    metallicRoughnessTextureKey_.clear(); materialData_->metallicRoughnessMapEnabled = 0;
+    if (!filePath.empty()) {
+        metallicRoughnessTextureKey_ = TextureManager::GetInstance()->LoadLinearTexture(filePath);
+        if (!metallicRoughnessTextureKey_.empty()) { materialData_->metallicRoughnessMapEnabled = 1; }
     }
+}
+bool SkinningObject3d::SetRaytracingBounds(const DxrSceneBounds& localBounds) {
+    if (localBounds.radius == -1) { raytracingBounds_ = {}; return true; }
+    if (!IsValidDxrSceneBounds(localBounds)) { return false; }
+    raytracingBounds_ = localBounds; return true;
+}
+bool SkinningObject3d::IsVisible(const Camera& camera) const {
+    auto bounds = TransformDxrSceneBounds(raytracingBounds_, worldMatrix_);
+    return IsDxrSceneBoundsVisible(bounds, camera.GetUnjitteredViewProjectionMatrix());
 }
 
 void SkinningObject3d::QueueMotionVectors()

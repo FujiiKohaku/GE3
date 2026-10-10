@@ -1,3 +1,7 @@
+#include "Engine/Raytracing/DxrRenderer.h"
+#include "Engine/Raytracing/DxrShadowRenderer.h"
+#include "Engine/Raytracing/DxrGlobalIlluminationRenderer.h"
+#include "Engine/Raytracing/DxrLocalShadowRenderer.h"
 #include "Engine/Reflection/ScreenSpaceReflection.h"
 #include "Engine/Lighting/ScreenSpaceGlobalIllumination.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
@@ -11,6 +15,7 @@
 #include "Engine/PostEffect/CopyImageRenderer.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/PostEffect/Bloom/BloomRenderer.h"
+#include "Engine/SuperResolution/TemporalSuperResolution.h"
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include <limits>
 #include "Engine/TextureManager/TextureManager.h"
@@ -150,18 +155,19 @@ void CheckMotionVectors(DirectXCommon* dx, PostEffectManager& post, OffscreenRen
     MotionVectorRenderer renderer;
     renderer.Initialize();
     MotionVectorHistory history;
-    Vector4 positions[] = {{-2, -2, 0, 1}, {0, 2, 0, 1}, {2, -2, 0, 1}};
-    auto currentBuffer = dx->CreateBufferResource(sizeof(positions));
-    auto previousBuffer = dx->CreateBufferResource(sizeof(positions));
+    VertexData vertices[] = {{{-2, -2, 0, 1}, {0, 1}, {0, 0, -1}},
+        {{0, 2, 0, 1}, {0.5f, 0}, {0, 0, -1}}, {{2, -2, 0, 1}, {1, 1}, {0, 0, -1}}};
+    auto currentBuffer = dx->CreateBufferResource(sizeof(vertices));
+    auto previousBuffer = dx->CreateBufferResource(sizeof(vertices));
     void* mapped = nullptr;
     currentBuffer->Map(0, nullptr, &mapped);
-    memcpy(mapped, positions, sizeof(positions));
+    memcpy(mapped, vertices, sizeof(vertices));
     currentBuffer->Unmap(0, nullptr);
     previousBuffer->Map(0, nullptr, &mapped);
-    memcpy(mapped, positions, sizeof(positions));
+    memcpy(mapped, vertices, sizeof(vertices));
     previousBuffer->Unmap(0, nullptr);
-    D3D12_VERTEX_BUFFER_VIEW currentVertices = {currentBuffer->GetGPUVirtualAddress(), sizeof(positions), sizeof(Vector4)};
-    D3D12_VERTEX_BUFFER_VIEW previousVertices = {previousBuffer->GetGPUVirtualAddress(), sizeof(positions), sizeof(Vector4)};
+    D3D12_VERTEX_BUFFER_VIEW currentVertices = {currentBuffer->GetGPUVirtualAddress(), sizeof(vertices), sizeof(VertexData)};
+    D3D12_VERTEX_BUFFER_VIEW previousVertices = {previousBuffer->GetGPUVirtualAddress(), sizeof(vertices), sizeof(VertexData)};
     Matrix4x4 world = MatrixMath::MakeIdentity4x4();
     for (int mode = 0; mode < 8; ++mode) {
         Logger::Log("Motion vectors: displacement mode " + std::to_string(mode));
@@ -171,9 +177,9 @@ void CheckMotionVectors(DirectXCommon* dx, PostEffectManager& post, OffscreenRen
         if (mode == 5) { camera.LookAt({1, 0, -10}, {1, 0, 0}); camera.Update(); camera.ResetMotionHistory(); }
         if (mode == 6) {
             // A pose changes with no world or camera movement: previous-position stream must capture it.
-            for (auto& position : positions) { position.x += 0.5f; }
+            for (auto& vertex : vertices) { vertex.position.x += 0.5f; }
             currentBuffer->Map(0, nullptr, &mapped);
-            memcpy(mapped, positions, sizeof(positions));
+            memcpy(mapped, vertices, sizeof(vertices));
             currentBuffer->Unmap(0, nullptr);
         }
         if (mode == 7) { renderer.ResetHistory(); }
@@ -586,6 +592,7 @@ public:
 class FxaaRenderTest {
 public:
     static Renderer* GetRenderer(Game& game) { return game.renderer_.get(); }
+    static void HideDebugUi(Game& game) { game.showDebugUI_ = false; }
     static PostEffectManager* GetManager(Game& game)
     {
         return game.renderer_->GetPostEffectManager();
@@ -716,6 +723,328 @@ int RunFxaaTest()
         if (initialized) { game.Finalize(); }
         Logger::Finalize();
         return 1;
+    }
+}
+
+int RunTemporalIntegrationTest(bool shouldValidateQuality = false, bool shouldValidateFinalQuality = false)
+{
+    Logger::Initialize();
+    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+    std::filesystem::create_directories(directory);
+    Microsoft::WRL::ComPtr<ID3D12Debug> debug;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
+    Game game; bool isInitialized = false;
+    try {
+        game.Initialize(); isInitialized = true; ShowWindow(WinApp::GetInstance()->GetHwnd(), SW_HIDE);
+        auto* renderer = FxaaRenderTest::GetRenderer(game); auto* dx = DirectXCommon::GetInstance();
+        auto* temporal = renderer->GetTemporalSuperResolution();
+        Microsoft::WRL::ComPtr<ID3D12InfoQueue> info; dx->GetDevice()->QueryInterface(IID_PPV_ARGS(&info));
+        if (info) {
+            info->ClearStoredMessages(); info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, false);
+            info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, false); info->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+        }
+        TimeManager::GetInstance()->SetTimeScale(0);
+#if defined(ENABLE_DEVELOPMENT_TOOLS)
+        Require(DevelopmentWebPanelTests::ApplyAction("antialiasing/aaTaa", ""), "TAA development panel command failed");
+#else
+        renderer->SetTemporalAntiAliasing(true, false);
+#endif
+        for (uint32_t frame = 0; frame < 40; ++frame) { game.Update(); game.Draw(); }
+        Require(temporal->IsActive() && temporal->HasUsedHistory() && temporal->GetOutputTexture() != nullptr,
+            "Native temporal AA did not execute/reuse history in the real renderer");
+        Require(!renderer->GetDlssSuperResolution()->IsActive(), "DLAA and TAA executed together");
+        Require(temporal->GetOutputTexture()->GetDesc().Width == WinApp::kClientWidth, "Native TAA output changed display size");
+        auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier); ReadFrame(dx, directory / "taa-title.png");
+        auto* camera = Object3dManager::GetInstance()->GetDefaultCamera(); Require(camera != nullptr, "TAA title camera missing");
+        camera->ResetMotionHistory(); game.Update(); game.Draw();
+        Require(!temporal->HasUsedHistory(), "Real renderer camera cut retained TAA history");
+        renderer->SetTemporalAntiAliasing(true, true);
+        for (uint32_t frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+        Require(temporal->IsActive() && renderer->GetPostEffectManager()->IsFxaaEnabled(), "TAA + FXAA mode failed");
+        TimeManager::GetInstance()->SetTimeScale(1);
+        auto scene = std::make_unique<ShadowTestStage>("stage03");
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::move(scene)));
+        bool isStageReady = false;
+        for (uint32_t frame = 0; frame < 400; ++frame) {
+            game.Update(); game.Draw();
+            if (SceneManager::GetInstance()->GetShadowSettings().enabled) { isStageReady = true; break; }
+        }
+        Require(isStageReady, "TAA stage03 loading failed");
+        for (uint32_t frame = 0; frame < 12; ++frame) { game.Update(); game.Draw(); }
+        Require(temporal->IsActive() && temporal->GetOutputTexture() != nullptr, "Stage geometry/sky failed temporal resolve");
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier); ReadFrame(dx, directory / "taa-stage03.png");
+        if (shouldValidateFinalQuality) {
+            FxaaRenderTest::HideDebugUi(game);
+            std::ofstream finalReport(directory / "final-quality-result.txt");
+            TimeManager::GetInstance()->SetTimeScale(0);
+            renderer->SetRenderQualityPreset(RenderQualityPreset::Balanced); renderer->SetTemporalAntiAliasing(true, false);
+            auto* rayScene = renderer->GetDxrRenderer();
+            if (rayScene->IsSupported()) {
+                auto settings = rayScene->GetSettings(); settings.isEnabled = true; rayScene->SetSettings(settings);
+                auto shadow = renderer->GetDxrShadowRenderer()->GetSettings(); shadow.isEnabled = true; renderer->GetDxrShadowRenderer()->SetSettings(shadow);
+                auto reflection = renderer->GetDxrReflectionRenderer()->GetSettings(); reflection.isEnabled = true; renderer->GetDxrReflectionRenderer()->SetSettings(reflection);
+                auto indirect = renderer->GetDxrGlobalIlluminationRenderer()->GetSettings(); indirect.isEnabled = true; renderer->GetDxrGlobalIlluminationRenderer()->SetSettings(indirect);
+            }
+            auto* lights = LightManager::GetInstance();
+            const auto kOriginalSun = lights->GetDirectionalLight();
+            auto* finalCamera = Object3dManager::GetInstance()->GetDefaultCamera();
+            const Vector3 kCameraPosition = finalCamera->GetTranslate(); const Vector3 kCameraRotation = finalCamera->GetRotate();
+            for (uint32_t sizeIndex = 0; sizeIndex < 2; ++sizeIndex) {
+                renderer->SetLowResolutionRendering(sizeIndex == 1, 960, 540);
+                for (uint32_t frame = 0; frame < 36; ++frame) { game.Update(); game.Draw(); }
+                for (uint32_t frame = 0; frame < 24; ++frame) {
+                    game.Update();
+                    Vector3 position = kCameraPosition; position.x += 0.25f * float(frame);
+                    Vector3 rotation = kCameraRotation; rotation.y += 0.0005f * float(frame);
+                    finalCamera->SetTranslate(position); finalCamera->SetRotate(rotation); finalCamera->Update(); game.Draw();
+                    Require(temporal->IsActive() && temporal->HasUsedHistory(), "Smooth camera movement discarded all TAA history");
+                }
+                finalCamera->ResetMotionHistory(); game.Update(); game.Draw();
+                Require(!temporal->HasUsedHistory(), "Camera cut retained TAA history");
+                for (uint32_t frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+                for (uint32_t frame = 0; frame < 12; ++frame) {
+                    game.Update();
+                    float intensity = kOriginalSun.intensity * (1.0f + 0.005f * float(frame + 1));
+                    lights->SetDirectional(kOriginalSun.color, kOriginalSun.direction, intensity); game.Draw();
+                    Require(temporal->HasUsedHistory(), "Gradual lighting change discarded TAA history every frame");
+                }
+                for (uint32_t frame = 0; frame < 12; ++frame) {
+                    game.Update(); Vector3 direction = kOriginalSun.direction; direction.x += 0.001f * float(frame + 1);
+                    lights->SetDirectional(kOriginalSun.color, direction, kOriginalSun.intensity); game.Draw();
+                    Require(temporal->HasUsedHistory(), "Gradual sun rotation discarded TAA history");
+                }
+                game.Update(); Vector3 oppositeDirection = {-kOriginalSun.direction.x, -kOriginalSun.direction.y, -kOriginalSun.direction.z};
+                lights->SetDirectional(kOriginalSun.color, oppositeDirection, kOriginalSun.intensity); game.Draw();
+                Require(!temporal->HasUsedHistory(), "Abrupt sun rotation retained TAA history");
+                lights->SetDirectional(kOriginalSun.color, kOriginalSun.direction, kOriginalSun.intensity);
+                for (uint32_t frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+                game.Update(); lights->SetDirectional(kOriginalSun.color, kOriginalSun.direction, kOriginalSun.intensity * 4 + 1); game.Draw();
+                Require(!temporal->HasUsedHistory(), "Abrupt sunlight change retained TAA history");
+                lights->SetDirectional(kOriginalSun.color, kOriginalSun.direction, kOriginalSun.intensity);
+                renderer->SetRenderQualityPreset(RenderQualityPreset::Quality); game.Update(); game.Draw();
+                Require(!temporal->HasUsedHistory(), "Quality change retained TAA history");
+                renderer->SetRenderQualityPreset(RenderQualityPreset::Balanced);
+                for (uint32_t frame = 0; frame < 36; ++frame) { game.Update(); game.Draw(); }
+                Require(temporal->HasUsedHistory(), "History did not converge after quality switch");
+                barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                dx->GetCommandList()->ResourceBarrier(1, &barrier);
+                std::string captureName = "final-native.png"; if (sizeIndex == 1) { captureName = "final-low.png"; }
+                ReadFrame(dx, directory / captureName);
+                finalReport << "PASS: size " << renderer->GetSceneRenderWidth() << " camera movement/cut, gradual/abrupt light, quality recovery\n";
+            }
+            const float kOriginalExposure = SceneManager::GetInstance()->GetSceneExposure();
+            SceneManager::GetInstance()->SetSceneExposure(0.5f);
+            // Game::Draw presents; populate every swap buffer before reading the current one.
+            for (uint32_t frame = 0; frame < dx->GetSwapChainResourcesNum(); ++frame) { game.Update(); game.Draw(); }
+            Require(renderer->GetPostEffectManager()->GetCopyImageRenderer()->GetPostEffectParameter().toneExposure == 0.5f, "Dark exposure did not reach final parameters");
+            Require(temporal->HasUsedHistory(), "Post-TAA exposure change discarded HDR history");
+            barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            dx->GetCommandList()->ResourceBarrier(1, &barrier); auto darkExposure = ReadFrame(dx, directory / "final-exposure-dark.png");
+            SceneManager::GetInstance()->SetSceneExposure(2.0f);
+            for (uint32_t frame = 0; frame < dx->GetSwapChainResourcesNum(); ++frame) { game.Update(); game.Draw(); }
+            Require(renderer->GetPostEffectManager()->GetCopyImageRenderer()->GetPostEffectParameter().toneExposure == 2.0f, "Bright exposure did not reach final parameters");
+            barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+            dx->GetCommandList()->ResourceBarrier(1, &barrier); auto brightExposure = ReadFrame(dx, directory / "final-exposure-bright.png");
+            Require(ChangedPixels(darkExposure, brightExposure) > 1000, "Manual exposure did not change final display");
+            SceneManager::GetInstance()->SetSceneExposure(kOriginalExposure);
+            auto* autoExposure = renderer->GetPostEffectManager()->GetAutoExposureRenderer(); auto exposureSettings = autoExposure->GetSettings();
+            exposureSettings.isEnabled = true; Require(autoExposure->SetSettings(exposureSettings), "Auto exposure activation failed");
+            for (uint32_t frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+            Require(autoExposure->GetExposureTexture() != nullptr && autoExposure->GetGpuTimeMs() > 0 && temporal->HasUsedHistory(), "Auto exposure lost HDR temporal integration");
+            finalReport << "PASS: manual exposure display change, preserved HDR history, auto exposure GPU integration\n";
+            TimeManager::GetInstance()->SetTimeScale(1);
+            for (uint32_t frame = 0; frame < 24; ++frame) { game.Update(); game.Draw(); }
+            Require(temporal->IsActive() && temporal->GetOutputTexture() != nullptr, "Moving scene lost temporal output");
+            Require(renderer->GetPostEffectManager()->GetSceneColorTexture()->GetDesc().Width == 1280
+                && renderer->GetPostEffectManager()->GetDepthTexture()->GetDesc().Width == 1280, "Particle composition lost display resolution");
+            if (info) {
+                for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
+                    SIZE_T size = 0; info->GetMessage(index, nullptr, &size); std::vector<uint8_t> storage(size);
+                    auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data()); info->GetMessage(index, message, &size);
+                    Require(message->Severity > D3D12_MESSAGE_SEVERITY_ERROR, message->pDescription);
+                }
+            }
+            finalReport << "PASS: moving game, native particle composition, D3D12 validation\n";
+            game.Finalize(); Logger::Finalize(); return 0;
+        }
+        if (shouldValidateQuality) {
+            std::ofstream qualityReport(directory / "quality-result.txt");
+            std::ofstream measurements(directory / "quality-gpu-times.csv");
+            measurements << "preset,width,height,samples,frame_mean_ms,rt_mean_ms,fog_mean_ms\n";
+            TimeManager::GetInstance()->SetTimeScale(0);
+            auto* rayScene = renderer->GetDxrRenderer();
+            bool wasRayEnabled = rayScene->GetSettings().isEnabled;
+            bool wasTaaEnabled = temporal->GetSettings().isEnabled;
+            Require(!renderer->SetRenderQualityPreset(RenderQualityPreset::Custom), "Custom accepted as preset");
+            Require(!renderer->SetRenderQualityPreset(static_cast<RenderQualityPreset>(99)), "Invalid preset accepted");
+            renderer->SetLowResolutionRendering(true, 640, 360);
+            Require(renderer->SetRenderQualityPreset(RenderQualityPreset::Balanced), "Balanced rejected");
+            Require(renderer->IsLowResolutionRenderingEnabled() && temporal->GetSettings().isEnabled == wasTaaEnabled
+                && rayScene->GetSettings().isEnabled == wasRayEnabled, "Quality changed feature/resolution switches");
+            auto customSettings = renderer->GetDxrReflectionRenderer()->GetSettings(); customSettings.sampleCount = 3;
+            renderer->GetDxrReflectionRenderer()->SetSettings(customSettings);
+            Require(renderer->GetRenderQualityPreset() == RenderQualityPreset::Custom, "Manual setting still reports preset");
+            Require(!renderer->ApplyRecommendedRenderResolution(), "Custom has an invented recommended resolution");
+            if (rayScene->IsSupported()) {
+                auto raySettings = rayScene->GetSettings(); raySettings.isEnabled = true; rayScene->SetSettings(raySettings);
+                auto shadowSettings = renderer->GetDxrShadowRenderer()->GetSettings(); shadowSettings.isEnabled = true;
+                renderer->GetDxrShadowRenderer()->SetSettings(shadowSettings);
+                auto reflectionSettings = renderer->GetDxrReflectionRenderer()->GetSettings(); reflectionSettings.isEnabled = true;
+                renderer->GetDxrReflectionRenderer()->SetSettings(reflectionSettings);
+                auto indirectSettings = renderer->GetDxrGlobalIlluminationRenderer()->GetSettings(); indirectSettings.isEnabled = true;
+                renderer->GetDxrGlobalIlluminationRenderer()->SetSettings(indirectSettings);
+                auto localSettings = renderer->GetDxrLocalShadowRenderer()->GetSettings(); localSettings.isEnabled = true;
+                renderer->GetDxrLocalShadowRenderer()->SetSettings(localSettings);
+            }
+            auto* qualityVolume = renderer->GetPostEffectManager()->GetVolumetricLightRenderer();
+            qualityVolume->SetEnabled(true); qualityVolume->SetLocalFogEnabled(true);
+            Require(qualityVolume->SetHeightFog(0, 0.003f, 0.02f), "Quality test fog rejected");
+            renderer->SetTemporalAntiAliasing(true, false);
+            const char* kPresetNames[] = {"quality", "balanced", "performance"};
+            const uint32_t kSunSamples[] = {16, 8, 2}; const uint32_t kLightingSamples[] = {8, 4, 1};
+            const int32_t kFogSteps[] = {64, 32, 16};
+            for (uint32_t profileIndex = 0; profileIndex < 3; ++profileIndex) {
+                auto preset = static_cast<RenderQualityPreset>(profileIndex);
+                Require(renderer->SetRenderQualityPreset(preset) && renderer->GetRenderQualityPreset() == preset, "Preset roundtrip failed");
+                Require(renderer->GetDxrShadowRenderer()->GetSettings().sampleCount == kSunSamples[profileIndex], "Sun sample profile mismatch");
+                Require(renderer->GetDxrReflectionRenderer()->GetSettings().sampleCount == kLightingSamples[profileIndex]
+                    && renderer->GetDxrGlobalIlluminationRenderer()->GetSettings().sampleCount == kLightingSamples[profileIndex]
+                    && renderer->GetDxrLocalShadowRenderer()->GetSettings().sampleCount == kLightingSamples[profileIndex], "Lighting profile mismatch");
+                Require(renderer->GetPostEffectManager()->GetVolumetricLightRenderer()->GetParameters().sampleCount == kFogSteps[profileIndex], "Fog quality profile mismatch");
+                Require(renderer->GetDxrReflectionRenderer()->GetSettings().shouldTraceMultipleReflections == (profileIndex == 0), "Reflection bounce profile mismatch");
+                Require(renderer->ApplyRecommendedRenderResolution(), "Recommended resolution rejected");
+                game.Update(); game.Draw();
+                Require(!temporal->HasUsedHistory(), "Quality switch retained TAA history");
+                if (rayScene->IsSupported()) {
+                    Require(renderer->GetDxrShadowRenderer()->HasValidFrame() && renderer->GetDxrReflectionRenderer()->HasValidFrame()
+                        && renderer->GetDxrGlobalIlluminationRenderer()->HasValidFrame(), "Preset lost RT output");
+                    Require(!renderer->GetDxrReflectionRenderer()->HasUsedHistory(), "Quality switch retained RT history");
+                }
+                double frameTotalMs = 0, rayTotalMs = 0, fogTotalMs = 0;
+                constexpr uint32_t kWarmupFrames = 64; constexpr uint32_t kMeasurementFrames = 16;
+                for (uint32_t frame = 0; frame < kWarmupFrames + kMeasurementFrames; ++frame) {
+                    game.Update(); game.Draw();
+                    if (frame < kWarmupFrames) { continue; }
+                    frameTotalMs += renderer->GetFrameGpuTimeMs();
+                    auto* shadow = renderer->GetDxrShadowRenderer(); auto* reflection = renderer->GetDxrReflectionRenderer();
+                    auto* indirect = renderer->GetDxrGlobalIlluminationRenderer(); auto* local = renderer->GetDxrLocalShadowRenderer();
+                    rayTotalMs += shadow->GetTraceGpuTimeMs() + shadow->GetDenoiseGpuTimeMs() + shadow->GetCompositeGpuTimeMs()
+                        + reflection->GetTraceGpuTimeMs() + reflection->GetFilterGpuTimeMs() + reflection->GetCompositeGpuTimeMs()
+                        + indirect->GetTraceGpuTimeMs() + indirect->GetFilterGpuTimeMs() + indirect->GetCompositeGpuTimeMs()
+                        + local->GetTraceGpuTimeMs() + local->GetFilterGpuTimeMs() + local->GetCompositeGpuTimeMs();
+                    auto* volume = renderer->GetPostEffectManager()->GetVolumetricLightRenderer();
+                    fogTotalMs += volume->GetRaymarchGpuTimeMs() + volume->GetTemporalGpuTimeMs() + volume->GetCompositeGpuTimeMs();
+                }
+                Require(std::isfinite(frameTotalMs) && frameTotalMs > 0, "Preset GPU timing missing");
+                Require(std::isfinite(fogTotalMs) && fogTotalMs > 0 && qualityVolume->HasUsedHistory(), "Fog did not execute during quality comparison");
+                Require(renderer->GetSceneRenderWidth() == 1280 || profileIndex == 2, "Quality/balanced not native after recommendation");
+                if (profileIndex == 2) { Require(renderer->GetSceneRenderWidth() == 960 && temporal->IsActive(), "Performance recommendation failed"); }
+                measurements << kPresetNames[profileIndex] << ',' << renderer->GetSceneRenderWidth() << ',' << renderer->GetSceneRenderHeight()
+                    << ',' << kMeasurementFrames << ',' << frameTotalMs / kMeasurementFrames << ',' << rayTotalMs / kMeasurementFrames << ',' << fogTotalMs / kMeasurementFrames << '\n';
+                barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                dx->GetCommandList()->ResourceBarrier(1, &barrier);
+                ReadFrame(dx, directory / (std::string("quality-") + kPresetNames[profileIndex] + ".png"));
+            }
+            if (info) {
+                for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
+                    SIZE_T size = 0; info->GetMessage(index, nullptr, &size); std::vector<uint8_t> storage(size);
+                    auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data()); info->GetMessage(index, message, &size);
+                    Require(message->Severity > D3D12_MESSAGE_SEVERITY_ERROR, message->pDescription);
+                }
+            }
+            qualityReport << "PASS: three presets, manual Custom detection, independent resolution/features, recommended resolution, history reset, actual RT/fog rendering, GPU averages, D3D12 validation\n";
+            game.Finalize(); Logger::Finalize(); return 0;
+        }
+        std::ofstream report(directory / "taa-integration-result.txt");
+        report << "native GPU ms=" << temporal->GetGpuTimeMs() << " images bytes=" << temporal->GetAllocationBytes() << '\n';
+        TimeManager::GetInstance()->SetTimeScale(0);
+        Require(!renderer->SetLowResolutionRendering(true, 959, 540), "Odd input dimensions accepted");
+        Require(!renderer->SetLowResolutionRendering(true, 960, 500), "Mismatched aspect accepted");
+        Require(renderer->SetLowResolutionRendering(true, 960, 540), "Low resolution settings rejected");
+        game.Update(); game.Draw();
+        Require(!temporal->HasUsedHistory(), "Render size change retained history");
+        for (uint32_t frame = 0; frame < 36; ++frame) { game.Update(); game.Draw(); }
+        Require(renderer->GetSceneRenderWidth() == 960 && renderer->GetSceneRenderHeight() == 540, "Low resolution not applied");
+        Require(renderer->GetMotionVectorRenderer()->GetTexture()->GetDesc().Width == 960, "Motion is still native resolution");
+        Require(renderer->GetMotionVectorRenderer()->GetReprojectionTexture()->GetDesc().Height == 540, "Reprojection is still native resolution");
+        Require(temporal->GetSettings().inputWidth == 960 && temporal->HasUsedHistory(), "Low input TAA history failed");
+        Require(temporal->GetOutputTexture()->GetDesc().Width == 1280, "Temporal output is not native");
+        Require(renderer->GetPostEffectManager()->GetSceneColorTexture()->GetDesc().Width == 1280, "Particle composition is not native");
+        Require(renderer->GetPostEffectManager()->GetDepthTexture()->GetDesc().Width == 1280, "Particle depth is not native");
+        report << "960x540 + TAA frame GPU ms=" << renderer->GetFrameGpuTimeMs() << " resolve ms=" << temporal->GetGpuTimeMs() << '\n';
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier); ReadFrame(dx, directory / "resolution-75-taa.png");
+        renderer->SetAntiAliasing(false, false);
+        for (uint32_t frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+        Require(renderer->IsLowResolutionRenderingEnabled() && !temporal->IsActive(), "Low resolution and TAA switches are coupled");
+        Require(Object3dManager::GetInstance()->GetDefaultCamera()->GetProjectionJitter().x == 0, "Spatial scaling retained jitter");
+        Require(renderer->GetPostEffectManager()->GetSceneColorTexture()->GetDesc().Width == 1280, "Spatial scaling did not return native composition");
+        renderer->SetTemporalAntiAliasing(true, false);
+        Require(renderer->SetLowResolutionRendering(true, 640, 360), "50 percent settings rejected");
+        for (uint32_t frame = 0; frame < 36; ++frame) { game.Update(); game.Draw(); }
+        Require(renderer->GetMotionVectorRenderer()->GetTexture()->GetDesc().Width == 640 && temporal->HasUsedHistory(), "50 percent rendering failed");
+        report << "640x360 + TAA frame GPU ms=" << renderer->GetFrameGpuTimeMs() << " resolve ms=" << temporal->GetGpuTimeMs() << '\n';
+        barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        dx->GetCommandList()->ResourceBarrier(1, &barrier); ReadFrame(dx, directory / "resolution-50-taa.png");
+        Require(renderer->SetLowResolutionRendering(false), "Native settings rejected");
+        game.Update(); game.Draw();
+        Require(!temporal->HasUsedHistory() && temporal->IsActive(), "OFF coupled TAA or retained low history");
+        Require(renderer->GetMotionVectorRenderer()->GetTexture()->GetDesc().Width == 1280, "OFF did not restore native inputs");
+        for (uint32_t frame = 0; frame < 36; ++frame) { game.Update(); game.Draw(); }
+        report << "native + TAA frame GPU ms=" << renderer->GetFrameGpuTimeMs() << " resolve ms=" << temporal->GetGpuTimeMs() << '\n';
+        auto* rayScene = renderer->GetDxrRenderer();
+        if (rayScene->IsSupported()) {
+            auto sceneSettings = rayScene->GetSettings(); sceneSettings.isEnabled = true; rayScene->SetSettings(sceneSettings);
+            auto shadowSettings = renderer->GetDxrShadowRenderer()->GetSettings(); shadowSettings.isEnabled = true;
+            renderer->GetDxrShadowRenderer()->SetSettings(shadowSettings);
+            auto reflectionSettings = renderer->GetDxrReflectionRenderer()->GetSettings(); reflectionSettings.isEnabled = true;
+            renderer->GetDxrReflectionRenderer()->SetSettings(reflectionSettings);
+            auto indirectSettings = renderer->GetDxrGlobalIlluminationRenderer()->GetSettings(); indirectSettings.isEnabled = true;
+            renderer->GetDxrGlobalIlluminationRenderer()->SetSettings(indirectSettings);
+            const uint32_t kRenderWidths[] = {960, 640, 1280};
+            const uint32_t kRenderHeights[] = {540, 360, 720};
+            for (uint32_t sizeIndex = 0; sizeIndex < 3; ++sizeIndex) {
+                renderer->SetLowResolutionRendering(sizeIndex < 2, kRenderWidths[sizeIndex], kRenderHeights[sizeIndex]);
+                for (uint32_t frame = 0; frame < 8; ++frame) { game.Update(); game.Draw(); }
+                Require(rayScene->HasValidScene(), "Low resolution lost RT scene");
+                Require(renderer->GetDxrShadowRenderer()->HasValidFrame(), "Low resolution lost RT sun shadows");
+                Require(renderer->GetDxrShadowRenderer()->GetMaskTexture()->GetDesc().Width == kRenderWidths[sizeIndex], "RT shadow mask did not resize");
+                Require(renderer->GetDxrShadowRenderer()->GetDenoisedMaskTexture()->GetDesc().Width == kRenderWidths[sizeIndex], "Shadow denoiser did not resize");
+                Require(renderer->GetDxrReflectionRenderer()->HasValidFrame(), "Low resolution lost RT reflections");
+                Require(renderer->GetDxrGlobalIlluminationRenderer()->HasValidFrame(), "Low resolution lost RT GI");
+                Require(renderer->GetDxrReflectionRenderer()->GetRawTexture()->GetDesc().Width == kRenderWidths[sizeIndex] / 2, "RT reflection trace did not resize");
+                Require(renderer->GetDxrGlobalIlluminationRenderer()->GetColorTexture()->GetDesc().Width == kRenderWidths[sizeIndex], "RT GI composition did not resize");
+                auto* volume = renderer->GetPostEffectManager()->GetVolumetricLightRenderer();
+                Require(volume->GetRawTransmittanceTexture()->GetDesc().Width == kRenderWidths[sizeIndex] / 2, "Fog did not resize");
+            }
+            report << "PASS: RT scene/sun/denoiser/reflections/GI and fog resize at 75/50/native\n";
+        } else { report << "SKIP: DXR unsupported\n"; }
+        uint32_t descriptorCount = SrvManager::GetInstance()->GetAllocatedCount();
+        for (uint32_t cycle = 0; cycle < 3; ++cycle) {
+            renderer->SetLowResolutionRendering(true); game.Update(); game.Draw();
+            renderer->SetLowResolutionRendering(false); game.Update(); game.Draw();
+        }
+        Require(SrvManager::GetInstance()->GetAllocatedCount() == descriptorCount, "Repeated switching leaked descriptors");
+        report << "PASS: true low inputs, native particle color/depth, independent low/TAA ON/OFF, size history reset, repeated switching\n";
+        renderer->SetAntiAliasing(false, true); game.Update(); game.Draw();
+        Require(!temporal->IsActive() && temporal->GetProjectionJitterNdc().x == 0, "FXAA mode retained temporal jitter");
+        if (info) {
+            for (UINT64 index = 0; index < info->GetNumStoredMessages(); ++index) {
+                SIZE_T size = 0; info->GetMessage(index, nullptr, &size); std::vector<uint8_t> storage(size);
+                auto* message = reinterpret_cast<D3D12_MESSAGE*>(storage.data()); info->GetMessage(index, message, &size);
+                if (message->Severity <= D3D12_MESSAGE_SEVERITY_ERROR) { throw std::runtime_error(message->pDescription); }
+            }
+        }
+        report << "PASS: title/stage03 renderer integration, native HDR TAA, camera cut, TAA+FXAA, exclusive DLAA, OFF, D3D12 validation\n";
+        game.Finalize(); Logger::Finalize(); return 0;
+    } catch (const std::exception& error) {
+        std::string resultName = "taa-integration-result.txt";
+        if (shouldValidateQuality) { resultName = "quality-result.txt"; }
+        if (shouldValidateFinalQuality) { resultName = "final-quality-result.txt"; }
+        std::ofstream(directory / resultName) << "FAIL: " << error.what();
+        if (isInitialized) { game.Finalize(); } Logger::Finalize(); return 1;
     }
 }
 
@@ -919,6 +1248,9 @@ int RunSsrValidation();
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
     if (std::string(commandLine).find("--ssr") != std::string::npos) { return RunSsrValidation(); }
+    if (std::string(commandLine).find("--final-quality") != std::string::npos) { return RunTemporalIntegrationTest(false, true); }
+    if (std::string(commandLine).find("--quality") != std::string::npos) { return RunTemporalIntegrationTest(true); }
+    if (std::string(commandLine).find("--taa") != std::string::npos) { return RunTemporalIntegrationTest(); }
     if (std::string(commandLine).find("--dlss") != std::string::npos) { return RunDlssTest(); }
     if (std::string(commandLine).find("--fxaa") != std::string::npos) { return RunFxaaTest(); }
     if (std::string(commandLine).find("--title") != std::string::npos) { return RunTitleShadowTest(); }
@@ -927,6 +1259,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     if (std::string(commandLine).find("--stage04") != std::string::npos) { return RunGameStageShadowTest("stage04"); }
     if (std::string(commandLine).find("--stage") != std::string::npos) { return RunGameStageShadowTest("stage03"); }
     int exitCode = 0;
+    bool isVolumetricOnly = std::string(commandLine).find("--volumetric") != std::string::npos;
     try {
         std::filesystem::path directory = "runtime/captures/ShadowMapTests";
         std::filesystem::create_directories(directory);
@@ -990,6 +1323,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             ice.SetCastShadow(true);
             ice.SetReceiveShadow(true);
             ice.Update();
+            if (!isVolumetricOnly) {
             std::vector<uint8_t> images[4];
             const char* names[] = { "enabled.png", "disabled.png", "cast-off.png", "receive-off.png" };
             for (int frame = 0; frame < 4; ++frame) {
@@ -1077,6 +1411,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 ice.SetSurfaceProperties(0.18f, 0.75f, 1.0f);
                 if (mode == 1) { ice.SetSurfaceProperties(0.90f, 0.0f, 0.10f); }
                 if (mode >= 2) {
+                    // IBL replaces hemisphere diffuse; isolate the fallback being compared.
+                    Require(LightManager::GetInstance()->SetEnvironmentLighting(0.0f, 0.0f), "Hemisphere fixture environment setting failed");
                     LightManager::GetInstance()->SetIntensity(0.0f);
                     LightManager::GetInstance()->SetAmbientIntensity(0.65f);
                     LightManager::GetInstance()->SetHemisphereColors({ 1.0f, 0.1f, 0.1f }, { 0.1f, 0.1f, 1.0f });
@@ -1133,12 +1469,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             ice.SetNormalMap("");
             Logger::Log("Normal mapping PASS: linear mipmapped texture, surface lighting and zero-strength equivalence");
 
+            }
+            // Restore the common dielectric fixture after material/normal-map comparisons.
+            // SSAO must not inherit the previous highly metallic response.
+            ice.SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+            ice.SetColor({0.82f, 0.94f, 1.0f, 1.0f}); ice.SetSurfaceProperties(0.25f, 0.0f, 0.85f);
+            TextureManager::GetInstance()->FlushUploads();
             PostEffectManager post;
             post.Initialize(dx);
             post.SetNormalTextureHandle(offscreen.GetNormalSrvHandleGPU());
             post.SetIndirectTextureHandle(offscreen.GetIndirectSrvHandleGPU());
             post.PostDrawDepth();
             post.SetFxaaEnabled(false);
+            if (!isVolumetricOnly) {
             CheckMotionVectors(dx, post, offscreen);
             Logger::Log("HDR bloom test initialized");
             Logger::Flush();
@@ -1162,7 +1505,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             const size_t verticalHaloPixel = (296 * 1280 + 640) * 4;
             Require(bloomImages[1][verticalHaloPixel] > bloomImages[0][verticalHaloPixel] + 5,
                 "HDR bloom did not spread vertically");
+            }
             auto* volume = post.GetVolumetricLightRenderer();
+            volume->SetTemporalEnabled(false);
             Require(volume->IsReady(), "Volumetric light initialization failed");
             VolumetricLightRenderer uninitializedVolume;
             Require(!uninitializedVolume.Generate({}, true), "Uninitialized volume renderer should skip safely");
@@ -1688,7 +2033,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 }
             }
         }
+        if (isVolumetricOnly) {
+            std::ofstream(directory / "result.txt") << "PASS: volumetric lighting, sphere/box/height fog, static noise, camera precision, sun/spot shadows, missing inputs, fog presets, post-processing regression, D3D12 validation\n";
+        } else {
         std::ofstream(directory / "result.txt") << "PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting, local sphere/box/height fog, stable noise, shadow fallbacks, point/spot lights and shadows, generation handles, SSAO, atmospheric perspective, environment illumination, clustered image parity, D3D12 validation\n";
+        }
         ModelManager::Finalize();
         Object3dManager::Finalize();
         LightManager::Finalize();

@@ -7,6 +7,7 @@
 #include "Engine/math/MatrixMath.h"
 #include "Engine/math/Object3DStruct.h"
 #include "Model.h"
+#include "Engine/Raytracing/DxrSceneBounds.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -17,6 +18,7 @@
 #include <wrl.h>
 class SkinningObject3dManager;
 class Model;
+class DxrRenderer;
 class SkinningObject3d {
 public:
     // ===============================
@@ -25,6 +27,12 @@ public:
     void Initialize(SkinningObject3dManager* skinningObject3DManager);
     void Update();
     void Draw();
+    void SubmitRaytracing(DxrRenderer& renderer) const;
+    bool IsVisible(const Camera& camera) const;
+    void SetFrustumCullingEnabled(bool isEnabled) { shouldUseFrustumCulling_ = isEnabled; }
+    void SetRaytracingEnabled(bool isEnabled) { isRaytracingEnabled_ = isEnabled; }
+    // Bounds must enclose the current deformed vertices, in model-local space.
+    bool SetRaytracingBounds(const DxrSceneBounds& localBounds);
     void QueueMotionVectors();
     void ResetMotionHistory() { motionHistory_.Reset(); }
     void SetCastShadow(bool isEnabled) { shouldCastShadow_ = isEnabled; }
@@ -33,6 +41,7 @@ public:
     bool GetReceiveShadow() const { return shouldReceiveShadow_; }
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
+    void SetMetallicRoughnessMap(const std::string& filePath);
     bool SetAlphaCutoff(float alphaCutoff);
     ~SkinningObject3d();
     // setter
@@ -129,6 +138,10 @@ public:
     }
 
 private:
+    bool IsRaytracingEligible() const;
+    bool isRaytracingEnabled_ = true;
+    bool shouldUseFrustumCulling_ = false;
+    DxrSceneBounds raytracingBounds_;
     bool shouldCastShadow_ = false;
     bool shouldReceiveShadow_ = false;
     uint64_t skinnedGeometryRevision_ = 0;
@@ -197,4 +210,5 @@ private:
     void DispatchSkinning();
     std::vector<D3D12_VERTEX_BUFFER_VIEW> skinnedPrimitiveVertexBufferViews_;
     std::string normalMapTextureKey_;
+    std::string metallicRoughnessTextureKey_;
 };

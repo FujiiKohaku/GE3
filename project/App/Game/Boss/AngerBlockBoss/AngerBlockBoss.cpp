@@ -360,6 +360,13 @@ void AngerBlockBoss::Draw()
     if (rightHand_ && rightHandHp_ > 0.0f) rightHand_->Draw();
 }
 
+void AngerBlockBoss::SubmitRaytracing(DxrRenderer& renderer) {
+    if (body_) { body_->SubmitRaytracing(renderer); }
+    if (core_) { core_->SubmitRaytracing(renderer); }
+    if (leftHand_ && leftHandHp_ > 0) { leftHand_->SubmitRaytracing(renderer); }
+    if (rightHand_ && rightHandHp_ > 0) { rightHand_->SubmitRaytracing(renderer); }
+}
+
 void AngerBlockBoss::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
 {
     parts.clear();

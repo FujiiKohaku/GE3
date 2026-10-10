@@ -110,8 +110,14 @@ RaymarchOutput main(VertexShaderOutput input) {
     float scattering = 0.0f;
     float3 spotScattering = 0.0f;
     float transmittance = 1.0f;
+    float jitter = 0.5f;
+    if (temporalControls.z >= 0) {
+        uint seed = uint(input.position.x) + uint(input.position.y) * (width / 2);
+        seed ^= seed >> 16; seed *= 0x7feb352du; seed ^= seed >> 15; seed *= 0x846ca68bu; seed ^= seed >> 16;
+        jitter = frac((float(seed >> 9) + 0.5f) / 8388608.0f + float(uint(temporalControls.z) & 63u) * 0.618033989f);
+    }
     for (int index = 0; index < samples; ++index) {
-        float travel = (index + 0.5f) * stepLength;
+        float travel = (index + jitter) * stepLength;
         float3 relativePosition = ray * travel;
         float density = DensityAt(relativePosition);
         if (density <= 0.0f) { continue; }
@@ -125,7 +131,7 @@ RaymarchOutput main(VertexShaderOutput input) {
         transmittance *= segmentTransmittance;
         if (transmittance < 0.001f) { break; }
     }
-    float3 color = scattering * phase * lightColorAndIntensity.rgb * lightColorAndIntensity.w + spotScattering;
+    float3 color = (scattering * phase * lightColorAndIntensity.rgb * lightColorAndIntensity.w + spotScattering) * temporalControls.w;
     RaymarchOutput output;
     output.scatteringAndDepth = float4(clamp(color, 0.0f, 8.0f), surfaceDistance);
     output.transmittance = 1.0f;

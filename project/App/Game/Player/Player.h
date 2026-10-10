@@ -124,6 +124,7 @@ public:
 
     // 使用クラス：GamePlayScene。弾を描画し、Healthの判定に従って機体を描画する。
     void Draw();
+    void SubmitRaytracing(DxrRenderer& renderer);
     // 機体の影を描画する。機体の非表示中は影も描かない。
     void DrawShadow(ShadowMapRenderer& renderer);
     // デバッグビルドでHP・武器・熱量を表示する。

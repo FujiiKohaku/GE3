@@ -13,6 +13,7 @@ class OffscreenRenderer {
 public:
     ~OffscreenRenderer();
     void Initialize();
+    void ResizeSceneTargets();
     void PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle, bool shouldCaptureDirectionalLight = false, bool shouldCaptureReflections = false, bool shouldCaptureLocalShadows = false);
     void PostDraw();
     void SetClearColor(const Vector4& color) { clearColor_ = color; }
@@ -22,6 +23,7 @@ public:
     D3D12_GPU_DESCRIPTOR_HANDLE GetIndirectSrvHandleGPU() const { return indirectSrvHandleGPU_; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetMaterialSrvHandleGPU() const { return materialSrvHandleGPU_; }
     ID3D12Resource* GetColorTexture() const { return renderTextureResource_.Get(); }
+    ID3D12Resource* GetIndirectTexture() const { return indirectTextureResource_.Get(); }
     ID3D12Resource* GetNormalTexture() const { return normalTextureResource_.Get(); }
     D3D12_CPU_DESCRIPTOR_HANDLE GetNormalRtvHandle() const { return normalRtvHandle_; }
     ID3D12Resource* GetDirectionalLightTexture() const { return directionalLightTexture_.Get(); }

@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "OffscreenRenderer.h"
 
 #include <cassert>
@@ -34,8 +35,8 @@ void OffscreenRenderer::Initialize()
     CreateRenderTexture();
     CreateDescriptorViews();
 
-    viewport_.Width = static_cast<float>(WinApp::kClientWidth);
-    viewport_.Height = static_cast<float>(WinApp::kClientHeight);
+    viewport_.Width = static_cast<float>(SceneRenderResolution::GetWidth());
+    viewport_.Height = static_cast<float>(SceneRenderResolution::GetHeight());
     viewport_.TopLeftX = 0.0f;
     viewport_.TopLeftY = 0.0f;
     viewport_.MinDepth = 0.0f;
@@ -43,8 +44,8 @@ void OffscreenRenderer::Initialize()
 
     scissorRect_.left = 0;
     scissorRect_.top = 0;
-    scissorRect_.right = WinApp::kClientWidth;
-    scissorRect_.bottom = WinApp::kClientHeight;
+    scissorRect_.right = SceneRenderResolution::GetWidth();
+    scissorRect_.bottom = SceneRenderResolution::GetHeight();
 }
 
 void OffscreenRenderer::PreDraw(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle, bool shouldCaptureDirectionalLight, bool shouldCaptureReflections, bool shouldCaptureLocalShadows)
@@ -231,14 +232,14 @@ void OffscreenRenderer::CreateLocalLightTarget() {
     auto* device = DirectXCommon::GetInstance()->GetDevice(); auto* srvManager = SrvManager::GetInstance();
     if (!srvManager->CanAllocate()) { throw std::runtime_error("RT local capture descriptors exhausted"); }
     auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, WinApp::kClientWidth, WinApp::kClientHeight,
+    auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(),
         1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
     Microsoft::WRL::ComPtr<ID3D12Resource> texture;
     auto rtvHeap = DirectXCommon::GetInstance()->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
     if (FAILED(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&texture)))) {
         throw std::runtime_error("RT local capture allocation failed");
     }
-    localLightSrvIndex_ = srvManager->Allocate(); srvManager->CreateSRVforTexture2D(localLightSrvIndex_, texture.Get(), description.Format, 1);
+    if (localLightSrvIndex_ == UINT_MAX) { localLightSrvIndex_ = srvManager->Allocate(); } srvManager->CreateSRVforTexture2D(localLightSrvIndex_, texture.Get(), description.Format, 1);
     device->CreateRenderTargetView(texture.Get(), nullptr, rtvHeap->GetCPUDescriptorHandleForHeapStart());
     localLightTexture_ = texture; localLightRtvHeap_ = rtvHeap; localLightAllocationBytes_ = device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
 }
@@ -247,6 +248,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetLocalLightSrv() const {
     return SrvManager::GetInstance()->GetGPUDescriptorHandle(localLightSrvIndex_);
 }
 void OffscreenRenderer::CreateReflectionTargets() {
+    reflectionAllocationBytes_ = 0;
     auto* device = DirectXCommon::GetInstance()->GetDevice();
     auto* srvManager = SrvManager::GetInstance();
     if (!srvManager->CanAllocate(2)) { throw std::runtime_error("Reflection capture descriptors exhausted"); }
@@ -255,7 +257,7 @@ void OffscreenRenderer::CreateReflectionTargets() {
     auto rtvHeap = DirectXCommon::GetInstance()->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
     uint32_t incrementBytes = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     for (uint32_t index = 0; index < 2; ++index) {
-        auto description = CD3DX12_RESOURCE_DESC::Tex2D(kFormats[index], WinApp::kClientWidth, WinApp::kClientHeight,
+        auto description = CD3DX12_RESOURCE_DESC::Tex2D(kFormats[index], SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(),
             1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
         HRESULT result = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&reflectionTextures_[index]));
@@ -290,14 +292,14 @@ void OffscreenRenderer::CreateDirectionalLightTarget() {
     D3D12_HEAP_PROPERTIES heap = {};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32B32A32_FLOAT,
-        WinApp::kClientWidth, WinApp::kClientHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+        SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
     if (FAILED(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&directionalLightTexture_)))) {
         throw std::runtime_error("RT directional capture texture creation failed");
     }
     device->CreateRenderTargetView(directionalLightTexture_.Get(), nullptr, directionalLightRtvHeap_->GetCPUDescriptorHandleForHeapStart());
     directionalLightAllocationBytes_ = device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
-    directionalLightSrvIndex_ = srvManager->Allocate();
+    if (directionalLightSrvIndex_ == UINT_MAX) { directionalLightSrvIndex_ = srvManager->Allocate(); }
     srvManager->CreateSRVforTexture2D(directionalLightSrvIndex_, directionalLightTexture_.Get(), description.Format, 1);
 }
 D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetDirectionalLightSrv() const {
@@ -360,20 +362,20 @@ void OffscreenRenderer::CreateRenderTexture()
 {
     renderTextureResource_ = CreateRenderTextureResource(
         DirectXCommon::GetInstance()->GetDevice(),
-        WinApp::kClientWidth,
-        WinApp::kClientHeight,
+        SceneRenderResolution::GetWidth(),
+        SceneRenderResolution::GetHeight(),
         format_,
         clearColor_);
     materialTextureResource_ = CreateRenderTextureResource(
-        DirectXCommon::GetInstance()->GetDevice(), WinApp::kClientWidth, WinApp::kClientHeight,
+        DirectXCommon::GetInstance()->GetDevice(), SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(),
         DXGI_FORMAT_R8G8B8A8_UNORM, { 0, 0, 0, 0 });
     indirectTextureResource_ = CreateRenderTextureResource(
-        DirectXCommon::GetInstance()->GetDevice(), WinApp::kClientWidth, WinApp::kClientHeight,
+        DirectXCommon::GetInstance()->GetDevice(), SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(),
         DXGI_FORMAT_R16G16B16A16_FLOAT, { 0, 0, 0, 0 });
     normalTextureResource_ = CreateRenderTextureResource(
         DirectXCommon::GetInstance()->GetDevice(),
-        WinApp::kClientWidth,
-        WinApp::kClientHeight,
+        SceneRenderResolution::GetWidth(),
+        SceneRenderResolution::GetHeight(),
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         { 0.5f, 0.5f, 1.0f, -1.0f });
 }
@@ -408,17 +410,17 @@ void OffscreenRenderer::CreateDescriptorViews()
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
 
-    materialSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (materialSrvIndex_ == kInvalidDescriptorIndex) { materialSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
     materialSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(materialSrvIndex_);
     D3D12_SHADER_RESOURCE_VIEW_DESC materialSrvDesc = srvDesc;
     materialSrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     device->CreateShaderResourceView(materialTextureResource_.Get(), &materialSrvDesc,
         SrvManager::GetInstance()->GetCPUDescriptorHandle(materialSrvIndex_));
-    indirectSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (indirectSrvIndex_ == kInvalidDescriptorIndex) { indirectSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
     indirectSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(indirectSrvIndex_);
     device->CreateShaderResourceView(indirectTextureResource_.Get(), &srvDesc,
         SrvManager::GetInstance()->GetCPUDescriptorHandle(indirectSrvIndex_));
-    srvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (srvIndex_ == kInvalidDescriptorIndex) { srvIndex_ = SrvManager::GetInstance()->Allocate(); }
     srvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(srvIndex_);
     srvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
     device->CreateShaderResourceView(renderTextureResource_.Get(), &srvDesc, srvHandleCPU_);
@@ -428,9 +430,20 @@ void OffscreenRenderer::CreateDescriptorViews()
     normalSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     normalSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     normalSrvDesc.Texture2D.MipLevels = 1;
-    normalSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (normalSrvIndex_ == kInvalidDescriptorIndex) { normalSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
     normalSrvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(normalSrvIndex_);
     normalSrvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(normalSrvIndex_);
     device->CreateShaderResourceView(
         normalTextureResource_.Get(), &normalSrvDesc, normalSrvHandleCPU_);
+}
+
+void OffscreenRenderer::ResizeSceneTargets() {
+    if (renderTextureResource_->GetDesc().Width == SceneRenderResolution::GetWidth()
+        && renderTextureResource_->GetDesc().Height == SceneRenderResolution::GetHeight()) { return; }
+    currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    normalCurrentState_ = currentState_; indirectCurrentState_ = currentState_; materialCurrentState_ = currentState_;
+    Initialize();
+    if (directionalLightTexture_) { CreateDirectionalLightTarget(); }
+    if (reflectionRtvHeap_) { CreateReflectionTargets(); }
+    if (localLightTexture_) { CreateLocalLightTarget(); }
 }

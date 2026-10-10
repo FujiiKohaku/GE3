@@ -25,6 +25,9 @@ cbuffer VolumeConstants : register(b0) {
     FogVolumeConstants volumes[8];
     float4 spotCountAndBias;
     VolumetricSpotConstants spotLights[2];
+    row_major float4x4 previousRelativeViewProjection;
+    float4 previousCameraDelta;
+    float4 temporalControls;
 };
 Texture2D<float4> gColor : register(t0);
 Texture2D<float> gDepth : register(t1);

@@ -2049,6 +2049,34 @@ void GamePlayScene::Draw3D()
 
 }
 
+bool GamePlayScene::SubmitRaytracingScene(DxrRenderer& renderer) {
+    for (const auto& object : levelObjects_) {
+        if (object) { object->SubmitRaytracing(renderer); }
+    }
+    for (const RecoveryItem& item : recoveryItems_) {
+        if (!item.collected && item.object) { item.object->SubmitRaytracing(renderer); }
+    }
+    if (floorObj_) { floorObj_->SubmitRaytracing(renderer); }
+    if (isFishSchoolActive_) {
+        for (const auto& fish : oceanFish_) {
+            if (fish) { fish->SubmitRaytracing(renderer); }
+        }
+    }
+    for (const auto& bird : oceanBirds_) {
+        if (bird) { bird->SubmitRaytracing(renderer); }
+    }
+    if (player_) { player_->SubmitRaytracing(renderer); }
+    if (sceneObjectManager_) { sceneObjectManager_->SubmitRaytracing(renderer); }
+    for (const auto& enemy : enemies_) {
+        if (enemy) { enemy->SubmitRaytracing(renderer); }
+    }
+    for (const auto& bullet : enemyBulletManager_.GetBullets()) {
+        if (bullet) { bullet->SubmitRaytracing(renderer); }
+    }
+    if (GetActiveBoss()) { GetActiveBoss()->SubmitRaytracing(renderer); }
+    return true;
+}
+
 void GamePlayScene::DrawParticle()
 {
     EffectManager::GetInstance()->PreDraw();

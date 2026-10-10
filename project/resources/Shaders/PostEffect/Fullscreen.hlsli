@@ -80,4 +80,5 @@ cbuffer PostEffectParameter : register(b0)
     float4 atmosphereSettings;
     float4 screenSunDirection;
     float4 screenSunColor;
+    float4 colorFinishSettings;
 };

@@ -46,6 +46,8 @@ public:
     void SetClusteredLightingEnabled(bool isEnabled);
     bool IsClusteredLightingEnabled() const { return isClusteredLightingEnabled_; }
     bool SetEnvironmentLighting(float diffuseStrength, float specularStrength);
+    bool SetSkyLighting(bool isEnabled, float strength = 1.0f);
+    bool IsSkyLightingEnabled() const { return ambientLightData_->environmentSettings.z > 0.5f; }
     bool SetLightingComponents(float directStrength, float indirectStrength, float iceAmbientMultiplier, uint32_t viewMode);
     Vector4 GetLightingComponents() const { return ambientLightData_->componentSettings; }
     bool SetAtmosphere(bool isEnabled, float density, float strength, float anisotropy);

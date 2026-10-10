@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "DxrShadowRenderer.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
@@ -83,12 +84,12 @@ void DxrShadowRenderer::CreateResources() {
     if (!srvManager->CanAllocate(3)) { throw std::runtime_error("RT shadow descriptors exhausted"); }
     D3D12_HEAP_PROPERTIES heap = {};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
-    auto maskDescription = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_FLOAT, WinApp::kClientWidth,
-        WinApp::kClientHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+    auto maskDescription = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32_FLOAT, SceneRenderResolution::GetWidth(),
+        SceneRenderResolution::GetHeight(), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     RequireShadowResult(device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &maskDescription,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&mask_)), "RT shadow mask creation failed");
-    auto colorDescription = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, WinApp::kClientWidth,
-        WinApp::kClientHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+    auto colorDescription = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, SceneRenderResolution::GetWidth(),
+        SceneRenderResolution::GetHeight(), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
     RequireShadowResult(device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &colorDescription,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&color_)), "RT shadow color creation failed");
     textureAllocationBytes_ = device_->GetResourceAllocationInfo(0, 1, &maskDescription).SizeInBytes
@@ -191,6 +192,8 @@ void DxrShadowRenderer::CreatePipelines(const DxrRenderer& scene) {
     RequireShadowResult(device_->CreateGraphicsPipelineState(&composite, IID_PPV_ARGS(&compositePipeline_)), "RT shadow composition pipeline creation failed");
 }
 D3D12_GPU_DESCRIPTOR_HANDLE DxrShadowRenderer::Draw(const DxrShadowInputs& inputs) {
+    if (color_ && (color_->GetDesc().Width != SceneRenderResolution::GetWidth() || color_->GetDesc().Height != SceneRenderResolution::GetHeight())) { ResetResources(); }
+
     hasValidFrame_ = false;
     traceTimer_.ResetSample(); compositeTimer_.ResetSample();
     if (!settings_.isEnabled || !inputs.scene || !inputs.scene->HasValidScene() || !inputs.camera
@@ -207,7 +210,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrShadowRenderer::Draw(const DxrShadowInputs& input
     }
     for (ID3D12Resource* resource : {inputs.depthTexture, inputs.normalTexture, inputs.directionalLightTexture}) {
         auto description = resource->GetDesc();
-        if (description.Width != WinApp::kClientWidth || description.Height != WinApp::kClientHeight) { denoiser_.ResetHistory(); return inputs.colorSrv; }
+        if (description.Width != SceneRenderResolution::GetWidth() || description.Height != SceneRenderResolution::GetHeight()) { denoiser_.ResetHistory(); return inputs.colorSrv; }
     }
     try {
         if (!isReady_) {
@@ -273,7 +276,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrShadowRenderer::Draw(const DxrShadowInputs& input
     dispatch.RayGenerationShaderRecord = {address, 32};
     dispatch.MissShaderTable = {address + 64, 64, 64};
     dispatch.HitGroupTable = {address + 128, static_cast<uint64_t>(inputs.scene->GetStatistics().hitRecordCount) * 96, 96};
-    dispatch.Width = WinApp::kClientWidth; dispatch.Height = WinApp::kClientHeight; dispatch.Depth = 1;
+    dispatch.Width = SceneRenderResolution::GetWidth(); dispatch.Height = SceneRenderResolution::GetHeight(); dispatch.Depth = 1;
     traceTimer_.Begin(); commandList_->DispatchRays(&dispatch); traceTimer_.End();
     inputs.scene->EndMaterialRead();
     for (ID3D12Resource* resource : resources) {
@@ -289,6 +292,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrShadowRenderer::Draw(const DxrShadowInputs& input
         denoiseInputs.depthSrv = inputs.depthSrv; denoiseInputs.normalSrv = inputs.normalSrv;
         denoiseInputs.directionalLightSrv = inputs.directionalLightSrv;
         denoiseInputs.motionVectorSrv = inputs.motionVectorSrv;
+        denoiseInputs.reprojectionSrv = inputs.reprojectionSrv; denoiseInputs.previousReprojectionSrv = inputs.previousReprojectionSrv;
         denoiseInputs.sceneRevision = inputs.sceneRevision;
         denoiseInputs.casterRevision = inputs.scene->GetShadowSceneRevision();
         denoiseInputs.lightDirection = parameters.lightDirection;
@@ -300,8 +304,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxrShadowRenderer::Draw(const DxrShadowInputs& input
     commandList_->ResourceBarrier(1, &colorBefore);
     auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
     commandList_->OMSetRenderTargets(1, &rtv, false, nullptr);
-    D3D12_VIEWPORT viewport = {0, 0, static_cast<float>(WinApp::kClientWidth), static_cast<float>(WinApp::kClientHeight), 0, 1};
-    D3D12_RECT scissor = {0, 0, WinApp::kClientWidth, WinApp::kClientHeight};
+    D3D12_VIEWPORT viewport = {0, 0, static_cast<float>(SceneRenderResolution::GetWidth()), static_cast<float>(SceneRenderResolution::GetHeight()), 0, 1};
+    D3D12_RECT scissor = {0, 0, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight()};
     commandList_->RSSetViewports(1, &viewport); commandList_->RSSetScissorRects(1, &scissor);
     commandList_->SetGraphicsRootSignature(compositeRoot_.Get()); commandList_->SetPipelineState(compositePipeline_.Get());
     commandList_->SetGraphicsRootDescriptorTable(0, inputs.colorSrv);

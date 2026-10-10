@@ -27,6 +27,8 @@ struct DxrShadowInputs {
     D3D12_GPU_DESCRIPTOR_HANDLE directionalLightSrv = {};
     Vector3 lightDirection = {0, -1, 0};
     D3D12_GPU_DESCRIPTOR_HANDLE motionVectorSrv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE reprojectionSrv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE previousReprojectionSrv = {};
     uint64_t sceneRevision = 0;
 };
 

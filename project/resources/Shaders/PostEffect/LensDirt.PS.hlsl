@@ -1,4 +1,5 @@
 #include "Fullscreen.hlsli"
+#include "HdrColor.hlsli"
 
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
@@ -29,6 +30,6 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float luminance = dot(color.rgb, float3(0.2125f, 0.7154f, 0.0721f));
     float lightResponse = smoothstep(0.55f, 1.0f, luminance);
     float3 dirtColor = float3(1.0f, 0.82f, 0.58f);
-    color.rgb = saturate(color.rgb + dirtColor * dirt * lightResponse * lensDirtStrength);
+    color.rgb = SanitizeHdr(color.rgb + dirtColor * dirt * lightResponse * lensDirtStrength);
     return color;
 }

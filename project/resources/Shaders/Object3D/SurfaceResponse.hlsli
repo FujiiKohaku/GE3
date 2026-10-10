@@ -1,3 +1,4 @@
+#include "LightingEnergy.hlsli"
 // Shared opaque material response in linear HDR space.
 float GetDirectLightingStrength(AmbientLight light)
 {
@@ -32,8 +33,6 @@ float3 SurfaceSpecular(Material material, float3 baseColor, float3 N, float3 V, 
     float k = (roughness + 1.0f) * (roughness + 1.0f) * 0.125f;
     float geometry = nv / (nv * (1.0f - k) + k);
     geometry *= nl / max(nl * (1.0f - k) + k, 0.00001f);
-    float3 f0 = lerp(0.04f.xxx, saturate(baseColor), saturate(material.metallic));
-    float grazing = 1.0f - vh;
-    float3 fresnel = f0 + (1.0f - f0) * pow(grazing, 5.0f);
-    return fresnel * distribution * geometry * nl * material.specularStrength / max(4.0f * nv * nl, 0.0001f);
+    float3 fresnel = SurfaceFresnel(baseColor, material.metallic, vh);
+    return fresnel * distribution * geometry * nl * saturate(material.specularStrength) / max(4.0f * nv * nl, 0.0001f);
 }

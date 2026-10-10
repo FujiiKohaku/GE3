@@ -186,6 +186,12 @@ void Player::DrawShadow(ShadowMapRenderer& renderer)
     }
 }
 
+void Player::SubmitRaytracing(DxrRenderer& renderer) {
+    if (!object_) { return; }
+    weaponController_.SubmitRaytracing(renderer);
+    if (health_.ShouldDraw()) { object_->SubmitRaytracing(renderer); }
+}
+
 void Player::ApplyTransform()
 {
     object_->SetScale(transform_.scale);

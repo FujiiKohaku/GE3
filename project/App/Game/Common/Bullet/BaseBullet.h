@@ -17,6 +17,7 @@ public:
     virtual void Update();
     // 描画関数
     virtual void Draw();
+    void SubmitRaytracing(DxrRenderer& renderer);
     bool IsAlive() const
     {
         return isAlive_;

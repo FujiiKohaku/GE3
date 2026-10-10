@@ -225,6 +225,14 @@ void Object3dManager::CreateRootSignature()
     normalParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     normalParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     normalParameter.DescriptorTable = { 1, &normalRange };
+    D3D12_DESCRIPTOR_RANGE metallicRoughnessRange {};
+    metallicRoughnessRange.BaseShaderRegister = 5;
+    metallicRoughnessRange.NumDescriptors = 1;
+    metallicRoughnessRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    auto& metallicRoughnessParameter = rootParameters[RootParameterIndex(Object3dRootParameter::MetallicRoughnessTexture)];
+    metallicRoughnessParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    metallicRoughnessParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    metallicRoughnessParameter.DescriptorTable = {1, &metallicRoughnessRange};
 
 
     auto& vertexShaderParameters = rootParameters[kVertexShaderParametersRootIndex];

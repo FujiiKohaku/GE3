@@ -25,6 +25,7 @@ public:
 
     // 生存中の各部位とボスが発射した弾を描画する。
     void Draw() override;
+    void SubmitRaytracing(DxrRenderer& renderer) override;
     void DrawShadow(ShadowMapRenderer& renderer) override;
 
     // 撃破演出が完了してシーン遷移可能かを返す。

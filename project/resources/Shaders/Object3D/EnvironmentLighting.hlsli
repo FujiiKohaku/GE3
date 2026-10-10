@@ -1,5 +1,14 @@
 #ifndef KOHAKU_ENVIRONMENT_LIGHTING
 #define KOHAKU_ENVIRONMENT_LIGHTING
+#include "../Atmosphere/SkyLighting.hlsli"
+float3 SampleEnvironmentLighting(float3 direction, float roughness, float cubeMip) {
+    if (gAmbientLight.environmentSettings.z > 0.5f) {
+        return FilteredSkyLightingRadiance(direction, roughness, normalize(-gDirectionalLight.direction),
+            gDirectionalLight.color.rgb, gDirectionalLight.intensity, gAmbientLight.atmosphereSettings,
+            gAmbientLight.skyColor.rgb, gAmbientLight.groundColor.rgb, gAmbientLight.environmentSettings.w);
+    }
+    return gEnvironmentTexture.SampleLevel(gSampler, direction, cubeMip).rgb;
+}
 // 少数サンプルによる環境積分の近似。静的キューブマップの粗いMipを併用する。
 float3 EnvironmentLighting(float3 baseColor, float3 normal, float3 view, bool hasSpecular) {
     if (GetIndirectLightingStrength(gAmbientLight) <= 0) { return 0; }
@@ -18,17 +27,18 @@ float3 EnvironmentLighting(float3 baseColor, float3 normal, float3 view, bool ha
         float angle = float(index) * 2.39996323f;
         float3 sampleDirection = tangent * (cos(angle) * sqrt(fraction)) +
             bitangent * (sin(angle) * sqrt(fraction)) + normal * sqrt(1.0f - fraction);
-        diffuse += gEnvironmentTexture.SampleLevel(gSampler, sampleDirection, maxMip).rgb;
+        diffuse += SampleEnvironmentLighting(sampleDirection, 0.0f, maxMip);
     }
     float metallic = saturate(gMaterial.metallic);
-    float3 result = baseColor * (1.0f - metallic) * diffuse / float(kEnvironmentSamples) * gAmbientLight.environmentSettings.x;
+    float specularStrength = 0; if (hasSpecular) { specularStrength = gMaterial.specularStrength; }
+    float3 result = baseColor * SurfaceDiffuseWeight(baseColor, metallic, specularStrength, dot(normal, view))
+        * diffuse / float(kEnvironmentSamples) * gAmbientLight.environmentSettings.x;
     if (hasSpecular) {
         float3 reflected = reflect(-view, normal);
         float roughness = clamp(gMaterial.roughness, 0.08f, 1.0f);
-        float3 reflection = gEnvironmentTexture.SampleLevel(gSampler, reflected, roughness * maxMip).rgb;
-        float3 f0 = lerp(0.04f.xxx, saturate(baseColor), metallic);
-        float3 fresnel = f0 + (1.0f - f0) * pow(1.0f - saturate(dot(normal, view)), 5.0f);
-        float3 specular = reflection * fresnel * gMaterial.specularStrength * gAmbientLight.environmentSettings.y * (1.0f - roughness * 0.5f);
+        float3 reflection = SampleEnvironmentLighting(reflected, roughness, roughness * maxMip);
+        float3 fresnel = SurfaceFresnel(baseColor, metallic, dot(normal, view));
+        float3 specular = reflection * fresnel * saturate(gMaterial.specularStrength) * gAmbientLight.environmentSettings.y * (1.0f - roughness * 0.5f);
         result += specular;
 #if defined(KOHAKU_RT_REFLECTION_CAPTURE)
         capturedReflectionEnvironment += specular * GetIndirectLightingStrength(gAmbientLight);

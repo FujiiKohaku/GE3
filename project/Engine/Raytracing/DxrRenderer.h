@@ -1,10 +1,12 @@
 #pragma once
 #include "DxrLocalShadowParameters.h"
+#include "DxrSceneBounds.h"
 #include "Engine/Debug/GpuTimestampTimer.h"
 #include "Engine/Math/Object3DStruct.h"
 #include <map>
 #include <functional>
 #include <vector>
+#include <unordered_set>
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
 #include "externals/json.hpp"
 #endif
@@ -22,6 +24,7 @@ struct DxrSettings {
 };
 
 struct DxrStatistics {
+    uint32_t culledInstanceCount = 0;
     uint32_t instanceCount = 0;
     uint32_t blasCount = 0;
     uint32_t builtBlasCount = 0;
@@ -34,6 +37,10 @@ struct DxrStatistics {
     uint64_t outputAllocationBytes = 0;
     bool hasValidFrame = false;
 };
+struct DxrMaterialTextures {
+    D3D12_GPU_DESCRIPTOR_HANDLE normal = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE metallicRoughness = {};
+};
 
 // BeginFrame requires the previous frame's fence to have completed, as in Renderer.
 // Opaque triangle geometry; deformed input must contain all primitives in model order.
@@ -43,14 +50,20 @@ public:
     ~DxrRenderer();
     void Initialize();
     void BeginFrame();
+    // Frame-local selection, independent of the raster camera frustum. Radius 0 disables it.
+    bool SetSceneCullingSphere(const Vector3& center, float radius);
+    void SetDrawSubmissionEnabled(bool isEnabled) { shouldUseDrawSubmission_ = isEnabled; }
+    bool ShouldUseDrawSubmission() const { return shouldUseDrawSubmission_; }
     void Queue(const void* objectId, const Model& model, const Matrix4x4& world,
-        const Material& material, bool shouldCastShadow = true, bool shouldReceiveShadow = true);
+        const Material& material, bool shouldCastShadow = true, bool shouldReceiveShadow = true,
+        const DxrMaterialTextures* materialTextures = nullptr);
     // The caller advances geometryRevision after changing vertices and keeps vertexState accurate.
     // EndFrame temporarily adds shader-read access and restores the caller's state.
     void QueueDeformed(const void* objectId, const Model& model, const Matrix4x4& world,
         const Material& material, ID3D12Resource* vertices, uint64_t geometryRevision,
         bool shouldCastShadow = true,
-        D3D12_RESOURCE_STATES vertexState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, bool shouldReceiveShadow = true);
+        D3D12_RESOURCE_STATES vertexState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, bool shouldReceiveShadow = true,
+        const DxrSceneBounds* worldBounds = nullptr, const DxrMaterialTextures* materialTextures = nullptr);
     void EndFrame(const Camera* camera, bool shouldTraceDebug = true);
     bool HasValidScene() const { return isValidScene_; }
     uint64_t GetShadowSceneRevision() const { return shadowSceneRevision_; }
@@ -130,13 +143,15 @@ private:
         Matrix4x4 world = {};
         Material material = {};
         std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> textures;
+        DxrMaterialTextures materialTextures;
         bool shouldCastShadow = true;
         bool shouldReceiveShadow = true;
     };
     bool CreatePipeline();
     void QueueInternal(const void* objectId, const Model& model, const Matrix4x4& world,
         const Material& material, bool shouldCastShadow, ID3D12Resource* deformedVertices,
-        uint64_t geometryRevision, D3D12_RESOURCE_STATES vertexState, bool shouldReceiveShadow);
+        uint64_t geometryRevision, D3D12_RESOURCE_STATES vertexState, bool shouldReceiveShadow,
+        const DxrSceneBounds* worldBounds = nullptr, const DxrMaterialTextures* materialTextures = nullptr);
     void TransitionDynamicVertices(bool shouldRestore, bool shouldLimitToMasked = false) const;
     void CreateMaterialBuffer();
     bool CreateOutput();
@@ -178,7 +193,9 @@ private:
     std::unique_ptr<CopyImageRenderer> debugCopy_;
     std::map<BlasKey, BlasEntry> blasEntries_;
     std::vector<Instance> instances_;
-    std::vector<const void*> objectIds_;
+    std::unordered_set<const void*> objectIds_;
+    DxrSceneBounds cullingSphere_;
+    bool shouldUseDrawSubmission_ = true;
     // Resources replaced after commands are recorded must survive until the fence.
     std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> retiredResources_;
     D3D12_DISPATCH_RAYS_DESC dispatch_ = {};

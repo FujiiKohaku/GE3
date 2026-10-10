@@ -75,6 +75,10 @@ void BaseEnemy::DrawShadow(ShadowMapRenderer& renderer)
     if (!isDead_ && object_ != nullptr) { object_->DrawShadow(renderer); }
 }
 
+void BaseEnemy::SubmitRaytracing(DxrRenderer& renderer) {
+    if (!isDead_ && object_) { object_->SubmitRaytracing(renderer); }
+}
+
 void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
 {
     bulletManager_ = bulletManager;

@@ -13,6 +13,9 @@ struct MotionVectorSettings {
 
 struct MotionVectorHistory {
     Matrix4x4 previousWorldViewProjection = {};
+    Matrix4x4 previousWorldView = {};
+    Matrix4x4 previousNormalTransform = {};
+    uint32_t surfaceId = 0;
     Vector4 previousParameters = {};
     uint64_t frameId = 0;
     uint64_t cameraHistoryId = 0;
@@ -25,6 +28,7 @@ class MotionVectorRenderer {
 public:
     ~MotionVectorRenderer();
     void Initialize();
+    void ResizeSceneTargets();
     void BeginFrame();
     void EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle);
     void DrawDebug();
@@ -33,6 +37,10 @@ public:
     const MotionVectorSettings& GetSettings() const { return settings_; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetSrvHandle() const;
     ID3D12Resource* GetTexture() const { return texture_.Get(); }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetReprojectionSrv() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetPreviousReprojectionSrv() const;
+    ID3D12Resource* GetReprojectionTexture() const { return reprojectionTextures_[reprojectionIndex_].Get(); }
+    uint64_t GetReprojectionAllocationBytes() const { return reprojectionAllocationBytes_; }
     static MotionVectorRenderer* GetActive() { return active_; }
     bool HasHistory(const MotionVectorHistory& history, const Camera& camera) const;
     bool IsQueued(const MotionVectorHistory& history) const { return history.frameId == frameId_; }
@@ -52,11 +60,15 @@ private:
         uint32_t indexCount = 0;
         Matrix4x4 currentWorldViewProjection = {};
         Matrix4x4 previousWorldViewProjection = {};
+        Matrix4x4 previousWorldView = {};
+        Matrix4x4 previousNormalTransform = {};
+        uint32_t surfaceId = 0;
         Vector4 parameters = {};
         Vector4 previousParameters = {};
         std::wstring shaderPath;
         bool isDoubleSided = false;
         Vector2 jitterNdc = {};
+        bool hasPreviousGeometry = false;
         Material material = {};
         D3D12_GPU_DESCRIPTOR_HANDLE textureSrv = {};
     };
@@ -67,6 +79,7 @@ private:
     ID3D12PipelineState* GetPipeline(const std::wstring& shaderPath, bool isDoubleSided, bool isAlphaMasked = false);
     inline static MotionVectorRenderer* active_ = nullptr;
     inline static uint64_t nextFrameId_ = 1;
+    inline static uint32_t nextSurfaceId_ = 1;
     uint64_t frameId_ = 0;
     uint64_t previousFrameId_ = 0;
     MotionVectorSettings settings_;
@@ -77,6 +90,11 @@ private:
     Microsoft::WRL::ComPtr<ID3D12PipelineState> debugPipeline_;
     std::map<std::tuple<std::wstring, bool, bool>, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_;
     Microsoft::WRL::ComPtr<ID3D12Resource> materialUpload_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> reprojectionUpload_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> reprojectionTextures_[2];
+    uint32_t reprojectionSrvIndices_[2] = {UINT_MAX, UINT_MAX};
+    uint32_t reprojectionIndex_ = 0;
+    uint64_t reprojectionAllocationBytes_ = 0;
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineDescription_ = {};
     uint32_t srvIndex_ = UINT_MAX;
     std::vector<DrawEntry> draws_;

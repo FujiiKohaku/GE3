@@ -16,8 +16,8 @@ public:
 
         float intensity;
         int32_t blurDirection;
-        float padding0;
-        float padding1;
+        float softKnee;
+        float maxRadiance;
     };
 
     void Initialize(DirectXCommon* dxCommon);

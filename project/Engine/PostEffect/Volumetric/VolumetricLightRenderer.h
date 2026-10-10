@@ -1,12 +1,15 @@
 #pragma once
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/Debug/GpuTimestampTimer.h"
 #include <cstdint>
 #include <array>
 #include <wrl.h>
 class Camera;
 class ShadowMapRenderer;
 class LocalShadowRenderer;
+
+enum class VolumetricQuality { Low, Medium, High, Custom };
 
 enum class FogVolumeShape { Sphere, Box };
 
@@ -39,6 +42,10 @@ struct VolumetricLightParameters {
     float maxDistance = 240.0f;
     float anisotropy = 0.35f;
     int32_t sampleCount = 32;
+    bool shouldUseTemporalHistory = true;
+    float historyWeight = 0.9f;
+    float scatteringAlbedo = 1.0f;
+    VolumetricQuality quality = VolumetricQuality::Medium;
 };
 
 struct FogPreset {
@@ -53,7 +60,7 @@ public:
     static constexpr uint32_t kMaxVolumetricSpotLights = 2;
     ~VolumetricLightRenderer();
     bool Initialize(DirectXCommon* dxCommon);
-    void SetEnabled(bool enabled) { parameters_.enabled = enabled; }
+    void SetEnabled(bool isEnabled);
     void SetLightColor(const Vector3& color);
     void SetLightIntensity(float intensity);
     void SetLightDirection(const Vector3& direction);
@@ -61,8 +68,22 @@ public:
     void SetMaxDistance(float distance);
     void SetAnisotropy(float anisotropy);
     void SetSampleCount(int32_t samples);
+    bool SetQuality(VolumetricQuality quality);
+    void SetTemporalEnabled(bool isEnabled);
+    bool SetHistoryWeight(float weight);
+    bool SetScatteringAlbedo(float albedo);
+    void ResetHistory();
+    void ResizeSceneTargets();
+    void ReadCompleted();
+    bool HasUsedHistory() const { return hasUsedHistory_; }
+    uint64_t GetAllocationBytes() const { return allocationBytes_; }
+    double GetRaymarchGpuTimeMs() const { return raymarchTimer_.GetDurationMs(); }
+    double GetTemporalGpuTimeMs() const { return temporalTimer_.GetDurationMs(); }
+    double GetCompositeGpuTimeMs() const { return compositeTimer_.GetDurationMs(); }
+    ID3D12Resource* GetRawTransmittanceTexture() const { return transmittanceTexture_.Get(); }
+    ID3D12Resource* GetFilteredTransmittanceTexture() const;
     const VolumetricLightParameters& GetParameters() const { return parameters_; }
-    void SetLocalFogEnabled(bool isEnabled) { localFog_.isEnabled = isEnabled; }
+    void SetLocalFogEnabled(bool isEnabled);
     bool ApplyFogPreset(const FogPreset& preset);
     bool SetFogVolume(uint32_t volumeIndex, const FogVolumeSettings& settings);
     const std::array<FogVolumeSettings, kMaxFogVolumes>& GetFogVolumes() const { return fogVolumes_; }
@@ -74,7 +95,7 @@ public:
     bool SetFogColor(const Vector3& color);
     // Must be supplied after shadow rendering, for every frame.
     void SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows,
-        const LocalShadowRenderer* localShadows = nullptr);
+        const LocalShadowRenderer* localShadows = nullptr, uint64_t sceneRevision = 0);
     bool Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, bool depthReady);
     void Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
     void DrawImGui();
@@ -107,9 +128,14 @@ private:
             Vector4 decayAndFalloffAndShadow {};
         };
         std::array<SpotConstants, kMaxVolumetricSpotLights> spotLights {};
+        Matrix4x4 previousRelativeViewProjection {};
+        Vector4 previousCameraDelta {};
+        Vector4 temporalControls {}; // history valid, history weight, jitter frame, scattering albedo
     };
     void CreateResources();
     void CreatePipelines();
+    void CreateHistoryResources();
+    void RenderTemporal();
     void Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESCRIPTOR_HANDLE color,
         D3D12_GPU_DESCRIPTOR_HANDLE depth, D3D12_GPU_DESCRIPTOR_HANDLE shadow);
     void Transition(D3D12_RESOURCE_STATES state);
@@ -127,6 +153,28 @@ private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> raymarchPipeline_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> compositePipeline_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> temporalPipeline_;
+    std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> historyTextures_;
+    std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, 2> historyTransmittanceTextures_;
+    std::array<uint32_t, 2> historySrvIndices_ = {UINT_MAX, UINT_MAX};
+    std::array<uint32_t, 2> historyTransmittanceSrvIndices_ = {UINT_MAX, UINT_MAX};
+    const Camera* frameCamera_ = nullptr;
+    const Camera* previousCamera_ = nullptr;
+    uint64_t frameSceneRevision_ = 0;
+    uint64_t previousSceneRevision_ = 0;
+    uint64_t previousCameraHistoryId_ = 0;
+    uint64_t previousLightingHash_ = 0;
+    uint64_t allocationBytes_ = 0;
+    uint32_t frameIndex_ = 0;
+    uint32_t historyIndex_ = 0;
+    bool hasHistory_ = false;
+    bool hasUsedHistory_ = false;
+    Matrix4x4 previousRelativeViewProjection_ {};
+    Vector3 previousCameraPosition_ {};
+    Vector3 previousCameraForward_ {};
+    GpuTimestampTimer raymarchTimer_;
+    GpuTimestampTimer temporalTimer_;
+    GpuTimestampTimer compositeTimer_;
     uint32_t srvIndex_ = 0xffffffffu;
     uint32_t transmittanceSrvIndex_ = 0xffffffffu;
     D3D12_GPU_DESCRIPTOR_HANDLE transmittanceSrv_ {};

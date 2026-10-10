@@ -10,7 +10,8 @@ cbuffer ReflectionParameters : register(b0) {
     float4 composition; // strength, debug view
     uint4 rtLocalLightMasks;
     float4 rtLocalShadowControls;
-    float4 historyValidation; // changed geometry/lighting, temporal enabled, reserved
+    float4 indirectSampling; // low discrepancy enabled, distance fade ratio, reflection bounce limit, reserved
+    float4 historyValidation; // changed geometry/lighting, temporal enabled, receiver metadata, texture mips
 };
 float3 ReflectionWorld(float2 uv, float depth) {
     float4 position = mul(float4(uv.x * 2 - 1, 1 - uv.y * 2, depth, 1), inverseViewProjection);

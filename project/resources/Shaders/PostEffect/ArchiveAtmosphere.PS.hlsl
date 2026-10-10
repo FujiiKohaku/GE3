@@ -1,4 +1,5 @@
 #include "Fullscreen.hlsli"
+#include "HdrColor.hlsli"
 
 // Reuse the three reserved floats without changing the shared shader layout.
 #define archiveFocusDistance customParameter0
@@ -94,5 +95,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float2 pixel = floor(uv * float2(width, height) / 1.5f);
     float noise = frac(sin(dot(pixel, float2(12.9898f, 78.233f)) + floor(time * 24.0f) * 37.719f) * 43758.5453f);
     color += (noise - 0.5f) * 0.015f * smoothstep(0.0f, 0.12f, luminance);
-    return float4(saturate(color), source.a);
+    return float4(SanitizeHdr(color), source.a);
 }

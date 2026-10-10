@@ -96,6 +96,8 @@ void SphereObject::Draw(ID3D12GraphicsCommandList* cmd)
     cmd->SetGraphicsRootDescriptorTable(
         RootParameterIndex(Object3dRootParameter::NormalTexture),
         TextureManager::GetInstance()->GetSrvHandleGPU(""));
+    cmd->SetGraphicsRootDescriptorTable(RootParameterIndex(Object3dRootParameter::MetallicRoughnessTexture),
+        TextureManager::GetInstance()->GetSrvHandleGPU(""));
     cmd->IASetVertexBuffers(0, 1, &vertexBufferView_);
     cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(vertexCount_, 1, 0, 0);

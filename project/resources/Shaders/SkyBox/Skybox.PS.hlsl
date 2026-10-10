@@ -1,5 +1,5 @@
 #include "Skybox.hlsli"
-#include "../Atmosphere/Scattering.hlsli"
+#include "../Atmosphere/SkyLighting.hlsli"
 cbuffer SkySun : register(b1) { float4 sunColor; float3 sunDirectionVector; float sunIntensity; };
 cbuffer SkyAtmosphere : register(b5) {
     float4 ambientColor; float4 ambientSky; float4 ambientGround;
@@ -38,6 +38,16 @@ float FractalNoise(float2 value)
 float4 main(VertexShaderOutput input) : SV_TARGET
 {
     float3 direction = normalize(input.texcoord);
+    if (environmentSettings.z > 0.5f) {
+        float3 lightDirection = normalize(-sunDirectionVector);
+        float3 radiance = SkyLightingRadiance(direction, lightDirection, sunColor.rgb, sunIntensity,
+            atmosphereSettings, ambientSky.rgb, ambientGround.rgb, environmentSettings.w);
+        // 0.27 degree solar radius. Keep the disk HDR and separate from IBL.
+        float disk = smoothstep(0.999985f, 0.999991f, dot(direction, lightDirection));
+        radiance += disk * sunColor.rgb * max(sunIntensity, 0.0f)
+            * smoothstep(-0.12f, 0.10f, lightDirection.y);
+        return float4(radiance, 1.0f);
+    }
     float height = saturate(direction.y * 0.5f + 0.5f);
 
     const float3 horizonColor = float3(0.56f, 0.84f, 1.0f);

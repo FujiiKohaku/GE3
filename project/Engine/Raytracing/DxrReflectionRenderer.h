@@ -9,8 +9,12 @@ struct DxrReflectionSettings {
     bool isDebugVisible = false;
     bool shouldUseTemporalHistory = true;
     bool shouldTraceSunShadows = true;
+    bool shouldUseTextureMipmaps = true;
+    bool shouldUseLowDiscrepancySampling = true;
+    bool shouldTraceMultipleReflections = false;
     uint32_t sampleCount = 4;
     uint32_t spatialPassCount = 2;
+    uint32_t maxReflectionBounces = 2;
     float maxDistance = 1000.0f;
     float maxRoughness = 0.85f;
     float normalBias = 0.02f;
@@ -18,6 +22,7 @@ struct DxrReflectionSettings {
     float strength = 1.0f;
     float historyWeight = 0.9f;
     float maxRadiance = 10.0f;
+    float indirectDistanceFadeRatio = 0.2f;
 };
 struct DxrReflectionInputs {
     const DxrRenderer* scene = nullptr;
@@ -28,10 +33,14 @@ struct DxrReflectionInputs {
     D3D12_GPU_DESCRIPTOR_HANDLE environmentSrv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE materialSrv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE motionVectorSrv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE reprojectionSrv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE previousReprojectionSrv = {};
     ID3D12Resource* depthTexture = nullptr;
     ID3D12Resource* surfaceTexture = nullptr;
     ID3D12Resource* environmentTexture = nullptr;
     ID3D12Resource* materialTexture = nullptr;
+    ID3D12Resource* indirectTexture = nullptr;
+    D3D12_GPU_DESCRIPTOR_HANDLE indirectSrv = {};
     ID3D12Resource* localLightTexture = nullptr;
     D3D12_GPU_DESCRIPTOR_HANDLE localLightSrv = {};
     uint64_t sceneRevision = 0;
@@ -79,6 +88,7 @@ private:
         Vector4 options;
         Vector4 composition;
         DxrLocalShadowParameters localShadows;
+        Vector4 indirectSampling;
         Vector4 historyValidation;
     };
     void CreateResources();
@@ -97,6 +107,7 @@ private:
     uint64_t allocationBytes_ = 0;
     uint64_t previousSceneRevision_ = 0;
     uint64_t previousGeometryRevision_ = 0;
+    uint64_t previousSkyLightingHash_ = 0;
     uint64_t previousLightingHash_ = 0;
     uint64_t cameraHistoryId_ = 0;
     const Camera* historyCamera_ = nullptr;

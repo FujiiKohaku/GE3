@@ -103,6 +103,8 @@ void BloomRenderer::DrawImGui()
     ImGui::SliderInt("Blur Radius", &parameterData_->blurRadius, 0, 32);
     ImGui::SliderFloat("Blur Sigma", &parameterData_->blurSigma, 0.01f, 20.0f);
     ImGui::SliderFloat("Intensity", &parameterData_->intensity, 0.0f, 5.0f);
+    ImGui::SliderFloat("Soft Knee", &parameterData_->softKnee, 0, 1);
+    ImGui::SliderFloat("Radiance Limit", &parameterData_->maxRadiance, 0, 65504);
 
     ImGui::End();
 #endif
@@ -302,8 +304,8 @@ void BloomRenderer::SetDefaultParameter()
     parameterData_->blurSigma = 2.5f;
     parameterData_->intensity = 0.18f;
     parameterData_->blurDirection = 0;
-    parameterData_->padding0 = 0.0f;
-    parameterData_->padding1 = 0.0f;
+    parameterData_->softKnee = 0.25f;
+    parameterData_->maxRadiance = 65504.0f;
 }
 
 void BloomRenderer::DrawFullScreen(

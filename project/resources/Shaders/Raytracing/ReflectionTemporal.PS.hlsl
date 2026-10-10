@@ -22,21 +22,32 @@ TemporalOutput main(PixelInput input) {
     float2 uv = (float2(fullPixel) + 0.5f) / float2(fullWidth, fullHeight);
     float depth = depthTexture.Load(int3(fullPixel, 0));
     float3 worldPosition = ReflectionWorld(uv, depth);
+    float expectedPreviousDepth = mul(float4(worldPosition, 1), previousView).z;
+    float3 expectedPreviousNormal = GuideNormal(output.guide);
+    float4 receiverReprojection = reprojectionTexture.Load(int3(fullPixel, 0));
     float4 previousClip = mul(float4(worldPosition, 1), previousViewProjection);
-    if (previousClip.w <= 0) { return output; }
-    float2 previousUv = previousClip.xy / previousClip.w * float2(0.5f, -0.5f) + 0.5f;
+    if (previousClip.w <= 0 && historyValidation.z < 0.5f) { return output; }
+    float2 previousUv = previousClip.xy / max(previousClip.w, 0.000001f) * float2(0.5f, -0.5f) + 0.5f;
     if (options.w > 0.5f) {
         float2 motionUv = uv - motionTexture.Load(int3(fullPixel, 0)) - temporal.zw;
-        // Fast receiver motion remains conservative until previous object transforms are available.
-        if (any(abs(motionUv - previousUv) * float2(fullWidth, fullHeight) > 3)) { return output; }
+        // Metadata validates the actual previous geometry; legacy callers retain conservative motion rejection.
+        if (historyValidation.z > 0.5f) {
+            if (!all(isfinite(receiverReprojection)) || receiverReprojection.w <= 0 || abs(receiverReprojection.z) <= 0) { return output; }
+            expectedPreviousDepth = abs(receiverReprojection.z);
+            if (receiverReprojection.z > 0) { expectedPreviousNormal = DecodeReprojectionNormal(receiverReprojection.xy); }
+        } else if (any(abs(motionUv - previousUv) * float2(fullWidth, fullHeight) > 3)) { return output; }
         previousUv = motionUv;
     }
     if (any(previousUv < 0) || any(previousUv >= 1)) { return output; }
+    if (historyValidation.z > 0.5f) {
+        int2 previousFullPixel = FullReflectionPixel(ReflectionPixel(previousUv));
+        if (abs(previousReprojectionTexture.Load(int3(previousFullPixel, 0)).w) != receiverReprojection.w) { return output; }
+    }
     int2 previousPixel = ReflectionPixel(previousUv);
     float4 oldGuide = historyGuide.Load(int3(previousPixel, 0));
-    float previousDepth = mul(float4(worldPosition, 1), previousView).z;
+    float previousDepth = expectedPreviousDepth;
     if (oldGuide.w <= 0 || abs(oldGuide.w - previousDepth) > max(0.03f, previousDepth * 0.005f)
-        || dot(GuideNormal(oldGuide), GuideNormal(output.guide)) < 0.98f
+        || dot(GuideNormal(oldGuide), expectedPreviousNormal) < 0.98f
         || abs(length(oldGuide.xyz * 2 - 1) - length(output.guide.xyz * 2 - 1)) > 0.02f) { return output; }
     float4 oldStatistics = previousStatistics.Load(int3(previousPixel, 0));
     if (!all(isfinite(oldStatistics)) || oldStatistics.z < 1 || oldStatistics.w != output.statistics.w) { return output; }

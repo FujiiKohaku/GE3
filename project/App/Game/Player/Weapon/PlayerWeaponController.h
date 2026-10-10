@@ -26,6 +26,7 @@ public:
     void UpdateBullets();
     void RemoveDeadBullets();
     void DrawBullets();
+    void SubmitRaytracing(DxrRenderer& renderer);
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const { return bullets_; }
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { homingLock_.SetTargets(targets); }
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;

@@ -26,7 +26,7 @@ float4 main(VertexShaderOutput input) : SV_Target0 {
     // No compatible depth samples: omit the effect rather than bleed across silhouettes.
     if (totalWeight > 0.0001f) {
         float transmission = saturate(transmittance / totalWeight);
-        scene.rgb = scene.rgb * transmission + fogColorAndEnabled.rgb * (1.0f - transmission) + light / totalWeight;
+        scene.rgb = scene.rgb * transmission + fogColorAndEnabled.rgb * temporalControls.w * (1.0f - transmission) + light / totalWeight;
     }
     return scene;
 }

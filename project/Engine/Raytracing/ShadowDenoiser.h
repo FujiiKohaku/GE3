@@ -11,6 +11,8 @@ struct ShadowDenoiserInputs {
     D3D12_GPU_DESCRIPTOR_HANDLE normalSrv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE directionalLightSrv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE motionVectorSrv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE reprojectionSrv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE previousReprojectionSrv = {};
     uint64_t sceneRevision = 0;
     uint64_t casterRevision = 0;
     Vector3 lightDirection = {};

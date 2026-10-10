@@ -1,3 +1,4 @@
+#include "Engine/Renderer/SceneRenderResolution.h"
 #include "MotionVectorRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include <stdexcept>
@@ -22,33 +23,14 @@ void TransitionMotionResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES be
 MotionVectorRenderer::~MotionVectorRenderer() {
     if (active_ == this) { active_ = nullptr; }
     if (srvIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(srvIndex_); }
+    for (uint32_t index : reprojectionSrvIndices_) { if (index != UINT_MAX) { SrvManager::GetInstance()->Free(index); } }
 }
 
 void MotionVectorRenderer::Initialize() {
+    ResizeSceneTargets();
     auto* dx = DirectXCommon::GetInstance();
     auto* device = dx->GetDevice();
-    D3D12_HEAP_PROPERTIES heap = {};
-    heap.Type = D3D12_HEAP_TYPE_DEFAULT;
-    D3D12_RESOURCE_DESC description = {};
-    description.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    description.Width = WinApp::kClientWidth;
-    description.Height = WinApp::kClientHeight;
-    description.DepthOrArraySize = 1;
-    description.MipLevels = 1;
-    description.Format = DXGI_FORMAT_R16G16_FLOAT;
-    description.SampleDesc.Count = 1;
-    description.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-    D3D12_CLEAR_VALUE clear = {};
-    clear.Format = description.Format;
-    CheckMotionVector(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
-        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&texture_)));
-    texture_->SetName(L"MotionVector::UVDisplacement");
-    rtvHeap_ = dx->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
-    device->CreateRenderTargetView(texture_.Get(), nullptr, rtvHeap_->GetCPUDescriptorHandleForHeapStart());
-    srvIndex_ = SrvManager::GetInstance()->Allocate();
-    SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, texture_.Get(), description.Format, 1);
-
-    D3D12_ROOT_PARAMETER parameters[7] = {};
+    D3D12_ROOT_PARAMETER parameters[8] = {};
     const uint32_t counts[] = {16, 16, 4, 4, 2};
     for (uint32_t index = 0; index < 5; ++index) {
         parameters[index].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
@@ -70,7 +52,10 @@ void MotionVectorRenderer::Initialize() {
     sampler.MaxLOD = D3D12_FLOAT32_MAX; sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     D3D12_ROOT_SIGNATURE_DESC signature = {};
     signature.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    signature.NumParameters = 7;
+    parameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    parameters[7].Descriptor.ShaderRegister = 6;
+    parameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    signature.NumParameters = 8;
     signature.pParameters = parameters;
     signature.NumStaticSamplers = 1; signature.pStaticSamplers = &sampler;
     Microsoft::WRL::ComPtr<ID3DBlob> blob;
@@ -89,7 +74,10 @@ void MotionVectorRenderer::Initialize() {
     pipelineDescription_.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     pipelineDescription_.SampleMask = UINT_MAX;
     pipelineDescription_.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineDescription_.NumRenderTargets = 1;
+    pipelineDescription_.NumRenderTargets = 2;
+    pipelineDescription_.BlendState.IndependentBlendEnable = TRUE;
+    pipelineDescription_.BlendState.RenderTarget[1].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    pipelineDescription_.RTVFormats[1] = DXGI_FORMAT_R32G32B32A32_FLOAT;
     pipelineDescription_.RTVFormats[0] = DXGI_FORMAT_R16G16_FLOAT;
     pipelineDescription_.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     pipelineDescription_.SampleDesc.Count = 1;
@@ -113,6 +101,8 @@ void MotionVectorRenderer::Initialize() {
     auto debugVertexShader = dx->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
     auto debugPixelShader = dx->LoadCompiledShader(L"resources/Shaders/MotionVector/Debug.PS.hlsl");
     D3D12_GRAPHICS_PIPELINE_STATE_DESC debugDescription = pipelineDescription_;
+    debugDescription.NumRenderTargets = 1;
+    debugDescription.RTVFormats[1] = DXGI_FORMAT_UNKNOWN;
     debugDescription.pRootSignature = debugRoot_.Get();
     debugDescription.VS = {debugVertexShader->GetBufferPointer(), debugVertexShader->GetBufferSize()};
     debugDescription.PS = {debugPixelShader->GetBufferPointer(), debugPixelShader->GetBufferSize()};
@@ -134,7 +124,7 @@ ID3D12PipelineState* MotionVectorRenderer::GetPipeline(const std::wstring& shade
     std::wstring pixelPath = L"resources/Shaders/MotionVector/MotionVector.PS.hlsl";
     if (isAlphaMasked) { pixelPath = L"resources/Shaders/MotionVector/AlphaMask.PS.hlsl"; }
     auto pixelShader = dx->LoadCompiledShader(pixelPath);
-    D3D12_INPUT_ELEMENT_DESC inputs[3] = {};
+    D3D12_INPUT_ELEMENT_DESC inputs[4] = {};
     for (uint32_t index = 0; index < 2; ++index) {
         inputs[index].SemanticName = "POSITION";
         inputs[index].SemanticIndex = index;
@@ -144,7 +134,8 @@ ID3D12PipelineState* MotionVectorRenderer::GetPipeline(const std::wstring& shade
     inputs[2].SemanticName = "TEXCOORD"; inputs[2].Format = DXGI_FORMAT_R32G32_FLOAT;
     inputs[2].AlignedByteOffset = 16;
     auto description = pipelineDescription_;
-    description.InputLayout = {inputs, 3};
+    inputs[3].SemanticName = "NORMAL"; inputs[3].InputSlot = 1; inputs[3].Format = DXGI_FORMAT_R32G32B32_FLOAT; inputs[3].AlignedByteOffset = 24;
+    description.InputLayout = {inputs, 4};
     description.VS = {vertexShader->GetBufferPointer(), vertexShader->GetBufferSize()};
     description.PS = {pixelShader->GetBufferPointer(), pixelShader->GetBufferSize()};
     if (isDoubleSided) { description.RasterizerState.CullMode = D3D12_CULL_MODE_NONE; }
@@ -155,6 +146,7 @@ ID3D12PipelineState* MotionVectorRenderer::GetPipeline(const std::wstring& shade
 }
 
 void MotionVectorRenderer::BeginFrame() {
+    reprojectionIndex_ = 1 - reprojectionIndex_;
     previousFrameId_ = frameId_;
     frameId_ = nextFrameId_++;
     draws_.clear(); copies_.clear();
@@ -168,6 +160,8 @@ bool MotionVectorRenderer::HasHistory(const MotionVectorHistory& history, const 
 }
 void MotionVectorRenderer::CommitHistory(MotionVectorHistory& history, const Matrix4x4& world, const Camera& camera, const Vector4& parameters) {
     history.previousWorldViewProjection = MatrixMath::Multiply(world, camera.GetUnjitteredViewProjectionMatrix());
+    history.previousWorldView = MatrixMath::Multiply(world, camera.GetViewMatrix());
+    history.previousNormalTransform = MatrixMath::Transpose(MatrixMath::Inverse(world));
     history.previousParameters = parameters;
     history.frameId = frameId_;
     history.camera = &camera;
@@ -179,7 +173,9 @@ void MotionVectorRenderer::Queue(const D3D12_VERTEX_BUFFER_VIEW& currentVertices
     MotionVectorHistory& history, const std::wstring& shaderPath, const Vector4& parameters, bool isDoubleSided,
     const Material* material, D3D12_GPU_DESCRIPTOR_HANDLE textureSrv) {
     if (material && material->alphaCutoff > 0 && (!shaderPath.empty() || textureSrv.ptr == 0)) { return; }
+    if (history.surfaceId == 0 && nextSurfaceId_ <= 0x00ffffffu) { history.surfaceId = nextSurfaceId_++; }
     DrawEntry entry;
+    entry.surfaceId = history.surfaceId;
     entry.vertices[0] = currentVertices;
     entry.vertices[1] = previousVertices;
     entry.indices = indices; entry.vertexCount = vertexCount; entry.indexCount = indexCount;
@@ -190,6 +186,9 @@ void MotionVectorRenderer::Queue(const D3D12_VERTEX_BUFFER_VIEW& currentVertices
     if (HasHistory(history, camera)) {
         entry.previousWorldViewProjection = history.previousWorldViewProjection;
         entry.previousParameters = history.previousParameters;
+        entry.previousWorldView = history.previousWorldView;
+        entry.previousNormalTransform = history.previousNormalTransform;
+        entry.hasPreviousGeometry = shaderPath.empty();
     } else { entry.vertices[1] = currentVertices; }
     entry.shaderPath = shaderPath; entry.isDoubleSided = isDoubleSided;
     if (material) { entry.material = *material; entry.textureSrv = textureSrv; }
@@ -216,11 +215,31 @@ void MotionVectorRenderer::EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle) {
         materialUpload_->Unmap(0, nullptr);
         SrvManager::GetInstance()->PreDraw();
     }
+    if (!draws_.empty()) {
+        uint64_t uploadSizeBytes = draws_.size() * D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+        if (!reprojectionUpload_ || reprojectionUpload_->GetDesc().Width < uploadSizeBytes) { reprojectionUpload_ = DirectXCommon::GetInstance()->CreateBufferResource(uploadSizeBytes); }
+        struct ReprojectionParameters { Matrix4x4 previousWorldView; Matrix4x4 previousNormalTransform; Vector4 controls; };
+        void* data = nullptr; CheckMotionVector(reprojectionUpload_->Map(0, nullptr, &data));
+        for (size_t index = 0; index < draws_.size(); ++index) {
+            const auto& entry = draws_[index]; ReprojectionParameters parameters = {};
+            parameters.previousWorldView = entry.previousWorldView; parameters.previousNormalTransform = entry.previousNormalTransform;
+            parameters.controls.x = static_cast<float>(entry.surfaceId);
+            if (entry.hasPreviousGeometry) { parameters.controls.y = 1; }
+            if (entry.material.normalMapEnabled != 0 && entry.material.normalMapStrength > 0) { parameters.controls.z = 1; }
+            std::memcpy(static_cast<uint8_t*>(data) + index * 256, &parameters, sizeof(parameters));
+        }
+        reprojectionUpload_->Unmap(0, nullptr);
+    }
+    TransitionMotionResource(reprojectionTextures_[reprojectionIndex_].Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
     TransitionMotionResource(texture_.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
     auto target = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
     const float clear[] = {0, 0, 0, 0};
     commandList->ClearRenderTargetView(target, clear, 0, nullptr);
-    commandList->OMSetRenderTargets(1, &target, FALSE, &depthHandle);
+    auto metadataTarget = target;
+    metadataTarget.ptr += (reprojectionIndex_ + 1) * DirectXCommon::GetInstance()->GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    commandList->ClearRenderTargetView(metadataTarget, clear, 0, nullptr);
+    D3D12_CPU_DESCRIPTOR_HANDLE targets[] = {target, metadataTarget};
+    commandList->OMSetRenderTargets(2, targets, FALSE, &depthHandle);
     commandList->SetGraphicsRootSignature(root_.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     for (size_t index = 0; index < draws_.size(); ++index) {
@@ -231,6 +250,7 @@ void MotionVectorRenderer::EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle) {
             commandList->SetGraphicsRootConstantBufferView(5, materialUpload_->GetGPUVirtualAddress() + index * 256);
             commandList->SetGraphicsRootDescriptorTable(6, entry.textureSrv);
         }
+        commandList->SetGraphicsRootConstantBufferView(7, reprojectionUpload_->GetGPUVirtualAddress() + index * 256);
         commandList->SetGraphicsRoot32BitConstants(0, 16, &entry.currentWorldViewProjection, 0);
         commandList->SetGraphicsRoot32BitConstants(1, 16, &entry.previousWorldViewProjection, 0);
         commandList->SetGraphicsRoot32BitConstants(2, 4, &entry.parameters, 0);
@@ -250,9 +270,16 @@ void MotionVectorRenderer::EndFrame(D3D12_CPU_DESCRIPTOR_HANDLE depthHandle) {
         TransitionMotionResource(copy.previousVertices, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
     }
     TransitionMotionResource(texture_.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    TransitionMotionResource(reprojectionTextures_[reprojectionIndex_].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 D3D12_GPU_DESCRIPTOR_HANDLE MotionVectorRenderer::GetSrvHandle() const {
     return SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
+}
+D3D12_GPU_DESCRIPTOR_HANDLE MotionVectorRenderer::GetReprojectionSrv() const {
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(reprojectionSrvIndices_[reprojectionIndex_]);
+}
+D3D12_GPU_DESCRIPTOR_HANDLE MotionVectorRenderer::GetPreviousReprojectionSrv() const {
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(reprojectionSrvIndices_[1 - reprojectionIndex_]);
 }
 void MotionVectorRenderer::DrawDebug() {
     if (!settings_.isDebugVisible) { return; }
@@ -263,4 +290,43 @@ void MotionVectorRenderer::DrawDebug() {
     commandList->SetGraphicsRootDescriptorTable(0, GetSrvHandle());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->DrawInstanced(3, 1, 0, 0);
+}
+
+void MotionVectorRenderer::ResizeSceneTargets() {
+    if (texture_ && texture_->GetDesc().Width == SceneRenderResolution::GetWidth() && texture_->GetDesc().Height == SceneRenderResolution::GetHeight()) { return; }
+    ResetHistory(); reprojectionAllocationBytes_ = 0;
+    auto* dx = DirectXCommon::GetInstance();
+    auto* device = dx->GetDevice();
+    D3D12_HEAP_PROPERTIES heap = {};
+    heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+    D3D12_RESOURCE_DESC description = {};
+    description.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    description.Width = SceneRenderResolution::GetWidth();
+    description.Height = SceneRenderResolution::GetHeight();
+    description.DepthOrArraySize = 1;
+    description.MipLevels = 1;
+    description.Format = DXGI_FORMAT_R16G16_FLOAT;
+    description.SampleDesc.Count = 1;
+    description.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    D3D12_CLEAR_VALUE clear = {};
+    clear.Format = description.Format;
+    CheckMotionVector(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&texture_)));
+    texture_->SetName(L"MotionVector::UVDisplacement");
+    rtvHeap_ = dx->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 3, false);
+    device->CreateRenderTargetView(texture_.Get(), nullptr, rtvHeap_->GetCPUDescriptorHandleForHeapStart());
+    if (srvIndex_ == UINT_MAX) { srvIndex_ = SrvManager::GetInstance()->Allocate(); }
+    SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, texture_.Get(), description.Format, 1);
+
+    description.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; clear.Format = description.Format;
+    uint32_t rtvIncrementBytes = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    for (uint32_t index = 0; index < 2; ++index) {
+        CheckMotionVector(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&reprojectionTextures_[index])));
+        auto rtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart(); rtv.ptr += (index + 1) * rtvIncrementBytes;
+        device->CreateRenderTargetView(reprojectionTextures_[index].Get(), nullptr, rtv);
+        if (reprojectionSrvIndices_[index] == UINT_MAX) { reprojectionSrvIndices_[index] = SrvManager::GetInstance()->Allocate(); }
+        SrvManager::GetInstance()->CreateSRVforTexture2D(reprojectionSrvIndices_[index], reprojectionTextures_[index].Get(), description.Format, 1);
+        reprojectionAllocationBytes_ += device->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
+    }
 }

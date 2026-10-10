@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
+#include "Engine/math/MathStruct.h"
 #include <d3d12.h>
 #include <wrl.h>
 
@@ -8,6 +9,13 @@ class FogRenderer {
 public:
     void Initialize(DirectXCommon* dxCommon);
 
+    ~FogRenderer();
+    void ResizeSceneTargets();
+    void ResolveParticleDepth(Vector2 jitterUv);
+    D3D12_CPU_DESCRIPTOR_HANDLE GetParticleDepthDsv() const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetParticleDepthSrv() const;
+    ID3D12Resource* GetParticleDepthTexture() const;
+    void FinishParticleDepth();
     void PreDrawDepth();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
@@ -37,7 +45,16 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE depthDSVHandle_ {};
     D3D12_CPU_DESCRIPTOR_HANDLE depthSRVHandleCPU_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE depthSRVHandleGPU_ {};
-    uint32_t depthSRVIndex_ = 0;
+    uint32_t depthSRVIndex_ = UINT_MAX;
+    bool shouldUseParticleDepth_ = false;
+    uint32_t sceneWidth_ = 1280;
+    uint32_t sceneHeight_ = 720;
+    Microsoft::WRL::ComPtr<ID3D12Resource> particleDepth_;
+    Microsoft::WRL::ComPtr<ID3D12Resource> depthResolveConstants_;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> particleDepthHeap_;
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> depthResolvePipeline_;
+    uint32_t particleDepthSrvIndex_ = UINT_MAX;
+    D3D12_RESOURCE_STATES particleDepthState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     D3D12_RESOURCE_STATES depthResourceState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     D3D12_VIEWPORT viewport_ {};

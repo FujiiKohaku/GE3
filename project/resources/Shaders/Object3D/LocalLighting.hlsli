@@ -22,6 +22,8 @@ uint2 GetClusterLightMasks(float3 worldPosition) {
 float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 worldPosition,
     float3 geometricNormal, bool hasSpecular) {
     if (GetDirectLightingStrength(gAmbientLight) <= 0) { return 0; }
+    float specularStrength = 0; if (hasSpecular) { specularStrength = gMaterial.specularStrength; }
+    float3 diffuseColor = baseColor * SurfaceDiffuseWeight(baseColor, gMaterial.metallic, specularStrength, dot(normal, view));
     float3 result = 0.0f;
     uint2 masks = GetClusterLightMasks(worldPosition);
 #if defined(KOHAKU_RT_TRACE_LOCAL_SHADOWS)
@@ -42,7 +44,7 @@ float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 wor
         visibility = PointShadowVisibility(lightIndex, light.position, worldPosition, geometricNormal);
 #endif
         float3 radiance = light.color.rgb * light.intensity * attenuation * visibility;
-        float3 contribution = baseColor * radiance * saturate(dot(normal, direction));
+        float3 contribution = diffuseColor * radiance * saturate(dot(normal, direction));
         if (hasSpecular) { contribution += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
         result += contribution;
 #if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)
@@ -68,7 +70,7 @@ float3 ShadeLocalLights(float3 baseColor, float3 normal, float3 view, float3 wor
         visibility = SpotShadowVisibility(lightIndex, worldPosition, geometricNormal);
 #endif
         float3 radiance = light.color.rgb * light.intensity * attenuation * cone * visibility;
-        float3 contribution = baseColor * radiance * saturate(dot(normal, direction));
+        float3 contribution = diffuseColor * radiance * saturate(dot(normal, direction));
         if (hasSpecular) { contribution += radiance * SurfaceSpecular(gMaterial, baseColor, normal, view, direction); }
         result += contribution;
 #if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)

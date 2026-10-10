@@ -15,6 +15,7 @@ class ShadowMapRenderer;
 class LocalShadowRenderer;
 class MotionVectorRenderer;
 class DlssSuperResolution;
+class TemporalSuperResolution;
 class ScreenSpaceReflection;
 class ScreenSpaceGlobalIllumination;
 class DxrRenderer;
@@ -22,6 +23,8 @@ class DxrShadowRenderer;
 class DxrReflectionRenderer;
 class DxrGlobalIlluminationRenderer;
 class DxrLocalShadowRenderer;
+
+enum class RenderQualityPreset { Quality, Balanced, Performance, Custom };
 
 class Renderer {
 public:
@@ -34,6 +37,15 @@ public:
     void Draw(SceneManager* sceneManager);
     PostEffectManager* GetPostEffectManager() const { return postEffectManager_.get(); }
     MotionVectorRenderer* GetMotionVectorRenderer() const { return motionVectorRenderer_.get(); }
+    TemporalSuperResolution* GetTemporalSuperResolution() const { return temporalSuperResolution_.get(); }
+    void SetTemporalAntiAliasing(bool isEnabled, bool isFxaaEnabled);
+    bool SetRenderQualityPreset(RenderQualityPreset preset);
+    RenderQualityPreset GetRenderQualityPreset() const;
+    bool ApplyRecommendedRenderResolution();
+    bool SetLowResolutionRendering(bool isEnabled, uint32_t width = 960, uint32_t height = 540);
+    bool IsLowResolutionRenderingEnabled() const { return isLowResolutionRenderingEnabled_; }
+    uint32_t GetSceneRenderWidth() const { return sceneRenderWidth_; }
+    uint32_t GetSceneRenderHeight() const { return sceneRenderHeight_; }
     DlssSuperResolution* GetDlssSuperResolution() const { return dlssSuperResolution_.get(); }
     ScreenSpaceReflection* GetScreenSpaceReflection() const { return screenSpaceReflection_.get(); }
     ScreenSpaceGlobalIllumination* GetScreenSpaceGlobalIllumination() const { return screenSpaceGlobalIllumination_.get(); }
@@ -54,6 +66,17 @@ public:
 #endif
 
 private:
+    void ApplySceneRenderResolution();
+    uint64_t UpdateTemporalRadianceRevision();
+    std::array<float, 21> previousTemporalRadiance_ {};
+    std::array<float, 3> previousTemporalSunDirection_ {};
+    uint64_t temporalRadianceRevision_ = 0;
+    bool hasTemporalRadiance_ = false;
+    bool isLowResolutionRenderingEnabled_ = false;
+    uint32_t lowResolutionWidth_ = 960;
+    uint32_t lowResolutionHeight_ = 540;
+    uint32_t sceneRenderWidth_ = 1280;
+    uint32_t sceneRenderHeight_ = 720;
     struct AntiAliasingSample {
         uint32_t sampleCount = 0;
         double frameTotalMs = 0;
@@ -64,12 +87,13 @@ private:
     void RecordGpuSample();
     GpuTimestampTimer frameTimer_;
     GpuTimestampTimer dlaaTimer_;
-    std::array<AntiAliasingSample, 4> antiAliasingSamples_ = {};
+    std::array<AntiAliasingSample, 6> antiAliasingSamples_ = {};
     uint32_t warmupFrames_ = 32;
     uint32_t previousAntiAliasingMode_ = UINT_MAX;
     uint64_t comparisonSceneRevision_ = UINT64_MAX;
     std::unique_ptr<MotionVectorRenderer> motionVectorRenderer_;
     std::unique_ptr<DlssSuperResolution> dlssSuperResolution_;
+    std::unique_ptr<TemporalSuperResolution> temporalSuperResolution_;
     std::unique_ptr<ScreenSpaceReflection> screenSpaceReflection_;
     std::unique_ptr<ScreenSpaceGlobalIllumination> screenSpaceGlobalIllumination_;
     std::unique_ptr<DxrRenderer> dxrRenderer_;

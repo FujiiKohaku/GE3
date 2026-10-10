@@ -24,6 +24,7 @@ public:
     void Update() override;
     void Draw2D() override;
     void Draw3D() override;
+    bool SubmitRaytracingScene(DxrRenderer& renderer) override;
     void DrawParticle() override;
     void DrawImGui() override;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)

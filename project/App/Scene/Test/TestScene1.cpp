@@ -1152,6 +1152,19 @@ void TestScene1::Draw3D()
     }
 }
 
+bool TestScene1::SubmitRaytracingScene(DxrRenderer& renderer) {
+    if (floorObj_) { floorObj_->SubmitRaytracing(renderer); }
+    if (ikTerrainObj_) { ikTerrainObj_->SubmitRaytracing(renderer); }
+    for (const auto& object : ikTestBlockObjs_) {
+        if (object) { object->SubmitRaytracing(renderer); }
+    }
+    if (katanaObj_ && !isSandGolemMode_) { katanaObj_->SubmitRaytracing(renderer); }
+    if (recoveryCubeObj_) { recoveryCubeObj_->SubmitRaytracing(renderer); }
+    if (playerActor_ && !isSandGolemMode_ && playerActor_->GetObject()) { playerActor_->GetObject()->SubmitRaytracing(renderer); }
+    if (sneakWalkActor_ && sneakWalkActor_->GetObject()) { sneakWalkActor_->GetObject()->SubmitRaytracing(renderer); }
+    return true;
+}
+
 void TestScene1::DrawParticle()
 {
     EffectManager::GetInstance()->PreDraw();

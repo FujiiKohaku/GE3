@@ -4,19 +4,22 @@
 #include "ShadowSampling.hlsli"
 #endif
 
-ConstantBuffer<Material> gMaterial : register(b0);
+ConstantBuffer<Material> materialParameters : register(b0);
+static Material gMaterial;
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 ConstantBuffer<Camera> gCamera : register(b2);
 ConstantBuffer<AmbientLight> gAmbientLight : register(b5);
 Texture2D<float32_t4> gTexture : register(t0);
 TextureCube<float32_t4> gEnvironmentTexture : register(t1);
 SamplerState gSampler : register(s0);
+#include "MaterialMaps.PS.hlsli"
 #include "NormalMapping.PS.hlsli"
 #include "LocalLighting.hlsli"
 #if defined(KOHAKU_RT_REFLECTION_CAPTURE)
 static float3 capturedReflectionEnvironment = 0;
 #endif
 #include "EnvironmentLighting.hlsli"
+#include "SurfaceLighting.hlsli"
 
 struct PixelShaderOutput
 {
@@ -40,22 +43,16 @@ float3 ShadeStandard(float3 baseColor, float3 normal, float3 worldPosition, floa
 {
     float3 N = normalize(normal);
     float3 V = normalize(gCamera.worldPosition - worldPosition);
-    float3 ambient = baseColor * HemisphereAmbient(gAmbientLight, N) + EnvironmentLighting(baseColor, N, V, true);
+    float3 ambient = StandardSurfaceIndirect(baseColor, N, V);
     indirectColor = ambient;
     float3 Ld = normalize(-gDirectionalLight.direction);
-    float NdotLd = saturate(dot(N, Ld));
     float visibility = 1.0f;
 #if defined(KOHAKU_MATERIAL_SHADOWS) && !defined(KOHAKU_RT_CAPTURE)
     visibility = ShadowDirectFactor(SampleShadowVisibility(worldPosition, geometricNormal));
 #endif
-    directionalColor = baseColor * gDirectionalLight.color.rgb * NdotLd * gDirectionalLight.intensity * GetDirectLightingStrength(gAmbientLight);
+    directionalColor = StandardSurfaceDirect(baseColor, N, V, Ld) * gDirectionalLight.color.rgb
+        * gDirectionalLight.intensity * GetDirectLightingStrength(gAmbientLight);
     float3 result = ambient;
-    float3 Hd = normalize(Ld + V);
-    if (gMaterial.shininess > 0.0f)
-    {
-        directionalColor += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
-            SurfaceSpecular(gMaterial, baseColor, N, V, Ld) * GetDirectLightingStrength(gAmbientLight);
-    }
 
     result += directionalColor * visibility + ShadeLocalLights(baseColor, N, V, worldPosition, geometricNormal, gMaterial.shininess > 0.0f);
     return result;
@@ -97,6 +94,7 @@ float3 ShadeArchive(float3 baseColor, float3 normal, float3 worldPosition, float
 
 PixelShaderOutput main(VertexShaderOutput input)
 {
+    gMaterial = materialParameters;
 #if defined(KOHAKU_RT_LOCAL_SHADOW_CAPTURE)
     capturedRtLocalLight = 0;
 #endif
@@ -107,6 +105,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 indirectColor = 0.0f;
     float3 directionalColor = 0.0f;
     float4 transformedUV = mul(float32_t4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
+    gMaterial = ResolveRasterMaterial(gMaterial, transformedUV.xy);
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
     if (gMaterial.alphaCutoff > 0) {
         float maskAlpha = gTexture.SampleLevel(gSampler, transformedUV.xy, 0).a;
@@ -116,16 +115,11 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 surfaceNormal = ApplyNormalMap(input.worldPosition, input.normal, transformedUV.xy);
 
 #if OBJECT3D_MATERIAL_TYPE == 6
-    output.color.rgb = ShadeToonSurface(baseColor, surfaceNormal,
-        gCamera.worldPosition - input.worldPosition, -gDirectionalLight.direction,
-        gDirectionalLight.color.rgb, gDirectionalLight.intensity) * GetDirectLightingStrength(gAmbientLight);
     float3 toonN = surfaceNormal;
     float3 toonV = normalize(gCamera.worldPosition - input.worldPosition);
-    indirectColor = baseColor * HemisphereAmbient(gAmbientLight, toonN) * 0.30f;
-    output.color.rgb += indirectColor;
-    output.color.rgb += gDirectionalLight.color.rgb * gDirectionalLight.intensity *
-        SurfaceSpecular(gMaterial, baseColor, toonN, toonV, normalize(-gDirectionalLight.direction)) * GetDirectLightingStrength(gAmbientLight);
-    directionalColor = output.color.rgb - indirectColor;
+    indirectColor = ToonSurfaceIndirect(baseColor, toonN, toonV);
+    directionalColor = ToonSurfaceDirect(baseColor, toonN, toonV, normalize(-gDirectionalLight.direction));
+    output.color.rgb = directionalColor + indirectColor;
     output.color.rgb += ShadeLocalLights(baseColor, toonN, toonV, input.worldPosition, input.normal, true);
 #elif OBJECT3D_MATERIAL_TYPE == 2
     float3 N = surfaceNormal;
@@ -155,9 +149,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     if (gMaterial.enableEnvironmentMap != 0)
     {
         float3 N = surfaceNormal;
-        float3 reflected = reflect(normalize(input.worldPosition - gCamera.worldPosition), N);
-        float3 environmentColor = gEnvironmentTexture.SampleLevel(gSampler, reflected, saturate(gMaterial.roughness) * 5.0f).rgb *
-            gMaterial.environmentCoefficient * GetIndirectLightingStrength(gAmbientLight);
+        float3 environmentColor = LegacySurfaceEnvironment(N, normalize(gCamera.worldPosition - input.worldPosition));
         output.color.rgb += environmentColor;
         indirectColor += environmentColor;
 #if defined(KOHAKU_RT_REFLECTION_CAPTURE)

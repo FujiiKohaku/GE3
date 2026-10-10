@@ -20,6 +20,7 @@ class Object3dManager;
 class Model;
 class BoxCollider;
 class ShadowMapRenderer;
+class DxrRenderer;
 class Object3d {
 public:
     // ===============================
@@ -28,11 +29,16 @@ public:
     void Initialize(Object3dManager* object3DManager);
     void Update();
     void Draw();
+    void SubmitRaytracing(DxrRenderer& renderer) const;
+    bool IsVisible(const Camera& camera) const;
+    void SetFrustumCullingEnabled(bool isEnabled) { shouldUseFrustumCulling_ = isEnabled; }
+    void SetRaytracingEnabled(bool isEnabled) { isRaytracingEnabled_ = isEnabled; }
     void QueueMotionVectors();
     void ResetMotionHistory() { motionHistory_.Reset(); }
     void SetMotionVectorShader(const std::wstring& shaderPath) { motionVectorShaderPath_ = shaderPath; ResetMotionHistory(); }
     void SetNormalMap(const std::string& filePath, float strength = 0.3f, bool flipY = false);
     void SetNormalMapStrength(float strength);
+    void SetMetallicRoughnessMap(const std::string& filePath);
     bool SetAlphaCutoff(float alphaCutoff);
     void DrawShadow(ShadowMapRenderer& renderer, bool opaqueTransparentShadow = false);
     bool SetShadowMaterial(const ShadowMaterialSettings& settings);
@@ -162,6 +168,9 @@ public:
     BoxCollider* GetCollider() const { return collider_; }
 
 private:
+    bool IsRaytracingEligible() const;
+    bool shouldUseFrustumCulling_ = false;
+    bool isRaytracingEnabled_ = true;
     MotionVectorHistory motionHistory_;
     std::wstring motionVectorShaderPath_;
     // ===============================
@@ -220,4 +229,5 @@ private:
     BoxCollider* collider_ = nullptr;
     Vector3 colliderOffset_ = { 0.0f, 0.0f, 0.0f };
     std::string normalMapTextureKey_;
+    std::string metallicRoughnessTextureKey_;
 };

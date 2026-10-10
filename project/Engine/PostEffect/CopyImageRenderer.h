@@ -95,6 +95,7 @@ public:
         Vector4 atmosphereSettings;
         Vector4 screenSunDirection;
         Vector4 screenSunColor;
+        Vector4 colorFinishSettings;
     };
     void Initialize(DirectXCommon* dxCommon);
     void Draw(
@@ -105,6 +106,7 @@ public:
     void SetPostEffectType(PostEffectType postEffectType);
     void SetOutputFormat(DXGI_FORMAT format) { outputFormat_ = format; }
 
+    void SetExposureTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { exposureTextureHandle_ = handle; }
     void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { indirectTextureHandle_ = handle; }
     void SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     PostEffectParameter& GetPostEffectParameter();
@@ -130,6 +132,7 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> drawParameterResource_;
     unsigned char* drawParameterData_ = nullptr;
     // マスクテクスチャのGPUディスクリプタハンドル
+    D3D12_GPU_DESCRIPTOR_HANDLE exposureTextureHandle_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE indirectTextureHandle_ {};
     D3D12_GPU_DESCRIPTOR_HANDLE maskTextureHandle_ {};
 };

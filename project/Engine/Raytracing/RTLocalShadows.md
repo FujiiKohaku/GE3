@@ -34,7 +34,7 @@ RT反射・RTGIの命中先照明でも、同じ選択ライトへ遮蔽光線�
 
 ## 対応範囲と負荷
 
-受ける面はObject3dのStandard、ShadowStandard、Toon、ShadowToonと、ブレンドなしSkinningObject3dのStandard、Toonです。遮蔽物はDXRに提出された剛体・GPUスキニング・アルファ切り抜きモデルです。透明ブレンド、独自頂点変形、独自材質の受け手は未対応です。Draw自体をカリングした物体はDXRへ登録されません。
+受ける面はObject3dのStandard、ShadowStandard、Toon、ShadowToonと、ブレンドなしSkinningObject3dのStandard、Toonです。遮蔽物はDXRに提出された剛体・GPUスキニング・アルファ切り抜きモデルです。透明ブレンド、独自頂点変形、独自材質の受け手は未対応です。Drawを省いた物体も専用のRT提出入口から登録できます。参加条件と範囲は [RTシーン登録](RTSceneSubmission.md) を参照してください。
 
 1280×720では探索は640×360です。受ける画素ごとに、最大で対象ライト数×サンプル数の遮蔽光線を追加します。反射・RTGIでは命中先ごとに同じ上限の遮蔽光線を追加します。BLAS/TLASは共有し、局所ライトごとに別の加速構造を作りません。
 

@@ -146,7 +146,7 @@ void LightManager::Initialize(DirectXCommon* dxCommon)
     ambientLightResource_->SetName(L"Object3d::AmbientLightCB");
     *ambientLightData_ = {};
     ambientLightData_->componentSettings = {1.0f, 1.0f, 1.0f, 0.0f};
-    ambientLightData_->environmentSettings = { 0.12f, 0.20f, 0.0f, 0.0f };
+    ambientLightData_->environmentSettings = { 0.12f, 0.20f, 0.0f, 1.0f };
     ambientLightData_->atmosphereSettings = { 1.0f, 0.00035f, 0.45f, 0.65f };
     ambientLightData_->color = { 1.0f, 1.0f, 1.0f, 0.25f };
     ambientLightData_->skyColor = { 0.78f, 0.90f, 1.10f, 1.0f };
@@ -743,7 +743,18 @@ bool LightManager::SetEnvironmentLighting(float diffuseStrength, float specularS
 {
     if (!IsInitialized() || !std::isfinite(diffuseStrength) || !std::isfinite(specularStrength) ||
         diffuseStrength < 0.0f || diffuseStrength > 2.0f || specularStrength < 0.0f || specularStrength > 2.0f) { return false; }
-    ambientLightData_->environmentSettings = { diffuseStrength, specularStrength, 0.0f, 0.0f };
+    ambientLightData_->environmentSettings.x = diffuseStrength;
+    ambientLightData_->environmentSettings.y = specularStrength;
+    return true;
+}
+
+bool LightManager::SetSkyLighting(bool isEnabled, float strength)
+{
+    if (!IsInitialized() || !std::isfinite(strength) || strength < 0.0f || strength > 2.0f) { return false; }
+    float enabled = 0.0f;
+    if (isEnabled) { enabled = 1.0f; }
+    ambientLightData_->environmentSettings.z = enabled;
+    ambientLightData_->environmentSettings.w = strength;
     return true;
 }
 

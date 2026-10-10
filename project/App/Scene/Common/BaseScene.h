@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/Shadow/ShadowSettings.h"
 class ShadowMapRenderer;
+class DxrRenderer;
 
 
 // シーン基底クラス
@@ -15,6 +16,8 @@ public:
 
     virtual void Draw2D() = 0;
     virtual void Draw3D() = 0;
+    // Submit all RT participants independently of raster visibility. False retains Draw compatibility.
+    virtual bool SubmitRaytracingScene(DxrRenderer&) { return false; }
     virtual void DrawShadow(ShadowMapRenderer&) {}
     virtual ShadowSettings GetShadowSettings() const { return {}; }
     virtual void DrawParticle() = 0;

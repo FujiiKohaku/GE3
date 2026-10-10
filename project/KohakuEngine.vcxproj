@@ -184,6 +184,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)Engine\EditorManager\EditorManager.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\math\EngineStruct.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Effect\EffectManager.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\PostEffect\Exposure\AutoExposureRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Bloom\BloomRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Volumetric\VolumetricLightRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Fog\FogManager.cpp" />
@@ -191,6 +192,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)Engine\Renderer\Renderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\MotionVector\MotionVectorRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\SuperResolution\DlssSuperResolution.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\SuperResolution\TemporalSuperResolution.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\ShadowCamera.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\ShadowMapRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Shadow\LocalShadowRenderer.cpp" />
@@ -375,6 +377,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Fog\FogManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Fog\FogRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\Renderer\Renderer.h" />
+    <ClInclude Include="$(projectRootPath)Engine\Renderer\SceneRenderResolution.h" />
     <ClInclude Include="$(projectRootPath)Engine\Shadow\ShadowSettings.h" />
     <ClInclude Include="$(projectRootPath)Engine\Shadow\ShadowCamera.h" />
     <ClInclude Include="$(projectRootPath)Engine\Shadow\ShadowMapRenderer.h" />
@@ -691,8 +694,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\VisualPresetLibrary.h" />
     <ClInclude Include="$(projectRootPath)Engine\Shadow\ShadowMaterialSettings.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\PostEffectSettings.h" />
+    <ClInclude Include="$(projectRootPath)Engine\PostEffect\Exposure\AutoExposureRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\MotionVector\MotionVectorRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\SuperResolution\DlssSuperResolution.h" />
+    <ClInclude Include="$(projectRootPath)Engine\SuperResolution\TemporalSuperResolution.h" />
     <ClInclude Include="$(projectRootPath)Engine\Debug\GpuTimestampTimer.h" />
     <None Include="$(projectRootPath)Engine\SuperResolution\README.md" />
     <None Include="$(projectRootPath)Engine\MotionVector\README.md" />

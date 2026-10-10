@@ -5,6 +5,7 @@
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/PostEffect/CopyImageRenderer.h"
+#include "Engine/PostEffect/Exposure/AutoExposureRenderer.h"
 #include "Engine/Debug/GpuTimestampTimer.h"
 #include <array>
 #include <cstdint>
@@ -30,11 +31,13 @@ public:
     void Update(Camera* camera);
     void UpdateCameraInputs(Camera* camera);
     bool SetSsao(bool isEnabled, float strength, float radius, float bias);
+    bool SetToneMapping(uint32_t mode, float compensationEv);
+    AutoExposureRenderer* GetAutoExposureRenderer() const { return autoExposureRenderer_.get(); }
     void DrawImGui();
     void SetFxaaEnabled(bool enabled) { fxaaEnabled_ = enabled; }
     bool IsFxaaEnabled() const { return fxaaEnabled_; }
     double GetFinalPassGpuTimeMs() const { return finalPassTimer_.GetDurationMs(); }
-    void ReadCompletedGpuTiming() { finalPassTimer_.ReadCompleted(); }
+    void ReadCompletedGpuTiming() { finalPassTimer_.ReadCompleted(); autoExposureRenderer_->ReadCompleted(); }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     void RegisterDevelopmentPanel();
     nlohmann::json GetDevelopmentControls() const;
@@ -47,6 +50,9 @@ public:
     void ClearDevelopmentPassOverrides() { passOverrides_.clear(); cameraShakeOverride_.reset(); }
 #endif
 
+    void ResizeSceneTargets();
+    void ResolveSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv);
+    void SetParticleDepthJitter(Vector2 jitterUv) { particleDepthJitterUv_ = jitterUv; }
     void PreDrawDepth();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
@@ -80,7 +86,8 @@ public:
 private:
     class RenderTarget {
     public:
-        void Initialize(DirectXCommon* dxCommon, uint32_t rtvIndex);
+        ~RenderTarget();
+        void Initialize(DirectXCommon* dxCommon, uint32_t rtvIndex, uint32_t width = 1280, uint32_t height = 720);
         void BeginRender();
         void BeginRenderWithDepth(
             D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle);
@@ -98,7 +105,10 @@ private:
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_ {};
         D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_ {};
         D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_ {};
-        uint32_t srvIndex_ = 0;
+        uint32_t srvIndex_ = UINT_MAX;
+        uint32_t width_ = 1280;
+        uint32_t height_ = 720;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvHeap_;
         D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
         D3D12_VIEWPORT viewport_ {};
         D3D12_RECT scissorRect_ {};
@@ -120,6 +130,10 @@ private:
     DirectXCommon* dxCommon_ = nullptr;
     std::unique_ptr<CopyImageRenderer> copyImageRenderer_;
     std::unique_ptr<BloomRenderer> bloomRenderer_;
+    std::unique_ptr<AutoExposureRenderer> autoExposureRenderer_;
+    Camera* exposureCamera_ = nullptr;
+    uint64_t exposureCameraHistoryId_ = 0;
+    float exposureDeltaSeconds_ = 1.0f / 60.0f;
     std::unique_ptr<VolumetricLightRenderer> volumetricLightRenderer_;
     bool sceneDepthReady_ = false;
     bool isIndirectLightingDebugVisible_ = false;
@@ -128,6 +142,11 @@ private:
     uint64_t sceneFogRevision_ = 0;
     uint64_t sceneExposureRevision_ = 0;
     std::array<RenderTarget, kPingPongRenderTargetCount> pingPongRenderTargets_;
+    std::array<RenderTarget, kPingPongRenderTargetCount> sceneRenderTargets_;
+    std::array<RenderTarget, kPingPongRenderTargetCount>& GetActiveTargets();
+    const std::array<RenderTarget, kPingPongRenderTargetCount>& GetActiveTargets() const;
+    bool isNativeComposition_ = true;
+    Vector2 particleDepthJitterUv_ {};
     uint32_t particleCompositionTargetIndex_ = 0;
     bool isAnimationEnabled_ = true;
     bool fxaaEnabled_ = true;

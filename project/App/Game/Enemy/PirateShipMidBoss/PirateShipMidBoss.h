@@ -12,6 +12,7 @@ public:
     void Initialize(Model* cubeModel, Model* bulletModel, Player* player);
     void Update() override;
     void Draw() override;
+    void SubmitRaytracing(DxrRenderer& renderer) override;
     void DrawShadow(ShadowMapRenderer& renderer) override;
     void SetPosition(const Vector3& position) override;
     Vector3 GetPosition() const override { return shipPosition_; }

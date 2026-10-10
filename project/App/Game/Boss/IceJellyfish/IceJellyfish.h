@@ -29,6 +29,7 @@ public:
     void Initialize(Camera* camera, Model* bulletModel, Player* player);
     void Update() override;
     void Draw() override;
+    void SubmitRaytracing(DxrRenderer& renderer) override;
     void DrawShadow(ShadowMapRenderer& renderer) override;
     void SetPosition(const Vector3& position) override;
     Vector3 GetPosition() const override { return basePosition_; }

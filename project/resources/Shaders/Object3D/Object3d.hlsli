@@ -26,6 +26,9 @@ struct Material
     float normalMapFlipY;
     float normalMapPadding;
     float alphaCutoff;
+    int raytracingShadingVariant;
+    int metallicRoughnessMapEnabled;
+    float materialPadding;
 };
 
 static const int kShadingUnlit = 0;

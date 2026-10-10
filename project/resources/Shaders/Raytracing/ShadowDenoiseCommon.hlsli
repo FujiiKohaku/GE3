@@ -5,6 +5,9 @@ Texture2D<float4> directionalLight : register(t3);
 Texture2D<float2> motionVectors : register(t4);
 Texture2D<float4> historySignal : register(t5);
 Texture2D<float4> historyGeometry : register(t6);
+Texture2D<float4> reprojectionTexture : register(t7);
+Texture2D<float4> previousReprojectionTexture : register(t8);
+#include "../MotionVector/Reprojection.hlsli"
 cbuffer DenoiseParameters : register(b0) {
     row_major float4x4 inverseViewProjection;
     row_major float4x4 previousViewProjection;

@@ -42,6 +42,7 @@ class ScreenSpaceGlobalIllumination {
 public:
     ~ScreenSpaceGlobalIllumination();
     void Initialize();
+    void ResizeSceneTargets();
     D3D12_GPU_DESCRIPTOR_HANDLE Draw(const ScreenSpaceGlobalIlluminationInputs& inputs);
     bool SetSettings(const ScreenSpaceGlobalIlluminationSettings& settings);
     const ScreenSpaceGlobalIlluminationSettings& GetSettings() const { return settings_; }

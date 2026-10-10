@@ -10,6 +10,7 @@ struct SuperResolutionHistoryInputs {
     uintptr_t cameraId = 0;
     uint64_t cameraHistoryId = 0;
     uint64_t sceneRevision = 0;
+    uint64_t radianceRevision = 0;
 };
 
 // Borrowed native-resolution inputs, all PIXEL_SHADER_RESOURCE.

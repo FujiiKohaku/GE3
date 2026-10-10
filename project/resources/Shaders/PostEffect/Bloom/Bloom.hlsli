@@ -13,6 +13,6 @@ cbuffer BloomParameter : register(b0)
 
     float intensity;
     int blurDirection;
-    float padding0;
-    float padding1;
+    float softKnee;
+    float maxRadiance;
 };

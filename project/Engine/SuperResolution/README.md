@@ -1,5 +1,7 @@
 # DLAA
 
+GPUメーカーに依存しない追加のTAAと、低解像度入力の再構成APIは [汎用時間再構成](TemporalResolution.md) を参照。通常ゲームはネイティブTAAと、低解像度の3D入力から表示解像度への復元を選択できる。
+
 NVIDIA公式NGX SDKをD3D12へ直接接続しています。固定コミットは `externals/DLSS/SDK-COMMIT.txt`、利用条件は同ディレクトリの `LICENSE.txt` にあります。MSBuildが `nvngx_dlss.dll` を実行ファイルと同じディレクトリへコピーします。
 
 初期状態はONです。Debugの「Super resolution」で「DLAA (Native resolution)」を切り替えられます。コードからは `Renderer::GetDlssSuperResolution()->SetEnabled(true)` を使います。利用可否は `GetStatus()` で確認できます。非対応環境では通常描画を維持し、評価失敗時はポスト合成済みのカラーをそのままコピーして表示します。
@@ -48,3 +50,7 @@ GPU描画時間はRenderer::Drawの区間、DLAA時間はEvaluateと粒子合成
 GpuTimestampTimerは汎用のGPU区間計測です。フェンス完了後に読み戻し、計測のための追加GPU待ちは行いません。現在のDirectXCommon::PostDrawがGPU完了を待つ契約に従います。非同期フレーム方式へ変更する場合はフレームごとの読み戻しバッファとフェンスを用意してください。
 
 Development/DebugのShadowMapTests.exe --dlssは4モードを64フレームずつ実行し、プリセット状態、正のGPU時間、OFF時のDLAA時間リセット、D3D12検証を確認します。DevelopmentではWebパネルの操作経路と平均のウォームアップも検証します。aa-gpu-times.csvは各モードの最終フレームの実測値で、平均値ではありません。
+
+## 低解像度描画
+
+ゲームの3D入力を低解像度で生成し、表示解像度へ復元する機能を追加。低解像度化とTAAは独立したON/OFF設定。既定は低解像度OFF。操作・API・コストは [RenderResolution.md](../Renderer/RenderResolution.md)。

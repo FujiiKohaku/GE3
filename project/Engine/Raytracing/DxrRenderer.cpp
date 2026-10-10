@@ -125,7 +125,7 @@ bool DxrRenderer::CreatePipeline() {
     textureRange.NumDescriptors = 1;
     textureRange.BaseShaderRegister = 3;
     textureRange.RegisterSpace = 1;
-    D3D12_ROOT_PARAMETER localParameters[5] = {};
+    D3D12_ROOT_PARAMETER localParameters[7] = {};
     localParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
     localParameters[0].Descriptor.ShaderRegister = 1;
     localParameters[0].Descriptor.RegisterSpace = 1;
@@ -139,13 +139,22 @@ bool DxrRenderer::CreatePipeline() {
     localParameters[3].Descriptor.RegisterSpace = 1;
     localParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     localParameters[4].Constants = {2, 1, 2};
+    D3D12_DESCRIPTOR_RANGE materialTextureRanges[2] = {};
+    for (uint32_t textureIndex = 0; textureIndex < 2; ++textureIndex) {
+        materialTextureRanges[textureIndex].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        materialTextureRanges[textureIndex].NumDescriptors = 1;
+        materialTextureRanges[textureIndex].BaseShaderRegister = 4 + textureIndex;
+        materialTextureRanges[textureIndex].RegisterSpace = 1;
+        localParameters[5 + textureIndex].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        localParameters[5 + textureIndex].DescriptorTable = {1, &materialTextureRanges[textureIndex]};
+    }
     D3D12_STATIC_SAMPLER_DESC sampler = {};
     sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     sampler.AddressU = sampler.AddressV = sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     sampler.MaxLOD = D3D12_FLOAT32_MAX;
     sampler.RegisterSpace = 1;
     D3D12_ROOT_SIGNATURE_DESC localDescription = {};
-    localDescription.NumParameters = 5;
+    localDescription.NumParameters = 7;
     localDescription.pParameters = localParameters;
     localDescription.NumStaticSamplers = 1;
     localDescription.pStaticSamplers = &sampler;
@@ -214,6 +223,8 @@ void DxrRenderer::BeginFrame() {
     shouldCaptureLocalShadows_ = false; localShadowParameters_ = {}; localShadowConstantsAddress_ = 0;
     instances_.clear();
     objectIds_.clear();
+    cullingSphere_ = {}; shouldUseDrawSubmission_ = true;
+    statistics_.culledInstanceCount = 0;
     retiredResources_.clear();
     statistics_.instanceCount = 0;
     statistics_.builtBlasCount = 0;
@@ -244,25 +255,47 @@ void DxrRenderer::BeginFrame() {
     } catch (const std::exception& error) { SetFailure(error.what()); }
 }
 void DxrRenderer::Queue(const void* objectId, const Model& model, const Matrix4x4& world,
-    const Material& material, bool shouldCastShadow, bool shouldReceiveShadow) {
+    const Material& material, bool shouldCastShadow, bool shouldReceiveShadow, const DxrMaterialTextures* materialTextures) {
     QueueInternal(objectId, model, world, material, shouldCastShadow, nullptr, 0,
-        D3D12_RESOURCE_STATE_GENERIC_READ, shouldReceiveShadow);
+        D3D12_RESOURCE_STATE_GENERIC_READ, shouldReceiveShadow, nullptr, materialTextures);
 }
 void DxrRenderer::QueueDeformed(const void* objectId, const Model& model, const Matrix4x4& world,
     const Material& material, ID3D12Resource* vertices, uint64_t geometryRevision,
-    bool shouldCastShadow, D3D12_RESOURCE_STATES vertexState, bool shouldReceiveShadow) {
+    bool shouldCastShadow, D3D12_RESOURCE_STATES vertexState, bool shouldReceiveShadow, const DxrSceneBounds* worldBounds,
+    const DxrMaterialTextures* materialTextures) {
     if (!vertices || !objectId || vertices->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) { return; }
     // Only read states are accepted; UAV writes must be completed by the producer.
     if (vertexState != D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
         && vertexState != D3D12_RESOURCE_STATE_GENERIC_READ) { return; }
-    QueueInternal(objectId, model, world, material, shouldCastShadow, vertices, geometryRevision, vertexState, shouldReceiveShadow);
+    QueueInternal(objectId, model, world, material, shouldCastShadow, vertices, geometryRevision, vertexState, shouldReceiveShadow, worldBounds, materialTextures);
+}
+bool DxrRenderer::SetSceneCullingSphere(const Vector3& center, float radius) {
+    DxrSceneBounds bounds = {center, radius};
+    if (active_ != this || !objectIds_.empty() || !IsValidDxrSceneBounds(bounds)) { return false; }
+    cullingSphere_ = bounds;
+    return true;
 }
 void DxrRenderer::QueueInternal(const void* objectId, const Model& model, const Matrix4x4& world,
     const Material& material, bool shouldCastShadow, ID3D12Resource* deformedVertices,
-    uint64_t geometryRevision, D3D12_RESOURCE_STATES vertexState, bool shouldReceiveShadow) {
+    uint64_t geometryRevision, D3D12_RESOURCE_STATES vertexState, bool shouldReceiveShadow, const DxrSceneBounds* worldBounds,
+    const DxrMaterialTextures* materialTextures) {
     if (active_ != this || !IsValidWorld(world) || instances_.size() >= kMaxInstanceCount) { return; }
     if (!std::isfinite(material.alphaCutoff) || material.alphaCutoff < 0 || material.alphaCutoff > 1) { return; }
-    if (std::find(objectIds_.begin(), objectIds_.end(), objectId) != objectIds_.end()) { return; }
+    if (objectIds_.find(objectId) != objectIds_.end()) { return; }
+    DxrSceneBounds bounds;
+    if (cullingSphere_.radius > 0) {
+        if (!deformedVertices) { bounds = TransformDxrSceneBounds({model.GetBoundsCenter(), model.GetBoundsRadius()}, world); }
+        else if (worldBounds) { bounds = *worldBounds; }
+    }
+    if (cullingSphere_.radius > 0 && IsValidDxrSceneBounds(bounds)) {
+        double deltaX = static_cast<double>(bounds.center.x) - cullingSphere_.center.x;
+        double deltaY = static_cast<double>(bounds.center.y) - cullingSphere_.center.y;
+        double deltaZ = static_cast<double>(bounds.center.z) - cullingSphere_.center.z;
+        double distanceLimit = static_cast<double>(cullingSphere_.radius) + bounds.radius;
+        if (deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ > distanceLimit * distanceLimit) {
+            ++statistics_.culledInstanceCount; objectIds_.insert(objectId); return;
+        }
+    }
     std::vector<Geometry> geometries;
     Instance instance;
     instance.blasKey.model = &model;
@@ -270,6 +303,14 @@ void DxrRenderer::QueueInternal(const void* objectId, const Model& model, const 
     if (deformedVertices) { instance.blasKey.objectId = objectId; }
     instance.world = world;
     instance.material = material;
+    if (materialTextures) { instance.materialTextures = *materialTextures; }
+    auto fallbackTexture = TextureManager::GetInstance()->GetSrvHandleGPU("");
+    if (instance.materialTextures.normal.ptr == 0) {
+        instance.materialTextures.normal = fallbackTexture; instance.material.normalMapEnabled = 0;
+    }
+    if (instance.materialTextures.metallicRoughness.ptr == 0) {
+        instance.materialTextures.metallicRoughness = fallbackTexture; instance.material.metallicRoughnessMapEnabled = 0;
+    }
     instance.shouldCastShadow = shouldCastShadow;
     instance.shouldReceiveShadow = shouldReceiveShadow;
     uint64_t vertexOffsetBytes = 0;
@@ -329,7 +370,7 @@ void DxrRenderer::QueueInternal(const void* objectId, const Model& model, const 
     entry.vertexState = vertexState;
     entry.lastFrameId = frameId_;
     instances_.push_back(std::move(instance));
-    objectIds_.push_back(objectId);
+    objectIds_.insert(objectId);
 }
 void DxrRenderer::TransitionDynamicVertices(bool shouldRestore, bool shouldLimitToMasked) const {
     std::vector<ID3D12Resource*> transitionedResources;
@@ -416,6 +457,8 @@ bool DxrRenderer::BuildScene() {
     for (const Instance& instance : instances_) {
         reflectionSceneHash = HashReflectionBytes(reflectionSceneHash, &instance.world, sizeof(instance.world));
         reflectionSceneHash = HashReflectionBytes(reflectionSceneHash, &instance.material, sizeof(instance.material));
+        reflectionSceneHash = HashReflectionBytes(reflectionSceneHash, &instance.materialTextures.normal.ptr, sizeof(uint64_t));
+        reflectionSceneHash = HashReflectionBytes(reflectionSceneHash, &instance.materialTextures.metallicRoughness.ptr, sizeof(uint64_t));
         reflectionSceneHash = HashReflectionBytes(reflectionSceneHash, &instance.shouldCastShadow, sizeof(instance.shouldCastShadow));
         reflectionSceneHash = HashReflectionBytes(reflectionSceneHash, &instance.shouldReceiveShadow, sizeof(instance.shouldReceiveShadow));
         for (const auto& texture : instance.textures) {
@@ -567,6 +610,8 @@ void DxrRenderer::WriteHitRecords(void* records, uint64_t strideBytes, const voi
             std::memcpy(record + 64, &hasIndices, sizeof(hasIndices));
             uint32_t shouldReceiveShadow = 0; if (instance.shouldReceiveShadow) { shouldReceiveShadow = 1; }
             std::memcpy(record + 68, &shouldReceiveShadow, sizeof(shouldReceiveShadow));
+            std::memcpy(record + 72, &instance.materialTextures.normal.ptr, sizeof(uint64_t));
+            std::memcpy(record + 80, &instance.materialTextures.metallicRoughness.ptr, sizeof(uint64_t));
             ++recordIndex;
         }
     }
@@ -687,6 +732,7 @@ void DxrRenderer::DrawImGui() {
             if (ImGui::Combo("Output", &debugMode, "Normals\0Base color\0Instance ID\0")) { settings_.debugMode = static_cast<DxrDebugMode>(debugMode); }
         }
         ImGui::Text("Instances %u / BLAS %u / new BLAS %u", statistics_.instanceCount, statistics_.blasCount, statistics_.builtBlasCount);
+        ImGui::Text("RT range excluded %u", statistics_.culledInstanceCount);
         ImGui::Text("Dynamic BLAS %u / updated %u / buffers %.3f MiB", statistics_.dynamicBlasCount,
             statistics_.updatedBlasCount, statistics_.dynamicBufferBytes / 1048576.0);
         ImGui::Text("Dynamic BLAS allocation %.3f MiB", statistics_.dynamicAllocationBytes / 1048576.0);
@@ -702,6 +748,7 @@ nlohmann::json DxrRenderer::GetDevelopmentState() const {
     return {{"isSupported", isSupported_}, {"status", status_}, {"isEnabled", settings_.isEnabled},
         {"isDebugVisible", settings_.isDebugVisible}, {"hasValidFrame", statistics_.hasValidFrame},
         {"instanceCount", statistics_.instanceCount}, {"blasCount", statistics_.blasCount},
+        {"culledInstanceCount", statistics_.culledInstanceCount},
         {"builtBlasCount", statistics_.builtBlasCount}, {"bufferBytes", statistics_.bufferBytes},
         {"updatedBlasCount", statistics_.updatedBlasCount}, {"dynamicBlasCount", statistics_.dynamicBlasCount},
         {"dynamicBufferBytes", statistics_.dynamicBufferBytes},
@@ -719,6 +766,7 @@ nlohmann::json DxrRenderer::GetDevelopmentControls() const {
         {{"key", "baseColor"}, {"label", "基本色"}, {"type", "action"}},
         {{"key", "instanceId"}, {"label", "配置ID"}, {"type", "action"}},
         {{"key", "instanceCount"}, {"label", "配置数"}, {"type", "metric"}},
+        {{"key", "culledInstanceCount"}, {"label", "RT範囲外の配置数"}, {"type", "metric"}},
         {{"key", "blasCount"}, {"label", "共有BLAS数"}, {"type", "metric"}},
         {{"key", "builtBlasCount"}, {"label", "新規BLAS数"}, {"type", "metric"}},
         {{"key", "updatedBlasCount"}, {"label", "BLAS更新数"}, {"type", "metric"}},
