@@ -1,0 +1,60 @@
+{
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Emitter": {
+    "Shape": "Box",
+    "Count": 2,
+    "Radius": 35.0,
+    "Frequency": 0.3
+  },
+  "Particle": {
+    "MaxParticles": 128,
+    "LifeTime": 12.0,
+    "StartScale": 0.22,
+    "EndScale": 0.1,
+    "StartRotation": 0.0,
+    "RotationSpeed": 0.2,
+    "Velocity": [
+      0.04,
+      0.12,
+      0.02
+    ],
+    "StartColor": [
+      0.45,
+      0.72,
+      1.0,
+      0.65
+    ],
+    "EndColor": [
+      0.7,
+      0.4,
+      1.0,
+      0.0
+    ]
+  },
+  "Simulation": {
+    "EnableGravity": false,
+    "Gravity": 0.0,
+    "EnableDrag": true,
+    "Drag": 0.999,
+    "EnableNoise": true,
+    "NoiseStrength": 0.15,
+    "EnableAttraction": false,
+    "AttractionStrength": 0.0
+  },
+  "Render": {
+    "Texture": "../../Textures/blue_spark.png",
+    "MeshType": "Board",
+    "BlendMode": "Add",
+    "DepthTest": true,
+    "DepthWrite": false,
+    "CullMode": "None",
+    "Loop": true,
+    "Duration": -1.0,
+    "EmissionStrength": 2.0
+  }
+}

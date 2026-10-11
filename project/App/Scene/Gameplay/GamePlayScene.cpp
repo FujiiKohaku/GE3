@@ -261,6 +261,7 @@ void GamePlayScene::Initialize()
     SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere(stageId_));
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
         FogPreset fogPreset;
+        volume->SetFogDensity(0.003f);
         if (stageId_ == "stage01") {
             fogPreset.parameters.isEnabled = true;
             fogPreset.parameters.color = { 0.68f, 0.65f, 0.58f };
@@ -269,18 +270,27 @@ void GamePlayScene::Initialize()
             fogPreset.parameters.heightDensity = 0.0015f;
             fogPreset.parameters.heightFalloff = 0.16f;
         } else if (stageId_ == "stage03") {
+            // Keep the ice air clear while retaining a faint cold haze.
+            volume->SetFogDensity(0.0006f);
             fogPreset.parameters.isEnabled = true;
-            fogPreset.parameters.color = { 0.58f, 0.80f, 0.96f };
+            fogPreset.parameters.color = { 0.68f, 0.82f, 0.94f };
             fogPreset.parameters.noiseScale = 0.025f;
-            fogPreset.parameters.noiseStrength = 0.35f;
+            fogPreset.parameters.noiseStrength = 0.10f;
             fogPreset.parameters.noiseVelocity = { 0.8f, 0.0f, 0.3f };
             FogVolumeSettings& footFog = fogPreset.volumes[0];
             footFog.isEnabled = true;
             footFog.shape = FogVolumeShape::Box;
             footFog.center = { stageSettings_.bossPosition.x, 4.0f, stageSettings_.bossPosition.z };
-            footFog.halfExtents = { 75.0f, 12.0f, 75.0f };
-            footFog.density = 0.006f;
+            footFog.halfExtents = { 75.0f, 5.0f, 75.0f };
+            footFog.density = 0.0018f;
             footFog.edgeSoftness = 10.0f;
+            FogVolumeSettings& lightMist = fogPreset.volumes[1];
+            lightMist.isEnabled = true;
+            lightMist.shape = FogVolumeShape::Box;
+            lightMist.center = stageSettings_.bossPosition + Vector3 { 0.0f, 25.0f, 0.0f };
+            lightMist.halfExtents = { 45.0f, 35.0f, 45.0f };
+            lightMist.density = 0.0012f;
+            lightMist.edgeSoftness = 15.0f;
         }
         volume->ApplyFogPreset(fogPreset);
     }
@@ -291,8 +301,9 @@ void GamePlayScene::Initialize()
             bossPosition + Vector3 { -55.0f, 100.0f, -45.0f }, { 0.4f, -0.8f, 0.3f }, 0.65f, 240.0f, 2.0f, 0.72f);
         lights->SetSpotLightCosFalloffStart(bossSpotLightHandle_, 0.90f);
         lights->SetSpotLightShadowEnabled(bossSpotLightHandle_, true);
-        bossPointLightHandle_ = lights->AddPointLight({ 0.25f, 0.55f, 0.85f, 1.0f },
-            bossPosition + Vector3 { 45.0f, 20.0f, -35.0f }, 0.30f, 180.0f, 2.0f);
+        lights->SetSpotLightVolumetricEnabled(bossSpotLightHandle_, true);
+        bossPointLightHandle_ = lights->AddPointLight({ 0.48f, 0.32f, 1.0f, 1.0f },
+            bossPosition + Vector3 { 45.0f, 20.0f, -35.0f }, 0.45f, 180.0f, 2.0f);
         lights->SetPointLightShadowEnabled(bossPointLightHandle_, true);
     }
 
@@ -682,6 +693,9 @@ void GamePlayScene::Initialize()
         }
     }
     InitializeRecoveryItems(recoveryItemModel);
+    if (stageId_ == "stage03") {
+        EffectManager::GetInstance()->AttachEffect("IceMotes", player_.get());
+    }
     playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(
         "Jet", std::bind(&Player::GetEngineExhaustPosition, player_.get()));
     playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(
@@ -1066,6 +1080,11 @@ void GamePlayScene::Update()
                 footFog.center = { jellyfish->GetPosition().x, 4.0f, jellyfish->GetPosition().z };
             }
             volume->SetFogVolume(0, footFog);
+            if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+                FogVolumeSettings lightMist = volume->GetFogVolumes()[1];
+                lightMist.center = jellyfish->GetPosition() + Vector3 { 0.0f, 25.0f, 0.0f };
+                volume->SetFogVolume(1, lightMist);
+            }
         }
     }
     if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
