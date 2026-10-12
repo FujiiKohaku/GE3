@@ -238,7 +238,11 @@ private:
     std::vector<std::unique_ptr<Sprite>> bossHudFrameSprites_;
     std::unique_ptr<Text> weaponHudLabelText_;
     std::unique_ptr<Text> weaponHudNameText_;
-    std::unique_ptr<Text> gameplayControlsText_;
+    uint32_t score_ = 0;
+    std::unique_ptr<Sprite> scoreHudBgSprite_;
+    std::vector<std::unique_ptr<Sprite>> scoreHudFrameSprites_;
+    std::unique_ptr<Text> scoreHudLabelText_;
+    std::unique_ptr<Text> scoreHudValueText_;
     // ------------------------------
     // BGM / SE
     // ------------------------------

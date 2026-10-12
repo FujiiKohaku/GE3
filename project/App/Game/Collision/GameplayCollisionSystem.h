@@ -3,6 +3,7 @@
 #include "Engine/Math/MathStruct.h"
 
 #include <memory>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@ struct DestructibleLevelObject {
 
 struct GameplayCollisionEvents {
     bool paintBulletHitPlayer = false;
+    uint32_t scoreAwarded = 0;
     std::vector<std::string> enteredTriggers;
     std::vector<std::string> exitedTriggers;
 };

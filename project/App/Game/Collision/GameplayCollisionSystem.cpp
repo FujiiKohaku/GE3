@@ -35,7 +35,7 @@ bool EnemyBlocksBulletHit(const BaseEnemy* enemy, const Sphere& bullet,
 }
 
 void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
-    const std::vector<std::unique_ptr<BaseEnemy>>& enemies, bool isBoss = false)
+    const std::vector<std::unique_ptr<BaseEnemy>>& enemies, GameplayCollisionEvents& events, bool isBoss = false)
 {
     if (enemy.IsDead()) { return; }
     for (const auto& bullet : player.GetBullets()) {
@@ -72,8 +72,12 @@ void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
         enemy.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
         if (!wasDead && enemy.IsDead()) {
             SoundManager::GetInstance()->Play(isBoss ? "BossDestroyed" : "EnemyDestroyed");
+            events.scoreAwarded += isBoss ? 1000u : 100u;
         }
         bullet->SetDead();
+        if (enemy.IsDead()) {
+            break;
+        }
     }
 }
 
@@ -238,14 +242,14 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
                 }
             }
 
-            CheckPlayerBulletsAgainstEnemy(player, *enemy, enemies);
+            CheckPlayerBulletsAgainstEnemy(player, *enemy, enemies, events);
         }
 
     }
 
     if (boss != nullptr) {
         if (!boss->IsDead()) {
-            CheckPlayerBulletsAgainstEnemy(player, *boss, enemies, true);
+            CheckPlayerBulletsAgainstEnemy(player, *boss, enemies, events, true);
         }
     }
     CheckEnemyBulletsAgainstPlayer(player, independentBullets, events);

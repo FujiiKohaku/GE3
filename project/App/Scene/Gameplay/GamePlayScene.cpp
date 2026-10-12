@@ -491,23 +491,32 @@ void GamePlayScene::Initialize()
     weaponHudNameText_->SetOutlineWidth(1.0f);
     weaponHudNameText_->Update();
 
-    // 仮のゲームプレイ操作ガイド。正式UIへ置き換えるまで左上に常時表示する。
-    gameplayControlsText_ = std::make_unique<Text>();
-    gameplayControlsText_->Initialize(kDefaultFont);
-    gameplayControlsText_->SetText(
-        "MOUSE : MOVE / AIM    LEFT CLICK / SPACE : FIRE\n"
-        "C : WASD + MOUSE (SUB)    SHIFT / RMB : BOOST    TAB : PAUSE");
-    if (stageSettings_.allRangeMode) {
-        gameplayControlsText_->SetText(
-            "ALL-RANGE   MOUSE : TURN / CLIMB    LEFT CLICK : FIRE\n"
-            "SHIFT / RMB : BOOST    TAB : PAUSE / CONTROLS");
-    }
-    gameplayControlsText_->SetPosition({ 24.0f, 20.0f });
-    gameplayControlsText_->SetFontSize(22.0f);
-    gameplayControlsText_->SetLineSpacing(6.0f);
-    gameplayControlsText_->SetColor({ 0.0f, 0.0f, 0.0f, 1.0f });
-    gameplayControlsText_->SetOutlineWidth(0.0f);
-    gameplayControlsText_->Update();
+    score_ = 0;
+    InitializeHudFrame(
+        scoreHudFrameSprites_, { 20.0f, 20.0f }, { 244.0f, 76.0f }, { 0.0f, 0.0f }, kPlayerActionCyan);
+    scoreHudBgSprite_ = std::make_unique<Sprite>();
+    scoreHudBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    scoreHudBgSprite_->SetSize({ 240.0f, 72.0f });
+    scoreHudBgSprite_->SetPosition({ 22.0f, 22.0f });
+    scoreHudBgSprite_->SetColor(kHudPanel);
+    scoreHudBgSprite_->Update();
+
+    scoreHudLabelText_ = std::make_unique<Text>();
+    scoreHudLabelText_->Initialize(kDefaultFont);
+    scoreHudLabelText_->SetText("SCORE");
+    scoreHudLabelText_->SetPosition({ 36.0f, 28.0f });
+    scoreHudLabelText_->SetFontSize(16.0f);
+    scoreHudLabelText_->SetColor(kPlayerActionCyan);
+    scoreHudLabelText_->Update();
+
+    scoreHudValueText_ = std::make_unique<Text>();
+    scoreHudValueText_->Initialize(kDefaultFont);
+    scoreHudValueText_->SetText("0");
+    scoreHudValueText_->SetPosition({ 36.0f, 50.0f });
+    scoreHudValueText_->SetFontSize(28.0f);
+    scoreHudValueText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+    scoreHudValueText_->SetOutlineWidth(1.0f);
+    scoreHudValueText_->Update();
 
     // -------------------------------------------------
     // 画面右側に表示するプレイヤーHPゲージUIの初期化
@@ -1193,15 +1202,6 @@ void GamePlayScene::Update()
         currentPosition = player_->GetTranslate();
         forward = player_->GetFlightForward();
         CalculateRailBasis(forward, railRight, railUp);
-        if (player_->IsReturningToFlightArea()) {
-            gameplayControlsText_->SetText(
-                "AREA LIMIT : AUTO TURN\nSHIFT / RMB : BOOST    TAB : PAUSE");
-        } else {
-            gameplayControlsText_->SetText(
-                "ALL-RANGE   MOUSE : TURN / CLIMB    LEFT CLICK : FIRE\n"
-                "SHIFT / RMB : BOOST    TAB : PAUSE / CONTROLS");
-        }
-        gameplayControlsText_->Update();
     }
     const bool isPlayerBoosting = player_->IsBoosting();
     UpdateBoostKick(isPlayerBoosting);
@@ -2204,6 +2204,8 @@ void GamePlayScene::Draw2D()
     }
 
     // 全HUDは同じ濃紺パネル・アイボリー罫線・機能色アクセントを使う。
+    DrawHudFrame(scoreHudFrameSprites_);
+    if (scoreHudBgSprite_) scoreHudBgSprite_->Draw();
     DrawHudFrame(weaponHudFrameSprites_);
     if (weaponHudBgSprite_) weaponHudBgSprite_->Draw();
     DrawHudFrame(playerHudFrameSprites_);
@@ -2238,7 +2240,8 @@ void GamePlayScene::Draw2D()
         TextRenderer::GetInstance()->PreDraw();
         if (weaponHudLabelText_) weaponHudLabelText_->Draw();
         if (weaponHudNameText_) weaponHudNameText_->Draw();
-        if (gameplayControlsText_) gameplayControlsText_->Draw();
+        if (scoreHudLabelText_) scoreHudLabelText_->Draw();
+        if (scoreHudValueText_) scoreHudValueText_->Draw();
         if (playerHpText_) playerHpText_->Draw();
         if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
             if (bossNameText_) bossNameText_->Draw();
@@ -2554,6 +2557,11 @@ void GamePlayScene::CheckCollision()
                 enemies_,
                 GetActiveBoss(),
                 enemyBulletManager_.GetBullets());
+        if (events.scoreAwarded != 0) {
+            score_ += events.scoreAwarded;
+            scoreHudValueText_->SetText(std::to_string(score_));
+            scoreHudValueText_->Update();
+        }
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
