@@ -124,10 +124,8 @@ private:
     static constexpr float kRecoveryItemBobHeight = 0.65f;
     static constexpr int32_t kRecoveryItemHealAmount = 5;
 
-    // スウォームとジャスト回避
+    // スウォーム
     static constexpr int32_t kSwarmMembersPerWave = 18;
-    static constexpr float kJustDodgeSlowDuration = 1.0f;
-    static constexpr float kJustDodgeEnemyBulletTimeScale = 0.35f;
 
     // 水柱ヒット時の画面水滴
     static constexpr float kWaterDropEffectDuration = 4.0f;
@@ -143,7 +141,6 @@ private:
     void StartPaintHitEffect();
     void StartWaterDropEffect();
     void UpdateWaterDropEffect();
-    void UpdateJustDodgeSlowMotion(bool justDodged);
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
     void DrawCollisionDebug();
 #endif
@@ -385,7 +382,6 @@ private:
     // 被弾フラッシュ演出用
     float damageFlashTimer_ = 0.0f;
     int lastPlayerHp_ = 20;
-    float justDodgeSlowTimer_ = 0.0f;
 
     // プレイヤー爆発後、ゲームオーバー画面へ移るまでの待機時間
     float playerDeathAfterExplosionTimer_ = 0.0f;

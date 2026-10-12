@@ -130,10 +130,7 @@ void Player::SetRotate(const Vector3& rotate)
 {
     transform_.rotate.x = rotate.x;
     transform_.rotate.y = rotate.y;
-    if (!movementController_.IsRolling()) {
-        // シーン側の機体傾きで、ロール演出の回転を上書きしない。
-        transform_.rotate.z = rotate.z;
-    }
+    transform_.rotate.z = rotate.z;
     movementController_.SynchronizeOrientation();
 }
 
@@ -158,9 +155,9 @@ Vector3 Player::GetAutomaticWorldVelocity() const
 
 bool Player::ApplyDamage(int damage)
 {
-    const bool hasAppliedDamage = health_.ApplyDamage(damage, movementController_.IsRolling());
+    const bool hasAppliedDamage = health_.ApplyDamage(damage);
     if (hasAppliedDamage && health_.IsDead()) {
-        // 死亡状態への移行に合わせ、ブースト・ロール・ロックオンを解除する。
+        // 死亡状態への移行に合わせ、ブースト・ロックオンを解除する。
         movementController_.Stop();
         weaponController_.ResetHomingLock();
     }

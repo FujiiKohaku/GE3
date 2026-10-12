@@ -71,8 +71,6 @@ public:
     bool IsReturningToFlightArea() const { return movementController_.IsReturningToFlightArea(); }
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
     bool IsBoosting() const { return movementController_.IsBoosting(); }
-    // 使用クラス：GameplayCollisionSystemなど。ロール中かを返す。
-    bool IsRolling() const { return movementController_.IsRolling(); }
     // 使用クラス：GamePlayScene。キーボード移動とマウス操舵を切り替える。
     void SetControlMode(ControlMode mode) { movementController_.SetControlMode(mode); }
     // 現在の操作方式を返す。

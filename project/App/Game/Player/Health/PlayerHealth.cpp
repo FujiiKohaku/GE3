@@ -18,15 +18,15 @@ bool PlayerHealth::ShouldDraw() const
     return IsFalling() || (IsAlive() && isVisible);
 }
 
-// ダメージを受ける。無敵時間・ロール状態を確認し、HPを減らす。死亡時は落下演出へ進める。
-bool PlayerHealth::ApplyDamage(int damage, bool isRolling)
+// ダメージを受ける。無敵時間を確認し、HPを減らす。死亡時は落下演出へ進める。
+bool PlayerHealth::ApplyDamage(int damage)
 {
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     if (isInvincibleMode_) {
         return false;
     }
 #endif
-    if (damage <= 0 || invincibleRemainingSeconds_ > 0.000001f || isRolling || currentHp_ <= 0) {
+    if (damage <= 0 || invincibleRemainingSeconds_ > 0.000001f || currentHp_ <= 0) {
         return false;
     }
 

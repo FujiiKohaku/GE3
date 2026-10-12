@@ -2,7 +2,6 @@
 #include "Engine/math/MathStruct.h"
 #include "App/Game/Player/Aim/PlayerAimController.h"
 #include "ScreenConstraint/PlayerScreenConstraint.h"
-#include "Roll/PlayerRollController.h"
 #include "Steering/PlayerSteeringController.h"
 
 class Camera;
@@ -41,8 +40,6 @@ public:
     bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
     // 使用クラス：Player（外部への公開）。ブースト中かを返す。
     bool IsBoosting() const { return isBoosting_; }
-    // 使用クラス：Player（被弾判定・外部への公開）。ロール中かを返す。
-    bool IsRolling() const { return rollController_.IsRolling(); }
     // 使用クラス：Player・PlayerWeaponController。飛行の前方向を返す。
     const Vector3& GetFlightForward() const { return railForward_; }
     // 使用クラス：Player（外部への公開）。レール基準位置からの移動量を返す。
@@ -84,7 +81,7 @@ private:
     void UpdateFlightHeight(float deltaTimeSeconds);
     // 使用クラス：本クラス（UpdateAllRangeMove）。姿勢から飛行方向を求め、位置を更新する。
     void UpdateFlightPosition(float deltaTimeSeconds);
-    // 使用クラス：本クラス（UpdateAllRangeMove）。ロール中以外は旋回に合わせて機体を傾ける。
+    // 使用クラス：本クラス（UpdateAllRangeMove）。旋回に合わせて機体を傾ける。
     void UpdateFlightBank(const Vector2& steering, float deltaTimeSeconds);
 
     EulerTransform& transform_;
@@ -111,6 +108,5 @@ private:
     Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
     // 細かな画面内補正・ロール・操舵計算は、各部品へ委譲する。
     PlayerScreenConstraint screenConstraint_{ railBasePosition_, railRight_, railUp_, railForward_ };
-    PlayerRollController rollController_;
     PlayerSteeringController steeringController_;
 };

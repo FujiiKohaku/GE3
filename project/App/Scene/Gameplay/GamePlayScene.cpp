@@ -137,7 +137,6 @@ void GamePlayScene::Initialize()
         { "EnvironmentCollision", "resources/Audio/GameSfx/environment_collision.wav", 0.20f, 0.20f },
         { "LowHpWarning", "resources/Audio/GameSfx/low_hp_warning.wav", 0.28f, 0.80f },
     });
-    EnemyBullet::SetTimeScale(1.0f);
     BaseEnemy::SetBulletManager(&enemyBulletManager_);
     enemyBulletManager_.Clear();
     StageCatalog* stageCatalog = StageCatalog::GetInstance();
@@ -2539,7 +2538,6 @@ void GamePlayScene::DrawImGui()
 
 void GamePlayScene::CheckCollision()
 {
-    bool justDodgedEnemyBullet = false;
 
     if (gameplayCollisionSystem_ != nullptr) {
         gameplayCollisionSystem_->UpdateStageCollisions(
@@ -2559,39 +2557,12 @@ void GamePlayScene::CheckCollision()
         if (events.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
-        justDodgedEnemyBullet = events.justDodgedEnemyBullet;
     }
 
     if (gameplayCollisionSystem_ != nullptr) {
         gameplayCollisionSystem_->UpdateTriggers(*player_, stageTriggers_);
     }
 
-    UpdateJustDodgeSlowMotion(justDodgedEnemyBullet);
-}
-
-void GamePlayScene::UpdateJustDodgeSlowMotion(bool justDodged)
-{
-    if (justDodged) {
-        justDodgeSlowTimer_ = kJustDodgeSlowDuration;
-    } else if (justDodgeSlowTimer_ > 0.0f) {
-        justDodgeSlowTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
-        if (justDodgeSlowTimer_ < 0.0f) {
-            justDodgeSlowTimer_ = 0.0f;
-        }
-    }
-
-    if (justDodgeSlowTimer_ > 0.0f) {
-        EnemyBullet::SetTimeScale(kJustDodgeEnemyBulletTimeScale);
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::GrayScale,
-            PostEffectStage::BeforeParticle);
-    } else {
-        EnemyBullet::SetTimeScale(1.0f);
-        if (!isPaused_) {
-            SceneManager::GetInstance()->RemovePostEffect(
-                PostEffectType::GrayScale);
-        }
-    }
 }
 
 void GamePlayScene::StartPaintHitEffect()
@@ -3357,8 +3328,6 @@ void GamePlayScene::ApplyStageVisualPreset()
 
 void GamePlayScene::ResetGameplayPostEffects()
 {
-    EnemyBullet::SetTimeScale(1.0f);
-    justDodgeSlowTimer_ = 0.0f;
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
     SceneManager::GetInstance()->SetRadialBlurSettings({});

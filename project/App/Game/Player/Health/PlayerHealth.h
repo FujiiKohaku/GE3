@@ -3,8 +3,8 @@
 
 class PlayerHealth {
 public:
-    // 使用クラス：Player（ApplyDamage）。無敵時間・ロール状態を確認し、HPを減らす。
-    bool ApplyDamage(int damage, bool isRolling);
+    // 使用クラス：Player（ApplyDamage）。無敵時間を確認し、HPを減らす。
+    bool ApplyDamage(int damage);
     // 使用クラス：Player（Heal）。生存中のHPを上限まで回復する。
     bool Heal(int amount);
     // 使用クラス：Player（Update）。被弾後の無敵時間を経過秒数で進める。

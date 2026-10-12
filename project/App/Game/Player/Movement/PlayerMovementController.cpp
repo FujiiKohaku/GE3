@@ -35,9 +35,6 @@ void PlayerMovementController::SynchronizeOrientation()
 
 void PlayerMovementController::UpdateMovement(Input* input)
 {
-    // ロールは移動モードにかかわらず先に更新し、その後で移動処理を選ぶ。
-    rollController_.Update(transform_, input->IsKeyTrigger(DIK_A), input->IsKeyTrigger(DIK_D),
-        TimeManager::GetInstance()->GetDeltaTime());
     if (isAllRangeMode_) {
         UpdateAllRangeMove(input);
     } else if (controlMode_ == ControlMode::StarFox) {
@@ -58,7 +55,6 @@ void PlayerMovementController::Stop()
 {
     // 死亡時に操作状態を解除する。速度や位置を0にする処理ではない。
     isBoosting_ = false;
-    rollController_.Stop();
 }
 
 Vector3 PlayerMovementController::GetAutomaticWorldVelocity() const
@@ -264,12 +260,9 @@ void PlayerMovementController::UpdateFlightPosition(float deltaTimeSeconds)
 
 void PlayerMovementController::UpdateFlightBank(const Vector2& steering, float deltaTimeSeconds)
 {
-    if (!rollController_.IsRolling()) {
-        // ロールのZ回転を上書きせず、通常の旋回中だけ機体の傾きを補間する。
-        const float targetBank = -steering.x * 0.65f;
-        transform_.rotate.z += (targetBank - transform_.rotate.z) *
-            (1.0f - std::exp(-7.0f * deltaTimeSeconds));
-    }
+    const float targetBank = -steering.x * 0.65f;
+    transform_.rotate.z += (targetBank - transform_.rotate.z) *
+        (1.0f - std::exp(-7.0f * deltaTimeSeconds));
 }
 
 void PlayerMovementController::UpdateStarFoxSteering()
