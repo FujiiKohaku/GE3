@@ -537,7 +537,7 @@ void RunShadowValidation(DirectXCommon* dxCommon) {
     receiver.Initialize(Object3dManager::GetInstance()); receiver.SetModel(&model);
     receiver.SetScale({4, 4, 1}); receiver.SetTranslate({0, 0, 5});
     receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.SetReceiveShadow(true); receiver.SetCastShadow(false);
-    receiver.GetMaterial()->shininess = 0;
+    receiver.SetShininess(0);
     Object3d occluder;
     occluder.Initialize(Object3dManager::GetInstance()); occluder.SetModel(&model);
     occluder.SetScale({0.6f, 0.6f, 1}); occluder.SetTranslate({-2, 0, 3});
@@ -776,7 +776,7 @@ void RunAlphaValidation(DirectXCommon* dxCommon) {
     for (float value : motionValues) { maximumMotion = (std::max)(maximumMotion, std::abs(value)); }
     Require(maximumMotion > 0.005f, "Alpha test removed motion from opaque border");
     foreground.SetTranslate({0, 0, 0});
-    foreground.GetMaterial()->uvTransform.m[3][0] = 0.4f;
+    foreground.SetUvTransformElement(3, 0, 0.4f);
     DrawAlphaFrame(dxCommon, scene, offscreen, postEffects, camera, motionVectors, background, foreground, opaqueInstance);
     RequireColor(ReadTextureCenter(dxCommon, offscreen.GetColorTexture(), "alpha-raster-uv.png"), {0, 1, 0}, "Raster alpha ignored UV transform");
     dxCommon->PreDraw(); RequireColor(ReadCenter(dxCommon, scene, "alpha-trace-uv.png"), {0, 1, 0}, "AnyHit alpha ignored UV transform");
@@ -786,7 +786,7 @@ void RunAlphaValidation(DirectXCommon* dxCommon) {
     foreground.SetAlphaCutoff(0.5f); foreground.SetColor({1, 1, 1, 0.25f});
     DrawAlphaFrame(dxCommon, scene, offscreen, postEffects, camera, motionVectors, background, foreground, opaqueInstance);
     RequireColor(ReadCenter(dxCommon, scene, "alpha-trace-material.png"), {1, 0, 0}, "AnyHit ignored material color alpha");
-    foreground.SetColor({1, 1, 1, 1}); foreground.GetMaterial()->uvTransform = MatrixMath::MakeIdentity4x4();
+    foreground.SetColor({1, 1, 1, 1}); foreground.SetUvTransform(MatrixMath::MakeIdentity4x4());
     foreground.SetAlphaCutoff(0);
     DrawAlphaFrame(dxCommon, scene, offscreen, postEffects, camera, motionVectors, background, foreground, opaqueInstance);
     RequireColor(ReadCenter(dxCommon, scene, "alpha-disabled.png"), {0, 1, 0}, "Cutoff zero did not restore opaque geometry");
@@ -811,7 +811,7 @@ void RunAlphaValidation(DirectXCommon* dxCommon) {
         throw;
     }
     Require(ReadTextureCenter(dxCommon, shadowMap.GetDepthTexture(), "alpha-shadowmap-hole.png").x > 0.999f, "Shadow map filled alpha hole");
-    foreground.GetMaterial()->uvTransform.m[3][0] = 0.4f;
+    foreground.SetUvTransformElement(3, 0, 0.4f);
     shadowMap.BeginShadowPass(); foreground.DrawShadow(shadowMap); shadowMap.EndShadowPass(); dxCommon->PreDraw();
     Require(ReadTextureCenter(dxCommon, shadowMap.GetDepthTexture(), "alpha-shadowmap-uv.png").x < 0.99f, "Shadow map ignored UV-transformed alpha border");
     DxrShadowRenderer shadows;
@@ -820,9 +820,9 @@ void RunAlphaValidation(DirectXCommon* dxCommon) {
     settings.isEnabled = true; settings.isDenoisingEnabled = false; settings.sunAngularRadiusRadians = 0;
     shadows.SetSettings(settings);
     background.SetColor({1, 1, 1, 1}); background.SetScale({4, 4, 1}); background.SetTranslate({0, 0, 5});
-    background.SetShadingMode(MaterialShadingMode::Standard); background.SetReceiveShadow(true); background.GetMaterial()->shininess = 0;
+    background.SetShadingMode(MaterialShadingMode::Standard); background.SetReceiveShadow(true); background.SetShininess(0);
     foreground.SetShadingMode(MaterialShadingMode::Standard); foreground.SetScale({0.6f, 0.6f, 1}); foreground.SetTranslate({-2, 0, 3});
-    foreground.GetMaterial()->uvTransform = MatrixMath::MakeIdentity4x4();
+    foreground.SetUvTransform(MatrixMath::MakeIdentity4x4());
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, background, foreground, 0, &motionVectors);
     RequireColor(ReadTextureCenter(dxCommon, shadows.GetMaskTexture(), "alpha-rt-shadow-hole.png"), {1, 1, 1}, "RT shadow filled alpha hole");
     shadows.ReadCompleted(); double maskedTraceGpuTimeMs = shadows.GetTraceGpuTimeMs();
@@ -841,7 +841,7 @@ void RunAlphaValidation(DirectXCommon* dxCommon) {
         dxCommon->PostDraw(); scene.ReadCompleted(); shadows.ReadCompleted();
     }
     Require(shadows.HasUsedShadowHistory(), "Stable alpha mask rejected all shadow history");
-    foreground.GetMaterial()->uvTransform.m[3][0] = 0.4f;
+    foreground.SetUvTransformElement(3, 0, 0.4f);
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, background, foreground, 0, &motionVectors);
     dxCommon->PostDraw(); shadows.ReadCompleted();
     Require(shadows.HasUsedShadowHistory(), "UV alpha change discarded unaffected shadow history globally");
@@ -950,11 +950,11 @@ void RunReflectionValidation(DirectXCommon* dxCommon) {
     Model model; model.Initialize(&modelCommon, modelData);
     Object3d receiver; receiver.Initialize(Object3dManager::GetInstance()); receiver.SetModel(&model);
     receiver.SetShadingMode(MaterialShadingMode::Standard);
-    receiver.GetMaterial()->roughness = 0; receiver.GetMaterial()->metallic = 1; receiver.GetMaterial()->specularStrength = 1;
-    receiver.GetMaterial()->shininess = 0;
+    receiver.SetRoughness(0); receiver.SetMetallic(1); receiver.SetSpecularStrength(1);
+    receiver.SetShininess(0);
     Object3d target; target.Initialize(Object3dManager::GetInstance()); target.SetModel(&model);
     target.SetRotate({0, 1.57079633f, 0}); target.SetTranslate({4, 0, 0}); target.SetColor({1, 0, 0, 1});
-    target.GetMaterial()->specularStrength = 0; target.GetMaterial()->shininess = 0;
+    target.SetSpecularStrength(0); target.SetShininess(0);
     target.Update();
     for (const VertexData& vertex : primitive.vertices) {
         auto world = MatrixMath::Transform({vertex.position.x, vertex.position.y, vertex.position.z}, target.GetWorldMatrix());
@@ -1058,7 +1058,7 @@ void RunReflectionValidation(DirectXCommon* dxCommon) {
     dxCommon->PreDraw(); RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-miss-raw.png"), {0, 0, 0}, "Reflection miss retained an old target");
     RequireColor(baseline, {0, 0, 0}, "Metal reflection miss generated diffuse base lighting");
     target.SetTranslate({4, 0, 0}); target.SetShadingMode(MaterialShadingMode::Standard);
-    target.GetMaterial()->specularStrength = 0; target.GetMaterial()->shininess = 0;
+    target.SetSpecularStrength(0); target.SetShininess(0);
     lighting.intensity = 1; lighting.direction = {0, 0, 1}; lighting.ambient.w = 0; lights->ApplyLightingPreset(lighting);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, objects);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-lit-hit.png"), {kDiagonal, 0, 0}, "Reflection hit ignored material lighting");
@@ -1074,7 +1074,7 @@ void RunReflectionValidation(DirectXCommon* dxCommon) {
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-alpha-hole.png"), {0, 0, 0}, "Reflection AnyHit failed to ignore transparent target");
     target.SetColor({1, 0, 0, 1}); target.SetAlphaCutoff(0);
     lighting.intensity = 0; lighting.ambient.w = 0.2f; lights->ApplyLightingPreset(lighting);
-    receiver.GetMaterial()->roughness = 0.6f;
+    receiver.SetRoughness(0.6f);
     settings.sampleCount = 16; reflections.SetSettings(settings);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, objects);
     std::vector<float> reference; ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-rough-reference16.png", nullptr, &reference);
@@ -1111,7 +1111,7 @@ void RunReflectionValidation(DirectXCommon* dxCommon) {
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, objects, 1);
     dxCommon->PostDraw(); Require(!reflections.HasUsedHistory(), "Scene revision reused reflection history");
     // ClosestHit reads opaque GPU-skinned vertices after the motion-history copy.
-    receiver.GetMaterial()->roughness = 0; settings.shouldUseTemporalHistory = false; settings.spatialPassCount = 0;
+    receiver.SetRoughness(0); settings.shouldUseTemporalHistory = false; settings.spatialPassCount = 0;
     reflections.SetSettings(settings); camera.ResetMotionHistory(); camera.SetTranslate({0, 0, -4}); camera.Update(); camera.SetProjectionJitter({});
     auto* skinManager = SkinningObject3dManager::GetInstance(); skinManager->SetDefaultCamera(&camera);
     skinManager->SetBlendMode(kBlendModeNone); skinManager->SetEnvironmentTexture(Object3dManager::GetInstance()->GetEnvironmentTexture());
@@ -1138,11 +1138,11 @@ void RunReflectionValidation(DirectXCommon* dxCommon) {
     skinSceneInputs.shouldEnableSceneCulling = false;
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, kSkinObjects, 0, &skinnedTarget, nullptr, true, &skinSceneInputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-skin-range-restored.png"), {1, 0, 0}, "Returning skinned object failed to rebuild scene");
-    skeleton.joints[0].transform.translate.x = 4; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.translate.x = 4; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, kSkinObjects, 0, &skinnedTarget, nullptr, true, &skinSceneInputs);
     Require(scene.GetStatistics().updatedBlasCount == 1, "Reflected skinning pose did not refit");
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-skinned-moved.png"), {0, 0, 0}, "Reflection retained old skinned pose");
-    skeleton.joints[0].transform.translate.x = 0; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.translate.x = 0; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     skinnedTarget.SetAlphaCutoff(0.5f); skinnedTarget.SetColor({1, 0, 0, 0.25f});
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, kSkinObjects, 0, &skinnedTarget);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-skinned-alpha.png"), {0, 0, 0}, "Reflected skinned alpha mask failed");
@@ -1219,7 +1219,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     data.materials = {{"runtime/captures/DxrTests/mip-color.dds"}};
     Model targetModel; targetModel.Initialize(&common, data);
     Object3d receiver; receiver.Initialize(manager); receiver.SetModel(&receiverModel); receiver.SetShadingMode(MaterialShadingMode::Standard);
-    receiver.SetSurfaceProperties(0, 1, 1); receiver.GetMaterial()->roughness = 0; receiver.GetMaterial()->shininess = 0;
+    receiver.SetSurfaceProperties(0, 1, 1); receiver.SetRoughness(0); receiver.SetShininess(0);
     Object3d target; target.Initialize(manager); target.SetModel(&targetModel); target.SetShadingMode(MaterialShadingMode::Unlit);
     target.SetRotate({0, -1.57079633f, 0}); target.SetTranslate({4, 0, 0}); target.SetCastShadow(false);
     std::vector<Object3d*> rasterObjects = {&receiver}; std::vector<Object3d*> rayObjects = {&target};
@@ -1229,7 +1229,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     std::ofstream report("runtime/captures/DxrTests/texture-mip-result.txt"); report.setf(std::ios::unitbuf);
     const float kUvScales[] = {0.01f, 1, 64, -64, 0};
     for (uint32_t index = 0; index < 5; ++index) {
-        target.GetMaterial()->uvTransform.m[0][0] = kUvScales[index]; target.GetMaterial()->uvTransform.m[1][1] = kUvScales[index];
+        target.SetUvTransformElement(0, 0, kUvScales[index]); target.SetUvTransformElement(1, 1, kUvScales[index]);
         DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
         std::string capture = "mip-color-" + std::to_string(index) + ".png";
         Vector3 color = ReadTextureCenter(dxCommon, reflections.GetRawTexture(), capture.c_str());
@@ -1238,7 +1238,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
         if (index == 2 || index == 3) { RequireColor(color, {0, 1, 0}, "Minification/mirrored UV did not select coarse mip"); }
         if (index == 1) { Require(color.y > 0.1f, "Camera and hit distance footprint failed to select mip"); }
     }
-    target.GetMaterial()->uvTransform.m[0][0] = 0.5f; target.GetMaterial()->uvTransform.m[1][1] = 0.5f;
+    target.SetUvTransformElement(0, 0, 0.5f); target.SetUvTransformElement(1, 1, 0.5f);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     Vector3 fractionalColor = ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-fractional.png");
     double pixelDiameter = 4.0 * 4.0 * std::tan(0.35) / (reflections.GetRawTexture()->GetDesc().Height * 2);
@@ -1246,24 +1246,24 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     report << "fractional mip=" << expectedMip << " color=" << fractionalColor.x << ',' << fractionalColor.y << '\n';
     Require(std::abs(fractionalColor.y - expectedMip) < 0.025 && std::abs(fractionalColor.x - (1 - expectedMip)) < 0.025,
         "Trilinear mip color disagreed with independent center footprint calculation");
-    target.GetMaterial()->uvTransform.m[0][0] = 0.1f; target.GetMaterial()->uvTransform.m[1][1] = 0.1f;
+    target.SetUvTransformElement(0, 0, 0.1f); target.SetUvTransformElement(1, 1, 0.1f);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-near-camera.png"), {1, 0, 0}, "Near camera overfiltered magnified texture");
     camera.LookAt({0, 0, -100}, {0, 0, 0}); camera.Update();
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-far-camera.png"), {0, 1, 0}, "Camera distance did not enlarge footprint");
     camera.LookAt({0, 0, -4}, {0, 0, 0}); camera.Update();
-    target.GetMaterial()->uvTransform = MatrixMath::MakeIdentity4x4(); target.SetScale({10, 10, 10});
+    target.SetUvTransform(MatrixMath::MakeIdentity4x4()); target.SetScale({10, 10, 10});
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-wide-mirror.png"), {1, 0, 0}, "Mirror failed to retain large target detail");
-    receiver.GetMaterial()->roughness = 0.6f; settings.sampleCount = 16; reflections.SetSettings(settings);
+    receiver.SetRoughness(0.6f); settings.sampleCount = 16; reflections.SetSettings(settings);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     Vector3 roughColor = ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-wide-rough.png");
     Require(roughColor.y > 0.1f && roughColor.x < 0.02f, "Rough reflection failed to widen texture footprint");
     DxrGlobalIlluminationRenderer indirect; indirect.Initialize(); auto indirectSettings = indirect.GetSettings();
     indirectSettings.isEnabled = true; indirectSettings.shouldUseTemporalHistory = false; indirectSettings.spatialPassCount = 0;
     indirectSettings.sampleCount = 16; indirectSettings.shouldTraceSunShadows = false; indirect.SetSettings(indirectSettings);
-    receiver.GetMaterial()->metallic = 0;
+    receiver.SetMetallic(0);
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     Vector3 indirectColor = ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "mip-diffuse-indirect.png");
     Require(indirectColor.y > 0.1f && indirectColor.x < 0.02f, "Diffuse indirect rays failed to select coarse texture mip");
@@ -1272,8 +1272,8 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     Vector3 indirectUnfiltered = ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "mip-diffuse-disabled.png");
     Require(indirectUnfiltered.x > 0.1f && indirectUnfiltered.y < 0.02f, "Diffuse mip OFF did not retain mip zero");
     report << "rough=" << roughColor.x << ',' << roughColor.y << " indirect=" << indirectColor.x << ',' << indirectColor.y << '\n';
-    receiver.GetMaterial()->roughness = 0; receiver.GetMaterial()->metallic = 1; target.SetScale({1, 1, 1});
-    target.GetMaterial()->uvTransform.m[0][0] = 64; target.GetMaterial()->uvTransform.m[1][1] = 64;
+    receiver.SetRoughness(0); receiver.SetMetallic(1); target.SetScale({1, 1, 1});
+    target.SetUvTransformElement(0, 0, 64); target.SetUvTransformElement(1, 1, 64);
     settings.shouldUseTextureMipmaps = false; reflections.SetSettings(settings);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-disabled.png"), {1, 0, 0}, "Mip OFF did not restore old mip zero sampling");
@@ -1282,7 +1282,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-nonuniform.png"), {0, 1, 0}, "World scale broke mip footprint");
     target.SetScale({1, 1, 1}); targetModel.SetTexture("resources/Textures/white.png");
-    target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(1, 0, 1); target.GetMaterial()->shininess = 0;
+    target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(1, 0, 1); target.SetShininess(0);
     target.SetNormalMap("runtime/captures/DxrTests/mip-normal.dds", 1); TextureManager::GetInstance()->FlushUploads();
     Vector3 normalColors[2];
     for (uint32_t index = 0; index < 2; ++index) {
@@ -1368,23 +1368,23 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     for (uint32_t vertexIndex = 0; vertexIndex < 4; ++vertexIndex) { weights.vertexWeights.push_back({1, vertexIndex}); }
     data.skinClusterData["materialRoot"] = weights; Model model; model.Initialize(&modelCommon, data);
     Object3d receiver; receiver.Initialize(objectManager); receiver.SetModel(&model); receiver.SetShadingMode(MaterialShadingMode::Standard);
-    receiver.SetSurfaceProperties(0, 1, 1); receiver.GetMaterial()->shininess = 0; receiver.SetCamera(&camera);
-    receiver.GetMaterial()->roughness = 0;
+    receiver.SetSurfaceProperties(0, 1, 1); receiver.SetShininess(0); receiver.SetCamera(&camera);
+    receiver.SetRoughness(0);
     Object3d target; target.Initialize(objectManager); target.SetModel(&model); target.SetShadingMode(MaterialShadingMode::Standard);
     target.SetRotate({0, -1.57079633f, 0}); target.SetTranslate({4, 0, 0}); target.SetSurfaceProperties(0.6f, 0, 1);
-    target.GetMaterial()->shininess = 0;
+    target.SetShininess(0);
     OffscreenRenderer offscreen; offscreen.Initialize(); PostEffectManager postEffects; postEffects.Initialize(dxCommon);
     MotionVectorRenderer motionVectors; motionVectors.Initialize(); TextureManager::GetInstance()->FlushUploads();
     std::ofstream report("runtime/captures/DxrTests/material-result.txt"); report.setf(std::ios::unitbuf);
     static_assert(sizeof(Material) == 144); static_assert(offsetof(Material, alphaCutoff) == 128);
     Vector3 baseline = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "standard-specular-off", report);
-    target.GetMaterial()->metallic = 1;
+    target.SetMetallic(1);
     Vector3 metalDiffuse = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "metal-no-specular", report);
     RequireColor(metalDiffuse, {0, 0, 0}, "Metal retained diffuse lighting");
-    target.GetMaterial()->shininess = 32;
+    target.SetShininess(32);
     Vector3 specular = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "standard-specular-on", report);
     Require(specular.x > metalDiffuse.x + 0.1f, "Shininess gate did not control material specular");
-    target.GetMaterial()->shininess = 0; target.GetMaterial()->metallic = 0;
+    target.SetShininess(0); target.SetMetallic(0);
     target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1); TextureManager::GetInstance()->FlushUploads();
     Vector3 mapped = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "normal-map", report);
     Require(std::abs(mapped.x - baseline.x) > 0.02f, "Normal map did not affect RT hit lighting");
@@ -1395,14 +1395,14 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1, true);
     Vector3 flippedY = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "normal-y-flipped", report);
     Require(std::abs(flippedY.x - normalY.x) > 0.1f, "Normal map Y inversion had no effect");
-    target.GetMaterial()->uvTransform.m[0][0] = -1; target.GetMaterial()->uvTransform.m[3][0] = 1;
+    target.SetUvTransformElement(0, 0, -1); target.SetUvTransformElement(3, 0, 1);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "mirrored-uv", report);
-    target.GetMaterial()->uvTransform.m[0][0] = 0; target.GetMaterial()->uvTransform.m[1][1] = 0;
+    target.SetUvTransformElement(0, 0, 0); target.SetUvTransformElement(1, 1, 0);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "degenerate-uv", report);
-    target.GetMaterial()->uvTransform = MatrixMath::MakeIdentity4x4(); target.SetScale({1, 1.3f, 0.6f});
+    target.SetUvTransform(MatrixMath::MakeIdentity4x4()); target.SetScale({1, 1.3f, 0.6f});
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "nonuniform-scale", report);
     target.SetScale({1, 1, 1}); target.SetNormalMap(""); lights->SetDirection({0, 0, 1});
-    target.SetSurfaceProperties(0.6f, 0.8f, 1); target.GetMaterial()->shininess = 32;
+    target.SetSurfaceProperties(0.6f, 0.8f, 1); target.SetShininess(32);
     target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); TextureManager::GetInstance()->FlushUploads();
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "metallic-roughness-map", report);
     ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects, "material-mr-capture.png");
@@ -1418,11 +1418,11 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "shadow-toon", report);
     target.SetReceiveShadow(false); target.SetShadingMode(MaterialShadingMode::Standard);
     target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
-    target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); target.GetMaterial()->shininess = 0;
+    target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); target.SetShininess(0);
     lights->SetEnvironmentLighting(0.4f, 0.6f);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "environment-lighting", report);
     Vector3 iblColor = ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects, "lighting-ibl-only.png");
-    target.GetMaterial()->enableEnvironmentMap = 1; target.GetMaterial()->environmentCoefficient = 0.3f;
+    target.SetEnableEnvironmentMap(1); target.SetEnvironmentMapStrength(0.3f);
     Vector3 legacyIblColor = ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects, "lighting-ibl-with-legacy.png");
     RequireColor(legacyIblColor, iblColor, "Legacy environment was added to Standard IBL specular");
     lights->SetAmbientIntensity(0.9f);
@@ -1494,7 +1494,10 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     lights->SetSkyLighting(false, 1); lights->SetLightingComponents(1, 1, 1, 0);
     lights->SetDirectional(kSavedSun.color, kSavedSun.direction, kSavedSun.intensity);
     lights->SetAtmosphere(kSavedAtmosphere.x > 0.5f, kSavedAtmosphere.y, kSavedAtmosphere.z, kSavedAtmosphere.w);
-    *target.GetMaterial() = kSavedMaterial;
+    target.SetColor(kSavedMaterial.color); target.SetShadingMode(static_cast<MaterialShadingMode>(kSavedMaterial.enableLighting));
+    target.SetEnableEnvironmentMap(kSavedMaterial.enableEnvironmentMap != 0); target.SetEnvironmentMapStrength(kSavedMaterial.environmentCoefficient);
+    target.SetShininess(kSavedMaterial.shininess); target.SetUvTransform(kSavedMaterial.uvTransform);
+    target.SetRoughness(kSavedMaterial.roughness); target.SetMetallic(kSavedMaterial.metallic); target.SetSpecularStrength(kSavedMaterial.specularStrength);
     target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
     target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png");
     RequireColor(ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects,
@@ -1504,7 +1507,7 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "legacy-environment", report);
     target.SetShadingMode(MaterialShadingMode::Unlit);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "unlit-environment", report);
-    target.SetShadingMode(MaterialShadingMode::Standard); target.GetMaterial()->enableEnvironmentMap = 0;
+    target.SetShadingMode(MaterialShadingMode::Standard); target.SetEnableEnvironmentMap(0);
     lights->SetEnvironmentLighting(0, 0); lights->SetIntensity(0);
     lights->SetPointIntensity(0.7f); lights->SetPointPosition({0, 2, 0}); lights->SetPointRadius(10); lights->SetPointDecay(0);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "point-light", report);
@@ -1518,7 +1521,7 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     Skeleton skeleton = Skeleton::CreateSkeleton(data.rootNode); skeleton.UpdateSkeleton(); PlayAnimation animation; animation.SetSkeleton(&skeleton);
     SkinningObject3d skinned; skinned.SetModel(&model); skinned.SetAnimation(&animation); skinned.Initialize(skinManager);
     skinned.SetTranslate({4, 0, 0}); skinned.SetRotate({0, -1.57079633f, 0}); skinned.SetShadingMode(MaterialShadingMode::Standard);
-    skinned.GetMaterial()->shininess = 0; skinned.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
+    skinned.SetShininess(0); skinned.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
     skinned.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); TextureManager::GetInstance()->FlushUploads();
     Vector3 skinRaster = ReadRasterMaterial(dxCommon, scene, skinned, surfaceCamera, offscreen, postEffects, "material-skinned-raster.png", true);
     skinned.SetCamera(&camera); std::vector<Object3d*> skinRasterObjects = {&receiver}; RaytracingTestSceneInputs skinInputs; skinInputs.shouldDrawSkinnedTarget = false;
@@ -1557,10 +1560,10 @@ void RunGlobalIlluminationValidation(DirectXCommon* dxCommon) {
     Model model; model.Initialize(&modelCommon, modelData);
     Object3d receiver; receiver.Initialize(Object3dManager::GetInstance()); receiver.SetModel(&model);
     receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.SetCastShadow(false); receiver.SetColor({0.5f, 0.25f, 0.75f, 1});
-    receiver.GetMaterial()->roughness = 1; receiver.GetMaterial()->specularStrength = 0; receiver.GetMaterial()->shininess = 0;
+    receiver.SetRoughness(1); receiver.SetSpecularStrength(0); receiver.SetShininess(0);
     Object3d target; target.Initialize(Object3dManager::GetInstance()); target.SetModel(&model);
     target.SetTranslate({0, 0, -6}); target.SetScale({2000, 2000, 1}); target.SetColor({1, 0, 0, 1});
-    target.GetMaterial()->specularStrength = 0; target.GetMaterial()->shininess = 0;
+    target.SetSpecularStrength(0); target.SetShininess(0);
     target.Update();
     for (const auto& vertex : primitive.vertices) {
         auto world = MatrixMath::Transform({vertex.position.x, vertex.position.y, vertex.position.z}, target.GetWorldMatrix());
@@ -1595,7 +1598,7 @@ void RunGlobalIlluminationValidation(DirectXCommon* dxCommon) {
     RequireColor(partialColor, baseline * (1 - partialCoverage) + Vector3{0.5f * partialCoverage, 0, 0}, "Partial GI double-counted ambient or discarded miss fallback");
     target.SetScale({2000, 2000, 1}); settings.sampleCount = 1;
     settings.isEnabled = false; indirect.SetSettings(settings);
-    receiver.GetMaterial()->specularStrength = 0.5f; lights->SetEnvironmentLighting(0.4f, 0.6f);
+    receiver.SetSpecularStrength(0.5f); lights->SetEnvironmentLighting(0.4f, 0.6f);
     source = DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, objects);
     Vector3 environmentBaseline = ReadTextureCenter(dxCommon, source, "lighting-gi-environment-baseline.png");
     dxCommon->PreDraw(); Vector3 capturedIndirect = ReadTextureCenter(dxCommon, offscreen.GetIndirectTexture(), "lighting-gi-indirect.png");
@@ -1606,7 +1609,7 @@ void RunGlobalIlluminationValidation(DirectXCommon* dxCommon) {
     settings.isEnabled = true; indirect.SetSettings(settings);
     source = DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, objects);
     RequireColor(ReadTextureCenter(dxCommon, source, "lighting-gi-specular-preserved.png"), environmentBaseline - capturedDiffuse + Vector3{0.49f, 0, 0}, "GI removed specular or double-counted diffuse environment");
-    receiver.GetMaterial()->specularStrength = 0; lights->SetEnvironmentLighting(0, 0);
+    receiver.SetSpecularStrength(0); lights->SetEnvironmentLighting(0, 0);
     source = DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, objects);
     RequireColor(ReadTextureCenter(dxCommon, source, "rtgi-color-bleeding.png"), Vector3{0.5f, 0, 0}, "RTGI missed behind-camera source or receiver albedo");
     dxCommon->PreDraw(); RequireColor(ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "rtgi-raw-irradiance.png"), {1, 0, 0}, "RTGI depends on specular strength or roughness");
@@ -1627,11 +1630,11 @@ void RunGlobalIlluminationValidation(DirectXCommon* dxCommon) {
     settings.strength = 1; settings.maxDistance = 1; indirect.SetSettings(settings);
     source = DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, objects);
     RequireColor(ReadTextureCenter(dxCommon, source, "rtgi-distance-miss.png"), baseline, "RTGI miss replaced base environment/direct lighting");
-    settings.maxDistance = 1000; indirect.SetSettings(settings); receiver.GetMaterial()->metallic = 1;
+    settings.maxDistance = 1000; indirect.SetSettings(settings); receiver.SetMetallic(1);
     settings.isDebugVisible = true; indirect.SetSettings(settings);
     source = DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, objects);
     RequireColor(ReadTextureCenter(dxCommon, source, "rtgi-metallic.png"), {0, 0, 0}, "Metal received diffuse indirect light");
-    settings.isDebugVisible = false; indirect.SetSettings(settings); receiver.GetMaterial()->metallic = 0;
+    settings.isDebugVisible = false; indirect.SetSettings(settings); receiver.SetMetallic(0);
     target.SetAlphaCutoff(0.5f); target.SetColor({1, 0, 0, 0.25f});
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, objects);
     RequireColor(ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "rtgi-alpha-hole.png"), {0, 0, 0}, "RTGI alpha AnyHit failed");
@@ -1714,7 +1717,7 @@ void RunGlobalIlluminationValidation(DirectXCommon* dxCommon) {
     const std::vector<Object3d*> kSkinObjects = {&receiver};
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, kSkinObjects, 0, &skinned);
     RequireColor(ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "rtgi-skinned-hit.png"), {1, 0, 0}, "RTGI skinned hit failed");
-    skeleton.joints[0].transform.translate.z = 20; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.translate.z = 20; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, kSkinObjects, 0, &skinned);
     Require(scene.GetStatistics().updatedBlasCount == 1, "RTGI skinned geometry did not refit");
     RequireColor(ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "rtgi-skinned-moved.png"), {0, 0, 0}, "RTGI retained stale skinning geometry");
@@ -1783,7 +1786,7 @@ void RunDiffuseQualityValidation(DirectXCommon* dxCommon) {
         {{1, -1, 0, 1}, {1, 0}, {0, 0, -1}}, {{1, 1, 0, 1}, {1, 1}, {0, 0, -1}}};
     plane.indices = {0, 1, 2, 2, 1, 3}; data.primitives = {plane}; Model model; model.Initialize(&common, data);
     Object3d receiver; receiver.Initialize(manager); receiver.SetModel(&model); receiver.SetShadingMode(MaterialShadingMode::Standard);
-    receiver.SetSurfaceProperties(1, 0, 0); receiver.GetMaterial()->shininess = 0;
+    receiver.SetSurfaceProperties(1, 0, 0); receiver.SetShininess(0);
     Object3d target; target.Initialize(manager); target.SetModel(&model); target.SetShadingMode(MaterialShadingMode::Unlit);
     target.SetScale({1000, 1000, 1}); target.SetTranslate({0, 0, -5}); target.SetColor({1, 0, 0, 1});
     std::vector<Object3d*> rasterObjects = {&receiver}; std::vector<Object3d*> rayObjects = {&target};
@@ -1883,10 +1886,10 @@ void RunMultipleReflectionValidation(DirectXCommon* dxCommon) {
     mirrorData.skinClusterData["multipleRoot"] = weights;
     Model mirrorModel; mirrorModel.Initialize(&common, mirrorData);
     Object3d receiver; receiver.Initialize(manager); receiver.SetModel(&receiverModel); receiver.SetShadingMode(MaterialShadingMode::Standard);
-    receiver.SetSurfaceProperties(0, 1, 1); receiver.GetMaterial()->roughness = 0; receiver.GetMaterial()->shininess = 0;
+    receiver.SetSurfaceProperties(0, 1, 1); receiver.SetRoughness(0); receiver.SetShininess(0);
     Object3d mirror; mirror.Initialize(manager); mirror.SetModel(&mirrorModel); mirror.SetShadingMode(MaterialShadingMode::Standard);
     mirror.SetRotate({0, -0.785398163f, 0}); mirror.SetTranslate({4, 0, 0}); mirror.SetSurfaceProperties(0, 1, 1);
-    mirror.GetMaterial()->roughness = 0; mirror.GetMaterial()->shininess = 0;
+    mirror.SetRoughness(0); mirror.SetShininess(0);
     Object3d target; target.Initialize(manager); target.SetModel(&mirrorModel); target.SetShadingMode(MaterialShadingMode::Unlit);
     target.SetTranslate({4, 0, -4}); target.SetColor({1, 0, 0, 1}); target.SetCastShadow(false);
     std::vector<Object3d*> rasterObjects = {&receiver}; std::vector<Object3d*> rayObjects = {&mirror, &target};
@@ -1915,14 +1918,14 @@ void RunMultipleReflectionValidation(DirectXCommon* dxCommon) {
     float fresnelTail = std::pow(1.0f - kDiagonal, 5.0f);
     Vector3 tintedExpected = Vector3{0.5f, 0.25f, 0.75f} + Vector3{0.5f, 0.75f, 0.25f} * fresnelTail;
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-tinted-metal.png"), tintedExpected, "Secondary metal reflection ignored colored Fresnel");
-    mirror.SetColor({1, 1, 1, 1}); mirror.GetMaterial()->metallic = 0;
+    mirror.SetColor({1, 1, 1, 1}); mirror.SetMetallic(0);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     float dielectricExpected = 0.04f + 0.96f * fresnelTail;
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-dielectric.png"), {dielectricExpected, dielectricExpected, dielectricExpected}, "Secondary dielectric Fresnel was missing");
-    mirror.GetMaterial()->metallic = 1; mirror.GetMaterial()->specularStrength = 0;
+    mirror.SetMetallic(1); mirror.SetSpecularStrength(0);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-no-specular.png"), {0, 0, 0}, "Non-reflective hit traced secondary radiance");
-    mirror.GetMaterial()->specularStrength = 1; mirror.SetShadingMode(MaterialShadingMode::Unlit); mirror.SetColor({0, 1, 0, 1});
+    mirror.SetSpecularStrength(1); mirror.SetShadingMode(MaterialShadingMode::Unlit); mirror.SetColor({0, 1, 0, 1});
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-unlit.png"), {0, 1, 0}, "Unlit hit was replaced by a secondary reflection");
     mirror.SetShadingMode(MaterialShadingMode::Standard); mirror.SetColor({1, 1, 1, 1}); target.SetColor({1, 0, 0, 1});
@@ -1942,24 +1945,24 @@ void RunMultipleReflectionValidation(DirectXCommon* dxCommon) {
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-miss.png"), environment, "Secondary geometry miss discarded fallback");
     target.SetTranslate({4, 0, -4}); target.SetColor({1, 0, 0, 1}); lights->SetEnvironmentLighting(0, 0);
     // Last hit is lit and casts a shadow ray at recursion depth three.
-    target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(1, 0, 0); target.GetMaterial()->shininess = 0;
+    target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(1, 0, 0); target.SetShininess(0);
     lighting.intensity = 1; lighting.direction = {0, 0, -1}; lights->ApplyLightingPreset(lighting);
     mirror.SetCastShadow(false); settings.shouldTraceSunShadows = true; reflections.SetSettings(settings);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-lit-last-hit.png"), {1, 0, 0}, "Final reflection hit could not shade/trace sun at depth three");
     mirror.SetCastShadow(true); lighting.intensity = 0; lights->ApplyLightingPreset(lighting); settings.shouldTraceSunShadows = false;
-    target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(0, 1, 1); target.GetMaterial()->roughness = 0;
+    target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(0, 1, 1); target.SetRoughness(0);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-mirror-loop.png"), {0, 0, 0}, "Opposing mirrors escaped the reflection depth bound");
     target.SetShadingMode(MaterialShadingMode::Unlit); target.SetColor({1, 1, 1, 1}); target.SetScale({100, 100, 1});
-    mirror.GetMaterial()->roughness = 0.6f; settings.sampleCount = 16; reflections.SetSettings(settings);
+    mirror.SetRoughness(0.6f); settings.sampleCount = 16; reflections.SetSettings(settings);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     std::vector<float> values; ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-rough.png", nullptr, &values);
     double mean = 0;
     double error = MeasureDiffusePatch(values, reflections.GetRawTexture(), 0, &mean);
     Require(mean > 0.05 && error <= 1.001, "Rough secondary reflection was missing/non-finite or amplified unit light");
     report << "rough unit-plane mean=" << mean << " tinted Fresnel=" << tintedExpected.x << ',' << tintedExpected.y << ',' << tintedExpected.z << '\n';
-    mirror.GetMaterial()->roughness = 0; target.SetScale({1, 1, 1}); settings.shouldUseTemporalHistory = true; reflections.SetSettings(settings);
+    mirror.SetRoughness(0); target.SetScale({1, 1, 1}); settings.shouldUseTemporalHistory = true; reflections.SetSettings(settings);
     for (uint32_t index = 0; index < 3; ++index) {
         DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs); dxCommon->PostDraw();
     }
@@ -2222,9 +2225,11 @@ void RunHdrValidation(DirectXCommon* dxCommon) {
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvHeap;
     Require(SUCCEEDED(device->CreateDescriptorHeap(&rtvDescription, IID_PPV_ARGS(&rtvHeap))), "HDR test RTV allocation failed");
     auto rtv = rtvHeap->GetCPUDescriptorHandleForHeapStart(); device->CreateRenderTargetView(output.Get(), nullptr, rtv);
-    auto* copy = post.GetCopyImageRenderer(); auto& parameters = copy->GetPostEffectParameter();
+    auto* copy = post.GetCopyImageRenderer(); auto parameterEdit1 = copy->BeginParameterEdit();
+    auto& parameters = parameterEdit1.Get();
     parameters.toneExposure = 1; parameters.toneContrast = 1; parameters.toneSaturation = 1;
-    auto* bloom = post.GetBloomRenderer(); auto* bloomSettings = bloom->GetEditableBloomParameter();
+    auto* bloom = post.GetBloomRenderer(); auto parameterEdit2 = bloom->BeginParameterEdit();
+    auto* bloomSettings = &parameterEdit2.Get();
     Vector3 toneColors[2];
     for (uint32_t mode = 0; mode < 2; ++mode) {
         source.SetClearColor({4, 2, 1, 1}); source.PreDraw(dxCommon->GetDSVHandle()); source.PostDraw();
@@ -2232,6 +2237,8 @@ void RunHdrValidation(DirectXCommon* dxCommon) {
         auto before = CD3DX12_RESOURCE_BARRIER::Transition(output.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
         dxCommon->GetCommandList()->ResourceBarrier(1, &before); dxCommon->GetCommandList()->OMSetRenderTargets(1, &rtv, false, nullptr);
         copy->SetOutputFormat(DXGI_FORMAT_R16G16B16A16_FLOAT); copy->SetPostEffectType(PostEffectType::ToneMap);
+    parameterEdit1.Commit();
+    parameterEdit2.Commit();
         copy->Draw(source.GetSrvHandleGPU(), source.GetSrvHandleGPU(), source.GetNormalSrvHandleGPU());
         auto after = CD3DX12_RESOURCE_BARRIER::Transition(output.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         dxCommon->GetCommandList()->ResourceBarrier(1, &after); dxCommon->PreDraw();
@@ -2253,6 +2260,8 @@ void RunHdrValidation(DirectXCommon* dxCommon) {
         dxCommon->GetCommandList()->ResourceBarrier(1, &before);
         dxCommon->GetCommandList()->OMSetRenderTargets(1, &rtv, false, nullptr);
         copy->SetOutputFormat(DXGI_FORMAT_R16G16B16A16_FLOAT); copy->SetPostEffectType(type);
+    parameterEdit1.Commit();
+    parameterEdit2.Commit();
         copy->Draw(source.GetSrvHandleGPU(), source.GetSrvHandleGPU(), source.GetNormalSrvHandleGPU());
         auto after = CD3DX12_RESOURCE_BARRIER::Transition(output.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         dxCommon->GetCommandList()->ResourceBarrier(1, &after); dxCommon->PreDraw();
@@ -2269,9 +2278,13 @@ void RunHdrValidation(DirectXCommon* dxCommon) {
         bloomSettings->maxRadiance = 65504;
         if (mode == 1) { bloomSettings->maxRadiance = 1; }
         source.SetClearColor(color); source.PreDraw(dxCommon->GetDSVHandle()); source.PostDraw();
+    parameterEdit1.Commit();
+    parameterEdit2.Commit();
         SrvManager::GetInstance()->PreDraw(); bloom->Generate(source.GetSrvHandleGPU());
         auto before = CD3DX12_RESOURCE_BARRIER::Transition(output.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
         dxCommon->GetCommandList()->ResourceBarrier(1, &before);
+    parameterEdit1.Commit();
+    parameterEdit2.Commit();
         dxCommon->GetCommandList()->OMSetRenderTargets(1, &rtv, false, nullptr); bloom->Composite(source.GetSrvHandleGPU());
         auto after = CD3DX12_RESOURCE_BARRIER::Transition(output.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
         dxCommon->GetCommandList()->ResourceBarrier(1, &after); dxCommon->PreDraw();
@@ -2488,10 +2501,10 @@ void RunRoughReflectionValidation(DirectXCommon* dxCommon) {
         ModelData data = receiverData; float viewSine = std::sqrt(1 - viewCosine * viewCosine);
         for (auto& vertex : data.primitives[0].vertices) { vertex.normal = {viewSine, 0, -viewCosine}; }
         Model model; model.Initialize(&common, data); Object3d receiver; receiver.Initialize(manager); receiver.SetModel(&model);
-        receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.GetMaterial()->metallic = 1; receiver.GetMaterial()->specularStrength = 1;
-        receiver.GetMaterial()->shininess = 0; std::vector<Object3d*> rasterObjects = {&receiver}; TextureManager::GetInstance()->FlushUploads();
+        receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.SetMetallic(1); receiver.SetSpecularStrength(1);
+        receiver.SetShininess(0); std::vector<Object3d*> rasterObjects = {&receiver}; TextureManager::GetInstance()->FlushUploads();
         for (float roughness : kRoughnessValues) {
-            receiver.GetMaterial()->roughness = roughness;
+            receiver.SetRoughness(roughness);
             DrawReflectionFrame(dxCommon, scene, reflection, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &sceneInputs);
             std::vector<float> pixels; ReadTextureCenter(dxCommon, reflection.GetRawTexture(), "rough-furnace.png", nullptr, &pixels);
             uint32_t width = WinApp::kClientWidth / 2; uint32_t height = WinApp::kClientHeight / 2;
@@ -2513,10 +2526,10 @@ void RunRoughReflectionValidation(DirectXCommon* dxCommon) {
             report << "roughness=" << roughness << " viewCosine=" << viewCosine << " gpuMean=" << average << " quadrature=" << reference << '\n';
             Require(std::abs(average - reference) < 0.035, "VNDF reflection disagrees with independent GGX BRDF integration");
         }
-        receiver.GetMaterial()->roughness = 0;
+        receiver.SetRoughness(0);
         DrawReflectionFrame(dxCommon, scene, reflection, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &sceneInputs);
         RequireColor(ReadTextureCenter(dxCommon, reflection.GetRawTexture(), "rough-mirror-limit.png"), {1, 1, 1}, "GGX update changed mirror limit");
-        receiver.GetMaterial()->metallic = 0;
+        receiver.SetMetallic(0);
         DrawReflectionFrame(dxCommon, scene, reflection, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &sceneInputs);
         Vector3 dielectric = ReadTextureCenter(dxCommon, reflection.GetRawTexture(), "rough-dielectric-mirror.png");
         double expected = 0.04 + 0.96 * std::pow(1 - viewCosine, 5);
@@ -2549,7 +2562,7 @@ void RunReceiverMotionValidation(DirectXCommon* dxCommon) {
     for (uint32_t index = 0; index < 4; ++index) { weights.vertexWeights.push_back({1, index}); }
     data.skinClusterData["receiverMotionRoot"] = weights; Model model; model.Initialize(&modelCommon, data);
     Object3d receiver; receiver.Initialize(objectManager); receiver.SetModel(&model); receiver.SetShadingMode(MaterialShadingMode::Standard);
-    receiver.SetReceiveShadow(true); receiver.SetCastShadow(false); receiver.GetMaterial()->specularStrength = 0; receiver.GetMaterial()->shininess = 0;
+    receiver.SetReceiveShadow(true); receiver.SetCastShadow(false); receiver.SetSpecularStrength(0); receiver.SetShininess(0);
     Object3d source; source.Initialize(objectManager); source.SetModel(&model); source.SetTranslate({0, 0, -6}); source.SetScale({2000, 2000, 1});
     source.SetColor({1, 0, 0, 1}); source.SetCastShadow(false);
     std::vector<Object3d*> objects = {&receiver, &source};
@@ -2594,7 +2607,7 @@ void RunReceiverMotionValidation(DirectXCommon* dxCommon) {
     receiver.SetNormalMap("");
     Object3d replacement; replacement.Initialize(objectManager); replacement.SetModel(&model); replacement.SetShadingMode(MaterialShadingMode::Standard);
     replacement.SetTranslate({0.4f, 0, 0.5f}); replacement.SetRotate({0, 0.35f, 0}); replacement.SetScale({1.4f, 1.2f, 0.7f});
-    replacement.SetCastShadow(false); replacement.GetMaterial()->specularStrength = 0; replacement.GetMaterial()->shininess = 0;
+    replacement.SetCastShadow(false); replacement.SetSpecularStrength(0); replacement.SetShininess(0);
     objects[0] = &replacement;
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, objects);
     statistics = ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-replacement-history.png");
@@ -2615,20 +2628,20 @@ void RunReceiverMotionValidation(DirectXCommon* dxCommon) {
     Require(statistics.z == 1, "Receiver returning from offscreen reused absent history");
     Skeleton skeleton = Skeleton::CreateSkeleton(data.rootNode); skeleton.UpdateSkeleton(); PlayAnimation animation; animation.SetSkeleton(&skeleton);
     SkinningObject3d skinned; skinned.SetModel(&model); skinned.SetAnimation(&animation); skinned.Initialize(skinManager);
-    skinned.SetShadingMode(MaterialShadingMode::Standard); skinned.GetMaterial()->specularStrength = 0; skinned.GetMaterial()->shininess = 0;
+    skinned.SetShadingMode(MaterialShadingMode::Standard); skinned.SetSpecularStrength(0); skinned.SetShininess(0);
     std::vector<Object3d*> skinObjects = {&source}; indirect.ResetHistory();
     for (uint32_t frame = 0; frame < 3; ++frame) {
         DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, skinObjects, 0, &skinned);
         ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-skin-stable.png");
     }
-    skeleton.joints[0].transform.translate = {0.4f, 0, 0.5f}; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.translate = {0.4f, 0, 0.5f}; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, skinObjects, 0, &skinned);
     statistics = ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-skin-deformed.png");
     Require(statistics.z >= 4, "GPU skinned receiver did not reproject its previous vertices/depth");
     dxCommon->PreDraw(); metadata = ReadTextureCenter(dxCommon, motion.GetReprojectionTexture(), "receiver-motion-skin-metadata.png");
     RequireColor(metadata, {1, 1, 4}, "Skin metadata used current vertices instead of previous vertices");
     report << "skinnedHistory=" << statistics.z << " previousDepth=" << metadata.z << '\n';
-    skeleton.joints[0].transform.rotate = {0, std::sin(0.175f), 0, std::cos(0.175f)}; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.rotate = {0, std::sin(0.175f), 0, std::cos(0.175f)}; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, skinObjects, 0, &skinned);
     statistics = ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-skin-rotated.png");
     Require(statistics.z >= 5, "Skinned normal deformation discarded compatible history");
@@ -2685,7 +2698,7 @@ void RunLocalShadowValidation(DirectXCommon* dxCommon) {
     Model model; model.Initialize(&modelCommon, data);
     Object3d receiver; receiver.Initialize(Object3dManager::GetInstance()); receiver.SetModel(&model);
     receiver.SetScale({4, 4, 1}); receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.SetReceiveShadow(true);
-    receiver.GetMaterial()->shininess = 0; receiver.GetMaterial()->specularStrength = 0;
+    receiver.SetShininess(0); receiver.SetSpecularStrength(0);
     Object3d caster; caster.Initialize(Object3dManager::GetInstance()); caster.SetModel(&model);
     caster.SetScale({0.4f, 0.6f, 1}); caster.SetTranslate({-1, 0, -1.5f}); caster.SetColor({0, 0, 0, 1}); caster.SetCastShadow(true);
     std::vector<Object3d*> objects = {&receiver, &caster}; TextureManager::GetInstance()->FlushUploads();
@@ -2829,13 +2842,13 @@ void RunLocalShadowValidation(DirectXCommon* dxCommon) {
     const std::vector<Object3d*> kSkinObjects = {&receiver};
     DrawReflectionFrame(dxCommon, scene, shadows, offscreen, postEffects, motion, camera, kSkinObjects, 0, &skinned, &shadows);
     RequireColor(ReadTextureCenter(dxCommon, shadows.GetRawTexture(), "local-shadow-skinned-caster.png"), {0, 0, 0}, "Skinned local caster failed");
-    skeleton.joints[0].transform.translate.y = 4; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.translate.y = 4; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     DrawReflectionFrame(dxCommon, scene, shadows, offscreen, postEffects, motion, camera, kSkinObjects, 0, &skinned, &shadows);
     Require(scene.GetStatistics().updatedBlasCount == 1, "Local shadow skinning did not refit");
     Require(ReadTextureCenter(dxCommon, shadows.GetRawTexture(), "local-shadow-skinned-moved.png").x > 0.8f, "Skinned local shadow retained old pose");
-    skeleton.joints[0].transform.translate.y = 0; skeleton.UpdateSkeleton();
+    { auto transform = skeleton.GetJoints()[0].GetTransform(); transform.translate.y = 0; skeleton.SetJointTransform(0, transform); } skeleton.UpdateSkeleton();
     skinned.SetTranslate({0, 0, 0}); skinned.SetScale({4, 4, 1}); skinned.SetColor({1, 1, 1, 1}); skinned.SetReceiveShadow(true);
-    skinned.SetShadingMode(MaterialShadingMode::Standard); skinned.GetMaterial()->shininess = 0; skinned.GetMaterial()->specularStrength = 0;
+    skinned.SetShadingMode(MaterialShadingMode::Standard); skinned.SetShininess(0); skinned.SetSpecularStrength(0);
     caster.SetTranslate({-1, 0, -1.5f}); caster.SetScale({0.4f, 0.6f, 1}); const std::vector<Object3d*> kCasterOnly = {&caster};
     source = DrawReflectionFrame(dxCommon, scene, shadows, offscreen, postEffects, motion, camera, kCasterOnly, 0, &skinned, &shadows);
     RequireColor(ReadTextureCenter(dxCommon, source, "local-shadow-skinned-receiver.png"), {0.2f, 0.2f, 0.2f}, "Skinned receiver did not replace selected lighting");
@@ -2849,10 +2862,10 @@ void RunLocalShadowValidation(DirectXCommon* dxCommon) {
     // A reflected surface receives a point light; a blocker is outside the primary mirror ray.
     auto diagonalData = data; for (auto& vertex : diagonalData.primitives[0].vertices) { vertex.normal = {0.70710678f, 0, -0.70710678f}; }
     Model diagonalModel; diagonalModel.Initialize(&modelCommon, diagonalData);
-    receiver.SetModel(&diagonalModel); receiver.SetScale({1, 1, 1}); receiver.GetMaterial()->metallic = 1; receiver.GetMaterial()->specularStrength = 1; receiver.GetMaterial()->roughness = 0;
+    receiver.SetModel(&diagonalModel); receiver.SetScale({1, 1, 1}); receiver.SetMetallic(1); receiver.SetSpecularStrength(1); receiver.SetRoughness(0);
     Object3d reflectedTarget; reflectedTarget.Initialize(Object3dManager::GetInstance()); reflectedTarget.SetModel(&model);
     reflectedTarget.SetTranslate({4, 0, 0}); reflectedTarget.SetRotate({0, 1.57079633f, 0}); reflectedTarget.SetShadingMode(MaterialShadingMode::Standard);
-    reflectedTarget.GetMaterial()->shininess = 0; reflectedTarget.GetMaterial()->specularStrength = 0; reflectedTarget.SetReceiveShadow(true);
+    reflectedTarget.SetShininess(0); reflectedTarget.SetSpecularStrength(0); reflectedTarget.SetReceiveShadow(true);
     caster.SetRotate({0, 1.57079633f, 0}); caster.SetTranslate({3, 1, 0}); caster.SetScale({0.4f, 0.4f, 1});
     lighting.ambient.w = 0; lights->ApplyLightingPreset(lighting); lights->SetPointPosition({2, 2, 0}); lights->SetPointLightShadowEnabled(0, true);
     objects = {&receiver, &reflectedTarget, &caster}; DxrReflectionRenderer reflections; reflections.Initialize();
@@ -2944,7 +2957,7 @@ void RunSkinningValidation(DirectXCommon* dxCommon) {
     SkinningObject3d first;
     first.SetModel(&model); first.SetAnimation(&firstAnimation); first.Initialize(skinManager);
     first.SetScale({0.6f, 0.6f, 1}); first.SetTranslate({-2, 0, 3});
-    first.SetShadingMode(MaterialShadingMode::Standard); first.SetCastShadow(true); first.GetMaterial()->shininess = 0;
+    first.SetShadingMode(MaterialShadingMode::Standard); first.SetCastShadow(true); first.SetShininess(0);
     Require(first.SetAlphaCutoff(0.5f), "Skinned alpha cutoff rejected");
     SkinningObject3d second;
     second.SetModel(&model); second.SetAnimation(&secondAnimation); second.Initialize(skinManager);
@@ -2953,11 +2966,11 @@ void RunSkinningValidation(DirectXCommon* dxCommon) {
     Object3d receiver;
     receiver.Initialize(Object3dManager::GetInstance()); receiver.SetModel(&model);
     receiver.SetScale({4, 4, 1}); receiver.SetTranslate({0, 0, 5});
-    receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.SetReceiveShadow(true); receiver.GetMaterial()->shininess = 0;
+    receiver.SetShadingMode(MaterialShadingMode::Standard); receiver.SetReceiveShadow(true); receiver.SetShininess(0);
     Object3d occluder;
     occluder.Initialize(Object3dManager::GetInstance()); occluder.SetModel(&model);
     occluder.SetScale({0.6f, 0.6f, 1}); occluder.SetTranslate({30, 0, 3});
-    occluder.SetShadingMode(MaterialShadingMode::Standard); occluder.GetMaterial()->shininess = 0;
+    occluder.SetShadingMode(MaterialShadingMode::Standard); occluder.SetShininess(0);
     TextureManager::GetInstance()->FlushUploads();
     OffscreenRenderer offscreen;
     offscreen.Initialize();
@@ -2982,13 +2995,13 @@ void RunSkinningValidation(DirectXCommon* dxCommon) {
     std::ofstream report("runtime/captures/DxrTests/skinning-result.txt");
     report << "initialBuildMs=" << scene.GetBuildGpuTimeMs() << " dynamicBufferBytes=" << dynamicBufferBytes
         << " dynamicAllocationBytes=" << scene.GetStatistics().dynamicAllocationBytes << '\n';
-    first.GetMaterial()->color.w = 0.25f;
+    first.SetOpacity(0.25f);
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, receiver, occluder, 0, &motionVectors, &objects);
     RequireColor(ReadTextureCenter(dxCommon, shadows.GetMaskTexture(), "skinned-alpha-hole.png"), {1, 1, 1}, "Skinned AnyHit ignored material alpha or vertex synchronization");
-    first.GetMaterial()->color.w = 1;
+    first.SetOpacity(1);
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, receiver, occluder, 0, &motionVectors, &objects);
     RequireColor(ReadTextureCenter(dxCommon, shadows.GetMaskTexture(), "skinned-alpha-opaque.png"), {0, 0, 0}, "Skinned alpha mask failed to restore opaque shadow");
-    firstSkeleton.joints[0].transform.translate.x = 8; firstSkeleton.UpdateSkeleton();
+    { auto transform = firstSkeleton.GetJoints()[0].GetTransform(); transform.translate.x = 8; firstSkeleton.SetJointTransform(0, transform); } firstSkeleton.UpdateSkeleton();
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, receiver, occluder, 0, &motionVectors, &objects);
     Require(scene.GetStatistics().updatedBlasCount == 1 && scene.GetStatistics().builtBlasCount == 0
         && scene.GetStatistics().dynamicBufferBytes == dynamicBufferBytes, "Skinned pose refit rebuilt buffers or updated unchanged pose");
@@ -3001,7 +3014,7 @@ void RunSkinningValidation(DirectXCommon* dxCommon) {
     Require(scene.GetStatistics().updatedBlasCount == 0 && scene.GetShadowSceneRevision() == shadowRevision,
         "Repeated unchanged skinning dispatch invalidated history or refitted BLAS");
     dxCommon->PostDraw(); scene.ReadCompleted(); shadows.ReadCompleted();
-    firstSkeleton.joints[0].transform.translate.x = 0; firstSkeleton.UpdateSkeleton();
+    { auto transform = firstSkeleton.GetJoints()[0].GetTransform(); transform.translate.x = 0; firstSkeleton.SetJointTransform(0, transform); } firstSkeleton.UpdateSkeleton();
     first.SetCastShadow(false);
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, receiver, occluder, 0, &motionVectors, &objects);
     RequireColor(ReadTextureCenter(dxCommon, shadows.GetMaskTexture(), "skinned-cast-off.png"), {1, 1, 1}, "Skinned CastShadow OFF still occluded");
@@ -3033,7 +3046,7 @@ void RunSkinningValidation(DirectXCommon* dxCommon) {
         dxCommon->PostDraw(); scene.ReadCompleted(); shadows.ReadCompleted();
     }
     Require(shadows.HasUsedShadowHistory(), "Stable skinned receiver did not reuse shadow history");
-    firstSkeleton.joints[0].transform.translate.x = 0.01f; firstSkeleton.UpdateSkeleton();
+    { auto transform = firstSkeleton.GetJoints()[0].GetTransform(); transform.translate.x = 0.01f; firstSkeleton.SetJointTransform(0, transform); } firstSkeleton.UpdateSkeleton();
     first.SetCastShadow(true);
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, receiver, occluder, 0, &motionVectors, &objects);
     dxCommon->PostDraw(); scene.ReadCompleted(); shadows.ReadCompleted();

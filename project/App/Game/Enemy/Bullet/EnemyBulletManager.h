@@ -10,7 +10,7 @@ class EnemyBulletManager {
 public:
     void Add(std::unique_ptr<EnemyBullet> bullet)
     {
-        bullets_.push_back(std::move(bullet));
+        if (bullet) { bullets_.push_back(std::move(bullet)); }
     }
 
     void Update(
@@ -45,7 +45,7 @@ public:
         }
     }
 
-    std::vector<std::unique_ptr<EnemyBullet>>& GetBullets()
+    const std::vector<std::unique_ptr<EnemyBullet>>& GetBullets() const
     {
         return bullets_;
     }

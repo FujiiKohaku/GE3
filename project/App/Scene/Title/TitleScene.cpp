@@ -582,7 +582,7 @@ void TitleScene::InitializeStageRoomSets()
         ice->SetColor({ 0.68f, 0.88f, 1.0f, 1.0f });
         const std::string modelPath = std::string(kIceEnvironment) + iceProps[index].model;
         ice->SetMaterial(VisualPresetLibrary::GetInstance().GetMaterial(modelPath));
-        ice->GetMaterial()->shininess = VisualPresetLibrary::GetInstance().GetShininess("ice");
+        ice->SetShininess(VisualPresetLibrary::GetInstance().GetShininess("ice"));
         ice->SetEnableEnvironmentMap(false);
         ice->SetEnvironmentMapStrength(0.0f);
     }

@@ -118,7 +118,7 @@ void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
     bulletModel_ = bulletModel;
     player_ = player;
-    hp_ = kHeadHp;
+    SetHealth(kHeadHp);
     moveSpeed_ = kBaseMoveSpeed;
 
     isMadModeActive_ = false;
@@ -214,7 +214,7 @@ Vector3 FearWormEnemy::GetPosition() const
 void FearWormEnemy::Update()
 {
     // HPが0以下になっており、まだ死亡状態になっていない場合は死亡状態へ移行
-    if (isDead_ && state_ != BossState::Dead) {
+    if (IsDead() && state_ != BossState::Dead) {
         state_ = BossState::Dead;
         OnDeath();
     }
@@ -874,6 +874,7 @@ bool FearWormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
 
 void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
 {
+    if (IsDead() || !std::isfinite(damage) || damage <= 0.0f) { return; }
     if (!IsValidSegmentIndex(partIndex)) {
         return;
     }
@@ -1514,7 +1515,7 @@ void FearWormEnemy::UpdateBeamAttack()
     Vector3 uvTranslation = { 0.0f, beamUVScrollOffset_, 0.0f }; // V方向にスクロール
     Matrix4x4 uvMat = MatrixMath::MakeTranslateMatrix(uvTranslation);
     if (beamPlane_->GetMaterial()) {
-        beamPlane_->GetMaterial()->uvTransform = uvMat;
+        beamPlane_->SetUvTransform(uvMat);
     }
 
     // ビームの自転角度を更新

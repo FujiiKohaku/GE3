@@ -6,7 +6,7 @@ class SceneRenderResolution {
 public:
     static int GetWidth() { return width_; }
     static int GetHeight() { return height_; }
-    static void SetSize(int width, int height) { width_ = width; height_ = height; }
+    static void SetSize(int width, int height) { if (width > 0 && height > 0) { width_ = width; height_ = height; } }
 private:
     inline static int width_ = WinApp::kClientWidth;
     inline static int height_ = WinApp::kClientHeight;

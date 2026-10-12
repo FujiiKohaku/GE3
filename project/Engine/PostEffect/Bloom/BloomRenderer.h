@@ -1,4 +1,6 @@
 #pragma once
+#include "Engine/math/SettingsEdit.h"
+#include "Engine/math/ValueValidation.h"
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include <array>
@@ -28,7 +30,10 @@ public:
 
     bool IsEnabled() const;
     const BloomParameter* GetBloomParameter() const { return parameterData_; }
-    BloomParameter* GetEditableBloomParameter() { return parameterData_; }
+
+    bool SetBloomParameter(const BloomParameter& value);
+    SettingsEdit<BloomParameter> BeginParameterEdit();
+    static bool IsValidParameter(const BloomParameter& value);
 
 private:
     class RenderTarget {

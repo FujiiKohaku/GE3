@@ -8,9 +8,9 @@ void SwarmPulseBullet::Initialize(Model* model)
 {
     transform_.scale = { 0.22f, 0.22f, 0.22f };
     // 波状軌道の途中で時間切れにならないよう余裕を持たせる。
-    maxLifeTime_ = 20.0f;
-    collisionRadius_ = 1.0f;
-    damage_ = 1;
+    SetMaxLifeTime(20.0f);
+    SetCollisionRadius(1.0f);
+    SetDamage(1);
 
     EnemyBullet::Initialize(model);
     SetEnableLighting(false);

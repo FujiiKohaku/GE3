@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 #include <cstdint>
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/Math/MathStruct.h"
@@ -24,13 +25,13 @@ public:
     // ===============================
     // setter（外部から値を設定）
     // ===============================
-    void SetRotate(const Vector3& rotate) { transform_.rotate = rotate; }
-    void SetTranslate(const Vector3& translate) { transform_.translate = translate; }
-    void SetScale(const Vector3& scale) { transform_.scale = scale; }
-    void SetFovY(float fovY) { fovY_ = fovY; }
-    void SetAspectRatio(float aspectRatio) { aspectRatio_ = aspectRatio; }
-    void SetNearClip(float nearClip) { nearClip_ = nearClip; }
-    void SetFarClip(float farClip) { farClip_ = farClip; }
+    void SetRotate(const Vector3& rotate) { if (ValueValidation::IsFinite(rotate)) { transform_.rotate = rotate; } }
+    void SetTranslate(const Vector3& translate) { if (ValueValidation::IsFinite(translate)) { transform_.translate = translate; } }
+    void SetScale(const Vector3& scale) { if (ValueValidation::IsFinite(scale)) { transform_.scale = scale; } }
+    void SetFovY(float fovY) { if (std::isfinite(fovY) && fovY > 0.001f && fovY < 3.14159265f) { fovY_ = fovY; } }
+    void SetAspectRatio(float aspectRatio) { if (std::isfinite(aspectRatio) && aspectRatio > 0.0f) { aspectRatio_ = aspectRatio; } }
+    void SetNearClip(float nearClip) { if (std::isfinite(nearClip) && nearClip > 0.0f && nearClip < farClip_) { nearClip_ = nearClip; } }
+    void SetFarClip(float farClip) { if (std::isfinite(farClip) && farClip > nearClip_) { farClip_ = farClip; } }
     void LookAt(const Vector3& eye, const Vector3& target);
     Vector2 WorldToScreen (const Vector3& worldPosition) const;
     // ===============================
@@ -47,8 +48,6 @@ public:
     const Vector3& GetRotate() const { return transform_.rotate; }
     const Vector3& GetTranslate() const { return transform_.translate; }
     const Vector3& GetScale() const { return transform_.scale; }
-    Vector3& GetTranslate() { return transform_.translate; }
-    Vector3& GetRotate() { return transform_.rotate; }
     // 各種プロジェクション設定値
     float GetFovY() const { return fovY_; }
     float GetAspectRatio() const { return aspectRatio_; }

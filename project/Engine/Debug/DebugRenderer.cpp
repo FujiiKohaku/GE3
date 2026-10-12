@@ -231,8 +231,8 @@ void DebugRenderer::AddSkeleton(
     float thickness)
 {
     // Draw local axes for all joints
-    for (const Joint& joint : skeleton.joints) {
-        Matrix4x4 jointWorldMatrix = MatrixMath::Multiply(joint.skeletonSpaceMatrix, worldMatrix);
+    for (const Joint& joint : skeleton.GetJoints()) {
+        Matrix4x4 jointWorldMatrix = MatrixMath::Multiply(joint.GetSkeletonSpaceMatrix(), worldMatrix);
         Vector3 jointPosition = {
             jointWorldMatrix.m[3][0],
             jointWorldMatrix.m[3][1],
@@ -254,31 +254,31 @@ void DebugRenderer::AddSkeleton(
     }
 
     // Draw connection bones
-    for (const Joint& joint : skeleton.joints) {
-        if (!joint.parent.has_value()) {
+    for (const Joint& joint : skeleton.GetJoints()) {
+        if (!joint.GetParent().has_value()) {
             continue;
         }
 
-        const int32_t parentIndex = joint.parent.value();
+        const int32_t parentIndex = joint.GetParent().value();
         if (parentIndex < 0) {
             continue;
         }
 
         const size_t parentArrayIndex = static_cast<size_t>(parentIndex);
-        if (parentArrayIndex >= skeleton.joints.size()) {
+        if (parentArrayIndex >= skeleton.GetJoints().size()) {
             continue;
         }
 
-        const Joint& parent = skeleton.joints[parentArrayIndex];
+        const Joint& parent = skeleton.GetJoints()[parentArrayIndex];
         Vector3 jointPosition = {
-            joint.skeletonSpaceMatrix.m[3][0],
-            joint.skeletonSpaceMatrix.m[3][1],
-            joint.skeletonSpaceMatrix.m[3][2]
+            joint.GetSkeletonSpaceMatrix().m[3][0],
+            joint.GetSkeletonSpaceMatrix().m[3][1],
+            joint.GetSkeletonSpaceMatrix().m[3][2]
         };
         Vector3 parentPosition = {
-            parent.skeletonSpaceMatrix.m[3][0],
-            parent.skeletonSpaceMatrix.m[3][1],
-            parent.skeletonSpaceMatrix.m[3][2]
+            parent.GetSkeletonSpaceMatrix().m[3][0],
+            parent.GetSkeletonSpaceMatrix().m[3][1],
+            parent.GetSkeletonSpaceMatrix().m[3][2]
         };
 
         jointPosition = MatrixMath::Transform(jointPosition, worldMatrix);

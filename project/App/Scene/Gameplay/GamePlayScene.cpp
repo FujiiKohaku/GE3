@@ -773,7 +773,7 @@ void GamePlayScene::Initialize()
             floorObj_->SetShadingMode(MaterialShadingMode::Ice);
             floorObj_->SetMaterial("resources/Shaders/Object3D/StageIceFloor");
             floorObj_->SetSurfaceProperties(0.18f, 0.0f, 0.65f);
-            floorObj_->GetMaterial()->shininess = 0.0f;
+            floorObj_->SetShininess(0.0f);
             floorObj_->SetEnableEnvironmentMap(false);
             floorObj_->SetEnvironmentMapStrength(0.0f);
             floorObj_->SetReceiveShadow(true);
@@ -3506,9 +3506,7 @@ void GamePlayScene::SpawnSwarmWave(
     }
 
     std::shared_ptr<SwarmGroupState> groupState =
-        std::make_shared<SwarmGroupState>();
-    groupState->totalCount = kSwarmMembersPerWave;
-    groupState->activeCount = kSwarmMembersPerWave;
+        std::make_shared<SwarmGroupState>(kSwarmMembersPerWave);
 
     for (int32_t slotIndex = 0;
          slotIndex < kSwarmMembersPerWave;
@@ -3713,7 +3711,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);
                 levelObject->SetMaterial(VisualPresetLibrary::GetInstance().GetMaterial(objData.fileName));
-                levelObject->GetMaterial()->shininess = VisualPresetLibrary::GetInstance().GetShininess("ice");
+                levelObject->SetShininess(VisualPresetLibrary::GetInstance().GetShininess("ice"));
                 levelObject->SetEnableEnvironmentMap(false);
                 levelObject->SetEnvironmentMapStrength(0.0f);
                 levelObject->SetCastShadow(true);

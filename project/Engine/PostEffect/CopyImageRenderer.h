@@ -1,4 +1,6 @@
 #pragma once
+#include "Engine/math/SettingsEdit.h"
+#include "Engine/math/ValueValidation.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/math/EngineStruct.h"
 #include "PostEffectType.h"
@@ -109,7 +111,11 @@ public:
     void SetExposureTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { exposureTextureHandle_ = handle; }
     void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { indirectTextureHandle_ = handle; }
     void SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
-    PostEffectParameter& GetPostEffectParameter();
+    const PostEffectParameter& GetPostEffectParameter() const;
+
+    bool SetPostEffectParameter(const PostEffectParameter& value);
+    SettingsEdit<PostEffectParameter> BeginParameterEdit();
+    static bool IsValidParameter(const PostEffectParameter& value);
 
 private:
     void CreateRootSignature();

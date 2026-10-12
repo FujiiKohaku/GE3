@@ -28,20 +28,22 @@ void PlayAnimation::ApplyAnimation(
     const Animation& animation,
     float animationTime)
 {
-    for (Joint& joint : skeleton.joints) {
+    for (const Joint& joint : skeleton.GetJoints()) {
+        auto transform = joint.GetTransform();
 
-        auto it = animation.nodeAnimations.find(joint.name);
+        auto it = animation.nodeAnimations.find(joint.GetName());
         if (it == animation.nodeAnimations.end()) {
             continue;
         }
 
         const NodeAnimation& nodeAnim = it->second;
 
-        joint.transform.translate = CalculateValue(nodeAnim.translate, animationTime);
+        transform.translate = CalculateValue(nodeAnim.translate, animationTime);
 
-        joint.transform.rotate = CalculateValue(nodeAnim.rotation, animationTime);
+        transform.rotate = CalculateValue(nodeAnim.rotation, animationTime);
 
-        joint.transform.scale = CalculateValue(nodeAnim.scale, animationTime);
+        transform.scale = CalculateValue(nodeAnim.scale, animationTime);
+        skeleton.SetJointTransform(joint.GetIndex(), transform);
     }
 }
 
@@ -242,17 +244,18 @@ void PlayAnimation::ApplyBlendAnimation(
     float nextTime,
     float blendRatio)
 {
-    for (Joint& joint : skeleton.joints) {
-        auto itPrev = prevAnimation.nodeAnimations.find(joint.name);
-        auto itNext = nextAnimation.nodeAnimations.find(joint.name);
+    for (const Joint& joint : skeleton.GetJoints()) {
+        auto transform = joint.GetTransform();
+        auto itPrev = prevAnimation.nodeAnimations.find(joint.GetName());
+        auto itNext = nextAnimation.nodeAnimations.find(joint.GetName());
 
-        Vector3 tPrev = joint.transform.translate;
-        Quaternion rPrev = joint.transform.rotate;
-        Vector3 sPrev = joint.transform.scale;
+        Vector3 tPrev = transform.translate;
+        Quaternion rPrev = transform.rotate;
+        Vector3 sPrev = transform.scale;
 
-        Vector3 tNext = joint.transform.translate;
-        Quaternion rNext = joint.transform.rotate;
-        Vector3 sNext = joint.transform.scale;
+        Vector3 tNext = transform.translate;
+        Quaternion rNext = transform.rotate;
+        Vector3 sNext = transform.scale;
 
         bool hasPrev = (itPrev != prevAnimation.nodeAnimations.end());
         bool hasNext = (itNext != nextAnimation.nodeAnimations.end());
@@ -269,9 +272,10 @@ void PlayAnimation::ApplyBlendAnimation(
         }
 
         if (hasPrev || hasNext) {
-            joint.transform.translate = Lerp(tPrev, tNext, blendRatio);
-            joint.transform.rotate = Slerp(rPrev, rNext, blendRatio);
-            joint.transform.scale = Lerp(sPrev, sNext, blendRatio);
+            transform.translate = Lerp(tPrev, tNext, blendRatio);
+            transform.rotate = Slerp(rPrev, rNext, blendRatio);
+            transform.scale = Lerp(sPrev, sNext, blendRatio);
+            skeleton.SetJointTransform(joint.GetIndex(), transform);
         }
     }
 }

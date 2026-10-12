@@ -1,11 +1,12 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 #include "Engine/CollisionManager/CollisionLayer.h"
 #include "Engine/math/EngineStruct.h"
 
 class BoxCollider {
 public:
     void SetCenter(const Vector3& center) { center_ = center; }
-    void SetSize(const Vector3& size) { size_ = size; }
+    void SetSize(const Vector3& size) { if (ValueValidation::IsFinite(size) && size.x >= 0.0f && size.y >= 0.0f && size.z >= 0.0f) { size_ = size; } }
     void SetRotation(const Vector3& rotation) { rotation_ = rotation; }
     void SetLayer(CollisionLayer category, CollisionLayer mask)
     {

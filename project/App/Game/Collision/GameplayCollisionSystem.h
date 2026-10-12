@@ -46,7 +46,7 @@ public:
         Player& player,
         std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss,
-        std::vector<std::unique_ptr<EnemyBullet>>& independentBullets);
+        const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets);
 
     GameplayCollisionEvents UpdateTriggers(
         Player& player,

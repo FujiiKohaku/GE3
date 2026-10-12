@@ -15,7 +15,7 @@ public:
     void Reset();
     void GetPositions(std::vector<Vector3>& positions) const;
     const std::vector<BaseEnemy*>& GetLockedTargets() const { return lockedTargets_; }
-    const std::shared_ptr<std::vector<BaseEnemy*>>& GetTargets() const { return targets_; }
+    std::shared_ptr<const std::vector<BaseEnemy*>> GetTargets() const { return targets_; }
 
 private:
     void UpdateTargets(bool isLocking, Camera* camera, const Vector3& position,

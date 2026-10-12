@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Game/Enemy/BaseEnemy.h"
+#include <cmath>
 
 class Player;
 class Model;
@@ -25,16 +26,16 @@ public:
 
     // ゲッター・セッター（ImGuiや外部調整用）
     MovePattern GetMovePattern() const { return movePattern_; }
-    void SetMovePattern(MovePattern pattern) { movePattern_ = pattern; }
+    void SetMovePattern(MovePattern pattern) { if (pattern >= MovePattern::LeftRight && pattern <= MovePattern::SineWave) { movePattern_ = pattern; } }
 
     float GetMoveSpeed() const { return moveSpeed_; }
-    void SetMoveSpeed(float speed) { moveSpeed_ = speed; }
+    void SetMoveSpeed(float speed) { if (std::isfinite(speed) && speed >= 0.0f) { moveSpeed_ = speed; } }
 
     float GetAmplitude() const { return amplitude_; }
-    void SetAmplitude(float amplitude) { amplitude_ = amplitude; }
+    void SetAmplitude(float amplitude) { if (std::isfinite(amplitude) && amplitude >= 0.0f) { amplitude_ = amplitude; } }
 
     float GetFrequency() const { return frequency_; }
-    void SetFrequency(float frequency) { frequency_ = frequency; }
+    void SetFrequency(float frequency) { if (std::isfinite(frequency) && frequency >= 0.0f) { frequency_ = frequency; } }
     void ResetPosition() { moveTime_ = 0.0f; transform_.translate = startPosition_; }
 
 private:

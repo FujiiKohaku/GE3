@@ -3,6 +3,7 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 #include <cstdint>
 #include <memory>
+#include <algorithm>
 
 class Model;
 class Player;
@@ -16,11 +17,25 @@ enum class SwarmFormationType {
     Arrow,
 };
 
-struct SwarmGroupState {
-    int32_t totalCount = 0;
-    int32_t activeCount = 0;
-    int32_t defeatedCount = 0;
-    int32_t escapedCount = 0;
+class SwarmGroupState {
+public:
+    explicit SwarmGroupState(int32_t totalCount = 0)
+        : totalCount_((std::max)(0, totalCount)), activeCount_(totalCount_) {}
+    void RecordRemoval(bool escaped)
+    {
+        if (activeCount_ <= 0) { return; }
+        --activeCount_;
+        if (escaped) { ++escapedCount_; } else { ++defeatedCount_; }
+    }
+    int32_t GetTotalCount() const { return totalCount_; }
+    int32_t GetActiveCount() const { return activeCount_; }
+    int32_t GetDefeatedCount() const { return defeatedCount_; }
+    int32_t GetEscapedCount() const { return escapedCount_; }
+private:
+    int32_t totalCount_ = 0;
+    int32_t activeCount_ = 0;
+    int32_t defeatedCount_ = 0;
+    int32_t escapedCount_ = 0;
 };
 
 class SwarmEnemy : public BaseEnemy {

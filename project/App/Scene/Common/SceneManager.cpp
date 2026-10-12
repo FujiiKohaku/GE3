@@ -229,6 +229,7 @@ const Vector2& SceneManager::GetPostEffectCenter() const
 
 void SceneManager::SetCameraShakeStrength(float strength)
 {
+    if (!std::isfinite(strength)) { return; }
     cameraShakeStrength_ = strength;
     if (cameraShakeStrength_ < 0.0f) {
         cameraShakeStrength_ = 0.0f;

@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 #include "Engine/MotionVector/MotionVectorRenderer.h"
 #include "../3D/SkinCluster.h"
 #include "../Animation/PlayAnimation.h"
@@ -81,10 +82,28 @@ public:
     }
 
     // DirectionalLight* GetLight() { return directionalLightData; }
-    Material* GetMaterial() { return materialData_; }
-    SkinCluster::SkinClusterData& GetSkinCluster()
-    {
-        return skinClusterData_;
+    bool SetRoughness(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 1.0f) return false; materialData_->roughness = value; return true; }
+    bool SetMetallic(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 1.0f) return false; materialData_->metallic = value; return true; }
+    bool SetSpecularStrength(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 2.0f) return false; materialData_->specularStrength = value; return true; }
+    bool SetOpacity(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 1) return false; materialData_->color.w = value; return true; }
+    bool SetUvTransformElement(uint32_t row, uint32_t column, float value) { if (!materialData_ || row >= 4 || column >= 4 || !std::isfinite(value)) return false; materialData_->uvTransform.m[row][column] = value; return true; }
+    const Material* GetMaterial() const { return materialData_; }
+    bool SetShininess(float value) { if (!materialData_ || !std::isfinite(value) || value < 0.0f) return false; materialData_->shininess = value; return true; }
+    bool SetUvTransform(const Matrix4x4& value) { if (!materialData_ || !ValueValidation::IsFinite(value)) return false; materialData_->uvTransform = value; return true; }
+    size_t GetSkinVertexCount() const { return skinClusterData_.mappedInfluence.size(); }
+    bool SetVertexInfluence(size_t vertex, const SkinCluster::VertexInfluence& influence) {
+        if (vertex >= GetSkinVertexCount()) return false;
+        float total = 0.0f;
+        for (size_t i = 0; i < influence.weights.size(); ++i) {
+            if (!std::isfinite(influence.weights[i]) || influence.weights[i] < 0 || influence.weights[i] > 1) return false;
+            if (influence.weights[i] > 0 && (influence.jointIndices[i] < 0 ||
+                static_cast<size_t>(influence.jointIndices[i]) >= skinClusterData_.inverseBindPoseMatrices.size())) return false;
+            total += influence.weights[i];
+        }
+        if (total > 1.0001f) return false;
+        skinClusterData_.mappedInfluence[vertex] = influence;
+        ResetMotionHistory();
+        return true;
     }
     void SetAnimation(PlayAnimation* animation)
     {
@@ -133,7 +152,7 @@ public:
     void SetEnvironmentMapStrength(float strength)
     {
         if (materialData_) {
-            materialData_->environmentCoefficient = strength;
+            if (std::isfinite(strength) && strength >= 0.0f) { materialData_->environmentCoefficient = strength; }
         }
     }
 

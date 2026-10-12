@@ -1,35 +1,54 @@
-﻿#pragma once
+#pragma once
 
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/SpriteManager.h"
 #include <algorithm>
 #include <memory>
+#include <cmath>
 
 namespace PageTransition {
-inline bool pendingReveal = false;
-inline Vector4 pendingRevealColor = { 1.0f, 0.91f, 0.68f, 1.0f };
-inline float pendingRevealDuration = 0.40f;
+class RevealRequest {
+public:
+    static RevealRequest& GetInstance() { static RevealRequest request; return request; }
+    void Request(const Vector4& color, float duration)
+    {
+        if (!std::isfinite(duration) || !std::isfinite(color.x) ||
+            !std::isfinite(color.y) || !std::isfinite(color.z) || !std::isfinite(color.w)) { return; }
+        pending_ = true;
+        color_ = color;
+        duration_ = (std::max)(duration, 0.01f);
+    }
+    bool Consume(Vector4& color, float& duration)
+    {
+        if (!pending_) { return false; }
+        pending_ = false;
+        color = color_;
+        duration = duration_;
+        return true;
+    }
+private:
+    RevealRequest() = default;
+    RevealRequest(const RevealRequest&) = delete;
+    RevealRequest& operator=(const RevealRequest&) = delete;
+    bool pending_ = false;
+    Vector4 color_ = { 1.0f, 0.91f, 0.68f, 1.0f };
+    float duration_ = 0.40f;
+};
 
 inline void RequestReveal(
-    const Vector4& color = { 1.0f, 0.91f, 0.68f, 1.0f },
-    float duration = 0.40f)
+    const Vector4& color = { 1.0f, 0.91f, 0.68f, 1.0f }, float duration = 0.40f)
 {
-    pendingReveal = true;
-    pendingRevealColor = color;
-    pendingRevealDuration = (std::max)(duration, 0.01f);
+    RevealRequest::GetInstance().Request(color, duration);
 }
 
 class RevealOverlay {
 public:
     void InitializeIfRequested()
     {
-        if (!pendingReveal) {
+        if (!RevealRequest::GetInstance().Consume(color_, duration_)) {
             return;
         }
-        pendingReveal = false;
         elapsedTime_ = 0.0f;
-        color_ = pendingRevealColor;
-        duration_ = pendingRevealDuration;
         sprite_ = std::make_unique<Sprite>();
         sprite_->Initialize(
             SpriteManager::GetInstance(),

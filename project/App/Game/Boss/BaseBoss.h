@@ -38,9 +38,9 @@ public:
     void SetScale(const Vector3& scale) { scale_ = scale; }
 
     // 各部位のコライダーリストの取得インターフェース
-    virtual std::vector<BossCollider>& GetColliders() = 0;
+    virtual const std::vector<BossCollider>& GetColliders() const = 0;
 
-protected:
+private:
     Vector3 position_ = { 0.0f, 0.0f, 0.0f };
     Vector3 rotate_ = { 0.0f, 0.0f, 0.0f };
     Vector3 scale_ = { 1.0f, 1.0f, 1.0f };

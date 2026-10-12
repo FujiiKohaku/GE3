@@ -29,7 +29,9 @@ public:
     // メンバ変数
     // ===============================
     // Objファイルから読み込んだモデルデータ
+private:
     ModelData modelData_;
+public:
 
     // getter
     const ModelData& GetModelData() const { return modelData_; }

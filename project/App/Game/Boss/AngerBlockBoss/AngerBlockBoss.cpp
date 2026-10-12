@@ -53,7 +53,7 @@ void AngerBlockBoss::Initialize(Model* model, Model* bulletModel, Player* player
     core_ = CreatePart(model, { 4.5f, 3.0f, 1.5f }, { 1.0f, 0.08f, 0.02f, 1.0f });
     leftHand_ = CreatePart(model, { 7.0f, 7.0f, 7.0f }, { 0.22f, 0.13f, 0.10f, 1.0f });
     rightHand_ = CreatePart(model, { 7.0f, 7.0f, 7.0f }, { 0.22f, 0.13f, 0.10f, 1.0f });
-    hp_ = coreHp_;
+    SetHealth(coreHp_);
     UpdatePartTransforms();
 }
 
@@ -67,7 +67,7 @@ void AngerBlockBoss::SetPosition(const Vector3& position)
 void AngerBlockBoss::Update()
 {
     const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
-    if (isDead_) {
+    if (IsDead()) {
         deathTimer_ += deltaTime;
         bodyPosition_.y -= 8.0f * deltaTime;
         bodyPosition_.z += 4.0f * deltaTime;
@@ -384,11 +384,12 @@ bool AngerBlockBoss::IsCollisionPartDamageable(int32_t partIndex) const
 
 void AngerBlockBoss::ApplyDamageToPart(int32_t partIndex, float damage)
 {
+    if (IsDead() || !std::isfinite(damage) || damage <= 0.0f) { return; }
     if (partIndex == 1) leftHandHp_ = (std::max)(0.0f, leftHandHp_ - damage);
     if (partIndex == 2) rightHandHp_ = (std::max)(0.0f, rightHandHp_ - damage);
     if (partIndex == 0 && IsCollisionPartDamageable(0)) {
         coreHp_ = (std::max)(0.0f, coreHp_ - damage);
-        hp_ = coreHp_;
+        SetHealth(coreHp_);
         if (coreHp_ <= 0.0f) SetDead(true);
     }
 }

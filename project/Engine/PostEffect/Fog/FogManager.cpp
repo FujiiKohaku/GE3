@@ -1,3 +1,4 @@
+#include <cstring>
 #include "Engine/PostEffect/Fog/FogManager.h"
 
 #include "Engine/Winapp/WinApp.h"
@@ -126,6 +127,8 @@ void FogManager::SetCameraInfo(float nearClip, float farClip, float fovY, float 
         aspectRatio = 0.001f;
     }
 
+    if (!std::isfinite(nearClip) || !std::isfinite(farClip) || !std::isfinite(fovY) ||
+        !std::isfinite(aspectRatio) || fovY >= 3.14159265f) return;
     fogData_->nearClip = nearClip;
     fogData_->farClip = farClip;
     fogData_->fovY = fovY;
@@ -199,4 +202,88 @@ void FogManager::SetDefaultData()
     fogData_->volumetricEnabled = 0;
     fogData_->time = 0.0f;
     fogData_->padding = 0.0f;
+}
+
+
+bool FogManager::IsValidParameter(const FogData& value)
+{
+    return (ValueValidation::IsFinite(value.color)) &&
+        (ValueValidation::IsFinite(value.nearClip)) &&
+        (ValueValidation::IsFinite(value.farClip)) &&
+        (ValueValidation::IsFinite(value.fovY)) &&
+        (ValueValidation::IsFinite(value.aspectRatio)) &&
+        (ValueValidation::IsFinite(value.time)) &&
+        (ValueValidation::IsFinite(value.padding)) &&
+        (std::isfinite(value.distance.start)) &&
+        (std::isfinite(value.distance.end)) &&
+        (std::isfinite(value.distance.density)) &&
+        (std::isfinite(value.distance.curve)) &&
+        (std::isfinite(value.height.startHeight)) &&
+        (std::isfinite(value.height.endHeight)) &&
+        (std::isfinite(value.height.density)) &&
+        (std::isfinite(value.exponential.density)) &&
+        (std::isfinite(value.exponential.falloff)) &&
+        (std::isfinite(value.noise.scale)) &&
+        (std::isfinite(value.noise.speed)) &&
+        (std::isfinite(value.noise.strength)) &&
+        (std::isfinite(value.volumetric.scattering)) &&
+        (std::isfinite(value.volumetric.stepLength)) &&
+        (std::isfinite(value.volumetric.maxDistance)) &&
+        (value.distance.start >= 0) &&
+        (value.distance.end > value.distance.start) &&
+        (value.distance.density >= 0) &&
+        (value.distance.density <= 1) &&
+        (value.distance.curve > 0) &&
+        (value.height.density >= 0) &&
+        (value.exponential.density >= 0) &&
+        (value.exponential.falloff >= 0) &&
+        (value.noise.scale > 0) &&
+        (value.noise.strength >= 0) &&
+        (value.volumetric.scattering >= 0) &&
+        (value.volumetric.stepLength > 0) &&
+        (value.volumetric.maxDistance > 0) &&
+        (value.nearClip > 0) &&
+        (value.farClip > value.nearClip) &&
+        (value.fovY > 0) &&
+        (value.fovY < 3.14159265f) &&
+        (value.aspectRatio > 0) &&
+        (value.isEnabled == 0 || value.isEnabled == 1) &&
+        (value.distanceEnabled == 0 || value.distanceEnabled == 1) &&
+        (value.heightEnabled == 0 || value.heightEnabled == 1) &&
+        (value.exponentialEnabled == 0 || value.exponentialEnabled == 1) &&
+        (value.noiseEnabled == 0 || value.noiseEnabled == 1) &&
+        (value.volumetricEnabled == 0 || value.volumetricEnabled == 1);
+}
+bool FogManager::SetFogData(const FogData& value)
+{
+    if (!fogData_ || !IsValidParameter(value)) return false;
+    *fogData_ = value;
+    return true;
+}
+SettingsEdit<FogData> FogManager::BeginFogEdit()
+{
+    const FogData snapshot = fogData_ ? *fogData_ : FogData{};
+    return SettingsEdit<FogData>(snapshot, [this](const FogData& original, const FogData& edited) {
+        if (!fogData_) return false;
+        auto value = *fogData_;
+        if (std::memcmp(&original.color, &edited.color, sizeof(value.color)) != 0) value.color = edited.color;
+        if (std::memcmp(&original.distance, &edited.distance, sizeof(value.distance)) != 0) value.distance = edited.distance;
+        if (std::memcmp(&original.height, &edited.height, sizeof(value.height)) != 0) value.height = edited.height;
+        if (std::memcmp(&original.exponential, &edited.exponential, sizeof(value.exponential)) != 0) value.exponential = edited.exponential;
+        if (std::memcmp(&original.noise, &edited.noise, sizeof(value.noise)) != 0) value.noise = edited.noise;
+        if (std::memcmp(&original.volumetric, &edited.volumetric, sizeof(value.volumetric)) != 0) value.volumetric = edited.volumetric;
+        if (std::memcmp(&original.nearClip, &edited.nearClip, sizeof(value.nearClip)) != 0) value.nearClip = edited.nearClip;
+        if (std::memcmp(&original.farClip, &edited.farClip, sizeof(value.farClip)) != 0) value.farClip = edited.farClip;
+        if (std::memcmp(&original.fovY, &edited.fovY, sizeof(value.fovY)) != 0) value.fovY = edited.fovY;
+        if (std::memcmp(&original.aspectRatio, &edited.aspectRatio, sizeof(value.aspectRatio)) != 0) value.aspectRatio = edited.aspectRatio;
+        if (std::memcmp(&original.isEnabled, &edited.isEnabled, sizeof(value.isEnabled)) != 0) value.isEnabled = edited.isEnabled;
+        if (std::memcmp(&original.distanceEnabled, &edited.distanceEnabled, sizeof(value.distanceEnabled)) != 0) value.distanceEnabled = edited.distanceEnabled;
+        if (std::memcmp(&original.heightEnabled, &edited.heightEnabled, sizeof(value.heightEnabled)) != 0) value.heightEnabled = edited.heightEnabled;
+        if (std::memcmp(&original.exponentialEnabled, &edited.exponentialEnabled, sizeof(value.exponentialEnabled)) != 0) value.exponentialEnabled = edited.exponentialEnabled;
+        if (std::memcmp(&original.noiseEnabled, &edited.noiseEnabled, sizeof(value.noiseEnabled)) != 0) value.noiseEnabled = edited.noiseEnabled;
+        if (std::memcmp(&original.volumetricEnabled, &edited.volumetricEnabled, sizeof(value.volumetricEnabled)) != 0) value.volumetricEnabled = edited.volumetricEnabled;
+        if (std::memcmp(&original.time, &edited.time, sizeof(value.time)) != 0) value.time = edited.time;
+        if (std::memcmp(&original.padding, &edited.padding, sizeof(value.padding)) != 0) value.padding = edited.padding;
+        return SetFogData(value);
+    });
 }

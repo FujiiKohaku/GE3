@@ -25,7 +25,8 @@ public:
     void SetSkeletonDebugVisible(bool visible);
 
     SkinningObject3d* GetObject();
-    Skeleton* GetSkeleton();
+    const Skeleton* GetSkeleton() const;
+    bool ApplySkeletonPose(const Skeleton& pose) { return skeleton_.ApplyPose(pose); }
     PlayAnimation* GetPlayAnimation();
 
 private:

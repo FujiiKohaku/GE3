@@ -153,7 +153,7 @@ void ModelPreviewApp::ApplyMaterial(PreviewItem& item)
     item.object->SetTransparent(item.transparent);
     item.object->SetEnableEnvironmentMap(item.environment);
     item.object->SetEnvironmentMapStrength(item.reflection);
-    item.object->GetMaterial()->shininess = item.shininess;
+    item.object->SetShininess(item.shininess);
 }
 
 void ModelPreviewApp::Load(const std::filesystem::path& path, bool append)

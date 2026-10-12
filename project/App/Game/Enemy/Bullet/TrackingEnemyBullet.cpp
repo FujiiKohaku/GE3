@@ -19,16 +19,16 @@ void TrackingEnemyBullet::Initialize(Model* model)
 {
     transform_.scale = { 0.45f, 0.45f, 0.45f }; // ミサイルらしく少し目立たせる
     // 追尾終了後もプレイヤー後方へ抜けるまでは飛び続ける。
-    maxLifeTime_ = 20.0f;
-    collisionRadius_ = 1.8f;
-    damage_ = 2;                                // 追尾ミサイルなので通常弾より少し高ダメージ
+    SetMaxLifeTime(20.0f);
+    SetCollisionRadius(1.8f);
+    SetDamage(2);                                // 追尾ミサイルなので通常弾より少し高ダメージ
 
     EnemyBullet::Initialize(model);
 }
 
 void TrackingEnemyBullet::Update()
 {
-    if (!isAlive_) {
+    if (!IsAlive()) {
         return;
     }
 

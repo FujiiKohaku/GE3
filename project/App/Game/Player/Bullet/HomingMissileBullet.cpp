@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-void HomingMissileBullet::SetTarget(BaseEnemy* target, const std::shared_ptr<std::vector<BaseEnemy*>>& activeTargets)
+void HomingMissileBullet::SetTarget(BaseEnemy* target, const std::shared_ptr<const std::vector<BaseEnemy*>>& activeTargets)
 {
     target_ = target;
     activeTargets_ = activeTargets;
@@ -13,7 +13,7 @@ void HomingMissileBullet::SetTarget(BaseEnemy* target, const std::shared_ptr<std
 
 void HomingMissileBullet::Move()
 {
-    const std::shared_ptr<std::vector<BaseEnemy*>> activeTargets = activeTargets_.lock();
+    const std::shared_ptr<const std::vector<BaseEnemy*>> activeTargets = activeTargets_.lock();
     const bool targetIsActive = activeTargets != nullptr &&
         std::find(activeTargets->begin(), activeTargets->end(), target_) != activeTargets->end();
 

@@ -61,10 +61,16 @@ protected:
 
     EulerTransform transform_;
 
+    void SetHealth(float hp);
+    float GetHealth() const { return hp_; }
+    void InitializeHealth(float hp);
+
+private:
     bool isDead_ = false;
 
     float hp_ = 1.0f;
 
+protected:
     float moveSpeed_ = 0.1f;
 
     static EnemyBulletManager* bulletManager_;

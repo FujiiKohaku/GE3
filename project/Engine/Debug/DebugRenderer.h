@@ -8,7 +8,7 @@
 #include <wrl.h>
 
 class DirectXCommon;
-struct Skeleton;
+class Skeleton;
 
 // DebugLine は、CPU側で「どこからどこまで線を描きたいか」を覚えておくためのデータです。
 // AddLine() が呼ばれるたびに、この構造体を lines_ に追加します。

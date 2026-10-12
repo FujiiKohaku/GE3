@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 
 #include "FontManager.h"
 #include "TextStruct.h"
@@ -38,7 +39,7 @@ public:
     void SetLineSpacing(float lineSpacing);
     void SetHorizontalAlignment(TextHorizontalAlignment alignment);
     void SetOutlineColor(const Vector4& color) { outlineColor_ = color; }
-    void SetOutlineWidth(float width) { outlineWidth_ = width; }
+    void SetOutlineWidth(float width) { if (std::isfinite(width) && width >= 0.0f) { outlineWidth_ = width; } }
     void SetShadowColor(const Vector4& color) { shadowColor_ = color; }
     void SetShadowOffset(const Vector2& offset) { shadowOffset_ = offset; }
 

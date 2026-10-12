@@ -1,3 +1,4 @@
+#include <cstring>
 #include "Engine/PostEffect/Bloom/BloomRenderer.h"
 
 #include "Engine/SrvManager/SrvManager.h"
@@ -508,4 +509,49 @@ void BloomRenderer::RenderTarget::Transition(D3D12_RESOURCE_STATES nextState)
 
     dxCommon_->GetCommandList()->ResourceBarrier(1, &barrier);
     currentState_ = nextState;
+}
+
+
+bool BloomRenderer::IsValidParameter(const BloomParameter& value)
+{
+    return (ValueValidation::IsFinite(value.threshold)) &&
+        (ValueValidation::IsFinite(value.blurSigma)) &&
+        (ValueValidation::IsFinite(value.intensity)) &&
+        (ValueValidation::IsFinite(value.softKnee)) &&
+        (ValueValidation::IsFinite(value.maxRadiance)) &&
+        (value.threshold >= 0) &&
+        (value.blurRadius >= 0) &&
+        (value.blurRadius <= 32) &&
+        (value.blurSigma >= 0.01f) &&
+        (value.intensity >= 0) &&
+        (value.softKnee >= 0) &&
+        (value.softKnee <= 1) &&
+        (value.maxRadiance >= 0) &&
+        (value.maxRadiance <= 65504) &&
+        (value.blurDirection >= 0) &&
+        (value.blurDirection <= 1) &&
+        (value.isEnabled == 0 || value.isEnabled == 1);
+}
+bool BloomRenderer::SetBloomParameter(const BloomParameter& value)
+{
+    if (!parameterData_ || !IsValidParameter(value)) return false;
+    *parameterData_ = value;
+    return true;
+}
+SettingsEdit<BloomRenderer::BloomParameter> BloomRenderer::BeginParameterEdit()
+{
+    const BloomParameter snapshot = parameterData_ ? *parameterData_ : BloomParameter{};
+    return SettingsEdit<BloomParameter>(snapshot, [this](const BloomParameter& original, const BloomParameter& edited) {
+        if (!parameterData_) return false;
+        auto value = *parameterData_;
+        if (std::memcmp(&original.isEnabled, &edited.isEnabled, sizeof(value.isEnabled)) != 0) value.isEnabled = edited.isEnabled;
+        if (std::memcmp(&original.threshold, &edited.threshold, sizeof(value.threshold)) != 0) value.threshold = edited.threshold;
+        if (std::memcmp(&original.blurRadius, &edited.blurRadius, sizeof(value.blurRadius)) != 0) value.blurRadius = edited.blurRadius;
+        if (std::memcmp(&original.blurSigma, &edited.blurSigma, sizeof(value.blurSigma)) != 0) value.blurSigma = edited.blurSigma;
+        if (std::memcmp(&original.intensity, &edited.intensity, sizeof(value.intensity)) != 0) value.intensity = edited.intensity;
+        if (std::memcmp(&original.blurDirection, &edited.blurDirection, sizeof(value.blurDirection)) != 0) value.blurDirection = edited.blurDirection;
+        if (std::memcmp(&original.softKnee, &edited.softKnee, sizeof(value.softKnee)) != 0) value.softKnee = edited.softKnee;
+        if (std::memcmp(&original.maxRadiance, &edited.maxRadiance, sizeof(value.maxRadiance)) != 0) value.maxRadiance = edited.maxRadiance;
+        return SetBloomParameter(value);
+    });
 }

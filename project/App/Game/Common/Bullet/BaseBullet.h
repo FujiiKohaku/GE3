@@ -4,6 +4,7 @@
 
 #include "Engine/math/MathStruct.h"
 #include <memory>
+#include <cmath>
 class BaseBullet {
 
 public:
@@ -46,15 +47,15 @@ public:
     void SetColor(const Vector4& color);
     void SetDamage(int damage)
     {
-        damage_ = damage;
+        if (damage >= 0) { damage_ = damage; }
     }
     void SetCollisionRadius(float collisionRadius)
     {
-        collisionRadius_ = collisionRadius;
+        if (std::isfinite(collisionRadius) && collisionRadius >= 0.0f) { collisionRadius_ = collisionRadius; }
     }
     void SetMaxLifeTime(float maxLifeTime)
     {
-        maxLifeTime_ = maxLifeTime;
+        if (std::isfinite(maxLifeTime) && maxLifeTime > 0.0f) { maxLifeTime_ = maxLifeTime; }
     }
     void SetCamera(Camera* camera);
     void SetEnableLighting(bool enable);
@@ -74,6 +75,7 @@ protected:
     // 移動処理
     virtual void Move();
     virtual float GetTimeScale() const { return 1.0f; }
+private:
     bool isAlive_ = true;
     float lifeTime_ = 0.0f;
     float maxLifeTime_ = 5.0f; // 最大寿命時間（秒）

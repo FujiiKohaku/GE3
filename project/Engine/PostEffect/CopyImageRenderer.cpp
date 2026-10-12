@@ -1,3 +1,4 @@
+#include <cstring>
 #include "CopyImageRenderer.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/TextureManager/TextureManager.h"
@@ -456,11 +457,241 @@ void CopyImageRenderer::CreatePostEffectParameterResource()
     postEffectParameterData_->waterEffectIntensity = 0.0f;
     postEffectParameterData_->paddingWaterEffect = {};
 }
-CopyImageRenderer::PostEffectParameter&CopyImageRenderer::GetPostEffectParameter()
+const CopyImageRenderer::PostEffectParameter& CopyImageRenderer::GetPostEffectParameter() const
 {
     return *postEffectParameterData_;
 }
 void CopyImageRenderer::SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle)
 {
     maskTextureHandle_ = handle;
+}
+
+
+bool CopyImageRenderer::IsValidParameter(const PostEffectParameter& value)
+{
+    return (ValueValidation::IsFinite(value.grayScaleStrength)) &&
+        (ValueValidation::IsFinite(value.vignetteStrength)) &&
+        (ValueValidation::IsFinite(value.outlineScale)) &&
+        (ValueValidation::IsFinite(value.time)) &&
+        (ValueValidation::IsFinite(value.radialBlurCenter)) &&
+        (ValueValidation::IsFinite(value.radialBlurWidth)) &&
+        (ValueValidation::IsFinite(value.dissolveThreshold)) &&
+        (ValueValidation::IsFinite(value.dissolveEdgeWidth)) &&
+        (ValueValidation::IsFinite(value.dissolveEdgeStrength)) &&
+        (ValueValidation::IsFinite(value.dissolvePadding)) &&
+        (ValueValidation::IsFinite(value.radialBlurImpulseStrength)) &&
+        (ValueValidation::IsFinite(value.pixelSize)) &&
+        (ValueValidation::IsFinite(value.colorBrightness)) &&
+        (ValueValidation::IsFinite(value.colorContrast)) &&
+        (ValueValidation::IsFinite(value.colorSaturation)) &&
+        (ValueValidation::IsFinite(value.customParameter0)) &&
+        (ValueValidation::IsFinite(value.customParameter1)) &&
+        (ValueValidation::IsFinite(value.customParameter2)) &&
+        (ValueValidation::IsFinite(value.focusDepth)) &&
+        (ValueValidation::IsFinite(value.focusRange)) &&
+        (ValueValidation::IsFinite(value.depthOfFieldRadius)) &&
+        (ValueValidation::IsFinite(value.motionBlurStrength)) &&
+        (ValueValidation::IsFinite(value.motionBlurDirection)) &&
+        (ValueValidation::IsFinite(value.chromaticAberrationStrength)) &&
+        (ValueValidation::IsFinite(value.lensDistortionStrength)) &&
+        (ValueValidation::IsFinite(value.filmGrainStrength)) &&
+        (ValueValidation::IsFinite(value.lensDirtStrength)) &&
+        (ValueValidation::IsFinite(value.cameraShakeStrength)) &&
+        (ValueValidation::IsFinite(value.bokehRadius)) &&
+        (ValueValidation::IsFinite(value.fisheyeStrength)) &&
+        (ValueValidation::IsFinite(value.lightThreshold)) &&
+        (ValueValidation::IsFinite(value.lightStrength)) &&
+        (ValueValidation::IsFinite(value.lightRadius)) &&
+        (ValueValidation::IsFinite(value.lightAngle)) &&
+        (ValueValidation::IsFinite(value.paintProgress)) &&
+        (ValueValidation::IsFinite(value.paintIntensity)) &&
+        (ValueValidation::IsFinite(value.paintSeed)) &&
+        (ValueValidation::IsFinite(value.paintColor)) &&
+        (ValueValidation::IsFinite(value.sonicBoomProgress)) &&
+        (ValueValidation::IsFinite(value.sonicBoomCenter)) &&
+        (ValueValidation::IsFinite(value.boostSparkIntensity)) &&
+        (ValueValidation::IsFinite(value.boostSparkElapsedSeconds)) &&
+        (ValueValidation::IsFinite(value.blackHoleCenter)) &&
+        (ValueValidation::IsFinite(value.blackHoleRadius)) &&
+        (ValueValidation::IsFinite(value.blackHoleStrength)) &&
+        (ValueValidation::IsFinite(value.waterEffectIntensity)) &&
+        (ValueValidation::IsFinite(value.paddingWaterEffect)) &&
+        (ValueValidation::IsFinite(value.outlineNearClip)) &&
+        (ValueValidation::IsFinite(value.outlineFarClip)) &&
+        (ValueValidation::IsFinite(value.outlineThreshold)) &&
+        (ValueValidation::IsFinite(value.outlineSoftness)) &&
+        (ValueValidation::IsFinite(value.outlineNormalThreshold)) &&
+        (ValueValidation::IsFinite(value.outlineNormalSoftness)) &&
+        (ValueValidation::IsFinite(value.outlineNormalStrength)) &&
+        (ValueValidation::IsFinite(value.outlineNormalPadding)) &&
+        (ValueValidation::IsFinite(value.fxaaStrength)) &&
+        (ValueValidation::IsFinite(value.fxaaSubpixel)) &&
+        (ValueValidation::IsFinite(value.fxaaEdgeThreshold)) &&
+        (ValueValidation::IsFinite(value.fxaaEdgeThresholdMin)) &&
+        (ValueValidation::IsFinite(value.toneExposure)) &&
+        (ValueValidation::IsFinite(value.toneContrast)) &&
+        (ValueValidation::IsFinite(value.toneSaturation)) &&
+        (ValueValidation::IsFinite(value.screenInverseProjection)) &&
+        (ValueValidation::IsFinite(value.screenCameraRotation)) &&
+        (ValueValidation::IsFinite(value.ssaoSettings)) &&
+        (ValueValidation::IsFinite(value.screenCameraSettings)) &&
+        (ValueValidation::IsFinite(value.atmosphereSettings)) &&
+        (ValueValidation::IsFinite(value.screenSunDirection)) &&
+        (ValueValidation::IsFinite(value.screenSunColor)) &&
+        (ValueValidation::IsFinite(value.colorFinishSettings)) &&
+        (value.grayScaleStrength >= 0) &&
+        (value.vignetteStrength >= 0) &&
+        (value.outlineScale >= 0) &&
+        (value.time >= 0) &&
+        (value.radialBlurWidth >= 0) &&
+        (value.dissolveEdgeWidth >= 0) &&
+        (value.dissolveEdgeStrength >= 0) &&
+        (value.radialBlurImpulseStrength >= 0) &&
+        (value.colorContrast >= 0) &&
+        (value.colorSaturation >= 0) &&
+        (value.depthOfFieldRadius >= 0) &&
+        (value.motionBlurStrength >= 0) &&
+        (value.chromaticAberrationStrength >= 0) &&
+        (value.filmGrainStrength >= 0) &&
+        (value.lensDirtStrength >= 0) &&
+        (value.cameraShakeStrength >= 0) &&
+        (value.bokehRadius >= 0) &&
+        (value.lightThreshold >= 0) &&
+        (value.lightStrength >= 0) &&
+        (value.lightRadius >= 0) &&
+        (value.paintIntensity >= 0) &&
+        (value.boostSparkIntensity >= 0) &&
+        (value.boostSparkElapsedSeconds >= 0) &&
+        (value.blackHoleRadius >= 0) &&
+        (value.blackHoleStrength >= 0) &&
+        (value.waterEffectIntensity >= 0) &&
+        (value.outlineThreshold >= 0) &&
+        (value.outlineSoftness >= 0) &&
+        (value.outlineNormalThreshold >= 0) &&
+        (value.outlineNormalSoftness >= 0) &&
+        (value.outlineNormalStrength >= 0) &&
+        (value.fxaaStrength >= 0) &&
+        (value.fxaaSubpixel >= 0) &&
+        (value.fxaaEdgeThreshold >= 0) &&
+        (value.fxaaEdgeThresholdMin >= 0) &&
+        (value.toneContrast >= 0) &&
+        (value.toneSaturation >= 0) &&
+        (value.pixelSize >= 1) &&
+        (value.focusRange > 0) &&
+        (value.toneExposure > 0) &&
+        (value.outlineNearClip > 0) &&
+        (value.outlineFarClip > value.outlineNearClip) &&
+        (value.radialBlurSampleCount >= 1) &&
+        (value.radialBlurSampleCount <= 128) &&
+        (value.motionBlurSampleCount >= 1) &&
+        (value.motionBlurSampleCount <= 64) &&
+        (value.bokehSides >= 3) &&
+        (value.bokehSides <= 32) &&
+        (value.paintPatternType >= 0) &&
+        (value.paintPatternType <= 3) &&
+        (value.ssaoSettings.x >= 0) &&
+        (value.ssaoSettings.y > 0) &&
+        (value.ssaoSettings.z >= 0) &&
+        (value.ssaoSettings.z <= value.ssaoSettings.y) &&
+        (value.dissolveThreshold >= 0) &&
+        (value.dissolveThreshold <= 1) &&
+        (value.focusDepth >= 0) &&
+        (value.focusDepth <= 1) &&
+        (value.paintProgress >= 0) &&
+        (value.paintProgress <= 1) &&
+        (value.sonicBoomProgress >= 0) &&
+        (value.sonicBoomProgress <= 1) &&
+        (value.animationEnabled == 0 || value.animationEnabled == 1) &&
+        (value.toneMapEnabled == 0 || value.toneMapEnabled == 1);
+}
+bool CopyImageRenderer::SetPostEffectParameter(const PostEffectParameter& value)
+{
+    if (!postEffectParameterData_ || !IsValidParameter(value)) return false;
+    *postEffectParameterData_ = value;
+    return true;
+}
+SettingsEdit<CopyImageRenderer::PostEffectParameter> CopyImageRenderer::BeginParameterEdit()
+{
+    const PostEffectParameter snapshot = postEffectParameterData_ ? *postEffectParameterData_ : PostEffectParameter{};
+    return SettingsEdit<PostEffectParameter>(snapshot, [this](const PostEffectParameter& original, const PostEffectParameter& edited) {
+        if (!postEffectParameterData_) return false;
+        auto value = *postEffectParameterData_;
+        if (std::memcmp(&original.grayScaleStrength, &edited.grayScaleStrength, sizeof(value.grayScaleStrength)) != 0) value.grayScaleStrength = edited.grayScaleStrength;
+        if (std::memcmp(&original.vignetteStrength, &edited.vignetteStrength, sizeof(value.vignetteStrength)) != 0) value.vignetteStrength = edited.vignetteStrength;
+        if (std::memcmp(&original.outlineScale, &edited.outlineScale, sizeof(value.outlineScale)) != 0) value.outlineScale = edited.outlineScale;
+        if (std::memcmp(&original.time, &edited.time, sizeof(value.time)) != 0) value.time = edited.time;
+        if (std::memcmp(&original.radialBlurCenter, &edited.radialBlurCenter, sizeof(value.radialBlurCenter)) != 0) value.radialBlurCenter = edited.radialBlurCenter;
+        if (std::memcmp(&original.radialBlurSampleCount, &edited.radialBlurSampleCount, sizeof(value.radialBlurSampleCount)) != 0) value.radialBlurSampleCount = edited.radialBlurSampleCount;
+        if (std::memcmp(&original.radialBlurWidth, &edited.radialBlurWidth, sizeof(value.radialBlurWidth)) != 0) value.radialBlurWidth = edited.radialBlurWidth;
+        if (std::memcmp(&original.dissolveThreshold, &edited.dissolveThreshold, sizeof(value.dissolveThreshold)) != 0) value.dissolveThreshold = edited.dissolveThreshold;
+        if (std::memcmp(&original.dissolveEdgeWidth, &edited.dissolveEdgeWidth, sizeof(value.dissolveEdgeWidth)) != 0) value.dissolveEdgeWidth = edited.dissolveEdgeWidth;
+        if (std::memcmp(&original.dissolveEdgeStrength, &edited.dissolveEdgeStrength, sizeof(value.dissolveEdgeStrength)) != 0) value.dissolveEdgeStrength = edited.dissolveEdgeStrength;
+        if (std::memcmp(&original.dissolvePadding, &edited.dissolvePadding, sizeof(value.dissolvePadding)) != 0) value.dissolvePadding = edited.dissolvePadding;
+        if (std::memcmp(&original.radialBlurImpulseStrength, &edited.radialBlurImpulseStrength, sizeof(value.radialBlurImpulseStrength)) != 0) value.radialBlurImpulseStrength = edited.radialBlurImpulseStrength;
+        if (std::memcmp(&original.pixelSize, &edited.pixelSize, sizeof(value.pixelSize)) != 0) value.pixelSize = edited.pixelSize;
+        if (std::memcmp(&original.colorBrightness, &edited.colorBrightness, sizeof(value.colorBrightness)) != 0) value.colorBrightness = edited.colorBrightness;
+        if (std::memcmp(&original.colorContrast, &edited.colorContrast, sizeof(value.colorContrast)) != 0) value.colorContrast = edited.colorContrast;
+        if (std::memcmp(&original.colorSaturation, &edited.colorSaturation, sizeof(value.colorSaturation)) != 0) value.colorSaturation = edited.colorSaturation;
+        if (std::memcmp(&original.customParameter0, &edited.customParameter0, sizeof(value.customParameter0)) != 0) value.customParameter0 = edited.customParameter0;
+        if (std::memcmp(&original.customParameter1, &edited.customParameter1, sizeof(value.customParameter1)) != 0) value.customParameter1 = edited.customParameter1;
+        if (std::memcmp(&original.customParameter2, &edited.customParameter2, sizeof(value.customParameter2)) != 0) value.customParameter2 = edited.customParameter2;
+        if (std::memcmp(&original.focusDepth, &edited.focusDepth, sizeof(value.focusDepth)) != 0) value.focusDepth = edited.focusDepth;
+        if (std::memcmp(&original.focusRange, &edited.focusRange, sizeof(value.focusRange)) != 0) value.focusRange = edited.focusRange;
+        if (std::memcmp(&original.depthOfFieldRadius, &edited.depthOfFieldRadius, sizeof(value.depthOfFieldRadius)) != 0) value.depthOfFieldRadius = edited.depthOfFieldRadius;
+        if (std::memcmp(&original.motionBlurStrength, &edited.motionBlurStrength, sizeof(value.motionBlurStrength)) != 0) value.motionBlurStrength = edited.motionBlurStrength;
+        if (std::memcmp(&original.motionBlurDirection, &edited.motionBlurDirection, sizeof(value.motionBlurDirection)) != 0) value.motionBlurDirection = edited.motionBlurDirection;
+        if (std::memcmp(&original.motionBlurSampleCount, &edited.motionBlurSampleCount, sizeof(value.motionBlurSampleCount)) != 0) value.motionBlurSampleCount = edited.motionBlurSampleCount;
+        if (std::memcmp(&original.chromaticAberrationStrength, &edited.chromaticAberrationStrength, sizeof(value.chromaticAberrationStrength)) != 0) value.chromaticAberrationStrength = edited.chromaticAberrationStrength;
+        if (std::memcmp(&original.lensDistortionStrength, &edited.lensDistortionStrength, sizeof(value.lensDistortionStrength)) != 0) value.lensDistortionStrength = edited.lensDistortionStrength;
+        if (std::memcmp(&original.filmGrainStrength, &edited.filmGrainStrength, sizeof(value.filmGrainStrength)) != 0) value.filmGrainStrength = edited.filmGrainStrength;
+        if (std::memcmp(&original.lensDirtStrength, &edited.lensDirtStrength, sizeof(value.lensDirtStrength)) != 0) value.lensDirtStrength = edited.lensDirtStrength;
+        if (std::memcmp(&original.cameraShakeStrength, &edited.cameraShakeStrength, sizeof(value.cameraShakeStrength)) != 0) value.cameraShakeStrength = edited.cameraShakeStrength;
+        if (std::memcmp(&original.bokehRadius, &edited.bokehRadius, sizeof(value.bokehRadius)) != 0) value.bokehRadius = edited.bokehRadius;
+        if (std::memcmp(&original.bokehSides, &edited.bokehSides, sizeof(value.bokehSides)) != 0) value.bokehSides = edited.bokehSides;
+        if (std::memcmp(&original.fisheyeStrength, &edited.fisheyeStrength, sizeof(value.fisheyeStrength)) != 0) value.fisheyeStrength = edited.fisheyeStrength;
+        if (std::memcmp(&original.animationEnabled, &edited.animationEnabled, sizeof(value.animationEnabled)) != 0) value.animationEnabled = edited.animationEnabled;
+        if (std::memcmp(&original.lightThreshold, &edited.lightThreshold, sizeof(value.lightThreshold)) != 0) value.lightThreshold = edited.lightThreshold;
+        if (std::memcmp(&original.lightStrength, &edited.lightStrength, sizeof(value.lightStrength)) != 0) value.lightStrength = edited.lightStrength;
+        if (std::memcmp(&original.lightRadius, &edited.lightRadius, sizeof(value.lightRadius)) != 0) value.lightRadius = edited.lightRadius;
+        if (std::memcmp(&original.lightAngle, &edited.lightAngle, sizeof(value.lightAngle)) != 0) value.lightAngle = edited.lightAngle;
+        if (std::memcmp(&original.paintProgress, &edited.paintProgress, sizeof(value.paintProgress)) != 0) value.paintProgress = edited.paintProgress;
+        if (std::memcmp(&original.paintIntensity, &edited.paintIntensity, sizeof(value.paintIntensity)) != 0) value.paintIntensity = edited.paintIntensity;
+        if (std::memcmp(&original.paintSeed, &edited.paintSeed, sizeof(value.paintSeed)) != 0) value.paintSeed = edited.paintSeed;
+        if (std::memcmp(&original.paintPatternType, &edited.paintPatternType, sizeof(value.paintPatternType)) != 0) value.paintPatternType = edited.paintPatternType;
+        if (std::memcmp(&original.paintColor, &edited.paintColor, sizeof(value.paintColor)) != 0) value.paintColor = edited.paintColor;
+        if (std::memcmp(&original.sonicBoomProgress, &edited.sonicBoomProgress, sizeof(value.sonicBoomProgress)) != 0) value.sonicBoomProgress = edited.sonicBoomProgress;
+        if (std::memcmp(&original.sonicBoomCenter, &edited.sonicBoomCenter, sizeof(value.sonicBoomCenter)) != 0) value.sonicBoomCenter = edited.sonicBoomCenter;
+        if (std::memcmp(&original.boostSparkIntensity, &edited.boostSparkIntensity, sizeof(value.boostSparkIntensity)) != 0) value.boostSparkIntensity = edited.boostSparkIntensity;
+        if (std::memcmp(&original.boostSparkElapsedSeconds, &edited.boostSparkElapsedSeconds, sizeof(value.boostSparkElapsedSeconds)) != 0) value.boostSparkElapsedSeconds = edited.boostSparkElapsedSeconds;
+        if (std::memcmp(&original.blackHoleCenter, &edited.blackHoleCenter, sizeof(value.blackHoleCenter)) != 0) value.blackHoleCenter = edited.blackHoleCenter;
+        if (std::memcmp(&original.blackHoleRadius, &edited.blackHoleRadius, sizeof(value.blackHoleRadius)) != 0) value.blackHoleRadius = edited.blackHoleRadius;
+        if (std::memcmp(&original.blackHoleStrength, &edited.blackHoleStrength, sizeof(value.blackHoleStrength)) != 0) value.blackHoleStrength = edited.blackHoleStrength;
+        if (std::memcmp(&original.waterEffectIntensity, &edited.waterEffectIntensity, sizeof(value.waterEffectIntensity)) != 0) value.waterEffectIntensity = edited.waterEffectIntensity;
+        if (std::memcmp(&original.paddingWaterEffect, &edited.paddingWaterEffect, sizeof(value.paddingWaterEffect)) != 0) value.paddingWaterEffect = edited.paddingWaterEffect;
+        if (std::memcmp(&original.outlineNearClip, &edited.outlineNearClip, sizeof(value.outlineNearClip)) != 0) value.outlineNearClip = edited.outlineNearClip;
+        if (std::memcmp(&original.outlineFarClip, &edited.outlineFarClip, sizeof(value.outlineFarClip)) != 0) value.outlineFarClip = edited.outlineFarClip;
+        if (std::memcmp(&original.outlineThreshold, &edited.outlineThreshold, sizeof(value.outlineThreshold)) != 0) value.outlineThreshold = edited.outlineThreshold;
+        if (std::memcmp(&original.outlineSoftness, &edited.outlineSoftness, sizeof(value.outlineSoftness)) != 0) value.outlineSoftness = edited.outlineSoftness;
+        if (std::memcmp(&original.outlineNormalThreshold, &edited.outlineNormalThreshold, sizeof(value.outlineNormalThreshold)) != 0) value.outlineNormalThreshold = edited.outlineNormalThreshold;
+        if (std::memcmp(&original.outlineNormalSoftness, &edited.outlineNormalSoftness, sizeof(value.outlineNormalSoftness)) != 0) value.outlineNormalSoftness = edited.outlineNormalSoftness;
+        if (std::memcmp(&original.outlineNormalStrength, &edited.outlineNormalStrength, sizeof(value.outlineNormalStrength)) != 0) value.outlineNormalStrength = edited.outlineNormalStrength;
+        if (std::memcmp(&original.outlineNormalPadding, &edited.outlineNormalPadding, sizeof(value.outlineNormalPadding)) != 0) value.outlineNormalPadding = edited.outlineNormalPadding;
+        if (std::memcmp(&original.fxaaStrength, &edited.fxaaStrength, sizeof(value.fxaaStrength)) != 0) value.fxaaStrength = edited.fxaaStrength;
+        if (std::memcmp(&original.fxaaSubpixel, &edited.fxaaSubpixel, sizeof(value.fxaaSubpixel)) != 0) value.fxaaSubpixel = edited.fxaaSubpixel;
+        if (std::memcmp(&original.fxaaEdgeThreshold, &edited.fxaaEdgeThreshold, sizeof(value.fxaaEdgeThreshold)) != 0) value.fxaaEdgeThreshold = edited.fxaaEdgeThreshold;
+        if (std::memcmp(&original.fxaaEdgeThresholdMin, &edited.fxaaEdgeThresholdMin, sizeof(value.fxaaEdgeThresholdMin)) != 0) value.fxaaEdgeThresholdMin = edited.fxaaEdgeThresholdMin;
+        if (std::memcmp(&original.toneMapEnabled, &edited.toneMapEnabled, sizeof(value.toneMapEnabled)) != 0) value.toneMapEnabled = edited.toneMapEnabled;
+        if (std::memcmp(&original.toneExposure, &edited.toneExposure, sizeof(value.toneExposure)) != 0) value.toneExposure = edited.toneExposure;
+        if (std::memcmp(&original.toneContrast, &edited.toneContrast, sizeof(value.toneContrast)) != 0) value.toneContrast = edited.toneContrast;
+        if (std::memcmp(&original.toneSaturation, &edited.toneSaturation, sizeof(value.toneSaturation)) != 0) value.toneSaturation = edited.toneSaturation;
+        if (std::memcmp(&original.screenInverseProjection, &edited.screenInverseProjection, sizeof(value.screenInverseProjection)) != 0) value.screenInverseProjection = edited.screenInverseProjection;
+        if (std::memcmp(&original.screenCameraRotation, &edited.screenCameraRotation, sizeof(value.screenCameraRotation)) != 0) value.screenCameraRotation = edited.screenCameraRotation;
+        if (std::memcmp(&original.ssaoSettings, &edited.ssaoSettings, sizeof(value.ssaoSettings)) != 0) value.ssaoSettings = edited.ssaoSettings;
+        if (std::memcmp(&original.screenCameraSettings, &edited.screenCameraSettings, sizeof(value.screenCameraSettings)) != 0) value.screenCameraSettings = edited.screenCameraSettings;
+        if (std::memcmp(&original.atmosphereSettings, &edited.atmosphereSettings, sizeof(value.atmosphereSettings)) != 0) value.atmosphereSettings = edited.atmosphereSettings;
+        if (std::memcmp(&original.screenSunDirection, &edited.screenSunDirection, sizeof(value.screenSunDirection)) != 0) value.screenSunDirection = edited.screenSunDirection;
+        if (std::memcmp(&original.screenSunColor, &edited.screenSunColor, sizeof(value.screenSunColor)) != 0) value.screenSunColor = edited.screenSunColor;
+        if (std::memcmp(&original.colorFinishSettings, &edited.colorFinishSettings, sizeof(value.colorFinishSettings)) != 0) value.colorFinishSettings = edited.colorFinishSettings;
+        return SetPostEffectParameter(value);
+    });
 }

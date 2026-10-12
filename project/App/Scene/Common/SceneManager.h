@@ -9,6 +9,8 @@
 #include "Engine/PostEffect/Fog/FogData.h"
 #include "Engine/PostEffect/PostEffectSettings.h"
 #include <unordered_map>
+#include <algorithm>
+#include <cmath>
 
 struct AtmospherePreset {
     float exposure = 1.0f;
@@ -55,7 +57,7 @@ public:
 
     bool SetRadialBlurSettings(const RadialBlurSettings& settings);
     const RadialBlurSettings& GetRadialBlurSettings() const { return radialBlurSettings_; }
-    void SetPostEffectParameters(PostEffectType type, const Vector3& parameters) { effectParameters_[type] = parameters; }
+    void SetPostEffectParameters(PostEffectType type, const Vector3& parameters) { if (std::isfinite(parameters.x) && std::isfinite(parameters.y) && std::isfinite(parameters.z)) { effectParameters_[type] = parameters; } }
     const Vector3* FindPostEffectParameters(PostEffectType type) const;
     void ApplyAtmospherePreset(const AtmospherePreset& preset);
     void ApplyPostEffectChain(const std::vector<PostEffectInfo>& effects);
@@ -82,40 +84,43 @@ public:
     const Vector2& GetPostEffectCenter() const;
     void SetCameraShakeStrength(float strength);
     float GetCameraShakeStrength() const;
-    void SetPaintProgress(float progress) { paintProgress_ = progress; }
+    void SetPaintProgress(float progress) { if (std::isfinite(progress)) { paintProgress_ = std::clamp(progress, 0.0f, 1.0f); } }
     float GetPaintProgress() const { return paintProgress_; }
-    void SetPaintIntensity(float intensity) { paintIntensity_ = intensity; }
+    void SetPaintIntensity(float intensity) { if (std::isfinite(intensity)) { paintIntensity_ = (std::max)(0.0f, intensity); } }
     float GetPaintIntensity() const { return paintIntensity_; }
-    void SetPaintSeed(float seed) { paintSeed_ = seed; }
+    void SetPaintSeed(float seed) { if (std::isfinite(seed)) { paintSeed_ = seed; } }
     float GetPaintSeed() const { return paintSeed_; }
-    void SetPaintPatternType(int type) { paintPatternType_ = type; }
+    void SetPaintPatternType(int type) { if (type >= 0 && type <= 3) { paintPatternType_ = type; } }
     int GetPaintPatternType() const { return paintPatternType_; }
-    void SetPaintColor(const Vector3& color) { paintColor_ = color; }
+    void SetPaintColor(const Vector3& color) { if (std::isfinite(color.x) && std::isfinite(color.y) && std::isfinite(color.z)) { paintColor_ = color; } }
     const Vector3& GetPaintColor() const { return paintColor_; }
-    void SetVignetteStrength(float strength) { vignetteStrength_ = strength; }
+    void SetVignetteStrength(float strength) { if (std::isfinite(strength)) { vignetteStrength_ = (std::max)(0.0f, strength); } }
     float GetVignetteStrength() const { return vignetteStrength_; }
-    void SetSonicBoomProgress(float progress) { sonicBoomProgress_ = progress; }
+    void SetSonicBoomProgress(float progress) { if (std::isfinite(progress)) { sonicBoomProgress_ = std::clamp(progress, 0.0f, 1.0f); } }
     float GetSonicBoomProgress() const { return sonicBoomProgress_; }
-    void SetSonicBoomCenter(const Vector2& center) { sonicBoomCenter_ = center; }
+    void SetSonicBoomCenter(const Vector2& center) { if (std::isfinite(center.x) && std::isfinite(center.y)) { sonicBoomCenter_ = center; } }
     const Vector2& GetSonicBoomCenter() const { return sonicBoomCenter_; }
-    void SetBlackHoleCenter(const Vector2& center) { blackHoleCenter_ = center; }
+    void SetBlackHoleCenter(const Vector2& center) { if (std::isfinite(center.x) && std::isfinite(center.y)) { blackHoleCenter_ = center; } }
     const Vector2& GetBlackHoleCenter() const { return blackHoleCenter_; }
-    void SetBlackHoleRadius(float radius) { blackHoleRadius_ = radius; }
+    void SetBlackHoleRadius(float radius) { if (std::isfinite(radius)) { blackHoleRadius_ = (std::max)(0.0f, radius); } }
     float GetBlackHoleRadius() const { return blackHoleRadius_; }
-    void SetBlackHoleStrength(float strength) { blackHoleStrength_ = strength; }
+    void SetBlackHoleStrength(float strength) { if (std::isfinite(strength)) { blackHoleStrength_ = (std::max)(0.0f, strength); } }
     float GetBlackHoleStrength() const { return blackHoleStrength_; }
-    void SetWaterEffectIntensity(float intensity) { waterEffectIntensity_ = intensity; }
+    void SetWaterEffectIntensity(float intensity) { if (std::isfinite(intensity)) { waterEffectIntensity_ = (std::max)(0.0f, intensity); } }
     float GetWaterEffectIntensity() const { return waterEffectIntensity_; }
-    void SetBoostSparkIntensity(float intensity) { boostSparkIntensity_ = intensity; }
+    void SetBoostSparkIntensity(float intensity) { if (std::isfinite(intensity)) { boostSparkIntensity_ = (std::max)(0.0f, intensity); } }
     float GetBoostSparkIntensity() const { return boostSparkIntensity_; }
-    void SetBoostSparkElapsedSeconds(float elapsedSeconds) { boostSparkElapsedSeconds_ = elapsedSeconds; }
+    void SetBoostSparkElapsedSeconds(float elapsedSeconds) { if (std::isfinite(elapsedSeconds)) { boostSparkElapsedSeconds_ = (std::max)(0.0f, elapsedSeconds); } }
     float GetBoostSparkElapsedSeconds() const { return boostSparkElapsedSeconds_; }
-    void SetSceneClearColor(const Vector4& color) { sceneClearColor_ = color; }
+    void SetSceneClearColor(const Vector4& color) { if (std::isfinite(color.x) && std::isfinite(color.y) && std::isfinite(color.z) && std::isfinite(color.w)) { sceneClearColor_ = color; } }
     const Vector4& GetSceneClearColor() const { return sceneClearColor_; }
-    void SetSceneFogColor(const Vector4& color) { sceneFogColor_ = color; }
+    void SetSceneFogColor(const Vector4& color) { if (std::isfinite(color.x) && std::isfinite(color.y) && std::isfinite(color.z) && std::isfinite(color.w)) { sceneFogColor_ = color; } }
     const Vector4& GetSceneFogColor() const { return sceneFogColor_; }
     void SetSceneDistanceFog(const DistanceFogData& fog)
     {
+        if (!std::isfinite(fog.start) || !std::isfinite(fog.end) ||
+            !std::isfinite(fog.density) || !std::isfinite(fog.curve) ||
+            fog.start < 0.0f || fog.end <= fog.start || fog.density < 0.0f || fog.curve <= 0.0f) { return; }
         sceneDistanceFog_ = fog;
         ++sceneFogRevision_;
     }

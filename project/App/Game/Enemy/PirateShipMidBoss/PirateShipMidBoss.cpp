@@ -37,7 +37,7 @@ void PirateShipMidBoss::Initialize(Model* cubeModel, Model* bulletModel, Player*
 {
     player_ = player;
     bulletModel_ = bulletModel;
-    hp_ = shipHp_;
+    SetHealth(shipHp_);
     hull_ = CreatePart(cubeModel, { 14.0f, 4.0f, 28.0f }, { 0.12f, 0.055f, 0.025f, 1.0f });
     deck_ = CreatePart(cubeModel, { 12.0f, 1.5f, 19.0f }, { 0.28f, 0.12f, 0.045f, 1.0f });
     cabin_ = CreatePart(cubeModel, { 6.5f, 5.0f, 7.0f }, { 0.18f, 0.07f, 0.025f, 1.0f });
@@ -191,9 +191,10 @@ bool PirateShipMidBoss::IsCollisionPartDamageable(int32_t) const
 
 void PirateShipMidBoss::ApplyDamageToPart(int32_t, float damage)
 {
+    if (IsDead() || !std::isfinite(damage) || damage <= 0.0f) { return; }
     if (state_ != State::Battle) return;
     shipHp_ = (std::max)(0.0f, shipHp_ - damage);
-    hp_ = shipHp_;
+    SetHealth(shipHp_);
     if (shipHp_ <= 0.0f) {
         state_ = State::Sinking;
         stateTimer_ = 0.0f;

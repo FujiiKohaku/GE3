@@ -34,7 +34,7 @@ void SwarmEnemy::Initialize(
     formationType_ = formationType;
     slotIndex_ = slotIndex;
     travelDirection_ = travelDirection;
-    hp_ = 1.0f;
+    SetHealth(1.0f);
     transform_.scale = { 0.58f, 0.58f, 0.58f };
     attackTimer_ =
         0.35f +
@@ -153,7 +153,7 @@ void SwarmEnemy::SetAppearance(Model* model)
 
 void SwarmEnemy::Attack()
 {
-    if (isDead_) {
+    if (IsDead()) {
         return;
     }
     if (isFading_) {
@@ -184,17 +184,9 @@ void SwarmEnemy::OnDeath()
         return;
     }
 
-    groupState_->activeCount -= 1;
-    if (groupState_->activeCount < 0) {
-        groupState_->activeCount = 0;
-    }
+    groupState_->RecordRemoval(escaped_);
+    if (escaped_) { return; }
 
-    if (escaped_) {
-        groupState_->escapedCount += 1;
-        return;
-    }
-
-    groupState_->defeatedCount += 1;
     EffectManager::GetInstance()->PlayEffect("HitEffect", transform_.translate);
 }
 

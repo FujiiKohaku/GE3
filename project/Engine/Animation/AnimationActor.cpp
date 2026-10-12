@@ -87,7 +87,7 @@ SkinningObject3d* AnimationActor::GetObject()
     return object_.get();
 }
 
-Skeleton* AnimationActor::GetSkeleton()
+const Skeleton* AnimationActor::GetSkeleton() const
 {
     return &skeleton_;
 }

@@ -244,12 +244,12 @@ void RotateIkJointToward(
     int32_t effectorIndex,
     const Vector3& targetPosition)
 {
-    Joint& joint = skeleton.joints[jointIndex];
+    const Joint& joint = skeleton.GetJoints()[jointIndex];
     const Vector3 jointPosition =
-        GetMatrixTranslation(joint.skeletonSpaceMatrix);
+        GetMatrixTranslation(joint.GetSkeletonSpaceMatrix());
     const Vector3 effectorPosition =
         GetMatrixTranslation(
-            skeleton.joints[effectorIndex].skeletonSpaceMatrix);
+            skeleton.GetJoints()[effectorIndex].GetSkeletonSpaceMatrix());
     Vector3 currentDirection = effectorPosition - jointPosition;
     Vector3 targetDirection = targetPosition - jointPosition;
     if (Vector3LengthSquared(currentDirection) <= 0.000001f ||
@@ -258,11 +258,11 @@ void RotateIkJointToward(
     }
 
     Matrix4x4 parentInverse = MatrixMath::MakeIdentity4x4();
-    if (joint.parent.has_value()) {
+    if (joint.GetParent().has_value()) {
         parentInverse =
             MatrixMath::Inverse(
-                skeleton.joints[joint.parent.value()]
-                    .skeletonSpaceMatrix);
+                skeleton.GetJoints()[joint.GetParent().value()]
+                    .GetSkeletonSpaceMatrix());
     }
     currentDirection =
         TransformDirection(currentDirection, parentInverse);
@@ -271,11 +271,10 @@ void RotateIkJointToward(
 
     const Quaternion rotationDelta =
         QuaternionFromTo(currentDirection, targetDirection);
-    joint.transform.rotate =
-        Normalize(
+    skeleton.SetJointRotation(jointIndex, Normalize(
             MultiplyQuaternion(
                 rotationDelta,
-                joint.transform.rotate));
+                joint.GetTransform().rotate)));
     skeleton.UpdateSkeleton();
 }
 
@@ -288,13 +287,13 @@ void ApplyKneePoleCorrection(
 {
     const Vector3 hipPosition =
         GetMatrixTranslation(
-            skeleton.joints[upperIndex].skeletonSpaceMatrix);
+            skeleton.GetJoints()[upperIndex].GetSkeletonSpaceMatrix());
     const Vector3 kneePosition =
         GetMatrixTranslation(
-            skeleton.joints[lowerIndex].skeletonSpaceMatrix);
+            skeleton.GetJoints()[lowerIndex].GetSkeletonSpaceMatrix());
     const Vector3 footPosition =
         GetMatrixTranslation(
-            skeleton.joints[footIndex].skeletonSpaceMatrix);
+            skeleton.GetJoints()[footIndex].GetSkeletonSpaceMatrix());
     Vector3 legAxis = footPosition - hipPosition;
     if (Vector3LengthSquared(legAxis) <= 0.000001f) {
         return;
@@ -315,12 +314,12 @@ void ApplyKneePoleCorrection(
     }
 
     Matrix4x4 parentInverse = MatrixMath::MakeIdentity4x4();
-    Joint& upperJoint = skeleton.joints[upperIndex];
-    if (upperJoint.parent.has_value()) {
+    const Joint& upperJoint = skeleton.GetJoints()[upperIndex];
+    if (upperJoint.GetParent().has_value()) {
         parentInverse =
             MatrixMath::Inverse(
-                skeleton.joints[upperJoint.parent.value()]
-                    .skeletonSpaceMatrix);
+                skeleton.GetJoints()[upperJoint.GetParent().value()]
+                    .GetSkeletonSpaceMatrix());
     }
     currentKneeDirection =
         TransformDirection(
@@ -335,11 +334,10 @@ void ApplyKneePoleCorrection(
         QuaternionFromTo(
             currentKneeDirection,
             targetKneeDirection);
-    upperJoint.transform.rotate =
-        Normalize(
+    skeleton.SetJointRotation(upperIndex, Normalize(
             MultiplyQuaternion(
                 poleRotation,
-                upperJoint.transform.rotate));
+                upperJoint.GetTransform().rotate)));
     skeleton.UpdateSkeleton();
 }
 }
@@ -527,12 +525,12 @@ void TestScene1::Initialize()
     ApplySelectedPostEffect();
 
     // ジョイント名テキストの初期化
-    Skeleton* skeleton = playerActor_->GetSkeleton();
+    const Skeleton* skeleton = playerActor_->GetSkeleton();
     if (skeleton) {
-        for (const Joint& joint : skeleton->joints) {
+        for (const Joint& joint : skeleton->GetJoints()) {
             auto text = std::make_unique<Text>();
             text->Initialize(kDefaultFont);
-            text->SetText(joint.name);
+            text->SetText(joint.GetName());
             text->SetFontSize(14.0f);
             text->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
             text->SetOutlineColor({ 0.0f, 0.0f, 0.0f, 1.0f });
@@ -1449,17 +1447,17 @@ void TestScene1::UpdateKatanaAttachment()
         return;
     }
 
-    Skeleton* skeleton = playerActor_->GetSkeleton();
+    const Skeleton* skeleton = playerActor_->GetSkeleton();
     if (!skeleton) {
         return;
     }
 
-    auto handIt = skeleton->jointMap.find("hand.L");
-    if (handIt == skeleton->jointMap.end()) {
+    auto handIt = skeleton->GetJointMap().find("hand.L");
+    if (handIt == skeleton->GetJointMap().end()) {
         return;
     }
 
-    const Joint& handJoint = skeleton->joints[handIt->second];
+    const Joint& handJoint = skeleton->GetJoints()[handIt->second];
     Vector3 gripToOrigin = {
         -katanaGripPosition_.x,
         -katanaGripPosition_.y,
@@ -1474,7 +1472,7 @@ void TestScene1::UpdateKatanaAttachment()
         katanaOffset_);
     Matrix4x4 katanaLocalMatrix = MatrixMath::Multiply(gripMatrix, attachmentMatrix);
     Matrix4x4 handWorldMatrix = MatrixMath::Multiply(
-        handJoint.skeletonSpaceMatrix,
+        handJoint.GetSkeletonSpaceMatrix(),
         playerActor_->GetObject()->GetWorldMatrix());
     Matrix4x4 katanaWorldMatrix = MatrixMath::Multiply(katanaLocalMatrix, handWorldMatrix);
 
@@ -1966,20 +1964,18 @@ void TestScene1::SolveLegIK(
         return;
     }
 
-    Skeleton* skeleton = playerActor_->GetSkeleton();
-    if (!skeleton) {
-        return;
-    }
+    Skeleton pose = *playerActor_->GetSkeleton();
+    Skeleton* skeleton = &pose;
 
     const std::map<std::string, int32_t>::const_iterator upperIterator =
-        skeleton->jointMap.find(upperLegName);
+        skeleton->GetJointMap().find(upperLegName);
     const std::map<std::string, int32_t>::const_iterator lowerIterator =
-        skeleton->jointMap.find(lowerLegName);
+        skeleton->GetJointMap().find(lowerLegName);
     const std::map<std::string, int32_t>::const_iterator footIterator =
-        skeleton->jointMap.find(footName);
-    if (upperIterator == skeleton->jointMap.end() ||
-        lowerIterator == skeleton->jointMap.end() ||
-        footIterator == skeleton->jointMap.end()) {
+        skeleton->GetJointMap().find(footName);
+    if (upperIterator == skeleton->GetJointMap().end() ||
+        lowerIterator == skeleton->GetJointMap().end() ||
+        footIterator == skeleton->GetJointMap().end()) {
         return;
     }
 
@@ -1992,17 +1988,17 @@ void TestScene1::SolveLegIK(
     }
 
     const Quaternion originalUpperRotation =
-        skeleton->joints[upperIndex].transform.rotate;
+        skeleton->GetJoints()[upperIndex].GetTransform().rotate;
     const Quaternion originalLowerRotation =
-        skeleton->joints[lowerIndex].transform.rotate;
+        skeleton->GetJoints()[lowerIndex].GetTransform().rotate;
     const Quaternion originalFootRotation =
-        skeleton->joints[footIndex].transform.rotate;
+        skeleton->GetJoints()[footIndex].GetTransform().rotate;
     const Vector3 originalHipPosition =
         GetMatrixTranslation(
-            skeleton->joints[upperIndex].skeletonSpaceMatrix);
+            skeleton->GetJoints()[upperIndex].GetSkeletonSpaceMatrix());
     const Vector3 originalKneePosition =
         GetMatrixTranslation(
-            skeleton->joints[lowerIndex].skeletonSpaceMatrix);
+            skeleton->GetJoints()[lowerIndex].GetSkeletonSpaceMatrix());
     const Vector3 animatedKneeDirection =
         originalKneePosition - originalHipPosition;
     const Matrix4x4 inverseWorld =
@@ -2038,13 +2034,13 @@ void TestScene1::SolveLegIK(
         footIndex,
         animatedKneeDirection);
 
-    Joint& footJoint = skeleton->joints[footIndex];
+    const Joint& footJoint = skeleton->GetJoints()[footIndex];
     Matrix4x4 parentInverse = MatrixMath::MakeIdentity4x4();
-    if (footJoint.parent.has_value()) {
+    if (footJoint.GetParent().has_value()) {
         parentInverse =
             MatrixMath::Inverse(
-                skeleton->joints[footJoint.parent.value()]
-                    .skeletonSpaceMatrix);
+                skeleton->GetJoints()[footJoint.GetParent().value()]
+                    .GetSkeletonSpaceMatrix());
     }
     const Vector3 currentFootUp =
         TransformDirection(
@@ -2054,34 +2050,31 @@ void TestScene1::SolveLegIK(
         TransformDirection(skeletonNormal, parentInverse);
     const Quaternion footRotationDelta =
         QuaternionFromTo(currentFootUp, targetFootUp);
-    footJoint.transform.rotate =
-        Normalize(
+    skeleton->SetJointRotation(footIndex, Normalize(
             MultiplyQuaternion(
                 footRotationDelta,
-                footJoint.transform.rotate));
+                footJoint.GetTransform().rotate)));
 
     const Quaternion solvedUpperRotation =
-        skeleton->joints[upperIndex].transform.rotate;
+        skeleton->GetJoints()[upperIndex].GetTransform().rotate;
     const Quaternion solvedLowerRotation =
-        skeleton->joints[lowerIndex].transform.rotate;
+        skeleton->GetJoints()[lowerIndex].GetTransform().rotate;
     const Quaternion solvedFootRotation =
-        skeleton->joints[footIndex].transform.rotate;
-    skeleton->joints[upperIndex].transform.rotate =
-        Slerp(
+        skeleton->GetJoints()[footIndex].GetTransform().rotate;
+    skeleton->SetJointRotation(upperIndex, Slerp(
             originalUpperRotation,
             solvedUpperRotation,
-            ikWeight);
-    skeleton->joints[lowerIndex].transform.rotate =
-        Slerp(
+            ikWeight));
+    skeleton->SetJointRotation(lowerIndex, Slerp(
             originalLowerRotation,
             solvedLowerRotation,
-            ikWeight);
-    skeleton->joints[footIndex].transform.rotate =
-        Slerp(
+            ikWeight));
+    skeleton->SetJointRotation(footIndex, Slerp(
             originalFootRotation,
             solvedFootRotation,
-            ikWeight * 0.75f);
+            ikWeight * 0.75f));
     skeleton->UpdateSkeleton();
+    playerActor_->ApplySkeletonPose(pose);
 }
 
 void TestScene1::ApplyFootIK()
@@ -2193,10 +2186,11 @@ void TestScene1::ApplyFootIK()
             std::clamp(pelvisWorldOffset, -0.35f, 0.35f);
         pelvisWorldOffset *= 0.45f;
 
-        Skeleton* skeleton = playerActor_->GetSkeleton();
+        Skeleton pose = *playerActor_->GetSkeleton();
+        Skeleton* skeleton = &pose;
         const std::map<std::string, int32_t>::const_iterator pelvisIterator =
-            skeleton->jointMap.find("pelvis");
-        if (pelvisIterator != skeleton->jointMap.end()) {
+            skeleton->GetJointMap().find("pelvis");
+        if (pelvisIterator != skeleton->GetJointMap().end()) {
             const Matrix4x4 inverseWorld =
                 MatrixMath::Inverse(
                     playerActor_->GetObject()->GetWorldMatrix());
@@ -2204,9 +2198,9 @@ void TestScene1::ApplyFootIK()
                 TransformDirection(
                     { 0.0f, pelvisWorldOffset, 0.0f },
                     inverseWorld);
-            skeleton->joints[pelvisIterator->second]
-                .transform.translate.y += localPelvisOffset.y;
+            skeleton->OffsetJointTranslation(pelvisIterator->second, { 0.0f, localPelvisOffset.y, 0.0f });
             skeleton->UpdateSkeleton();
+            playerActor_->ApplySkeletonPose(pose);
         }
     }
 
@@ -2285,22 +2279,22 @@ bool TestScene1::TryGetJointWorldPosition(
         return false;
     }
 
-    Skeleton* skeleton = playerActor_->GetSkeleton();
+    const Skeleton* skeleton = playerActor_->GetSkeleton();
     if (!skeleton) {
         return false;
     }
 
     std::map<std::string, int32_t>::const_iterator jointIterator =
-        skeleton->jointMap.find(jointName);
-    if (jointIterator == skeleton->jointMap.end()) {
+        skeleton->GetJointMap().find(jointName);
+    if (jointIterator == skeleton->GetJointMap().end()) {
         return false;
     }
 
-    const Joint& joint = skeleton->joints[jointIterator->second];
+    const Joint& joint = skeleton->GetJoints()[jointIterator->second];
     const Vector3 localPosition = {
-        joint.skeletonSpaceMatrix.m[3][0],
-        joint.skeletonSpaceMatrix.m[3][1],
-        joint.skeletonSpaceMatrix.m[3][2],
+        joint.GetSkeletonSpaceMatrix().m[3][0],
+        joint.GetSkeletonSpaceMatrix().m[3][1],
+        joint.GetSkeletonSpaceMatrix().m[3][2],
     };
     worldPosition = MatrixMath::Transform(
         localPosition,
@@ -2384,15 +2378,15 @@ void TestScene1::UpdateBoneNames()
         return;
     }
 
-    Skeleton* skeleton = playerActor_ ? playerActor_->GetSkeleton() : nullptr;
-    if (!skeleton || jointNameTexts_.size() < skeleton->joints.size()) {
+    const Skeleton* skeleton = playerActor_ ? playerActor_->GetSkeleton() : nullptr;
+    if (!skeleton || jointNameTexts_.size() < skeleton->GetJoints().size()) {
         return;
     }
 
-    for (size_t i = 0; i < skeleton->joints.size(); ++i) {
-        const Joint& joint = skeleton->joints[i];
+    for (size_t i = 0; i < skeleton->GetJoints().size(); ++i) {
+        const Joint& joint = skeleton->GetJoints()[i];
         Vector3 worldPos {};
-        if (TryGetJointWorldPosition(joint.name, worldPos)) {
+        if (TryGetJointWorldPosition(joint.GetName(), worldPos)) {
             // 3D 座標を 2D スクリーン座標に変換
             Vector2 screenPos = camera_->WorldToScreen(worldPos);
             

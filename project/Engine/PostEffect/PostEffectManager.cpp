@@ -235,7 +235,8 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
     if (!std::isfinite(value)) { return false; }
     const float number = static_cast<float>(value);
     if (!std::isfinite(number)) { return false; }
-    auto& finish = copyImageRenderer_->GetPostEffectParameter().colorFinishSettings;
+    auto parameterEdit1 = copyImageRenderer_->BeginParameterEdit();
+    auto& finish = parameterEdit1.Get().colorFinishSettings;
     if (key == "toneMappingMode") {
         if (number < 0 || number > 1 || std::floor(number) != number) { return false; }
         return SetToneMapping(static_cast<uint32_t>(number), finish.z);
@@ -251,7 +252,8 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
         return autoExposureRenderer_->SetSettings(settings);
     }
     if (key == "bloomSoftKnee" || key == "bloomMaxRadiance") {
-        auto* bloomSettings = bloomRenderer_->GetEditableBloomParameter();
+        auto parameterEdit13 = bloomRenderer_->BeginParameterEdit();
+        auto* bloomSettings = &parameterEdit13.Get();
         if (key == "bloomSoftKnee") {
             if (number < 0 || number > 1) { return false; }
             bloomSettings->softKnee = number;
@@ -337,7 +339,8 @@ bool PostEffectManager::ExecuteDevelopmentCommand(const std::string& key)
 
 nlohmann::json PostEffectManager::GetDevelopmentSettings() const
 {
-    const auto& p = copyImageRenderer_->GetPostEffectParameter();
+    const auto parameterEdit2 = copyImageRenderer_->BeginParameterEdit();
+    auto& p = parameterEdit2.Get();
     const LightManager* lights = LightManager::GetInstance();
     const Vector4 environment = lights->GetEnvironmentLighting();
     const Vector4 components = lights->GetLightingComponents();
@@ -455,9 +458,12 @@ bool PostEffectManager::ApplyDevelopmentSetting(const std::string& key, const st
 {
     if ((key == "toneMapEnabled" || key == "volumeEnabled" || key == "fxaaEnabled" || key == "animationEnabled" || key == "fogEnabled" || key == "distanceFogEnabled" || key == "bloomEnabled" || key.starts_with("pass.")) && value != "true" && value != "false") { return false; }
     const bool isEnabled = value == "true";
-    auto& parameters = copyImageRenderer_->GetPostEffectParameter();
-    FogData* fog = fogManager_->GetEditableFogData();
-    auto* bloom = bloomRenderer_->GetEditableBloomParameter();
+    auto parameterEdit3 = copyImageRenderer_->BeginParameterEdit();
+    auto& parameters = parameterEdit3.Get();
+    auto parameterEdit14 = fogManager_->BeginFogEdit();
+    auto* fog = &parameterEdit14.Get();
+    auto parameterEdit15 = bloomRenderer_->BeginParameterEdit();
+    auto* bloom = &parameterEdit15.Get();
     if (key == "toneMapEnabled") {
         parameters.toneMapEnabled = 0;
         if (isEnabled) { parameters.toneMapEnabled = 1; }
@@ -610,13 +616,14 @@ bool PostEffectManager::SetSsao(bool isEnabled, float strength, float radius, fl
         strength < 0.0f || strength > 0.6f || radius < 0.1f || radius > 30.0f || bias < 0.0f || bias > radius) { return false; }
     float enabled = 0.0f;
     if (isEnabled) { enabled = 1.0f; }
-    copyImageRenderer_->GetPostEffectParameter().ssaoSettings = { strength, radius, bias, enabled };
+    { auto parameterEdit16 = copyImageRenderer_->BeginParameterEdit(); parameterEdit16.Get().ssaoSettings = { strength, radius, bias, enabled }; }
     return true;
 }
 
 void PostEffectManager::UpdateCameraInputs(Camera* camera)
 {
-    auto& screenParameters = copyImageRenderer_->GetPostEffectParameter();
+    auto parameterEdit4 = copyImageRenderer_->BeginParameterEdit();
+    auto& screenParameters = parameterEdit4.Get();
     screenParameters.screenCameraSettings.z = 0.0f;
     LightManager* lights = LightManager::GetInstance();
     screenParameters.atmosphereSettings = lights->GetAtmosphereSettings();
@@ -650,7 +657,8 @@ void PostEffectManager::UpdateCameraInputs(Camera* camera)
 bool PostEffectManager::SetToneMapping(uint32_t mode, float compensationEv)
 {
     if (mode > 1 || !std::isfinite(compensationEv) || compensationEv < -10 || compensationEv > 10) { return false; }
-    auto& settings = copyImageRenderer_->GetPostEffectParameter().colorFinishSettings;
+    auto parameterEdit5 = copyImageRenderer_->BeginParameterEdit();
+    auto& settings = parameterEdit5.Get().colorFinishSettings;
     settings.x = static_cast<float>(mode); settings.z = compensationEv;
     return true;
 }
@@ -662,17 +670,18 @@ void PostEffectManager::Update(Camera* camera)
     if (camera != nullptr) { cameraHistoryId = camera->GetMotionHistoryId(); }
     if (exposureCamera_ != camera || exposureCameraHistoryId_ != cameraHistoryId) { autoExposureRenderer_->ResetHistory(); }
     exposureCamera_ = camera; exposureCameraHistoryId_ = cameraHistoryId;
-    auto& animationParameters = copyImageRenderer_->GetPostEffectParameter();
+    auto parameterEdit6 = copyImageRenderer_->BeginParameterEdit();
+    auto& animationParameters = parameterEdit6.Get();
     if (isAnimationEnabled_) { animationParameters.time += TimeManager::GetInstance()->GetDeltaTime(); }
     if (animationParameters.time > 1000.0f) { animationParameters.time = 0.0f; }
     UpdateCameraInputs(camera);
     SceneManager* sceneManager = SceneManager::GetInstance();
     if (sceneExposureRevision_ != sceneManager->GetSceneExposureRevision()) {
-        copyImageRenderer_->GetPostEffectParameter().toneExposure = sceneManager->GetSceneExposure();
+        { auto parameterEdit17 = copyImageRenderer_->BeginParameterEdit(); parameterEdit17.Get().toneExposure = sceneManager->GetSceneExposure(); }
         sceneExposureRevision_ = sceneManager->GetSceneExposureRevision();
         autoExposureRenderer_->ResetHistory();
     }
-    if (FogData* fogData = fogManager_->GetEditableFogData()) {
+    if (auto fogEdit = fogManager_->BeginFogEdit(); FogData* fogData = &fogEdit.Get()) {
         SceneManager* sceneManager = SceneManager::GetInstance();
         fogData->color = sceneManager->GetSceneFogColor();
         // Apply a preset once, so development sliders remain usable afterwards.
@@ -682,7 +691,8 @@ void PostEffectManager::Update(Camera* camera)
         }
     }
     if (camera != nullptr) {
-        auto& parameter = copyImageRenderer_->GetPostEffectParameter();
+        auto parameterEdit7 = copyImageRenderer_->BeginParameterEdit();
+        auto& parameter = parameterEdit7.Get();
         parameter.outlineNearClip = camera->GetNearClip();
         parameter.outlineFarClip = camera->GetFarClip();
         fogManager_->SetCameraInfo(
@@ -692,7 +702,9 @@ void PostEffectManager::Update(Camera* camera)
             camera->GetAspectRatio());
     }
 
+    parameterEdit6.Commit();
     fogManager_->Update();
+    parameterEdit6.Commit();
     bloomRenderer_->Update();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     if (cameraShakeOverride_) {
@@ -737,7 +749,8 @@ void PostEffectManager::DrawImGui()
 #ifdef USE_IMGUI
     ImGui::Begin("Post Effects");
 
-    CopyImageRenderer::PostEffectParameter& parameter = copyImageRenderer_->GetPostEffectParameter();
+    auto parameterEdit8 = copyImageRenderer_->BeginParameterEdit();
+    CopyImageRenderer::PostEffectParameter& parameter = parameterEdit8.Get();
     bool toneEnabled = parameter.toneMapEnabled != 0;
     if (ImGui::Checkbox("Tone Mapping", &toneEnabled)) {
         parameter.toneMapEnabled = 0;
@@ -845,8 +858,8 @@ void PostEffectManager::UpdatePostEffectParameters(
         return;
     }
 
-    CopyImageRenderer::PostEffectParameter& postEffectParameter =
-        copyImageRenderer_->GetPostEffectParameter();
+    auto parameterEdit9 = copyImageRenderer_->BeginParameterEdit();
+    CopyImageRenderer::PostEffectParameter& postEffectParameter = parameterEdit9.Get();
     const RadialBlurSettings& blur = sceneManager->GetRadialBlurSettings();
     postEffectParameter.radialBlurSampleCount = blur.sampleCount;
     postEffectParameter.radialBlurWidth = blur.width;
@@ -932,7 +945,8 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
         return;
     }
     bool volumeApplied = false;
-    auto& screenSettings = copyImageRenderer_->GetPostEffectParameter();
+    auto parameterEdit10 = copyImageRenderer_->BeginParameterEdit();
+    auto& screenSettings = parameterEdit10.Get();
     screenSettings.screenCameraSettings.w = 0.0f;
     if (normalTextureHandle_.ptr != 0 && indirectTextureHandle_.ptr != 0) { screenSettings.screenCameraSettings.w = 1.0f; }
     if (sceneDepthReady_ && screenSettings.screenCameraSettings.z > 0.5f &&
@@ -1052,15 +1066,18 @@ void PostEffectManager::FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle
 {
     // Meter the HDR scene before Bloom, so glow does not feed back into exposure.
     autoExposureRenderer_->Generate(GetSceneColorTexture(), inputHandle, exposureDeltaSeconds_);
-    auto& finishSettings = copyImageRenderer_->GetPostEffectParameter().colorFinishSettings;
+    auto parameterEdit11 = copyImageRenderer_->BeginParameterEdit();
+    auto& finishSettings = parameterEdit11.Get().colorFinishSettings;
     finishSettings.y = 0;
     D3D12_GPU_DESCRIPTOR_HANDLE exposureSrv = autoExposureRenderer_->GetExposureSrv();
     if (exposureSrv.ptr != 0) { finishSettings.y = 1; }
     copyImageRenderer_->SetExposureTextureHandle(exposureSrv);
     if (bloomRenderer_->IsEnabled()) {
+        parameterEdit11.Commit();
         bloomRenderer_->Generate(inputHandle);
         RenderTarget& target = GetActiveTargets()[GetNextPingPongIndex(particleCompositionTargetIndex_)];
         target.BeginRender();
+        parameterEdit11.Commit();
         bloomRenderer_->Composite(inputHandle);
         target.EndRender();
         inputHandle = target.GetSrvHandleGPU();
@@ -1069,6 +1086,7 @@ void PostEffectManager::FinishSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE inputHandle
     PostEffectType finalType = PostEffectType::ToneMap;
     if (fxaaEnabled_) { finalType = PostEffectType::FXAA; }
     finalPassTimer_.Begin();
+    parameterEdit11.Commit();
     ApplyPostEffectToCurrentTarget(finalType, inputHandle);
     finalPassTimer_.End();
 }
@@ -1103,7 +1121,8 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
     if (defaults != defaultEffectParameters_.end()) { customParameters = defaults->second; }
     const Vector3* overrides = SceneManager::GetInstance()->FindPostEffectParameters(type);
     if (overrides != nullptr) { customParameters = *overrides; }
-    auto& parameters = copyImageRenderer_->GetPostEffectParameter();
+    auto parameterEdit12 = copyImageRenderer_->BeginParameterEdit();
+    auto& parameters = parameterEdit12.Get();
     parameters.customParameter0 = customParameters.x;
     parameters.customParameter1 = customParameters.y;
     parameters.customParameter2 = customParameters.z;
@@ -1116,6 +1135,7 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
         D3D12_GPU_VIRTUAL_ADDRESS fogConstantBufferView = fogManager_->GetConstantBufferView();
         if (fogConstantBufferView == 0) {
             copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
+            parameterEdit12.Commit();
             copyImageRenderer_->Draw(
                 inputHandle, depthSrv, normalTextureHandle_);
             return;
@@ -1127,12 +1147,14 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
 
     if (type == PostEffectType::Bloom) {
         copyImageRenderer_->SetPostEffectType(PostEffectType::Copy);
+        parameterEdit12.Commit();
         copyImageRenderer_->Draw(
             inputHandle, depthSrv, normalTextureHandle_);
         return;
     }
 
     copyImageRenderer_->SetPostEffectType(type);
+    parameterEdit12.Commit();
     copyImageRenderer_->Draw(
         inputHandle, depthSrv, normalTextureHandle_);
 }

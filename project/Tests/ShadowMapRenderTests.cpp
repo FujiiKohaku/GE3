@@ -228,15 +228,17 @@ void CheckMotionVectors(DirectXCommon* dx, PostEffectManager& post, OffscreenRen
         object.SetModel(model);
         object.SetAnimation(&animation);
         object.Initialize(SkinningObject3dManager::GetInstance());
-        for (auto& influence : object.GetSkinCluster().mappedInfluence) {
+        for (size_t vertex = 0; vertex < object.GetSkinVertexCount(); ++vertex) {
+            SkinCluster::VertexInfluence influence {};
             influence.weights[0] = 1;
-            influence.jointIndices[0] = skeleton.root;
+            influence.jointIndices[0] = skeleton.GetRoot();
+            Require(object.SetVertexInfluence(vertex, influence), "Invalid skin influence");
         }
         for (int mode = 0; mode < 4; ++mode) {
             Logger::Log("Motion vectors: skinning mode " + std::to_string(mode));
             Logger::Flush();
-            if (mode == 1) { skeleton.joints[skeleton.root].transform.translate.x += 0.5f; skeleton.UpdateSkeleton(); }
-            if (mode == 3) { skeleton.joints[skeleton.root].transform.translate.x += 0.5f; skeleton.UpdateSkeleton(); object.ResetMotionHistory(); }
+            if (mode == 1) { skeleton.OffsetJointTranslation(skeleton.GetRoot(), { 0.5f, 0, 0 }); skeleton.UpdateSkeleton(); }
+            if (mode == 3) { skeleton.OffsetJointTranslation(skeleton.GetRoot(), { 0.5f, 0, 0 }); skeleton.UpdateSkeleton(); object.ResetMotionHistory(); }
             object.Update();
             SrvManager::GetInstance()->PreDraw();
             post.PreDrawDepth();
@@ -640,9 +642,11 @@ int RunFxaaTest()
             const char* views[] = { "title", "stage03", "jellyfish" };
             for (int mode = 0; mode < 3; ++mode) {
                 manager->SetFxaaEnabled(mode != 0);
-                auto& parameter = manager->GetCopyImageRenderer()->GetPostEffectParameter();
+                auto parameterEdit = manager->GetCopyImageRenderer()->BeginParameterEdit();
+                auto& parameter = parameterEdit.Get();
                 parameter.fxaaStrength = 1.0f;
                 if (mode == 2) { parameter.fxaaStrength = 0.0f; }
+                parameterEdit.Commit();
                 for (int frame = 0; frame < 3; ++frame) { game.Draw(); }
                 auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
                     D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -677,11 +681,11 @@ int RunFxaaTest()
         UINT64 frequency = 0;
         Require(SUCCEEDED(dx->GetCommandQueue()->GetTimestampFrequency(&frequency)), "GPU timer frequency failed");
         double averages[3] {};
-        manager->GetCopyImageRenderer()->GetPostEffectParameter().fxaaStrength = 1.0f;
+        manager->GetCopyImageRenderer()->BeginParameterEdit().Get().fxaaStrength = 1.0f;
         for (int mode = 0; mode < 3; ++mode) {
             manager->SetFxaaEnabled(mode != 0);
-            manager->GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = 0;
-            if (mode == 2) { manager->GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = 1; }
+            manager->GetBloomRenderer()->BeginParameterEdit().Get().isEnabled = 0;
+            if (mode == 2) { manager->GetBloomRenderer()->BeginParameterEdit().Get().isEnabled = 1; }
             for (int sample = 0; sample < 24; ++sample) {
                 dx->PreDraw();
                 SrvManager::GetInstance()->PreDraw();
@@ -838,13 +842,13 @@ int RunTemporalIntegrationTest(bool shouldValidateQuality = false, bool shouldVa
             SceneManager::GetInstance()->SetSceneExposure(0.5f);
             // Game::Draw presents; populate every swap buffer before reading the current one.
             for (uint32_t frame = 0; frame < dx->GetSwapChainResourcesNum(); ++frame) { game.Update(); game.Draw(); }
-            Require(renderer->GetPostEffectManager()->GetCopyImageRenderer()->GetPostEffectParameter().toneExposure == 0.5f, "Dark exposure did not reach final parameters");
+            Require(renderer->GetPostEffectManager()->GetCopyImageRenderer()->BeginParameterEdit().Get().toneExposure == 0.5f, "Dark exposure did not reach final parameters");
             Require(temporal->HasUsedHistory(), "Post-TAA exposure change discarded HDR history");
             barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
             dx->GetCommandList()->ResourceBarrier(1, &barrier); auto darkExposure = ReadFrame(dx, directory / "final-exposure-dark.png");
             SceneManager::GetInstance()->SetSceneExposure(2.0f);
             for (uint32_t frame = 0; frame < dx->GetSwapChainResourcesNum(); ++frame) { game.Update(); game.Draw(); }
-            Require(renderer->GetPostEffectManager()->GetCopyImageRenderer()->GetPostEffectParameter().toneExposure == 2.0f, "Bright exposure did not reach final parameters");
+            Require(renderer->GetPostEffectManager()->GetCopyImageRenderer()->BeginParameterEdit().Get().toneExposure == 2.0f, "Bright exposure did not reach final parameters");
             barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
             dx->GetCommandList()->ResourceBarrier(1, &barrier); auto brightExposure = ReadFrame(dx, directory / "final-exposure-bright.png");
             Require(ChangedPixels(darkExposure, brightExposure) > 1000, "Manual exposure did not change final display");
@@ -1319,7 +1323,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             ice.SetTranslate({ -10.0f, 0.0f, 25.0f });
             ice.SetMaterial("resources/Shaders/Object3D/StageIceSpire");
             ice.SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
-            ice.GetMaterial()->shininess = 96.0f;
+            ice.SetShininess(96.0f);
             ice.SetCastShadow(true);
             ice.SetReceiveShadow(true);
             ice.Update();
@@ -1487,7 +1491,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Logger::Flush();
             std::vector<uint8_t> bloomImages[2];
             for (int mode = 0; mode < 2; ++mode) {
-                post.GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = mode;
+                post.GetBloomRenderer()->BeginParameterEdit().Get().isEnabled = mode;
                 SrvManager::GetInstance()->PreDraw();
                 offscreen.SetClearColor({ 0.0f, 0.0f, 0.0f, 1.0f });
                 offscreen.PreDraw(dx->GetDSVHandle());
@@ -1584,7 +1588,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                     Require(!volume->Generate(shadows.GetSrv(), false), "Missing depth readiness was ignored");
                 }
                 dx->PreDraw();
-                post.GetBloomRenderer()->GetEditableBloomParameter()->isEnabled = 0;
+                post.GetBloomRenderer()->BeginParameterEdit().Get().isEnabled = 0;
                 post.Apply(nullptr, offscreen.GetSrvHandleGPU());
                 volumeImages[mode] = ReadFrame(dx, directory / ("volumetric-safety-" + std::to_string(mode) + ".png"));
             }
@@ -1959,7 +1963,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             lights->SetEnvironmentLighting(originalEnvironment.x, originalEnvironment.y);
             lights->SetAtmosphere(originalAtmosphere.x > 0.5f, originalAtmosphere.y, originalAtmosphere.z, originalAtmosphere.w);
             camera.LookAt({0,40,-95}, {0,0,35}); camera.Update(); floor.Update(); ice.Update();
-            post.GetCopyImageRenderer()->GetPostEffectParameter().screenCameraSettings.z = 0.0f;
+            post.GetCopyImageRenderer()->BeginParameterEdit().Get().screenCameraSettings.z = 0.0f;
             Logger::Log("Lighting 4-6 PASS: SSAO stable/off/normal fallback, atmosphere, environment maps, 38 lights clustered image parity across three cameras");
 
             D3D12_QUERY_HEAP_DESC volumeQueryDesc {};

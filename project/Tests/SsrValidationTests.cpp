@@ -323,13 +323,15 @@ int RunSsrValidation()
                 Object3dManager::GetInstance()->PreDraw(); floor.Draw(); box.Draw(); pillar.Draw(); rail.Draw();
                 offscreen.PostDraw(); post.PostDrawDepth(); dxCommon->PreDraw();
                 dxCommon->SetBackBufferRenderTarget(dxCommon->GetDSVHandle());
-                auto& parameters = copy->GetPostEffectParameter();
+                auto parameterEdit1 = copy->BeginParameterEdit();
+    auto& parameters = parameterEdit1.Get();
                 parameters.ssaoSettings = { 0.6f, 5.0f, 0.02f, 0 };
                 if (frameIndex == 1 || frameIndex == 3) { parameters.ssaoSettings.w = 1; }
                 parameters.atmosphereSettings.x = 0;
                 parameters.screenCameraSettings.w = 1;
                 copy->SetPostEffectType(PostEffectType::ScreenLighting);
                 aoTimer.Begin();
+    parameterEdit1.Commit();
                 copy->Draw(offscreen.GetSrvHandleGPU(), post.GetDepthSrv(), offscreen.GetNormalSrvHandleGPU());
                 aoTimer.End();
                 aoFrames[frameIndex] = CaptureSsrFrame(dxCommon, directory / (std::string(kAoNames[frameIndex]) + ".png"));

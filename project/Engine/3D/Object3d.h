@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/math/MatrixMath.h"
@@ -69,7 +70,14 @@ public:
     const Vector3& GetRotate() const { return transform.rotate; }
     const Vector3& GetTranslate() const { return transform.translate; }
     // DirectionalLight* GetLight() { return directionalLightData; }
-    Material* GetMaterial() { return materialData_; }
+    bool SetRoughness(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 1.0f) return false; materialData_->roughness = value; return true; }
+    bool SetMetallic(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 1.0f) return false; materialData_->metallic = value; return true; }
+    bool SetSpecularStrength(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 2.0f) return false; materialData_->specularStrength = value; return true; }
+    bool SetOpacity(float value) { if (!materialData_ || !std::isfinite(value) || value < 0 || value > 1) return false; materialData_->color.w = value; return true; }
+    bool SetUvTransformElement(uint32_t row, uint32_t column, float value) { if (!materialData_ || row >= 4 || column >= 4 || !std::isfinite(value)) return false; materialData_->uvTransform.m[row][column] = value; return true; }
+    const Material* GetMaterial() const { return materialData_; }
+    bool SetShininess(float value) { if (!materialData_ || !std::isfinite(value) || value < 0.0f) return false; materialData_->shininess = value; return true; }
+    bool SetUvTransform(const Matrix4x4& value) { if (!materialData_ || !ValueValidation::IsFinite(value)) return false; materialData_->uvTransform = value; return true; }
     // ----------------
     // Material 操作
     // ----------------
@@ -128,7 +136,7 @@ public:
     void SetEnvironmentMapStrength(float strength)
     {
         if (materialData_) {
-            materialData_->environmentCoefficient = strength;
+            if (std::isfinite(strength) && strength >= 0.0f) { materialData_->environmentCoefficient = strength; }
         }
     }
     void SetName(const std::string& name)

@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/math/Object3DStruct.h"
@@ -84,7 +85,7 @@ public:
     void SetShininess(float shininess)
     {
         if (materialData_) {
-            materialData_->shininess = shininess;
+            if (std::isfinite(shininess) && shininess >= 0.0f) { materialData_->shininess = shininess; }
         }
     }
 

@@ -1,4 +1,6 @@
 #pragma once
+#include "Engine/math/SettingsEdit.h"
+#include "Engine/math/ValueValidation.h"
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/PostEffect/Fog/FogData.h"
@@ -14,8 +16,11 @@ public:
     void SetCameraInfo(float nearClip, float farClip, float fovY, float aspectRatio);
 
     const FogData& GetFogData() const;
-    FogData* GetEditableFogData() { return fogData_; }
     D3D12_GPU_VIRTUAL_ADDRESS GetConstantBufferView() const;
+
+    bool SetFogData(const FogData& value);
+    SettingsEdit<FogData> BeginFogEdit();
+    static bool IsValidParameter(const FogData& value);
 
 private:
     void CreateConstantBuffer();

@@ -46,11 +46,11 @@ public:
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
     bool IsDeathSequenceFinished() const override { return deathTimer_ >= 2.0f; }
-    bool IsMadModeActive() const override { return hp_ <= kMaxHp * 0.35f; }
+    bool IsMadModeActive() const override { return GetHealth() <= kMaxHp * 0.35f; }
     bool IsBeamHittingPlayer() const override { return false; }
     float GetHeadHpFraction() const override;
     float GetBodyHpFraction() const override;
-    float GetHp() const { return hp_; }
+    float GetHp() const { return GetHealth(); }
     AttackPattern GetAttackPattern() const { return attackPattern_; }
 
 private:

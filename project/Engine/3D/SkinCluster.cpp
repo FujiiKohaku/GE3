@@ -11,13 +11,13 @@ SkinCluster::SkinClusterData SkinCluster::CreateSkinCluster(
     // 入力チェック
     // =================================================
     assert(device);
-    assert(!skeleton.joints.empty());
+    assert(!skeleton.GetJoints().empty());
     assert(!modelData.primitives.empty());
 
     // =================================================
     // MatrixPalette（WellForGPU）
     // =================================================
-    const size_t jointCount = skeleton.joints.size();
+    const size_t jointCount = skeleton.GetJoints().size();
     assert(jointCount > 0);
 
     skinCluster.paletteResource = DirectXCommon::GetInstance()->CreateBufferResource(
@@ -85,8 +85,8 @@ SkinCluster::SkinClusterData SkinCluster::CreateSkinCluster(
     // =================================================
     for (const auto& jointWeight : modelData.skinClusterData) {
 
-        auto it = skeleton.jointMap.find(jointWeight.first);
-        if (it == skeleton.jointMap.end()) {
+        auto it = skeleton.GetJointMap().find(jointWeight.first);
+        if (it == skeleton.GetJointMap().end()) {
             continue;
         }
 
@@ -134,11 +134,11 @@ SkinCluster::SkinClusterData SkinCluster::CreateSkinCluster(
 
 void SkinCluster::UpdateSkinCluster(SkinClusterData& skinCluster, const Skeleton& skeleton)
 {
-    for (size_t jointIndex = 0; jointIndex < skeleton.joints.size(); ++jointIndex) {
+    for (size_t jointIndex = 0; jointIndex < skeleton.GetJoints().size(); ++jointIndex) {
 
       
         
-        skinCluster.mappedPalette[jointIndex].skeletonSpaceMatrix = MatrixMath::Multiply(skinCluster.inverseBindPoseMatrices[jointIndex], skeleton.joints[jointIndex].skeletonSpaceMatrix);
+        skinCluster.mappedPalette[jointIndex].skeletonSpaceMatrix = MatrixMath::Multiply(skinCluster.inverseBindPoseMatrices[jointIndex], skeleton.GetJoints()[jointIndex].GetSkeletonSpaceMatrix());
 
         // 法線用：逆転置行列
         skinCluster.mappedPalette[jointIndex].skeletonSpaceInverseTransposeMatrix = MatrixMath::Transpose(

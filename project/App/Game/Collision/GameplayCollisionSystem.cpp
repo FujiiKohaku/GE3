@@ -151,7 +151,7 @@ void CheckPlayerBulletsAgainstEnemy(
 
 void CheckEnemyBulletsAgainstPlayer(
     Player& player,
-    std::vector<std::unique_ptr<EnemyBullet>>& bullets,
+    const std::vector<std::unique_ptr<EnemyBullet>>& bullets,
     GameplayCollisionEvents& events)
 {
     const Sphere playerSphere {
@@ -303,7 +303,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     Player& player,
     std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss,
-    std::vector<std::unique_ptr<EnemyBullet>>& independentBullets)
+    const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets)
 {
     GameplayCollisionEvents events {};
     const Sphere playerSphere {

@@ -10,7 +10,7 @@ void ArmoredEnemy::Initialize(
         bulletModel,
         player);
 
-    hp_ = 10.0f;
+    SetHealth(10.0f);
     transform_.scale = { 2.6f, 2.6f, 2.6f };
 
     if (object_ != nullptr) {

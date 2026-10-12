@@ -5,6 +5,7 @@
 #include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include <cmath>
+#include <algorithm>
 
 EnemyBulletManager* BaseEnemy::bulletManager_ = nullptr;
 
@@ -159,7 +160,8 @@ void BaseEnemy::SetDead(bool isDead)
 
 void BaseEnemy::ApplyDamage(float damage)
 {
-    hp_ -= damage;
+    if (isDead_ || !std::isfinite(damage) || damage <= 0.0f) { return; }
+    hp_ = (std::max)(0.0f, hp_ - damage);
 
     OnDamage(damage);
 
@@ -202,4 +204,18 @@ void BaseEnemy::OnDamage(float)
 
 void BaseEnemy::OnDeath()
 {
+}
+
+void BaseEnemy::SetHealth(float hp)
+{
+    if (std::isfinite(hp) && hp >= 0.0f) {
+        hp_ = hp;
+    }
+}
+
+void BaseEnemy::InitializeHealth(float hp)
+{
+    if (!std::isfinite(hp) || hp <= 0.0f) { return; }
+    hp_ = hp;
+    isDead_ = false;
 }

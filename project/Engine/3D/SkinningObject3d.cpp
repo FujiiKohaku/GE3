@@ -83,7 +83,7 @@ void SkinningObject3d::Initialize(SkinningObject3dManager* skinningObject3DManag
     assert(skinningInformationData_);
 
     skinningInformationData_->numVertices = vertexCount;
-    skinningInformationData_->numJoints = static_cast<uint32_t>(playAnimation_->GetSkeleton()->joints.size());
+    skinningInformationData_->numJoints = static_cast<uint32_t>(playAnimation_->GetSkeleton()->GetJoints().size());
     // ================================
     // Transform 初期値
     // ================================
@@ -571,7 +571,7 @@ void SkinningObject3d::CreateSkinningResources()
     paletteSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
     paletteSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
     paletteSrvDesc.Buffer.FirstElement = 0;
-    paletteSrvDesc.Buffer.NumElements = static_cast<UINT>(playAnimation_->GetSkeleton()->joints.size());
+    paletteSrvDesc.Buffer.NumElements = static_cast<UINT>(playAnimation_->GetSkeleton()->GetJoints().size());
     paletteSrvDesc.Buffer.StructureByteStride = sizeof(SkinCluster::WellForGPU);
     paletteSrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
     paletteSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

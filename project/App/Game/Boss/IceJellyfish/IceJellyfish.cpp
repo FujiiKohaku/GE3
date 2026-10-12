@@ -38,7 +38,7 @@ void ConfigureJellyfishBodyMaterial(Object3d& object)
     object.SetTransparentDepthWrite(true);
     object.SetEnableEnvironmentMap(true);
     object.SetEnvironmentMapStrength(0.10f);
-    object.GetMaterial()->shininess = 96.0f;
+    object.SetShininess(96.0f);
     object.SetSurfaceProperties(0.28f, 0.0f, 0.70f);
 }
 
@@ -95,7 +95,7 @@ std::unique_ptr<Object3d> IceJellyfish::CreatePart(
     object->SetEnableLighting(ice);
     object->SetEnableEnvironmentMap(false);
     object->SetEnvironmentMapStrength(0.0f);
-    object->GetMaterial()->shininess = 0.0f;
+    object->SetShininess(0.0f);
     return object;
 }
 
@@ -104,8 +104,7 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     camera_ = camera;
     bulletModel_ = bulletModel;
     player_ = player;
-    hp_ = kMaxHp;
-    isDead_ = false;
+    InitializeHealth(kMaxHp);
     animationTime_ = 0.0f;
     softPoseTime_ = 0.0f;
     softPoseInitialized_ = false;
@@ -182,7 +181,7 @@ void IceJellyfish::Update()
     animationTime_ += (std::max)(deltaTime, 0.0f);
     hitFlashTime_ = (std::max)(0.0f, hitFlashTime_ - deltaTime);
 
-    if (isDead_) {
+    if (IsDead()) {
         deathTimer_ += deltaTime;
         bodyPosition_.y -= 9.0f * deltaTime;
         bodyPosition_.z += 5.0f * deltaTime;
@@ -952,7 +951,7 @@ void IceJellyfish::UpdateIcePillarModelTransforms()
 
 void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 {
-    if (bell_ == nullptr || camera_ == nullptr || (isDead_ && deathTimer_ >= 2.0f)) { return; }
+    if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) { return; }
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
         if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->DrawShadow(renderer);
@@ -974,7 +973,7 @@ void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 
 void IceJellyfish::Draw()
 {
-    if (bell_ == nullptr || camera_ == nullptr || (isDead_ && deathTimer_ >= 2.0f)) return;
+    if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) return;
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
         if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->Draw();
@@ -1003,7 +1002,7 @@ void IceJellyfish::Draw()
 }
 
 void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
-    if (!bell_ || !camera_ || (isDead_ && deathTimer_ >= 2.0f)) { return; }
+    if (!bell_ || !camera_ || (IsDead() && deathTimer_ >= 2.0f)) { return; }
     for (size_t crystalIndex = 0; crystalIndex < crystals_.size(); ++crystalIndex) {
         if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystalIndex] > 0 && crystals_[crystalIndex]) {
             crystals_[crystalIndex]->SubmitRaytracing(renderer);
@@ -1030,7 +1029,7 @@ SweepHit IceJellyfish::SweepBullet(
 {
     SweepHit nearest {};
     partIndex = kBellPart;
-    if (bell_ == nullptr || isDead_) return nearest;
+    if (bell_ == nullptr || IsDead()) return nearest;
 
     auto consider = [&](const SweepHit& hit, int32_t candidatePart) {
         if (hit.isHit && (!nearest.isHit || hit.time < nearest.time)) {
@@ -1086,11 +1085,11 @@ bool IceJellyfish::IsCollisionPartDamageable(int32_t partIndex) const
 
 void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
 {
-    if (isDead_ || damage <= 0.0f) return;
+    if (IsDead() || !std::isfinite(damage) || damage <= 0.0f) return;
     if (partIndex == kCorePart) {
         if (!coreExposed_) return;
         hitFlashTime_ = 0.12f;
-        hp_ = (std::max)(0.0f, hp_ - damage * 1.5f);
+        SetHealth((std::max)(0.0f, GetHealth() - damage * 1.5f));
     } else if (partIndex >= kFirstSegmentPart &&
         partIndex < kFirstSegmentPart + static_cast<int32_t>(kTentacleCount * kSegmentsPerTentacle)) {
         const int32_t flat = partIndex - kFirstSegmentPart;
@@ -1117,7 +1116,7 @@ void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
         return;
     }
 
-    if (hp_ <= 0.0f) {
+    if (GetHealth() <= 0.0f) {
         SetDead(true);
         EffectManager::GetInstance()->PlayEffect("Explosion", coreCollider_.center);
     }
@@ -1141,7 +1140,7 @@ void IceJellyfish::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) con
 
 void IceJellyfish::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
 {
-    if (bell_ == nullptr || isDead_) return;
+    if (bell_ == nullptr || IsDead()) return;
     CollisionManager* manager = CollisionManager::GetInstance();
     if (!coreExposed_) {
         for (const OBB& box : bellColliders_) manager->RegisterRaycastObbTarget(nextObjectId++, box);
@@ -1157,7 +1156,7 @@ void IceJellyfish::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
 
 void IceJellyfish::DrawCollisionDebug() const
 {
-    if (bell_ == nullptr || isDead_) return;
+    if (bell_ == nullptr || IsDead()) return;
     DebugRenderer* renderer = DebugRenderer::GetInstance();
     if (!coreExposed_) {
         for (const OBB& box : bellColliders_) {
@@ -1190,7 +1189,7 @@ void IceJellyfish::DrawCollisionDebug() const
 
 float IceJellyfish::GetHeadHpFraction() const
 {
-    return std::clamp(hp_ / kMaxHp, 0.0f, 1.0f);
+    return std::clamp(GetHealth() / kMaxHp, 0.0f, 1.0f);
 }
 
 float IceJellyfish::GetBodyHpFraction() const

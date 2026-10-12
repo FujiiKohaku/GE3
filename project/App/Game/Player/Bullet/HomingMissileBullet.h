@@ -8,14 +8,14 @@ class BaseEnemy;
 
 class HomingMissileBullet : public MissileBullet {
 public:
-    void SetTarget(BaseEnemy* target, const std::shared_ptr<std::vector<BaseEnemy*>>& activeTargets);
+    void SetTarget(BaseEnemy* target, const std::shared_ptr<const std::vector<BaseEnemy*>>& activeTargets);
 
 protected:
     void Move() override;
 
 private:
     BaseEnemy* target_ = nullptr;
-    std::weak_ptr<std::vector<BaseEnemy*>> activeTargets_;
+    std::weak_ptr<const std::vector<BaseEnemy*>> activeTargets_;
     float homingStrength_ = 0.08f;
     int targetPassCount_ = 0;
 

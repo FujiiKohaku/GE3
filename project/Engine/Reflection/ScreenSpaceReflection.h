@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/math/ValueValidation.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Debug/GpuTimestampTimer.h"
@@ -44,8 +45,16 @@ public:
         settings_.debugMode = ScreenSpaceReflectionDebugMode::None;
         if (isDebugVisible) { settings_.debugMode = ScreenSpaceReflectionDebugMode::Reflection; }
     }
-    void SetDebugMode(ScreenSpaceReflectionDebugMode debugMode) { settings_.debugMode = debugMode; }
-    void SetSettings(const ScreenSpaceReflectionSettings& settings) { settings_ = settings; }
+    void SetDebugMode(ScreenSpaceReflectionDebugMode debugMode) { auto settings = settings_; settings.debugMode = debugMode; SetSettings(settings); }
+    bool SetSettings(const ScreenSpaceReflectionSettings& settings) {
+        if (!std::isfinite(settings.historyWeight) || settings.historyWeight < 0 || settings.historyWeight > 1 ||
+            !std::isfinite(settings.maxBlurRadiusPx) || settings.maxBlurRadiusPx < 0 || settings.maxBlurRadiusPx > 32 ||
+            !std::isfinite(settings.maxDistance) || settings.maxDistance <= 0 ||
+            !std::isfinite(settings.thickness) || settings.thickness <= 0 ||
+            !std::isfinite(settings.strength) || settings.strength < 0 || settings.strength > 1 ||
+            settings.debugMode < ScreenSpaceReflectionDebugMode::None || settings.debugMode > ScreenSpaceReflectionDebugMode::HitStatus) return false;
+        settings_ = settings; return true;
+    }
     const ScreenSpaceReflectionSettings& GetSettings() const { return settings_; }
     bool IsEnabled() const { return settings_.isEnabled; }
     void SetEnabled(bool isEnabled) { settings_.isEnabled = isEnabled; }

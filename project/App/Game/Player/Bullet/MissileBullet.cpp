@@ -8,7 +8,7 @@ void MissileBullet::Initialize(Model* model)
     SetEnableLighting(false);
     SetColor({ 0.325f, 0.847f, 0.910f, 1.0f });
 
-    damage_ = 10;
+    SetDamage(10);
 
     transform_.scale = {
         scale_,
