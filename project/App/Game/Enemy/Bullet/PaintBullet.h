@@ -8,5 +8,5 @@ public:
     ~PaintBullet() override = default;
 
     void Initialize(Model* model) override;
-    void OnHitPlayer(const Vector3& position) override;
+    EnemyBulletHitEffect OnHitPlayer(const Vector3& position) override;
 };

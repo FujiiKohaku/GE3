@@ -219,3 +219,34 @@ void BaseEnemy::InitializeHealth(float hp)
     hp_ = hp;
     isDead_ = false;
 }
+
+SweepHit BaseEnemy::SweepBullet(const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const
+{
+    if (IsDead()) { return {}; }
+    std::vector<EnemyCollisionPart> parts;
+    GetCollisionParts(parts);
+    for (const auto& part : parts) {
+        SweepHit hit = CollisionManager::SweepSphere(bullet, movement, Sphere { part.position, part.radius });
+        if (hit.isHit) {
+            partIndex = part.partIndex;
+            // 通常敵の従来の部位順序とエフェクト位置を維持する。
+            hit.position = part.position;
+            return hit;
+        }
+    }
+    return {};
+}
+void BaseEnemy::OnBulletHit(int32_t partIndex, float damage, const Vector3& position)
+{
+    if (IsCollisionPartDamageable(partIndex)) { ApplyDamageToPart(partIndex, damage); }
+    else { OnCollisionPartGuarded(partIndex, position); }
+}
+void BaseEnemy::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
+{
+    if (IsDead()) { return; }
+    std::vector<EnemyCollisionPart> parts;
+    GetCollisionParts(parts);
+    for (const auto& part : parts) {
+        CollisionManager::GetInstance()->RegisterRaycastSphereTarget(nextObjectId++, Sphere { part.position, part.radius });
+    }
+}

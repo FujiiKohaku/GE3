@@ -3,9 +3,7 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Player/Bullet/PlayerBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
-#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
-#include "App/Game/Enemy/Bullet/PaintBullet.h"
 #include "Engine/audio/SoundManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
@@ -19,13 +17,8 @@ constexpr float kPlayerObstacleRadius = 1.0f;
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 constexpr float kJustDodgePlayerRadius = 3.5f;
 
-float VectorLength(const Vector3& value)
-{
-    return std::sqrt(Dot(value, value));
-}
-
-bool EnemyBlocksJellyfishHit(const BaseEnemy* enemy, const Sphere& bullet,
-    const Vector3& movement, float jellyfishHitTime)
+bool EnemyBlocksBulletHit(const BaseEnemy* enemy, const Sphere& bullet,
+    const Vector3& movement, float targetHitTime)
 {
     if (enemy == nullptr || enemy->IsDead()) {
         return false;
@@ -35,117 +28,53 @@ bool EnemyBlocksJellyfishHit(const BaseEnemy* enemy, const Sphere& bullet,
     for (const EnemyCollisionPart& part : parts) {
         const SweepHit hit = CollisionManager::SweepSphere(
             bullet, movement, Sphere { part.position, part.radius });
-        if (hit.isHit && hit.time <= jellyfishHitTime) {
+        if (hit.isHit && hit.time <= targetHitTime) {
             return true;
         }
     }
     return false;
 }
 
-void CheckPlayerBulletsAgainstJellyfish(Player& player, IceJellyfish& jellyfish,
-    const std::vector<std::unique_ptr<BaseEnemy>>& enemies)
+void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
+    const std::vector<std::unique_ptr<BaseEnemy>>& enemies, bool isBoss = false)
 {
+    if (enemy.IsDead()) { return; }
     for (const auto& bullet : player.GetBullets()) {
         if (!bullet->IsAlive()) {
             continue;
         }
         const Sphere sphere { bullet->GetPreviousPosition(), bullet->GetCollisionRadius() };
         const Vector3 movement = bullet->GetPosition() - bullet->GetPreviousPosition();
-        int32_t partIndex = 100;
-        const SweepHit hit = jellyfish.SweepBullet(sphere, movement, partIndex);
+        int32_t partIndex = 0;
+        const SweepHit hit = enemy.SweepBullet(sphere, movement, partIndex);
         if (!hit.isHit) {
             continue;
         }
         bool blockedByEnemy = false;
-        for (const auto& enemy : enemies) {
-            if (EnemyBlocksJellyfishHit(enemy.get(), sphere, movement, hit.time)) {
-                blockedByEnemy = true;
-                break;
+        if (enemy.RequiresBulletOcclusionCheck()) {
+            for (const auto& blocker : enemies) {
+                if (blocker.get() != &enemy &&
+                    EnemyBlocksBulletHit(blocker.get(), sphere, movement, hit.time)) {
+                    blockedByEnemy = true;
+                    break;
+                }
             }
         }
         if (blockedByEnemy) {
             continue;
         }
-        if (jellyfish.IsCollisionPartDamageable(partIndex)) {
+        if (enemy.IsCollisionPartDamageable(partIndex)) {
             bullet->OnHitEnemy(hit.position);
             SoundManager::GetInstance()->Play("EnemyHit");
         } else {
             SoundManager::GetInstance()->Play("ArmorDeflect");
         }
-        const bool wasDead = jellyfish.IsDead();
-        jellyfish.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
-        if (!wasDead && jellyfish.IsDead()) {
-            SoundManager::GetInstance()->Play("BossDestroyed");
+        const bool wasDead = enemy.IsDead();
+        enemy.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
+        if (!wasDead && enemy.IsDead()) {
+            SoundManager::GetInstance()->Play(isBoss ? "BossDestroyed" : "EnemyDestroyed");
         }
         bullet->SetDead();
-    }
-}
-
-void RegisterEnemyRaycastParts(CollisionManager& manager,
-    CollisionObjectId& nextObjectId, const BaseEnemy* enemy)
-{
-    if (enemy == nullptr || enemy->IsDead()) {
-        return;
-    }
-    std::vector<EnemyCollisionPart> parts;
-    enemy->GetCollisionParts(parts);
-    for (const EnemyCollisionPart& part : parts) {
-        manager.RegisterRaycastSphereTarget(nextObjectId++, Sphere { part.position, part.radius });
-    }
-}
-
-void CheckPlayerBulletsAgainstEnemy(
-    Player& player,
-    BaseEnemy& enemy,
-    bool isBoss = false)
-{
-    if (enemy.IsDead()) {
-        return;
-    }
-
-    std::vector<EnemyCollisionPart> collisionParts;
-    enemy.GetCollisionParts(collisionParts);
-    for (const std::unique_ptr<PlayerBullet>& bullet : player.GetBullets()) {
-        if (!bullet->IsAlive()) {
-            continue;
-        }
-
-        for (const EnemyCollisionPart& part : collisionParts) {
-            const Sphere bulletSphere {
-                bullet->GetPreviousPosition(),
-                bullet->GetCollisionRadius()
-            };
-            const Sphere enemySphere { part.position, part.radius };
-            const Vector3 movement =
-                bullet->GetPosition() - bullet->GetPreviousPosition();
-            if (!CollisionManager::SweepSphere(
-                    bulletSphere,
-                    movement,
-                    enemySphere).isHit) {
-                continue;
-            }
-
-            if (enemy.IsCollisionPartDamageable(part.partIndex)) {
-                bullet->OnHitEnemy(part.position);
-                const bool wasDead = enemy.IsDead();
-                enemy.ApplyDamageToPart(
-                    part.partIndex,
-                    static_cast<float>(bullet->GetDamage()));
-                SoundManager::GetInstance()->Play("EnemyHit");
-                if (!wasDead && enemy.IsDead()) {
-                    if (isBoss) {
-                        SoundManager::GetInstance()->Play("BossDestroyed");
-                    } else {
-                        SoundManager::GetInstance()->Play("EnemyDestroyed");
-                    }
-                }
-            } else {
-                enemy.OnCollisionPartGuarded(part.partIndex, part.position);
-                SoundManager::GetInstance()->Play("ArmorDeflect");
-            }
-            bullet->SetDead();
-            break;
-        }
     }
 }
 
@@ -190,8 +119,7 @@ void CheckEnemyBulletsAgainstPlayer(
             continue;
         }
 
-        bullet->OnHitPlayer(player.GetTranslate());
-        if (dynamic_cast<PaintBullet*>(bullet.get()) != nullptr) {
+        if (bullet->OnHitPlayer(player.GetTranslate()) == EnemyBulletHitEffect::Paint) {
             events.paintBulletHitPlayer = true;
         }
         if (player.ApplyDamage(bullet->GetDamage())) {
@@ -324,18 +252,14 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
                 }
             }
 
-            CheckPlayerBulletsAgainstEnemy(player, *enemy);
+            CheckPlayerBulletsAgainstEnemy(player, *enemy, enemies);
         }
 
     }
 
     if (boss != nullptr) {
         if (!boss->IsDead()) {
-            if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(boss)) {
-                CheckPlayerBulletsAgainstJellyfish(player, *iceJellyfish, enemies);
-            } else {
-                CheckPlayerBulletsAgainstEnemy(player, *boss, true);
-            }
+            CheckPlayerBulletsAgainstEnemy(player, *boss, enemies, true);
         }
     }
     CheckEnemyBulletsAgainstPlayer(player, independentBullets, events);
@@ -385,11 +309,9 @@ void GameplayCollisionSystem::SyncRaycastTargets(
 
     CollisionObjectId nextObjectId = 1;
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies) {
-        RegisterEnemyRaycastParts(*collisionManager, nextObjectId, enemy.get());
+        enemy->RegisterRaycastTargets(nextObjectId);
     }
-    if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(boss)) {
-        iceJellyfish->RegisterRaycastTargets(nextObjectId);
-    } else {
-        RegisterEnemyRaycastParts(*collisionManager, nextObjectId, boss);
+    if (boss != nullptr) {
+        boss->RegisterRaycastTargets(nextObjectId);
     }
 }

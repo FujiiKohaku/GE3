@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Engine/math/EngineStruct.h"
+#include "Engine/CollisionManager/CollisionManager.h"
 
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
 class Camera;
@@ -48,6 +49,10 @@ public:
     void ApplyDamage(float damage);
     virtual void ApplyDamageToPart(int32_t partIndex, float damage);
     virtual void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const;
+    virtual SweepHit SweepBullet(const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const;
+    virtual void OnBulletHit(int32_t partIndex, float damage, const Vector3& position);
+    virtual void RegisterRaycastTargets(CollisionObjectId& nextObjectId) const;
+    virtual bool RequiresBulletOcclusionCheck() const { return false; }
     virtual bool IsCollisionPartDamageable(int32_t partIndex) const;
     virtual void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position);
 

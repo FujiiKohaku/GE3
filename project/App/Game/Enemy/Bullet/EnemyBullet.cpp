@@ -11,9 +11,10 @@ void EnemyBullet::Initialize(Model* model)
     SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
 }
 
-void EnemyBullet::OnHitPlayer(const Vector3&)
+EnemyBulletHitEffect EnemyBullet::OnHitPlayer(const Vector3&)
 {
     justDodgeResolved_ = true;
+    return EnemyBulletHitEffect::None;
 }
 
 void EnemyBullet::SetTimeScale(float timeScale)

@@ -35,9 +35,10 @@ public:
     Vector3 GetPosition() const override { return basePosition_; }
 
     SweepHit SweepBullet(
-        const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const;
-    void OnBulletHit(int32_t partIndex, float damage, const Vector3& position);
-    void RegisterRaycastTargets(CollisionObjectId& nextObjectId) const;
+        const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const override;
+    void OnBulletHit(int32_t partIndex, float damage, const Vector3& position) override;
+    void RegisterRaycastTargets(CollisionObjectId& nextObjectId) const override;
+    bool RequiresBulletOcclusionCheck() const override { return true; }
     void DrawCollisionDebug() const;
 
     void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const override;

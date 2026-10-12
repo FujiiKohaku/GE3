@@ -13,7 +13,8 @@ void PaintBullet::Initialize(Model* model)
     SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
 }
 
-void PaintBullet::OnHitPlayer(const Vector3& position)
+EnemyBulletHitEffect PaintBullet::OnHitPlayer(const Vector3& position)
 {
     EnemyBullet::OnHitPlayer(position);
+    return EnemyBulletHitEffect::Paint;
 }
