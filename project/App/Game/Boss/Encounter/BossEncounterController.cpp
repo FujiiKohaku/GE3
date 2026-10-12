@@ -3,7 +3,7 @@
 #include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
-#include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Boss/Common/BaseBoss.h"
 #include "Engine/Rail/Rail.h"
 
 BossEncounterController::BossEncounterController() = default;
@@ -80,7 +80,7 @@ void BossEncounterController::UpdateDeathSequence()
     }
 }
 
-StageBoss* BossEncounterController::GetActiveBoss() const
+BaseBoss* BossEncounterController::GetActiveBoss() const
 {
     return activeBoss_.get();
 }

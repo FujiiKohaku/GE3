@@ -337,9 +337,6 @@
     <ClCompile Include="App\Game\Player\Player.cpp">
       <Filter>Player</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\BaseBoss.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -481,9 +478,6 @@
     <ClCompile Include="App\Game\Player\Player.cpp">
       <Filter>Player</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\BaseBoss.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\PostEffect\OffscreenRenderer.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -586,14 +580,21 @@
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyStates.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>App\Game\Boss\AngerBlockBoss</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\BossEncounterController.cpp" />
-    <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfish.cpp" />
+    <ClCompile Include="App\Game\Boss\Encounter\BossEncounterController.cpp">
+      <Filter>App\Game\Boss\Encounter</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfish.cpp">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -821,8 +822,8 @@
     <ClInclude Include="App\Game\Player\Player.h">
       <Filter>Player</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\BaseBoss.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Boss\Common\BaseBoss.h">
+      <Filter>App\Game\Boss\Common</Filter>
     </ClInclude>
     <ClInclude Include="Engine\PostEffect\OffscreenRenderer.h">
       <Filter>ヘッダー ファイル</Filter>
@@ -923,16 +924,24 @@
     </ClInclude>
     <ClInclude Include="App\Game\Enemy\Types\ArmoredEnemy.h" />
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
-    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
-    <ClInclude Include="App\Game\Boss\StageBoss.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormState.h">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>App\Game\Boss\AngerBlockBoss</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\BossEncounterController.h" />
-    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfish.h" />
-    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.h" />
+    <ClInclude Include="App\Game\Boss\Encounter\BossEncounterController.h">
+      <Filter>App\Game\Boss\Encounter</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfish.h">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.h">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClInclude>
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -1010,5 +1019,31 @@
     <None Include="resources\Shaders\GlobalIllumination\Composite.PS.hlsl" />
     <None Include="resources\Shaders\GlobalIllumination\Temporal.PS.hlsl" />
     <None Include="resources\Shaders\GlobalIllumination\Trace.PS.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App">
+      <UniqueIdentifier>{f581800f-1f80-53c8-bd9d-0c76e2ad31b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game">
+      <UniqueIdentifier>{ee291e8c-2038-5ca2-a7e6-7280bd8a7904}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss">
+      <UniqueIdentifier>{4cd7400c-bc3b-57bd-a6f9-f23e1fd5dfcc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\Common">
+      <UniqueIdentifier>{9e23683b-00ab-5664-aa2a-de6e9fea9339}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\Encounter">
+      <UniqueIdentifier>{385e906c-a63f-5fbf-8edc-ee187bafb5e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\AngerBlockBoss">
+      <UniqueIdentifier>{e395594d-f2ae-5192-982d-2eb67bbead81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy">
+      <UniqueIdentifier>{3e1089a6-bc4a-5161-b575-aed6262c4950}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\IceJellyfish">
+      <UniqueIdentifier>{15081e1b-16a9-5293-8d88-ef1ae7f06370}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

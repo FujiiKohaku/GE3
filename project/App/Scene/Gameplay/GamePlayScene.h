@@ -53,9 +53,9 @@
 #include "App/Game/Enemy/Types/NormalEnemy.h"
 #include "App/Game/Enemy/Types/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
-#include "App/Game/Boss/BossEncounterController.h"
+#include "App/Game/Boss/Encounter/BossEncounterController.h"
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
-#include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Boss/Common/BaseBoss.h"
 #include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
 
 struct LevelData;
@@ -149,7 +149,7 @@ private:
 #endif
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
-    StageBoss* GetActiveBoss() const;
+    BaseBoss* GetActiveBoss() const;
     void ConfigureFrozenEnemyAppearance(BaseEnemy& enemy);
 
     // Updateメソッドの処理分割用ヘルパー関数

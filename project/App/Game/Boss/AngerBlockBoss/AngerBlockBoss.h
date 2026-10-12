@@ -1,13 +1,13 @@
 #pragma once
 
-#include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Boss/Common/BaseBoss.h"
 #include <memory>
 
 class Model;
 class Object3d;
 class Player;
 
-class AngerBlockBoss final : public StageBoss {
+class AngerBlockBoss final : public BaseBoss {
 public:
     void Initialize(Model* model, Model* bulletModel, Player* player);
     void Update() override;

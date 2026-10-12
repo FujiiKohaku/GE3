@@ -1,6 +1,6 @@
 #pragma once
 
-#include "App/Game/Boss/StageBoss.h"
+#include "App/Game/Boss/Common/BaseBoss.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include <array>
 #include <memory>
@@ -10,7 +10,7 @@ class Camera;
 class Model;
 class Player;
 
-class IceJellyfish final : public StageBoss {
+class IceJellyfish final : public BaseBoss {
 public:
     static constexpr float kMaxHp = 120.0f;
     static constexpr size_t kTentacleCount = 6;

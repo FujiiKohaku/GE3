@@ -7,7 +7,7 @@
 class Model;
 class Player;
 class Rail;
-class StageBoss;
+class BaseBoss;
 class Camera;
 
 class BossEncounterController {
@@ -31,7 +31,7 @@ public:
     void Update(float railDistance);
     void UpdateDeathSequence();
 
-    StageBoss* GetActiveBoss() const;
+    BaseBoss* GetActiveBoss() const;
     bool IsSpawned() const;
     bool DidSpawnThisFrame() const;
     bool DidEnterMadModeThisFrame() const;
@@ -41,7 +41,7 @@ public:
 private:
     void SpawnBoss();
 
-    std::unique_ptr<StageBoss> activeBoss_;
+    std::unique_ptr<BaseBoss> activeBoss_;
     std::string bossType_;
     Vector3 spawnPosition_ {};
     float spawnDistance_ = 0.0f;

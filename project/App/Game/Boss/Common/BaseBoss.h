@@ -2,9 +2,9 @@
 
 #include "App/Game/Enemy/BaseEnemy.h"
 
-class StageBoss : public BaseEnemy {
+class BaseBoss : public BaseEnemy {
 public:
-    ~StageBoss() override = default;
+    ~BaseBoss() override = default;
 
     virtual bool IsDeathSequenceFinished() const = 0;
     virtual bool IsMadModeActive() const = 0;

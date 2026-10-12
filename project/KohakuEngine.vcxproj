@@ -302,7 +302,6 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Player\Aim\PlayerAimController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Hazard\WaterPillarHazard.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PirateShipMidBoss\PirateShipMidBoss.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Game\Boss\BaseBoss.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\OffscreenRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoardMesh.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoxMesh.cpp" />
@@ -326,8 +325,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemyStates.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Game\Boss\BossEncounterController.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\Encounter\BossEncounterController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfish.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\PaintBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\PlayerBullet.cpp" />
@@ -474,7 +474,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Player\Movement\PlayerMovementController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Health\PlayerHealth.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Aim\PlayerAimController.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Boss\BaseBoss.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\Common\BaseBoss.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\OffscreenRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoardMesh.h" />
     <ClInclude Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoxMesh.h" />
@@ -497,9 +497,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Boss\StageBoss.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormState.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Boss\BossEncounterController.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\Encounter\BossEncounterController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfish.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfishCollision.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\PlayerBullet.h" />

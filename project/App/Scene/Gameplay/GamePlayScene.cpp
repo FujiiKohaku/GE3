@@ -822,7 +822,7 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
     return forward;
 }
 
-StageBoss* GamePlayScene::GetActiveBoss() const
+BaseBoss* GamePlayScene::GetActiveBoss() const
 {
     if (bossController_ == nullptr) {
         return nullptr;
@@ -1109,7 +1109,7 @@ void GamePlayScene::Update()
     }
 
     // ボスの更新
-    StageBoss* activeBoss = GetActiveBoss();
+    BaseBoss* activeBoss = GetActiveBoss();
     if (activeBoss != nullptr) {
         UpdateBossHpHud();
 
@@ -2807,7 +2807,7 @@ bool GamePlayScene::ExecuteDevelopmentCommand(const std::string& key)
 
 nlohmann::json GamePlayScene::GetDevelopmentState() const
 {
-    const StageBoss* boss = GetActiveBoss();
+    const BaseBoss* boss = GetActiveBoss();
     const IceJellyfish* jellyfish = dynamic_cast<const IceJellyfish*>(boss);
     nlohmann::json state = {
         { "active", true },
@@ -3122,7 +3122,7 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
     } else if (key == "teleportBossArea") {
         railDistance_ = 1750.0f;
     } else if (key == "teleportBoss") {
-        if (const StageBoss* boss = GetActiveBoss()) {
+        if (const BaseBoss* boss = GetActiveBoss()) {
             railDistance_ = (std::max)(0.0f, boss->GetPosition().z - 130.0f);
         } else { return false; }
     } else if (key == "teleportJellyfish") {

@@ -1,7 +1,7 @@
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "App/Game/Player/Weapon/PlayerHomingLock.h"
-#include "App/Game/Boss/BaseBoss.h"
+#include "App/Game/Boss/Common/BaseBoss.h"
 #include <cassert>
 #include <type_traits>
 #include <utility>
@@ -94,8 +94,10 @@ static_assert(std::is_same_v<decltype(std::declval<const EnemyBulletManager&>().
     const std::vector<std::unique_ptr<EnemyBullet>>&>);
 static_assert(std::is_same_v<decltype(std::declval<const PlayerHomingLock&>().GetTargets()),
     std::shared_ptr<const std::vector<BaseEnemy*>>>);
-static_assert(std::is_same_v<decltype(std::declval<const BaseBoss&>().GetColliders()),
-    const std::vector<BossCollider>&>);
+// The active boss hierarchy shares enemy behavior and supports polymorphic deletion.
+static_assert(std::is_base_of_v<BaseEnemy, BaseBoss>);
+static_assert(std::is_abstract_v<BaseBoss>);
+static_assert(std::has_virtual_destructor_v<BaseBoss>);
 
 int main()
 {

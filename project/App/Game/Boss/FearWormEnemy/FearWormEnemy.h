@@ -1,12 +1,12 @@
 #pragma once
 
-#include "App/Game/Boss/StageBoss.h"
-
+#include "App/Game/Boss/Common/BaseBoss.h"
 class Model;
 class Object3d;
 class Player;
+class FearWormState;
 
-class FearWormEnemy : public StageBoss {
+class FearWormEnemy : public BaseBoss {
 public:
     enum class BossState {
         Wait,    // プレイヤーを待つ待機状態
@@ -14,6 +14,8 @@ public:
         Battle,  // 通常戦闘状態 (行動切り替えと攻撃)
         Dead     // 撃破演出状態
     };
+
+    FearWormEnemy();
 
     void Initialize(
         Model* model,
@@ -50,7 +52,7 @@ public:
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
     // 現在の状態を取得する
-    BossState GetBossState() const { return state_; }
+    BossState GetBossState() const;
     bool IsMadModeActive() const override { return isMadModeActive_; }
     bool IsBeamHittingPlayer() const override { return isBeamHittingPlayer_; }
 
@@ -59,6 +61,16 @@ public:
     float GetBodyHpFraction() const override;
 
 private:
+    // ボス専用の状態クラスだけに、内部の行動処理へのアクセスを許可する。
+    friend class FearWormWaitState;
+    friend class FearWormEntryState;
+    friend class FearWormBattleState;
+    friend class FearWormDeadState;
+
+    static const FearWormState& GetState(BossState state);
+    void ChangeState(BossState state);
+    const FearWormState* currentState_;
+
     enum class MovementPattern {
         Orbit, 
         Coil,
@@ -82,10 +94,6 @@ private:
     // 頭部、胴体、尻尾の各セグメントを生成する。
     void InitializeSegments(Model* model);
 
-    // 各状態の更新関数
-    void UpdateWait();
-    void UpdateEntry();
-    void UpdateBattle();
 
     // 生存している胴体を1つ前の部位から一定距離に配置する。
     void UpdateSegments();
@@ -123,8 +131,6 @@ private:
     // 経過時間に応じて次の移動パターンへ切り替える。
     void UpdateMovementPattern(float movementSpeedRate);
 
-    // ボス戦開始時の登場位置と状態のセットアップを行う。
-    void SetupEntryPosition(const Vector3& playerPosition);
 
     // 通常弾とチャージ攻撃の発射タイミングを更新する。
     void Attack() override;
@@ -165,8 +171,6 @@ private:
     // 全胴体破壊後に頭部が弱点化したことを示すエフェクトを再生する。
     void PlayHeadVulnerableEffect(const Vector3& position);
 
-    // 尻尾側から順に部位を爆発させる撃破演出を更新する。
-    void UpdateDeathSequence();
 
     // 全部位の現在HPからボス全体の残りHP割合を計算する。
     float HealthRate() const;
@@ -237,7 +241,6 @@ private:
     float deathSequenceTimer_ = 0.0f;
     int32_t nextDeathSegmentIndex_ = -1;
     MovementPattern movementPattern_ = MovementPattern::Orbit; 
-    BossState state_ = BossState::Wait;
 
     // 追尾ミサイル攻撃用のタイマー・フラグ
     float missileAttackTimer_ = 0.0f;
