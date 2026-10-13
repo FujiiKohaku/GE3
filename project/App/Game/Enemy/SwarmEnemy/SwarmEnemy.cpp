@@ -34,6 +34,10 @@ void SwarmEnemy::Initialize(
     formationType_ = formationType;
     slotIndex_ = slotIndex;
     travelDirection_ = travelDirection;
+    if (player_ != nullptr) {
+        previousPlayerPositionZ_ = player_->GetTranslate().z;
+        forwardPositionZ_ = previousPlayerPositionZ_ + forwardDistance_;
+    }
     SetHealth(1.0f);
     transform_.scale = { 0.58f, 0.58f, 0.58f };
     attackTimer_ =
@@ -123,10 +127,16 @@ void SwarmEnemy::Move()
     centerX += static_cast<float>(travelDirection_) * crossingSpeed_ * moveTime_;
 
     Vector3 formationOffset = CalculateFormationOffset();
+    // 敵はプレイヤー更新前に動くため、直前の移動に使った倍率を参照する。
+    // 通常の進行分だけ追従し、ブーストで縮めた距離は解除後も維持する。
+    const float playerPositionZ = player_->GetTranslate().z;
+    const float playerMovementZ = playerPositionZ - previousPlayerPositionZ_;
+    forwardPositionZ_ += playerMovementZ / player_->GetForwardSpeedMultiplier();
+    previousPlayerPositionZ_ = playerPositionZ;
     transform_.translate.x = centerX + formationOffset.x;
     transform_.translate.y = baseHeight_ + formationOffset.y;
     transform_.translate.z =
-        player_->GetTranslate().z + forwardDistance_ + formationOffset.z;
+        forwardPositionZ_ + formationOffset.z;
     transform_.rotate.z =
         std::sin(moveTime_ * 4.0f + static_cast<float>(slotIndex_) * 0.25f) * 0.28f;
 

@@ -26,7 +26,7 @@ private:
     const Vector3& forward_;
     Camera* camera_ = nullptr;
     float railMoveLimitX_ = 20.0f;
-    float railMoveLimitY_ = 12.0f;
+    float railMoveLimitY_ = 15.0f;
     // 画面端に残す余白。単位はピクセル。
     float playerClampMarginX_ = 100.0f;
     float playerClampMarginY_ = 100.0f;

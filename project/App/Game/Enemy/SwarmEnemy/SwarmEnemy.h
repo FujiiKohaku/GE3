@@ -78,6 +78,8 @@ private:
     float centerStartX_ = -38.0f;
     float baseHeight_ = 2.0f;
     float forwardDistance_ = 120.0f;
+    float forwardPositionZ_ = 0.0f;
+    float previousPlayerPositionZ_ = 0.0f;
     float attackTimer_ = 0.0f;
     float fadeTimer_ = 0.0f;
     int32_t shotsFired_ = 0;

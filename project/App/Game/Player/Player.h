@@ -26,6 +26,8 @@ public:
     void Initialize(Model* model);
     // 使用クラス：GamePlayScene。照準・移動・発射・描画姿勢を順に更新する。
     void Update();
+    // レール進行の計算前に、このフレームのブースト入力を確定する。
+    void UpdateBoostState();
     // 使用クラス：GamePlayScene。機体・移動・武器で使うカメラを揃える。
     void SetCamera(Camera* camera);
     // 設定中のカメラを返す。カメラの所有権はPlayerにない。
@@ -71,6 +73,7 @@ public:
     bool IsReturningToFlightArea() const { return movementController_.IsReturningToFlightArea(); }
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
     bool IsBoosting() const { return movementController_.IsBoosting(); }
+    float GetForwardSpeedMultiplier() const { return movementController_.GetForwardSpeedMultiplier(); }
     // 使用クラス：GamePlayScene。キーボード移動とマウス操舵を切り替える。
     void SetControlMode(ControlMode mode) { movementController_.SetControlMode(mode); }
     // 現在の操作方式を返す。

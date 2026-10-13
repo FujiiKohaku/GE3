@@ -40,6 +40,7 @@ public:
     bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
     // 使用クラス：Player（外部への公開）。ブースト中かを返す。
     bool IsBoosting() const { return isBoosting_; }
+    float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
     // 使用クラス：Player・PlayerWeaponController。飛行の前方向を返す。
     const Vector3& GetFlightForward() const { return railForward_; }
     // 使用クラス：Player（外部への公開）。レール基準位置からの移動量を返す。

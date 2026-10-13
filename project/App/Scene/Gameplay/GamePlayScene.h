@@ -154,6 +154,7 @@ private:
     void UpdatePlayerTransform(const Vector3& currentPosition, const Vector3& railRight, const Vector3& railUp, const Vector3& forward);
     void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
     void UpdateBoostKick(bool isPlayerBoosting);
+    void UpdateBrakeReaction(bool isPlayerBraking);
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
     void UpdateCameraShakePostEffect();
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
@@ -283,9 +284,14 @@ private:
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
     bool wasPlayerBoosting_ = false;
+    bool wasPlayerBraking_ = false;
+    float brakeReactionStrength_ = 0.0f;
+    float brakeFovStrength_ = 0.0f;
+    static constexpr float kBrakeCameraKickDurationSeconds = 0.32f;
+    float brakeCameraKickRemainingSeconds_ = 0.0f;
     bool wasBoostingForKick_ = false;
     float normalFovY_ = 0.45f;
-    float boostFovY_ = 0.75f;
+    float boostFovY_ = 0.60f;
     float currentFovY_ = 0.45f;
     float boostKickTimer_ = 0.0f;
     float boostKickStrength_ = 0.0f;
@@ -329,7 +335,7 @@ private:
 
     // カメラパラメータ (プレイヤー上下移動連動用)
     float cameraHeightFollowFactor_ = 0.3f;
-    float cameraLookUpFactor_ = 0.7f;
+    float cameraLookUpFactor_ = 0.595f;
     float cameraHorizontalFollowFactor_ = 0.2f;
     float cameraLookHorizontalFactor_ = 0.35f;
 

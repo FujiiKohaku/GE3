@@ -52,11 +52,7 @@ void Player::Update()
         return;
     }
     health_.UpdateInvincibility(TimeManager::GetInstance()->GetDeltaTime());
-    if (debugCameraController_ != nullptr) {
-        isDebugMode_ = debugCameraController_->GetDebugMode();
-    }
-
-    movementController_.UpdateBoost(input, isDebugMode_);
+    UpdateBoostState();
     if (!isDebugMode_) {
         // 照準を先に確定してから操舵し、発射と表示で参照する位置を揃える。
         // 最新のマウス位置を取得し、この後の操舵とレティクル表示に使う。
@@ -79,6 +75,25 @@ void Player::Update()
 #ifdef _DEBUG
     weaponController_.DrawAimDebugLines();
 #endif
+}
+
+void Player::UpdateBoostState()
+{
+    if (!health_.IsAlive()) {
+        movementController_.Stop();
+        return;
+    }
+    if (object_ == nullptr || TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
+        return;
+    }
+    Input* input = Input::GetInstance();
+    if (input == nullptr) {
+        return;
+    }
+    if (debugCameraController_ != nullptr) {
+        isDebugMode_ = debugCameraController_->GetDebugMode();
+    }
+    movementController_.UpdateBoost(input, isDebugMode_);
 }
 
 void Player::UpdateDeath()

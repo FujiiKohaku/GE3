@@ -91,17 +91,22 @@ void PlayerMovementController::SetControlMode(ControlMode mode)
 }
 void PlayerMovementController::UpdateBoost(Input* input, bool isDebugMode)
 {
+    constexpr float kBrakeSpeedMultiplier = 0.5f;
+    const bool isBraking = !isDebugMode &&
+        (input->IsKeyPressed(DIK_LCONTROL) || input->IsKeyPressed(DIK_RCONTROL));
     const bool wasBoosting = isBoosting_;
-    isBoosting_ = !isDebugMode &&
+    isBoosting_ = !isDebugMode && !isBraking &&
         (input->IsKeyPressed(DIK_LSHIFT) || input->IsMousePressed(1));
     if (isBoosting_ && !wasBoosting) {
         // 押し続けている間は繰り返さず、ブースト開始時だけ効果音を鳴らす。
         SoundManager::GetInstance()->Play("BoostStart");
     }
-    // 現在の入力に応じて前進速度と左右・上下の移動量を直接切り替える。
+    // Ctrlの減速を優先し、左右・上下の操作速度は通常時のまま保つ。
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
-    if (isBoosting_) {
+    if (isBraking) {
+        velocity_.z = normalMaxSpeed_ * kBrakeSpeedMultiplier;
+    } else if (isBoosting_) {
         velocity_.z = boostMaxSpeed_;
         moveSpeed_ = boostAcceleration_;
     }

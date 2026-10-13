@@ -129,6 +129,7 @@ void GamePlayScene::Initialize()
         { "PlayerDamage", "resources/Audio/GameSfx/player_damage.wav", 0.38f, 0.15f },
         { "HealPickup", "resources/Audio/GameSfx/heal_pickup.wav", 0.28f, 0.20f },
         { "BoostStart", "resources/Audio/GameSfx/boost_start.wav", 0.22f, 0.30f },
+        { "BrakeStart", "resources/Audio/GameSfx/brake_start.wav", 0.18f, 0.15f },
         { "EnemyDestroyed", "resources/Audio/GameSfx/enemy_destroyed.wav", 0.25f, 0.10f },
         { "BossDestroyed", "resources/Audio/GameSfx/boss_destroyed.wav", 0.42f, 0.50f },
         { "EnemyShot", "resources/Audio/GameSfx/enemy_shot.wav", 0.10f, 0.12f },
@@ -712,6 +713,10 @@ void GamePlayScene::Initialize()
     EffectManager::GetInstance()->SetEffectDirection(playerJetHandle_, exhaustDirection);
     EffectManager::GetInstance()->SetEffectDirection(playerJetSparkHandle_, exhaustDirection);
     wasPlayerBoosting_ = false;
+    wasPlayerBraking_ = false;
+    brakeReactionStrength_ = 0.0f;
+    brakeFovStrength_ = 0.0f;
+    brakeCameraKickRemainingSeconds_ = 0.0f;
 
     CreateLevelObjects(levelData);
 
@@ -1182,6 +1187,7 @@ void GamePlayScene::Update()
     Vector3 railRight {};
     Vector3 railUp {};
     float nextRailDistance = 0.0f;
+    player_->UpdateBoostState();
     UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
 
     // 静的フラグ（初回フレームのログ出力用）
@@ -1205,6 +1211,7 @@ void GamePlayScene::Update()
     }
     const bool isPlayerBoosting = player_->IsBoosting();
     UpdateBoostKick(isPlayerBoosting);
+    UpdateBrakeReaction(player_->GetForwardSpeedMultiplier() < 1.0f);
 
     // 進行距離を更新
     railDistance_ = nextRailDistance;
@@ -1254,6 +1261,13 @@ void GamePlayScene::Update()
     EffectManager::GetInstance()->SetEffectDirection(playerJetHandle_, exhaustDirection);
     EffectManager::GetInstance()->SetEffectDirection(playerJetSparkHandle_, exhaustDirection);
 
+    if (!isPlayerBoosting) {
+        const float jetSpeed = 4.0f * (1.0f - 0.65f * brakeReactionStrength_);
+        const float sparkSpeed = 10.0f * (1.0f - 0.55f * brakeReactionStrength_);
+        EffectManager::GetInstance()->SetEffectVelocity(playerJetHandle_, { 0.0f, 0.0f, -jetSpeed });
+        EffectManager::GetInstance()->SetEffectVelocity(playerJetSparkHandle_, { 0.0f, 0.0f, -sparkSpeed });
+    }
+
     UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
 
     ConfigureGameplayPostEffects(isPlayerBoosting);
@@ -1262,10 +1276,8 @@ void GamePlayScene::Update()
     // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
     // -------------------------------------------------
     static bool prevBoostingState = false;
-    bool isShiftPressed = Input::GetInstance()->IsKeyTrigger(DIK_LSHIFT) || Input::GetInstance()->IsKeyTrigger(DIK_RSHIFT);
-
-    // シフトキーを押した瞬間、またはブースト未開始から開始に切り替わった瞬間に100%確実に発動！
-    if (isShiftPressed || (isPlayerBoosting && !prevBoostingState)) {
+    // Ctrlで減速中は発動せず、実際にブーストを開始したときだけ発動する。
+    if (isPlayerBoosting && !prevBoostingState) {
         sonicBoomTimer_ = 0.85f;
 
         // プレイヤーの現在位置を中心発生源として画面UV座標(0.0〜1.0)へ変換
@@ -1641,7 +1653,8 @@ void GamePlayScene::UpdateRailMovement(
     }
     // 次フレームのレール上の進行距離を計算
     const float frameScale = TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
-    outNextDistance = railDistance_ + railSpeed_ * frameScale;
+    outNextDistance = railDistance_ +
+        railSpeed_ * player_->GetForwardSpeedMultiplier() * frameScale;
     if (outNextDistance > rail_->GetTotalLength()) {
         outNextDistance = rail_->GetTotalLength();
     }
@@ -1737,6 +1750,21 @@ void GamePlayScene::UpdateCamera(
     Input* input)
 {
     debugCameraController_->Update();
+    // 開始直後を最も強くし、EaseOutCubicの戻りで制動の勢いを収める。
+    constexpr float kBrakeCameraDistanceReduction = 0.16f;
+    constexpr float kBrakeCameraKickReduction = 0.18f;
+    constexpr float kBrakeFovReduction = 0.07f;
+    const float brakeKickProgress = 1.0f -
+        brakeCameraKickRemainingSeconds_ / kBrakeCameraKickDurationSeconds;
+    const float brakeKickRemainingRatio = 1.0f - std::clamp(brakeKickProgress, 0.0f, 1.0f);
+    float brakeKickStrength = brakeKickRemainingRatio *
+        brakeKickRemainingRatio * brakeKickRemainingRatio;
+    if (player_->IsBoosting() || debugCameraController_->GetDebugMode()) {
+        brakeKickStrength = 0.0f;
+    }
+    const float cameraBackwardOffset = kCameraBackwardOffset *
+        (1.0f - kBrakeCameraDistanceReduction * brakeReactionStrength_ -
+            kBrakeCameraKickReduction * brakeKickStrength);
     if (stageSettings_.allRangeMode) {
         const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
         float targetFov = normalFovY_;
@@ -1744,9 +1772,10 @@ void GamePlayScene::UpdateCamera(
             targetFov = boostFovY_;
         }
         currentFovY_ += (targetFov - currentFovY_) * (1.0f - std::exp(-8.0f * deltaTime));
-        camera_->SetFovY(currentFovY_);
+        const float renderFovY = currentFovY_ * (1.0f - kBrakeFovReduction * brakeFovStrength_);
+        camera_->SetFovY(renderFovY);
         if (!debugCameraController_->GetDebugMode()) {
-            const Vector3 targetEye = currentPosition - forward * kCameraBackwardOffset +
+            const Vector3 targetEye = currentPosition - forward * cameraBackwardOffset +
                 Vector3 { 0.0f, kAllRangeCameraUpwardOffset, 0.0f };
             const Vector3 targetLook = currentPosition + forward * 60.0f;
             const float followRate = 1.0f - std::exp(-9.0f * deltaTime);
@@ -1764,7 +1793,7 @@ void GamePlayScene::UpdateCamera(
         }
         camera_->Update();
         aimCamera_->LookAt(camera_->GetTranslate(), camera_->GetTranslate() + forward * 60.0f);
-        aimCamera_->SetFovY(currentFovY_);
+        aimCamera_->SetFovY(renderFovY);
         aimCamera_->SetAspectRatio(camera_->GetAspectRatio());
         aimCamera_->SetFarClip(camera_->GetFarClip());
         aimCamera_->Update();
@@ -1819,7 +1848,8 @@ void GamePlayScene::UpdateCamera(
 
     // FOVの補間計算とカメラへの適用
     currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
-    camera_->SetFovY(currentFovY_);
+    const float renderFovY = currentFovY_ * (1.0f - kBrakeFovReduction * brakeFovStrength_);
+    camera_->SetFovY(renderFovY);
 
     // デバッグモードでない場合は、描画用カメラをレールに沿って遅延追従（Lerp）させる
     if (!debugCameraController_->GetDebugMode()) {
@@ -1838,7 +1868,7 @@ void GamePlayScene::UpdateCamera(
         // プレイヤーのレール相対移動量を取得
         Vector3 playerRailOffset = player_->GetRailOffset();
 
-        Vector3 targetDrawCameraPosition = currentPosition - cameraForward * kCameraBackwardOffset;
+        Vector3 targetDrawCameraPosition = currentPosition - cameraForward * cameraBackwardOffset;
         targetDrawCameraPosition += railUp * (kCameraUpwardOffset + playerRailOffset.y * cameraHeightFollowFactor_);
         targetDrawCameraPosition += railRight *
             (playerRailOffset.x * cameraHorizontalFollowFactor_);
@@ -1869,12 +1899,12 @@ void GamePlayScene::UpdateCamera(
     camera_->Update();
 
     // 2. エイム用仮想カメラ（aimCamera_）の更新 (遅延なしの最新情報でLookAt)
-    Vector3 targetCameraPosition = currentPosition - forward * kCameraBackwardOffset;
+    Vector3 targetCameraPosition = currentPosition - forward * cameraBackwardOffset;
     targetCameraPosition.y += kCameraUpwardOffset;
     Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
     
     aimCamera_->LookAt(targetCameraPosition, targetLookAheadPosition);
-    aimCamera_->SetFovY(currentFovY_);
+    aimCamera_->SetFovY(renderFovY);
     aimCamera_->SetAspectRatio(camera_->GetAspectRatio());
     aimCamera_->SetNearClip(camera_->GetNearClip());
     aimCamera_->SetFarClip(camera_->GetFarClip());
@@ -3348,6 +3378,10 @@ void GamePlayScene::ResetGameplayPostEffects()
     boostKickStrength_ = 0.0f;
     wasBoostingForKick_ = false;
     wasPlayerBoosting_ = false;
+    wasPlayerBraking_ = false;
+    brakeReactionStrength_ = 0.0f;
+    brakeFovStrength_ = 0.0f;
+    brakeCameraKickRemainingSeconds_ = 0.0f;
     smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
     cameraShakeTime_ = 0.0f;
     cameraShakeDuration_ = 0.0f;
@@ -3542,6 +3576,37 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
             enemies_.push_back(std::move(enemy));
         }
     }
+}
+
+void GamePlayScene::UpdateBrakeReaction(bool isPlayerBraking)
+{
+    if (isPlayerBraking && !wasPlayerBraking_) {
+        SoundManager::GetInstance()->Play("BrakeStart");
+        brakeCameraKickRemainingSeconds_ = kBrakeCameraKickDurationSeconds;
+    }
+    wasPlayerBraking_ = isPlayerBraking;
+
+    float targetStrength = 0.0f;
+    float responsePerSecond = 12.0f;
+    if (isPlayerBraking) {
+        targetStrength = 1.0f;
+        responsePerSecond = 14.0f;
+    }
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    brakeCameraKickRemainingSeconds_ = (std::max)(
+        0.0f, brakeCameraKickRemainingSeconds_ - deltaTimeSeconds);
+    const float blendRatio = 1.0f - std::exp(-responsePerSecond * deltaTimeSeconds);
+    brakeReactionStrength_ += (targetStrength - brakeReactionStrength_) * blendRatio;
+
+    // 押下中は縮小を維持し、押し直しも現在値から指数補間して段差を防ぐ。
+    constexpr float kBrakeFovAttackResponsePerSecond = 15.0f;
+    constexpr float kBrakeFovReleaseResponsePerSecond = 10.0f;
+    float fovResponsePerSecond = kBrakeFovReleaseResponsePerSecond;
+    if (isPlayerBraking) {
+        fovResponsePerSecond = kBrakeFovAttackResponsePerSecond;
+    }
+    const float fovBlendRatio = 1.0f - std::exp(-fovResponsePerSecond * deltaTimeSeconds);
+    brakeFovStrength_ += (targetStrength - brakeFovStrength_) * fovBlendRatio;
 }
 
 void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
