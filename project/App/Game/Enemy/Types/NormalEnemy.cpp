@@ -17,11 +17,29 @@ void NormalEnemy::Initialize(
     bulletModel_ = bulletModel;
 
     player_ = player;
+    fireInterval_ = 120;
+    bulletSpeed_ = 0.48f;
+    isRadialShotEnabled_ = true;
 }
 
 void NormalEnemy::Update()
 {
     BaseEnemy::Update();
+}
+
+void NormalEnemy::SetRadialShotEnabled(bool isEnabled)
+{
+    isRadialShotEnabled_ = isEnabled;
+}
+
+void NormalEnemy::SetBulletSpeed(float bulletSpeed)
+{
+    bulletSpeed_ = bulletSpeed;
+}
+
+void NormalEnemy::SetFireInterval(int32_t fireIntervalFrames)
+{
+    fireInterval_ = fireIntervalFrames;
 }
 
 void NormalEnemy::Attack()
@@ -70,10 +88,6 @@ void NormalEnemy::FireBullet()
         return;
     }
 
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
-
-    bullet->Initialize(bulletModel_);
-
     Vector3 playerPosition = player_->GetTranslate();
 
     // 弾の到達時間からPlayerの自動前進位置を予測する。
@@ -87,20 +101,50 @@ void NormalEnemy::FireBullet()
             (flightFrames * kPredictionRatio);
     }
 
-    Vector3 direction = Normalize(
-        playerPosition - transform_.translate);
+    constexpr float kMinimumAimDistance = 0.0001f;
+    const Vector3 aimOffset = playerPosition - transform_.translate;
+    const float aimDistance = Vector3Length(aimOffset);
+    if (!std::isfinite(aimDistance) || aimDistance <= kMinimumAimDistance) {
+        return;
+    }
 
-    Vector3 velocity;
+    const Vector3 aimDirection = Normalize(aimOffset);
+    SpawnBullet(aimDirection, true);
+    if (!isRadialShotEnabled_) {
+        return;
+    }
 
-    velocity.x = direction.x * bulletSpeed_;
+    constexpr int32_t kRadialBulletCount = 8;
+    constexpr float kPi = 3.14159265358979323846f;
+    constexpr float kSpreadAngleDegrees = 15.0f;
+    constexpr float kParallelAxisThreshold = 0.99f;
+    const float spreadAngleRadians = kSpreadAngleDegrees * kPi / 180.0f;
+    const float spreadCos = std::cos(spreadAngleRadians);
+    const float spreadSin = std::sin(spreadAngleRadians);
 
-    velocity.y = direction.y * bulletSpeed_;
+    Vector3 referenceAxis = { 0.0f, 1.0f, 0.0f };
+    if (std::abs(Dot(aimDirection, referenceAxis)) >= kParallelAxisThreshold) {
+        referenceAxis = { 1.0f, 0.0f, 0.0f };
+    }
+    const Vector3 rightDirection = Normalize(Cross(referenceAxis, aimDirection));
+    const Vector3 upDirection = Normalize(Cross(aimDirection, rightDirection));
 
-    velocity.z = direction.z * bulletSpeed_;
+    for (int32_t bulletIndex = 0; bulletIndex < kRadialBulletCount; ++bulletIndex) {
+        const float angleRadians = 2.0f * kPi *
+            static_cast<float>(bulletIndex) / static_cast<float>(kRadialBulletCount);
+        const Vector3 radialDirection = rightDirection * std::cos(angleRadians) +
+            upDirection * std::sin(angleRadians);
+        const Vector3 direction = Normalize(
+            aimDirection * spreadCos + radialDirection * spreadSin);
+        SpawnBullet(direction, false);
+    }
+}
 
+void NormalEnemy::SpawnBullet(const Vector3& direction, bool shouldPlayShotSound)
+{
+    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->Initialize(bulletModel_);
     bullet->SetTranslate(transform_.translate);
-
-    bullet->SetVelocity(velocity);
-
-    AddEnemyBullet(std::move(bullet));
+    bullet->SetVelocity(direction * bulletSpeed_);
+    AddEnemyBullet(std::move(bullet), shouldPlayShotSound);
 }

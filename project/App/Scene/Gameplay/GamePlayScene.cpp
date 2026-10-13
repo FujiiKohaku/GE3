@@ -237,7 +237,7 @@ void GamePlayScene::Initialize()
 
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
-    enemyBulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
+    enemyBulletModel_ = ModelManager::GetInstance()->Load("Enemy/Bullet/LowPolySphere/lowPolySphere.obj");
     fearWormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
     angerBlockModel_ = ModelManager::GetInstance()->Load("Environment/Block/block.obj");
     // animationskinLoad

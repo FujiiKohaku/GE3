@@ -13,10 +13,16 @@ public:
         Player* player);
 
     void Update() override;
+    void SetRadialShotEnabled(bool isEnabled);
+
+protected:
+    void SetBulletSpeed(float bulletSpeed);
+    void SetFireInterval(int32_t fireIntervalFrames);
 
 private:
     void Attack() override;
     void FireBullet();
+    void SpawnBullet(const Vector3& direction, bool shouldPlayShotSound);
 
 private:
     Player* player_ = nullptr;
@@ -25,7 +31,8 @@ private:
 
     int32_t fireTimer_ = 0;
 
-    int32_t fireInterval_ = 60;
+    int32_t fireInterval_ = 120;
 
-    float bulletSpeed_ = 0.8f;
+    float bulletSpeed_ = 0.48f;
+    bool isRadialShotEnabled_ = true;
 };

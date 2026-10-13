@@ -10,6 +10,10 @@ void ArmoredEnemy::Initialize(
         bulletModel,
         player);
 
+    SetRadialShotEnabled(false);
+    SetBulletSpeed(0.8f);
+    SetFireInterval(60);
+
     SetHealth(10.0f);
     transform_.scale = { 2.6f, 2.6f, 2.6f };
 

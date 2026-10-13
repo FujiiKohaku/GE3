@@ -57,7 +57,7 @@ public:
     virtual void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position);
 
 protected:
-    void AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet);
+    void AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet, bool shouldPlayShotSound = true);
     virtual void UpdateAnimation();
     virtual void OnDamage(float damage);
     virtual void OnDeath();

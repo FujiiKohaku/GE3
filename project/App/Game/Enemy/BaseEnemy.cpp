@@ -85,10 +85,12 @@ void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
     bulletManager_ = bulletManager;
 }
 
-void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet)
+void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet, bool shouldPlayShotSound)
 {
     if (bulletManager_ != nullptr) {
-        SoundManager::GetInstance()->Play("EnemyShot");
+        if (shouldPlayShotSound) {
+            SoundManager::GetInstance()->Play("EnemyShot");
+        }
         bulletManager_->Add(std::move(bullet));
     }
 }
