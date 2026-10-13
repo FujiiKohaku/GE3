@@ -62,6 +62,13 @@ public:
     virtual void SetTranslate(const Vector3& translate);
     virtual void SetDead();
 
+    void SetPixelShaderPath(const std::string& pixelShaderPath);
+    void SetTransparent(bool transparent);
+    void SetTransparentDepthWrite(bool enable);
+    void SetCastShadow(bool enabled);
+    Object3d* GetObject3d() { return object_.get(); }
+    const Object3d* GetObject3d() const { return object_.get(); }
+
 private:
     std::unique_ptr<Object3d> object_;
 

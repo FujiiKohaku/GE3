@@ -120,3 +120,32 @@ void BaseBullet::SetEnableLighting(bool enable)
         object_->SetEnableLighting(enable);
     }
 }
+
+void BaseBullet::SetPixelShaderPath(const std::string& pixelShaderPath)
+{
+    if (object_ != nullptr) {
+        object_->SetPixelShaderPath(pixelShaderPath);
+    }
+}
+
+void BaseBullet::SetTransparent(bool transparent)
+{
+    if (object_ != nullptr) {
+        object_->SetTransparent(transparent);
+    }
+}
+
+void BaseBullet::SetTransparentDepthWrite(bool enable)
+{
+    if (object_ != nullptr) {
+        object_->SetTransparentDepthWrite(enable);
+    }
+}
+
+void BaseBullet::SetCastShadow(bool enabled)
+{
+    if (object_ != nullptr) {
+        object_->SetCastShadow(enabled);
+    }
+}
+
