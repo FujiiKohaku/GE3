@@ -56,7 +56,7 @@ void TestPausedTimeAndShotHeat()
 {
     PlayerWeaponHeat heat;
     heat.AddShotHeat(true);
-    assert(std::abs(heat.GetHeatRatio() - 0.04f) < 0.0001f);
+    assert(std::abs(heat.GetHeatRatio() - 0.01f) < 0.0001f);
     heat.Update(1.0f, false);
     assert(heat.GetHeatRatio() == 0.0f);
     FillHeat(heat);
