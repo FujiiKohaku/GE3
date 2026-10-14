@@ -21,8 +21,6 @@ constexpr float kBodyAlpha = 0.95f;
 constexpr float kBellWaveAmplitude = 1.5f;
 constexpr float kTentacleWaveAmplitude = 0.12f;
 constexpr float kIcePillarAheadDistance = 190.0f;
-constexpr float kIcePillarRevealSeconds = 2.00f;
-constexpr float kIcePillarWaveTimeoutSeconds = 9.00f;
 
 void ConfigureJellyfishBodyMaterial(Object3d& object)
 {
@@ -57,11 +55,6 @@ TransparentPart MakeTransparentPart(Object3d& object, const Camera& camera)
 bool IsFartherPart(const TransparentPart& left, const TransparentPart& right)
 {
     return left.viewDepth > right.viewDepth;
-}
-
-bool Crossed(float previous, float current, float point)
-{
-    return previous < point && current >= point;
 }
 
 float SmoothStep(float value)
@@ -210,93 +203,17 @@ void IceJellyfish::Update()
 
 void IceJellyfish::UpdateAttackSequence(float floatPhase, float deltaTime)
 {
-    if (pulseBarrageWave_ >= 0) {
-        pulseBarrageTimer_ += deltaTime;
-        while (pulseBarrageWave_ < 3 &&
-            pulseBarrageTimer_ >= static_cast<float>(pulseBarrageWave_) * 0.18f) {
-            int32_t aliveTentacles = 0;
-            for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
-                if (IsSegmentAlive(tentacle, 0)) ++aliveTentacles;
-            }
-
-            if (pulseBarrageWave_ == 0) {
-                FirePulseRing(aliveTentacles * 2, 0.12f, 0.65f, 0.0f, false);
-            } else if (pulseBarrageWave_ == 1) {
-                const int count = aliveTentacles * 2;
-                const float halfStep = count > 0 ? std::numbers::pi_v<float> /
-                    static_cast<float>(count) : 0.0f;
-                FirePulseRing(count, 0.22f, 0.62f, halfStep, false);
-            } else {
-                FirePulseRing(aliveTentacles, 0.08f, 0.82f,
-                    std::numbers::pi_v<float> * 0.5f, true);
-            }
-            ++pulseBarrageWave_;
-        }
-        if (pulseBarrageWave_ >= 3) pulseBarrageWave_ = -1;
+    const auto& attacks = GetJellyfishAttacks();
+    for (const BaseJellyfishAttack* attack : attacks) {
+        attack->Update(*this, deltaTime);
     }
-
-    if (iceSpearVolley_ >= 0) {
-        iceSpearTimer_ += deltaTime;
-        if (iceSpearVolley_ < 3) {
-            iceSpearPoseWeight_ = (std::min)(1.0f, iceSpearPoseWeight_ + deltaTime * 2.8f);
-            while (iceSpearVolley_ < 3 &&
-                iceSpearTimer_ >= 1.0f + static_cast<float>(iceSpearVolley_) * 0.20f) {
-                FireIceSpearVolley();
-                ++iceSpearVolley_;
-            }
-        }
-        if (iceSpearVolley_ >= 3) {
-            iceSpearPoseWeight_ = (std::max)(0.0f, iceSpearPoseWeight_ - deltaTime * 1.8f);
-            if (iceSpearPoseWeight_ <= 0.0f) {
-                iceSpearVolley_ = -1;
-                iceSpearTentacles_.fill(-1);
-            }
-        }
-    }
-
-    UpdateIcePillarAttack(deltaTime);
-
     const float pulse = std::sin(floatPhase);
-    if (pulse <= -0.72f) {
-        pulseAttackArmed_ = true;
-    }
-    if (!pulseAttackArmed_ || pulse < -0.05f) {
-        return;
-    }
+    if (pulse <= -0.72f) pulseAttackArmed_ = true;
+    if (!pulseAttackArmed_ || pulse < -0.05f) return;
 
-    if (nextAttackIndex_ == 0) {
-        pulseBarrageWave_ = 0;
-        pulseBarrageTimer_ = 0.0f;
-    } else if (nextAttackIndex_ == 1) {
-        StartIceSpearAttack();
-    } else {
-        StartIcePillarAttack();
-    }
-    nextAttackIndex_ = (nextAttackIndex_ + 1) % 3;
+    attacks[nextAttackIndex_]->Start(*this);
+    nextAttackIndex_ = (nextAttackIndex_ + 1) % static_cast<int32_t>(attacks.size());
     pulseAttackArmed_ = false;
-}
-
-void IceJellyfish::StartIceSpearAttack()
-{
-    iceSpearTentacles_.fill(-1);
-    std::array<int32_t, kTentacleCount> candidates {};
-    size_t candidateCount = 0;
-    for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
-        if (IsSegmentAlive(tentacle, 0)) {
-            candidates[candidateCount++] = static_cast<int32_t>(tentacle);
-        }
-    }
-
-    std::mt19937 randomEngine(std::random_device {}());
-    std::shuffle(candidates.begin(), candidates.begin() + candidateCount, randomEngine);
-    const size_t selectedCount = (std::min)(iceSpearTentacles_.size(), candidateCount);
-    for (size_t index = 0; index < selectedCount; ++index) {
-        iceSpearTentacles_[index] = candidates[index];
-    }
-    if (player_ != nullptr) lockedTarget_ = player_->GetTranslate();
-    iceSpearVolley_ = selectedCount > 0 ? 0 : -1;
-    iceSpearTimer_ = 0.0f;
-    iceSpearPoseWeight_ = 0.0f;
 }
 
 void IceJellyfish::FireIceSpearVolley()
@@ -344,18 +261,6 @@ void IceJellyfish::FireIceSpearVolley()
     }
 }
 
-void IceJellyfish::StartIcePillarAttack()
-{
-    if (player_ == nullptr || icePillarWave_ >= 0) return;
-    std::mt19937 randomEngine(std::random_device {}());
-    std::uniform_int_distribution<int32_t> laneDistribution(0, 2);
-    icePillarSafeLane_ = laneDistribution(randomEngine);
-    icePillarWave_ = 0;
-    icePillarTimer_ = 0.0f;
-    for (int32_t slot = 3; slot < 6; ++slot) attackHitApplied_[slot] = false;
-    PrepareIcePillarWarning();
-}
-
 void IceJellyfish::PrepareIcePillarWarning()
 {
     if (player_ == nullptr || icePillarWave_ < 0 || icePillarWave_ >= 3) return;
@@ -376,83 +281,12 @@ void IceJellyfish::PrepareIcePillarWarning()
     }
 }
 
-void IceJellyfish::UpdateIcePillarAttack(float deltaTime)
-{
-    if (icePillarWave_ < 0) return;
-    icePillarTimer_ += deltaTime;
-    if (icePillarModelSpawnedForWave_) {
-        icePillarModelTimer_ += deltaTime;
-    }
-    if (!icePillarModelSpawnedForWave_ &&
-        icePillarTimer_ >= kIcePillarRevealSeconds) {
-        constexpr std::array<float, 3> spikeOffsets = { -4.0f, 0.0f, 4.0f };
-        size_t modelIndex = 0;
-        for (const Vector3& laneCenter : icePillarPositions_) {
-            for (size_t spike = 0; spike < spikeOffsets.size(); ++spike) {
-                icePillarModelPositions_[modelIndex++] = {
-                    laneCenter.x + spikeOffsets[spike],
-                    laneCenter.y,
-                    laneCenter.z + (spike == 1 ? 1.2f : -1.2f)
-                };
-            }
-        }
-        icePillarModelTimer_ = 0.0f;
-        icePillarModelSpawnedForWave_ = true;
-    }
-
-    if (player_ != nullptr) {
-        const Vector3 playerPosition = player_->GetTranslate();
-        if (icePillarModelSpawnedForWave_) {
-            for (const Vector3& position : icePillarPositions_) {
-                const bool withinWidth = std::abs(playerPosition.x - position.x) <= 6.5f;
-                const bool withinDepth = std::abs(playerPosition.z - position.z) <= 4.0f;
-                const bool withinHeight = playerPosition.y >= position.y - 2.0f &&
-                    playerPosition.y <= position.y + 40.0f;
-                if (withinWidth && withinDepth && withinHeight) {
-                    DamagePlayerOnce(3 + icePillarWave_, 2);
-                    break;
-                }
-            }
-        }
-
-        const bool passedPillars = playerPosition.z > icePillarPositions_[0].z + 10.0f;
-        if (!passedPillars && icePillarTimer_ < kIcePillarWaveTimeoutSeconds) return;
-    } else if (icePillarTimer_ < kIcePillarWaveTimeoutSeconds) {
-        return;
-    }
-
-    icePillarModelSpawnedForWave_ = false;
-    icePillarModelTimer_ = 0.0f;
-    ++icePillarWave_;
-    icePillarTimer_ = 0.0f;
-    if (icePillarWave_ >= 3) {
-        icePillarWave_ = -1;
-        return;
-    }
-    icePillarSafeLane_ = (icePillarSafeLane_ + 1 + icePillarWave_ % 2) % 3;
-    PrepareIcePillarWarning();
-}
-
 void IceJellyfish::BeginPattern(AttackPattern pattern)
 {
-    attackPattern_ = pattern;
-    attackTimer_ = 0.0f;
-    previousAttackTimer_ = 0.0f;
-    firedWave_ = 0;
-    coreExposed_ = AreAllTentaclesDestroyed();
-    absoluteInterrupted_ = false;
-    attackHitApplied_.fill(false);
-    absoluteSealDamage_.fill(0.0f);
-    if (player_ != nullptr) {
-        lockedTarget_ = player_->GetTranslate();
-    }
-    if (pattern == AttackPattern::CrystalPrison) {
-        crystalHp_.fill(6.0f);
-    } else {
-        crystalHp_.fill(0.0f);
-    }
+    currentPattern_->Exit(*this);
+    currentPattern_ = &GetJellyfishAttackPattern(pattern);
+    currentPattern_->Enter(*this);
 }
-
 void IceJellyfish::SelectNextPattern()
 {
     if (phase_ == 1) {
@@ -477,38 +311,15 @@ void IceJellyfish::SelectNextPattern()
     BeginPattern(patterns[patternIndex_]);
 }
 
-float IceJellyfish::PatternDuration() const
-{
-    switch (attackPattern_) {
-    case AttackPattern::FrozenSweep: return phase_ == 3 ? 5.4f : 6.0f;
-    case AttackPattern::IcicleBloom: return 6.2f;
-    case AttackPattern::TentacleThrust: return 6.5f;
-    case AttackPattern::BlizzardCurrent: return 6.5f;
-    case AttackPattern::CrystalPrison: return 7.5f;
-    case AttackPattern::AbsoluteZero: return 8.0f;
-    }
-    return 6.0f;
-}
-
 void IceJellyfish::UpdatePattern(float deltaTime)
 {
     previousAttackTimer_ = attackTimer_;
     attackTimer_ += deltaTime;
-
-    switch (attackPattern_) {
-    case AttackPattern::FrozenSweep: UpdateFrozenSweep(); break;
-    case AttackPattern::IcicleBloom: UpdateIcicleBloom(); break;
-    case AttackPattern::TentacleThrust: UpdateTentacleThrust(); break;
-    case AttackPattern::BlizzardCurrent: UpdateBlizzardCurrent(); break;
-    case AttackPattern::CrystalPrison: UpdateCrystalPrison(); break;
-    case AttackPattern::AbsoluteZero: UpdateAbsoluteZero(); break;
-    }
-
-    if (attackTimer_ >= PatternDuration()) {
+    currentPattern_->Update(*this);
+    if (attackTimer_ >= currentPattern_->GetDuration(phase_)) {
         SelectNextPattern();
     }
 }
-
 void IceJellyfish::DamagePlayerOnce(int slot, int damage)
 {
     if (player_ == nullptr || slot < 0 || slot >= static_cast<int>(attackHitApplied_.size()) ||
@@ -518,103 +329,6 @@ void IceJellyfish::DamagePlayerOnce(int slot, int damage)
     attackHitApplied_[slot] = true;
     if (player_->ApplyDamage(damage)) {
         EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-    }
-}
-
-void IceJellyfish::UpdateFrozenSweep()
-{
-    if (Crossed(previousAttackTimer_, attackTimer_, 0.8f) && player_ != nullptr) {
-        lockedTarget_ = player_->GetTranslate();
-    }
-    if (Crossed(previousAttackTimer_, attackTimer_, 2.0f) && player_ != nullptr &&
-        std::abs(player_->GetTranslate().y - lockedTarget_.y) < 6.0f) {
-        DamagePlayerOnce(0, 2);
-    }
-    if (phase_ == 3 && Crossed(previousAttackTimer_, attackTimer_, 3.0f) && player_ != nullptr &&
-        std::abs(player_->GetTranslate().x - lockedTarget_.x) < 6.0f) {
-        DamagePlayerOnce(1, 2);
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-void IceJellyfish::UpdateIcicleBloom()
-{
-    const int32_t waves = phase_ == 1 ? 2 : 3;
-    while (firedWave_ < waves) {
-        const float fireTime = 1.4f + static_cast<float>(firedWave_) * 0.9f;
-        if (!Crossed(previousAttackTimer_, attackTimer_, fireTime)) break;
-        FireRadialBurst(8, phase_ == 3 ? 0.72f : 0.58f, 1,
-            static_cast<float>(firedWave_) * std::numbers::pi_v<float> / 8.0f);
-        ++firedWave_;
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-void IceJellyfish::UpdateTentacleThrust()
-{
-    if (Crossed(previousAttackTimer_, attackTimer_, 0.9f) && player_ != nullptr) {
-        lockedTarget_ = player_->GetTranslate();
-    }
-    const int32_t thrustCount = phase_ == 1 ? 2 : 3;
-    for (int32_t thrust = 0; thrust < thrustCount; ++thrust) {
-        const float hitTime = 1.8f + static_cast<float>(thrust) * 0.85f;
-        if (Crossed(previousAttackTimer_, attackTimer_, hitTime) && player_ != nullptr) {
-            const Vector3 difference = player_->GetTranslate() - lockedTarget_;
-            if (Dot(difference, difference) <= 64.0f) DamagePlayerOnce(thrust, 2);
-            lockedTarget_ = player_->GetTranslate();
-        }
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-void IceJellyfish::UpdateBlizzardCurrent()
-{
-    if (player_ != nullptr && attackTimer_ >= 1.0f && attackTimer_ < 5.2f) {
-        const float direction = (patternIndex_ % 2 == 0) ? 1.0f : -1.0f;
-        player_->ApplyRailAreaForce({ direction * (phase_ == 3 ? 0.13f : 0.09f), 0.0f, 0.0f });
-    }
-    while (firedWave_ < 5) {
-        const float fireTime = 1.3f + static_cast<float>(firedWave_) * 0.75f;
-        if (!Crossed(previousAttackTimer_, attackTimer_, fireTime)) break;
-        FireAimedBurst(3, 0.24f, 0.42f, 1);
-        ++firedWave_;
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-void IceJellyfish::UpdateCrystalPrison()
-{
-    UpdateCrystalTransforms();
-    int32_t alive = 0;
-    for (float hp : crystalHp_) {
-        if (hp > 0.0f) ++alive;
-    }
-    if (Crossed(previousAttackTimer_, attackTimer_, 5.2f) && alive > 0 && player_ != nullptr) {
-        const Vector3 offset = player_->GetTranslate() - lockedTarget_;
-        if (std::abs(offset.x) > 10.0f || std::abs(offset.y) > 10.0f) {
-            DamagePlayerOnce(0, 3);
-        }
-    }
-    if (Crossed(previousAttackTimer_, attackTimer_, 5.6f) && alive > 0) {
-        FireAimedBurst(alive, 0.18f, 0.60f, 1);
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-void IceJellyfish::UpdateAbsoluteZero()
-{
-    int32_t released = 0;
-    for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
-        if (!IsSegmentAlive(tentacle, kSegmentsPerTentacle - 1) ||
-            absoluteSealDamage_[tentacle] >= 3.0f) {
-            ++released;
-        }
-    }
-    absoluteInterrupted_ = released == static_cast<int32_t>(kTentacleCount);
-    coreExposed_ = AreAllTentaclesDestroyed();
-    if (!absoluteInterrupted_ && Crossed(previousAttackTimer_, attackTimer_, 6.0f)) {
-        DamagePlayerOnce(0, 4);
-        FireRadialBurst(16, 0.78f, 2, 0.0f);
     }
 }
 
@@ -918,7 +632,7 @@ void IceJellyfish::UpdateCrystalTransforms()
         Vector3 { -16.0f, 11.0f, 42.0f }, Vector3 { 16.0f, 11.0f, 42.0f }
     };
     for (size_t index = 0; index < crystals_.size(); ++index) {
-        if (crystalHp_[index] <= 0.0f || attackPattern_ != AttackPattern::CrystalPrison) continue;
+        if (crystalHp_[index] <= 0.0f || GetAttackPattern() != AttackPattern::CrystalPrison) continue;
         const Vector3 position = lockedTarget_ + offsets[index];
         const Matrix4x4 matrix = MatrixMath::MakeAffineMatrix(
             Vector3 { 2.2f, 5.0f, 2.2f },
@@ -953,7 +667,7 @@ void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) { return; }
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
+        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->DrawShadow(renderer);
         }
     }
@@ -975,7 +689,7 @@ void IceJellyfish::Draw()
 {
     if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) return;
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
+        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->Draw();
         }
     }
@@ -1004,7 +718,7 @@ void IceJellyfish::Draw()
 void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
     if (!bell_ || !camera_ || (IsDead() && deathTimer_ >= 2.0f)) { return; }
     for (size_t crystalIndex = 0; crystalIndex < crystals_.size(); ++crystalIndex) {
-        if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystalIndex] > 0 && crystals_[crystalIndex]) {
+        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystalIndex] > 0 && crystals_[crystalIndex]) {
             crystals_[crystalIndex]->SubmitRaytracing(renderer);
         }
     }
@@ -1046,7 +760,7 @@ SweepHit IceJellyfish::SweepBullet(
         consider(CollisionManager::SweepSphere(bullet, movement, tentacleColliders_[index]),
             tentacleColliderParts_[index]);
     }
-    if (attackPattern_ == AttackPattern::CrystalPrison) {
+    if (GetAttackPattern() == AttackPattern::CrystalPrison) {
         for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
             if (crystalHp_[crystal] > 0.0f) {
                 consider(CollisionManager::SweepSphere(bullet, movement, crystalColliders_[crystal]),
@@ -1105,7 +819,7 @@ void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
                 EffectManager::GetInstance()->PlayEffect("Explosion", burstPosition);
             }
         }
-        if (attackPattern_ == AttackPattern::AbsoluteZero) {
+        if (GetAttackPattern() == AttackPattern::AbsoluteZero) {
             absoluteSealDamage_[tentacle] += damage;
         }
         coreExposed_ = AreAllTentaclesDestroyed();
@@ -1147,7 +861,7 @@ void IceJellyfish::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
     }
     for (const OBB& box : tentacleColliders_) manager->RegisterRaycastObbTarget(nextObjectId++, box);
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        if (attackPattern_ == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
+        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             manager->RegisterRaycastSphereTarget(nextObjectId++, crystalColliders_[crystal]);
         }
     }

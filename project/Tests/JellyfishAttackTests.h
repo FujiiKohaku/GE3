@@ -1,0 +1,52 @@
+#pragma once
+#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
+#include "App/Game/Player/Player.h"
+#include <cmath>
+#include <numbers>
+
+inline bool RunJellyfishAttackTests()
+{
+    IceJellyfish boss;
+    const auto& attacks = GetJellyfishAttacks();
+    boss.tentacleHp_.fill(6.0f);
+    // 浮遊のタイミングで一度だけ開始し、波状弾→氷槍→氷柱の順を保つ。
+    boss.UpdateAttackSequence(-std::numbers::pi_v<float> / 2.0f, 0.0f);
+    boss.UpdateAttackSequence(0.0f, 0.0f);
+    if (boss.nextAttackIndex_ != 1 || boss.pulseBarrageWave_ != 0) return false;
+    boss.UpdateAttackSequence(0.0f, 0.0f);
+    if (boss.nextAttackIndex_ != 1 || boss.pulseBarrageWave_ != 1) return false;
+    boss.UpdateAttackSequence(-std::numbers::pi_v<float> / 2.0f, 0.18f);
+    boss.UpdateAttackSequence(0.0f, 0.0f);
+    if (boss.nextAttackIndex_ != 2 || boss.iceSpearVolley_ != 0 || boss.pulseBarrageWave_ != 2) return false;
+
+    Player player;
+    boss.player_ = &player;
+    boss.UpdateAttackSequence(-std::numbers::pi_v<float> / 2.0f, 0.0f);
+    boss.UpdateAttackSequence(0.0f, 0.0f);
+    if (boss.nextAttackIndex_ != 0 || boss.icePillarWave_ != 0) return false;
+    boss.player_ = nullptr; // 描画や弾を生成せず、並行動作と時間を検証する。
+    boss.UpdateAttackSequence(0.0f, 0.18f);
+    if (boss.pulseBarrageWave_ != -1 || std::abs(boss.iceSpearTimer_ - 0.18f) > 0.0001f ||
+        std::abs(boss.icePillarTimer_ - 0.18f) > 0.0001f) return false;
+    attacks[1]->Update(boss, 0.82f);
+    attacks[1]->Update(boss, 0.20f);
+    attacks[1]->Update(boss, 0.21f);
+    if (boss.iceSpearVolley_ != 3) return false;
+    attacks[1]->Update(boss, 1.0f);
+    if (boss.iceSpearVolley_ != -1 || boss.iceSpearPoseWeight_ != 0.0f) return false;
+    attacks[2]->Update(boss, 1.82f);
+    if (!boss.icePillarModelSpawnedForWave_) return false;
+    boss.player_ = &player;
+    const float pillarTime = boss.icePillarTimer_;
+    attacks[2]->Start(boss);
+    if (boss.icePillarTimer_ != pillarTime) return false; // 氷柱の実行中は再開始しない。
+    boss.player_ = nullptr;
+    attacks[2]->Update(boss, 7.0f);
+    if (boss.icePillarWave_ != 1 || boss.icePillarTimer_ != 0.0f) return false;
+    attacks[2]->Update(boss, 9.0f);
+    attacks[2]->Update(boss, 9.0f);
+    if (boss.icePillarWave_ != -1) return false;
+    boss.tentacleHp_.fill(0.0f);
+    attacks[1]->Start(boss);
+    return boss.iceSpearVolley_ == -1;
+}

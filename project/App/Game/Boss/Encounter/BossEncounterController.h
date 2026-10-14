@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Engine/Math/MathStruct.h"
+#include "App/Game/Boss/Presentation/BaseBossPresentation.h"
 #include <memory>
 #include <string>
 
@@ -30,6 +31,7 @@ public:
 
     void Update(float railDistance);
     void UpdateDeathSequence();
+    void UpdatePresentation(const BossPresentationContext& context);
 
     BaseBoss* GetActiveBoss() const;
     bool IsSpawned() const;
@@ -42,6 +44,7 @@ private:
     void SpawnBoss();
 
     std::unique_ptr<BaseBoss> activeBoss_;
+    std::unique_ptr<BaseBossPresentation> presentation_;
     std::string bossType_;
     Vector3 spawnPosition_ {};
     float spawnDistance_ = 0.0f;

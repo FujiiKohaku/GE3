@@ -2,6 +2,8 @@
 #include "App/Game/Player/Bullet/PlayerBullet.h"
 #include "App/Game/Player/Weapon/PlayerWeaponHeat.h"
 #include "App/Game/Player/Weapon/PlayerHomingLock.h"
+#include "App/Game/Player/Weapon/BasePlayerWeapon.h"
+#include <array>
 #include "Engine/math/MathStruct.h"
 #include <memory>
 #include <cstdint>
@@ -33,7 +35,7 @@ public:
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { homingLock_.SetTargets(targets); }
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;
     void ResetHomingLock() { homingLock_.Reset(); }
-    bool IsHomingMissileSelected() const { return currentWeapon_ == kWeaponHomingMissile; }
+    bool IsHomingMissileSelected() const { return GetCurrentWeapon().IsHoming(); }
     const char* GetCurrentWeaponName() const;
     float GetHeatRatio() const { return weaponHeat_.GetHeatRatio(); }
     bool IsOverheated() const { return weaponHeat_.IsOverheated(); }
@@ -50,11 +52,9 @@ private:
         kWeaponCount
     };
     void UpdateWeaponSwitch(Input* input);
-    void UpdateHomingFireInput(bool isFireHeld, bool isDebugMode);
-    void UpdateWeaponHeat(bool isFireHeld, bool isDebugMode);
-    void UpdateFireInput(Input* input, bool isDebugMode);
+    BasePlayerWeapon& GetCurrentWeapon() const { return *weapons_[currentWeapon_]; }
+    PlayerWeaponContext MakeWeaponContext(const Camera* activeCamera = nullptr);
     Vector3 CalculateMuzzlePosition() const;
-    std::unique_ptr<PlayerBullet> CreateBullet(float& shotSpeed);
     void FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget);
 
     const EulerTransform& transform_;
@@ -71,14 +71,11 @@ private:
     float bulletSpawnOffsetZ_ = 4.0f;
     float bulletSpeed_ = 5.8f;
     int currentWeapon_ = kWeaponNormalBullet;
-    static constexpr int kNormalBulletDamage = 3;
-    static constexpr float kNormalFireIntervalSeconds = 10.0f / 60.0f;
-    float normalFireCooldownSeconds_ = 0;
+    std::array<std::unique_ptr<BasePlayerWeapon>, kWeaponCount> weapons_ {
+        std::make_unique<NormalPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
+        std::make_unique<HomingPlayerWeapon>(), std::make_unique<MinigunPlayerWeapon>() };
     static constexpr float kMissileFireIntervalSeconds = 2.0f;
     float missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
-    static constexpr int kMinigunDamage = 1;
-    static constexpr float kMinigunFireIntervalSeconds = 3.0f / 60.0f;
-    float minigunFireCooldownSeconds_ = 0;
 #ifdef _DEBUG
     bool shouldDrawDebugLines_ = false;
     Vector3 debugAimRayOrigin_ = {};

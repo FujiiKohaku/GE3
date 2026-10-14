@@ -4,7 +4,6 @@
 #include "App/Game/Player/Player.h"
 #include "Engine/math/MathStruct.h"
 #include "Engine/Time/TimeManager.h"
-#include "externals/imgui/imgui.h"
 #include <cmath>
 
 void MoveEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
@@ -16,7 +15,7 @@ void MoveEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
     player_ = player;
 
     // デフォルトパラメータの設定 (三項演算子、auto、ラムダ式は使用禁止)
-    movePattern_ = MovePattern::LeftRight;
+    SetMovePattern(MovePattern::LeftRight);
     moveSpeed_ = 2.0f;
     amplitude_ = 5.0f;
     frequency_ = 2.0f;
@@ -40,34 +39,9 @@ void MoveEnemy::Move()
 
     moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
-    // 各移動パターンによる座標計算 (累積誤差が発生しないよう startPosition_ を基準に計算)
-    if (movePattern_ == MovePattern::LeftRight) {
-        transform_.translate.x = startPosition_.x + std::sin(moveTime_ * moveSpeed_) * amplitude_;
-        transform_.translate.y = startPosition_.y;
-        transform_.translate.z = startPosition_.z;
-    }
-    
-    if (movePattern_ == MovePattern::UpDown) {
-        transform_.translate.x = startPosition_.x;
-        transform_.translate.y = startPosition_.y + std::sin(moveTime_ * moveSpeed_) * amplitude_;
-        transform_.translate.z = startPosition_.z;
-    }
-    
-    if (movePattern_ == MovePattern::ZigZag) {
-        // X方向は通常の往復、Y方向は倍の周波数で往復させることで滑らかなジグザグ移動を実現
-        transform_.translate.x = startPosition_.x + std::sin(moveTime_ * moveSpeed_) * amplitude_;
-        transform_.translate.y = startPosition_.y + std::sin(moveTime_ * moveSpeed_ * 2.0f) * amplitude_ * 0.5f;
-        transform_.translate.z = startPosition_.z;
-    }
-    
-    if (movePattern_ == MovePattern::SineWave) {
-        // Z負方向へ前進しながら、Y方向へ滑らかなSin波移動
-        transform_.translate.x = startPosition_.x;
-        transform_.translate.y = startPosition_.y + std::sin(moveTime_ * frequency_) * amplitude_;
-        transform_.translate.z = startPosition_.z - (moveTime_ * moveSpeed_ * 1.5f);
-    }
+    const EnemyMovementContext context { startPosition_, moveTime_, moveSpeed_, amplitude_, frequency_ };
+    transform_.translate = movement_->CalculatePosition(context);
 }
-
 void MoveEnemy::Attack()
 {
     if (player_ == nullptr) {
@@ -127,23 +101,4 @@ void MoveEnemy::FireBullet()
     bullet->SetVelocity(velocity);
 
     AddEnemyBullet(std::move(bullet));
-}
-
-void MoveEnemy::DrawImGui()
-{
-    // 移動パターンのリアルタイム調整用UI (auto、三項演算子、ラムダ式は不使用)
-    const char* patterns[] = { "LeftRight", "UpDown", "ZigZag", "SineWave" };
-    int currentPattern = static_cast<int>(movePattern_);
-    
-    if (ImGui::Combo("Move Pattern", &currentPattern, patterns, 4)) {
-        movePattern_ = static_cast<MovePattern>(currentPattern);
-    }
-    
-    ImGui::SliderFloat("Move Speed", &moveSpeed_, 0.0f, 10.0f);
-    ImGui::SliderFloat("Amplitude", &amplitude_, 0.0f, 20.0f);
-    ImGui::SliderFloat("Frequency", &frequency_, 0.0f, 10.0f);
-    
-    if (ImGui::Button("Reset Position")) {
-        ResetPosition();
-    }
 }

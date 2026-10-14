@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "BaseTutorialStep.h"
 
 class Input;
 class Player;
@@ -16,10 +17,10 @@ public:
     int GetTargetCount() const;
     bool HasMovingTargets() const;
     void SetDefeatedTargets(int count) { defeatedTargets_ = count; }
-    bool IsComplete() const { return step_ == Step::Complete; }
+    bool IsComplete() const { return stepIndex_ >= kStepCount; }
     bool IsCompact() const { return false; }
     int GetCompletedCount() const;
-    static constexpr int kStepCount = 14;
+    static constexpr int kStepCount = kTutorialStepCount;
     float LimitRailDistance(float distance) const;
     std::string GetTitle() const;
     std::string GetInstructionText(const Input& input) const;
@@ -27,21 +28,14 @@ public:
     std::vector<std::string> GetButtonHints(const Input& input) const;
 
 private:
-    enum class Step { Move, Fire, Heat, FireMoving, Boost, Brake, Bank, Roll, Weapon, Missile, Homing, Minigun, Pause, Combat, Complete };
-    const char* GetPracticeWeapon() const;
+    TutorialStepInput ReadStepInput(const Input& input, const Player& player) const;
+    BaseTutorialStep* GetCurrentStep() const { return IsComplete() ? nullptr : steps_[stepIndex_].get(); }
     std::string currentWeapon_;
-    bool heatRaised_ = false;
     int defeatedTargets_ = 0;
     bool achieved_ = false;
     void EnterStep(const Player& player);
-    int CountDirections() const;
-    Step step_ = Step::Move;
+    std::array<std::unique_ptr<BaseTutorialStep>, kStepCount> steps_ = CreateTutorialSteps();
+    int stepIndex_ = 0;
     float stepTime_ = 0.0f;
     float successTime_ = 0.0f;
-    float holdTime_ = 0.0f;
-    std::array<float, 4> directionTime_ {};
-    unsigned directions_ = 0;
-    unsigned bankDirections_ = 0;
-    bool wasRolling_ = false;
-    bool pauseOpened_ = false;
 };

@@ -52,7 +52,7 @@ public:
         // 登場用タイマーと移動パターンを初期状態へ戻す。
         boss.enterTimer_ = 0.0f;
         boss.orbitAngle_ = kInitialOrbitAngle;
-        boss.movementPattern_ = FearWormEnemy::MovementPattern::Orbit;
+        boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Orbit);
         boss.movementPatternTimer_ = 0.0f;
 
         // 頭部を登場開始位置へ移す。
@@ -106,7 +106,7 @@ public:
         if (shouldTriggerMad) {
             boss.isMadModeActive_ = true;
             boss.madModeTimer_ = 0.0f;
-            boss.movementPattern_ = FearWormEnemy::MovementPattern::Spiral;
+            boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Spiral);
             boss.spiralAngle_ = 0.0f;
             boss.barrageAngle_ = 0.0f;
 
@@ -123,7 +123,7 @@ public:
             if (boss.madModeTimer_ >= 7.0f) {
                 boss.isMadModeActive_ = false;
                 boss.isMadModeFinished_ = true; // 終了フラグを立てて、再度発狂しないようにする
-                boss.movementPattern_ = FearWormEnemy::MovementPattern::Orbit; // 通常パターンに復帰
+                boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Orbit); // 通常パターンに復帰
                 boss.movementPatternTimer_ = 0.0f;
                 boss.missileAttackTimer_ = 0.0f;
             }
@@ -147,7 +147,7 @@ public:
                     boss.isMissileAttackActive_ = true;
                     boss.hasFiredMissiles_ = false;
                     boss.missilePhaseTimer_ = 0.0f;
-                    boss.movementPattern_ = FearWormEnemy::MovementPattern::Line;
+                    boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Line);
                     boss.lineTransitionTimer_ = 0.0f;
                     // 進行中のチャージ攻撃があればキャンセルする
                     if (boss.isHeadChargeActive_) {
@@ -179,7 +179,7 @@ public:
                         boss.missileTargetIndices_ = aliveIndices;
                     } else {
                         // 生存セグメントがない（通常はあり得ないが安全のため）
-                        boss.movementPattern_ = FearWormEnemy::MovementPattern::Orbit;
+                        boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Orbit);
                         boss.movementPatternTimer_ = 0.0f;
                         boss.missileAttackTimer_ = 0.0f;
                     }
@@ -208,7 +208,7 @@ public:
                         // 硬直終了！通常状態に戻り、Orbitへ復帰
                         boss.isFiringMissilesSequence_ = false;
                         boss.missileAttackTimer_ = 0.0f;
-                        boss.movementPattern_ = FearWormEnemy::MovementPattern::Orbit;
+                        boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Orbit);
                         boss.movementPatternTimer_ = 0.0f;
                     }
                 }
@@ -258,7 +258,7 @@ public:
         // 攻撃状態をクリア（発射済みの弾はManager側で飛び続ける）
         boss.isHeadChargeActive_ = false;
         boss.isHeadChargeFiring_ = false;
-        boss.beamState_ = FearWormEnemy::BeamState::Wait;
+        boss.ChangeBeamState(FearWormEnemy::BeamState::Wait);
         boss.beamCurrentLength_ = 0.0f;
         boss.beamCurrentWidth_ = 0.0f;
         boss.isDeathSequenceFinished_ = false;

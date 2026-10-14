@@ -1,8 +1,6 @@
 #include "BossEncounterController.h"
 
-#include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
-#include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
-#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
+#include "BaseBossFactory.h"
 #include "App/Game/Boss/Common/BaseBoss.h"
 #include "Engine/Rail/Rail.h"
 
@@ -34,6 +32,7 @@ void BossEncounterController::Initialize(
     enableRailAutoExtension_ = enableRailAutoExtension;
     railExtensionBuffer_ = railExtensionBuffer;
     activeBoss_.reset();
+    presentation_.reset();
     isSpawned_ = false;
 }
 
@@ -80,6 +79,11 @@ void BossEncounterController::UpdateDeathSequence()
     }
 }
 
+void BossEncounterController::UpdatePresentation(const BossPresentationContext& context)
+{
+    if (activeBoss_ && presentation_) presentation_->Update(*activeBoss_, context);
+}
+
 BaseBoss* BossEncounterController::GetActiveBoss() const
 {
     return activeBoss_.get();
@@ -112,19 +116,12 @@ bool BossEncounterController::DidExtendRailThisFrame() const
 
 void BossEncounterController::SpawnBoss()
 {
-    if (bossType_ == "AngerBlock") {
-        auto angerBoss = std::make_unique<AngerBlockBoss>();
-        angerBoss->Initialize(angerBlockModel_, enemyBulletModel_, player_);
-        activeBoss_ = std::move(angerBoss);
-    } else if (bossType_ == "IceJellyfish") {
-        auto iceJellyfish = std::make_unique<IceJellyfish>();
-        iceJellyfish->Initialize(camera_, enemyBulletModel_, player_);
-        activeBoss_ = std::move(iceJellyfish);
-    } else {
-        auto fearWorm = std::make_unique<FearWormEnemy>();
-        fearWorm->Initialize(fearWormModel_, enemyBulletModel_, player_);
-        activeBoss_ = std::move(fearWorm);
-    }
+    const BaseBossFactory* factory = FindBossFactory(bossType_);
+    if (!factory) return;
+    const BossSpawnContext context {
+        fearWormModel_, angerBlockModel_, enemyBulletModel_, player_, camera_ };
+    activeBoss_ = factory->Create(context);
+    presentation_ = factory->CreatePresentation();
 
     activeBoss_->SetPosition(spawnPosition_);
     isSpawned_ = true;

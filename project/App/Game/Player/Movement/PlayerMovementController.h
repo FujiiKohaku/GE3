@@ -4,6 +4,7 @@
 #include "ScreenConstraint/PlayerScreenConstraint.h"
 #include "Steering/PlayerSteeringController.h"
 #include "Roll/PlayerRollController.h"
+#include "App/Game/Player/Control/BasePlayerControl.h"
 
 class Camera;
 class Input;
@@ -29,6 +30,7 @@ public:
     void UpdateBoost(Input* input, bool isDebugMode);
     // 使用クラス：Player（Update）。ロールを更新し、モードに応じた移動を実行する。
     void UpdateMovement(Input* input);
+    const BasePlayerControl& GetControlStrategy(const Input& input) const;
     // 使用クラス：Player（Update）。レール上の移動量を機体のワールド位置に反映する。
     void ApplyRailPosition();
     // 使用クラス：Player（死亡時）。ブーストとロールの状態を解除する。
@@ -70,11 +72,8 @@ public:
 
 private:
     // 使用クラス：本クラス（UpdateMovement）。WASDでレール上の左右・上下移動を更新する。
-    void UpdateKeyboardMove(Input* input);
     // 使用クラス：本クラス（UpdateMovement）。マウス操舵でレール上の移動を更新する。
-    void UpdateStarFoxMove();
     // 使用クラス：本クラス（レール移動・全方向飛行）。Aimの照準位置からSteeringの入力を更新する。
-    void UpdateStarFoxSteering();
     // 使用クラス：本クラス（UpdateMovement）。旋回・範囲制限・前進・機体の傾きを順に更新する。
     void UpdateAllRangeMove(Input* input);
     // 使用クラス：本クラス（UpdateAllRangeMove）。操舵に応じてヨーとピッチを更新する。

@@ -4,7 +4,13 @@
     <ClCompile Include="App\Game\Tutorial\TutorialController.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Tutorial\BaseTutorialStep.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClInclude Include="App\Game\Tutorial\TutorialController.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Tutorial\BaseTutorialStep.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClCompile Include="App\Game\Tutorial\TutorialCommPanel.cpp">
@@ -220,10 +226,16 @@
     <ClCompile Include="App\Scene\Gameplay\GamePlayScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Scene\Gameplay\Pause\BasePauseState.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Stage\StageCatalog.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Scene\Title\TitleScene.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\Title\BaseTitleState.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Scene\Test\SpriteTestScene.cpp">
@@ -325,6 +337,9 @@
     <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
       <Filter>Player\Weapon</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Player\Weapon\BasePlayerWeapon.cpp">
+      <Filter>Player\Weapon</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.cpp">
       <Filter>Player\Movement\ScreenConstraint</Filter>
     </ClCompile>
@@ -335,6 +350,9 @@
       <Filter>Player\Movement\Steering</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Movement\PlayerMovementController.cpp">
+      <Filter>Player\Movement</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Player\Control\BasePlayerControl.cpp">
       <Filter>Player\Movement</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Player\Health\PlayerHealth.cpp">
@@ -571,6 +589,12 @@
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Enemy\MoveEnemy\BaseEnemyMovement.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Enemy\Debug\EnemyDebugViews.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -589,6 +613,7 @@
     </ClCompile>
     <ClCompile Include="App\Game\Enemy\Types\ArmoredEnemy.cpp" />
     <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
+    <ClCompile Include="App\Game\Enemy\SwarmEnemy\BaseSwarmFormation.cpp" />
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -598,13 +623,31 @@
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\BaseBeamState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\BaseFearWormMovement.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp">
       <Filter>App\Game\Boss\AngerBlockBoss</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\Encounter\BossEncounterController.cpp">
       <Filter>App\Game\Boss\Encounter</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Boss\Encounter\BaseBossFactory.cpp">
+      <Filter>App\Game\Boss\Encounter</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\Presentation\BaseBossPresentation.cpp">
+      <Filter>App\Game\Boss\Encounter</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfish.cpp">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\IceJellyfish\BaseJellyfishAttack.cpp">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\IceJellyfish\JellyfishAttackPattern.cpp">
       <Filter>App\Game\Boss\IceJellyfish</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp">
@@ -697,12 +740,21 @@
     <ClInclude Include="App\Scene\Gameplay\GamePlayScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Scene\Gameplay\Pause\BasePauseState.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="App\Scene\Common\PageTransition.h" />
     <ClInclude Include="App\Game\Stage\StageCatalog.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Stage\EnemyAppearanceTable.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="App\Scene\Loading\LoadingScene.h" />
     <ClInclude Include="App\Scene\Title\TitleScene.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\Title\BaseTitleState.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Scene\Test\SpriteTestScene.h">
@@ -810,6 +862,9 @@
     <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponController.h">
       <Filter>Player\Weapon</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Player\Weapon\BasePlayerWeapon.h">
+      <Filter>Player\Weapon</Filter>
+    </ClInclude>
     <ClInclude Include="App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.h">
       <Filter>Player\Movement\ScreenConstraint</Filter>
     </ClInclude>
@@ -820,6 +875,9 @@
       <Filter>Player\Movement\Steering</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Movement\PlayerMovementController.h">
+      <Filter>Player\Movement</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Control\BasePlayerControl.h">
       <Filter>Player\Movement</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Player\Health\PlayerHealth.h">
@@ -921,6 +979,12 @@
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Enemy\MoveEnemy\BaseEnemyMovement.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\Debug\BaseEnemyDebugView.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -936,10 +1000,17 @@
     </ClInclude>
     <ClInclude Include="App\Game\Enemy\Types\ArmoredEnemy.h" />
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
+    <ClInclude Include="App\Game\Enemy\SwarmEnemy\BaseSwarmFormation.h" />
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormState.h">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\BaseBeamState.h">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\BaseFearWormMovement.h">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h">
@@ -948,7 +1019,19 @@
     <ClInclude Include="App\Game\Boss\Encounter\BossEncounterController.h">
       <Filter>App\Game\Boss\Encounter</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Boss\Encounter\BaseBossFactory.h">
+      <Filter>App\Game\Boss\Encounter</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\Presentation\BaseBossPresentation.h">
+      <Filter>App\Game\Boss\Encounter</Filter>
+    </ClInclude>
     <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfish.h">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\IceJellyfish\BaseJellyfishAttack.h">
+      <Filter>App\Game\Boss\IceJellyfish</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\IceJellyfish\JellyfishAttackPattern.h">
       <Filter>App\Game\Boss\IceJellyfish</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.h">

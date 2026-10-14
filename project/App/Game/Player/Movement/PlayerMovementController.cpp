@@ -39,10 +39,16 @@ void PlayerMovementController::UpdateMovement(Input* input)
         (input->IsGamepadButtonPressed(XINPUT_GAMEPAD_RIGHT_SHOULDER) ? 0.9f : 0.0f);
     if (isAllRangeMode_) {
         UpdateAllRangeMove(input);
-    } else if (controlMode_ == ControlMode::StarFox || input->IsUsingGamepad()) {
-        UpdateStarFoxMove();
     } else {
-        UpdateKeyboardMove(input);
+        const PlayerControlContext context { *input, aimController_, steeringController_,
+            { static_cast<float>(WinApp::GetInstance()->GetClientWidth()),
+              static_cast<float>(WinApp::GetInstance()->GetClientHeight()) },
+            false, TimeManager::GetInstance()->GetDeltaTime() };
+        const auto control = GetControlStrategy(*input).GetControl(context);
+        Vector3 nextRailOffset = railOffset_;
+        nextRailOffset.x += control.steering.x * moveSpeed_ * control.railResponse;
+        nextRailOffset.y += control.steering.y * moveSpeed_ * control.railResponse;
+        railOffset_ = screenConstraint_.ClampRailOffsetToScreen(nextRailOffset);
     }
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
     rollController_.Update(transform_,
@@ -122,42 +128,6 @@ void PlayerMovementController::UpdateBoost(Input* input, bool isDebugMode)
     }
 }
 
-void PlayerMovementController::UpdateKeyboardMove(Input* input)
-{
-
-    Vector3 nextRailOffset = railOffset_;
-
-    if (input->IsKeyPressed(DIK_A)) {
-        nextRailOffset.x -= moveSpeed_;
-    }
-
-    if (input->IsKeyPressed(DIK_D)) {
-        nextRailOffset.x += moveSpeed_;
-    }
-
-    if (input->IsKeyPressed(DIK_W)) {
-        nextRailOffset.y += moveSpeed_;
-    }
-
-    if (input->IsKeyPressed(DIK_S)) {
-        nextRailOffset.y -= moveSpeed_;
-    }
-
-    railOffset_ = screenConstraint_.ClampRailOffsetToScreen(nextRailOffset);
-}
-
-void PlayerMovementController::UpdateStarFoxMove()
-{
-    UpdateStarFoxSteering();
-    constexpr float kStarFoxResponse = 2.75f;
-    Vector3 nextRailOffset = railOffset_;
-    nextRailOffset.x +=
-        steeringController_.GetSteeringInput().x * moveSpeed_ * kStarFoxResponse;
-    nextRailOffset.y +=
-        steeringController_.GetSteeringInput().y * moveSpeed_ * kStarFoxResponse;
-    railOffset_ = screenConstraint_.ClampRailOffsetToScreen(nextRailOffset);
-}
-
 void PlayerMovementController::EnableAllRangeMode(float areaRadius, float minHeight, float maxHeight)
 {
     isAllRangeMode_ = true;
@@ -181,16 +151,11 @@ void PlayerMovementController::EnableAllRangeMode(float areaRadius, float minHei
 
 void PlayerMovementController::UpdateAllRangeMove(Input* input)
 {
-    UpdateStarFoxSteering();
-    Vector2 steering = steeringController_.GetSteeringInput();
-    if (controlMode_ == ControlMode::KeyboardAndMouse && !input->IsUsingGamepad()) {
-        steering = {};
-        if (input->IsKeyPressed(DIK_A)) steering.x -= 1.0f;
-        if (input->IsKeyPressed(DIK_D)) steering.x += 1.0f;
-        if (input->IsKeyPressed(DIK_W)) steering.y += 1.0f;
-        if (input->IsKeyPressed(DIK_S)) steering.y -= 1.0f;
-    }
-
+    const PlayerControlContext context { *input, aimController_, steeringController_,
+        { static_cast<float>(WinApp::GetInstance()->GetClientWidth()),
+          static_cast<float>(WinApp::GetInstance()->GetClientHeight()) },
+        true, TimeManager::GetInstance()->GetDeltaTime() };
+    Vector2 steering = GetControlStrategy(*input).GetControl(context).steering;
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
     // 手動旋回の後に範囲復帰と高度補正を加え、その姿勢で移動・傾きを更新する。
     UpdateFlightOrientation(steering, deltaTimeSeconds);
@@ -282,16 +247,7 @@ void PlayerMovementController::UpdateFlightBank(const Vector2& steering, float d
         (1.0f - std::exp(-7.0f * deltaTimeSeconds));
 }
 
-void PlayerMovementController::UpdateStarFoxSteering()
+const BasePlayerControl& PlayerMovementController::GetControlStrategy(const Input& input) const
 {
-    const Vector2 screenSizePixels = {
-        static_cast<float>(WinApp::GetInstance()->GetClientWidth()),
-        static_cast<float>(WinApp::GetInstance()->GetClientHeight())
-    };
-    const bool isGamepad = Input::GetInstance()->IsUsingGamepad();
-    // パッドは機体から照準への方向を使い、距離制限中も照準へ追従する。
-    const Vector2 steeringPosition = isGamepad ? aimController_.GetGamepadSteeringScreenPosition() :
-        aimController_.GetAimScreenPosition();
-    steeringController_.Update(steeringPosition, screenSizePixels,
-        isAllRangeMode_, TimeManager::GetInstance()->GetDeltaTime(), isGamepad);
+    return GetPlayerControl(input.IsUsingGamepad(), controlMode_ == ControlMode::StarFox);
 }

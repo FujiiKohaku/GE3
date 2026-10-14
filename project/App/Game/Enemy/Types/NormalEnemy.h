@@ -7,6 +7,7 @@ class Model;
 
 class NormalEnemy : public BaseEnemy {
 public:
+    std::string_view GetAppearanceId() const override { return "NormalEnemy"; }
     void Initialize(
         Model* model,
         Model* bulletModel,

@@ -18,6 +18,7 @@
 #include "externals/json.hpp"
 #include "Engine/PostEffect/PostEffectType.h"
 #include "App/Game/VisualPresetLibrary.h"
+#include "App/Game/Stage/EnemyAppearanceTable.h"
 #include <fstream>
 #include <string_view>
 
@@ -941,80 +942,39 @@ void GamePlayScene::Update()
         if (stageId_ == "tutorial" && isPaused_ && !disconnected) {
             tutorialController_.NotifyManualPauseOpened();
         }
-        pauseSelection_ = 0;
-        pauseSettingsOpen_ = false;
+        ChangePauseState(PauseViewState::Menu);
         input->BlockPrimaryFireUntilRelease();
         if (player_) player_->ResetHomingLock();
     }
 
     if (isPaused_) {
+        auto context = MakePauseContext();
         if (!pauseChanged && input != nullptr) {
-            if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_UP) || input->IsKeyTrigger(DIK_UP)) {
-                pauseSelection_ = (pauseSelection_ + 3) % 4;
-            }
-            if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_DOWN) || input->IsKeyTrigger(DIK_DOWN)) {
-                pauseSelection_ = (pauseSelection_ + 1) % 4;
-            }
-            if (pauseSettingsOpen_) {
-                if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
-                    input->IsKeyTrigger(DIK_LEFT) || input->IsKeyTrigger(DIK_LBRACKET)) {
-                    AdjustPauseSensitivity(-0.1f);
-                }
-                if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT) ||
-                    input->IsKeyTrigger(DIK_RIGHT) || input->IsKeyTrigger(DIK_RBRACKET)) {
-                    AdjustPauseSensitivity(0.1f);
-                }
-            }
-            if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B) ||
-                input->IsKeyTrigger(DIK_ESCAPE) || input->IsKeyTrigger(DIK_BACK)) {
-                if (pauseSettingsOpen_) {
-                    pauseSettingsOpen_ = false;
-                    pauseSelection_ = 2;
-                } else {
-                    pauseSelection_ = 0;
-                    ActivatePauseSelection();
-                }
-            } else if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) || input->IsKeyTrigger(DIK_RETURN)) {
-                ActivatePauseSelection();
-            } else if (!pauseSettingsOpen_ && input->IsKeyTrigger(DIK_S)) {
-                pauseSelection_ = 2;
-                ActivatePauseSelection();
-            } else if (!pauseSettingsOpen_ && input->IsKeyTrigger(DIK_R)) {
-                pauseSelection_ = 1;
-                ActivatePauseSelection();
-            } else if (!pauseSettingsOpen_ && input->IsKeyTrigger(DIK_T)) {
-                pauseSelection_ = 3;
-                ActivatePauseSelection();
-            }
-            if (pauseSettingsOpen_ && input->IsKeyTrigger(DIK_C)) {
-                gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
-                    ? Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
-                if (player_) player_->SetControlMode(gControlMode);
-            }
+            PauseStateInput pauseInput;
+            pauseInput.up = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_UP) || input->IsKeyTrigger(DIK_UP);
+            pauseInput.down = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_DOWN) || input->IsKeyTrigger(DIK_DOWN);
+            pauseInput.left = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
+                input->IsKeyTrigger(DIK_LEFT) || input->IsKeyTrigger(DIK_LBRACKET);
+            pauseInput.right = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT) ||
+                input->IsKeyTrigger(DIK_RIGHT) || input->IsKeyTrigger(DIK_RBRACKET);
+            pauseInput.back = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B) ||
+                input->IsKeyTrigger(DIK_ESCAPE) || input->IsKeyTrigger(DIK_BACK);
+            pauseInput.confirm = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) || input->IsKeyTrigger(DIK_RETURN);
+            pauseInput.settings = input->IsKeyTrigger(DIK_S);
+            pauseInput.retry = input->IsKeyTrigger(DIK_R);
+            pauseInput.title = input->IsKeyTrigger(DIK_T);
+            pauseState_->HandleInput(context, pauseInput);
+            pauseState_->HandleControlToggle(context, input->IsKeyTrigger(DIK_C));
         }
-        const bool pad = input != nullptr && input->IsUsingGamepad();
-        const auto marker = [this](int selection) { return pauseSelection_ == selection ? "> " : ""; };
-        if (pauseTitleText_) pauseTitleText_->SetText(pauseSettingsOpen_ ? "設定" : "PAUSE MENU");
-        if (pauseSettingsOpen_) {
-            const int padPercent = static_cast<int>(input->GetGamepadAimSensitivity() * 100.0f + 0.5f);
-            const int mousePercent = static_cast<int>(gMouseSensitivity * 100.0f + 0.5f);
-            if (pauseResumeText_) pauseResumeText_->SetText(std::string(marker(0)) + "PAD AIM: " + std::to_string(padPercent) + "%");
-            if (pauseRetryText_) pauseRetryText_->SetText(std::string(marker(1)) + "PAD PITCH: " +
-                (input->IsGamepadPitchInverted() ? "INVERTED" : "NORMAL"));
-            if (pauseControlText_) pauseControlText_->SetText(std::string(marker(2)) + "MOUSE: " + std::to_string(mousePercent) + "%");
-            if (pauseTitleBtnText_) pauseTitleBtnText_->SetText(std::string(marker(3)) + (pad ? "戻る [A / B]" : "戻る [ENTER / ESC]"));
-            if (pauseSensitivityText_) pauseSensitivityText_->SetText(pad
-                ? "十字キー上下: 選択 / 左右: 感度\nA: 上下反転 / B: 戻る"
-                : "↑↓: 選択 / ←→: 感度 / ENTER: 決定\nC: マウス操作切替 / ESC: 戻る");
-        } else {
-            if (pauseResumeText_) pauseResumeText_->SetText(std::string(marker(0)) + (pad ? "ゲーム再開 [A / B / START]" : "ゲーム再開 [TAB]"));
-            if (pauseRetryText_) pauseRetryText_->SetText(std::string(marker(1)) + (pad ? "リトライ [A]" : "リトライ [R]"));
-            if (pauseControlText_) pauseControlText_->SetText(std::string(marker(2)) + (pad ? "設定 [A]" : "設定 [S / ENTER]"));
-            if (pauseTitleBtnText_) pauseTitleBtnText_->SetText(std::string(marker(3)) + (pad ? "タイトルに戻る [A]" : "タイトルに戻る [T]"));
-            if (pauseSensitivityText_) pauseSensitivityText_->SetText(pad
-                ? "十字キー上下: 選択 / A: 決定"
-                : "↑↓: 選択 / ENTER: 決定");
-        }
+        const PauseDisplay display = pauseState_->GetDisplay({
+            pauseSelection_, input && input->IsUsingGamepad(), input && input->IsGamepadPitchInverted(),
+            input ? input->GetGamepadAimSensitivity() : 1.0f, gMouseSensitivity });
+        if (pauseTitleText_) pauseTitleText_->SetText(display.title);
+        if (pauseResumeText_) pauseResumeText_->SetText(display.rows[0]);
+        if (pauseRetryText_) pauseRetryText_->SetText(display.rows[1]);
+        if (pauseControlText_) pauseControlText_->SetText(display.rows[2]);
+        if (pauseTitleBtnText_) pauseTitleBtnText_->SetText(display.rows[3]);
+        if (pauseSensitivityText_) pauseSensitivityText_->SetText(display.hint);
         if (pauseTitleText_) pauseTitleText_->Update();
         if (pauseResumeText_) pauseResumeText_->Update();
         if (pauseRetryText_) pauseRetryText_->Update();
@@ -1154,26 +1114,22 @@ void GamePlayScene::Update()
 
     // ボス出現処理
     bossController_->Update(railDistance_);
-    if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
-        auto* lights = LightManager::GetInstance();
-        lights->SetSpotLightPosition(bossSpotLightHandle_, jellyfish->GetPosition() + Vector3 { -55.0f, 100.0f, -45.0f });
-        lights->SetPointLightPosition(bossPointLightHandle_, jellyfish->GetPosition() + Vector3 { 45.0f, 20.0f, -35.0f });
-    }
-    if (stageId_ == "stage03") {
+    BossPresentationContext presentationContext;
+    presentationContext.followFog = stageId_ == "stage03";
+    presentationContext.setSpotPosition = [this](const Vector3& position) {
+        LightManager::GetInstance()->SetSpotLightPosition(bossSpotLightHandle_, position);
+    };
+    presentationContext.setPointPosition = [this](const Vector3& position) {
+        LightManager::GetInstance()->SetPointLightPosition(bossPointLightHandle_, position);
+    };
+    presentationContext.setFogCenter = [](uint32_t index, const Vector3& center) {
         if (auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
-            FogVolumeSettings footFog = volume->GetFogVolumes()[0];
-            if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
-                // 地面付近に霧を残し、位置だけボスへ追従させる。
-                footFog.center = { jellyfish->GetPosition().x, 4.0f, jellyfish->GetPosition().z };
-            }
-            volume->SetFogVolume(0, footFog);
-            if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
-                FogVolumeSettings lightMist = volume->GetFogVolumes()[1];
-                lightMist.center = jellyfish->GetPosition() + Vector3 { 0.0f, 25.0f, 0.0f };
-                volume->SetFogVolume(1, lightMist);
-            }
+            auto fog = volume->GetFogVolumes()[index];
+            fog.center = center;
+            volume->SetFogVolume(index, fog);
         }
-    }
+    };
+    bossController_->UpdatePresentation(presentationContext);
     if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
         oceanSurface_->SetLength(rail_->GetTotalLength());
     }
@@ -2577,53 +2533,66 @@ void GamePlayScene::UpdateBossHpHud()
     }
 }
 
-void GamePlayScene::AdjustPauseSensitivity(float amount)
+PauseStateContext GamePlayScene::MakePauseContext()
 {
-    if (!pauseSettingsOpen_) return;
-    if (pauseSelection_ == 0) {
+    PauseStateContext context { pauseSelection_ };
+    context.changeState = [this](PauseViewState state, int selection) { ChangePauseState(state, selection); };
+    context.menuActions = {
+        [this]() {
+            isPaused_ = false;
+            Input::GetInstance()->BlockPrimaryFireUntilRelease();
+            if (player_) player_->ResetHomingLock();
+            SoundManager::GetInstance()->Play("PauseToggle");
+        },
+        [this]() {
+            isPaused_ = false;
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>(stageId_));
+        },
+        [this]() { ChangePauseState(PauseViewState::Settings); },
+        [this]() {
+            isPaused_ = false;
+            ResetGameplayPostEffects();
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        }
+    };
+    context.adjustPad = [](float amount) {
         auto* input = Input::GetInstance();
         input->SetGamepadAimSensitivity(input->GetGamepadAimSensitivity() + amount);
-    } else if (pauseSelection_ == 2) {
+    };
+    context.adjustMouse = [this](float amount) {
         gMouseSensitivity = std::clamp(gMouseSensitivity + amount, 0.5f, 2.0f);
         if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
-    }
+    };
+    context.togglePitch = []() { Input::GetInstance()->ToggleGamepadPitchInverted(); };
+    context.toggleControl = [this]() {
+        gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse ?
+            Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
+        if (player_) player_->SetControlMode(gControlMode);
+    };
+    return context;
+}
+
+void GamePlayScene::ChangePauseState(PauseViewState state, int selection)
+{
+    auto context = MakePauseContext();
+    pauseState_->Exit(context);
+    pauseState_ = &GetPauseState(state);
+    pauseState_->Enter(context);
+    pauseSelection_ = selection;
+}
+
+void GamePlayScene::AdjustPauseSensitivity(float amount)
+{
+    auto context = MakePauseContext();
+    pauseState_->AdjustSensitivity(context, amount);
 }
 
 void GamePlayScene::ActivatePauseSelection()
 {
-    auto* input = Input::GetInstance();
-    if (pauseSettingsOpen_) {
-        if (pauseSelection_ == 1) input->ToggleGamepadPitchInverted();
-        if (pauseSelection_ == 3) {
-            pauseSettingsOpen_ = false;
-            pauseSelection_ = 2;
-        }
-        return;
-    }
-    switch (pauseSelection_) {
-    case 0:
-        isPaused_ = false;
-        input->BlockPrimaryFireUntilRelease();
-        if (player_) player_->ResetHomingLock();
-        SoundManager::GetInstance()->Play("PauseToggle");
-        break;
-    case 1:
-        isPaused_ = false;
-        ResetGameplayPostEffects();
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>(stageId_));
-        break;
-    case 2:
-        pauseSettingsOpen_ = true;
-        pauseSelection_ = 0;
-        break;
-    case 3:
-        isPaused_ = false;
-        ResetGameplayPostEffects();
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
-        break;
-    }
+    auto context = MakePauseContext();
+    pauseState_->Activate(context);
 }
-
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
@@ -2639,7 +2608,7 @@ void GamePlayScene::DrawImGui()
             // 表示はDraw2Dの日本語UIに統一し、ここではマウスの当たり判定を配置する。
             const float rowPositions[] = { 168.0f, 238.0f, 308.0f, 428.0f };
             for (int row = 0; row < 4; ++row) {
-                if (pauseSettingsOpen_ && (row == 0 || row == 2)) {
+                if (pauseState_->HasSensitivityControls(row)) {
                     ImGui::PushID(row);
                     ImGui::SetCursorPos(ImVec2(18.0f, rowPositions[row]));
                     if (ImGui::Button("-", ImVec2(32.0f, 44.0f))) {
@@ -2751,12 +2720,12 @@ void GamePlayScene::DrawImGui()
     int32_t moveEnemyCount = 0;
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (!enemy->IsDead()) {
-            MoveEnemy* moveEnemy = dynamic_cast<MoveEnemy*>(enemy.get());
-            if (moveEnemy != nullptr) {
+            auto debugView = enemy->CreateDebugView();
+            if (debugView && debugView->HasMovementControls()) {
                 char label[64];
                 sprintf_s(label, "MoveEnemy [%d]", moveEnemyCount);
                 if (ImGui::TreeNode(label)) {
-                    moveEnemy->DrawImGui();
+                    debugView->DrawInspector();
                     ImGui::TreePop();
                 }
                 moveEnemyCount = moveEnemyCount + 1;
@@ -2774,12 +2743,9 @@ void GamePlayScene::DrawImGui()
     ImGui::End();
 
     ImGui::Begin("Debug Teleport Menu");
-    if (IceJellyfish* iceJellyfish = dynamic_cast<IceJellyfish*>(GetActiveBoss())) {
-        ImGui::Text("Ice Jellyfish core HP: %.0f / %.0f", iceJellyfish->GetHp(), IceJellyfish::kMaxHp);
-        ImGui::Checkbox("Show Ice Jellyfish collision", &showIceJellyfishCollision_);
-        if (ImGui::Button("Teleport to Ice Jellyfish")) {
-            railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
-        }
+    if (auto view = GetActiveBoss() ? GetActiveBoss()->CreateDebugView() : nullptr;
+        view && view->HasBossInspector()) {
+        view->DrawBossInspector(showIceJellyfishCollision_, railDistance_, stageSettings_.bossPosition);
     }
     if (GetActiveBoss() != nullptr) {
         ImGui::Text("Boss Z: %.2f", GetActiveBoss()->GetPosition().z);
@@ -3015,17 +2981,11 @@ nlohmann::json GamePlayScene::GetDevelopmentControls() const
         {"type","select"},{"group","オブジェクト"},{"options",std::move(options)}});
     int enemyIndex = 0;
     for (const auto& enemy : enemies_) {
-        if (enemy->IsDead() || dynamic_cast<MoveEnemy*>(enemy.get()) == nullptr) { continue; }
-        const std::string prefix = "enemy." + std::to_string(enemyIndex) + ".";
-        const std::string group = "移動する敵 " + std::to_string(enemyIndex + 1);
-        controls.push_back({{"key",prefix+"pattern"},{"label","移動パターン"},{"group",group},{"type","number"},{"minimum",0},{"maximum",3},{"step",1}});
-        controls.push_back({{"key",prefix+"speed"},{"label","速度"},{"group",group},{"type","number"},{"minimum",0},{"maximum",10},{"step",0.1}});
-        controls.push_back({{"key",prefix+"amplitude"},{"label","振幅"},{"group",group},{"type","number"},{"minimum",0},{"maximum",20},{"step",0.1}});
-        controls.push_back({{"key",prefix+"frequency"},{"label","周波数"},{"group",group},{"type","number"},{"minimum",0},{"maximum",10},{"step",0.1}});
-        controls.push_back({{"key",prefix+"reset"},{"label","位置を戻す"},{"group",group},{"type","action"}});
-        ++enemyIndex;
-    }
-    return controls;
+        if (enemy->IsDead()) continue;
+        auto view = enemy->CreateDebugView();
+        if (!view || !view->HasMovementControls()) continue;
+        view->AppendControls(controls, enemyIndex++);
+    }    return controls;
 }
 
 bool GamePlayScene::SetDevelopmentBool(const std::string& key, bool isEnabled)
@@ -3048,7 +3008,8 @@ bool GamePlayScene::ExecuteDevelopmentCommand(const std::string& key)
 nlohmann::json GamePlayScene::GetDevelopmentState() const
 {
     const BaseBoss* boss = GetActiveBoss();
-    const IceJellyfish* jellyfish = dynamic_cast<const IceJellyfish*>(boss);
+    auto bossDebug = boss ? GetActiveBoss()->CreateDebugView() : nullptr;
+    const bool hasBossInspector = bossDebug && bossDebug->HasBossInspector();
     nlohmann::json state = {
         { "active", true },
         { "freeCamera", debugCameraController_->GetDebugMode() },
@@ -3097,9 +3058,9 @@ nlohmann::json GamePlayScene::GetDevelopmentState() const
         { "drawDistance", collisionDrawDistance_ },
         { "railDistance", railDistance_ },
         { "bossAvailable", boss != nullptr && !boss->IsDead() },
-        { "jellyfishAvailable", jellyfish != nullptr && !jellyfish->IsDead() },
+        { "jellyfishAvailable", hasBossInspector && !boss->IsDead() },
         { "bossZ", boss ? boss->GetPosition().z : 0.0f },
-        { "bossHp", jellyfish ? nlohmann::json(jellyfish->GetHp()) : nlohmann::json(nullptr) }
+        { "bossHp", hasBossInspector ? nlohmann::json(bossDebug->GetBossHp()) : nlohmann::json(nullptr) }
     };
     state["moveEnemies"] = nlohmann::json::array();
     state["objects"] = nlohmann::json::array();
@@ -3125,17 +3086,11 @@ nlohmann::json GamePlayScene::GetDevelopmentState() const
     int moveEnemyIndex = 0;
     for (const auto& enemy : enemies_) {
         if (enemy->IsDead()) continue;
-        if (const MoveEnemy* moveEnemy = dynamic_cast<const MoveEnemy*>(enemy.get())) {
-            state["moveEnemies"].push_back({
-                {"index", moveEnemyIndex++},
-                {"pattern", static_cast<int>(moveEnemy->GetMovePattern())},
-                {"speed", moveEnemy->GetMoveSpeed()},
-                {"amplitude", moveEnemy->GetAmplitude()},
-                {"frequency", moveEnemy->GetFrequency()}
-            });
+        auto view = enemy->CreateDebugView();
+        if (view && view->HasMovementControls()) {
+            state["moveEnemies"].push_back(view->GetState(moveEnemyIndex++));
         }
-    }
-    for (const auto& enemy : state["moveEnemies"]) {
+    }    for (const auto& enemy : state["moveEnemies"]) {
         const std::string prefix = "enemy." + std::to_string(enemy["index"].get<int>()) + ".";
         for (const char* field : {"pattern", "speed", "amplitude", "frequency"}) { state[prefix+field] = enemy[field]; }
     }
@@ -3209,20 +3164,10 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         int currentIndex = 0;
         for (const auto& enemy : enemies_) {
             if (enemy->IsDead()) continue;
-            MoveEnemy* moveEnemy = dynamic_cast<MoveEnemy*>(enemy.get());
-            if (!moveEnemy) continue;
+            auto view = enemy->CreateDebugView();
+            if (!view || !view->HasMovementControls()) continue;
             if (currentIndex++ != targetIndex) continue;
-            const std::string field = key.substr(separator + 1);
-            if (field == "reset") { moveEnemy->ResetPosition(); return true; }
-            char* end = nullptr;
-            const float number = std::strtof(value.c_str(), &end);
-            if (end == value.c_str() || *end != '\0' || !std::isfinite(number)) return false;
-            if (field == "pattern") moveEnemy->SetMovePattern(static_cast<MovePattern>(static_cast<int>(std::clamp(number, 0.0f, 3.0f))));
-            else if (field == "speed") moveEnemy->SetMoveSpeed(std::clamp(number, 0.0f, 10.0f));
-            else if (field == "amplitude") moveEnemy->SetAmplitude(std::clamp(number, 0.0f, 20.0f));
-            else if (field == "frequency") moveEnemy->SetFrequency(std::clamp(number, 0.0f, 10.0f));
-            else { return false; }
-            return true;
+            return view->Apply(key.substr(separator + 1), value);
         }
         return false;
     }
@@ -3366,7 +3311,8 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
             railDistance_ = (std::max)(0.0f, boss->GetPosition().z - 130.0f);
         } else { return false; }
     } else if (key == "teleportJellyfish") {
-        if (dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+        if (auto view = GetActiveBoss() ? GetActiveBoss()->CreateDebugView() : nullptr;
+            view && view->HasBossInspector()) {
             railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
         } else { return false; }
     } else { return false; }
@@ -3389,9 +3335,9 @@ void GamePlayScene::DrawCollisionDebug()
         return dx * dx + dy * dy + dz * dz <= range * range;
     };
     if (showEnemyCollision_ && showIceJellyfishCollision_) {
-        if (const IceJellyfish* iceJellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
-            if (isNearCamera(iceJellyfish->GetPosition(), 100.0f)) {
-                iceJellyfish->DrawCollisionDebug();
+        if (BaseBoss* boss = GetActiveBoss(); boss && isNearCamera(boss->GetPosition(), 100.0f)) {
+            if (auto view = boss->CreateDebugView(); view && view->HasBossInspector()) {
+                view->DrawCollisionDebug();
             }
         }
     }
@@ -4171,22 +4117,9 @@ void GamePlayScene::DrawShadow(ShadowMapRenderer& renderer)
 
 void GamePlayScene::ConfigureFrozenEnemyAppearance(BaseEnemy& enemy)
 {
-    if (stageId_ != "stage03") {
-        return;
-    }
-    std::string modelName = "NormalEnemy";
-    if (dynamic_cast<MoveEnemy*>(&enemy) != nullptr) {
-        modelName = "MoveEnemy";
-    } else if (dynamic_cast<ArmoredEnemy*>(&enemy) != nullptr) {
-        modelName = "ArmoredEnemy";
-    } else if (dynamic_cast<PaintShooterEnemy*>(&enemy) != nullptr) {
-        modelName = "PaintShooterEnemy";
-    } else if (dynamic_cast<SwarmEnemy*>(&enemy) != nullptr) {
-        modelName = "SwarmEnemy";
-    } else if (dynamic_cast<NormalEnemy*>(&enemy) == nullptr) {
-        return;
-    }
+    const std::string_view modelPath = FindEnemyAppearance(stageId_, enemy.GetAppearanceId());
+    if (modelPath.empty()) return;
     // ModelManagerが共有・キャッシュするため、同じ種類の出現ごとに読み込み直さない。
-    Model* model = ModelManager::GetInstance()->Load("Enemy/Frozen/" + modelName + ".obj");
+    Model* model = ModelManager::GetInstance()->Load(std::string(modelPath));
     enemy.SetAppearance(model);
 }

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "BaseBeamState.h"
+#include "BaseFearWormMovement.h"
 class Model;
 class Object3d;
 class Player;
@@ -61,6 +63,13 @@ public:
     float GetBodyHpFraction() const override;
 
 private:
+    friend class BaseBeamState;
+    friend class BeamWaitState;
+    friend class BeamChargeState;
+    friend class BeamFireState;
+    friend class BeamFadeOutState;
+    friend bool RunBeamStateTests();
+    friend bool RunFearWormMovementTests();
     // ボス専用の状態クラスだけに、内部の行動処理へのアクセスを許可する。
     friend class FearWormWaitState;
     friend class FearWormEntryState;
@@ -71,14 +80,8 @@ private:
     void ChangeState(BossState state);
     const FearWormState* currentState_;
 
-    enum class MovementPattern {
-        Orbit, 
-        Coil,
-        Weave,
-        Drift,
-        Line,
-        Spiral,
-    };
+    using MovementPattern = FearWormMovementType;
+    void ChangeMovementPattern(MovementPattern pattern);
 
     struct Segment {
         std::unique_ptr<Object3d> object;
@@ -99,7 +102,6 @@ private:
     void UpdateSegments();
 
     // 渦巻き移動と弾幕用
-    Vector3 SpiralTargetPosition(const Vector3& playerPosition) const;
     void UpdateSpiralBarrage();
     void FireDirectionalBullet(const Vector3& position, const Vector3& direction);
 
@@ -114,16 +116,12 @@ private:
     Vector3 EntryStartPosition(const Vector3& playerPosition) const;
 
     // プレイヤー周辺を旋回する目標位置を計算する。
-    Vector3 OrbitTargetPosition(const Vector3& playerPosition) const;
 
     // プレイヤー周辺を巻くように動く目標位置を計算する。
-    Vector3 CoilTargetPosition(const Vector3& playerPosition) const;
 
     // 上下左右へ波打つ目標位置を計算する。
-    Vector3 WeaveTargetPosition(const Vector3& playerPosition) const;
 
     // 緩やかに漂う目標位置を計算する。
-    Vector3 DriftTargetPosition(const Vector3& playerPosition) const;
 
     // 現在選択中の移動パターンに対応する目標位置を返す。
     Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
@@ -193,12 +191,9 @@ private:
     Vector3 BattleTarget(const Vector3& playerPosition, float rate);// 戦闘中の目的地
 
     // ビーム攻撃用メンバー関数
-    enum class BeamState {
-        Wait,    // 次のビームまでの待機（クールダウン）
-        Charge,  // 発射前の予兆（マズルフラッシュと強めの追従）
-        Fire,    // ビーム発射（3秒照射、弱めの追従、当たり判定）
-        FadeOut  // 照射終了（ビーム細小化フェード）
-    };
+    using BeamState = FearWormBeamState;
+    void ChangeBeamState(BeamState state);
+    void ChangeBeamState(const BaseBeamState& state);
     void InitializeBeam();
     void UpdateBeamAttack();
     void DrawBeam();
@@ -240,7 +235,7 @@ private:
     bool isDeathSequenceFinished_ = false;
     float deathSequenceTimer_ = 0.0f;
     int32_t nextDeathSegmentIndex_ = -1;
-    MovementPattern movementPattern_ = MovementPattern::Orbit; 
+    const BaseFearWormMovement* movement_ = &GetFearWormMovement(MovementPattern::Orbit);
 
     // 追尾ミサイル攻撃用のタイマー・フラグ
     float missileAttackTimer_ = 0.0f;
@@ -275,6 +270,7 @@ private:
     // ビーム攻撃用メンバー変数
     std::unique_ptr<Object3d> beamPlane_;
     BeamState beamState_ = BeamState::Wait;
+    const BaseBeamState* currentBeamState_ = nullptr;
     float beamTimer_ = 0.0f;
     float beamUVScrollOffset_ = 0.0f;
     float beamCurrentLength_ = 0.0f;
@@ -282,6 +278,7 @@ private:
     float beamRotateTheta_ = 0.0f;
     bool isBeamHittingPlayer_ = false;
     float beamEffectTimer_ = 0.0f;
+    Vector3 beamMuzzlePosition_ {};
     int32_t beamHitEffectFrameCount_ = 0;
 };
 

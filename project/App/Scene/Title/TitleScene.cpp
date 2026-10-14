@@ -194,6 +194,7 @@ void TitleScene::Initialize()
     lights->SetSpotLightVolumetricEnabled(windowLightHandle_, true);
     InitializeInterface();
     InitializeStageSelection();
+    ChangeState(ViewState::Title);
     UpdateInterface(0.0f);
 
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
@@ -931,75 +932,12 @@ void TitleScene::Update()
         (std::min)(TimeManager::GetInstance()->GetDeltaTime(), 1.0f / 20.0f);
     idleTime_ += deltaTime;
 
-    Input* input = Input::GetInstance();
-    if (input != nullptr) {
-        if (viewState_ == ViewState::Title) {
-            if (input->IsKeyTrigger(DIK_SPACE) ||
-                input->IsKeyTrigger(DIK_RETURN) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
-                StartTutorial();
-            } else if (input->IsKeyTrigger(DIK_S) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_Y)) {
-                StartSettingsTransition(true);
-            }
-        } else if (viewState_ == ViewState::StageSelect) {
-            if (input->IsKeyTrigger(DIK_BACK) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B)) {
-                StartTitleReturn();
-            } else if (!stages_.empty() &&
-                       !stageRoomTransitionActive_ &&
-                       (input->IsKeyTrigger(DIK_D) ||
-                        input->IsKeyTrigger(DIK_RIGHT) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT))) {
-                StartStageRoomTransition(1);
-            } else if (!stages_.empty() &&
-                       !stageRoomTransitionActive_ &&
-                       (input->IsKeyTrigger(DIK_A) ||
-                        input->IsKeyTrigger(DIK_LEFT) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT))) {
-                StartStageRoomTransition(-1);
-            } else if (!stageRoomTransitionActive_ &&
-                       (input->IsKeyTrigger(DIK_SPACE) ||
-                        input->IsKeyTrigger(DIK_RETURN) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A))) {
-                ConfirmStage();
-            }
-        } else if (viewState_ == ViewState::Settings &&
-                   (input->IsKeyTrigger(DIK_BACK) ||
-                    input->IsKeyTrigger(DIK_S) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B))) {
-            StartSettingsTransition(false);
-        }
-        if (viewState_ == ViewState::Settings &&
-            (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) ||
-             input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
-             input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT))) {
-            input->ToggleGamepadPitchInverted();
-        }
+    if (!currentState_) ChangeState(viewState_);
+    if (Input* input = Input::GetInstance()) {
+        currentState_->HandleInput(*this, *input);
     }
-
-    switch (viewState_) {
-    case ViewState::Title:
-        UpdateTitleCamera(deltaTime);
-        break;
-    case ViewState::StartingTutorial:
-        UpdateTutorialStart(deltaTime);
-        break;
-    case ViewState::EnteringStageSelect:
-        UpdateStageSelectTransition(deltaTime);
-        break;
-    case ViewState::StageSelect:
-        UpdateStageSelection(deltaTime);
-        break;
-    case ViewState::LeavingStageSelect:
-        UpdateStageSelectTransition(deltaTime);
-        break;
-    case ViewState::ConfirmingStage:
-        UpdateStageConfirmation(deltaTime);
-        break;
-    case ViewState::EnteringSettings:
-    case ViewState::LeavingSettings:
-        UpdateSettingsTransition(deltaTime);
-        break;
-    case ViewState::Settings:
-        camera_->LookAt(kSettingsEye, kSettingsTarget);
-        camera_->Update();
-        break;
-    }
-
+    // 入力で状態が変わった場合は、新しい状態を同じフレームから更新する。
+    currentState_->Update(*this, deltaTime);
     UpdateStageRoomTransition(deltaTime);
     UpdateSceneLighting();
 
@@ -1014,12 +952,17 @@ void TitleScene::Update()
 void TitleScene::StartTutorial()
 {
     if (viewState_ != ViewState::Title) return;
+    ChangeState(ViewState::StartingTutorial);
+}
+
+void TitleScene::InitializeTutorialAnimation()
+{
     SoundManager::GetInstance()->Play("UiConfirm");
     Input::GetInstance()->BlockPrimaryFireUntilRelease();
     simulationStartEye_ = camera_->GetTranslate();
     animationTime_ = 0.0f;
     stageTransitionQueued_ = false;
-    viewState_ = ViewState::StartingTutorial;
+
     simulationTint_ = std::make_unique<Sprite>();
     simulationTint_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     simulationTint_->SetSize({ 1280.0f, 720.0f });
@@ -1067,7 +1010,7 @@ void TitleScene::StartStageSelectTransition()
         return;
     }
     animationTime_ = 0.0f;
-    viewState_ = ViewState::EnteringStageSelect;
+    ChangeState(ViewState::EnteringStageSelect);
 }
 
 void TitleScene::StartTitleReturn()
@@ -1075,9 +1018,7 @@ void TitleScene::StartTitleReturn()
     if (viewState_ != ViewState::StageSelect) {
         return;
     }
-    SoundManager::GetInstance()->Play("UiSelect");
-    animationTime_ = 0.0f;
-    viewState_ = ViewState::LeavingStageSelect;
+    ChangeState(ViewState::LeavingStageSelect);
 }
 
 void TitleScene::ConfirmStage()
@@ -1085,9 +1026,7 @@ void TitleScene::ConfirmStage()
     if (viewState_ != ViewState::StageSelect || stages_.empty()) {
         return;
     }
-    SoundManager::GetInstance()->Play("UiConfirm");
-    animationTime_ = 0.0f;
-    viewState_ = ViewState::ConfirmingStage;
+    ChangeState(ViewState::ConfirmingStage);
 }
 
 void TitleScene::StartSettingsTransition(bool opening)
@@ -1100,9 +1039,9 @@ void TitleScene::StartSettingsTransition(bool opening)
     }
     animationTime_ = 0.0f;
     if (opening) {
-        viewState_ = ViewState::EnteringSettings;
+        ChangeState(ViewState::EnteringSettings);
     } else {
-        viewState_ = ViewState::LeavingSettings;
+        ChangeState(ViewState::LeavingSettings);
     }
 }
 
@@ -1142,9 +1081,9 @@ void TitleScene::UpdateStageSelectTransition(float deltaTime)
     if (progress >= 1.0f) {
         animationTime_ = 0.0f;
         if (entering) {
-            viewState_ = ViewState::StageSelect;
+            ChangeState(ViewState::StageSelect);
         } else {
-            viewState_ = ViewState::Title;
+            ChangeState(ViewState::Title);
         }
         if (!entering) {
             camera_->SetFovY(0.64f);
@@ -1238,9 +1177,9 @@ void TitleScene::UpdateSettingsTransition(float deltaTime)
     if (progress >= 1.0f) {
         animationTime_ = 0.0f;
         if (opening) {
-            viewState_ = ViewState::Settings;
+            ChangeState(ViewState::Settings);
         } else {
-            viewState_ = ViewState::Title;
+            ChangeState(ViewState::Title);
         }
         if (!opening) {
             camera_->SetFovY(0.64f);
@@ -1599,6 +1538,8 @@ void TitleScene::UpdateSceneLighting()
 
 void TitleScene::Finalize()
 {
+    if (currentState_) currentState_->Exit(*this);
+    currentState_ = nullptr;
     LightManager::GetInstance()->RemoveSpotLight(windowLightHandle_);
     windowLightHandle_ = kInvalidSpotLightHandle;
     ShowCursor(TRUE);
@@ -1608,3 +1549,23 @@ void TitleScene::Finalize()
 
 void TitleScene::DrawParticle() {}
 void TitleScene::DrawImGui() {}
+
+void TitleScene::ChangeState(ViewState state)
+{
+    ChangeState(GetTitleState(state));
+}
+
+void TitleScene::ChangeState(const BaseTitleState& state)
+{
+    if (currentState_ == &state) return;
+    if (currentState_) currentState_->Exit(*this);
+    currentState_ = &state;
+    viewState_ = state.GetType();
+    currentState_->Enter(*this);
+}
+
+void TitleScene::UpdateSettingsCamera()
+{
+    camera_->LookAt(kSettingsEye, kSettingsTarget);
+    camera_->Update();
+}

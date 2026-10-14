@@ -53,39 +53,6 @@ constexpr float kEntryOffsetX = -34.0f;
 constexpr float kEntryOffsetY = 18.0f;
 constexpr float kEntryExtraForwardOffset = 22.0f;
 
-constexpr float kOrbitRadiusX = 16.0f;
-constexpr float kOrbitRadiusY = 7.0f;
-constexpr float kOrbitHeight = 7.0f;
-constexpr float kOrbitLateralSwayFrequency = 2.0f;
-constexpr float kOrbitLateralSwayAmplitude = 2.0f;
-constexpr float kOrbitDepthSwayFrequency = 0.80f;
-constexpr float kOrbitDepthSwayAmplitude = 3.0f;
-
-constexpr float kCoilAngleRate = 2.35f;
-constexpr float kCoilBaseRadius = 8.0f;
-constexpr float kCoilRadiusFrequency = 3.2f;
-constexpr float kCoilRadiusAmplitude = 2.0f;
-constexpr float kCoilHeight = 8.0f;
-constexpr float kCoilVerticalScale = 0.75f;
-constexpr float kCoilDepthFrequency = 0.50f;
-constexpr float kCoilDepthAmplitude = 2.5f;
-
-constexpr float kWeaveAngleRate = 1.35f;
-constexpr float kWeaveWidth = 13.0f;
-constexpr float kWeaveHeight = 7.0f;
-constexpr float kWeaveVerticalFrequency = 2.0f;
-constexpr float kWeaveVerticalAmplitude = 9.0f;
-constexpr float kWeaveDepthAmplitude = 2.5f;
-
-constexpr float kDriftHorizontalFrequency = 0.65f;
-constexpr float kDriftHorizontalAmplitude = 8.0f;
-constexpr float kDriftHeight = 8.0f;
-constexpr float kDriftVerticalFrequency = 0.85f;
-constexpr float kDriftVerticalAmplitude = 4.5f;
-constexpr float kDriftDepthFrequency = 0.50f;
-constexpr float kDriftDepthAmplitude = 2.0f;
-
-
 constexpr Vector4 kHeadColor = { 0.30f, 0.88f, 1.0f, 1.0f };
 constexpr Vector4 kVulnerableHeadColor = { 1.0f, 0.18f, 0.04f, 1.0f };
 constexpr Vector4 kChargingHeadColor = { 1.0f, 0.48f, 0.08f, 1.0f };
@@ -170,7 +137,7 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     transform_.translate = position;
     startPosition_ = position;
     ChangeState(BossState::Wait);
-    movementPattern_ = MovementPattern::Orbit;
+    ChangeMovementPattern(MovementPattern::Orbit);
     movementPatternTimer_ = 0.0f;
     isHeadChargeActive_ = false;
     isHeadChargeFiring_ = false;
@@ -286,133 +253,28 @@ Vector3 FearWormEnemy::EntryStartPosition(const Vector3& playerPosition) const
     return result;
 }
 
-Vector3 FearWormEnemy::OrbitTargetPosition(const Vector3& playerPosition) const
-{
-    Vector3 result = playerPosition;
-
-    // 基本の楕円軌道を計算する。
-    float orbitX = std::cos(orbitAngle_) * kOrbitRadiusX;
-
-    float orbitY = std::sin(orbitAngle_) * kOrbitRadiusY;
-
-    // 単調な周回にならないよう、横揺れと奥行きの揺れを加える。
-    float lateralSway = std::sin(orbitAngle_ * kOrbitLateralSwayFrequency) * kOrbitLateralSwayAmplitude;
-
-    float depthSway = std::sin(orbitAngle_ * kOrbitDepthSwayFrequency) * kOrbitDepthSwayAmplitude;
-
-    result.x += orbitX + lateralSway;
-    result.y += kOrbitHeight + orbitY;
-    result.z += parallelForwardOffset_ + depthSway;
-
-    return result;
-}
-
-Vector3 FearWormEnemy::CoilTargetPosition(const Vector3& playerPosition) const
-{
-    Vector3 result = playerPosition;
-
-    // 通常の軌道角を速めて、巻き付くような回転角を作る。
-    float coilAngle = orbitAngle_ * kCoilAngleRate;
-
-    // 時間経過で半径を伸縮させる。
-    float radius = kCoilBaseRadius + std::sin(movementPatternTimer_ * kCoilRadiusFrequency) * kCoilRadiusAmplitude;
-
-    result.x += std::cos(coilAngle) * radius;
-    result.y += kCoilHeight + std::sin(coilAngle) * radius * kCoilVerticalScale;
-    result.z += parallelForwardOffset_ + std::sin(coilAngle * kCoilDepthFrequency) * kCoilDepthAmplitude;
-
-    return result;
-}
-
-Vector3 FearWormEnemy::WeaveTargetPosition(const Vector3& playerPosition) const
-{
-    Vector3 result = playerPosition;
-
-    // 横方向と縦方向で異なる周期を使い、波打つ軌道を作る。
-    float waveAngle = orbitAngle_ * kWeaveAngleRate;
-
-    result.x += std::sin(waveAngle) * kWeaveWidth;
-    result.y += kWeaveHeight + std::sin(waveAngle * kWeaveVerticalFrequency) * kWeaveVerticalAmplitude;
-    result.z += parallelForwardOffset_ + std::cos(waveAngle) * kWeaveDepthAmplitude;
-
-    return result;
-}
-
-Vector3 FearWormEnemy::DriftTargetPosition(const Vector3& playerPosition) const
-{
-    Vector3 result = playerPosition;
-
-    // 各軸を異なる周期で揺らし、緩やかに漂う軌道を作る。
-    result.x += std::sin(orbitAngle_ * kDriftHorizontalFrequency) * kDriftHorizontalAmplitude;
-    result.y += kDriftHeight + std::sin(orbitAngle_ * kDriftVerticalFrequency) * kDriftVerticalAmplitude;
-    result.z += parallelForwardOffset_ + std::cos(orbitAngle_ * kDriftDepthFrequency) * kDriftDepthAmplitude;
-
-    return result;
-}
-
 Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) const
 {
-    // 現在の移動状態に対応する計算へ振り分ける。
-    if (movementPattern_ == MovementPattern::Spiral) {
-        return SpiralTargetPosition(playerPosition);
-    }
-
-    if (movementPattern_ == MovementPattern::Coil) {
-        return CoilTargetPosition(playerPosition);
-    }
-
-    if (movementPattern_ == MovementPattern::Weave) {
-        return WeaveTargetPosition(playerPosition);
-    }
-
-    if (movementPattern_ == MovementPattern::Drift) {
-        return DriftTargetPosition(playerPosition);
-    }
-
-    if (movementPattern_ == MovementPattern::Line) {
-        // プレイヤーの正面やや前方の左上に頭部を配置する（体はそこから左側に並ぶ）
-        Vector3 result = playerPosition;
-        result.x += 20.0f; // 遠くなるため、右寄せのオフセットも少し広げる
-        result.y += 3.0f;  // 高度を下げて、ミサイルが真上に上がっていく軌道を見えやすくする
-        result.z += parallelForwardOffset_ + 75.0f; // より遠く (画面奥) に配置
-        return result;
-    }
-
-    return OrbitTargetPosition(playerPosition);
+    const FearWormMovementContext context { playerPosition, orbitAngle_, movementPatternTimer_,
+        parallelForwardOffset_, madModeTimer_, spiralAngle_ };
+    return movement_->CalculateTarget(context);
 }
 
 void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
 {
-    // ミサイル専用のLineパターンや発狂モードのSpiralパターンのときは、自動で次の移動パターンに切り替えない
-    if (movementPattern_ == MovementPattern::Line || movementPattern_ == MovementPattern::Spiral) {
-        return;
-    }
-
+    if (!movement_->AdvancesAutomatically()) return;
     movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime() * movementSpeedRate;
-
-    if (movementPatternTimer_ < movementPatternDuration_) { // 時間に達していない場合はリターンする
-        return;
+    if (movementPatternTimer_ >= movementPatternDuration_) {
+        ChangeMovementPattern(movement_->GetNext());
     }
+}
 
-    movementPatternTimer_ = 0.0f;
-
-    // 順々に移動パターンを切り替える
-    if (movementPattern_ == MovementPattern::Orbit) {
-        movementPattern_ = MovementPattern::Coil;
-        return;
-    }
-
-    if (movementPattern_ == MovementPattern::Coil) {
-        movementPattern_ = MovementPattern::Weave;
-        return;
-    }
-
-    if (movementPattern_ == MovementPattern::Weave) {
-        movementPattern_ = MovementPattern::Drift;
-        return;
-    }
-    // 最後にOrbitに戻る
-    movementPattern_ = MovementPattern::Orbit;
+void FearWormEnemy::ChangeMovementPattern(MovementPattern pattern)
+{
+    FearWormMovementState state { movementPatternTimer_, lineTransitionTimer_ };
+    movement_->Exit(state);
+    movement_ = &GetFearWormMovement(pattern);
+    movement_->Enter(state);
 }
 
 void FearWormEnemy::UpdateSegments()
@@ -421,16 +283,8 @@ void FearWormEnemy::UpdateSegments()
         return;
     }
 
-    // Lineパターンへの遷移補間係数の計算 (1.0秒かけて 0.0 から 1.0 へ)
-    // 通常状態 (Line以外) では 0.0f にすることで、元通りの完全な縦並び挙動にします
-    float blendT = 0.0f;
-    if (movementPattern_ == MovementPattern::Line) {
-        lineTransitionTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-        blendT = std::min(lineTransitionTimer_ / 1.0f, 1.0f);
-    } else {
-        lineTransitionTimer_ = 0.0f;
-    }
-
+    const float blendT = movement_->UpdateLineBlend(
+        { movementPatternTimer_, lineTransitionTimer_ }, TimeManager::GetInstance()->GetDeltaTime());
     Segment* previousSegment = &segments_[0];
     int32_t aliveOrder = 0;
 
@@ -1049,34 +903,6 @@ void FearWormEnemy::FireSingleMissile(size_t segmentIndex)
     AddEnemyBullet(std::move(bullet));
 }
 
-Vector3 FearWormEnemy::SpiralTargetPosition(const Vector3& playerPosition) const
-{
-    Vector3 result = playerPosition;
-    float baseDistZ = parallelForwardOffset_ + 50.0f;
-
-    // 最初の2秒間は画面中央に静止して威嚇
-    if (madModeTimer_ < 2.0f) {
-        result.x += 0.0f;
-        result.y += 7.0f;
-        result.z += baseDistZ;
-    } else {
-        // 後半の5秒間で、中心から外側へ渦を描くように広がる (半径 0.0f 〜 25.0f)
-        float t = (madModeTimer_ - 2.0f) / 5.0f;
-        float spiralRadius = t * 25.0f;
-
-        result.x += std::cos(spiralAngle_) * spiralRadius;
-        result.y += 7.0f + std::sin(spiralAngle_) * spiralRadius;
-        result.z += baseDistZ;
-    }
-
-    // 地面にめり込まないように下限（Y = 1.5f）をかける
-    if (result.y < 1.5f) {
-        result.y = 1.5f;
-    }
-
-    return result;
-}
-
 namespace {
 // 任意軸まわりの回転行列を生成する関数 (ロドリゲスの回転公式)
 Matrix4x4 MakeRotateAxisAngleMatrix(const Vector3& axis, float angle)
@@ -1184,7 +1010,8 @@ void FearWormEnemy::InitializeBeam()
     beamPlane_->SetEnableLighting(false);
 
     // 初期状態の設定
-    beamState_ = BeamState::Wait;
+    currentBeamState_ = nullptr;
+    ChangeBeamState(BeamState::Wait);
     beamTimer_ = 0.0f;
     beamUVScrollOffset_ = 0.0f;
     beamCurrentLength_ = 0.0f;
@@ -1224,110 +1051,12 @@ void FearWormEnemy::UpdateBeamAttack()
     }
 
     // プレイヤーの座標
-    Vector3 playerPos = player_->GetTranslate();
     Vector3 headPos = HeadMuzzlePosition();
 
-    // 状態管理
-    constexpr float kWaitDuration = 4.0f;     // クールダウン
-    constexpr float kChargeDuration = 1.5f;   // 警告チャージ時間
-    constexpr float kFireDuration = 3.0f;     // 照射時間
-    constexpr float kFadeOutDuration = 0.5f;  // フェードアウト
-
-    switch (beamState_) {
-    case BeamState::Wait:
-        beamCurrentLength_ = 0.0f;
-        beamCurrentWidth_ = 0.0f;
-        
-        // 待機中（クールダウン中）は通常弾／チャージ攻撃を行う
-        Attack();
-
-        if (beamTimer_ >= kWaitDuration) {
-            // ビーム発射サイクルに入るため、通常チャージ攻撃を終了
-            if (isHeadChargeActive_) {
-                FinishHeadChargeAttack();
-            }
-            beamState_ = BeamState::Charge;
-            beamTimer_ = 0.0f;
-            beamEffectTimer_ = 0.0f; // エフェクトタイマーリセット
-            // 予兆開始時に、照準方向をプレイヤーの位置へ即座にリセットする
-            headAimDirection_ = NormalizeSafe(playerPos - segments_[0].position);
-            // 予兆エフェクトを再生
-            EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
-        }
-        break;
-
-    case BeamState::Charge:
-        {
-            beamCurrentLength_ = 0.0f;
-            beamCurrentWidth_ = 0.0f;
-
-            // 予兆中エイム：ボスが静止した状態できれいに狙いを定める
-            Vector3 targetDirection = NormalizeSafe(playerPos - segments_[0].position);
-            constexpr float kChargeAimFollowRate = 0.08f; // ゆっくりとした予兆追従
-            headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kChargeAimFollowRate));
-
-            // 予兆エフェクトの点滅的な演出 (多重生成を防ぐためタイマー制御)
-            beamEffectTimer_ += deltaTime;
-            if (beamEffectTimer_ >= 0.25f) {
-                beamEffectTimer_ = 0.0f;
-                EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
-            }
-
-            if (beamTimer_ >= kChargeDuration) {
-                beamState_ = BeamState::Fire;
-                beamTimer_ = 0.0f;
-                beamEffectTimer_ = 0.0f; // エフェクトタイマーリセット
-                // 照射開始時にマズルフラッシュ
-                EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
-            }
-        }
-        break;
-
-    case BeamState::Fire:
-        {
-            // ビームを急速に伸ばす
-            constexpr float kMaxBeamLength = 400.0f;
-            beamCurrentLength_ = (std::min)(kMaxBeamLength, beamCurrentLength_ + 1000.0f * deltaTime);
-            beamCurrentWidth_ = 3.5f; // ビームの太さ
-
-            // 照射中エイム：プレイヤーがダッシュ等で避けることができる程度にゆっくり追従
-            Vector3 targetDirection = NormalizeSafe(playerPos - segments_[0].position);
-            constexpr float kFireAimFollowRate = 0.015f; // 回避可能なゆっくりとした追従スピード
-            headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, kFireAimFollowRate));
-
-            // 衝突判定
-            CheckBeamCollision();
-
-            // 定期的にマズルエフェクト (多重生成を防ぐためタイマー制御)
-            beamEffectTimer_ += deltaTime;
-            if (beamEffectTimer_ >= 0.2f) {
-                beamEffectTimer_ = 0.0f;
-                EffectManager::GetInstance()->PlayEffect("WormShotFlash", headPos);
-            }
-
-            if (beamTimer_ >= kFireDuration) {
-                beamState_ = BeamState::FadeOut;
-                beamTimer_ = 0.0f;
-            }
-        }
-        break;
-
-    case BeamState::FadeOut:
-        {
-            // 太さを縮める
-            beamCurrentWidth_ = (std::max)(0.0f, beamCurrentWidth_ - 8.0f * deltaTime);
-            
-            // 判定は行わないが、方向の計算のみ維持
-            Vector3 targetDirection = NormalizeSafe(playerPos - segments_[0].position);
-            headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, targetDirection, 0.01f));
-
-            if (beamTimer_ >= kFadeOutDuration) {
-                beamState_ = BeamState::Wait;
-                beamTimer_ = 0.0f;
-            }
-        }
-        break;
-    }
+    // 照準を更新する前のマズル位置を、予兆・発射エフェクトで共有する。
+    beamMuzzlePosition_ = headPos;
+    if (!currentBeamState_) ChangeBeamState(beamState_);
+    currentBeamState_->Update(*this, deltaTime);
 
     // 1. 射向ベクトル (Lerpでゆっくり追従しているheadAimDirection_をそのままビームの進行方向軸とする)
     Vector3 zAxis = headAimDirection_;
@@ -1479,4 +1208,16 @@ float FearWormEnemy::GetBodyHpFraction() const
     return currentTotalHp / totalMaxHp;
 }
 
+void FearWormEnemy::ChangeBeamState(BeamState state)
+{
+    ChangeBeamState(GetBeamState(state));
+}
 
+void FearWormEnemy::ChangeBeamState(const BaseBeamState& state)
+{
+    if (currentBeamState_ == &state) return;
+    if (currentBeamState_) currentBeamState_->Exit(*this);
+    currentBeamState_ = &state;
+    beamState_ = state.GetType();
+    currentBeamState_->Enter(*this);
+}

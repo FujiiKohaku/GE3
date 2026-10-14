@@ -1,6 +1,8 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "JellyfishAttackPattern.h"
+#include "BaseJellyfishAttack.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include <array>
 #include <memory>
@@ -17,14 +19,7 @@ public:
     static constexpr size_t kSegmentsPerTentacle = 7;
     static constexpr size_t kIcePillarModelCount = 6;
 
-    enum class AttackPattern {
-        FrozenSweep,
-        IcicleBloom,
-        TentacleThrust,
-        BlizzardCurrent,
-        CrystalPrison,
-        AbsoluteZero
-    };
+    using AttackPattern = JellyfishPatternType;
 
     void Initialize(Camera* camera, Model* bulletModel, Player* player);
     void Update() override;
@@ -40,6 +35,9 @@ public:
     void RegisterRaycastTargets(CollisionObjectId& nextObjectId) const override;
     bool RequiresBulletOcclusionCheck() const override { return true; }
     void DrawCollisionDebug() const;
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+    std::unique_ptr<BaseEnemyDebugView> CreateDebugView() override;
+#endif
 
     void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const override;
     bool IsCollisionPartDamageable(int32_t partIndex) const override;
@@ -52,9 +50,21 @@ public:
     float GetHeadHpFraction() const override;
     float GetBodyHpFraction() const override;
     float GetHp() const { return GetHealth(); }
-    AttackPattern GetAttackPattern() const { return attackPattern_; }
+    AttackPattern GetAttackPattern() const { return currentPattern_->GetType(); }
 
 private:
+    friend class PulseBarrageAttack;
+    friend class IceSpearAttack;
+    friend class IcePillarAttack;
+    friend bool RunJellyfishAttackTests();
+    friend class JellyfishAttackPattern;
+    friend class FrozenSweepPattern;
+    friend class IcicleBloomPattern;
+    friend class TentacleThrustPattern;
+    friend class BlizzardCurrentPattern;
+    friend class CrystalPrisonPattern;
+    friend class AbsoluteZeroPattern;
+    friend bool RunJellyfishAttackPatternTests();
     static constexpr float kHoverDistance = 125.0f;
     static constexpr float kSegmentHp = 9.0f;
     static constexpr float kTentacleMaxHp = kSegmentHp * static_cast<float>(kSegmentsPerTentacle);
@@ -68,27 +78,17 @@ private:
     void BeginPattern(AttackPattern pattern);
     void SelectNextPattern();
     void UpdatePattern(float deltaTime);
-    void UpdateFrozenSweep();
-    void UpdateIcicleBloom();
-    void UpdateTentacleThrust();
-    void UpdateBlizzardCurrent();
-    void UpdateCrystalPrison();
-    void UpdateAbsoluteZero();
     void FireAimedBurst(int count, float spread, float speed, int damage);
     void FireRadialBurst(int count, float speed, int damage, float angleOffset);
     void FirePulseRing(
         int count, float spread, float speed, float angleOffset, bool includeCenter);
     void UpdateAttackSequence(float floatPhase, float deltaTime);
-    void StartIceSpearAttack();
     void FireIceSpearVolley();
-    void StartIcePillarAttack();
     void PrepareIcePillarWarning();
-    void UpdateIcePillarAttack(float deltaTime);
     void UpdatePartTransforms();
     void UpdateCrystalTransforms();
     void UpdateIcePillarModelTransforms();
     void DamagePlayerOnce(int slot, int damage);
-    float PatternDuration() const;
     bool IsSegmentAlive(size_t tentacle, size_t segment) const;
     bool AreAllTentaclesDestroyed() const;
     bool IsIceSpearTentacleSelected(size_t tentacle) const;
@@ -147,7 +147,8 @@ private:
     int32_t nextAttackIndex_ = 0;
     bool absoluteZeroUsed_ = false;
     bool absoluteInterrupted_ = false;
-    AttackPattern attackPattern_ = AttackPattern::FrozenSweep;
+    const JellyfishAttackPattern* currentPattern_ =
+        &GetJellyfishAttackPattern(AttackPattern::FrozenSweep);
 
     std::vector<OBB> bellColliders_;
     std::vector<OBB> tentacleColliders_;

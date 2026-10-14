@@ -3,11 +3,15 @@
 #include "Engine/3D/Object3d.h"
 #include <memory>
 #include <vector>
+#include <string_view>
 
 #include "Engine/math/EngineStruct.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+#include "Debug/BaseEnemyDebugView.h"
+#endif
 class Camera;
 class Model;
 class EnemyBulletManager;
@@ -21,6 +25,11 @@ struct EnemyCollisionPart {
 class BaseEnemy {
 public:
     virtual ~BaseEnemy() = default;
+    // ステージの外見対応表に渡す識別名。未対応の敵は外見を変更しない。
+    virtual std::string_view GetAppearanceId() const { return {}; }
+#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+    virtual std::unique_ptr<BaseEnemyDebugView> CreateDebugView() { return nullptr; }
+#endif
 
     virtual void Initialize(Model* model);
     // ステージ固有のモデルへ差し替え、テクスチャ本来の色で表示する。

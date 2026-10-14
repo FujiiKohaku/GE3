@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Scene/Common/BaseScene.h"
+#include "BaseTitleState.h"
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/Text/Text.h"
 #include "Engine/3D/Object3d.h"
@@ -26,6 +27,15 @@ public:
     void DrawImGui() override;
 
 private:
+    friend class BaseTitleState;
+    friend class TitleMenuState;
+    friend class StageSelectState;
+    friend class SettingsState;
+    friend class TutorialStartState;
+    friend class StageSelectTransitionState;
+    friend class SettingsTransitionState;
+    friend class StageConfirmState;
+    friend bool RunTitleStateTests();
 #if defined(KOHAKU_RENDER_TESTS)
     friend class TitleSceneRenderTest;
 #endif
@@ -37,17 +47,11 @@ private:
         float delay = 0.0f;
     };
 
-    enum class ViewState {
-        Title,
-        StartingTutorial,
-        EnteringStageSelect,
-        StageSelect,
-        LeavingStageSelect,
-        ConfirmingStage,
-        EnteringSettings,
-        Settings,
-        LeavingSettings,
-    };
+    using ViewState = TitleViewState;
+    void ChangeState(ViewState state);
+    void ChangeState(const BaseTitleState& state);
+    void InitializeTutorialAnimation();
+    void UpdateSettingsCamera();
 
     Object3d* AddBaseObject(
         const std::string& modelPath,
@@ -143,6 +147,7 @@ private:
     float frozenRoomAmount_ = 0.0f;
 
     ViewState viewState_ = ViewState::Title;
+    const BaseTitleState* currentState_ = nullptr;
     float animationTime_ = 0.0f;
     float idleTime_ = 0.0f;
 };

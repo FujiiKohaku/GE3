@@ -9,6 +9,7 @@
 #include "Engine/Skeleton/Skeleton.h"
 
 #include "App/Scene/Common/BaseScene.h"
+#include "Pause/BasePauseState.h"
 #include "Engine/2D/Text/Text.h"
 #include "Engine/2D/Text/TextRenderer.h"
 
@@ -410,7 +411,9 @@ private:
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
     int pauseSelection_ = 0;
-    bool pauseSettingsOpen_ = false;
+    const BasePauseState* pauseState_ = &GetPauseState(PauseViewState::Menu);
+    PauseStateContext MakePauseContext();
+    void ChangePauseState(PauseViewState state, int selection = 0);
     void ActivatePauseSelection();
     void AdjustPauseSensitivity(float amount);
     void InitializeTutorialPresentation();

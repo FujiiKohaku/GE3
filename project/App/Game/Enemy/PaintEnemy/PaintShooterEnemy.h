@@ -7,6 +7,7 @@ class Model;
 
 class PaintShooterEnemy : public BaseEnemy {
 public:
+    std::string_view GetAppearanceId() const override { return "PaintShooterEnemy"; }
     PaintShooterEnemy() = default;
     ~PaintShooterEnemy() override = default;
 

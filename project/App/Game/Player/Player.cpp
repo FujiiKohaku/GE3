@@ -58,13 +58,8 @@ void Player::Update()
     if (!isDebugMode_) {
         // 照準を先に確定してから操舵し、発射と表示で参照する位置を揃える。
         // 使用中の入力機器から照準を取得し、操舵とレティクル表示に使う。
-        if (input->IsUsingGamepad()) {
-            aimController_.UpdateGamepadAim(input->GetGamepadLeftStickX(),
-                input->GetGamepadLeftStickY(), input->IsGamepadPitchInverted(),
-                TimeManager::GetInstance()->GetDeltaTime(), input->GetGamepadAimSensitivity());
-        } else {
-            aimController_.UpdateMouseAim();
-        }
+        movementController_.GetControlStrategy(*input).UpdateAim(
+            aimController_, *input, TimeManager::GetInstance()->GetDeltaTime());
         aimController_.ClampAimScreenPosition();
         ConstrainGamepadAimToPlayer();
         movementController_.UpdateMovement(input);
@@ -91,15 +86,10 @@ void Player::Update()
 
 void Player::ConstrainGamepadAimToPlayer()
 {
-    if (camera_ == nullptr || isDebugMode_ || !health_.IsAlive() ||
-        !Input::GetInstance()->IsUsingGamepad()) {
-        return;
-    }
-    const Vector3 viewPosition = MatrixMath::Transform(transform_.translate, camera_->GetViewMatrix());
-    if (!std::isfinite(viewPosition.z) || viewPosition.z <= camera_->GetNearClip()) {
-        return;
-    }
-    aimController_.ClampGamepadAimToPlayer(camera_->WorldToScreen(transform_.translate));
+    if (isDebugMode_ || !health_.IsAlive()) return;
+    const Input* input = Input::GetInstance();
+    if (!input) return;
+    movementController_.GetControlStrategy(*input).ConstrainAim(aimController_, camera_, transform_.translate);
 }
 
 void Player::UpdateBoostState()

@@ -1,21 +1,13 @@
 #pragma once
 
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "BaseSwarmFormation.h"
 #include <cstdint>
 #include <memory>
 #include <algorithm>
 
 class Model;
 class Player;
-
-enum class SwarmFormationType {
-    Spiral,
-    Wall,
-    Glyph,
-    Diamond,
-    Wave,
-    Arrow,
-};
 
 class SwarmGroupState {
 public:
@@ -40,6 +32,7 @@ private:
 
 class SwarmEnemy : public BaseEnemy {
 public:
+    std::string_view GetAppearanceId() const override { return "SwarmEnemy"; }
     void Initialize(
         Model* model,
         Model* bulletModel,
@@ -59,18 +52,12 @@ private:
     void OnDeath() override;
     void FireMovingBullet();
     Vector3 CalculateFormationOffset() const;
-    Vector3 CalculateSpiralOffset() const;
-    Vector3 CalculateWallOffset() const;
-    Vector3 CalculateGlyphOffset() const;
-    Vector3 CalculateDiamondOffset() const;
-    Vector3 CalculateWaveOffset() const;
-    Vector3 CalculateArrowOffset() const;
 
 private:
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
     std::shared_ptr<SwarmGroupState> groupState_;
-    SwarmFormationType formationType_ = SwarmFormationType::Spiral;
+    const BaseSwarmFormation* formation_ = GetSwarmFormation(SwarmFormationType::Spiral).strategy;
     int32_t slotIndex_ = 0;
     int32_t travelDirection_ = 1;
     float moveTime_ = 0.0f;
