@@ -10,6 +10,10 @@ void PaintBullet::Initialize(Model* model)
 
     // 敵攻撃は危険色の朱赤へ統一し、暗い場所でも色が沈まないようにする。
     SetEnableLighting(false);
+    SetPixelShaderPath("resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl");
+    SetTransparent(true);
+    SetTransparentDepthWrite(false);
+    SetCastShadow(false);
     SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
 }
 

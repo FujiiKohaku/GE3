@@ -24,6 +24,10 @@ void TrackingEnemyBullet::Initialize(Model* model)
     SetDamage(2);                                // 追尾ミサイルなので通常弾より少し高ダメージ
 
     EnemyBullet::Initialize(model);
+    SetPixelShaderPath("resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl");
+    SetTransparent(true);
+    SetTransparentDepthWrite(false);
+    SetCastShadow(false);
 }
 
 void TrackingEnemyBullet::Update()

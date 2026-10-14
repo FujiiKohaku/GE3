@@ -14,6 +14,10 @@ void SwarmPulseBullet::Initialize(Model* model)
 
     EnemyBullet::Initialize(model);
     SetEnableLighting(false);
+    SetPixelShaderPath("resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl");
+    SetTransparent(true);
+    SetTransparentDepthWrite(false);
+    SetCastShadow(false);
     SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
 }
 
