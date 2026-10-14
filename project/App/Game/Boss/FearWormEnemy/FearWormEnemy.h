@@ -1,12 +1,10 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
-#include "BaseBeamState.h"
-#include "BaseFearWormMovement.h"
+#include "FearWormMovement.h"
 class Model;
 class Object3d;
 class Player;
-class FearWormState;
 
 class FearWormEnemy : public BaseBoss {
 public:
@@ -24,7 +22,6 @@ public:
         Model* bulletModel,
         Player* player);
 
-    
     void Update() override;
 
     // 生存中の各部位とボスが発射した弾を描画する。
@@ -63,25 +60,11 @@ public:
     float GetBodyHpFraction() const override;
 
 private:
-    friend class BaseBeamState;
-    friend class BeamWaitState;
-    friend class BeamChargeState;
-    friend class BeamFireState;
-    friend class BeamFadeOutState;
     friend bool RunBeamStateTests();
     friend bool RunFearWormMovementTests();
-    // ボス専用の状態クラスだけに、内部の行動処理へのアクセスを許可する。
-    friend class FearWormWaitState;
-    friend class FearWormEntryState;
-    friend class FearWormBattleState;
-    friend class FearWormDeadState;
-
-    static const FearWormState& GetState(BossState state);
-    void ChangeState(BossState state);
-    const FearWormState* currentState_;
 
     using MovementPattern = FearWormMovementType;
-    void ChangeMovementPattern(MovementPattern pattern);
+    enum class BeamState { Wait, Charge, Fire, FadeOut };
 
     struct Segment {
         std::unique_ptr<Object3d> object;
@@ -94,112 +77,71 @@ private:
         bool isAlive = true;
     };
 
-    // 頭部、胴体、尻尾の各セグメントを生成する。
-    void InitializeSegments(Model* model);
+    // FearWormEnemy.cpp：Updateの入口と状態の選択。
+    void UpdateState();
+    void ChangeState(BossState state);
+    void OnDeath() override;
 
+    // FearWormEnemyStates.cpp：待機 → 登場 → 戦闘 → 死亡。
+    void EnterEntry();
+    void EnterDead();
+    void UpdateWait();
+    void UpdateEntry();
+    void UpdateBattle();
+    void UpdateDead();
+    void UpdateMadMode(float movementSpeedRate);
+    void UpdateMissileAttack();
+    void UpdateBattleMovement(const Vector3& playerPosition, float movementSpeedRate);
+    void UpdateBattleAttack();
 
-    // 生存している胴体を1つ前の部位から一定距離に配置する。
+    // FearWormEnemyMovement.cpp：目的地、移動パターン、胴体の追従。
+    Vector3 FallbackTarget();
+    Vector3 EntryTarget(const Vector3& playerPosition);
+    Vector3 BattleTarget(const Vector3& playerPosition, float rate);
+    Vector3 EntryStartPosition(const Vector3& playerPosition) const;
+    Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
+    void ChangeMovementPattern(MovementPattern pattern);
+    void UpdateMovementPattern(float movementSpeedRate);
     void UpdateSegments();
+    float MovementSpeedRate() const;
 
-    // 渦巻き移動と弾幕用
+    // FearWormEnemyAttack.cpp：通常弾、チャージ弾、ミサイル、弾幕。
+    void Attack() override;
+    void FireBullet(const Vector3& position);
+    void FireSingleMissile(size_t segmentIndex);
+    void UpdateHeadChargeAttack(float attackSpeedRate);
+    void StartHeadChargeAttack();
+    void FinishHeadChargeAttack();
+    void UpdateHeadAimDirection();
+    void FireChargedBullet();
+    Vector3 HeadMuzzlePosition() const;
+    Vector3 HeadLookRotation() const;
     void UpdateSpiralBarrage();
     void FireDirectionalBullet(const Vector3& position, const Vector3& direction);
 
-    // 各セグメントの色、拡縮、回転、座標を描画用オブジェクトへ反映する。
+    // FearWormEnemyParts.cpp：部位の生成、描画、当たり判定、HP。
+    void InitializeSegments(Model* model);
     void UpdateSegmentObjects();
-
-    // ボスが発射した全弾を更新する。
-
-    // 寿命切れまたは命中済みの弾をリストから削除する。
-
-    // プレイヤーを基準に登場開始位置を計算する。
-    Vector3 EntryStartPosition(const Vector3& playerPosition) const;
-
-    // プレイヤー周辺を旋回する目標位置を計算する。
-
-    // プレイヤー周辺を巻くように動く目標位置を計算する。
-
-    // 上下左右へ波打つ目標位置を計算する。
-
-    // 緩やかに漂う目標位置を計算する。
-
-    // 現在選択中の移動パターンに対応する目標位置を返す。
-    Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
-
-    // 経過時間に応じて次の移動パターンへ切り替える。
-    void UpdateMovementPattern(float movementSpeedRate);
-
-
-    // 通常弾とチャージ攻撃の発射タイミングを更新する。
-    void Attack() override;
-
-    // 指定位置からプレイヤー方向へ通常弾を発射する。
-    void FireBullet(const Vector3& position);
-
-    // 指定部位から追尾ミサイルを1発撃ち上げる。
-    void FireSingleMissile(size_t segmentIndex);
-
-    // チャージ、連射、クールダウンの状態を更新する。
-    void UpdateHeadChargeAttack(float attackSpeedRate);
-
-    // 頭部のチャージ攻撃を開始する。
-    void StartHeadChargeAttack();
-
-    // チャージ攻撃を終了してクールダウンへ移行する。
-    void FinishHeadChargeAttack();
-
-    // 頭部の照準方向をプレイヤー方向へ滑らかに追従させる。
-    void UpdateHeadAimDirection();
-
-    // チャージ済みの強化弾を発射する。
-    void FireChargedBullet();
-
-    // 頭部位置と照準方向から弾の発射位置を計算する。
-    Vector3 HeadMuzzlePosition() const;
-
-    // 照準方向から頭部モデルの回転角を計算する。
-    Vector3 HeadLookRotation() const;
-
-    // 胴体が破壊された位置に破壊エフェクトを再生する。
     void PlayBodyBreakEffect(const Vector3& position);
-
-    // 頭部で攻撃を防いだ位置にガードエフェクトを再生する。
     void PlayHeadGuardEffect(const Vector3& position);
-
-    // 全胴体破壊後に頭部が弱点化したことを示すエフェクトを再生する。
     void PlayHeadVulnerableEffect(const Vector3& position);
-
-
-    // 全部位の現在HPからボス全体の残りHP割合を計算する。
     float HealthRate() const;
-
-    // 残りHPに応じた移動・攻撃速度の倍率を計算する。
-    float MovementSpeedRate() const;
-
-    // 生存している胴体部位が1つでもあるかを返す。
     bool HasAliveBodyParts() const;
-
-    // 部位番号がセグメント配列の有効範囲内かを返す。
     bool IsValidSegmentIndex(int32_t partIndex) const;
 
-    // 撃破直後に弾と攻撃状態を停止し、撃破演出を開始する。
-    void OnDeath() override;
-
-    // 各状態（フェーズ）の目的地を計算するヘルパー関数
-    Vector3 FallbackTarget();                                      // プレイヤー不在時の目的地
-    Vector3 EntryTarget(const Vector3& playerPosition);             // 登場演出中の目的地
-    Vector3 BattleTarget(const Vector3& playerPosition, float rate);// 戦闘中の目的地
-
-    // ビーム攻撃用メンバー関数
-    using BeamState = FearWormBeamState;
-    void ChangeBeamState(BeamState state);
-    void ChangeBeamState(const BaseBeamState& state);
+    // FearWormEnemyBeam.cpp：待機 → チャージ → 発射 → 終了。
     void InitializeBeam();
     void UpdateBeamAttack();
+    void ChangeBeamState(BeamState state);
+    void UpdateBeamState(float deltaTime);
+    void UpdateBeamWait(float deltaTime);
+    void UpdateBeamCharge(float deltaTime);
+    void UpdateBeamFire(float deltaTime);
+    void UpdateBeamFadeOut(float deltaTime);
     void DrawBeam();
     void CheckBeamCollision();
 
-
+    BossState state_ = BossState::Wait;
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
@@ -235,7 +177,7 @@ private:
     bool isDeathSequenceFinished_ = false;
     float deathSequenceTimer_ = 0.0f;
     int32_t nextDeathSegmentIndex_ = -1;
-    const BaseFearWormMovement* movement_ = &GetFearWormMovement(MovementPattern::Orbit);
+    MovementPattern movementPattern_ = MovementPattern::Orbit;
 
     // 追尾ミサイル攻撃用のタイマー・フラグ
     float missileAttackTimer_ = 0.0f;
@@ -270,7 +212,6 @@ private:
     // ビーム攻撃用メンバー変数
     std::unique_ptr<Object3d> beamPlane_;
     BeamState beamState_ = BeamState::Wait;
-    const BaseBeamState* currentBeamState_ = nullptr;
     float beamTimer_ = 0.0f;
     float beamUVScrollOffset_ = 0.0f;
     float beamCurrentLength_ = 0.0f;
@@ -281,4 +222,3 @@ private:
     Vector3 beamMuzzlePosition_ {};
     int32_t beamHitEffectFrameCount_ = 0;
 };
-

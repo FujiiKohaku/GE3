@@ -623,10 +623,19 @@
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\BaseBeamState.cpp">
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyMovement.cpp">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\BaseFearWormMovement.cpp">
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyAttack.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyParts.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyBeam.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormMovement.cpp">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp">
@@ -1001,16 +1010,10 @@
     <ClInclude Include="App\Game\Enemy\Types\ArmoredEnemy.h" />
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="App\Game\Enemy\SwarmEnemy\BaseSwarmFormation.h" />
-    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormState.h">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClInclude>
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\FearWormEnemy\BaseBeamState.h">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Boss\FearWormEnemy\BaseFearWormMovement.h">
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormMovement.h">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h">
