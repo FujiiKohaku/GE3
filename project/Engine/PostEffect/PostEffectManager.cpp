@@ -840,9 +840,15 @@ void PostEffectManager::PreDrawDepth()
 
 void PostEffectManager::PostDrawDepth()
 {
-    if (isNativeComposition_) { fogRenderer_->FinishParticleDepth(); }
-    else { fogRenderer_->PostDrawDepth(); }
+    fogRenderer_->FinishParticleDepth();
     sceneDepthReady_ = true;
+}
+
+void PostEffectManager::BeginObjectFogMask() { fogRenderer_->BeginObjectFogMask(); }
+void PostEffectManager::EndObjectFogMask() {
+    fogRenderer_->EndObjectFogMask();
+    volumetricLightRenderer_->SetObjectFogMask(fogRenderer_->GetObjectFogMaskSrv());
+    copyImageRenderer_->SetObjectFogMask(fogRenderer_->GetObjectFogMaskSrv());
 }
 
 void PostEffectManager::PrepareDepthForParticleDraw()

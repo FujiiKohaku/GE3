@@ -23,7 +23,7 @@ void PlayerSteeringController::SetMouseSensitivity(float sensitivity)
 }
 
 void PlayerSteeringController::Update(const Vector2& aimPosition, const Vector2& screenSizePixels,
-    bool isAllRangeMode, float deltaTimeSeconds)
+    bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad)
 {
     const float screenWidth = screenSizePixels.x;
     const float screenHeight = screenSizePixels.y;
@@ -38,17 +38,27 @@ void PlayerSteeringController::Update(const Vector2& aimPosition, const Vector2&
     float inputY = (screenHeight * 0.5f - aimPosition.y) /(screenHeight * 0.5f);
 
     // 感度を掛けて-1～1へ制限し、中央付近の微小なずれを取り除く。
-    inputX = ApplySteeringDeadZone(std::clamp(
-        inputX * mouseSensitivity_, -1.0f, 1.0f));
-    inputY = ApplySteeringDeadZone(std::clamp(
-        inputY * mouseSensitivity_, -1.0f, 1.0f));
+    // 照準の移動速度と機体の追従を分離する。パッドは照準のずれをそのまま操舵に使う。
+    const float sensitivity = isGamepad ? 1.0f : mouseSensitivity_;
+    inputX = std::clamp(inputX * sensitivity, -1.0f, 1.0f);
+    inputY = std::clamp(inputY * sensitivity, -1.0f, 1.0f);
+    // パッドのデッドゾーンはInputで適用済み。低感度でも細かな操作を残す。
+    if (!isGamepad) {
+        inputX = ApplySteeringDeadZone(inputX);
+        inputY = ApplySteeringDeadZone(inputY);
+    }
 
-    // レール移動では毎回20%追従し、全方向飛行では経過秒数から追従率を求める。
+    // パッドは入力へ即時追従し、照準の移動・中央復帰にさらに遅れを重ねない。
+    if (isGamepad) {
+        steeringInput_ = { inputX, inputY };
+        return;
+    }
+    // マウスのレール移動は即時追従し、全方向飛行では経過秒数から追従率を求める。
     // 全方向飛行の追従率は、フレームレートによる旋回感の差を抑えるため時間ベースにする。
-    float steeringLerpRate = 0.20f;
+    float steeringLerpRate = 1.0f;
     if (isAllRangeMode) {steeringLerpRate = 1.0f - std::exp(-13.4f * deltaTimeSeconds);
     }
-    // 入力へ徐々に近づけ、マウスを急に動かしても操舵が瞬間的に切り替わらないようにする。
+    // 全方向飛行のマウス操舵には補間を適用する。
     steeringInput_.x +=(inputX - steeringInput_.x) * steeringLerpRate;
     steeringInput_.y +=(inputY - steeringInput_.y) * steeringLerpRate;
 

@@ -8,6 +8,7 @@ struct VertexShaderOutput
 
 Texture2D<float4> gSceneColor : register(t0);
 Texture2D<float> gDepthTexture : register(t1);
+Texture2D<float> gObjectFogMask : register(t2);
 SamplerState gSampler : register(s0);
 ConstantBuffer<FogData> gFog : register(b0);
 
@@ -25,5 +26,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
         fogFactor = CalcDistanceFog(viewDistance, gFog.distance);
     }
 
-    return ApplyFog(sceneColor, gFog.color.rgb, fogFactor);
+    return ApplyFog(sceneColor, gFog.color.rgb, fogFactor * gObjectFogMask.SampleLevel(gSampler, input.texcoord, 0));
 }

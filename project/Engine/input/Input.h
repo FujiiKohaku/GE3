@@ -29,6 +29,17 @@ public:
     bool IsGamepadButtonTrigger(WORD button) const;
     float GetGamepadLeftStickX() const;
     float GetGamepadLeftStickY() const;
+    bool IsGamepadRightTriggerPressed() const;
+    bool IsUsingGamepad() const { return isUsingGamepad_; }
+    bool WasActiveGamepadDisconnected() const { return activeGamepadDisconnected_; }
+    bool IsPrimaryFirePressed() const;
+    bool IsPrimaryFireTrigger() const;
+    void BlockPrimaryFireUntilRelease() { blockPrimaryFire_ = true; }
+    bool IsPrimaryFireBlocked() const { return blockPrimaryFire_; }
+    bool IsGamepadPitchInverted() const { return gamepadPitchInverted_; }
+    void ToggleGamepadPitchInverted() { gamepadPitchInverted_ = !gamepadPitchInverted_; }
+    float GetGamepadAimSensitivity() const { return gamepadAimSensitivity_; }
+    void SetGamepadAimSensitivity(float sensitivity);
 
 public:
     class ConstructorKey {
@@ -41,6 +52,7 @@ public:
     ~Input() = default;
 
 private:
+    friend struct InputTestAccess;
     Input(const Input&) = delete;
     Input& operator=(const Input&) = delete;
 
@@ -63,4 +75,10 @@ private:
     XINPUT_STATE gamepadState_ = {};
     bool isGamepadConnected_ = false;
     DWORD gamepadIndex_ = XUSER_MAX_COUNT;
+    bool isUsingGamepad_ = false;
+    bool activeGamepadDisconnected_ = false;
+    bool gamepadButtonsReady_ = false;
+    bool blockPrimaryFire_ = false;
+    bool gamepadPitchInverted_ = false;
+    float gamepadAimSensitivity_ = 1.0f;
 };

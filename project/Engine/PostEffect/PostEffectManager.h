@@ -54,6 +54,8 @@ public:
     void ResolveSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv);
     void SetParticleDepthJitter(Vector2 jitterUv) { particleDepthJitterUv_ = jitterUv; }
     void PreDrawDepth();
+    void BeginObjectFogMask();
+    void EndObjectFogMask();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
     void SetIndirectLightingDebugVisible(bool isVisible) { isIndirectLightingDebugVisible_ = isVisible; }

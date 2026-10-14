@@ -33,6 +33,7 @@ constexpr const char* kAircraftModel =
 constexpr float kStageTransitionDuration = 3.20f;
 constexpr float kStageReturnDuration = 2.20f;
 constexpr float kStageConfirmDuration = 0.82f;
+constexpr float kTutorialStartDuration = 1.4f;
 constexpr float kSettingsTransitionDuration = 0.46f;
 constexpr float kStageRoomTransitionDuration = 0.72f;
 
@@ -633,7 +634,7 @@ void TitleScene::InitializeInterface()
 
     pushToStartText_ = std::make_unique<Text>();
     pushToStartText_->Initialize(kDefaultFont);
-    pushToStartText_->SetText("PRESS SPACE  /  MISSION SELECT");
+    pushToStartText_->SetText("PRESS SPACE  /  GAME START");
     pushToStartText_->SetPosition({ 88.0f, 550.0f });
     pushToStartText_->SetFontSize(26.0f);
     pushToStartText_->SetLetterSpacing(1.0f);
@@ -934,39 +935,48 @@ void TitleScene::Update()
     if (input != nullptr) {
         if (viewState_ == ViewState::Title) {
             if (input->IsKeyTrigger(DIK_SPACE) ||
-                input->IsKeyTrigger(DIK_RETURN)) {
-                StartStageSelectTransition();
-            } else if (input->IsKeyTrigger(DIK_S)) {
+                input->IsKeyTrigger(DIK_RETURN) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
+                StartTutorial();
+            } else if (input->IsKeyTrigger(DIK_S) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_Y)) {
                 StartSettingsTransition(true);
             }
         } else if (viewState_ == ViewState::StageSelect) {
-            if (input->IsKeyTrigger(DIK_BACK)) {
+            if (input->IsKeyTrigger(DIK_BACK) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B)) {
                 StartTitleReturn();
             } else if (!stages_.empty() &&
                        !stageRoomTransitionActive_ &&
                        (input->IsKeyTrigger(DIK_D) ||
-                        input->IsKeyTrigger(DIK_RIGHT))) {
+                        input->IsKeyTrigger(DIK_RIGHT) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT))) {
                 StartStageRoomTransition(1);
             } else if (!stages_.empty() &&
                        !stageRoomTransitionActive_ &&
                        (input->IsKeyTrigger(DIK_A) ||
-                        input->IsKeyTrigger(DIK_LEFT))) {
+                        input->IsKeyTrigger(DIK_LEFT) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT))) {
                 StartStageRoomTransition(-1);
             } else if (!stageRoomTransitionActive_ &&
                        (input->IsKeyTrigger(DIK_SPACE) ||
-                        input->IsKeyTrigger(DIK_RETURN))) {
+                        input->IsKeyTrigger(DIK_RETURN) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A))) {
                 ConfirmStage();
             }
         } else if (viewState_ == ViewState::Settings &&
                    (input->IsKeyTrigger(DIK_BACK) ||
-                    input->IsKeyTrigger(DIK_S))) {
+                    input->IsKeyTrigger(DIK_S) || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B))) {
             StartSettingsTransition(false);
+        }
+        if (viewState_ == ViewState::Settings &&
+            (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) ||
+             input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
+             input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT))) {
+            input->ToggleGamepadPitchInverted();
         }
     }
 
     switch (viewState_) {
     case ViewState::Title:
         UpdateTitleCamera(deltaTime);
+        break;
+    case ViewState::StartingTutorial:
+        UpdateTutorialStart(deltaTime);
         break;
     case ViewState::EnteringStageSelect:
         UpdateStageSelectTransition(deltaTime);
@@ -999,6 +1009,56 @@ void TitleScene::Update()
     }
     aircraft_->Update();
     UpdateInterface(deltaTime);
+}
+
+void TitleScene::StartTutorial()
+{
+    if (viewState_ != ViewState::Title) return;
+    SoundManager::GetInstance()->Play("UiConfirm");
+    Input::GetInstance()->BlockPrimaryFireUntilRelease();
+    simulationStartEye_ = camera_->GetTranslate();
+    animationTime_ = 0.0f;
+    stageTransitionQueued_ = false;
+    viewState_ = ViewState::StartingTutorial;
+    simulationTint_ = std::make_unique<Sprite>();
+    simulationTint_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
+    simulationTint_->SetSize({ 1280.0f, 720.0f });
+    simulationScan_ = std::make_unique<Sprite>();
+    simulationScan_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
+    simulationScan_->SetSize({ 1280.0f, 3.0f });
+    simulationText_ = std::make_unique<Text>();
+    simulationText_->Initialize(kDefaultFont);
+    simulationText_->SetText("SIMULATION INITIALIZING");
+    simulationText_->SetAnchorPoint({ 0.5f, 0.5f });
+    simulationText_->SetPosition({ 640.0f, 560.0f });
+    simulationText_->SetFontSize(26.0f);
+}
+
+void TitleScene::UpdateTutorialStart(float deltaTime)
+{
+    animationTime_ += deltaTime;
+    const float progress = Clamp01(animationTime_ / kTutorialStartDuration);
+    const float eased = SmoothStep(progress);
+    camera_->LookAt(CubicBezier(simulationStartEye_, { 120.0f, 45.0f, 38.0f },
+        { 28.0f, 15.0f, 30.0f }, { 10.0f, 8.0f, 14.0f }, eased),
+        Lerp(kOverviewTarget, { 0.0f, 3.0f, -5.0f }, eased));
+    camera_->SetFovY(0.64f - 0.10f * eased);
+    camera_->Update();
+    const float scan = SmoothStep(Clamp01((progress - 0.15f) / 0.65f));
+    aircraft_->SetColor({ 1.0f - 0.6f * scan, 1.0f, 1.0f + 0.5f * scan, 1.0f });
+    simulationScan_->SetPosition({ 0.0f, -10.0f + 740.0f * scan });
+    simulationScan_->SetColor({ 0.10f, 0.85f, 1.0f, 0.75f * std::sin(progress * std::numbers::pi_v<float>) });
+    simulationScan_->Update();
+    simulationTint_->SetColor({ 0.015f, 0.02f, 0.04f,
+        SmoothStep(Clamp01((progress - 0.30f) / 0.70f)) });
+    simulationTint_->Update();
+    simulationText_->SetColor({ 0.35f, 0.90f, 1.0f, SmoothStep(Clamp01((progress - 0.25f) / 0.25f)) });
+    simulationText_->Update();
+    if (progress >= 1.0f && !stageTransitionQueued_) {
+        stageTransitionQueued_ = true;
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(
+            std::make_unique<GamePlayScene>("tutorial"), true));
+    }
 }
 
 void TitleScene::StartStageSelectTransition()
@@ -1190,9 +1250,22 @@ void TitleScene::UpdateSettingsTransition(float deltaTime)
 
 void TitleScene::UpdateInterface(float deltaTime)
 {
+    const Input* input = Input::GetInstance();
+    const bool pad = input->IsUsingGamepad();
+    pushToStartText_->SetText(pad ? "PRESS A  /  GAME START" : "PRESS SPACE  /  GAME START");
+    settingsShortcutText_->SetText(pad ? "Y  SETTINGS" : "S  SETTINGS");
+    settingsBackText_->SetText(pad ? "B  BACK" : "BACKSPACE / S  BACK");
+    stageControlsText_->SetText(pad ? "D-PAD  SELECT     A  DEPLOY     B  OVERVIEW" :
+        "A / D  SELECT     SPACE  DEPLOY     BACKSPACE  OVERVIEW");
+    settingsItemsText_->SetText(pad ? std::string("PAD PITCH: ") +
+        (input->IsGamepadPitchInverted() ? "INVERTED" : "NORMAL") + " [A / D-PAD]\n\nLS AIM / A,RT FIRE\n\nX BOOST / Y BRAKE\n\nLB,RB TILT / DOUBLE TAP ROLL" :
+        "DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
     (void)deltaTime;
     float stageAmount = 0.0f;
     float stageTitleExit = 0.0f;
+    if (viewState_ == ViewState::StartingTutorial) {
+        stageTitleExit = SmoothStep(Clamp01(animationTime_ / 0.35f));
+    }
     if (viewState_ == ViewState::StageSelect) {
         stageAmount = 1.0f;
         stageTitleExit = 1.0f;
@@ -1381,6 +1454,13 @@ void TitleScene::Draw2D()
     stageDescriptionText_->Draw();
     stagePageText_->Draw();
     stageControlsText_->Draw();
+    if (viewState_ == ViewState::StartingTutorial) {
+        SpriteManager::GetInstance()->PreDraw();
+        simulationTint_->Draw();
+        simulationScan_->Draw();
+        TextRenderer::GetInstance()->PreDraw();
+        simulationText_->Draw();
+    }
 }
 
 void TitleScene::Draw3D()

@@ -4,6 +4,8 @@ Texture2D<float4> gTexture : register(t0);
 Texture2D<float> gDepthTexture : register(t1);
 Texture2D<float4> gNormalTexture : register(t2);
 Texture2D<float4> gIndirectTexture : register(t3);
+Texture2D<float> gObjectFogMask : register(t5);
+cbuffer ObjectFogMaskOptions : register(b1) { uint gHasObjectFogMask; };
 SamplerState gSampler : register(s0);
 
 float3 ReconstructPosition(float2 uv, float depth) {
@@ -51,7 +53,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET {
             scene.rgb = max(scene.rgb - indirectColor * occlusionStrength, 0.0f);
         }
     }
-    if (atmosphereSettings.x > 0.5f) {
+    if (atmosphereSettings.x > 0.5f && (gHasObjectFogMask == 0 || gObjectFogMask.Load(int3(pixel, 0)) >= 0.5f)) {
         float distance = length(position);
         float3 direction = position / max(distance, 0.000001f);
         float transmission = exp(-max(atmosphereSettings.y, 0.0f) * distance);

@@ -27,7 +27,7 @@ public:
 
     void Initialize(DirectXCommon* dxCommon, WinApp* winApp);
     void Update();
-    void RequestCapture(bool savePng);
+    void RequestCapture(bool savePng, bool copyToClipboard = true);
     void DrawNotification();
 
     void PrepareCapture();
@@ -51,6 +51,7 @@ private:
     bool captureRequested_ = false;
     bool capturePrepared_ = false;
     bool savePngRequested_ = false;
+    bool copyToClipboardRequested_ = true;
 
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;

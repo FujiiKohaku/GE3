@@ -5,7 +5,7 @@ class PlayerSteeringController {
 public:
     // 使用クラス：PlayerMovementController（UpdateStarFoxSteering）。照準位置から操舵入力を計算する。
     void Update(const Vector2& aimPosition, const Vector2& screenSizePixels,
-        bool isAllRangeMode, float deltaTimeSeconds);
+        bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad = false);
     // 使用クラス：PlayerMovementController（操作モード・全方向飛行への切り替え）。前の操舵入力を消す。
     void Reset() { steeringInput_ = {}; }
     // 使用クラス：PlayerMovementController（SetMouseSensitivity）。感度を0.5～2.0の範囲で設定する。

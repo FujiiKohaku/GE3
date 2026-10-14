@@ -170,6 +170,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Collision\GameplayCollisionSystem.cpp" />
     <ClCompile Include="$(projectRootPath)App\Scene\Loading\LoadingScene.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Stage\StageCatalog.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Tutorial\TutorialCommPanel.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Tutorial\TutorialController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\MissileBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Scene\Result\ClearScene.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\BaseEnemy.cpp" />
@@ -416,6 +418,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Scene\Gameplay\GamePlayScene.h" />
     <ClInclude Include="$(projectRootPath)App\Scene\Common\PageTransition.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Stage\StageCatalog.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Tutorial\TutorialCommPanel.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Tutorial\TutorialController.h" />
     <ClInclude Include="$(projectRootPath)Engine\ImGuiManager\ImGuiManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\Development\DevelopmentWebPanel.h" />
     <ClInclude Include="$(projectRootPath)App\Scene\Application\Game.h" />

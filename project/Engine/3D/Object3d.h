@@ -112,6 +112,9 @@ public:
     // The caller must draw them after opaque objects, from back to front.
     void SetTransparent(bool transparent) { transparent_ = transparent; }
     bool IsTransparent() const { return transparent_; }
+    // Opaque Object3d surfaces, plus non-depth-writing DanmakuBullet / Unlit surfaces.
+    void SetFogEnabled(bool enabled) { fogEnabled_ = enabled; fogWarningReported_ = false; }
+    bool IsFogEnabled() const { return fogEnabled_; }
     // Depth writing is an approximation for nearly opaque, sorted surfaces.
     void SetTransparentDepthWrite(bool enable) { transparentDepthWrite_ = enable; }
 
@@ -176,6 +179,7 @@ public:
     BoxCollider* GetCollider() const { return collider_; }
 
 private:
+    friend class Object3dManager;
     bool IsRaytracingEligible() const;
     bool shouldUseFrustumCulling_ = false;
     bool isRaytracingEnabled_ = true;
@@ -229,6 +233,8 @@ private:
     bool receiveShadow_ = false;
     bool transparent_ = false;
     bool transparentDepthWrite_ = false;
+    bool fogEnabled_ = true;
+    bool fogWarningReported_ = false;
 
     LevelData::ObjectData::GimmickData gimmick_ {};
     Vector3 baseTranslate_ = { 0.0f, 0.0f, 0.0f };

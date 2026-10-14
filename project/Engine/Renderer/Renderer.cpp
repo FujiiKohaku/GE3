@@ -175,6 +175,7 @@ void Renderer::DrawImGui()
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    Object3dManager::GetInstance()->BeginTransparentCollection();
     ApplySceneRenderResolution();
     if (comparisonSceneRevision_ != sceneManager->GetSceneRevision()) {
         antiAliasingSamples_ = {};
@@ -337,6 +338,9 @@ void Renderer::Draw(SceneManager* sceneManager)
     DebugRenderer::GetInstance()->Draw();
     motionVectorRenderer_->EndFrame(postEffectManager_->GetDepthDSVHandle());
     motionVectorRenderer_->SetSettings(motionSettings);
+    postEffectManager_->BeginObjectFogMask();
+    Object3dManager::GetInstance()->DrawOpaqueFogMask();
+    postEffectManager_->EndObjectFogMask();
     postEffectManager_->PostDrawDepth();
     offscreenRenderer_->PostDraw();
     DxrShadowInputs rtShadowInputs;
@@ -467,6 +471,12 @@ void Renderer::Draw(SceneManager* sceneManager)
 
     postEffectManager_->PrepareDepthForParticleDraw();
     postEffectManager_->BeginParticleDraw();
+    bool distanceFogEnabled = false;
+    for (const auto& effect : sceneManager->GetPostEffects()) {
+        if (effect.enabled && effect.type == PostEffectType::Fog && effect.stage == PostEffectStage::BeforeParticle) distanceFogEnabled = true;
+    }
+    Object3dManager::GetInstance()->DrawTransparent(postEffectManager_->GetFogConstantBufferView(),
+        distanceFogEnabled, *postEffectManager_->GetVolumetricLightRenderer());
     sceneManager->DrawParticle();
     postEffectManager_->EndParticleDraw();
     postEffectManager_->PostDrawDepth();

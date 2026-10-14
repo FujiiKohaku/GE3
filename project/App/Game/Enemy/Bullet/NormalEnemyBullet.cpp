@@ -11,10 +11,10 @@ void NormalEnemyBullet::Initialize(Model* model)
     EnemyBullet::Initialize(model);
 
     // 東方風弾幕シェーダーの設定
+    SetEnableLighting(false);
     SetPixelShaderPath("resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl");
     SetTransparent(true);
     SetTransparentDepthWrite(false);
     SetCastShadow(false);
-    SetEnableLighting(false);
     SetColor({ 1.0f, 0.22f, 0.28f, 1.0f });
 }

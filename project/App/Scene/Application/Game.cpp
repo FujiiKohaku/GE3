@@ -6,6 +6,9 @@
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "App/Scene/Title/TitleScene.h"
+#if defined(_DEBUG)
+#include "Tests/ObjectFogVerificationScene.h"
+#endif
 #include "Engine/audio/SoundManager.h"
 #include "Engine/Screenshot/ScreenshotManager.h"
 
@@ -135,6 +138,12 @@ void Game::Initialize()
     renderer_ = std::make_unique<Renderer>();
     renderer_->Initialize();
     SceneManager::GetInstance()->SetVolumetricLightRenderer(renderer_->GetPostEffectManager()->GetVolumetricLightRenderer());
+#if defined(_DEBUG)
+    if (std::wstring(GetCommandLineW()).find(L"--verify-object-fog") != std::wstring::npos) {
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ObjectFogVerificationScene>(renderer_.get()));
+        showDebugUI_ = false;
+    }
+#endif
     ScreenshotManager::GetInstance()->Initialize(
         DirectXCommon::GetInstance(),
         WinApp::GetInstance());

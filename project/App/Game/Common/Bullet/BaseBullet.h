@@ -65,6 +65,8 @@ public:
     void SetPixelShaderPath(const std::string& pixelShaderPath);
     void SetTransparent(bool transparent);
     void SetTransparentDepthWrite(bool enable);
+    void SetFogEnabled(bool enabled);
+    bool IsFogEnabled() const { return fogEnabled_; }
     void SetCastShadow(bool enabled);
     Object3d* GetObject3d() { return object_.get(); }
     const Object3d* GetObject3d() const { return object_.get(); }
@@ -84,6 +86,7 @@ protected:
     virtual float GetTimeScale() const { return 1.0f; }
 private:
     bool isAlive_ = true;
+    bool fogEnabled_ = true;
     float lifeTime_ = 0.0f;
     float maxLifeTime_ = 5.0f; // 最大寿命時間（秒）
     int damage_ = 1; // ダメージ

@@ -2,13 +2,14 @@
 
 #include "App/Scene/Common/BaseScene.h"
 #include "Engine/2D/Sprite.h"
+#include "Engine/2D/Text/Text.h"
 
 #include <memory>
 
 class LoadingScene : public BaseScene {
 public:
-    LoadingScene(std::unique_ptr<BaseScene> nextScene)
-        : nextScene_(std::move(nextScene)) {}
+    LoadingScene(std::unique_ptr<BaseScene> nextScene, bool simulationBoot = false)
+        : nextScene_(std::move(nextScene)), simulationBoot_(simulationBoot) {}
 
     void Initialize() override;
     void Finalize() override;
@@ -25,4 +26,6 @@ private:
     std::unique_ptr<Sprite> progressSprite_;
     bool hasDrawnFirstFrame_ = false;
     bool gameResourcesInitialized_ = false;
+    bool simulationBoot_ = false;
+    std::unique_ptr<Text> simulationText_;
 };

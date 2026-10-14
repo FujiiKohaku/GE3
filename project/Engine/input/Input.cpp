@@ -18,6 +18,13 @@ Input* Input::GetInstance()
     return instance_.get();
 }
 
+void Input::SetGamepadAimSensitivity(float sensitivity)
+{
+    if (std::isfinite(sensitivity)) {
+        gamepadAimSensitivity_ = std::clamp(sensitivity, 0.5f, 2.0f);
+    }
+}
+
 bool Input::Initialize(WinApp* winApp)
 {
     HRESULT result;
@@ -68,6 +75,10 @@ void Input::Update()
     memcpy(preKeys_, keys_, sizeof(keys_));
     preMouseState_ = mouseState_;
     preGamepadState_ = gamepadState_;
+    const DWORD previousGamepadIndex = gamepadIndex_;
+    activeGamepadDisconnected_ = false;
+    std::memset(keys_, 0, sizeof(keys_));
+    mouseState_ = {};
 
     HRESULT result;
 
@@ -103,10 +114,53 @@ void Input::Update()
         gamepadIndex_ = XUSER_MAX_COUNT;
     } else {
         if (gamepadIndex_ != nextGamepadIndex) {
-            preGamepadState_ = {};
+            preGamepadState_ = nextGamepadState;
+            gamepadButtonsReady_ = false;
         }
         gamepadState_ = nextGamepadState;
         gamepadIndex_ = nextGamepadIndex;
+    }
+
+    activeGamepadDisconnected_ = isUsingGamepad_ &&
+        previousGamepadIndex < XUSER_MAX_COUNT && previousGamepadIndex != gamepadIndex_;
+    if (!isGamepadConnected_) {
+        gamepadButtonsReady_ = false;
+        isUsingGamepad_ = false;
+    } else if (gamepadState_.Gamepad.wButtons == 0 &&
+        gamepadState_.Gamepad.bRightTrigger <= XINPUT_GAMEPAD_TRIGGER_THRESHOLD &&
+        gamepadState_.Gamepad.bLeftTrigger <= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) {
+        // 接続直後に押されていたボタンは、一度離すまで受け付けない。
+        gamepadButtonsReady_ = true;
+    }
+
+    if (GetForegroundWindow() != winApp_->GetHwnd()) {
+        std::memset(keys_, 0, sizeof(keys_));
+        mouseState_ = {};
+        gamepadState_ = {};
+        gamepadButtonsReady_ = false;
+        blockPrimaryFire_ = true;
+        return;
+    }
+
+    bool keyboardActivity = false;
+    for (int key = 0; key < 256; ++key) {
+        keyboardActivity |= (keys_[key] & 0x80) != 0;
+    }
+    const bool gamepadActivity = gamepadButtonsReady_ &&
+        (gamepadState_.Gamepad.wButtons != 0 || IsGamepadRightTriggerPressed() ||
+         GetGamepadLeftStickX() != 0.0f || GetGamepadLeftStickY() != 0.0f);
+    const bool mouseActivity = mouseState_.lX != 0 || mouseState_.lY != 0 ||
+        mouseState_.lZ != 0 || IsMousePressed(0) || IsMousePressed(1);
+    if (keyboardActivity) {
+        isUsingGamepad_ = false;
+    } else if (gamepadActivity) {
+        isUsingGamepad_ = true;
+    } else if (mouseActivity) {
+        isUsingGamepad_ = false;
+    }
+    if (blockPrimaryFire_ && !IsKeyPressed(DIK_SPACE) && !IsMousePressed(0) &&
+        !IsGamepadButtonPressed(XINPUT_GAMEPAD_A) && !IsGamepadRightTriggerPressed()) {
+        blockPrimaryFire_ = false;
     }
 }
 
@@ -190,7 +244,7 @@ bool Input::IsGamepadConnected() const
 
 bool Input::IsGamepadButtonPressed(WORD button) const
 {
-    return isGamepadConnected_ &&
+    return isGamepadConnected_ && gamepadButtonsReady_ &&
         (gamepadState_.Gamepad.wButtons & button) != 0;
 }
 
@@ -198,7 +252,28 @@ bool Input::IsGamepadButtonTrigger(WORD button) const
 {
     const bool isPressed = (gamepadState_.Gamepad.wButtons & button) != 0;
     const bool wasPressed = (preGamepadState_.Gamepad.wButtons & button) != 0;
-    return isGamepadConnected_ && isPressed && !wasPressed;
+    return isGamepadConnected_ && gamepadButtonsReady_ && isPressed && !wasPressed;
+}
+
+bool Input::IsGamepadRightTriggerPressed() const
+{
+    return isGamepadConnected_ && gamepadButtonsReady_ &&
+        gamepadState_.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+}
+
+bool Input::IsPrimaryFirePressed() const
+{
+    return !blockPrimaryFire_ && (IsKeyPressed(DIK_SPACE) || IsMousePressed(0) ||
+        IsGamepadButtonPressed(XINPUT_GAMEPAD_A) || IsGamepadRightTriggerPressed());
+}
+
+bool Input::IsPrimaryFireTrigger() const
+{
+    const bool wasPressed = (preKeys_[DIK_SPACE] & 0x80) != 0 ||
+        (preMouseState_.rgbButtons[0] & 0x80) != 0 ||
+        (preGamepadState_.Gamepad.wButtons & XINPUT_GAMEPAD_A) != 0 ||
+        preGamepadState_.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+    return IsPrimaryFirePressed() && !wasPressed;
 }
 
 namespace {

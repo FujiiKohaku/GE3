@@ -3,6 +3,7 @@
 #include "App/Game/Player/Aim/PlayerAimController.h"
 #include "ScreenConstraint/PlayerScreenConstraint.h"
 #include "Steering/PlayerSteeringController.h"
+#include "Roll/PlayerRollController.h"
 
 class Camera;
 class Input;
@@ -41,6 +42,8 @@ public:
     // 使用クラス：Player（外部への公開）。ブースト中かを返す。
     bool IsBoosting() const { return isBoosting_; }
     float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
+    bool IsRolling() const { return rollController_.IsRolling(); }
+    float GetManualBank() const { return manualBank_; }
     // 使用クラス：Player・PlayerWeaponController。飛行の前方向を返す。
     const Vector3& GetFlightForward() const { return railForward_; }
     // 使用クラス：Player（外部への公開）。レール基準位置からの移動量を返す。
@@ -110,4 +113,6 @@ private:
     // 細かな画面内補正・ロール・操舵計算は、各部品へ委譲する。
     PlayerScreenConstraint screenConstraint_{ railBasePosition_, railRight_, railUp_, railForward_ };
     PlayerSteeringController steeringController_;
+    PlayerRollController rollController_;
+    float manualBank_ = 0.0f;
 };

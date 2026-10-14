@@ -1,9 +1,11 @@
 {
   "lighting": {
+    "tutorial": { "color": [0.65,0.85,1.0,1.0], "direction": [-0.28,-0.86,0.42], "intensity": 0.9, "ambient": [0.15,0.35,0.65,0.25], "skyColor": [0.10,0.24,0.40], "groundColor": [0.04,0.08,0.15] },
     "default": { "color": [1.0,0.97,0.90,1.0], "direction": [-0.28,-0.86,0.42], "intensity": 0.95, "ambient": [0.52,0.60,0.68,0.22], "skyColor": [0.78,0.90,1.10], "groundColor": [0.42,0.38,0.34] },
     "stage03": { "color": [0.94,0.98,1.0,1.0], "direction": [-0.52,-0.76,0.39], "intensity": 0.90, "ambient": [0.38,0.50,0.67,0.13], "skyColor": [0.72,0.94,1.16], "groundColor": [0.24,0.36,0.50] }
   },
   "atmosphere": {
+    "tutorial": { "exposure": 1.0, "distanceFog": [300.0,1100.0,0.95,1.5], "fogColor": [0.005,0.012,0.035,1.0] },
     "default": { "exposure": 1.0, "distanceFog": [380.0,720.0,1.0,1.2] },
     "stage03": { "exposure": 0.95, "distanceFog": [650.0,1600.0,0.30,1.5], "fogColor": [0.68,0.82,0.94,1.0] }
   },
@@ -18,6 +20,8 @@
   "shininess": { "ice": 96.0 },
   "effectParameters": { "ArchiveAtmosphere": [16.5, 2.3, 0.0] },
   "effectChains": {
+    "tutorial": ["Fog", "Bloom"],
+    "tutorial_boost": ["Fog", "Bloom", "RadialBlur"],
     "default": ["DepthOutline", "Fog"],
     "boost": ["DepthOutline", "Fog", "RadialBlur", "FocusLine"]
   }

@@ -110,6 +110,7 @@ public:
 
     void SetExposureTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { exposureTextureHandle_ = handle; }
     void SetIndirectTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle) { indirectTextureHandle_ = handle; }
+    void SetObjectFogMask(D3D12_GPU_DESCRIPTOR_HANDLE handle) { objectFogMaskHandle_ = handle; }
     void SetMaskTextureHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
     const PostEffectParameter& GetPostEffectParameter() const;
 
@@ -118,6 +119,7 @@ public:
     static bool IsValidParameter(const PostEffectParameter& value);
 
 private:
+    D3D12_GPU_DESCRIPTOR_HANDLE objectFogMaskHandle_ {};
     void CreateRootSignature();
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(const std::wstring& pixelShaderPath);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> GetOrCreateGraphicsPipeline(PostEffectType type);

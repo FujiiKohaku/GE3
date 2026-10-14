@@ -81,10 +81,10 @@ void TestSteeringDeadZoneAndReset()
     steering.Update({ 650.0f, 360.0f }, screenSizePixels, false, 1.0f / 60.0f);
     assert(steering.GetSteeringInput().x == 0.0f);
     steering.Update({ 1280.0f, 0.0f }, screenSizePixels, false, 1.0f / 60.0f);
-    assert(IsNear(steering.GetSteeringInput().x, 0.20f));
-    assert(IsNear(steering.GetSteeringInput().y, 0.20f));
+    assert(IsNear(steering.GetSteeringInput().x, 1.0f));
+    assert(IsNear(steering.GetSteeringInput().y, 1.0f));
     steering.Update({ 640.0f, 360.0f }, { 0.0f, 720.0f }, false, 1.0f / 60.0f);
-    assert(IsNear(steering.GetSteeringInput().x, 0.20f));
+    assert(IsNear(steering.GetSteeringInput().x, 1.0f));
     steering.Reset();
     assert(steering.GetSteeringInput().x == 0.0f);
     assert(steering.GetSteeringInput().y == 0.0f);
@@ -108,6 +108,51 @@ void TestAllRangeSteeringTimeStep()
     fullStep.SetMouseSensitivity(100.0f);
     assert(fullStep.GetMouseSensitivity() == 2.0f);
 }
+
+void TestGamepadSteeringIndependentOfMouse()
+{
+    const bool modes[] = { false, true };
+    for (bool allRange : modes) {
+        PlayerSteeringController padLowMouse;
+        PlayerSteeringController padHighMouse;
+        padLowMouse.SetMouseSensitivity(0.5f);
+        padHighMouse.SetMouseSensitivity(2.0f);
+        const Vector2 aim{ 1120.0f, 90.0f };
+        const Vector2 size{ 1280.0f, 720.0f };
+        padLowMouse.Update(aim, size, allRange, 1.0f / 60.0f, true);
+        padHighMouse.Update(aim, size, allRange, 1.0f / 60.0f, true);
+        assert(IsNear(padLowMouse.GetSteeringInput().x, 0.75f));
+        assert(IsNear(padLowMouse.GetSteeringInput().y, 0.75f));
+        assert(IsNear(padLowMouse.GetSteeringInput().x, padHighMouse.GetSteeringInput().x));
+        assert(IsNear(padLowMouse.GetSteeringInput().y, padHighMouse.GetSteeringInput().y));
+        padLowMouse.Reset();
+        padLowMouse.Update({ 644.0f, 356.0f }, size, allRange, 1.0f / 60.0f, true);
+        assert(padLowMouse.GetSteeringInput().x > 0.0f);
+        assert(padLowMouse.GetSteeringInput().y > 0.0f);
+    }
+}
+
+void TestGamepadImmediateFollowAndReversal()
+{
+    const bool modes[] = { false, true };
+    const int frameRates[] = { 30, 60, 120 };
+    for (bool allRange : modes) {
+        for (int framesPerSecond : frameRates) {
+            PlayerSteeringController steering;
+            const float dt = 1.0f / static_cast<float>(framesPerSecond);
+            const Vector2 size{ 1280.0f, 720.0f };
+            steering.Update({ 1120.0f, 90.0f }, size, allRange, dt, true);
+            assert(IsNear(steering.GetSteeringInput().x, 0.75f));
+            assert(IsNear(steering.GetSteeringInput().y, 0.75f));
+            steering.Update({ 160.0f, 630.0f }, size, allRange, dt, true);
+            assert(IsNear(steering.GetSteeringInput().x, -0.75f));
+            assert(IsNear(steering.GetSteeringInput().y, -0.75f));
+            steering.Update({ 640.0f, 360.0f }, size, allRange, dt, true);
+            assert(steering.GetSteeringInput().x == 0.0f);
+            assert(steering.GetSteeringInput().y == 0.0f);
+        }
+    }
+}
 }
 
 int main()
@@ -117,4 +162,6 @@ int main()
     TestRollAtDifferentFrameRates();
     TestSteeringDeadZoneAndReset();
     TestAllRangeSteeringTimeStep();
+    TestGamepadSteeringIndependentOfMouse();
+    TestGamepadImmediateFollowAndReversal();
 }

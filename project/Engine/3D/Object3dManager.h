@@ -5,11 +5,15 @@
 #include "Engine/blend/blendutil.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Object3dRootParameter.h"
+#include "TransparentDrawQueue.h"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 class ShadowMapRenderer;
 class LocalShadowRenderer;
+class Object3d;
+class VolumetricLightRenderer;
 
 class Object3dManager {
 public:
@@ -21,6 +25,22 @@ public:
     static constexpr uint32_t kShadowReceiverRootIndex = kShadowTextureRootIndex + 1;
     static constexpr uint32_t kLocalShadowConstantsRootIndex = kShadowReceiverRootIndex + 1;
     static constexpr uint32_t kLocalShadowTextureRootIndex = kLocalShadowConstantsRootIndex + 1;
+    static constexpr uint32_t kFogConstantsRootIndex = kLocalShadowTextureRootIndex + 1;
+    static constexpr uint32_t kVolumeConstantsRootIndex = kFogConstantsRootIndex + 1;
+    static constexpr uint32_t kObjectFogFlagsRootIndex = kVolumeConstantsRootIndex + 1;
+    static constexpr uint32_t kVolumeShadowRootIndex = kObjectFogFlagsRootIndex + 1;
+    static constexpr uint32_t kVolumeLocalShadowRootIndex = kVolumeShadowRootIndex + 1;
+    void BeginTransparentCollection();
+    bool QueueTransparent(Object3d& object);
+    void CancelTransparentDraw(Object3d* object);
+    void DrawTransparent(D3D12_GPU_VIRTUAL_ADDRESS fogConstants, bool distanceFogEnabled,
+        const VolumetricLightRenderer& volume);
+    bool IsTransparentCompositionActive() const { return transparentCompositionActive_; }
+    const std::string& GetTransparentShader(const std::string& shader) const;
+    void BindObjectFog(bool enabled);
+    bool QueueOpaqueFogMask(Object3d& object);
+    void DrawOpaqueFogMask();
+    bool IsOpaqueFogMaskActive() const { return opaqueFogMaskActive_; }
     void SetLocalShadowRenderer(LocalShadowRenderer* renderer) { localShadowRenderer_ = renderer; }
     void SetShadowRenderer(ShadowMapRenderer* renderer) { shadowRenderer_ = renderer; }
     void BindShadowResources(bool receiveShadow,
@@ -66,6 +86,14 @@ public:
     void SetEnvironmentTexture(D3D12_GPU_DESCRIPTOR_HANDLE handle);
 
 private:
+    TransparentDrawQueue<Object3d> transparentDraws_;
+    std::vector<Object3d*> opaqueFogDraws_;
+    bool opaqueFogMaskActive_ = false;
+    bool hasOpaqueFogExclusion_ = false;
+    bool transparentCollectionActive_ = false;
+    bool transparentCompositionActive_ = false;
+    uint32_t activeFogFlags_ = 0;
+    Microsoft::WRL::ComPtr<ID3D12Resource> disabledVolumeConstants_;
     static std::unique_ptr<Object3dManager> instance_;
     // Singleton：外部から new できないようにする
     Object3dManager() = default;

@@ -6,6 +6,7 @@ public:
     void AddShotHeat(bool isMinigun);
     float GetHeatRatio() const { return heatRatio_; }
     bool IsOverheated() const { return isOverheated_; }
+    int GetShotDamage(int baseDamage) const;
 
 private:
     float heatRatio_ = 0.0f;
@@ -13,7 +14,7 @@ private:
     float graceRemainingSeconds_ = 0.0f;
     static constexpr float kGraceDurationSeconds = 30.0f / 60.0f;
     static constexpr float kNormalShotHeat = 0.08f;
-    static constexpr float kMinigunShotHeat = 0.01f;
+    static constexpr float kMinigunShotHeat = 0.025f;
     static constexpr float kCoolingPerSecond = 0.20f;
     static constexpr float kOverheatCoolingPerSecond = 0.25f;
 };

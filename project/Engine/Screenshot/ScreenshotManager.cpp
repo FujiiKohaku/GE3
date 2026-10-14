@@ -76,7 +76,7 @@ void ScreenshotManager::Update()
     }
 }
 
-void ScreenshotManager::RequestCapture(bool savePng)
+void ScreenshotManager::RequestCapture(bool savePng, bool copyToClipboard)
 {
     if (!initialized_ || captureRequested_ || capturePrepared_) {
         return;
@@ -84,6 +84,7 @@ void ScreenshotManager::RequestCapture(bool savePng)
 
     captureRequested_ = true;
     savePngRequested_ = savePng;
+    copyToClipboardRequested_ = copyToClipboard;
 }
 
 void ScreenshotManager::DrawNotification()
@@ -178,7 +179,7 @@ void ScreenshotManager::CompleteCapture()
 
     const std::uint8_t* sourcePixels =
         static_cast<const std::uint8_t*>(mappedData);
-    const bool clipboardSucceeded = CopyToClipboard(sourcePixels);
+    const bool clipboardSucceeded = !copyToClipboardRequested_ || CopyToClipboard(sourcePixels);
 
     bool pngSucceeded = true;
     if (savePngRequested_) {
@@ -190,7 +191,9 @@ void ScreenshotManager::CompleteCapture()
     writtenRange.End = 0;
     readbackResource_->Unmap(0, &writtenRange);
 
-    if (clipboardSucceeded && pngSucceeded) {
+    if (!copyToClipboardRequested_) {
+        if (!pngSucceeded) Logger::Error("File-only screenshot capture failed");
+    } else if (clipboardSucceeded && pngSucceeded) {
         ShowSuccessNotification();
     } else {
         ShowFailureNotification();

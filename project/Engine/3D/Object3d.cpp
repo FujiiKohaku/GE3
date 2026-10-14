@@ -13,6 +13,7 @@
 #include <sstream>
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include <cmath>
+#include "Engine/Logger/Logger.h"
 #pragma region
 void Object3d::Initialize(Object3dManager* object3DManager)
 {
@@ -128,6 +129,14 @@ void Object3d::Update()
 void Object3d::Draw()
 {
     if (shouldUseFrustumCulling_ && camera_ && !IsVisible(*camera_)) { return; }
+    if (!object3dManager_->IsTransparentCompositionActive() && !object3dManager_->IsOpaqueFogMaskActive()) {
+        if (object3dManager_->QueueTransparent(*this)) return;
+        const bool opaqueMaskRegistered = object3dManager_->QueueOpaqueFogMask(*this);
+        if (!fogEnabled_ && !opaqueMaskRegistered && !fogWarningReported_) {
+            Logger::Warning("Object fog OFF unsupported in this draw path: " + pixelShaderPath_);
+            fogWarningReported_ = true;
+        }
+    }
     if (receiveShadow_) {
         if (pixelShaderPath_ == "resources/Shaders/Object3D/Toon/Render.PS.hlsl") {
             SetMaterial("resources/Shaders/Object3D/ShadowToon");
@@ -142,8 +151,12 @@ void Object3d::Draw()
     }
     ID3D12GraphicsCommandList* commandList = object3dManager_->GetDxCommon()->GetCommandList();
     auto* dxrRenderer = DxrRenderer::GetActive();
-    bool isDxrEligible = dxrRenderer != nullptr && IsRaytracingEligible();
+    bool isDxrEligible = !object3dManager_->IsOpaqueFogMaskActive() && dxrRenderer != nullptr && IsRaytracingEligible();
     std::string drawPixelShaderPath = pixelShaderPath_;
+    if (object3dManager_->IsTransparentCompositionActive()) {
+        drawPixelShaderPath = object3dManager_->GetTransparentShader(pixelShaderPath_);
+    }
+    if (object3dManager_->IsOpaqueFogMaskActive()) drawPixelShaderPath = "resources/Shaders/Object3D/FogMask/Render.PS.hlsl";
     if (isDxrEligible && dxrRenderer->ShouldCaptureReflections()) {
         const std::string kMaterialRoot = "resources/Shaders/Object3D/";
         const std::string kMaterials[] = {"Standard", "ShadowStandard", "Toon", "ShadowToon"};
@@ -195,13 +208,14 @@ void Object3d::Draw()
         Object3dManager::GetInstance()->GetEnvironmentTexture());
 
     object3dManager_->BindShadowResources(receiveShadow_);
+    if (object3dManager_->IsTransparentCompositionActive() || object3dManager_->IsOpaqueFogMaskActive()) object3dManager_->BindObjectFog(fogEnabled_);
     commandList->SetGraphicsRootConstantBufferView(RootParameterIndex(Object3dRootParameter::RtLocalShadowSettings), object3dManager_->GetRtLocalShadowConstantsAddress());
     uint32_t shouldReceiveLocalShadow = 0; if (receiveShadow_) { shouldReceiveLocalShadow = 1; }
     commandList->SetGraphicsRoot32BitConstant(RootParameterIndex(Object3dRootParameter::RtLocalShadowReceiver), shouldReceiveLocalShadow, 0);
     if (model_) {
         model_->Draw();
     }
-    QueueMotionVectors();
+    if (!object3dManager_->IsTransparentCompositionActive() && !object3dManager_->IsOpaqueFogMaskActive()) QueueMotionVectors();
     if (isDxrEligible && dxrRenderer->ShouldUseDrawSubmission()) { SubmitRaytracing(*dxrRenderer); }
 }
 
@@ -547,6 +561,7 @@ void Object3d::SetAnimation(PlayAnimation* anim)
 
 Object3d::~Object3d()
 {
+    if (object3dManager_) object3dManager_->CancelTransparentDraw(this);
     if (transformationMatrixResource) {
         transformationMatrixResource->Unmap(0, nullptr);
     }

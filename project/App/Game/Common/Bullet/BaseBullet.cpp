@@ -7,6 +7,7 @@ void BaseBullet::Initialize(Model* model)
     assert(model != nullptr);
     object_ = std::make_unique<Object3d>();
     object_->Initialize(Object3dManager::GetInstance());
+    object_->SetFogEnabled(fogEnabled_);
     object_->SetEnableLighting(true);
     object_->SetModel(model);
 
@@ -104,6 +105,12 @@ void BaseBullet::Move()
 void BaseBullet::SetDead()
 {
     isAlive_ = false;
+}
+
+void BaseBullet::SetFogEnabled(bool enabled)
+{
+    fogEnabled_ = enabled;
+    if (object_) object_->SetFogEnabled(enabled);
 }
 void BaseBullet::SetCamera(Camera* camera)
 {

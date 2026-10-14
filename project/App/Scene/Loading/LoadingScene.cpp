@@ -1,6 +1,7 @@
 #include "App/Scene/Loading/LoadingScene.h"
 
 #include "Engine/2D/SpriteManager.h"
+#include "Engine/2D/Text/TextRenderer.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -47,6 +48,19 @@ void LoadingScene::Initialize()
     progressSprite_->SetPosition({ kProgressBarLeft, kProgressBarTop });
     progressSprite_->SetSize({ 0.0f, kProgressBarHeight });
     progressSprite_->SetColor({ 0.25f, 0.75f, 1.0f, 1.0f });
+    if (simulationBoot_) {
+        simulationText_ = std::make_unique<Text>();
+        simulationText_->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        simulationText_->SetText("SIMULATION INITIALIZING");
+        simulationText_->SetAnchorPoint({ 0.5f, 0.5f });
+        simulationText_->SetPosition({ 640.0f, 560.0f });
+        simulationText_->SetFontSize(26.0f);
+        simulationText_->SetColor({ 0.35f, 0.90f, 1.0f, 1.0f });
+        simulationText_->Update();
+        progressBackSprite_->SetPosition({ 430.0f, 602.0f });
+        progressBackSprite_->SetSize({ 420.0f, 3.0f });
+        progressSprite_->SetPosition({ 430.0f, 602.0f });
+    }
 
 }
 
@@ -78,7 +92,8 @@ void LoadingScene::Update()
     if (gameResourcesInitialized_) {
         progress = EffectManager::GetInstance()->GetWarmUpProgress();
     }
-    progressSprite_->SetSize({ kProgressBarWidth * progress, kProgressBarHeight });
+    progressSprite_->SetSize({ (simulationBoot_ ? 420.0f : kProgressBarWidth) * progress,
+        simulationBoot_ ? 3.0f : kProgressBarHeight });
 
     backgroundSprite_->Update();
     progressBackSprite_->Update();
@@ -96,6 +111,10 @@ void LoadingScene::Draw2D()
     backgroundSprite_->Draw();
     progressBackSprite_->Draw();
     progressSprite_->Draw();
+    if (simulationText_) {
+        TextRenderer::GetInstance()->PreDraw();
+        simulationText_->Draw();
+    }
 }
 
 void LoadingScene::Draw3D() {}

@@ -1,12 +1,19 @@
 #include "App/Scene/Result/ClearScene.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
+#include "Engine/2D/Text/TextRenderer.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 
 #include "App/Scene/Title/TitleScene.h"
 #include "Engine/audio/SoundManager.h"
 void ClearScene::Initialize()
 {
+    returnGuideText_ = std::make_unique<Text>();
+    returnGuideText_->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+    returnGuideText_->SetPosition({ 640.0f, 650.0f });
+    returnGuideText_->SetAnchorPoint({ 0.5f, 0.5f });
+    returnGuideText_->SetFontSize(26.0f);
+    returnGuideText_->SetOutlineWidth(1.0f);
     SoundManager::GetInstance()->RegisterSounds({
         { "StageClear", "resources/Audio/GameSfx/stage_clear.wav", 0.34f, 0.50f },
     });
@@ -41,17 +48,24 @@ void ClearScene::Initialize()
 
 void ClearScene::Update()
 {
-    if (Input::GetInstance()->IsKeyPressed(DIK_SPACE)) {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE) ||
+        Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) ||
+        Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
     }
     titleObj_->Update();
     titleSprite_->Update();
+    returnGuideText_->SetText(Input::GetInstance()->IsUsingGamepad() ?
+        "タイトルに戻る [A / B]" : "タイトルに戻る [SPACE]");
+    returnGuideText_->Update();
 }
 
 void ClearScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
     titleSprite_->Draw();
+    TextRenderer::GetInstance()->PreDraw();
+    returnGuideText_->Draw();
     ;
 }
 

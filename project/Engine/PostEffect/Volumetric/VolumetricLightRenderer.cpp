@@ -432,8 +432,8 @@ void VolumetricLightRenderer::CreateResources() {
     CheckVolume(constantsResource_->Map(0, nullptr, reinterpret_cast<void**>(&constantsData_)));
 }
 void VolumetricLightRenderer::CreatePipelines() {
-    D3D12_DESCRIPTOR_RANGE ranges[7] {};
-    D3D12_ROOT_PARAMETER root[8] {};
+    D3D12_DESCRIPTOR_RANGE ranges[8] {};
+    D3D12_ROOT_PARAMETER root[10] {};
     for (uint32_t index = 0; index < 4; ++index) {
         ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -451,7 +451,7 @@ void VolumetricLightRenderer::CreatePipelines() {
     root[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     root[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     root[5].DescriptorTable = { 1, &ranges[4] };
-    for (uint32_t index = 5; index < 7; ++index) {
+    for (uint32_t index = 5; index < 8; ++index) {
         ranges[index].BaseShaderRegister = index; ranges[index].NumDescriptors = 1;
         ranges[index].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         ranges[index].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -459,6 +459,9 @@ void VolumetricLightRenderer::CreatePipelines() {
         root[index + 1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
         root[index + 1].DescriptorTable = {1, &ranges[index]};
     }
+    root[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    root[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    root[9].Constants = { 1, 0, 1 };
     D3D12_STATIC_SAMPLER_DESC samplers[2] {};
     for (uint32_t index = 0; index < 2; ++index) {
         samplers[index].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -472,7 +475,7 @@ void VolumetricLightRenderer::CreatePipelines() {
     samplers[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
     samplers[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
     D3D12_ROOT_SIGNATURE_DESC desc {};
-    desc.NumParameters = 8; desc.pParameters = root;
+    desc.NumParameters = _countof(root); desc.pParameters = root;
     desc.NumStaticSamplers = 2; desc.pStaticSamplers = samplers;
     Microsoft::WRL::ComPtr<ID3DBlob> blob, errors;
     CheckVolume(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &errors));
@@ -559,10 +562,13 @@ void VolumetricLightRenderer::Draw(ID3D12PipelineState* pipeline, D3D12_GPU_DESC
         }
     }
     cmd->SetGraphicsRootDescriptorTable(6, history); cmd->SetGraphicsRootDescriptorTable(7, historyTransmission);
+    cmd->SetGraphicsRootDescriptorTable(8, objectFogMaskSrv_.ptr != 0 ? objectFogMaskSrv_ : depth);
+    cmd->SetGraphicsRoot32BitConstant(9, objectFogMaskSrv_.ptr != 0 ? 1u : 0u, 0);
     cmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     cmd->DrawInstanced(3, 1, 0, 0);
 }
 bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, bool depthReady) {
+    objectFogReady_ = false;
     generated_ = false; hasUsedHistory_ = false;
     raymarchTimer_.ResetSample(); temporalTimer_.ResetSample(); compositeTimer_.ResetSample();
     bool valid = frameValid_;
@@ -627,7 +633,7 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     previousRelativeViewProjection_ = MatrixMath::Multiply(MatrixMath::Inverse(relativeWorld), frameCamera_->GetProjectionMatrix());
     previousCameraForward_ = cameraForward; previousCameraPosition_ = cameraPosition; previousCamera_ = frameCamera_; previousSceneRevision_ = frameSceneRevision_;
     previousCameraHistoryId_ = frameCamera_->GetMotionHistoryId(); previousLightingHash_ = lightingHash;
-    ++frameIndex_; generated_ = true;
+    ++frameIndex_; generated_ = true; objectFogReady_ = true;
     return true;
 }
 void VolumetricLightRenderer::Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle) {

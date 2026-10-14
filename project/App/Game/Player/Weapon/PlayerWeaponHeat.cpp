@@ -1,5 +1,12 @@
 #include "App/Game/Player/Weapon/PlayerWeaponHeat.h"
 #include <algorithm>
+#include <cmath>
+
+int PlayerWeaponHeat::GetShotDamage(int baseDamage) const
+{
+    // 発射時の熱量で威力を確定する。0%で等倍、100%で2倍。
+    return baseDamage <= 0 ? 0 : static_cast<int>(std::lround(baseDamage * (1.0f + heatRatio_)));
+}
 
 void PlayerWeaponHeat::Update(float deltaTimeSeconds, bool isFireHeld)
 {

@@ -16,6 +16,9 @@ public:
     D3D12_GPU_DESCRIPTOR_HANDLE GetParticleDepthSrv() const;
     ID3D12Resource* GetParticleDepthTexture() const;
     void FinishParticleDepth();
+    void BeginObjectFogMask();
+    void EndObjectFogMask();
+    D3D12_GPU_DESCRIPTOR_HANDLE GetObjectFogMaskSrv() const;
     void PreDrawDepth();
     void PostDrawDepth();
     void PrepareDepthForParticleDraw();
@@ -34,9 +37,14 @@ private:
     void CreateDepthDSV();
     void CreateDepthSRV();
     void TransitionDepthResource(D3D12_RESOURCE_STATES nextState);
+    void CreateObjectFogMask();
 
 private:
     DirectXCommon* dxCommon_ = nullptr;
+    Microsoft::WRL::ComPtr<ID3D12Resource> objectFogMask_;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> objectFogMaskRtvHeap_;
+    uint32_t objectFogMaskSrvIndex_ = UINT_MAX;
+    D3D12_RESOURCE_STATES objectFogMaskState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
     Microsoft::WRL::ComPtr<ID3D12RootSignature> rootSignature_;
     Microsoft::WRL::ComPtr<ID3D12PipelineState> pipelineState_;
@@ -47,6 +55,7 @@ private:
     D3D12_GPU_DESCRIPTOR_HANDLE depthSRVHandleGPU_ {};
     uint32_t depthSRVIndex_ = UINT_MAX;
     bool shouldUseParticleDepth_ = false;
+    bool useResolvedParticleDepth_ = false;
     uint32_t sceneWidth_ = 1280;
     uint32_t sceneHeight_ = 720;
     Microsoft::WRL::ComPtr<ID3D12Resource> particleDepth_;

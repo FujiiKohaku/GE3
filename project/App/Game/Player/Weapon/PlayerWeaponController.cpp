@@ -16,6 +16,7 @@
 
 void PlayerWeaponController::Initialize()
 {
+    shotsFired_ = 0;
     ModelManager::GetInstance()->Load("Debug/block/block.obj");
     bulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
 }
@@ -30,10 +31,13 @@ void PlayerWeaponController::SetCamera(Camera* camera)
 
 void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
 {
+    if (input->IsPrimaryFireBlocked()) {
+        homingLock_.Reset();
+    }
     if (!isDebugMode) {
         UpdateWeaponSwitch(input);
     }
-    const bool isFireHeld = input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0);
+    const bool isFireHeld = input->IsPrimaryFirePressed();
     if (missileFireCooldownSeconds_ + 0.000001f < kMissileFireIntervalSeconds) {
         missileFireCooldownSeconds_ = (std::min)(kMissileFireIntervalSeconds,
             missileFireCooldownSeconds_ + TimeManager::GetInstance()->GetDeltaTime());
@@ -89,8 +93,18 @@ void PlayerWeaponController::UpdateWeaponHeat(bool isHomingFireHeld, bool isDebu
 
 void PlayerWeaponController::UpdateFireInput(Input* input, bool isDebugMode)
 {
+    // 初弾も連射もここだけで処理し、入力機器による二重発射を防ぐ。
+    if (!isDebugMode && camera_ != nullptr && input->IsPrimaryFireTrigger()) {
+        if (currentWeapon_ == kWeaponNormalBullet) {
+            normalFireCooldownSeconds_ = 0.0f;
+            FireBullet(*camera_);
+        } else if (currentWeapon_ == kWeaponMinigun) {
+            minigunFireCooldownSeconds_ = 0.0f;
+            FireBullet(*camera_);
+        }
+    }
     // 長押し連射。熱量は実際の発射時に加算する。
-    if (!isDebugMode && (input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0))) {
+    if (!isDebugMode && input->IsPrimaryFirePressed()) {
         // ミニガンは高速連射、通常弾はそれより遅い連射にする
         if (currentWeapon_ == kWeaponMinigun) {
             minigunFireCooldownSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
@@ -112,7 +126,7 @@ void PlayerWeaponController::UpdateFireInput(Input* input, bool isDebugMode)
     }
 
     if (!isDebugMode && currentWeapon_ == kWeaponMissileBullet &&
-        (input->IsKeyTrigger(DIK_SPACE) || input->IsMouseTrigger(0)) &&
+        input->IsPrimaryFireTrigger() &&
         camera_ != nullptr) {
         FireBullet(*camera_);
     }
@@ -174,9 +188,9 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     bullet->Initialize(bulletModel_);
     bullet->SetCamera(camera_);
     if (currentWeapon_ == kWeaponMinigun) {
-        bullet->SetDamage(kMinigunDamage);
+        bullet->SetDamage(weaponHeat_.GetShotDamage(kMinigunDamage));
     } else if (currentWeapon_ == kWeaponNormalBullet) {
-        bullet->SetDamage(kNormalBulletDamage);
+        bullet->SetDamage(weaponHeat_.GetShotDamage(kNormalBulletDamage));
     }
 
     Vector3 muzzlePosition = CalculateMuzzlePosition();
@@ -220,6 +234,7 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     bullet->SetVelocity(bulletVelocity);
 
     bullets_.push_back(std::move(bullet));
+    ++shotsFired_;
 }
 
 Vector3 PlayerWeaponController::CalculateMuzzlePosition() const
@@ -260,11 +275,11 @@ std::unique_ptr<PlayerBullet> PlayerWeaponController::CreateBullet(float& shotSp
 
 void PlayerWeaponController::UpdateWeaponSwitch(Input* input)
 {
-    if (input->GetMouseWheel() > 0) {
+    if (input->GetMouseWheel() > 0 || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT)) {
         currentWeapon_ = (currentWeapon_ + 1) % kWeaponCount;
     }
 
-    if (input->GetMouseWheel() < 0) {
+    if (input->GetMouseWheel() < 0 || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT)) {
         currentWeapon_ = (currentWeapon_ + kWeaponCount - 1) % kWeaponCount;
     }
 

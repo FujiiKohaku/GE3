@@ -8,9 +8,19 @@
 
 class EnemyBulletManager {
 public:
+    void SetFogExclusionEnabled(bool enabled)
+    {
+        fogExclusionEnabled_ = enabled;
+    }
+
     void Add(std::unique_ptr<EnemyBullet> bullet)
     {
-        if (bullet) { bullets_.push_back(std::move(bullet)); }
+        if (bullet) {
+            if (fogExclusionEnabled_) {
+                bullet->SetFogEnabled(false);
+            }
+            bullets_.push_back(std::move(bullet));
+        }
     }
 
     void Update(
@@ -56,5 +66,6 @@ public:
     }
 
 private:
+    bool fogExclusionEnabled_ = false;
     std::vector<std::unique_ptr<EnemyBullet>> bullets_;
 };

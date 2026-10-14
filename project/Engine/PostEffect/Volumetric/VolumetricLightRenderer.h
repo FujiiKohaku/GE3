@@ -100,6 +100,11 @@ public:
     void Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
     void DrawImGui();
     bool IsReady() const { return ready_; }
+    void SetObjectFogMask(D3D12_GPU_DESCRIPTOR_HANDLE mask) { objectFogMaskSrv_ = mask; }
+    bool HasObjectFogData() const { return objectFogReady_; }
+    D3D12_GPU_VIRTUAL_ADDRESS GetObjectFogConstants() const { return constantsResource_->GetGPUVirtualAddress(); }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetObjectFogShadow() const { return shadowSrv_; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetObjectFogLocalShadow() const { return localShadowSrv_; }
     bool HasValidFrameInputs() const { return frameValid_; }
 private:
     struct FogVolumeConstants {
@@ -187,4 +192,6 @@ private:
     bool ready_ = false;
     bool frameValid_ = false;
     bool generated_ = false;
+    bool objectFogReady_ = false;
+    D3D12_GPU_DESCRIPTOR_HANDLE objectFogMaskSrv_ {};
 };

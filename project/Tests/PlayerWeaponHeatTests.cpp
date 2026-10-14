@@ -56,7 +56,7 @@ void TestPausedTimeAndShotHeat()
 {
     PlayerWeaponHeat heat;
     heat.AddShotHeat(true);
-    assert(std::abs(heat.GetHeatRatio() - 0.01f) < 0.0001f);
+    assert(std::abs(heat.GetHeatRatio() - 0.025f) < 0.0001f);
     heat.Update(1.0f, false);
     assert(heat.GetHeatRatio() == 0.0f);
     FillHeat(heat);
@@ -68,6 +68,40 @@ void TestPausedTimeAndShotHeat()
     heat.Update(0.02f, true);
     assert(heat.IsOverheated());
 }
+
+void TestHeatDamageAndCooling()
+{
+    PlayerWeaponHeat heat;
+    assert(heat.GetShotDamage(3) == 3);
+    assert(heat.GetShotDamage(1) == 1);
+    int previousDamage = 3;
+    for (int shot = 0; shot < 13; ++shot) {
+        heat.AddShotHeat(false);
+        const int damage = heat.GetShotDamage(3);
+        assert(damage >= previousDamage && damage <= 6);
+        previousDamage = damage;
+    }
+    assert(heat.GetShotDamage(3) == 6);
+    assert(heat.GetShotDamage(1) == 2);
+    heat.Update(2.5f, false);
+    assert(std::abs(heat.GetHeatRatio() - 0.5f) < 0.0001f);
+    assert(heat.GetShotDamage(3) == 5);
+    assert(heat.GetShotDamage(1) == 2);
+    heat.Update(2.5f, false);
+    assert(heat.GetShotDamage(3) == 3);
+    assert(heat.GetShotDamage(1) == 1);
+}
+
+void TestMinigunSustainedFireCanOverheat()
+{
+    PlayerWeaponHeat heat;
+    for (int shot = 0; shot < 100; ++shot) {
+        heat.Update(0.05f, true);
+        if (!heat.IsOverheated()) heat.AddShotHeat(true);
+        else break;
+    }
+    assert(heat.IsOverheated());
+}
 }
 
 int main()
@@ -75,4 +109,6 @@ int main()
     TestGraceAndCompleteRecovery();
     TestReleaseCancelsGrace();
     TestPausedTimeAndShotHeat();
+    TestHeatDamageAndCooling();
+    TestMinigunSustainedFireCanOverheat();
 }

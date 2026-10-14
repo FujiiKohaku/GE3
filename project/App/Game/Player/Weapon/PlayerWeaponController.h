@@ -4,6 +4,7 @@
 #include "App/Game/Player/Weapon/PlayerHomingLock.h"
 #include "Engine/math/MathStruct.h"
 #include <memory>
+#include <cstdint>
 #include <vector>
 
 class Model;
@@ -28,6 +29,7 @@ public:
     void DrawBullets();
     void SubmitRaytracing(DxrRenderer& renderer);
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const { return bullets_; }
+    uint64_t GetShotsFired() const { return shotsFired_; }
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { homingLock_.SetTargets(targets); }
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;
     void ResetHomingLock() { homingLock_.Reset(); }
@@ -62,6 +64,7 @@ private:
     Model* bulletModel_ = nullptr;
     Camera* camera_ = nullptr;
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
+    uint64_t shotsFired_ = 0;
     PlayerHomingLock homingLock_;
     PlayerWeaponHeat weaponHeat_;
     float bulletSpawnOffsetY_ = 0.3f;

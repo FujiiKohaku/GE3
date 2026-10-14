@@ -1,8 +1,11 @@
 #include "Common.hlsli"
 Texture2D<float4> gVolume : register(t2);
 Texture2D<float> gTransmittance : register(t3);
+Texture2D<float> gObjectFogMask : register(t7);
+cbuffer ObjectFogMaskOptions : register(b1) { uint gHasObjectFogMask; };
 float4 main(VertexShaderOutput input) : SV_Target0 {
     float4 scene = gColor.SampleLevel(gPoint, input.texcoord, 0);
+    if (gHasObjectFogMask != 0 && gObjectFogMask.SampleLevel(gPoint, input.texcoord, 0) < 0.5f) return scene;
     float depth = gDepth.SampleLevel(gPoint, input.texcoord, 0);
     float surfaceDistance = min(length(ReconstructRelative(input.texcoord, depth)), 60000.0f);
     uint width, height; gVolume.GetDimensions(width, height);

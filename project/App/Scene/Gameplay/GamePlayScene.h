@@ -35,6 +35,8 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Tutorial/TutorialCommPanel.h"
+#include "App/Game/Tutorial/TutorialController.h"
 #include "App/Game/Hazard/WaterPillarHazard.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -163,7 +165,6 @@ private:
     void ApplyDevelopmentLighting();
     void ResetGameplayPostEffects();
     void StopPlayerEngineEffects();
-    void ProcessPlayerShooting(Input* input);
     void UpdateBossHpHud();
     void UpdateSwarmWaveSpawning();
     void SpawnSwarmWave(
@@ -408,6 +409,23 @@ private:
 
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
+    int pauseSelection_ = 0;
+    bool pauseSettingsOpen_ = false;
+    void ActivatePauseSelection();
+    void AdjustPauseSensitivity(float amount);
+    void InitializeTutorialPresentation();
+    bool UpdateTutorialPresentation();
+    std::unique_ptr<Text> tutorialTitleText_;
+    std::unique_ptr<TutorialCommPanel> tutorialCommPanel_;
+    TutorialController tutorialController_;
+    std::shared_ptr<int> tutorialDefeatedTargets_;
+    int tutorialTargetStep_ = -1;
+    float tutorialGateDistance_ = -1.0f;
+    std::unique_ptr<Text> tutorialSkipText_;
+    std::unique_ptr<Sprite> tutorialExitOverlay_;
+    float tutorialExitTime_ = -1.0f;
+    float tutorialIntroTime_ = 0.0f;
+    bool tutorialExitQueued_ = false;
     std::unique_ptr<Sprite> pauseMenuPanelSprite_;
     std::unique_ptr<Sprite> pauseResumeBtnSprite_;
     std::unique_ptr<Sprite> pauseRetryBtnSprite_;

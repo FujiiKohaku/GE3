@@ -31,11 +31,40 @@
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
 #include "Engine/Time/TimeManager.h"
+#include "App/Scene/Loading/LoadingScene.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include <algorithm>
 #include <cmath>
 
 namespace {
+// 訓練用の敵。機体の前方に留まり、反撃せず、撃破だけを記録する。
+class TutorialTarget final : public BaseEnemy {
+public:
+    TutorialTarget(Player* player, std::shared_ptr<int> defeated, int slot, int count, bool moving)
+        : player_(player), defeated_(std::move(defeated)), slot_(slot), count_(count), moving_(moving) {}
+    void Initialize(Model* model) override {
+        BaseEnemy::Initialize(model);
+        InitializeHealth(1.0f);
+        Move();
+        BaseEnemy::Update();
+    }
+    void Move() override {
+        elapsed_ += TimeManager::GetInstance()->GetDeltaTime();
+        Vector3 position { 0.0f, 0.0f, player_->GetTranslate().z + 85.0f };
+        position.x += (slot_ - (count_ - 1) * 0.5f) * 10.0f;
+        if (moving_) position.x += std::sin(elapsed_ * 0.65f + slot_) * 4.0f;
+        SetPosition(position);
+    }
+    void Attack() override {}
+protected:
+    void OnDeath() override { ++*defeated_; BaseEnemy::OnDeath(); }
+private:
+    Player* player_;
+    std::shared_ptr<int> defeated_;
+    int slot_, count_;
+    bool moving_;
+    float elapsed_ = 0.0f;
+};
 Player::ControlMode gControlMode = Player::ControlMode::StarFox;
 float gMouseSensitivity = 1.0f;
 
@@ -120,6 +149,7 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 
 void GamePlayScene::Initialize()
 {
+    Input::GetInstance()->BlockPrimaryFireUntilRelease();
     SoundManager::GetInstance()->RegisterSounds({
         { "NormalShot", "resources/Audio/GameSfx/player_normal_shot.wav", 0.20f, 0.04f },
         { "MissileShot", "resources/Audio/GameSfx/player_missile_shot.wav", 0.30f, 0.12f },
@@ -135,6 +165,7 @@ void GamePlayScene::Initialize()
         { "EnemyShot", "resources/Audio/GameSfx/enemy_shot.wav", 0.10f, 0.12f },
         { "HomingLock", "resources/Audio/GameSfx/homing_lock.wav", 0.20f, 0.12f },
         { "PauseToggle", "resources/Audio/GameSfx/pause_toggle.wav", 0.18f, 0.15f },
+        { "TutorialConfirm", "resources/Audio/GameSfx/ui_confirm.wav", 0.20f, 0.15f },
         { "EnvironmentCollision", "resources/Audio/GameSfx/environment_collision.wav", 0.20f, 0.20f },
         { "LowHpWarning", "resources/Audio/GameSfx/low_hp_warning.wav", 0.28f, 0.80f },
     });
@@ -258,10 +289,15 @@ void GamePlayScene::Initialize()
 
     ApplyStageVisualPreset();
 
+    // フローズンステージの敵弾は、ボス・通常敵ともに霧から除外する。
+    enemyBulletManager_.SetFogExclusionEnabled(stageId_ == "stage03");
     SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere(stageId_));
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
         FogPreset fogPreset;
         volume->SetFogDensity(0.003f);
+        if (stageId_ == "tutorial") {
+            volume->SetFogDensity(0.0002f);
+        }
         if (stageId_ == "stage01") {
             fogPreset.parameters.isEnabled = true;
             fogPreset.parameters.color = { 0.68f, 0.65f, 0.58f };
@@ -793,6 +829,7 @@ void GamePlayScene::Initialize()
         }
     }
 
+    InitializeTutorialPresentation();
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     RegisterDevelopmentPanel();
@@ -871,6 +908,7 @@ void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, V
 
 void GamePlayScene::Update()
 {
+    if (UpdateTutorialPresentation()) return;
     // TABキーによるポーズメニュー（Pause Menu）切り替え
     Input* input = Input::GetInstance();
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -888,73 +926,109 @@ void GamePlayScene::Update()
     }
     stepDevelopmentFrame_ = false;
 #endif
-    if (input != nullptr && input->IsKeyTrigger(DIK_TAB)) {
+    const bool disconnected = input != nullptr && input->WasActiveGamepadDisconnected();
+    bool pauseChanged = false;
+    if (disconnected) {
+        isPaused_ = true;
+        pauseChanged = true;
+    } else if (input != nullptr && (input->IsKeyTrigger(DIK_TAB) ||
+        input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_START))) {
         isPaused_ = !isPaused_;
+        pauseChanged = true;
         SoundManager::GetInstance()->Play("PauseToggle");
+    }
+    if (pauseChanged) {
+        if (stageId_ == "tutorial" && isPaused_ && !disconnected) {
+            tutorialController_.NotifyManualPauseOpened();
+        }
+        pauseSelection_ = 0;
+        pauseSettingsOpen_ = false;
+        input->BlockPrimaryFireUntilRelease();
+        if (player_) player_->ResetHomingLock();
     }
 
     if (isPaused_) {
-        SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
-        SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
-
-        // ポーズ中は読みやすさに必要なぼかしと彩度低下だけを適用する。
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter,PostEffectStage::BeforeParticle);
-        SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale,PostEffectStage::BeforeParticle);
-
-        // ポーズテキストオブジェクトの更新
+        if (!pauseChanged && input != nullptr) {
+            if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_UP) || input->IsKeyTrigger(DIK_UP)) {
+                pauseSelection_ = (pauseSelection_ + 3) % 4;
+            }
+            if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_DOWN) || input->IsKeyTrigger(DIK_DOWN)) {
+                pauseSelection_ = (pauseSelection_ + 1) % 4;
+            }
+            if (pauseSettingsOpen_) {
+                if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
+                    input->IsKeyTrigger(DIK_LEFT) || input->IsKeyTrigger(DIK_LBRACKET)) {
+                    AdjustPauseSensitivity(-0.1f);
+                }
+                if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT) ||
+                    input->IsKeyTrigger(DIK_RIGHT) || input->IsKeyTrigger(DIK_RBRACKET)) {
+                    AdjustPauseSensitivity(0.1f);
+                }
+            }
+            if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B) ||
+                input->IsKeyTrigger(DIK_ESCAPE) || input->IsKeyTrigger(DIK_BACK)) {
+                if (pauseSettingsOpen_) {
+                    pauseSettingsOpen_ = false;
+                    pauseSelection_ = 2;
+                } else {
+                    pauseSelection_ = 0;
+                    ActivatePauseSelection();
+                }
+            } else if (input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) || input->IsKeyTrigger(DIK_RETURN)) {
+                ActivatePauseSelection();
+            } else if (!pauseSettingsOpen_ && input->IsKeyTrigger(DIK_S)) {
+                pauseSelection_ = 2;
+                ActivatePauseSelection();
+            } else if (!pauseSettingsOpen_ && input->IsKeyTrigger(DIK_R)) {
+                pauseSelection_ = 1;
+                ActivatePauseSelection();
+            } else if (!pauseSettingsOpen_ && input->IsKeyTrigger(DIK_T)) {
+                pauseSelection_ = 3;
+                ActivatePauseSelection();
+            }
+            if (pauseSettingsOpen_ && input->IsKeyTrigger(DIK_C)) {
+                gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse
+                    ? Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
+                if (player_) player_->SetControlMode(gControlMode);
+            }
+        }
+        const bool pad = input != nullptr && input->IsUsingGamepad();
+        const auto marker = [this](int selection) { return pauseSelection_ == selection ? "> " : ""; };
+        if (pauseTitleText_) pauseTitleText_->SetText(pauseSettingsOpen_ ? "設定" : "PAUSE MENU");
+        if (pauseSettingsOpen_) {
+            const int padPercent = static_cast<int>(input->GetGamepadAimSensitivity() * 100.0f + 0.5f);
+            const int mousePercent = static_cast<int>(gMouseSensitivity * 100.0f + 0.5f);
+            if (pauseResumeText_) pauseResumeText_->SetText(std::string(marker(0)) + "PAD AIM: " + std::to_string(padPercent) + "%");
+            if (pauseRetryText_) pauseRetryText_->SetText(std::string(marker(1)) + "PAD PITCH: " +
+                (input->IsGamepadPitchInverted() ? "INVERTED" : "NORMAL"));
+            if (pauseControlText_) pauseControlText_->SetText(std::string(marker(2)) + "MOUSE: " + std::to_string(mousePercent) + "%");
+            if (pauseTitleBtnText_) pauseTitleBtnText_->SetText(std::string(marker(3)) + (pad ? "戻る [A / B]" : "戻る [ENTER / ESC]"));
+            if (pauseSensitivityText_) pauseSensitivityText_->SetText(pad
+                ? "十字キー上下: 選択 / 左右: 感度\nA: 上下反転 / B: 戻る"
+                : "↑↓: 選択 / ←→: 感度 / ENTER: 決定\nC: マウス操作切替 / ESC: 戻る");
+        } else {
+            if (pauseResumeText_) pauseResumeText_->SetText(std::string(marker(0)) + (pad ? "ゲーム再開 [A / B / START]" : "ゲーム再開 [TAB]"));
+            if (pauseRetryText_) pauseRetryText_->SetText(std::string(marker(1)) + (pad ? "リトライ [A]" : "リトライ [R]"));
+            if (pauseControlText_) pauseControlText_->SetText(std::string(marker(2)) + (pad ? "設定 [A]" : "設定 [S / ENTER]"));
+            if (pauseTitleBtnText_) pauseTitleBtnText_->SetText(std::string(marker(3)) + (pad ? "タイトルに戻る [A]" : "タイトルに戻る [T]"));
+            if (pauseSensitivityText_) pauseSensitivityText_->SetText(pad
+                ? "十字キー上下: 選択 / A: 決定"
+                : "↑↓: 選択 / ENTER: 決定");
+        }
         if (pauseTitleText_) pauseTitleText_->Update();
         if (pauseResumeText_) pauseResumeText_->Update();
         if (pauseRetryText_) pauseRetryText_->Update();
+        if (pauseControlText_) pauseControlText_->Update();
         if (pauseTitleBtnText_) pauseTitleBtnText_->Update();
-        if (input != nullptr && input->IsKeyTrigger(DIK_C)) {
-            if (gControlMode == Player::ControlMode::KeyboardAndMouse) {
-                gControlMode = Player::ControlMode::StarFox;
-            } else {
-                gControlMode = Player::ControlMode::KeyboardAndMouse;
-            }
-            if (player_) {
-                player_->SetControlMode(gControlMode);
-            }
-        }
-        if (pauseControlText_) {
-            if (gControlMode == Player::ControlMode::StarFox) {
-                pauseControlText_->SetText("CONTROL: MOUSE (MAIN) [C]");
-            } else {
-                pauseControlText_->SetText("CONTROL: WASD + MOUSE (SUB) [C]");
-            }
-            pauseControlText_->Update();
-        }
-        if (input != nullptr && input->IsKeyTrigger(DIK_LBRACKET)) {
-            gMouseSensitivity = std::clamp(
-                gMouseSensitivity - 0.1f, 0.5f, 2.0f);
-            if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
-        }
-        if (input != nullptr && input->IsKeyTrigger(DIK_RBRACKET)) {
-            gMouseSensitivity = std::clamp(
-                gMouseSensitivity + 0.1f, 0.5f, 2.0f);
-            if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
-        }
-        if (pauseSensitivityText_) {
-            int sensitivityPercent = static_cast<int>(gMouseSensitivity * 100.0f + 0.5f);pauseSensitivityText_->SetText("MOUSE SENSITIVITY: " +std::to_string(sensitivityPercent) +"%  [[ / ]] ");
-            pauseSensitivityText_->Update();
-        }
+        if (pauseSensitivityText_) pauseSensitivityText_->Update();
 
-        // Tキーでタイトル画面へ戻る
-        if (input != nullptr && input->IsKeyTrigger(DIK_T)) {
-            ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
-            return;
+        if (isPaused_) {
+            SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
+            SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter, PostEffectStage::BeforeParticle);
+            SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale, PostEffectStage::BeforeParticle);
         }
-
-        // Rキーでステージリトライ
-        if (input != nullptr && input->IsKeyTrigger(DIK_R)) {
-            ResetGameplayPostEffects();
-            SceneManager::GetInstance()->SetNextScene(
-                std::make_unique<GamePlayScene>(stageId_));
-            return;
-        }
-
-        // ポーズ中はゲームオブジェクトの更新を停止
+        // ポーズ中はゲームオブジェクトの更新を停止する。
         debugCameraController_->Update();
         camera_->Update();
         return;
@@ -1218,9 +1292,37 @@ void GamePlayScene::Update()
 
     // 3. 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
+    // カメラの追従・FOV変更後も、表示される機体と照準の距離を制限する。
+    player_->ConstrainGamepadAimToPlayer();
+    if (stageId_ == "tutorial" && !debugCameraController_->GetDebugMode()) {
+        tutorialController_.SetDefeatedTargets(tutorialDefeatedTargets_ &&
+            tutorialTargetStep_ == tutorialController_.GetCompletedCount() ? *tutorialDefeatedTargets_ : 0);
+        tutorialController_.Update(*input, *player_, TimeManager::GetInstance()->GetDeltaTime());
+        const int targetCount = tutorialController_.GetTargetCount();
+        const int step = tutorialController_.GetCompletedCount();
+        if (targetCount > 0 && tutorialTargetStep_ != step) {
+            tutorialTargetStep_ = step;
+            tutorialDefeatedTargets_ = std::make_shared<int>(0);
+            for (int slot = 0; slot < targetCount; ++slot) {
+                auto target = std::make_unique<TutorialTarget>(player_.get(), tutorialDefeatedTargets_,
+                    slot, targetCount, tutorialController_.HasMovingTargets());
+                target->Initialize(enemyModel_);
+                enemies_.push_back(std::move(target));
+            }
+        }
+        if (tutorialController_.IsComplete() && tutorialGateDistance_ < 0.0f) {
+            // 訓練完了後、機体の少し前へゲートを開き、長い空走を避ける。
+            tutorialGateDistance_ = railDistance_ + 150.0f;
+            for (auto& object : levelObjects_) {
+                if (object->GetModelFilePath() == "Environment/Tutorial/launch_gate.obj") {
+                    object->SetTranslate({ 0.0f, 0.0f, tutorialGateDistance_ - 3400.0f });
+                    object->SetColor({ 0.6f, 2.0f, 1.3f, 1.0f });
+                    object->Update();
+                }
+            }
+        }
+    }
     UpdateOceanLife(currentPosition, forward, railRight);
-    // 4. マウス左クリックによる弾の発射処理
-    ProcessPlayerShooting(input);
 
 #ifdef _DEBUG
     if (isFirstFrame) {
@@ -1655,6 +1757,9 @@ void GamePlayScene::UpdateRailMovement(
     const float frameScale = TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
     outNextDistance = railDistance_ +
         railSpeed_ * player_->GetForwardSpeedMultiplier() * frameScale;
+    if (stageId_ == "tutorial") {
+        outNextDistance = (std::max)(railDistance_, tutorialController_.LimitRailDistance(outNextDistance));
+    }
     if (outNextDistance > rail_->GetTotalLength()) {
         outNextDistance = rail_->GetTotalLength();
     }
@@ -1709,7 +1814,7 @@ void GamePlayScene::UpdatePlayerTransform(
         playerRotate.y = -std::atan2(forward.x, forward.z);
         playerRotate.z = 0.0f;
 
-        if (player_->GetControlMode() == Player::ControlMode::StarFox) {
+        if (player_->GetControlMode() == Player::ControlMode::StarFox || Input::GetInstance()->IsUsingGamepad()) {
             const float screenWidth = static_cast<float>(
                 WinApp::GetInstance()->GetClientWidth());
             const float screenHeight = static_cast<float>(
@@ -1729,6 +1834,10 @@ void GamePlayScene::UpdatePlayerTransform(
                 playerRotate.x += aimY * kMaxAimPitch;
                 playerRotate.z = -aimX * kMaxAimBank;
             }
+        }
+        playerRotate.z += player_->GetManualBank();
+        if (player_->IsRolling()) {
+            playerRotate.z = player_->GetRotate().z;
         }
         player_->SetRotate(playerRotate);
     }
@@ -2026,21 +2135,13 @@ void GamePlayScene::UpdateOceanLife(
 
 }
 
-void GamePlayScene::ProcessPlayerShooting(Input* input)
-{
-    if (input != nullptr && !debugCameraController_->GetDebugMode()) {
-        if (input->IsMouseTrigger(0) && !player_->IsHomingMissileSelected()) {
-            // 最新の描画用カメラを渡して、高精度な射撃用Rayから弾を発射する
-            player_->FireBullet(*camera_);
-        }
-    }
-}
-
 void GamePlayScene::Draw3D()
 {
     // skyBOx
     SkyBoxManager::GetInstance()->PreDraw();
-    skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    if (stageId_ != "tutorial") {
+        skyBox_->Draw(DirectXCommon::GetInstance()->GetCommandList());
+    }
 
     // OceanSurface owns a dedicated root signature and PSO, so draw it
     // before restoring the regular Object3d pipeline for gameplay objects.
@@ -2279,6 +2380,133 @@ void GamePlayScene::Draw2D()
             if (bossBodyHpText_) bossBodyHpText_->Draw();
         }
     }
+    if (stageId_ == "tutorial" && !isPaused_) {
+        TextRenderer::GetInstance()->PreDraw();
+        if (tutorialTitleText_) tutorialTitleText_->Draw();
+        if (tutorialExitTime_ < 0.0f) {
+            if (tutorialCommPanel_) tutorialCommPanel_->Draw();
+            TextRenderer::GetInstance()->PreDraw();
+            if (tutorialSkipText_) tutorialSkipText_->Draw();
+        }
+        if (tutorialExitTime_ >= 0.0f && tutorialExitOverlay_) {
+            SpriteManager::GetInstance()->PreDraw();
+            tutorialExitOverlay_->Draw();
+        }
+    }
+}
+
+void GamePlayScene::InitializeTutorialPresentation()
+{
+    if (stageId_ != "tutorial") return;
+    SceneManager::GetInstance()->SetSceneClearColor({ 0.005f, 0.012f, 0.035f, 1.0f });
+    const auto createText = [](const Vector2& position, float size) {
+        auto text = std::make_unique<Text>();
+        text->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        text->SetPosition(position);
+        text->SetAnchorPoint({ 0.5f, 0.5f });
+        text->SetFontSize(size);
+        text->SetColor({ 0.35f, 0.90f, 1.0f, 1.0f });
+        return text;
+    };
+    tutorialTitleText_ = createText({ 640.0f, 90.0f }, 24.0f);
+    tutorialCommPanel_ = std::make_unique<TutorialCommPanel>();
+    tutorialCommPanel_->Initialize();
+    tutorialController_.Initialize(*player_);
+    tutorialCommPanel_->SetProgress(0, TutorialController::kStepCount);
+    tutorialSkipText_ = createText({ 1240.0f, 700.0f }, 18.0f);
+    tutorialSkipText_->SetAnchorPoint({ 1.0f, 0.5f });
+    tutorialExitOverlay_ = std::make_unique<Sprite>();
+    tutorialExitOverlay_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    tutorialExitOverlay_->SetSize({ 1280.0f, 720.0f });
+    tutorialExitOverlay_->SetColor({ 0.015f, 0.02f, 0.04f, 0.0f });
+    tutorialExitOverlay_->Update();
+    // 最初の描画からデータ空間を構築中の状態にする。
+    for (auto& object : levelObjects_) {
+        if (object->GetModelFilePath().starts_with("Environment/Tutorial/")) {
+            object->SetVertexShaderPath("resources/Shaders/Object3D/TutorialBuild.VS.hlsl");
+            object->SetVertexShaderParameters({ -400.0f, 0.0f, 0.0f, 0.0f });
+        }
+    }
+    UpdateTutorialPresentation();
+}
+
+bool GamePlayScene::UpdateTutorialPresentation()
+{
+    if (stageId_ != "tutorial" || !tutorialTitleText_) return false;
+    auto* input = Input::GetInstance();
+    const bool pad = input->IsUsingGamepad();
+    tutorialTitleText_->SetText(tutorialExitTime_ >= 0.0f
+        ? "SIMULATION COMPLETE // LAUNCH STAGE 1"
+        : (tutorialIntroTime_ < 1.5f ? "SIMULATION INITIALIZING"
+            : (tutorialIntroTime_ < 2.3f ? "TRAINING START" : tutorialController_.GetTitle())));
+    if (tutorialIntroTime_ >= 1.5f && tutorialExitTime_ < 0.0f && !isPaused_) {
+        tutorialCommPanel_->ShowMessage(tutorialController_.GetInstructionText(*input),
+            tutorialController_.GetOperation(*input, *player_), tutorialController_.GetButtonHints(*input));
+        tutorialCommPanel_->SetCompact(tutorialController_.IsCompact());
+        tutorialCommPanel_->SetProgress(tutorialController_.GetCompletedCount(), TutorialController::kStepCount);
+    } else {
+        tutorialCommPanel_->Hide();
+    }
+    tutorialCommPanel_->Update(isPaused_ ? 0.0f : TimeManager::GetInstance()->GetUnscaledDeltaTime());
+    tutorialSkipText_->SetText(pad ? "SKIP → STAGE 1 [BACK / VIEW]" : "SKIP → STAGE 1 [ENTER]");
+    tutorialTitleText_->Update();
+    tutorialSkipText_->Update();
+    // ポーズのEnter決定をSKIPとして扱わない。終点・SKIPの両方から同じ出撃処理へ進む。
+    const bool skip = !isPaused_ && (input->IsKeyTrigger(DIK_RETURN) ||
+        input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_BACK));
+    const bool reachedGate = tutorialController_.IsComplete() && tutorialGateDistance_ >= 0.0f &&
+        railDistance_ >= tutorialGateDistance_;
+    if (tutorialExitTime_ < 0.0f && (skip || (!isPaused_ && reachedGate))) {
+        tutorialExitTime_ = 0.0f;
+        input->BlockPrimaryFireUntilRelease();
+        if (player_) player_->ResetHomingLock();
+    }
+    if (tutorialExitTime_ < 0.0f) {
+        if (isPaused_) return false;
+        constexpr float kIntroDuration = 1.5f;
+        const float previousTime = tutorialIntroTime_;
+        tutorialIntroTime_ += TimeManager::GetInstance()->GetUnscaledDeltaTime();
+        if (previousTime < kIntroDuration) {
+            const float progress = std::clamp(tutorialIntroTime_ / kIntroDuration, 0.0f, 1.0f);
+            const float eased = progress * progress * (3.0f - 2.0f * progress);
+            const float buildZ = -400.0f + 4500.0f * eased;
+            for (auto& object : levelObjects_) {
+                if (object->GetModelFilePath().starts_with("Environment/Tutorial/")) {
+                    object->SetVertexShaderParameters({ buildZ, 0.0f, 0.0f, 0.0f });
+                    if (progress >= 1.0f) {
+                        object->SetVertexShaderPath("resources/Shaders/Object3D/Object3d.VS.hlsl");
+                        object->ResetMotionHistory();
+                    }
+                }
+            }
+            camera_->LookAt(Lerp(Vector3 { 0.0f, 10.0f, -55.0f },
+                Vector3 { 0.0f, kCameraUpwardOffset, -kCameraBackwardOffset }, eased),
+                { 0.0f, 0.0f, cameraLookAheadDistance_ });
+            camera_->Update();
+            aimCamera_->LookAt(camera_->GetTranslate(), { 0.0f, 0.0f, cameraLookAheadDistance_ });
+            aimCamera_->Update();
+            smoothedCameraPosition_ = camera_->GetTranslate();
+            smoothedLookAheadPosition_ = { 0.0f, 0.0f, cameraLookAheadDistance_ };
+            hasCameraFollowState_ = true;
+            for (auto& object : levelObjects_) object->Update();
+            if (player_) player_->SetTranslate(player_->GetTranslate());
+            Input::GetInstance()->BlockPrimaryFireUntilRelease();
+            if (player_) player_->ConstrainGamepadAimToPlayer();
+            return true;
+        }
+        return false;
+    }
+    tutorialExitTime_ += TimeManager::GetInstance()->GetUnscaledDeltaTime();
+    const float progress = std::clamp(tutorialExitTime_ / 0.45f, 0.0f, 1.0f);
+    const float alpha = progress * progress * (3.0f - 2.0f * progress);
+    tutorialExitOverlay_->SetColor({ 0.015f, 0.02f, 0.04f, alpha });
+    tutorialExitOverlay_->Update();
+    if (progress >= 1.0f && !tutorialExitQueued_) {
+        tutorialExitQueued_ = true;
+        ResetGameplayPostEffects();
+        SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>("stage01");
+    }
+    return true;
 }
 
 void GamePlayScene::UpdateBossHpHud()
@@ -2349,91 +2577,94 @@ void GamePlayScene::UpdateBossHpHud()
     }
 }
 
+void GamePlayScene::AdjustPauseSensitivity(float amount)
+{
+    if (!pauseSettingsOpen_) return;
+    if (pauseSelection_ == 0) {
+        auto* input = Input::GetInstance();
+        input->SetGamepadAimSensitivity(input->GetGamepadAimSensitivity() + amount);
+    } else if (pauseSelection_ == 2) {
+        gMouseSensitivity = std::clamp(gMouseSensitivity + amount, 0.5f, 2.0f);
+        if (player_) player_->SetMouseSensitivity(gMouseSensitivity);
+    }
+}
+
+void GamePlayScene::ActivatePauseSelection()
+{
+    auto* input = Input::GetInstance();
+    if (pauseSettingsOpen_) {
+        if (pauseSelection_ == 1) input->ToggleGamepadPitchInverted();
+        if (pauseSelection_ == 3) {
+            pauseSettingsOpen_ = false;
+            pauseSelection_ = 2;
+        }
+        return;
+    }
+    switch (pauseSelection_) {
+    case 0:
+        isPaused_ = false;
+        input->BlockPrimaryFireUntilRelease();
+        if (player_) player_->ResetHomingLock();
+        SoundManager::GetInstance()->Play("PauseToggle");
+        break;
+    case 1:
+        isPaused_ = false;
+        ResetGameplayPostEffects();
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>(stageId_));
+        break;
+    case 2:
+        pauseSettingsOpen_ = true;
+        pauseSelection_ = 0;
+        break;
+    case 3:
+        isPaused_ = false;
+        ResetGameplayPostEffects();
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        break;
+    }
+}
+
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
     if (isPaused_) {
-        ImGui::SetNextWindowPos(ImVec2(WinApp::kClientWidth * 0.5f, WinApp::kClientHeight * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        if (Input::GetInstance()->IsUsingGamepad()) return;
+        ImGui::SetNextWindowPos(ImVec2(WinApp::kClientWidth * 0.5f, WinApp::kClientHeight * 0.5f),
+            ImGuiCond_Always, ImVec2(0.5f, 0.5f));
         ImGui::SetNextWindowSize(ImVec2(400.0f, 520.0f));
-
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
-                                 ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
-                                 ImGuiWindowFlags_NoBackground;
-
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.25f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 1.0f, 1.0f, 0.40f));
-
+        const ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings;
         if (ImGui::Begin("VerticalPauseWindow", nullptr, flags)) {
-            ImGui::SetWindowFontScale(1.4f);
-            ImGui::Spacing();
-            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("PAUSE MENU").x * 1.4f) * 0.5f);
-            ImGui::TextColored(ImVec4(0.35f, 0.85f, 1.0f, 1.0f), "PAUSE MENU");
-            ImGui::Separator();
-
-            ImGui::SetWindowFontScale(1.25f);
-
-            // 1. RESUME (TAB)
-            ImGui::SetCursorPosY(110.0f);
-            if (ImGui::Button("RESUME (TAB)", ImVec2(-1, 44.0f))) {
-                isPaused_ = false;
-            }
-
-            // 2. RETRY (R)
-            ImGui::SetCursorPosY(180.0f);
-            if (ImGui::Button("RETRY (R)", ImVec2(-1, 44.0f))) {
-                isPaused_ = false;
-                ResetGameplayPostEffects();
-                SceneManager::GetInstance()->SetNextScene(
-                    std::make_unique<GamePlayScene>(stageId_));
-            }
-
-            // 3. CONTROL MODE
-            ImGui::SetCursorPosY(250.0f);
-            const char* controlLabel = "CONTROL: MOUSE (MAIN) (C)";
-            if (gControlMode == Player::ControlMode::KeyboardAndMouse) {
-                controlLabel = "CONTROL: WASD + MOUSE (SUB) (C)";
-            }
-            if (ImGui::Button(controlLabel, ImVec2(-1, 44.0f))) {
-                if (gControlMode == Player::ControlMode::KeyboardAndMouse) {
-                    gControlMode = Player::ControlMode::StarFox;
+            // 表示はDraw2Dの日本語UIに統一し、ここではマウスの当たり判定を配置する。
+            const float rowPositions[] = { 168.0f, 238.0f, 308.0f, 428.0f };
+            for (int row = 0; row < 4; ++row) {
+                if (pauseSettingsOpen_ && (row == 0 || row == 2)) {
+                    ImGui::PushID(row);
+                    ImGui::SetCursorPos(ImVec2(18.0f, rowPositions[row]));
+                    if (ImGui::Button("-", ImVec2(32.0f, 44.0f))) {
+                        pauseSelection_ = row;
+                        AdjustPauseSensitivity(-0.1f);
+                    }
+                    ImGui::SetCursorPos(ImVec2(350.0f, rowPositions[row]));
+                    if (ImGui::Button("+", ImVec2(32.0f, 44.0f))) {
+                        pauseSelection_ = row;
+                        AdjustPauseSensitivity(0.1f);
+                    }
+                    ImGui::PopID();
                 } else {
-                    gControlMode = Player::ControlMode::KeyboardAndMouse;
-                }
-                if (player_) {
-                    player_->SetControlMode(gControlMode);
-                }
-            }
-
-            ImGui::SetCursorPosY(315.0f);
-            if (ImGui::SliderFloat(
-                    "MOUSE SENSITIVITY",
-                    &gMouseSensitivity,
-                    0.5f,
-                    2.0f,
-                    "%.1fx")) {
-                if (player_) {
-                    player_->SetMouseSensitivity(gMouseSensitivity);
+                    ImGui::SetCursorPos(ImVec2(50.0f, rowPositions[row]));
+                    const std::string id = "##pauseRow" + std::to_string(row);
+                    if (ImGui::InvisibleButton(id.c_str(), ImVec2(300.0f, 44.0f))) {
+                        pauseSelection_ = row;
+                        ActivatePauseSelection();
+                        // ページ変更後に同じクリックを別の項目へ渡さない。
+                        break;
+                    }
                 }
             }
-
-            // 5. TITLE (ESC)
-            ImGui::SetCursorPosY(390.0f);
-            if (ImGui::Button("TITLE (ESC)", ImVec2(-1, 44.0f))) {
-                isPaused_ = false;
-                ResetGameplayPostEffects();
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
-            }
-
-            ImGui::End();
         }
-
-        ImGui::PopStyleColor(6);
-        ImGui::PopStyleVar(1);
+        ImGui::End();
         return;
     }
 #endif
@@ -3299,6 +3530,9 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
         blur.impulseStrength = boostKickStrength_;
     }
     SceneManager* sceneManager = SceneManager::GetInstance();
+    if (stageId_ == "tutorial") {
+        presetId = isPlayerBoosting ? "tutorial_boost" : "tutorial";
+    }
     sceneManager->ApplyPostEffectChain(VisualPresetLibrary::GetInstance().GetPostEffects(presetId));
     sceneManager->SetRadialBlurSettings(blur);
     constexpr float kSparkFadeRate = 12.0f;
@@ -3740,6 +3974,19 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             levelObject->SetTranslate(objData.translation);
             levelObject->SetRotate(objData.rotation);
             levelObject->SetScale(objData.scale);
+            if (stageId_ == "tutorial" && objData.fileName.starts_with("Environment/Tutorial/")) {
+                levelObject->SetEnableLighting(false);
+                levelObject->SetEnableEnvironmentMap(false);
+                levelObject->SetCastShadow(false);
+                levelObject->SetReceiveShadow(false);
+                levelObject->SetRaytracingEnabled(false);
+                Vector4 color { 0.08f, 0.60f, 0.95f, 1.0f };
+                if (objData.name == "data_architecture") color = { 0.008f, 0.022f, 0.050f, 1.0f };
+                if (objData.name == "data_edges") color = { 0.10f, 1.2f, 1.6f, 1.0f };
+                if (objData.name == "training_rings") color = { 0.12f, 1.6f, 2.0f, 1.0f };
+                if (objData.name == "launch_gate") color = { 0.04f, 0.12f, 0.18f, 1.0f };
+                levelObject->SetColor(color);
+            }
 
             const bool isIceModel = objData.fileName.starts_with("Environment/Ice/") ||
                 objData.fileName == "IceSpike.obj";

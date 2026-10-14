@@ -39,6 +39,7 @@ private:
 
     enum class ViewState {
         Title,
+        StartingTutorial,
         EnteringStageSelect,
         StageSelect,
         LeavingStageSelect,
@@ -76,6 +77,8 @@ private:
     std::vector<StageRoomObject>* FindStageRoomObjects(const std::string& stageId);
     const std::vector<StageRoomObject>* FindStageRoomObjects(const std::string& stageId) const;
     void StartStageSelectTransition();
+    void StartTutorial();
+    void UpdateTutorialStart(float deltaTime);
     void StartTitleReturn();
     void ConfirmStage();
     void StartSettingsTransition(bool opening);
@@ -118,6 +121,10 @@ private:
     std::unique_ptr<Text> stageDescriptionText_;
     std::unique_ptr<Text> stagePageText_;
     std::unique_ptr<Text> stageControlsText_;
+    std::unique_ptr<Sprite> simulationTint_;
+    std::unique_ptr<Sprite> simulationScan_;
+    std::unique_ptr<Text> simulationText_;
+    Vector3 simulationStartEye_ {};
 
     struct StagePanelData {
         std::string id;

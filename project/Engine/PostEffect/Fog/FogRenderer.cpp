@@ -4,6 +4,7 @@
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Winapp/WinApp.h"
 #include <cassert>
+#include <cmath>
 
 void FogRenderer::Initialize(DirectXCommon* dxCommon)
 {
@@ -14,6 +15,7 @@ void FogRenderer::Initialize(DirectXCommon* dxCommon)
     CreateDepthResource();
     CreateDepthDSV();
     CreateDepthSRV();
+    CreateObjectFogMask();
 
     viewport_.Width = static_cast<float>(WinApp::kClientWidth);
     viewport_.Height = static_cast<float>(WinApp::kClientHeight);
@@ -31,6 +33,7 @@ void FogRenderer::Initialize(DirectXCommon* dxCommon)
 void FogRenderer::PreDrawDepth()
 {
     shouldUseParticleDepth_ = false;
+    useResolvedParticleDepth_ = false;
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
 
     TransitionDepthResource(D3D12_RESOURCE_STATE_DEPTH_WRITE);
@@ -85,6 +88,7 @@ void FogRenderer::Apply(
     if (shouldUseParticleDepth_) { depthSrv = GetParticleDepthSrv(); }
     commandList->SetGraphicsRootDescriptorTable(1, depthSrv);
     commandList->SetGraphicsRootConstantBufferView(2, fogConstantBufferView);
+    commandList->SetGraphicsRootDescriptorTable(3, GetObjectFogMaskSrv());
 
     commandList->DrawInstanced(3, 1, 0, 0);
 }
@@ -103,7 +107,7 @@ void FogRenderer::CreateRootSignature()
 {
     ID3D12Device* device = dxCommon_->GetDevice();
 
-    D3D12_DESCRIPTOR_RANGE descriptorRanges[2] = {};
+    D3D12_DESCRIPTOR_RANGE descriptorRanges[3] = {};
 
     descriptorRanges[0].BaseShaderRegister = 0;
     descriptorRanges[0].NumDescriptors = 1;
@@ -115,7 +119,12 @@ void FogRenderer::CreateRootSignature()
     descriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
     descriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[3] = {};
+    descriptorRanges[2] = descriptorRanges[1];
+    descriptorRanges[2].BaseShaderRegister = 2;
+    D3D12_ROOT_PARAMETER rootParameters[4] = {};
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    rootParameters[3].DescriptorTable = { 1, &descriptorRanges[2] };
 
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -298,6 +307,7 @@ void FogRenderer::TransitionDepthResource(D3D12_RESOURCE_STATES nextState)
 }
 
 FogRenderer::~FogRenderer() {
+    if (objectFogMaskSrvIndex_ != UINT_MAX) SrvManager::GetInstance()->Free(objectFogMaskSrvIndex_);
     if (depthSRVIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(depthSRVIndex_); }
     if (particleDepthSrvIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(particleDepthSrvIndex_); }
 }
@@ -305,26 +315,28 @@ void FogRenderer::ResizeSceneTargets() {
     if (sceneWidth_ == SceneRenderResolution::GetWidth() && sceneHeight_ == SceneRenderResolution::GetHeight()) { return; }
     sceneWidth_ = SceneRenderResolution::GetWidth(); sceneHeight_ = SceneRenderResolution::GetHeight();
     CreateDepthResource(); depthResourceState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-    CreateDepthDSV(); CreateDepthSRV();
+    CreateDepthDSV(); CreateDepthSRV(); CreateObjectFogMask();
     viewport_.Width = float(sceneWidth_); viewport_.Height = float(sceneHeight_);
     scissorRect_.right = sceneWidth_; scissorRect_.bottom = sceneHeight_;
 }
 D3D12_CPU_DESCRIPTOR_HANDLE FogRenderer::GetParticleDepthDsv() const {
-    if (sceneWidth_ == WinApp::kClientWidth) { return depthDSVHandle_; }
+    if (!useResolvedParticleDepth_) { return depthDSVHandle_; }
     return particleDepthHeap_->GetCPUDescriptorHandleForHeapStart();
 }
 D3D12_GPU_DESCRIPTOR_HANDLE FogRenderer::GetParticleDepthSrv() const {
-    if (sceneWidth_ == WinApp::kClientWidth) { return depthSRVHandleGPU_; }
+    if (!useResolvedParticleDepth_) { return depthSRVHandleGPU_; }
     if (particleDepthSrvIndex_ == UINT_MAX) { return {}; }
     return SrvManager::GetInstance()->GetGPUDescriptorHandle(particleDepthSrvIndex_);
 }
 ID3D12Resource* FogRenderer::GetParticleDepthTexture() const {
-    if (sceneWidth_ == WinApp::kClientWidth) { return depthResource_.Get(); }
+    if (!useResolvedParticleDepth_) { return depthResource_.Get(); }
     return particleDepth_.Get();
 }
 void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
     shouldUseParticleDepth_ = true;
-    if (sceneWidth_ == WinApp::kClientWidth) { PrepareDepthForParticleDraw(); return; }
+    useResolvedParticleDepth_ = sceneWidth_ != WinApp::kClientWidth || sceneHeight_ != WinApp::kClientHeight ||
+        std::abs(jitterUv.x) > 0.000001f || std::abs(jitterUv.y) > 0.000001f;
+    if (!useResolvedParticleDepth_) { PrepareDepthForParticleDraw(); return; }
     auto* device = dxCommon_->GetDevice(); auto* command = dxCommon_->GetCommandList();
     if (!particleDepth_) {
         auto description = depthResource_->GetDesc(); description.Width = WinApp::kClientWidth; description.Height = WinApp::kClientHeight;
@@ -365,7 +377,55 @@ void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
     command->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); command->DrawInstanced(3, 1, 0, 0);
 }
 void FogRenderer::FinishParticleDepth() {
-    if (sceneWidth_ == WinApp::kClientWidth) { PostDrawDepth(); return; }
+    if (!useResolvedParticleDepth_) { PostDrawDepth(); return; }
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(particleDepth_.Get(), particleDepthState_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
     dxCommon_->GetCommandList()->ResourceBarrier(1, &barrier); particleDepthState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+}
+
+void FogRenderer::CreateObjectFogMask()
+{
+    auto* device = dxCommon_->GetDevice();
+    D3D12_RESOURCE_DESC description = {};
+    description.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    description.Width = SceneRenderResolution::GetWidth();
+    description.Height = SceneRenderResolution::GetHeight();
+    description.DepthOrArraySize = 1; description.MipLevels = 1;
+    description.Format = DXGI_FORMAT_R8_UNORM; description.SampleDesc.Count = 1;
+    description.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    D3D12_HEAP_PROPERTIES heap = {}; heap.Type = D3D12_HEAP_TYPE_DEFAULT;
+    D3D12_CLEAR_VALUE clear = {}; clear.Format = description.Format;
+    clear.Color[0] = clear.Color[1] = clear.Color[2] = clear.Color[3] = 1;
+    objectFogMask_.Reset();
+    HRESULT result = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, &clear, IID_PPV_ARGS(&objectFogMask_));
+    assert(SUCCEEDED(result));
+    objectFogMaskState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    if (!objectFogMaskRtvHeap_) objectFogMaskRtvHeap_ = dxCommon_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
+    device->CreateRenderTargetView(objectFogMask_.Get(), nullptr, objectFogMaskRtvHeap_->GetCPUDescriptorHandleForHeapStart());
+    if (objectFogMaskSrvIndex_ == UINT_MAX) objectFogMaskSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    SrvManager::GetInstance()->CreateSRVforTexture2D(objectFogMaskSrvIndex_, objectFogMask_.Get(), description.Format, 1);
+}
+
+void FogRenderer::BeginObjectFogMask()
+{
+    auto* command = dxCommon_->GetCommandList();
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(objectFogMask_.Get(), objectFogMaskState_, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    command->ResourceBarrier(1, &barrier); objectFogMaskState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    const auto rtv = objectFogMaskRtvHeap_->GetCPUDescriptorHandleForHeapStart();
+    const float clear[] = { 1, 1, 1, 1 }; // Every surface receives fog unless explicitly excluded.
+    command->ClearRenderTargetView(rtv, clear, 0, nullptr);
+    command->RSSetViewports(1, &viewport_); command->RSSetScissorRects(1, &scissorRect_);
+    command->OMSetRenderTargets(1, &rtv, false, &depthDSVHandle_);
+}
+
+void FogRenderer::EndObjectFogMask()
+{
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(objectFogMask_.Get(), objectFogMaskState_, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    dxCommon_->GetCommandList()->ResourceBarrier(1, &barrier);
+    objectFogMaskState_ = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE FogRenderer::GetObjectFogMaskSrv() const
+{
+    return SrvManager::GetInstance()->GetGPUDescriptorHandle(objectFogMaskSrvIndex_);
 }

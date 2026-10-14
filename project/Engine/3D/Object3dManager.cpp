@@ -7,6 +7,11 @@
 #include "Engine/Shadow/LocalShadowRenderer.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Raytracing/DxrRenderer.h"
+#include "Object3d.h"
+#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 
 namespace {
 constexpr const char* kDefaultObject3dPixelShader =
@@ -39,6 +44,94 @@ Object3dManager* Object3dManager::GetInstance()
     }
     return instance_.get();
 }
+
+const std::string& Object3dManager::GetTransparentShader(const std::string& shader) const
+{
+    static const std::unordered_map<std::string, std::string> shaders {
+        { "resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Danmaku.PS.hlsl" },
+        { "resources/Shaders/Object3D/Unlit/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Unlit.PS.hlsl" }
+    };
+    auto found = shaders.find(shader);
+    return found == shaders.end() ? shader : found->second;
+}
+
+void Object3dManager::BeginTransparentCollection()
+{
+    transparentDraws_.Clear();
+    opaqueFogDraws_.clear();
+    hasOpaqueFogExclusion_ = false;
+    transparentCollectionActive_ = true;
+    transparentCompositionActive_ = false;
+}
+
+bool Object3dManager::QueueTransparent(Object3d& object)
+{
+    if (!transparentCollectionActive_ || !object.transparent_ || object.transparentDepthWrite_ ||
+        !object.camera_ || !object.model_ || GetTransparentShader(object.pixelShaderPath_) == object.pixelShaderPath_) return false;
+    const Vector3 position { object.worldMatrix_.m[3][0], object.worldMatrix_.m[3][1], object.worldMatrix_.m[3][2] };
+    const float depth = MatrixMath::Transform(position, object.camera_->GetViewMatrix()).z;
+    return transparentDraws_.Add(&object, depth);
+}
+
+void Object3dManager::CancelTransparentDraw(Object3d* object)
+{
+    transparentDraws_.Remove(object);
+    std::erase(opaqueFogDraws_, object);
+}
+
+bool Object3dManager::QueueOpaqueFogMask(Object3d& object)
+{
+    if (!transparentCollectionActive_ || object.transparent_ || !object.camera_ || !object.model_) return false;
+    if (std::find(opaqueFogDraws_.begin(), opaqueFogDraws_.end(), &object) == opaqueFogDraws_.end())
+        opaqueFogDraws_.push_back(&object);
+    hasOpaqueFogExclusion_ |= !object.fogEnabled_;
+    return true;
+}
+
+void Object3dManager::DrawOpaqueFogMask()
+{
+    if (hasOpaqueFogExclusion_) {
+        PreDraw();
+        opaqueFogMaskActive_ = true;
+        // EQUAL depth preserves visibility; submission order resolves coplanar surfaces.
+        for (auto* object : opaqueFogDraws_) object->Draw();
+        opaqueFogMaskActive_ = false;
+    }
+    opaqueFogDraws_.clear();
+    hasOpaqueFogExclusion_ = false;
+}
+
+void Object3dManager::BindObjectFog(bool enabled)
+{
+    dxCommon_->GetCommandList()->SetGraphicsRoot32BitConstant(kObjectFogFlagsRootIndex,
+        opaqueFogMaskActive_ ? (enabled ? 1u : 0u) : (enabled ? activeFogFlags_ : 0u), 0);
+}
+
+void Object3dManager::DrawTransparent(D3D12_GPU_VIRTUAL_ADDRESS fogConstants, bool distanceFogEnabled,
+    const VolumetricLightRenderer& volume)
+{
+    transparentCollectionActive_ = false;
+    if (transparentDraws_.Empty()) return;
+    // PreDraw binds the regular four-target pipeline; switch composition mode afterwards.
+    PreDraw();
+    transparentCompositionActive_ = true;
+    auto* command = dxCommon_->GetCommandList();
+    command->SetGraphicsRootConstantBufferView(kFogConstantsRootIndex, fogConstants);
+    const bool volumeEnabled = volume.HasObjectFogData();
+    command->SetGraphicsRootConstantBufferView(kVolumeConstantsRootIndex,
+        volumeEnabled ? volume.GetObjectFogConstants() : disabledVolumeConstants_->GetGPUVirtualAddress());
+    auto shadow = volume.GetObjectFogShadow();
+    auto localShadow = volume.GetObjectFogLocalShadow();
+    if (shadow.ptr == 0) shadow = SrvManager::GetInstance()->GetGPUDescriptorHandle(nullShadowSrv_);
+    if (localShadow.ptr == 0) localShadow = SrvManager::GetInstance()->GetGPUDescriptorHandle(nullLocalShadowSrv_);
+    command->SetGraphicsRootDescriptorTable(kVolumeShadowRootIndex, shadow);
+    command->SetGraphicsRootDescriptorTable(kVolumeLocalShadowRootIndex, localShadow);
+    activeFogFlags_ = (distanceFogEnabled ? 1u : 0u) | (volumeEnabled ? 2u : 0u);
+    for (const auto& draw : transparentDraws_.Sorted()) draw.object->Draw();
+    transparentDraws_.Clear();
+    transparentCompositionActive_ = false;
+    activeFogFlags_ = 0;
+}
 #pragma region
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
@@ -60,6 +153,11 @@ void Object3dManager::Initialize(DirectXCommon* dxCommon)
     disabledLocalShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabledLocal));
     *disabledLocal = {};
     disabledRtLocalShadowConstants_ = dxCommon_->CreateBufferResource(sizeof(DxrLocalShadowParameters));
+    disabledVolumeConstants_ = dxCommon_->CreateBufferResource(4096);
+    void* disabledVolume = nullptr;
+    disabledVolumeConstants_->Map(0, nullptr, &disabledVolume);
+    std::memset(disabledVolume, 0, 4096);
+    disabledVolumeConstants_->Unmap(0, nullptr);
     DxrLocalShadowParameters* disabledRtLocal = nullptr;
     disabledRtLocalShadowConstants_->Map(0, nullptr, reinterpret_cast<void**>(&disabledRtLocal));
     *disabledRtLocal = {};
@@ -126,7 +224,8 @@ void Object3dManager::BindPipeline(const std::string& pixelShaderPath, bool tran
         blendMode = kBlendModeNormal;
     }
     const std::string key = MakePipelineKey(
-        pixelShaderPath, blendMode, transparent, transparentDepthWrite, vertexShaderPath);
+        pixelShaderPath, blendMode, transparent, transparentDepthWrite, vertexShaderPath) +
+        (transparentCompositionActive_ ? "#fog-composition" : (opaqueFogMaskActive_ ? "#fog-mask" : ""));
     auto found = materialPipelineCache_.find(key);
     if (found == materialPipelineCache_.end()) {
         auto pipeline = CreateMaterialPipeline(
@@ -143,7 +242,7 @@ void Object3dManager::CreateRootSignature()
 
     // ====== RootParameterの設宁E======
     D3D12_ROOT_PARAMETER rootParameters[
-        kLocalShadowTextureRootIndex + 1] = {};
+        kVolumeLocalShadowRootIndex + 1] = {};
 
 
     auto& materialParameter = rootParameters[
@@ -275,6 +374,32 @@ void Object3dManager::CreateRootSignature()
     localTexture.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     localTexture.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
     localTexture.DescriptorTable = { 1, &localRange };
+    auto& fog = rootParameters[kFogConstantsRootIndex];
+    fog.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    fog.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    fog.Descriptor.ShaderRegister = 11;
+    auto& volume = rootParameters[kVolumeConstantsRootIndex];
+    volume.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    volume.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    volume.Descriptor.ShaderRegister = 12;
+    auto& fogFlags = rootParameters[kObjectFogFlagsRootIndex];
+    fogFlags.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    fogFlags.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    fogFlags.Constants = { 13, 0, 1 };
+    D3D12_DESCRIPTOR_RANGE volumeShadowRange {};
+    volumeShadowRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    volumeShadowRange.BaseShaderRegister = 6;
+    volumeShadowRange.NumDescriptors = 1;
+    auto& volumeShadow = rootParameters[kVolumeShadowRootIndex];
+    volumeShadow.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    volumeShadow.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    volumeShadow.DescriptorTable = { 1, &volumeShadowRange };
+    D3D12_DESCRIPTOR_RANGE volumeLocalRange = volumeShadowRange;
+    volumeLocalRange.BaseShaderRegister = 7;
+    auto& volumeLocal = rootParameters[kVolumeLocalShadowRootIndex];
+    volumeLocal.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    volumeLocal.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    volumeLocal.DescriptorTable = { 1, &volumeLocalRange };
     // ====== Sampler設宁E======
     D3D12_STATIC_SAMPLER_DESC staticSampler = {};
     staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -488,6 +613,18 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
             desc.BlendState.RenderTarget[7].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
         }
         desc.BlendState.RenderTarget[4].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+    }
+    if (transparentCompositionActive_) {
+        desc.NumRenderTargets = 1;
+        for (uint32_t target = 1; target < 8; ++target) desc.RTVFormats[target] = DXGI_FORMAT_UNKNOWN;
+    }
+    if (opaqueFogMaskActive_) {
+        desc.NumRenderTargets = 1;
+        desc.RTVFormats[0] = DXGI_FORMAT_R8_UNORM;
+        for (uint32_t target = 1; target < 8; ++target) desc.RTVFormats[target] = DXGI_FORMAT_UNKNOWN;
+        desc.BlendState = CreateBlendDesc(kBlendModeNone);
+        desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+        desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
     }
     desc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
     desc.SampleDesc.Count = 1;

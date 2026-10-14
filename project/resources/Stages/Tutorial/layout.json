@@ -1,0 +1,130 @@
+{
+  "scene": [
+    {
+      "name": "TutorialPlayerStart",
+      "type": "PlayerSpawn",
+      "transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "data_grid",
+      "type": "MESH",
+      "file_name": "Environment/Tutorial/data_grid.obj",
+      "transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "data_architecture",
+      "type": "MESH",
+      "file_name": "Environment/Tutorial/data_architecture.obj",
+      "transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "data_edges",
+      "type": "MESH",
+      "file_name": "Environment/Tutorial/data_edges.obj",
+      "transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "training_rings",
+      "type": "MESH",
+      "file_name": "Environment/Tutorial/training_rings.obj",
+      "transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "launch_gate",
+      "type": "MESH",
+      "file_name": "Environment/Tutorial/launch_gate.obj",
+      "transform": {
+        "translation": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  ]
+}

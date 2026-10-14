@@ -843,6 +843,7 @@ void FearWormEnemy::FireBullet(const Vector3& position)
 {
     // 通常弾を生成し、発射位置からプレイヤーへの速度を設定する。
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->SetFogEnabled(false);
     bullet->Initialize(bulletModel_);
 
     Vector3 direction = NormalizeSafe(player_->GetTranslate() - position);
@@ -874,6 +875,7 @@ void FearWormEnemy::FireChargedBullet()
 
     // 頭部の発射位置からプレイヤーへ向かう弾を生成する。
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->SetFogEnabled(false);
     bullet->Initialize(bulletModel_);
 
     Vector3 position = HeadMuzzlePosition();
@@ -890,7 +892,6 @@ void FearWormEnemy::FireChargedBullet()
         kChargedBulletScale,
         kChargedBulletScale });
     bullet->SetColor(kChargedBulletColor);
-    bullet->SetEnableLighting(false);
     bullet->SetDamage(kChargedBulletDamage);
     bullet->SetCollisionRadius(kChargedBulletCollisionRadius);
     bullet->SetMaxLifeTime(kChargedBulletLifeTime);
@@ -1155,6 +1156,7 @@ void FearWormEnemy::UpdateSpiralBarrage()
 void FearWormEnemy::FireDirectionalBullet(const Vector3& position, const Vector3& direction)
 {
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->SetFogEnabled(false);
     bullet->Initialize(bulletModel_);
 
     Vector3 velocity { };

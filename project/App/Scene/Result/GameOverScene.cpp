@@ -52,14 +52,18 @@ void GameOverScene::Initialize()
 
 void GameOverScene::Update()
 {
-    if (Input::GetInstance()->IsKeyTrigger(DIK_R)) {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_R) ||
+        Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
         SceneManager::GetInstance()->SetNextScene(
             std::make_unique<GamePlayScene>(stageId_));
-    } else if (Input::GetInstance()->IsKeyTrigger(DIK_T)) {
+    } else if (Input::GetInstance()->IsKeyTrigger(DIK_T) ||
+        Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B)) {
         SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
     }
     titleObj_->Update();
     titleSprite_->Update();
+    retryGuideText_->SetText(Input::GetInstance()->IsUsingGamepad() ?
+        "リトライ [A]     タイトルに戻る [B]" : "リトライ [R]     タイトルに戻る [T]");
     retryGuideText_->Update();
 }
 
