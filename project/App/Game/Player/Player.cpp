@@ -2,7 +2,9 @@
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Input/Input.h"
 #include "Engine/Time/TimeManager.h"
+#include "Engine/Camera/Camera.h"
 #include <cassert>
+#include <cmath>
 void Player::Initialize(Model* model)
 {
     assert(model != nullptr);
@@ -55,16 +57,26 @@ void Player::Update()
     UpdateBoostState();
     if (!isDebugMode_) {
         // 照準を先に確定してから操舵し、発射と表示で参照する位置を揃える。
-        // 最新のマウス位置を取得し、この後の操舵とレティクル表示に使う。
-        aimController_.UpdateMouseAim();
-        aimController_.ClampAimScreenPosition();
-        if (camera_ != nullptr) {
-            // 最新の照準位置で、発射に使う奥行きを確定する。
-            aimController_.UpdateSmoothedAimDistance(*camera_, TimeManager::GetInstance()->GetDeltaTime());
+        // 使用中の入力機器から照準を取得し、操舵とレティクル表示に使う。
+        if (input->IsUsingGamepad()) {
+            aimController_.UpdateGamepadAim(input->GetGamepadLeftStickX(),
+                input->GetGamepadLeftStickY(), input->IsGamepadPitchInverted(),
+                TimeManager::GetInstance()->GetDeltaTime(), input->GetGamepadAimSensitivity());
+        } else {
+            aimController_.UpdateMouseAim();
         }
+        aimController_.ClampAimScreenPosition();
+        ConstrainGamepadAimToPlayer();
         movementController_.UpdateMovement(input);
     }
     movementController_.ApplyRailPosition();
+    if (!isDebugMode_) {
+        ConstrainGamepadAimToPlayer();
+        if (camera_ != nullptr) {
+            // 移動後の機体との距離を補正した照準で、発射に使う奥行きを確定する。
+            aimController_.UpdateSmoothedAimDistance(*camera_, TimeManager::GetInstance()->GetDeltaTime());
+        }
+    }
     ApplyTransform();
     // 最新の照準と移動後の銃口から発射し、弾はこの後で1回だけ更新する。
     weaponController_.UpdateInput(input, isDebugMode_);
@@ -75,6 +87,19 @@ void Player::Update()
 #ifdef _DEBUG
     weaponController_.DrawAimDebugLines();
 #endif
+}
+
+void Player::ConstrainGamepadAimToPlayer()
+{
+    if (camera_ == nullptr || isDebugMode_ || !health_.IsAlive() ||
+        !Input::GetInstance()->IsUsingGamepad()) {
+        return;
+    }
+    const Vector3 viewPosition = MatrixMath::Transform(transform_.translate, camera_->GetViewMatrix());
+    if (!std::isfinite(viewPosition.z) || viewPosition.z <= camera_->GetNearClip()) {
+        return;
+    }
+    aimController_.ClampGamepadAimToPlayer(camera_->WorldToScreen(transform_.translate));
 }
 
 void Player::UpdateBoostState()

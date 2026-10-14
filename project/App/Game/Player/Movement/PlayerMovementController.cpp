@@ -35,13 +35,19 @@ void PlayerMovementController::SynchronizeOrientation()
 
 void PlayerMovementController::UpdateMovement(Input* input)
 {
+    manualBank_ = (input->IsGamepadButtonPressed(XINPUT_GAMEPAD_LEFT_SHOULDER) ? 0.9f : 0.0f) -
+        (input->IsGamepadButtonPressed(XINPUT_GAMEPAD_RIGHT_SHOULDER) ? 0.9f : 0.0f);
     if (isAllRangeMode_) {
         UpdateAllRangeMove(input);
-    } else if (controlMode_ == ControlMode::StarFox) {
+    } else if (controlMode_ == ControlMode::StarFox || input->IsUsingGamepad()) {
         UpdateStarFoxMove();
     } else {
         UpdateKeyboardMove(input);
     }
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    rollController_.Update(transform_,
+        input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER),
+        input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER), deltaTimeSeconds);
 }
 
 void PlayerMovementController::ApplyRailPosition()
@@ -55,6 +61,8 @@ void PlayerMovementController::Stop()
 {
     // 死亡時に操作状態を解除する。速度や位置を0にする処理ではない。
     isBoosting_ = false;
+    rollController_.Stop();
+    manualBank_ = 0.0f;
 }
 
 Vector3 PlayerMovementController::GetAutomaticWorldVelocity() const
@@ -93,10 +101,12 @@ void PlayerMovementController::UpdateBoost(Input* input, bool isDebugMode)
 {
     constexpr float kBrakeSpeedMultiplier = 0.5f;
     const bool isBraking = !isDebugMode &&
-        (input->IsKeyPressed(DIK_LCONTROL) || input->IsKeyPressed(DIK_RCONTROL));
+        (input->IsKeyPressed(DIK_LCONTROL) || input->IsKeyPressed(DIK_RCONTROL) ||
+         input->IsGamepadButtonPressed(XINPUT_GAMEPAD_Y));
     const bool wasBoosting = isBoosting_;
     isBoosting_ = !isDebugMode && !isBraking &&
-        (input->IsKeyPressed(DIK_LSHIFT) || input->IsMousePressed(1));
+        (input->IsKeyPressed(DIK_LSHIFT) || input->IsMousePressed(1) ||
+         input->IsGamepadButtonPressed(XINPUT_GAMEPAD_X));
     if (isBoosting_ && !wasBoosting) {
         // 押し続けている間は繰り返さず、ブースト開始時だけ効果音を鳴らす。
         SoundManager::GetInstance()->Play("BoostStart");
@@ -173,7 +183,7 @@ void PlayerMovementController::UpdateAllRangeMove(Input* input)
 {
     UpdateStarFoxSteering();
     Vector2 steering = steeringController_.GetSteeringInput();
-    if (controlMode_ == ControlMode::KeyboardAndMouse) {
+    if (controlMode_ == ControlMode::KeyboardAndMouse && !input->IsUsingGamepad()) {
         steering = {};
         if (input->IsKeyPressed(DIK_A)) steering.x -= 1.0f;
         if (input->IsKeyPressed(DIK_D)) steering.x += 1.0f;
@@ -187,7 +197,9 @@ void PlayerMovementController::UpdateAllRangeMove(Input* input)
     UpdateFlightAreaReturn(steering, deltaTimeSeconds);
     UpdateFlightHeight(deltaTimeSeconds);
     UpdateFlightPosition(deltaTimeSeconds);
-    UpdateFlightBank(steering, deltaTimeSeconds);
+    if (!rollController_.IsRolling()) {
+        UpdateFlightBank(steering, deltaTimeSeconds);
+    }
 }
 
 void PlayerMovementController::UpdateFlightOrientation(const Vector2& steering, float deltaTimeSeconds)
@@ -265,7 +277,7 @@ void PlayerMovementController::UpdateFlightPosition(float deltaTimeSeconds)
 
 void PlayerMovementController::UpdateFlightBank(const Vector2& steering, float deltaTimeSeconds)
 {
-    const float targetBank = -steering.x * 0.65f;
+    const float targetBank = -steering.x * 0.65f + manualBank_;
     transform_.rotate.z += (targetBank - transform_.rotate.z) *
         (1.0f - std::exp(-7.0f * deltaTimeSeconds));
 }
@@ -276,7 +288,10 @@ void PlayerMovementController::UpdateStarFoxSteering()
         static_cast<float>(WinApp::GetInstance()->GetClientWidth()),
         static_cast<float>(WinApp::GetInstance()->GetClientHeight())
     };
-    // 照準の画面中央からのずれを、機体を操舵する入力に変換する。
-    steeringController_.Update(aimController_.GetAimScreenPosition(), screenSizePixels,
-        isAllRangeMode_, TimeManager::GetInstance()->GetDeltaTime());
+    const bool isGamepad = Input::GetInstance()->IsUsingGamepad();
+    // パッドは機体から照準への方向を使い、距離制限中も照準へ追従する。
+    const Vector2 steeringPosition = isGamepad ? aimController_.GetGamepadSteeringScreenPosition() :
+        aimController_.GetAimScreenPosition();
+    steeringController_.Update(steeringPosition, screenSizePixels,
+        isAllRangeMode_, TimeManager::GetInstance()->GetDeltaTime(), isGamepad);
 }

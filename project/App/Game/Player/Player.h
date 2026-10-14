@@ -74,6 +74,9 @@ public:
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
     bool IsBoosting() const { return movementController_.IsBoosting(); }
     float GetForwardSpeedMultiplier() const { return movementController_.GetForwardSpeedMultiplier(); }
+    bool IsRolling() const { return movementController_.IsRolling(); }
+    void ResetHomingLock() { weaponController_.ResetHomingLock(); }
+    float GetManualBank() const { return movementController_.GetManualBank(); }
     // 使用クラス：GamePlayScene。キーボード移動とマウス操舵を切り替える。
     void SetControlMode(ControlMode mode) { movementController_.SetControlMode(mode); }
     // 現在の操作方式を返す。
@@ -87,10 +90,13 @@ public:
 
     // GamePlaySceneのレティクルとオーバーヒートゲージの配置に使う照準位置を返す。
     const Vector2& GetAimScreenPosition() const { return aimController_.GetAimScreenPosition(); }
+    // 操縦・射撃の前と、描画用カメラ更新後にパッド照準の距離を補正する。
+    void ConstrainGamepadAimToPlayer();
     // 外部から現在の武器の発射を要求する。死亡・過熱・クールダウン中は発射されない。
     void FireBullet(const Camera& activeCamera) { weaponController_.FireBullet(activeCamera); }
     // 使用クラス：GameplayCollisionSystem。プレイヤー弾の衝突判定に使う一覧を返す。
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const { return weaponController_.GetBullets(); }
+    uint64_t GetShotsFired() const { return weaponController_.GetShotsFired(); }
     // 使用クラス：GamePlayScene。生存中の敵をロックオン候補として武器側へ渡す。
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { weaponController_.SetHomingTargets(targets); }
     // 使用クラス：GamePlayScene。ロック表示用の座標を引数の一覧に書き込む。
