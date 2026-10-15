@@ -16,6 +16,7 @@ struct LevelData {
         Vector3 scale;
 
         bool disabled = false;
+        int enemyLevel = 2;
         
         struct ScoreItemData {
             bool exists = false;
@@ -94,6 +95,7 @@ struct LevelData {
 
     struct EnemySpawnData {
         std::string fileName;
+        int enemyLevel = 2;
         Vector3 translation;
         Vector3 rotation;
     };

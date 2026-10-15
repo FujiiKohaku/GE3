@@ -3513,6 +3513,74 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
     } else {
         sceneManager->SetBoostSparkElapsedSeconds(0.0f);
     }
+
+    UpdateWeaponHeatPostEffect();
+}
+
+void GamePlayScene::UpdateWeaponHeatPostEffect()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    const float deltaTimeSeconds = (std::max)(TimeManager::GetInstance()->GetDeltaTime(), 0.0f);
+    constexpr float kOverheatFlashDurationSeconds = 0.28f;
+    constexpr float kRecoveryFlashDurationSeconds = 0.45f;
+    weaponOverheatFlashRemainingSeconds_ = (std::max)(
+        0.0f, weaponOverheatFlashRemainingSeconds_ - deltaTimeSeconds);
+    weaponRecoveryFlashRemainingSeconds_ = (std::max)(
+        0.0f, weaponRecoveryFlashRemainingSeconds_ - deltaTimeSeconds);
+    const bool isPlayerActive = player_ != nullptr && !player_->IsDead();
+    bool isOverheated = false;
+    if (isPlayerActive) {
+        isOverheated = player_->IsOverheated();
+        if (isOverheated && !wasWeaponOverheated_) {
+            weaponOverheatFlashRemainingSeconds_ = kOverheatFlashDurationSeconds;
+            weaponRecoveryFlashRemainingSeconds_ = 0.0f;
+            playerHeatSteamHandle_ = EffectManager::GetInstance()->AttachEffect(
+                "WeaponHeatSteam", player_.get());
+        } else if (!isOverheated && wasWeaponOverheated_) {
+            weaponRecoveryFlashRemainingSeconds_ = kRecoveryFlashDurationSeconds;
+        }
+    } else {
+        weaponOverheatFlashRemainingSeconds_ = 0.0f;
+        weaponRecoveryFlashRemainingSeconds_ = 0.0f;
+    }
+    wasWeaponOverheated_ = isOverheated;
+    if (!isOverheated && playerHeatSteamHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(playerHeatSteamHandle_);
+        playerHeatSteamHandle_ = kInvalidEffectHandle;
+    }
+
+    constexpr float kHeatWarningStartRatio = 0.50f;
+    constexpr float kHeatEdgeRiseRate = 4.0f;
+    constexpr float kHeatEdgeFadeRate = 3.0f;
+    constexpr float kHeatEdgeStopThreshold = 0.001f;
+    float targetHeatIntensity = 0.0f;
+    if (isPlayerActive) {
+        const float heatRatio = std::clamp(player_->GetHeatRatio(), 0.0f, 1.0f);
+        const float warningRatio = std::clamp(
+            (heatRatio - kHeatWarningStartRatio) / (1.0f - kHeatWarningStartRatio), 0.0f, 1.0f);
+        targetHeatIntensity = warningRatio * warningRatio * (3.0f - 2.0f * warningRatio);
+        if (isOverheated) {
+            targetHeatIntensity = 0.25f + 0.75f * targetHeatIntensity;
+        }
+    }
+    float heatEaseRate = kHeatEdgeRiseRate;
+    if (targetHeatIntensity < weaponHeatEdgeIntensity_) {
+        heatEaseRate = kHeatEdgeFadeRate;
+    }
+    weaponHeatEdgeIntensity_ += (targetHeatIntensity - weaponHeatEdgeIntensity_) *
+        (1.0f - std::exp(-heatEaseRate * (std::max)(deltaTimeSeconds, 0.0f)));
+    if (targetHeatIntensity == 0.0f && weaponHeatEdgeIntensity_ < kHeatEdgeStopThreshold) {
+        weaponHeatEdgeIntensity_ = 0.0f;
+    }
+    float recoverySignal = weaponRecoveryFlashRemainingSeconds_ / kRecoveryFlashDurationSeconds;
+    if (isOverheated) {
+        recoverySignal = -1.0f;
+    }
+    // Final-pass parameters: heat, onset flash, cooling (-1) or recovery flash (0..1).
+    const Vector3 heatParameters = { weaponHeatEdgeIntensity_,
+        weaponOverheatFlashRemainingSeconds_ / kOverheatFlashDurationSeconds, recoverySignal };
+    sceneManager->SetPostEffectParameters(PostEffectType::ToneMap, heatParameters);
+    sceneManager->SetPostEffectParameters(PostEffectType::FXAA, heatParameters);
 }
 
 void GamePlayScene::ApplyDevelopmentLighting()
@@ -3557,6 +3625,16 @@ void GamePlayScene::ApplyStageVisualPreset()
 
 void GamePlayScene::ResetGameplayPostEffects()
 {
+    if (playerHeatSteamHandle_ != kInvalidEffectHandle) {
+        EffectManager::GetInstance()->StopEffect(playerHeatSteamHandle_);
+        playerHeatSteamHandle_ = kInvalidEffectHandle;
+    }
+    weaponHeatEdgeIntensity_ = 0.0f;
+    weaponOverheatFlashRemainingSeconds_ = 0.0f;
+    weaponRecoveryFlashRemainingSeconds_ = 0.0f;
+    wasWeaponOverheated_ = false;
+    SceneManager::GetInstance()->SetPostEffectParameters(PostEffectType::ToneMap, {});
+    SceneManager::GetInstance()->SetPostEffectParameters(PostEffectType::FXAA, {});
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
     SceneManager::GetInstance()->SetRadialBlurSettings({});
@@ -3730,6 +3808,7 @@ void GamePlayScene::SpawnSwarmWave(
 
 void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
 {
+    normalEnemyLevels_.Load();
     // レベルデータから敵を生成、配置
     for (const auto& enemyData : levelData.enemies) {
         if (enemyData.fileName == "MoveEnemy") {
@@ -3760,6 +3839,7 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
         } else {
             std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
             enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+            enemy->ApplySettings(normalEnemyLevels_.GetSettings(enemyData.enemyLevel));
             enemy->SetPosition(enemyData.translation);
             enemy->SetRotate(enemyData.rotation);
 
@@ -3904,6 +3984,7 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
 
 void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 {
+    normalEnemyLevels_.Load();
     hasCameraPoint_ = false;
     cameraPointObject_ = {};
     cameraPointLerpTime_ = 0.0f;
@@ -4085,6 +4166,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             } else {
                 std::unique_ptr<NormalEnemy> enemy = std::make_unique<NormalEnemy>();
                 enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
+                enemy->ApplySettings(normalEnemyLevels_.GetSettings(objData.enemyLevel));
                 enemy->SetPosition(objData.translation);
                 enemy->SetRotate(objData.rotation);
 

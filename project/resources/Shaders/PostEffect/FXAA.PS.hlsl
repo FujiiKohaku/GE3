@@ -1,5 +1,6 @@
 #include "Fullscreen.hlsli"
 #include "ColorFinish.hlsli"
+#include "HeatEdge.hlsli"
 
 Texture2D<float4> gTexture : register(t0);
 SamplerState gSampler : register(s0);
@@ -21,10 +22,10 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     uint height;
     gTexture.GetDimensions(width, height);
     float2 pixel = 1.0f / float2(width, height);
-    float2 uv = input.texcoord;
+    float2 uv = CalculateHeatUv(input.texcoord);
     float4 center = gTexture.SampleLevel(gSampler, uv, 0.0f);
     center.rgb = FinishColor(center.rgb);
-    if (fxaaStrength <= 0.0f) { return center; }
+    if (fxaaStrength <= 0.0f) { return ApplyHeatEdge(center, input.texcoord); }
     float m = Luma(center.rgb);
     float n = SampleLuma(uv - float2(0.0f, pixel.y));
     float s = SampleLuma(uv + float2(0.0f, pixel.y));
@@ -33,7 +34,7 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     float low = min(m, min(min(n, s), min(w, e)));
     float high = max(m, max(max(n, s), max(w, e)));
     float range = high - low;
-    if (range < max(fxaaEdgeThresholdMin, high * fxaaEdgeThreshold)) { return center; }
+    if (range < max(fxaaEdgeThresholdMin, high * fxaaEdgeThreshold)) { return ApplyHeatEdge(center, input.texcoord); }
 
     float nw = SampleLuma(uv - pixel);
     float ne = SampleLuma(uv + float2(pixel.x, -pixel.y));
@@ -107,5 +108,5 @@ float4 main(VertexShaderOutput input) : SV_TARGET
     subpixel = subpixel * subpixel * saturate(fxaaSubpixel);
     float offset = max(edgeBlend, subpixel) * saturate(fxaaStrength);
     float3 filtered = gTexture.SampleLevel(gSampler, saturate(uv + normalStep * offset), 0.0f).rgb;
-    return float4(FinishColor(filtered), center.a);
+    return ApplyHeatEdge(float4(FinishColor(filtered), center.a), input.texcoord);
 }

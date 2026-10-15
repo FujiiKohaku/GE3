@@ -49,6 +49,7 @@ const std::string& Object3dManager::GetTransparentShader(const std::string& shad
 {
     static const std::unordered_map<std::string, std::string> shaders {
         { "resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Danmaku.PS.hlsl" },
+        { "resources/Shaders/Object3D/PlayerBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/PlayerBullet.PS.hlsl" },
         { "resources/Shaders/Object3D/Unlit/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Unlit.PS.hlsl" }
     };
     auto found = shaders.find(shader);

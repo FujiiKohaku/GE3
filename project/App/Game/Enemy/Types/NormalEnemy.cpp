@@ -4,6 +4,7 @@
 
 #include "App/Game/Player/Player.h"
 #include "Engine/math/MathStruct.h"
+#include "Engine/Logger/Logger.h"
 #include <cmath>
 
 void NormalEnemy::Initialize(
@@ -25,6 +26,20 @@ void NormalEnemy::Initialize(
 void NormalEnemy::Update()
 {
     BaseEnemy::Update();
+}
+
+void NormalEnemy::ApplySettings(const NormalEnemySettings& settings)
+{
+    NormalEnemySettings appliedSettings = settings;
+    if (!IsValidNormalEnemySettings(appliedSettings)) {
+        Logger::Warning("Invalid normal enemy settings; using legacy settings");
+        appliedSettings = {};
+    }
+    SetHealth(appliedSettings.hp);
+    SetFireInterval(appliedSettings.fireIntervalFrames);
+    SetBulletSpeed(appliedSettings.bulletSpeedPerFrame);
+    SetRadialShotEnabled(appliedSettings.isRadialShotEnabled);
+    fireTimer_ = 0;
 }
 
 void NormalEnemy::SetRadialShotEnabled(bool isEnabled)

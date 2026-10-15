@@ -1,0 +1,7 @@
+{
+  "levels": {
+    "1": { "hp": 1.0, "fireIntervalFrames": 180, "bulletSpeedPerFrame": 0.36, "isRadialShotEnabled": false },
+    "2": { "hp": 4.0, "fireIntervalFrames": 120, "bulletSpeedPerFrame": 0.48, "isRadialShotEnabled": true },
+    "3": { "hp": 8.0, "fireIntervalFrames": 90, "bulletSpeedPerFrame": 0.60, "isRadialShotEnabled": true }
+  }
+}
