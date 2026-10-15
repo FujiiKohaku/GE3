@@ -177,8 +177,31 @@ public:
         }
     }
     BoxCollider* GetCollider() const { return collider_; }
+    size_t GetColliderCount() const
+    {
+        if (collider_ == nullptr) { return 0; }
+        return 1 + additionalColliders_.size();
+    }
+    BoxCollider* GetCollider(size_t index) const
+    {
+        if (index == 0) { return collider_; }
+        return additionalColliders_.at(index - 1).collider;
+    }
+    void AddCollider(BoxCollider* collider)
+    {
+        if (collider == nullptr) { return; }
+        if (collider_ == nullptr) { SetCollider(collider); return; }
+        additionalColliders_.push_back({ collider, collider->GetCenter() - transform.translate });
+        collider->SetRotation(transform.rotate);
+    }
+    void ClearColliders() { collider_ = nullptr; additionalColliders_.clear(); }
 
 private:
+    struct ColliderAttachment {
+        BoxCollider* collider;
+        Vector3 offset;
+    };
+    std::vector<ColliderAttachment> additionalColliders_;
     friend class Object3dManager;
     bool IsRaytracingEligible() const;
     bool shouldUseFrustumCulling_ = false;

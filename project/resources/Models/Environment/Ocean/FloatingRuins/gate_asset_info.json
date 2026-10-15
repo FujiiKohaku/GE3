@@ -1,0 +1,269 @@
+{
+  "gates": {
+    "Gate02": {
+      "name": "Gate02_StoneGate",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_gate_gate02.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          520.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            -15.0,
+            0.0,
+            0.0
+          ],
+          "size": [
+            10.0,
+            10.0,
+            22.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            15.0,
+            0.0,
+            0.0
+          ],
+          "size": [
+            10.0,
+            10.0,
+            22.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            0.0,
+            0.0,
+            10.0
+          ],
+          "size": [
+            40.0,
+            10.0,
+            10.0
+          ]
+        }
+      ]
+    },
+    "OffsetGate": {
+      "name": "OffsetGate_StoneGate",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_gate_offsetgate.obj",
+      "transform": {
+        "translation": [
+          -1.0,
+          1380.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            -14.0,
+            0.0,
+            0.0
+          ],
+          "size": [
+            14.0,
+            10.0,
+            26.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            14.0,
+            0.0,
+            0.0
+          ],
+          "size": [
+            14.0,
+            10.0,
+            26.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.0,
+            0.0,
+            15.0
+          ],
+          "size": [
+            42.0,
+            10.0,
+            8.0
+          ]
+        }
+      ]
+    },
+    "FinalGate": {
+      "name": "FinalGate_StoneGate",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_gate_finalgate.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1640.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            -13.0,
+            0.0,
+            2.0
+          ],
+          "size": [
+            14.0,
+            12.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            13.0,
+            0.0,
+            2.0
+          ],
+          "size": [
+            14.0,
+            12.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            0.0,
+            0.0,
+            -11.0
+          ],
+          "size": [
+            40.0,
+            12.0,
+            8.0
+          ]
+        }
+      ]
+    },
+    "SecondActGate": {
+      "name": "SecondActGate_StoneGate",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_gate_secondactgate.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2680.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            -16.0,
+            0.0,
+            0.0
+          ],
+          "size": [
+            12.0,
+            10.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            16.0,
+            0.0,
+            0.0
+          ],
+          "size": [
+            12.0,
+            10.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            0.0,
+            0.0,
+            -12.0
+          ],
+          "size": [
+            44.0,
+            10.0,
+            7.0
+          ]
+        }
+      ]
+    }
+  },
+  "triangles": {
+    "Gate02": 60,
+    "OffsetGate": 84,
+    "FinalGate": 60,
+    "SecondActGate": 60
+  },
+  "closedManifold": true,
+  "duplicateFaces": 0,
+  "tileSizeWorld": [
+    2.5,
+    1.25
+  ],
+  "collidersPerGate": 3
+}

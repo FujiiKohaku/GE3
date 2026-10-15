@@ -51,12 +51,15 @@ void ClearScene::Update()
     if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE) ||
         Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) ||
         Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_B)) {
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>(true));
     }
     titleObj_->Update();
     titleSprite_->Update();
-    returnGuideText_->SetText(Input::GetInstance()->IsUsingGamepad() ?
-        "タイトルに戻る [A / B]" : "タイトルに戻る [SPACE]");
+    if (Input::GetInstance()->IsUsingGamepad()) {
+        returnGuideText_->SetText("ステージセレクトに戻る [A / B]");
+    } else {
+        returnGuideText_->SetText("ステージセレクトに戻る [SPACE]");
+    }
     returnGuideText_->Update();
 }
 

@@ -88,6 +88,10 @@ void Object3d::Update()
         collider_->SetCenter(transform.translate + colliderOffset_);
         collider_->SetRotation(transform.rotate);
     }
+    for (const ColliderAttachment& attachment : additionalColliders_) {
+        attachment.collider->SetCenter(transform.translate + attachment.offset);
+        attachment.collider->SetRotation(transform.rotate);
+    }
 
     Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 

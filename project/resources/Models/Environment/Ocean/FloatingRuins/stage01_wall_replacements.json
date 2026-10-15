@@ -1,0 +1,3138 @@
+{
+  "wallCount": 19,
+  "groundCount": 15,
+  "wallColliderCount": 114,
+  "originalPanels": [
+    {
+      "name": "Gate02_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -15.0,
+          520.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          10.0,
+          10.0,
+          22.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          10.0,
+          10.0,
+          22.0
+        ]
+      }
+    },
+    {
+      "name": "Gate02_Right",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          15.0,
+          520.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          10.0,
+          10.0,
+          22.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          10.0,
+          10.0,
+          22.0
+        ]
+      }
+    },
+    {
+      "name": "Gate02_LowCeiling",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          520.0,
+          10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          40.0,
+          10.0,
+          10.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          40.0,
+          10.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "Slalom02_RightWall",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          12.0,
+          900.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          20.0,
+          12.0,
+          24.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          20.0,
+          12.0,
+          24.0
+        ]
+      }
+    },
+    {
+      "name": "VerticalTunnel_Floor",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1120.0,
+          -9.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          38.0,
+          18.0,
+          10.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          38.0,
+          18.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "VerticalTunnel_Ceiling",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1120.0,
+          9.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          38.0,
+          18.0,
+          10.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          38.0,
+          18.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "OffsetGate_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -15.0,
+          1380.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          14.0,
+          10.0,
+          26.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          14.0,
+          10.0,
+          26.0
+        ]
+      }
+    },
+    {
+      "name": "OffsetGate_Right",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          13.0,
+          1380.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          14.0,
+          10.0,
+          26.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          14.0,
+          10.0,
+          26.0
+        ]
+      }
+    },
+    {
+      "name": "OffsetGate_Top",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1380.0,
+          15.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          42.0,
+          10.0,
+          8.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          42.0,
+          10.0,
+          8.0
+        ]
+      }
+    },
+    {
+      "name": "FinalGate_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -13.0,
+          1640.0,
+          2.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          14.0,
+          12.0,
+          24.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          14.0,
+          12.0,
+          24.0
+        ]
+      }
+    },
+    {
+      "name": "FinalGate_Right",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          13.0,
+          1640.0,
+          2.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          14.0,
+          12.0,
+          24.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          14.0,
+          12.0,
+          24.0
+        ]
+      }
+    },
+    {
+      "name": "FinalGate_Bottom",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1640.0,
+          -11.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          40.0,
+          12.0,
+          8.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          40.0,
+          12.0,
+          8.0
+        ]
+      }
+    },
+    {
+      "name": "SecondActGate_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -16.0,
+          2680.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          12.0,
+          10.0,
+          24.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          12.0,
+          10.0,
+          24.0
+        ]
+      }
+    },
+    {
+      "name": "SecondActGate_Right",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          16.0,
+          2680.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          12.0,
+          10.0,
+          24.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          12.0,
+          10.0,
+          24.0
+        ]
+      }
+    },
+    {
+      "name": "SecondActGate_Bottom",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2680.0,
+          -12.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          44.0,
+          10.0,
+          7.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          44.0,
+          10.0,
+          7.0
+        ]
+      }
+    },
+    {
+      "name": "SecondSlalom_Left",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          -14.0,
+          3100.0,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          22.0,
+          12.0,
+          28.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          22.0,
+          12.0,
+          28.0
+        ]
+      }
+    },
+    {
+      "name": "SecondSlalom_Right",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          14.0,
+          3290.0,
+          -1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          22.0,
+          12.0,
+          28.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          22.0,
+          12.0,
+          28.0
+        ]
+      }
+    },
+    {
+      "name": "SecondTunnel_Floor",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          3700.0,
+          -10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          40.0,
+          22.0,
+          10.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          40.0,
+          22.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "name": "SecondTunnel_Ceiling",
+      "type": "MESH",
+      "file_name": "Environment/Block/block.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          3700.0,
+          11.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          40.0,
+          22.0,
+          9.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          40.0,
+          22.0,
+          9.0
+        ]
+      }
+    }
+  ],
+  "replacements": [
+    {
+      "name": "Gate02_Left",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          -15.0,
+          520.0,
+          -12.592493297587131
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.8849557522123893,
+          5.0,
+          2.9490616621983916
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            4.446903,
+            -0.0,
+            10.675603
+          ],
+          "size": [
+            1.106195,
+            10.0,
+            18.16622
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            3.230088,
+            -0.0,
+            11.855228
+          ],
+          "size": [
+            1.327434,
+            10.0,
+            20.525469
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.150442,
+            -0.0,
+            12.592493
+          ],
+          "size": [
+            2.831858,
+            10.0,
+            22.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.685841,
+            -0.0,
+            11.634048
+          ],
+          "size": [
+            0.840708,
+            10.0,
+            20.08311
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.190265,
+            -0.0,
+            12.223861
+          ],
+          "size": [
+            2.168142,
+            10.0,
+            21.262735
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.137168,
+            -0.0,
+            10.306971
+          ],
+          "size": [
+            1.725664,
+            10.0,
+            17.428954
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gate02_Left_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          -15.0,
+          520.0,
+          -12.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.7874015748031497,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          10.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "Gate02_Right",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          15.0,
+          520.0,
+          -12.592493297587131
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.8849557522123893,
+          5.0,
+          2.9490616621983916
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            4.446903,
+            -0.0,
+            10.675603
+          ],
+          "size": [
+            1.106195,
+            10.0,
+            18.16622
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            3.230088,
+            -0.0,
+            11.855228
+          ],
+          "size": [
+            1.327434,
+            10.0,
+            20.525469
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.150442,
+            -0.0,
+            12.592493
+          ],
+          "size": [
+            2.831858,
+            10.0,
+            22.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.685841,
+            -0.0,
+            11.634048
+          ],
+          "size": [
+            0.840708,
+            10.0,
+            20.08311
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.190265,
+            -0.0,
+            12.223861
+          ],
+          "size": [
+            2.168142,
+            10.0,
+            21.262735
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.137168,
+            -0.0,
+            10.306971
+          ],
+          "size": [
+            1.725664,
+            10.0,
+            17.428954
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gate02_Right_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          15.0,
+          520.0,
+          -12.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.7874015748031497,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          10.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "Gate02_LowCeiling",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          520.0,
+          4.2761394101876675
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.5398230088495573,
+          5.0,
+          1.3404825737265416
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            17.787611,
+            -0.0,
+            4.852547
+          ],
+          "size": [
+            4.424779,
+            10.0,
+            8.257373
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            12.920354,
+            -0.0,
+            5.38874
+          ],
+          "size": [
+            5.309735,
+            10.0,
+            9.329759
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.60177,
+            -0.0,
+            5.723861
+          ],
+          "size": [
+            11.327434,
+            10.0,
+            10.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.743363,
+            -0.0,
+            5.288204
+          ],
+          "size": [
+            3.362832,
+            10.0,
+            9.128686
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.761062,
+            -0.0,
+            5.5563
+          ],
+          "size": [
+            8.672566,
+            10.0,
+            9.664879
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -16.548673,
+            -0.0,
+            4.684987
+          ],
+          "size": [
+            6.902655,
+            10.0,
+            7.922252
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Slalom02_RightWall",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          12.0,
+          900.0,
+          -13.737265415549597
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.7699115044247786,
+          6.0,
+          3.2171581769436997
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            8.893805,
+            -0.0,
+            11.646113
+          ],
+          "size": [
+            2.212389,
+            12.0,
+            19.817694
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            6.460177,
+            -0.0,
+            12.932976
+          ],
+          "size": [
+            2.654867,
+            12.0,
+            22.391421
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            2.300885,
+            -0.0,
+            13.737265
+          ],
+          "size": [
+            5.663717,
+            12.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -1.371681,
+            -0.0,
+            12.691689
+          ],
+          "size": [
+            1.681416,
+            12.0,
+            21.908847
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.380531,
+            -0.0,
+            13.335121
+          ],
+          "size": [
+            4.336283,
+            12.0,
+            23.19571
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.274336,
+            -0.0,
+            11.243968
+          ],
+          "size": [
+            3.451327,
+            12.0,
+            19.013405
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Slalom02_RightWall_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          12.0,
+          900.0,
+          -13.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.5748031496062993,
+          2.2641509433962264,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          20.0,
+          12.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "VerticalTunnel_Floor",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1120.0,
+          -14.723860589812332
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.3628318584070795,
+          9.0,
+          1.3404825737265416
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            16.89823,
+            -0.0,
+            4.852547
+          ],
+          "size": [
+            4.20354,
+            18.0,
+            8.257373
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            12.274336,
+            -0.0,
+            5.38874
+          ],
+          "size": [
+            5.044248,
+            18.0,
+            9.329759
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.371681,
+            -0.0,
+            5.723861
+          ],
+          "size": [
+            10.761062,
+            18.0,
+            10.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.606195,
+            -0.0,
+            5.288204
+          ],
+          "size": [
+            3.19469,
+            18.0,
+            9.128686
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.323009,
+            -0.0,
+            5.5563
+          ],
+          "size": [
+            8.238938,
+            18.0,
+            9.664879
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -15.721239,
+            -0.0,
+            4.684987
+          ],
+          "size": [
+            6.557522,
+            18.0,
+            7.922252
+          ]
+        }
+      ]
+    },
+    {
+      "name": "VerticalTunnel_Floor_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1120.0,
+          -15.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          2.9921259842519685,
+          3.3962264150943398,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          38.0,
+          18.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "VerticalTunnel_Ceiling",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1120.0,
+          3.2761394101876675
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.3628318584070795,
+          9.0,
+          1.3404825737265416
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            16.89823,
+            -0.0,
+            4.852547
+          ],
+          "size": [
+            4.20354,
+            18.0,
+            8.257373
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            12.274336,
+            -0.0,
+            5.38874
+          ],
+          "size": [
+            5.044248,
+            18.0,
+            9.329759
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.371681,
+            -0.0,
+            5.723861
+          ],
+          "size": [
+            10.761062,
+            18.0,
+            10.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.606195,
+            -0.0,
+            5.288204
+          ],
+          "size": [
+            3.19469,
+            18.0,
+            9.128686
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.323009,
+            -0.0,
+            5.5563
+          ],
+          "size": [
+            8.238938,
+            18.0,
+            9.664879
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -15.721239,
+            -0.0,
+            4.684987
+          ],
+          "size": [
+            6.557522,
+            18.0,
+            7.922252
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OffsetGate_Left",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          -15.0,
+          1380.0,
+          -14.882037533512065
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.238938053097345,
+          5.0,
+          3.485254691689008
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            6.225664,
+            -0.0,
+            12.616622
+          ],
+          "size": [
+            1.548673,
+            10.0,
+            21.469169
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.522124,
+            -0.0,
+            14.010724
+          ],
+          "size": [
+            1.858407,
+            10.0,
+            24.257373
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.610619,
+            -0.0,
+            14.882038
+          ],
+          "size": [
+            3.964602,
+            10.0,
+            26.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.960177,
+            -0.0,
+            13.74933
+          ],
+          "size": [
+            1.176991,
+            10.0,
+            23.734584
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -3.066372,
+            -0.0,
+            14.446381
+          ],
+          "size": [
+            3.035398,
+            10.0,
+            25.128686
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -5.792035,
+            -0.0,
+            12.180965
+          ],
+          "size": [
+            2.415929,
+            10.0,
+            20.597855
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OffsetGate_Left_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          -15.0,
+          1380.0,
+          -14.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.1023622047244095,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          14.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "OffsetGate_Right",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          13.0,
+          1380.0,
+          -14.882037533512065
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.238938053097345,
+          5.0,
+          3.485254691689008
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            6.225664,
+            -0.0,
+            12.616622
+          ],
+          "size": [
+            1.548673,
+            10.0,
+            21.469169
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.522124,
+            -0.0,
+            14.010724
+          ],
+          "size": [
+            1.858407,
+            10.0,
+            24.257373
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.610619,
+            -0.0,
+            14.882038
+          ],
+          "size": [
+            3.964602,
+            10.0,
+            26.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.960177,
+            -0.0,
+            13.74933
+          ],
+          "size": [
+            1.176991,
+            10.0,
+            23.734584
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -3.066372,
+            -0.0,
+            14.446381
+          ],
+          "size": [
+            3.035398,
+            10.0,
+            25.128686
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -5.792035,
+            -0.0,
+            12.180965
+          ],
+          "size": [
+            2.415929,
+            10.0,
+            20.597855
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OffsetGate_Right_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          13.0,
+          1380.0,
+          -14.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.1023622047244095,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          14.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "OffsetGate_Top",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1380.0,
+          10.420911528150134
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.716814159292035,
+          5.0,
+          1.0723860589812333
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            18.676991,
+            -0.0,
+            3.882038
+          ],
+          "size": [
+            4.646018,
+            10.0,
+            6.605898
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            13.566372,
+            -0.0,
+            4.310992
+          ],
+          "size": [
+            5.575221,
+            10.0,
+            7.463807
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.831858,
+            -0.0,
+            4.579088
+          ],
+          "size": [
+            11.893805,
+            10.0,
+            8.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.880531,
+            -0.0,
+            4.230563
+          ],
+          "size": [
+            3.530973,
+            10.0,
+            7.302949
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -9.199115,
+            -0.0,
+            4.44504
+          ],
+          "size": [
+            9.106195,
+            10.0,
+            7.731903
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -17.376106,
+            -0.0,
+            3.747989
+          ],
+          "size": [
+            7.247788,
+            10.0,
+            6.337802
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FinalGate_Left",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          -13.0,
+          1640.0,
+          -11.737265415549597
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.238938053097345,
+          6.0,
+          3.2171581769436997
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            6.225664,
+            -0.0,
+            11.646113
+          ],
+          "size": [
+            1.548673,
+            12.0,
+            19.817694
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.522124,
+            -0.0,
+            12.932976
+          ],
+          "size": [
+            1.858407,
+            12.0,
+            22.391421
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.610619,
+            -0.0,
+            13.737265
+          ],
+          "size": [
+            3.964602,
+            12.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.960177,
+            -0.0,
+            12.691689
+          ],
+          "size": [
+            1.176991,
+            12.0,
+            21.908847
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -3.066372,
+            -0.0,
+            13.335121
+          ],
+          "size": [
+            3.035398,
+            12.0,
+            23.19571
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -5.792035,
+            -0.0,
+            11.243968
+          ],
+          "size": [
+            2.415929,
+            12.0,
+            19.013405
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FinalGate_Left_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          -13.0,
+          1640.0,
+          -11.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.1023622047244095,
+          2.2641509433962264,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          14.0,
+          12.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "FinalGate_Right",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          13.0,
+          1640.0,
+          -11.737265415549597
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.238938053097345,
+          6.0,
+          3.2171581769436997
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            6.225664,
+            -0.0,
+            11.646113
+          ],
+          "size": [
+            1.548673,
+            12.0,
+            19.817694
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.522124,
+            -0.0,
+            12.932976
+          ],
+          "size": [
+            1.858407,
+            12.0,
+            22.391421
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.610619,
+            -0.0,
+            13.737265
+          ],
+          "size": [
+            3.964602,
+            12.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.960177,
+            -0.0,
+            12.691689
+          ],
+          "size": [
+            1.176991,
+            12.0,
+            21.908847
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -3.066372,
+            -0.0,
+            13.335121
+          ],
+          "size": [
+            3.035398,
+            12.0,
+            23.19571
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -5.792035,
+            -0.0,
+            11.243968
+          ],
+          "size": [
+            2.415929,
+            12.0,
+            19.013405
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FinalGate_Right_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          13.0,
+          1640.0,
+          -11.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.1023622047244095,
+          2.2641509433962264,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          14.0,
+          12.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "FinalGate_Bottom",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1640.0,
+          -15.579088471849866
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.5398230088495573,
+          6.0,
+          1.0723860589812333
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            17.787611,
+            -0.0,
+            3.882038
+          ],
+          "size": [
+            4.424779,
+            12.0,
+            6.605898
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            12.920354,
+            -0.0,
+            4.310992
+          ],
+          "size": [
+            5.309735,
+            12.0,
+            7.463807
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.60177,
+            -0.0,
+            4.579088
+          ],
+          "size": [
+            11.327434,
+            12.0,
+            8.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.743363,
+            -0.0,
+            4.230563
+          ],
+          "size": [
+            3.362832,
+            12.0,
+            7.302949
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.761062,
+            -0.0,
+            4.44504
+          ],
+          "size": [
+            8.672566,
+            12.0,
+            7.731903
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -16.548673,
+            -0.0,
+            3.747989
+          ],
+          "size": [
+            6.902655,
+            12.0,
+            6.337802
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FinalGate_Bottom_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          1640.0,
+          -16.62
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.1496062992125986,
+          2.2641509433962264,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          40.0,
+          12.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondActGate_Left",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          -16.0,
+          2680.0,
+          -13.737265415549597
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0619469026548671,
+          5.0,
+          3.2171581769436997
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            5.336283,
+            -0.0,
+            11.646113
+          ],
+          "size": [
+            1.327434,
+            10.0,
+            19.817694
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            3.876106,
+            -0.0,
+            12.932976
+          ],
+          "size": [
+            1.59292,
+            10.0,
+            22.391421
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.380531,
+            -0.0,
+            13.737265
+          ],
+          "size": [
+            3.39823,
+            10.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.823009,
+            -0.0,
+            12.691689
+          ],
+          "size": [
+            1.00885,
+            10.0,
+            21.908847
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.628319,
+            -0.0,
+            13.335121
+          ],
+          "size": [
+            2.60177,
+            10.0,
+            23.19571
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.964602,
+            -0.0,
+            11.243968
+          ],
+          "size": [
+            2.070796,
+            10.0,
+            19.013405
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondActGate_Left_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          -16.0,
+          2680.0,
+          -13.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.9448818897637796,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          12.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondActGate_Right",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          16.0,
+          2680.0,
+          -13.737265415549597
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0619469026548671,
+          5.0,
+          3.2171581769436997
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            5.336283,
+            -0.0,
+            11.646113
+          ],
+          "size": [
+            1.327434,
+            10.0,
+            19.817694
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            3.876106,
+            -0.0,
+            12.932976
+          ],
+          "size": [
+            1.59292,
+            10.0,
+            22.391421
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            1.380531,
+            -0.0,
+            13.737265
+          ],
+          "size": [
+            3.39823,
+            10.0,
+            24.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -0.823009,
+            -0.0,
+            12.691689
+          ],
+          "size": [
+            1.00885,
+            10.0,
+            21.908847
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.628319,
+            -0.0,
+            13.335121
+          ],
+          "size": [
+            2.60177,
+            10.0,
+            23.19571
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.964602,
+            -0.0,
+            11.243968
+          ],
+          "size": [
+            2.070796,
+            10.0,
+            19.013405
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondActGate_Right_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          16.0,
+          2680.0,
+          -13.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.9448818897637796,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          12.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondActGate_Bottom",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2680.0,
+          -16.006702412868634
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.893805309734513,
+          5.0,
+          0.938337801608579
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            19.566372,
+            -0.0,
+            3.396783
+          ],
+          "size": [
+            4.867257,
+            10.0,
+            5.780161
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            14.212389,
+            -0.0,
+            3.772118
+          ],
+          "size": [
+            5.840708,
+            10.0,
+            6.530831
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            5.061947,
+            -0.0,
+            4.006702
+          ],
+          "size": [
+            12.460177,
+            10.0,
+            7.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -3.017699,
+            -0.0,
+            3.701743
+          ],
+          "size": [
+            3.699115,
+            10.0,
+            6.39008
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -9.637168,
+            -0.0,
+            3.88941
+          ],
+          "size": [
+            9.539823,
+            10.0,
+            6.765416
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -18.20354,
+            -0.0,
+            3.279491
+          ],
+          "size": [
+            7.59292,
+            10.0,
+            5.545576
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondActGate_Bottom_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2680.0,
+          -17.12
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.4645669291338583,
+          1.8867924528301887,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          44.0,
+          10.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondSlalom_Left",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          -14.0,
+          3100.0,
+          -15.026809651474531
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.9469026548672566,
+          6.0,
+          3.753351206434316
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            9.783186,
+            -0.0,
+            13.587131
+          ],
+          "size": [
+            2.433628,
+            12.0,
+            23.120643
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            7.106195,
+            -0.0,
+            15.088472
+          ],
+          "size": [
+            2.920354,
+            12.0,
+            26.123324
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            2.530973,
+            -0.0,
+            16.02681
+          ],
+          "size": [
+            6.230088,
+            12.0,
+            28.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -1.50885,
+            -0.0,
+            14.806971
+          ],
+          "size": [
+            1.849558,
+            12.0,
+            25.560322
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.818584,
+            -0.0,
+            15.557641
+          ],
+          "size": [
+            4.769912,
+            12.0,
+            27.061662
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -9.10177,
+            -0.0,
+            13.117962
+          ],
+          "size": [
+            3.79646,
+            12.0,
+            22.182306
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondSlalom_Left_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          -14.0,
+          3100.0,
+          -14.620000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.7322834645669292,
+          2.2641509433962264,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          22.0,
+          12.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondSlalom_Right",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          14.0,
+          3290.0,
+          -17.02680965147453
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.9469026548672566,
+          6.0,
+          3.753351206434316
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            9.783186,
+            -0.0,
+            13.587131
+          ],
+          "size": [
+            2.433628,
+            12.0,
+            23.120643
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            7.106195,
+            -0.0,
+            15.088472
+          ],
+          "size": [
+            2.920354,
+            12.0,
+            26.123324
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            2.530973,
+            -0.0,
+            16.02681
+          ],
+          "size": [
+            6.230088,
+            12.0,
+            28.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -1.50885,
+            -0.0,
+            14.806971
+          ],
+          "size": [
+            1.849558,
+            12.0,
+            25.560322
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -4.818584,
+            -0.0,
+            15.557641
+          ],
+          "size": [
+            4.769912,
+            12.0,
+            27.061662
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -9.10177,
+            -0.0,
+            13.117962
+          ],
+          "size": [
+            3.79646,
+            12.0,
+            22.182306
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondSlalom_Right_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          14.0,
+          3290.0,
+          -16.62
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.7322834645669292,
+          2.2641509433962264,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          22.0,
+          12.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondTunnel_Floor",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          3700.0,
+          -15.723860589812332
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.5398230088495573,
+          11.0,
+          1.3404825737265416
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            17.787611,
+            -0.0,
+            4.852547
+          ],
+          "size": [
+            4.424779,
+            22.0,
+            8.257373
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            12.920354,
+            -0.0,
+            5.38874
+          ],
+          "size": [
+            5.309735,
+            22.0,
+            9.329759
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.60177,
+            -0.0,
+            5.723861
+          ],
+          "size": [
+            11.327434,
+            22.0,
+            10.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.743363,
+            -0.0,
+            5.288204
+          ],
+          "size": [
+            3.362832,
+            22.0,
+            9.128686
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.761062,
+            -0.0,
+            5.5563
+          ],
+          "size": [
+            8.672566,
+            22.0,
+            9.664879
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -16.548673,
+            -0.0,
+            4.684987
+          ],
+          "size": [
+            6.902655,
+            22.0,
+            7.922252
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SecondTunnel_Floor_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          3700.0,
+          -16.62
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.1496062992125986,
+          4.150943396226415,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -5.34
+        ],
+        "size": [
+          40.0,
+          22.0,
+          13.92
+        ]
+      }
+    },
+    {
+      "name": "SecondTunnel_Ceiling",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          3700.0,
+          5.848525469168901
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          3.5398230088495573,
+          11.0,
+          1.2064343163538873
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            17.787611,
+            -0.0,
+            4.367292
+          ],
+          "size": [
+            4.424779,
+            22.0,
+            7.431635
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            12.920354,
+            -0.0,
+            4.849866
+          ],
+          "size": [
+            5.309735,
+            22.0,
+            8.396783
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            4.60177,
+            -0.0,
+            5.151475
+          ],
+          "size": [
+            11.327434,
+            22.0,
+            9.0
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -2.743363,
+            -0.0,
+            4.759383
+          ],
+          "size": [
+            3.362832,
+            22.0,
+            8.215818
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -8.761062,
+            -0.0,
+            5.00067
+          ],
+          "size": [
+            8.672566,
+            22.0,
+            8.698391
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -16.548673,
+            -0.0,
+            4.216488
+          ],
+          "size": [
+            6.902655,
+            22.0,
+            7.130027
+          ]
+        }
+      ]
+    }
+  ],
+  "passageBoundsValidated": true
+}

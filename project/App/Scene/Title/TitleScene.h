@@ -15,6 +15,9 @@
 
 class TitleScene : public BaseScene {
 public:
+    explicit TitleScene(bool shouldOpenStageSelect = false)
+        : shouldOpenStageSelect_(shouldOpenStageSelect) {}
+
     void Initialize() override;
     void Finalize() override;
     void Update() override;
@@ -81,6 +84,7 @@ private:
     std::vector<StageRoomObject>* FindStageRoomObjects(const std::string& stageId);
     const std::vector<StageRoomObject>* FindStageRoomObjects(const std::string& stageId) const;
     void StartStageSelectTransition();
+    void StartGame();
     void StartTutorial();
     void UpdateTutorialStart(float deltaTime);
     void StartTitleReturn();
@@ -147,6 +151,8 @@ private:
     float frozenRoomAmount_ = 0.0f;
 
     ViewState viewState_ = ViewState::Title;
+    static bool hasStartedTutorial_;
+    bool shouldOpenStageSelect_ = false;
     const BaseTitleState* currentState_ = nullptr;
     float animationTime_ = 0.0f;
     float idleTime_ = 0.0f;

@@ -1,0 +1,22 @@
+# Blender 4.4.1 MTL File: 'None'
+# www.blender.org
+
+newmtl RuinsEye
+Ns 422.499969
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 1.800000 0.360000 0.045000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/RuinsEye.png
+
+newmtl RuinsMetal
+Ns 270.399994
+Ka 0.650000 0.650000 0.650000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/RuinsMetal.png

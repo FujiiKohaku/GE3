@@ -1,0 +1,69 @@
+{
+  "NormalEnemy": {
+    "triangles": 552,
+    "materials": 4,
+    "modelRadius": 1.32,
+    "runtimeScale": 2.0,
+    "worldRadius": 2.64,
+    "parts": {
+      "Body": 408,
+      "Eye": 44,
+      "Left": 50,
+      "Right": 50
+    }
+  },
+  "MoveEnemy": {
+    "triangles": 494,
+    "materials": 4,
+    "modelRadius": 1.35,
+    "runtimeScale": 2.0,
+    "worldRadius": 2.7,
+    "parts": {
+      "Body": 282,
+      "Eye": 44,
+      "Left": 52,
+      "Right": 52,
+      "Cannon": 64
+    }
+  },
+  "ArmoredEnemy": {
+    "triangles": 636,
+    "materials": 4,
+    "modelRadius": 1.04,
+    "runtimeScale": 2.6,
+    "worldRadius": 2.704,
+    "parts": {
+      "Body": 444,
+      "Eye": 44,
+      "Left": 8,
+      "Right": 8,
+      "Cannon": 132
+    }
+  },
+  "SwarmEnemy": {
+    "triangles": 112,
+    "materials": 3,
+    "modelRadius": 1.65,
+    "runtimeScale": 0.58,
+    "worldRadius": 0.9569999999999999,
+    "parts": {
+      "Body": 92,
+      "Tail": 20
+    }
+  },
+  "PaintShooterEnemy": {
+    "triangles": 700,
+    "materials": 5,
+    "modelRadius": 1.32,
+    "runtimeScale": 2.0,
+    "worldRadius": 2.64,
+    "parts": {
+      "Body": 320,
+      "Eye": 44,
+      "Left": 104,
+      "Right": 104,
+      "Cannon": 64,
+      "Tank": 64
+    }
+  }
+}

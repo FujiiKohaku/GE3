@@ -28,6 +28,8 @@ struct LevelData {
             Vector3 center;
             Vector3 size;
         } collider;
+        // Additional boxes use the same world-space offsets and sizes as collider.
+        std::vector<ColliderData> colliders;
 
         struct TriggerData {
             bool exists = false;

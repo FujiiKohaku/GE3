@@ -19,6 +19,7 @@
 #include "Engine/PostEffect/PostEffectType.h"
 #include "App/Game/VisualPresetLibrary.h"
 #include "App/Game/Stage/EnemyAppearanceTable.h"
+#include "App/Game/Stage/EnemyAppearanceParts.h"
 #include <fstream>
 #include <string_view>
 
@@ -269,6 +270,16 @@ void GamePlayScene::Initialize()
 
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
+    if (stageId_ == "stage01") {
+        for (const EnemyAppearanceEntry& appearance : kEnemyAppearances) {
+            if (appearance.stage == stageId_) {
+                ModelManager::GetInstance()->Load(std::string(appearance.model));
+            }
+        }
+        for (const EnemyAppearancePartEntry& part : kEnemyAppearanceParts) {
+            ModelManager::GetInstance()->Load(std::string(part.model));
+        }
+    }
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Enemy/Bullet/LowPolySphere/lowPolySphere.obj");
     fearWormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
     angerBlockModel_ = ModelManager::GetInstance()->Load("Environment/Block/block.obj");
@@ -1073,6 +1084,7 @@ void GamePlayScene::Update()
 
     // 敵全体の更新
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+        if (stageId_ == "stage01") { enemy->SetAppearanceTarget(player_->GetTranslate()); }
         enemy->Update();
     }
 
@@ -3368,10 +3380,8 @@ void GamePlayScene::DrawCollisionDebug()
 
     if (showStageCollision_) {
       for (const std::unique_ptr<Object3d>& levelObject : levelObjects_) {
-        const BoxCollider* collider = levelObject->GetCollider();
-        if (collider == nullptr) {
-            continue;
-        }
+       for (size_t colliderIndex = 0; colliderIndex < levelObject->GetColliderCount(); ++colliderIndex) {
+        const BoxCollider* collider = levelObject->GetCollider(colliderIndex);
         const Vector3 size = collider->GetSize();
         const float radius = 0.5f * std::sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
         if (!isNearCamera(collider->GetCenter(), radius)) continue;
@@ -3387,6 +3397,7 @@ void GamePlayScene::DrawCollisionDebug()
             box.orientation[2],
             kStageColliderColor,
             kLineThickness);
+       }
       }
     }
 
@@ -3942,6 +3953,13 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 levelObject->SetCastShadow(true);
                 levelObject->SetReceiveShadow(true);
             }
+            if (objData.fileName == "Environment/Ocean/FloatingRuins/floating_earth_wall_masonry.obj" ||
+                objData.fileName == "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj" ||
+                objData.fileName.starts_with("Environment/Ocean/FloatingRuins/floating_gate_")) {
+                levelObject->SetMaterial("resources/Shaders/Object3D/FloatingRuins");
+                levelObject->SetSurfaceProperties(0.78f, 0.0f, 0.25f);
+                levelObject->SetShininess(24.0f);
+            }
             if (stageId_ == "stage03" && isIceModel) {
                 levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);
@@ -3958,7 +3976,11 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             }
 
             if (objData.destructible.exists) {
-                levelObject->SetColor({ 0.30f, 0.20f, 0.14f, 1.0f });
+                if (objData.fileName == "Environment/Ocean/FloatingRock/floating_rock.obj") {
+                    levelObject->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+                } else {
+                    levelObject->SetColor({ 0.30f, 0.20f, 0.14f, 1.0f });
+                }
                 destructibleLevelObjects_.push_back({
                     levelObject.get(),
                     (std::max)(objData.destructible.hp, 1.0f),
@@ -3969,8 +3991,15 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             if (objData.hazard.exists) {
                 levelObject->SetCollisionDamage(objData.hazard.damage);
                 if (objData.hazard.type == "LASER") {
-                    levelObject->SetColor({ 1.0f, 0.03f, 0.02f, 1.0f });
-                    levelObject->SetEnableLighting(false);
+                    if (objData.fileName.starts_with("Environment/Ocean/RuinsRotor/")) {
+                        levelObject->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+                        levelObject->SetMaterial("resources/Shaders/Object3D/RuinsRotor");
+                        levelObject->SetCastShadow(stageSettings_.shadows.enabled);
+                        levelObject->SetReceiveShadow(stageSettings_.shadows.enabled);
+                    } else {
+                        levelObject->SetColor({ 1.0f, 0.03f, 0.02f, 1.0f });
+                        levelObject->SetEnableLighting(false);
+                    }
                 }
             }
 
@@ -4009,6 +4038,14 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 }
             }
 
+            for (const LevelData::ObjectData::ColliderData& colliderData : objData.colliders) {
+                if (!colliderData.exists || colliderData.type != "BOX") { continue; }
+                std::unique_ptr<BoxCollider> collider = std::make_unique<BoxCollider>();
+                collider->SetCenter(objData.translation + colliderData.center);
+                collider->SetSize(colliderData.size);
+                BoxCollider* registeredCollider = CollisionManager::GetInstance()->RegisterCollider(std::move(collider));
+                levelObject->AddCollider(registeredCollider);
+            }
             levelObjects_.push_back(std::move(levelObject));
         }
         else if (objData.type == "EnemySpawn") {
@@ -4099,10 +4136,10 @@ void GamePlayScene::ClearLevelObjects()
     stageTriggers_.clear();
     destructibleLevelObjects_.clear();
     for (std::unique_ptr<Object3d>& obj : levelObjects_) {
-        if (obj->GetCollider() != nullptr) {
-            CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider());
-            obj->SetCollider(nullptr);
+        for (size_t colliderIndex = 0; colliderIndex < obj->GetColliderCount(); ++colliderIndex) {
+            CollisionManager::GetInstance()->UnregisterCollider(obj->GetCollider(colliderIndex));
         }
+        obj->ClearColliders();
     }
     levelObjects_.clear();
 }
@@ -4122,4 +4159,13 @@ void GamePlayScene::ConfigureFrozenEnemyAppearance(BaseEnemy& enemy)
     // ModelManagerが共有・キャッシュするため、同じ種類の出現ごとに読み込み直さない。
     Model* model = ModelManager::GetInstance()->Load(std::string(modelPath));
     enemy.SetAppearance(model);
+    if (stageId_ == "stage01") {
+        enemy.SetAppearanceMaterial("resources/Shaders/Object3D/RuinsEnemy");
+        for (const EnemyAppearancePartEntry& part : kEnemyAppearanceParts) {
+            if (part.appearance == enemy.GetAppearanceId()) {
+                enemy.AddAppearancePart(ModelManager::GetInstance()->Load(std::string(part.model)), part.motion);
+            }
+        }
+        enemy.SetAppearanceTarget(player_->GetTranslate());
+    }
 }

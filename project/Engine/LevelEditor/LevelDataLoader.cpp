@@ -153,6 +153,25 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
         }
     }
 
+    if (objectJson.contains("colliders")) {
+        for (const nlohmann::json& colliderJson : objectJson["colliders"]) {
+            LevelData::ObjectData::ColliderData colliderData {};
+            colliderData.exists = true;
+            colliderData.type = colliderJson.at("type").get<std::string>();
+            colliderData.center = {
+                colliderJson.at("center")[0].get<float>(),
+                colliderJson.at("center")[2].get<float>(),
+                colliderJson.at("center")[1].get<float>()
+            };
+            colliderData.size = {
+                colliderJson.at("size")[0].get<float>(),
+                colliderJson.at("size")[2].get<float>(),
+                colliderJson.at("size")[1].get<float>()
+            };
+            objectData.colliders.push_back(colliderData);
+        }
+    }
+
     if (objectJson.contains("trigger")) {
         const nlohmann::json& trigger = objectJson["trigger"];
         objectData.trigger.exists = true;

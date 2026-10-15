@@ -1,0 +1,17 @@
+{
+  "triangles": {
+    "WaterfallIsland_Terrain": 1016,
+    "WaterfallIsland_Ruins": 1192,
+    "WaterfallIsland_Water": 2400,
+    "WaterfallIsland_Foam": 720
+  },
+  "totalTriangles": 5328,
+  "meshObjects": 4,
+  "materials": 10,
+  "tunnelWidth": 28,
+  "tunnelArchHeight": 26,
+  "installedInStage": false,
+  "waterAnimationImplemented": false,
+  "units": "Blender Z up, OBJ Y up",
+  "seed": 27015
+}
