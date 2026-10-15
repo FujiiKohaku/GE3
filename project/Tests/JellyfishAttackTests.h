@@ -7,7 +7,6 @@
 inline bool RunJellyfishAttackTests()
 {
     IceJellyfish boss;
-    const auto& attacks = GetJellyfishAttacks();
     boss.tentacleHp_.fill(6.0f);
     // 浮遊のタイミングで一度だけ開始し、波状弾→氷槍→氷柱の順を保つ。
     boss.UpdateAttackSequence(-std::numbers::pi_v<float> / 2.0f, 0.0f);
@@ -28,25 +27,25 @@ inline bool RunJellyfishAttackTests()
     boss.UpdateAttackSequence(0.0f, 0.18f);
     if (boss.pulseBarrageWave_ != -1 || std::abs(boss.iceSpearTimer_ - 0.18f) > 0.0001f ||
         std::abs(boss.icePillarTimer_ - 0.18f) > 0.0001f) return false;
-    attacks[1]->Update(boss, 0.82f);
-    attacks[1]->Update(boss, 0.20f);
-    attacks[1]->Update(boss, 0.21f);
+    boss.UpdateIceSpearAttack(0.82f);
+    boss.UpdateIceSpearAttack(0.20f);
+    boss.UpdateIceSpearAttack(0.21f);
     if (boss.iceSpearVolley_ != 3) return false;
-    attacks[1]->Update(boss, 1.0f);
+    boss.UpdateIceSpearAttack(1.0f);
     if (boss.iceSpearVolley_ != -1 || boss.iceSpearPoseWeight_ != 0.0f) return false;
-    attacks[2]->Update(boss, 1.82f);
+    boss.UpdateIcePillarAttack(1.82f);
     if (!boss.icePillarModelSpawnedForWave_) return false;
     boss.player_ = &player;
     const float pillarTime = boss.icePillarTimer_;
-    attacks[2]->Start(boss);
+    boss.StartIcePillarAttack();
     if (boss.icePillarTimer_ != pillarTime) return false; // 氷柱の実行中は再開始しない。
     boss.player_ = nullptr;
-    attacks[2]->Update(boss, 7.0f);
+    boss.UpdateIcePillarAttack(7.0f);
     if (boss.icePillarWave_ != 1 || boss.icePillarTimer_ != 0.0f) return false;
-    attacks[2]->Update(boss, 9.0f);
-    attacks[2]->Update(boss, 9.0f);
+    boss.UpdateIcePillarAttack(9.0f);
+    boss.UpdateIcePillarAttack(9.0f);
     if (boss.icePillarWave_ != -1) return false;
     boss.tentacleHp_.fill(0.0f);
-    attacks[1]->Start(boss);
+    boss.StartIceSpearAttack();
     return boss.iceSpearVolley_ == -1;
 }

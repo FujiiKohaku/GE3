@@ -2,6 +2,7 @@
 
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
+#include "App/Game/Tutorial/BaseTutorialStep.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -68,6 +69,13 @@ void LoadingScene::Update()
 {
     if (!hasDrawnFirstFrame_) {
         hasDrawnFirstFrame_ = true;
+    } else if (simulationBoot_ && !hasPreparedTutorialFont_) {
+        FontManager* fontManager = FontManager::GetInstance();
+        const FontHandle fontHandle = fontManager->LoadFont(
+            "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        fontManager->EnsureGlyphs(fontHandle, GetTutorialGlyphText());
+        // このフレームの描画前にアトラス更新・転送を終えてから、次の準備へ進む。
+        hasPreparedTutorialFont_ = true;
     } else if (!gameResourcesInitialized_) {
         EffectManager* effectManager = EffectManager::GetInstance();
         if (!effectManager->IsInitialized()) {
@@ -92,8 +100,13 @@ void LoadingScene::Update()
     if (gameResourcesInitialized_) {
         progress = EffectManager::GetInstance()->GetWarmUpProgress();
     }
-    progressSprite_->SetSize({ (simulationBoot_ ? 420.0f : kProgressBarWidth) * progress,
-        simulationBoot_ ? 3.0f : kProgressBarHeight });
+    float progressWidth = kProgressBarWidth;
+    float progressHeight = kProgressBarHeight;
+    if (simulationBoot_) {
+        progressWidth = 420.0f;
+        progressHeight = 3.0f;
+    }
+    progressSprite_->SetSize({ progressWidth * progress, progressHeight });
 
     backgroundSprite_->Update();
     progressBackSprite_->Update();

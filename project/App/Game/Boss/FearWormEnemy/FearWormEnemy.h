@@ -1,7 +1,6 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
-#include "FearWormMovement.h"
 class Model;
 class Object3d;
 class Player;
@@ -63,6 +62,17 @@ private:
     friend bool RunBeamStateTests();
     friend bool RunFearWormMovementTests();
 
+    enum class FearWormMovementType { Orbit, Coil, Weave, Drift, Line, Spiral };
+
+    struct FearWormMovementContext {
+        Vector3 playerPosition;
+        float orbitAngle;
+        float patternTime;
+        float forwardOffset;
+        float madModeTime;
+        float spiralAngle;
+    };
+
     using MovementPattern = FearWormMovementType;
     enum class BeamState { Wait, Charge, Fire, FadeOut };
 
@@ -77,12 +87,12 @@ private:
         bool isAlive = true;
     };
 
-    // FearWormEnemy.cpp：Updateの入口と状態の選択。
+    // Updateの入口と状態の選択。
     void UpdateState();
     void ChangeState(BossState state);
     void OnDeath() override;
 
-    // FearWormEnemyStates.cpp：待機 → 登場 → 戦闘 → 死亡。
+    // 待機 → 登場 → 戦闘 → 死亡。
     void EnterEntry();
     void EnterDead();
     void UpdateWait();
@@ -94,7 +104,16 @@ private:
     void UpdateBattleMovement(const Vector3& playerPosition, float movementSpeedRate);
     void UpdateBattleAttack();
 
-    // FearWormEnemyMovement.cpp：目的地、移動パターン、胴体の追従。
+    // 目的地、移動パターン、胴体の追従。
+    static Vector3 CalculateOrbitTarget(const FearWormMovementContext& context);
+    static Vector3 CalculateCoilTarget(const FearWormMovementContext& context);
+    static Vector3 CalculateWeaveTarget(const FearWormMovementContext& context);
+    static Vector3 CalculateDriftTarget(const FearWormMovementContext& context);
+    static Vector3 CalculateLineTarget(const FearWormMovementContext& context);
+    static Vector3 CalculateSpiralTarget(const FearWormMovementContext& context);
+    static Vector3 CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context);
+    static FearWormMovementType NextFearWormMovement(FearWormMovementType type);
+    static Matrix4x4 MakeRotateAxisAngleMatrix(const Vector3& axis, float angle);
     Vector3 FallbackTarget();
     Vector3 EntryTarget(const Vector3& playerPosition);
     Vector3 BattleTarget(const Vector3& playerPosition, float rate);
@@ -105,7 +124,7 @@ private:
     void UpdateSegments();
     float MovementSpeedRate() const;
 
-    // FearWormEnemyAttack.cpp：通常弾、チャージ弾、ミサイル、弾幕。
+    // 通常弾、チャージ弾、ミサイル、弾幕。
     void Attack() override;
     void FireBullet(const Vector3& position);
     void FireSingleMissile(size_t segmentIndex);
@@ -119,7 +138,7 @@ private:
     void UpdateSpiralBarrage();
     void FireDirectionalBullet(const Vector3& position, const Vector3& direction);
 
-    // FearWormEnemyParts.cpp：部位の生成、描画、当たり判定、HP。
+    // 部位の生成、描画、当たり判定、HP。
     void InitializeSegments(Model* model);
     void UpdateSegmentObjects();
     void PlayBodyBreakEffect(const Vector3& position);
@@ -129,7 +148,7 @@ private:
     bool HasAliveBodyParts() const;
     bool IsValidSegmentIndex(int32_t partIndex) const;
 
-    // FearWormEnemyBeam.cpp：待機 → チャージ → 発射 → 終了。
+    // 待機 → チャージ → 発射 → 終了。
     void InitializeBeam();
     void UpdateBeamAttack();
     void ChangeBeamState(BeamState state);

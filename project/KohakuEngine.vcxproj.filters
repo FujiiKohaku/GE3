@@ -617,25 +617,7 @@
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyStates.cpp">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClCompile>
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyMovement.cpp">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyAttack.cpp">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyParts.cpp">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemyBeam.cpp">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormMovement.cpp">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp">
@@ -651,12 +633,6 @@
       <Filter>App\Game\Boss\Encounter</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfish.cpp">
-      <Filter>App\Game\Boss\IceJellyfish</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\IceJellyfish\BaseJellyfishAttack.cpp">
-      <Filter>App\Game\Boss\IceJellyfish</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\IceJellyfish\JellyfishAttackPattern.cpp">
       <Filter>App\Game\Boss\IceJellyfish</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp">
@@ -1013,9 +989,6 @@
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormMovement.h">
-      <Filter>App\Game\Boss\FearWormEnemy</Filter>
-    </ClInclude>
     <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h">
       <Filter>App\Game\Boss\AngerBlockBoss</Filter>
     </ClInclude>
@@ -1029,12 +1002,6 @@
       <Filter>App\Game\Boss\Encounter</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfish.h">
-      <Filter>App\Game\Boss\IceJellyfish</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Boss\IceJellyfish\BaseJellyfishAttack.h">
-      <Filter>App\Game\Boss\IceJellyfish</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Boss\IceJellyfish\JellyfishAttackPattern.h">
       <Filter>App\Game\Boss\IceJellyfish</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.h">

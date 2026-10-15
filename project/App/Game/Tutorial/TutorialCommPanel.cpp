@@ -13,25 +13,22 @@ constexpr const char* kFont = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.tt
 void TutorialCommPanel::Initialize()
 {
     parts_.clear();
-    for (int i = 0; i < 200; ++i) {
+    // 現行の最大構成は通常枠38個 + DPAD6個 + A/RT各40個。
+    constexpr size_t kInitialPartCount = 124;
+    parts_.reserve(kInitialPartCount);
+    for (size_t index = 0; index < kInitialPartCount; ++index) {
         auto part = std::make_unique<Sprite>();
         part->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
         part->SetAnchorPoint({ 0.5f, 0.5f });
         parts_.push_back(std::move(part));
     }
-    const auto text = [] {
-        auto result = std::make_unique<Text>();
-        result->Initialize(kFont);
-        result->SetAnchorPoint({ 0.0f, 0.5f });
-        return result;
-    };
-    header_ = text();
-    status_ = text();
-    message_ = text();
-    operation_ = text();
+    header_ = CreateText();
+    status_ = CreateText();
+    message_ = CreateText();
+    operation_ = CreateText();
     buttonLabels_.clear();
     for (int i = 0; i < 3; ++i) {
-        buttonLabels_.push_back(text());
+        buttonLabels_.push_back(CreateText());
         buttonLabels_.back()->SetAnchorPoint({ 0.5f, 0.5f });
     }
     header_->SetText("TRAINING AI");
@@ -52,7 +49,11 @@ void TutorialCommPanel::ShowMessage(const std::string& message, const std::strin
     success_ = operation == "練習クリア";
     buttons_ = buttons;
     if (buttons_.size() > buttonLabels_.size()) buttons_.resize(buttonLabels_.size());
-    status_->SetText(success_ ? "完了" : "練習中");
+    if (success_) {
+        status_->SetText("完了");
+    } else {
+        status_->SetText("練習中");
+    }
     visible_ = true;
 }
 
@@ -65,78 +66,70 @@ void TutorialCommPanel::SetProgress(int completed, int total)
 void TutorialCommPanel::Update(float deltaTime)
 {
     if (!header_) return;
-    const float dt = std::isfinite(deltaTime) ? (std::max)(0.0f, deltaTime) : 0.0f;
+    float dt = 0.0f;
+    if (std::isfinite(deltaTime)) dt = (std::max)(0.0f, deltaTime);
     elapsed_ += dt;
     const float follow = 1.0f - std::exp(-10.0f * dt);
-    alpha_ += ((visible_ ? 1.0f : 0.0f) - alpha_) * follow;
-    height_ += ((compact_ ? 72.0f : 240.0f) - height_) * follow;
+    float targetAlpha = 0.0f;
+    if (visible_) targetAlpha = 1.0f;
+    float targetHeight = 240.0f;
+    if (compact_) targetHeight = 72.0f;
+    alpha_ += (targetAlpha - alpha_) * follow;
+    height_ += (targetHeight - height_) * follow;
     const float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
     const float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
     const float scale = (std::max)(0.1f, (std::min)(screenWidth / 1280.0f, screenHeight / 720.0f));
     constexpr float width = 720.0f;
-    const float x = (screenWidth - width * scale) * 0.5f;
-    const float y = screenHeight - (44.0f + height_ - 12.0f * (1.0f - alpha_)) * scale;
-    size_t index = 0;
-    const auto rect = [&](float cx, float cy, float w, float h, Vector4 color, float rotation = 0.0f) {
-        auto& sprite = parts_[index++];
-        sprite->SetPosition({ x + cx * scale, y + cy * scale });
-        sprite->SetSize({ w * scale, h * scale });
-        sprite->SetRotation(rotation);
-        color.w *= alpha_;
-        sprite->SetColor(color);
-        sprite->Update();
-    };
-    const auto line = [&](float ax, float ay, float bx, float by, Vector4 color) {
-        const float dx = bx - ax, dy = by - ay;
-        rect((ax + bx) * 0.5f, (ay + by) * 0.5f,
-            std::sqrt(dx * dx + dy * dy), 1.0f, color, std::atan2(dy, dx));
-    };
+    panelPosition_ = { (screenWidth - width * scale) * 0.5f,
+        screenHeight - (44.0f + height_ - 12.0f * (1.0f - alpha_)) * scale };
+    panelScale_ = scale;
+    activePartCount_ = 0;
     const Vector4 background { 0.006f, 0.018f, 0.040f, 0.91f };
-    rect(width * 0.5f, height_ * 0.5f, width - 24.0f, height_, background);
-    rect(6.0f, height_ * 0.5f, 12.0f, height_ - 24.0f, background);
-    rect(width - 6.0f, height_ * 0.5f, 12.0f, height_ - 24.0f, background);
+    AddRectangle(width * 0.5f, height_ * 0.5f, width - 24.0f, height_, background);
+    AddRectangle(6.0f, height_ * 0.5f, 12.0f, height_ - 24.0f, background);
+    AddRectangle(width - 6.0f, height_ * 0.5f, 12.0f, height_ - 24.0f, background);
     // white.pngの回転した細線で、角を切った外枠を作る。
-    line(12, 0, width - 12, 0, kCyan);
-    line(width - 12, 0, width, 12, kCyan);
-    line(width, 12, width, height_ - 12, kCyan);
-    line(width, height_ - 12, width - 12, height_, kCyan);
-    line(width - 12, height_, 12, height_, kCyan);
-    line(12, height_, 0, height_ - 12, kCyan);
-    line(0, height_ - 12, 0, 12, kCyan);
-    line(0, 12, 12, 0, kCyan);
+    AddLine(12, 0, width - 12, 0, kCyan);
+    AddLine(width - 12, 0, width, 12, kCyan);
+    AddLine(width, 12, width, height_ - 12, kCyan);
+    AddLine(width, height_ - 12, width - 12, height_, kCyan);
+    AddLine(width - 12, height_, 12, height_, kCyan);
+    AddLine(12, height_, 0, height_ - 12, kCyan);
+    AddLine(0, height_ - 12, 0, 12, kCyan);
+    AddLine(0, 12, 12, 0, kCyan);
     const Vector4 divider { 0.18f, 0.64f, 0.78f, 0.55f };
-    line(22, 32, width - 22, 32, divider);
+    AddLine(22, 32, width - 22, 32, divider);
     if (!compact_) {
-        line(22, height_ - 78, width - 22, height_ - 78, divider);
-        line(108, 46, 108, height_ - 88, divider);
+        AddLine(22, height_ - 78, width - 22, height_ - 78, divider);
+        AddLine(108, 46, 108, height_ - 88, divider);
     }
-    const float waveY = compact_ ? 50.0f : 74.0f;
+    float waveY = 74.0f;
+    float waveScale = 1.0f;
+    if (compact_) {
+        waveY = 50.0f;
+        waveScale = 0.45f;
+    }
     const float waveHeights[] = { 10, 22, 34, 46, 34, 22, 10 };
     for (int i = 0; i < 7; ++i) {
         const float pulse = 0.85f + 0.15f * std::sin(elapsed_ * 5.0f + i * 0.7f);
-        rect(40.0f + i * 6.0f, waveY, 3.0f,
-            waveHeights[i] * pulse * (compact_ ? 0.45f : 1.0f), kCyan);
+        AddRectangle(40.0f + i * 6.0f, waveY, 3.0f,
+            waveHeights[i] * pulse * waveScale, kCyan);
     }
-    const Vector4 accent = success_ ? Vector4 { 0.30f, 1.0f, 0.55f, 1.0f } : kCyan;
-    const float operationY = height_ - 43.0f;
-    rect(width * 0.5f, operationY, width - 44, 58,
-        success_ ? Vector4 { 0.025f, 0.16f, 0.075f, 1.0f } : Vector4 { 0.025f, 0.085f, 0.14f, 1.0f });
-    rect(24, operationY, 4, 58, accent);
+    Vector4 accent = kCyan;
+    Vector4 operationBackground { 0.025f, 0.085f, 0.14f, 1.0f };
     if (success_) {
-        rect(46.5f, operationY + 4.5f, 13.0f, 4.0f, accent, 0.785398f);
-        rect(60.0f, operationY - 0.5f, 26.0f, 4.0f, accent, -0.812418f);
+        accent = { 0.30f, 1.0f, 0.55f, 1.0f };
+        operationBackground = { 0.025f, 0.16f, 0.075f, 1.0f };
+    }
+    const float operationY = height_ - 43.0f;
+    AddRectangle(width * 0.5f, operationY, width - 44, 58,
+        operationBackground);
+    AddRectangle(24, operationY, 4, 58, accent);
+    if (success_) {
+        AddRectangle(46.5f, operationY + 4.5f, 13.0f, 4.0f, accent, 0.785398f);
+        AddRectangle(60.0f, operationY - 0.5f, 26.0f, 4.0f, accent, -0.812418f);
     }
     // 小さなUI図形として描画し、解像度に合わせてボタンの輪郭も拡大する。
-    const auto rounded = [&](float cx, float cy, float w, float h, float radius, Vector4 color) {
-        constexpr int rows = 20;
-        const float rowHeight = h / rows;
-        for (int row = 0; row < rows; ++row) {
-            const float offset = -h * 0.5f + (row + 0.5f) * rowHeight;
-            const float corner = (std::max)(0.0f, std::abs(offset) - (h * 0.5f - radius));
-            const float inset = radius - std::sqrt((std::max)(0.0f, radius * radius - corner * corner));
-            rect(cx, cy + offset, w - inset * 2.0f, rowHeight + 0.2f, color);
-        }
-    };
     for (size_t i = 0; i < buttons_.size(); ++i) {
         const std::string& button = buttons_[i];
         const float cx = 54.0f + static_cast<float>(i) * 58.0f;
@@ -147,60 +140,76 @@ void TutorialCommPanel::Update(float deltaTime)
         if (button == "X") fill = { 0.08f, 0.36f, 0.85f, 1.0f };
         if (button == "Y") fill = { 0.96f, 0.73f, 0.10f, 1.0f };
         if (button == "DPAD") {
-            rect(cx, operationY, 14, 38, rim);
-            rect(cx, operationY, 38, 14, rim);
-            rect(cx, operationY, 10, 34, fill);
-            rect(cx, operationY, 34, 10, fill);
+            AddRectangle(cx, operationY, 14, 38, rim);
+            AddRectangle(cx, operationY, 38, 14, rim);
+            AddRectangle(cx, operationY, 10, 34, fill);
+            AddRectangle(cx, operationY, 34, 10, fill);
             // 今回使う左右の方向を明るく示す。
-            rect(cx - 13, operationY, 6, 6, kCyan);
-            rect(cx + 13, operationY, 6, 6, kCyan);
+            AddRectangle(cx - 13, operationY, 6, 6, kCyan);
+            AddRectangle(cx + 13, operationY, 6, 6, kCyan);
         } else {
-            const bool shoulder = button == "LB" || button == "RB";
-            const bool trigger = button == "RT";
-            const float w = shoulder ? 50.0f : (trigger ? 34.0f : 40.0f);
-            const float h = shoulder ? 30.0f : (trigger ? 44.0f : 40.0f);
-            const float radius = shoulder || trigger ? 8.0f : 20.0f;
-            rounded(cx, operationY, w, h, radius, rim);
-            rounded(cx, operationY, w - 4, h - 4, radius - 2, fill);
-            if (button == "LS") rounded(cx, operationY - 4, 18, 18, 9, rim);
+            const bool isShoulder = button == "LB" || button == "RB";
+            const bool isTrigger = button == "RT";
+            float buttonWidth = 40.0f;
+            float buttonHeight = 40.0f;
+            float radius = 20.0f;
+            if (isShoulder) {
+                buttonWidth = 50.0f;
+                buttonHeight = 30.0f;
+                radius = 8.0f;
+            } else if (isTrigger) {
+                buttonWidth = 34.0f;
+                buttonHeight = 44.0f;
+                radius = 8.0f;
+            }
+            AddRoundedRectangle(cx, operationY, buttonWidth, buttonHeight, radius, rim);
+            AddRoundedRectangle(cx, operationY, buttonWidth - 4, buttonHeight - 4, radius - 2, fill);
+            if (button == "LS") AddRoundedRectangle(cx, operationY - 4, 18, 18, 9, rim);
             if (button == "MENU") {
-                for (int bar = -1; bar <= 1; ++bar) rect(cx, operationY + bar * 6, 18, 2, rim);
+                for (int bar = -1; bar <= 1; ++bar) AddRectangle(cx, operationY + bar * 6, 18, 2, rim);
             }
         }
     }
     for (int i = 0; i < total_; ++i) {
-        const bool active = i < completed_;
-        rect(width - 26.0f - (total_ - 1 - i) * 30.0f, height_ - 7.0f,
-            22.0f, 4.0f, active ? kCyan : Vector4 { 0.12f, 0.30f, 0.40f, 1.0f });
+        Vector4 progressColor { 0.12f, 0.30f, 0.40f, 1.0f };
+        if (i < completed_) progressColor = kCyan;
+        AddRectangle(width - 26.0f - (total_ - 1 - i) * 30.0f, height_ - 7.0f,
+            22.0f, 4.0f, progressColor);
     }
-    rect(width - 22, 17, 4, 4, kCyan);
-    for (; index < parts_.size(); ++index) {
-        parts_[index]->SetColor({ 0, 0, 0, 0 });
-        parts_[index]->Update();
-    }
-    const auto updateText = [&](Text& text, float tx, float ty, float fontSize, Vector4 color) {
-        text.SetPosition({ x + tx * scale, y + ty * scale });
-        text.SetFontSize(fontSize * scale);
-        color.w *= alpha_;
-        text.SetColor(color);
-        text.Update();
-    };
+    AddRectangle(width - 22, 17, 4, 4, kCyan);
     message_->SetMaxWidth(560.0f * scale);
     message_->SetLineSpacing(4.0f * scale);
-    updateText(*header_, 26, 17, 13, kCyan);
-    updateText(*status_, width - 34, 17, 14, accent);
-    updateText(*message_, 132, 94, 20, { 0.90f, 0.97f, 1.0f, compact_ ? 0.0f : 1.0f });
-    const float operationX = success_ ? 86.0f : (buttons_.empty() ? 40.0f : 84.0f + static_cast<float>(buttons_.size()) * 58.0f);
+    UpdateText(*header_, 26, 17, 13, kCyan);
+    UpdateText(*status_, width - 34, 17, 14, accent);
+    Vector4 messageColor { 0.90f, 0.97f, 1.0f, 1.0f };
+    if (compact_) messageColor.w = 0.0f;
+    UpdateText(*message_, 132, 94, 20, messageColor);
+    float operationX = 40.0f;
+    float operationFontSize = 20.0f;
+    Vector4 operationColor { 0.96f, 0.99f, 1.0f, 1.0f };
+    if (success_) {
+        operationX = 86.0f;
+        operationFontSize = 26.0f;
+        operationColor = accent;
+    } else if (!buttons_.empty()) {
+        operationX = 84.0f + static_cast<float>(buttons_.size()) * 58.0f;
+    }
     operation_->SetMaxWidth((width - operationX - 30) * scale);
     operation_->SetLineSpacing(2.0f * scale);
-    updateText(*operation_, operationX, operationY, success_ ? 26.0f : 20.0f,
-        success_ ? accent : Vector4 { 0.96f, 0.99f, 1.0f, 1.0f });
+    UpdateText(*operation_, operationX, operationY, operationFontSize, operationColor);
     for (size_t i = 0; i < buttonLabels_.size(); ++i) {
-        const bool show = i < buttons_.size() && buttons_[i] != "DPAD" && buttons_[i] != "MENU" && buttons_[i] != "LS";
-        buttonLabels_[i]->SetText(show ? buttons_[i] : "");
-        updateText(*buttonLabels_[i], 54.0f + static_cast<float>(i) * 58.0f, operationY,
-            show && buttons_[i].size() == 1 ? 24.0f : 17.0f,
-            show && buttons_[i] == "Y" ? Vector4 { 0.07f, 0.06f, 0.02f, 1.0f } : Vector4 { 1, 1, 1, 1 });
+        const bool shouldShowLabel = i < buttons_.size() && buttons_[i] != "DPAD" && buttons_[i] != "MENU" && buttons_[i] != "LS";
+        std::string label;
+        float labelFontSize = 17.0f;
+        Vector4 labelColor { 1, 1, 1, 1 };
+        if (shouldShowLabel) {
+            label = buttons_[i];
+            if (label.size() == 1) labelFontSize = 24.0f;
+            if (label == "Y") labelColor = { 0.07f, 0.06f, 0.02f, 1.0f };
+        }
+        buttonLabels_[i]->SetText(label);
+        UpdateText(*buttonLabels_[i], 54.0f + static_cast<float>(i) * 58.0f, operationY,
+            labelFontSize, labelColor);
     }
 }
 
@@ -208,11 +217,71 @@ void TutorialCommPanel::Draw()
 {
     if (alpha_ < 0.001f) return;
     SpriteManager::GetInstance()->PreDraw();
-    for (auto& part : parts_) part->Draw();
+    for (size_t index = 0; index < activePartCount_; ++index) {
+        parts_[index]->Draw();
+    }
     TextRenderer::GetInstance()->PreDraw();
     header_->Draw();
     status_->Draw();
     if (!compact_) message_->Draw();
     operation_->Draw();
     for (auto& label : buttonLabels_) label->Draw();
+}
+
+std::unique_ptr<Text> TutorialCommPanel::CreateText() const
+{
+    auto text = std::make_unique<Text>();
+    text->Initialize(kFont);
+    text->SetAnchorPoint({ 0.0f, 0.5f });
+    return text;
+}
+
+void TutorialCommPanel::AddRectangle(float centerX, float centerY, float width, float height,
+    Vector4 color, float rotation)
+{
+    // 未使用のSpriteは保持するだけにし、更新・描画対象に含めない。
+    if (activePartCount_ == parts_.size()) {
+        auto part = std::make_unique<Sprite>();
+        part->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+        part->SetAnchorPoint({ 0.5f, 0.5f });
+        parts_.push_back(std::move(part));
+    }
+    Sprite& sprite = *parts_[activePartCount_++];
+    sprite.SetPosition({ panelPosition_.x + centerX * panelScale_, panelPosition_.y + centerY * panelScale_ });
+    sprite.SetSize({ width * panelScale_, height * panelScale_ });
+    sprite.SetRotation(rotation);
+    color.w *= alpha_;
+    sprite.SetColor(color);
+    sprite.Update();
+}
+
+void TutorialCommPanel::AddLine(float startX, float startY, float endX, float endY, Vector4 color)
+{
+    const float differenceX = endX - startX;
+    const float differenceY = endY - startY;
+    AddRectangle((startX + endX) * 0.5f, (startY + endY) * 0.5f,
+        std::sqrt(differenceX * differenceX + differenceY * differenceY), 1.0f, color,
+        std::atan2(differenceY, differenceX));
+}
+
+void TutorialCommPanel::AddRoundedRectangle(float centerX, float centerY, float width, float height,
+    float radius, Vector4 color)
+{
+    constexpr int kRowCount = 20;
+    const float rowHeight = height / kRowCount;
+    for (int row = 0; row < kRowCount; ++row) {
+        const float offset = -height * 0.5f + (row + 0.5f) * rowHeight;
+        const float corner = (std::max)(0.0f, std::abs(offset) - (height * 0.5f - radius));
+        const float inset = radius - std::sqrt((std::max)(0.0f, radius * radius - corner * corner));
+        AddRectangle(centerX, centerY + offset, width - inset * 2.0f, rowHeight + 0.2f, color);
+    }
+}
+
+void TutorialCommPanel::UpdateText(Text& text, float x, float y, float fontSize, Vector4 color)
+{
+    text.SetPosition({ panelPosition_.x + x * panelScale_, panelPosition_.y + y * panelScale_ });
+    text.SetFontSize(fontSize * panelScale_);
+    color.w *= alpha_;
+    text.SetColor(color);
+    text.Update();
 }
