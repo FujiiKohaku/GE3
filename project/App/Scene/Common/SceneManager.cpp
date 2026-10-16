@@ -1,3 +1,4 @@
+// 現在と次のシーンを管理し、シーン切替と描画・ポストエフェクト設定の受け渡しを行う。
 #include "App/Scene/Common/SceneManager.h"
 #include <cassert>
 #include <cmath>
@@ -6,6 +7,7 @@
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 
 namespace {
+// 次シーンへ所有権を移して初期化する。旧シーンはすぐに破棄せず、後の解放処理へ渡す。
 bool ChangeScene(
     std::unique_ptr<BaseScene>& scene,
     std::unique_ptr<BaseScene>& nextScene,
@@ -26,6 +28,7 @@ bool ChangeScene(
 }
 
 
+// 予約されたシーンへの切替と、現在のシーンの更新を行う。
 void SceneManager::Update()
 {
     if (retiredScene_) {
@@ -65,6 +68,7 @@ void SceneManager::Update()
 
 }
 
+// 保持しているシーンを終了し、シーン固有のリソースを解放する。
 void SceneManager::Finalize()
 {
     if (retiredScene_) {
@@ -78,6 +82,7 @@ void SceneManager::Finalize()
     }
 }
 
+// 画面に重ねるスプライトや文字を描画する。
 void SceneManager::Draw2D()
 {
     // 実行中シーンの2D描画
@@ -86,6 +91,7 @@ void SceneManager::Draw2D()
     }
     pageReveal_.Draw();
 }
+// 現在表示するモデルや追加パーツを描画する。
 void SceneManager::Draw3D()
 {
     // 実行中シーンの3D描画
@@ -94,11 +100,13 @@ void SceneManager::Draw3D()
     }
 }
 
+// 描画対象をレイトレーシング用のシーンへ登録する。
 bool SceneManager::SubmitRaytracingScene(DxrRenderer& renderer) {
     if (!scene_) { return false; }
     return scene_->SubmitRaytracingScene(renderer);
 }
 
+// このシーンで使用するパーティクルを描画する。
 void SceneManager::DrawParticle()
 {
     if (scene_) {
@@ -106,6 +114,7 @@ void SceneManager::DrawParticle()
     }
 }
 
+// 開発用の画面に内部状態や調整項目を表示する。
 void SceneManager::DrawImGui()
 {
     // 実行中シーンのImGui描画
@@ -131,6 +140,7 @@ PostEffectType SceneManager::GetPostEffectType() const
     return postEffectType_;
 }
 
+// 画面効果をチェーンへ追加し、同じ種類がある場合の扱いを調整する。
 void SceneManager::AddPostEffect(
     PostEffectType type,
     PostEffectStage stage)
@@ -153,6 +163,7 @@ void SceneManager::AddPostEffect(
     }
 }
 
+// 指定した種類の画面効果を適用対象から外す。
 void SceneManager::RemovePostEffect(PostEffectType type)
 {
     for (std::vector<PostEffectInfo>::iterator iterator = postEffects_.begin(); iterator != postEffects_.end(); ++iterator) {
@@ -175,12 +186,14 @@ void SceneManager::ClearPostEffects()
     postEffects_.clear();
     postEffectType_ = PostEffectType::Copy;
 }
+// 画面効果を探し、その設定値を参照する。見つからない場合はnullptrを返す。
 const Vector3* SceneManager::FindPostEffectParameters(PostEffectType type) const
 {
     const auto parameters = effectParameters_.find(type);
     if (parameters == effectParameters_.end()) { return nullptr; }
     return &parameters->second;
 }
+// 放射状ブラーの設定を検証し、適用できる場合だけ変更する。
 bool SceneManager::SetRadialBlurSettings(const RadialBlurSettings& settings)
 {
     if (!std::isfinite(settings.width) || !std::isfinite(settings.impulseStrength) ||
@@ -189,12 +202,14 @@ bool SceneManager::SetRadialBlurSettings(const RadialBlurSettings& settings)
     radialBlurSettings_ = settings;
     return true;
 }
+// シーン全体の霧や空気感に関する設定をまとめて適用する。
 void SceneManager::ApplyAtmospherePreset(const AtmospherePreset& preset)
 {
     SetSceneExposure(preset.exposure);
     SetSceneDistanceFog(preset.distanceFog);
     if (preset.shouldApplyFogColor) { SetSceneFogColor(preset.fogColor); }
 }
+// 渡された一覧で画面効果の適用順と設定を更新する。
 void SceneManager::ApplyPostEffectChain(const std::vector<PostEffectInfo>& effects)
 {
     postEffects_ = effects;
@@ -227,6 +242,7 @@ const Vector2& SceneManager::GetPostEffectCenter() const
     return postEffectCenter_;
 }
 
+// カメラ揺れの強さを設定し、許可された値に収める。
 void SceneManager::SetCameraShakeStrength(float strength)
 {
     if (!std::isfinite(strength)) { return; }
@@ -245,6 +261,7 @@ float SceneManager::GetCameraShakeStrength() const
     return cameraShakeStrength_;
 }
 
+// 現在のシーンに、影を落とす物体の描画を依頼する。
 void SceneManager::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (scene_) { scene_->DrawShadow(renderer); }
@@ -255,6 +272,7 @@ ShadowSettings SceneManager::GetShadowSettings() const
     return {};
 }
 
+// 現在のシーンを表示するときの露出を設定する。
 void SceneManager::SetSceneExposure(float exposure) {
     if (!std::isfinite(exposure) || exposure < 0.1f || exposure > 4.0f) { return; }
     sceneExposure_ = exposure;

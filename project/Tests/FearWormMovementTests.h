@@ -57,5 +57,19 @@ inline bool RunFearWormMovementTests()
     if (!IsFearWormValueClose(boss.segments_[1].position.x, -5.0f)) return false;
     boss.ChangeMovementPattern(FearWormMovementType::Orbit);
     boss.UpdateSegments();
-    return boss.lineTransitionTimer_ == 0.0f;
+    if (boss.lineTransitionTimer_ != 0.0f) { return false; }
+
+    // 登場中の接触・被弾を止め、戦闘開始後に部位判定を復帰する。
+    boss.state_ = FearWormEnemy::BossState::Entry;
+    const Vector3 entryBodyPosition = boss.segments_[1].position;
+    boss.UpdateSegments();
+    if (boss.segments_[1].position.x != entryBodyPosition.x
+        || boss.segments_[1].position.y != entryBodyPosition.y
+        || boss.segments_[1].position.z != entryBodyPosition.z) { return false; }
+    std::vector<EnemyCollisionPart> collisionParts;
+    boss.GetCollisionParts(collisionParts);
+    if (!collisionParts.empty() || boss.IsCollisionPartDamageable(1)) { return false; }
+    boss.state_ = FearWormEnemy::BossState::Battle;
+    boss.GetCollisionParts(collisionParts);
+    return collisionParts.size() == 2 && boss.IsCollisionPartDamageable(1);
 }

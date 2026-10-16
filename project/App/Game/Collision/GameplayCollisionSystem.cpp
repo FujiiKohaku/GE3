@@ -1,9 +1,10 @@
+// ステージ・敵・弾・トリガーの衝突を調べ、得点や被弾演出に必要な結果を呼び出し元へ返す。
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 
 #include "App/Game/Player/Player.h"
-#include "App/Game/Player/Bullet/PlayerBullet.h"
+#include "App/Game/Player/Bullet/Common/PlayerBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
-#include "App/Game/Enemy/Bullet/EnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Common/EnemyBullet.h"
 #include "Engine/audio/SoundManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
@@ -16,6 +17,7 @@ namespace {
 constexpr float kPlayerObstacleRadius = 1.0f;
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 
+// 狙った部位に届く前に、別の敵の部位へ当たるかを調べる。
 bool EnemyBlocksBulletHit(const BaseEnemy* enemy, const Sphere& bullet,
     const Vector3& movement, float targetHitTime)
 {
@@ -34,6 +36,7 @@ bool EnemyBlocksBulletHit(const BaseEnemy* enemy, const Sphere& bullet,
     return false;
 }
 
+// プレイヤー弾と敵の各部位の当たり判定を取り、命中・ガード・撃破を処理する。
 void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies, GameplayCollisionEvents& events, bool isBoss = false)
 {
@@ -43,12 +46,14 @@ void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
             continue;
         }
         const Sphere sphere { bullet->GetPreviousPosition(), bullet->GetCollisionRadius() };
+        // 一点だけでなく移動した区間を調べ、高速弾のすり抜けを防ぐ。
         const Vector3 movement = bullet->GetPosition() - bullet->GetPreviousPosition();
         int32_t partIndex = 0;
         const SweepHit hit = enemy.SweepBullet(sphere, movement, partIndex);
         if (!hit.isHit) {
             continue;
         }
+        // 手前の敵が遮っている場合は、奥の部位だけに命中しないようにする。
         bool blockedByEnemy = false;
         if (enemy.RequiresBulletOcclusionCheck()) {
             for (const auto& blocker : enemies) {
@@ -68,6 +73,7 @@ void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
         } else {
             SoundManager::GetInstance()->Play("ArmorDeflect");
         }
+        // 生存から撃破へ変わった瞬間だけ得点と撃破音を発生させる。
         const bool wasDead = enemy.IsDead();
         enemy.OnBulletHit(partIndex, static_cast<float>(bullet->GetDamage()), hit.position);
         if (!wasDead && enemy.IsDead()) {
@@ -81,6 +87,7 @@ void CheckPlayerBulletsAgainstEnemy(Player& player, BaseEnemy& enemy,
     }
 }
 
+// 敵弾の移動区間とプレイヤーの当たり判定を取り、ダメージと命中演出を処理する。
 void CheckEnemyBulletsAgainstPlayer(
     Player& player,
     const std::vector<std::unique_ptr<EnemyBullet>>& bullets,
@@ -112,6 +119,7 @@ void CheckEnemyBulletsAgainstPlayer(
         if (bullet->OnHitPlayer(player.GetTranslate()) == EnemyBulletHitEffect::Paint) {
             events.paintBulletHitPlayer = true;
         }
+        // 無敵などでダメージが無効なら、被弾エフェクトも重ねて出さない。
         if (player.ApplyDamage(bullet->GetDamage())) {
             EffectManager::GetInstance()->PlayEffect(
                 "DamageHit",
@@ -122,6 +130,7 @@ void CheckEnemyBulletsAgainstPlayer(
 }
 }
 
+// プレイヤーや弾とステージ障害物の当たり判定を取り、接触への対応を行う。
 void GameplayCollisionSystem::UpdateStageCollisions(
     Player& player,
     const std::vector<std::unique_ptr<Object3d>>& levelObjects,
@@ -216,6 +225,7 @@ void GameplayCollisionSystem::UpdateStageCollisions(
     }
 }
 
+// 敵・ボス・敵味方の弾との当たり判定を取り、得点と被弾演出の通知を集める。
 GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     Player& player,
     std::vector<std::unique_ptr<BaseEnemy>>& enemies,
@@ -255,6 +265,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     return events;
 }
 
+// ステージ内のトリガーとの接触を調べ、ゲーム進行に使うイベントを返す。
 GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
     Player& player,
     std::vector<StageTrigger>& triggers)
@@ -288,6 +299,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
     return events;
 }
 
+// 照準が参照するレイ判定の対象を、現在の障害物・敵・ボスの配置で登録し直す。
 void GameplayCollisionSystem::SyncRaycastTargets(
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     const BaseEnemy* boss)

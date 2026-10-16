@@ -1,3 +1,4 @@
+// 敵味方の弾に共通する位置・速度・寿命・描画設定を扱う。具体的な移動は派生クラスで変更できる。
 #pragma once
 #include "Engine/3D/Model.h"
 #include "Engine/3D/Object3d.h"
@@ -59,12 +60,17 @@ public:
     }
     void SetCamera(Camera* camera);
     void SetEnableLighting(bool enable);
+    // 配置位置を変更し、初回の移動区間が不自然にならないよう前回位置も合わせる。
     virtual void SetTranslate(const Vector3& translate);
+    // 弾を消滅扱いにする。実際の所有オブジェクトの削除は管理側が行う。
     virtual void SetDead();
 
+    // 弾の見た目に使うピクセルシェーダーを切り替える。
     void SetPixelShaderPath(const std::string& pixelShaderPath);
     void SetTransparent(bool transparent);
+    // 半透明の弾が深度を書き込むかを変更し、他の描画との重なり方を調整する。
     void SetTransparentDepthWrite(bool enable);
+    // 弾を霧の影響に含めるかを設定し、描画オブジェクトへ反映する。
     void SetFogEnabled(bool enabled);
     bool IsFogEnabled() const { return fogEnabled_; }
     void SetCastShadow(bool enabled);

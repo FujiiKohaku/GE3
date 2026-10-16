@@ -1,3 +1,4 @@
+// モデル・アニメーション・足の接地補正・エフェクトなどを確認するための開発用シーン。
 #pragma once
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
 #include "externals/json.hpp"
@@ -19,8 +20,11 @@
 
 class TestScene1 : public BaseScene {
 public:
+    // 検証対象のモデル・地形・アニメーションと、操作・描画の設定を準備する。
     void Initialize() override;
+    // 検証用のエフェクトやモデル、外部登録を終了する。
     void Finalize() override;
+    // 開発用の入力を処理し、モデルの移動・アニメーション・足の接地補正と演出を更新する。
     void Update() override;
     void Draw2D() override;
     void Draw3D() override;
@@ -28,20 +32,32 @@ public:
     void DrawParticle() override;
     void DrawImGui() override;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
+    // 開発用パネルへこのシーンを登録し、内部状態の確認や設定変更を受け付ける。
     void RegisterDevelopmentPanel();
+    // 開発用パネルに表示する操作項目をJSONとして組み立てる。
     nlohmann::json GetDevelopmentControls() const;
+    // 開発パネルからの真偽値変更を、共通の設定反映処理へ渡す。
     bool SetDevelopmentBool(const std::string& key, bool isEnabled);
+    // 開発パネルからの数値変更を、共通の設定反映処理へ渡す。
     bool SetDevelopmentNumber(const std::string& key, double value);
+    // 開発パネルで指定されたコマンドを実行する。
     bool ExecuteDevelopmentCommand(const std::string& key);
+    // シーンの現在状態を、開発パネル向けのJSONへまとめる。
     nlohmann::json GetDevelopmentState() const;
+    // シーンの開発用状態をJSON文字列に変換する。
     std::string GetDevelopmentStateJson() const;
+    // 指定されたキーと値を調べ、対応する検証用設定や操作へ反映する。
     bool ApplyDevelopmentAction(const std::string& key, const std::string& value);
 #endif
 
 private:
+    // 開発画面で選択された画面効果とパラメーターを適用する。
     void ApplySelectedPostEffect();
+    // 砂ゴーレムの各ボーンを現在の検証設定に合わせて配置する。
     void UpdateSandGolemSkeletonPose();
+    // 左右の足が地面に沿うように、地形の高さと傾きをボーンへ反映する。
     void ApplyFootIK();
+    // 腰側・膝・足先の関係から、目標位置に足を置くための脚の姿勢を計算する。
     void SolveLegIK(
         const std::string& upperLegName,
         const std::string& lowerLegName,
@@ -49,20 +65,28 @@ private:
         const Vector3& worldTarget,
         const Vector3& worldNormal,
         float ikWeight);
+    // 指定した位置付近の地形を調べ、接地位置と面の向きを求める。
     bool SampleTerrainSurface(
         float worldX,
         float worldZ,
         float& worldHeight,
         Vector3& worldNormal) const;
+    // 足裏の複数地点から地形を調べ、足を置く面の位置と向きを求める。
     bool SampleFootSoleSurface(
         const Vector3& footJointPosition,
         float& worldHeight,
         Vector3& worldNormal) const;
+    // 手などの取り付け先の姿勢から、刀の位置と向きを更新する。
     void UpdateKatanaAttachment();
+    // アニメーション内のイベントを受け取り、攻撃や効果音・エフェクトの開始へつなげる。
     void ProcessAnimationEvents();
+    // 移動状態に応じて砂煙などの追従エフェクトを更新する。
     void UpdateMovementEffects();
+    // ダッシュ開始の瞬間にだけ、勢いを示すエフェクトを出す。
     void PlayDashStartBurst();
+    // 移動に追従するループエフェクトを停止する。
     void StopMovementEffects();
+    // 指定したボーンを探し、見つかった場合にワールド位置を書き出す。
     bool TryGetJointWorldPosition(
         const std::string& jointName,
         Vector3& worldPosition) const;
@@ -242,5 +266,6 @@ private:
 
     Vector3 sixSeqCenterPos_{};
     std::vector<std::unique_ptr<Text>> jointNameTexts_;
+    // 現在のモデルからボーン名を集め、開発画面で選択できるようにする。
     void UpdateBoneNames();
 };

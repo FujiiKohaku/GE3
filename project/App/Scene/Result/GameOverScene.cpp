@@ -1,3 +1,4 @@
+// ゲームオーバー時の表示と入力を扱い、再挑戦やタイトルへの遷移につなげる。
 #include "App/Scene/Result/GameOverScene.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
@@ -6,6 +7,7 @@
 
 #include "App/Scene/Title/TitleScene.h"
 #include "Engine/audio/SoundManager.h"
+// ゲームオーバー表示と再挑戦・タイトルへ戻る操作案内を準備する。
 void GameOverScene::Initialize()
 {
     SoundManager::GetInstance()->RegisterSounds({
@@ -50,6 +52,7 @@ void GameOverScene::Initialize()
     retryGuideText_->SetOutlineWidth(1.0f);
 }
 
+// 再挑戦なら同じステージを開き直し、戻る操作ならタイトルへの遷移を予約する。
 void GameOverScene::Update()
 {
     if (Input::GetInstance()->IsKeyTrigger(DIK_R) ||
@@ -67,6 +70,7 @@ void GameOverScene::Update()
     retryGuideText_->Update();
 }
 
+// 画面に重ねるスプライトや文字を描画する。
 void GameOverScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
@@ -75,16 +79,19 @@ void GameOverScene::Draw2D()
     retryGuideText_->Draw();
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void GameOverScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
     // titleObj_->Draw();
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void GameOverScene::DrawParticle()
 {
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void GameOverScene::DrawImGui()
 {
 }

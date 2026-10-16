@@ -1,3 +1,4 @@
+// 敵のHP・移動・攻撃・外見と部位の当たり判定をまとめる基底クラス。
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/audio/SoundManager.h"
 
@@ -10,6 +11,7 @@
 
 EnemyBulletManager* BaseEnemy::bulletManager_ = nullptr;
 
+// モデルと材質を設定し、敵として共通の描画オブジェクトを作る。
 void BaseEnemy::Initialize(Model* model)
 {
     object_ = std::make_unique<Object3d>();
@@ -34,6 +36,7 @@ void BaseEnemy::Initialize(Model* model)
     object_->SetTranslate(transform_.translate);
 }
 
+// 生存中だけ移動・攻撃・アニメーションを進め、外見パーツを追従させる。
 void BaseEnemy::Update()
 {
     if (isDead_) {
@@ -54,6 +57,7 @@ void BaseEnemy::Update()
     object_->Update();
 }
 
+// 本体モデルを差し替え、以前の追加パーツや外見アニメーションをリセットする。
 void BaseEnemy::SetAppearance(Model* model)
 {
     if (object_ == nullptr || model == nullptr) {
@@ -71,6 +75,7 @@ void BaseEnemy::SetAppearance(Model* model)
     object_->SetNormalMapStrength(0.0f);
     object_->SetSurfaceProperties(0.25f, 0.15f, 0.65f);
 }
+// 本体と追加パーツに適用する材質を変更する。
 void BaseEnemy::SetAppearanceMaterial(const std::string& materialPath)
 {
     if (object_ != nullptr) {
@@ -80,6 +85,7 @@ void BaseEnemy::SetAppearanceMaterial(const std::string& materialPath)
     for (AppearancePart& part : appearanceParts_) { part.object_->SetMaterial(materialPath); }
 }
 
+// 目や脚などの別モデルを追加し、担当する動きと基準位置を記録する。
 void BaseEnemy::AddAppearancePart(Model* model, EnemyAppearancePart motion)
 {
     if (model == nullptr || object_ == nullptr) { return; }
@@ -120,6 +126,7 @@ void BaseEnemy::AddAppearancePart(Model* model, EnemyAppearancePart motion)
     appearancePhaseRadians_ = transform_.translate.x * 0.37f + transform_.translate.z * 0.13f;
 }
 
+// 視線・揺れ・反動による移動を計算し、本体に追従するパーツの姿勢へ反映する。
 void BaseEnemy::UpdateAppearanceParts()
 {
     if (appearanceParts_.empty()) { return; }
@@ -149,6 +156,7 @@ void BaseEnemy::UpdateAppearanceParts()
     }
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void BaseEnemy::Draw()
 {
     if (!isDead_) {
@@ -158,6 +166,7 @@ void BaseEnemy::Draw()
 
 }
 
+// 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void BaseEnemy::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (!isDead_ && object_ != nullptr) { object_->DrawShadow(renderer); }
@@ -166,6 +175,7 @@ void BaseEnemy::DrawShadow(ShadowMapRenderer& renderer)
     }
 }
 
+// 描画対象をレイトレーシング用のシーンへ登録する。
 void BaseEnemy::SubmitRaytracing(DxrRenderer& renderer) {
     if (!isDead_ && object_) { object_->SubmitRaytracing(renderer); }
     if (!isDead_) {
@@ -173,11 +183,13 @@ void BaseEnemy::SubmitRaytracing(DxrRenderer& renderer) {
     }
 }
 
+// 生成した敵弾の引き渡し先を設定する。管理クラスの所有権は受け取らない。
 void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
 {
     bulletManager_ = bulletManager;
 }
 
+// 生成した弾の所有権を敵弾管理へ渡し、必要なら発射音も鳴らす。
 void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet, bool shouldPlayShotSound)
 {
     if (bulletManager_ != nullptr) {
@@ -210,6 +222,7 @@ void BaseEnemy::Move()
     }
 }
 
+// 標準では射撃しない。具体的な敵の派生クラスで攻撃を実装する。
 void BaseEnemy::Attack()
 {
 }
@@ -241,6 +254,7 @@ void BaseEnemy::SetEnableLighting(bool enable)
     }
 }
 
+// 死亡状態の変更を反映し、撃破されたタイミングで死亡処理を呼ぶ。
 void BaseEnemy::SetDead(bool isDead)
 {
     if (isDead_ == isDead) {
@@ -254,6 +268,7 @@ void BaseEnemy::SetDead(bool isDead)
     }
 }
 
+// ダメージをHPへ反映し、被弾時やHPが尽きたときの処理につなげる。
 void BaseEnemy::ApplyDamage(float damage)
 {
     if (isDead_ || !std::isfinite(damage) || damage <= 0.0f) { return; }
@@ -266,11 +281,13 @@ void BaseEnemy::ApplyDamage(float damage)
     }
 }
 
+// 部位別HPを持たない敵では、命中部位を分けずに本体へダメージを渡す。
 void BaseEnemy::ApplyDamageToPart(int32_t, float damage)
 {
     ApplyDamage(damage);
 }
 
+// 標準では敵本体を一つの球として、衝突判定用の一覧へ書き出す。
 void BaseEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
 {
     EnemyCollisionPart part {};
@@ -281,27 +298,33 @@ void BaseEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
     parts.push_back(part);
 }
 
+// 標準の敵がダメージを受けられる状態かを返す。
 bool BaseEnemy::IsCollisionPartDamageable(int32_t) const
 {
     return true;
 }
 
+// 防御時の演出を派生クラスで定義するための窓口。標準では何も行わない。
 void BaseEnemy::OnCollisionPartGuarded(int32_t, const Vector3&)
 {
 }
 
+// 標準の追加アニメーション処理は空にし、必要な敵だけが上書きする。
 void BaseEnemy::UpdateAnimation()
 {
 }
 
+// 被弾時の追加反応を派生クラスで定義するための窓口。標準では何も行わない。
 void BaseEnemy::OnDamage(float)
 {
 }
 
+// 撃破時の追加演出を派生クラスで定義するための窓口。標準では何も行わない。
 void BaseEnemy::OnDeath()
 {
 }
 
+// 敵の最大HPと現在HPを設定する。
 void BaseEnemy::SetHealth(float hp)
 {
     if (std::isfinite(hp) && hp >= 0.0f) {
@@ -309,6 +332,7 @@ void BaseEnemy::SetHealth(float hp)
     }
 }
 
+// HPの初期値と死亡状態を初期化する。
 void BaseEnemy::InitializeHealth(float hp)
 {
     if (!std::isfinite(hp) || hp <= 0.0f) { return; }
@@ -316,6 +340,7 @@ void BaseEnemy::InitializeHealth(float hp)
     isDead_ = false;
 }
 
+// 弾の前フレームからの移動区間を調べ、高速の弾でも当たりをすり抜けないようにする。
 SweepHit BaseEnemy::SweepBullet(const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const
 {
     if (IsDead()) { return {}; }
@@ -332,11 +357,13 @@ SweepHit BaseEnemy::SweepBullet(const Sphere& bullet, const Vector3& movement, i
     }
     return {};
 }
+// 命中位置と部位番号を受け取り、部位へのダメージ処理へ渡す。
 void BaseEnemy::OnBulletHit(int32_t partIndex, float damage, const Vector3& position)
 {
     if (IsCollisionPartDamageable(partIndex)) { ApplyDamageToPart(partIndex, damage); }
     else { OnCollisionPartGuarded(partIndex, position); }
 }
+// 照準が敵を狙えるように、部位の球をレイ判定へ登録する。
 void BaseEnemy::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
 {
     if (IsDead()) { return; }

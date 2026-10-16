@@ -1,3 +1,4 @@
+// フォント・文字配置・スクロールなど、テキスト表示の挙動を確認するための開発用シーン。
 #pragma once
 
 #include "App/Scene/Common/BaseScene.h"
@@ -7,9 +8,12 @@
 
 class TextTestScene : public BaseScene {
 public:
+    // 表示を比較するフォントや文章を準備し、テキストの検証用配置を作る。
     void Initialize() override;
     void Finalize() override;
+    // 入力や経過時間に応じて、検証用テキストの表示状態を更新する。
     void Update() override;
+    // 検証用の文字を描画し、フォントや配置の違いを画面で確認する。
     void Draw2D() override;
     void Draw3D() override;
     void DrawParticle() override;

@@ -1,3 +1,4 @@
+// タイトルの基地背景・ステージ選択・設定画面と、各画面をつなぐカメラ演出を扱う。
 #include "App/Scene/Title/TitleScene.h"
 
 #include "Engine/2D/SpriteManager.h"
@@ -164,6 +165,7 @@ float FindHangarPathTimeByDistance(float distanceProgress)
 
 bool TitleScene::hasStartedTutorial_ = false;
 
+// タイトルの背景・UI・ステージ情報を準備し、入場時の表示状態を選ぶ。
 void TitleScene::Initialize()
 {
     SoundManager::GetInstance()->RegisterSounds({
@@ -233,6 +235,7 @@ void TitleScene::Initialize()
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
 }
 
+// 基地の共通背景として使うモデルを生成し、位置・向き・大きさを設定する。
 Object3d* TitleScene::AddBaseObject(
     const std::string& modelPath,
     const Vector3& position,
@@ -257,6 +260,7 @@ Object3d* TitleScene::AddBaseObject(
     return result;
 }
 
+// ステージ紹介用の部屋にモデルを追加し、遷移中の配置情報も保存する。
 Object3d* TitleScene::AddStageRoomObject(
     std::vector<StageRoomObject>& roomObjects,
     const std::string& modelPath,
@@ -302,6 +306,7 @@ Object3d* TitleScene::AddStageRoomObject(
     return result;
 }
 
+// タイトル背景の基地を構成する建物や小物を配置する。
 void TitleScene::InitializeLaunchBase()
 {
     oceanSurface_ = std::make_unique<OceanSurface>();
@@ -470,6 +475,7 @@ void TitleScene::InitializeLaunchBase()
     InitializeStageRoomSets();
 }
 
+// 各ステージを紹介する部屋ごとに、背景モデルの組み合わせを作る。
 void TitleScene::InitializeStageRoomSets()
 {
     firstFlightRoomObjects_.clear();
@@ -622,6 +628,7 @@ void TitleScene::InitializeStageRoomSets()
     }
 }
 
+// タイトル・設定画面の文字やパネルなどを準備する。
 void TitleScene::InitializeInterface()
 {
     atmosphereTint_ = std::make_unique<Sprite>();
@@ -693,6 +700,7 @@ void TitleScene::InitializeInterface()
 
 }
 
+// ステージ一覧から選択画面に必要なカードと表示情報を準備する。
 void TitleScene::InitializeStageSelection()
 {
     stages_.clear();
@@ -762,6 +770,7 @@ void TitleScene::InitializeStageSelection()
     RefreshStageSelectionText();
 }
 
+// 選択中のステージに合わせて名前と説明文を更新する。
 void TitleScene::RefreshStageSelectionText()
 {
     if (stages_.empty()) {
@@ -782,6 +791,7 @@ void TitleScene::RefreshStageSelectionText()
 }
 
 std::vector<TitleScene::StageRoomObject>*
+// ステージIDに対応する部屋のオブジェクト一覧を探す。
 TitleScene::FindStageRoomObjects(const std::string& stageId)
 {
     if (stageId == "stage01") {
@@ -794,6 +804,7 @@ TitleScene::FindStageRoomObjects(const std::string& stageId)
 }
 
 const std::vector<TitleScene::StageRoomObject>*
+// ステージIDに対応する部屋のオブジェクト一覧を探す。
 TitleScene::FindStageRoomObjects(const std::string& stageId) const
 {
     if (stageId == "stage01") {
@@ -805,6 +816,7 @@ TitleScene::FindStageRoomObjects(const std::string& stageId) const
     return nullptr;
 }
 
+// 左右のステージ切替を開始し、遷移元と遷移先の配置を記録する。
 void TitleScene::StartStageRoomTransition(int direction)
 {
     if (stages_.empty() || stageRoomTransitionActive_) {
@@ -830,6 +842,7 @@ void TitleScene::StartStageRoomTransition(int direction)
     SoundManager::GetInstance()->Play("UiSelect");
 }
 
+// 部屋に属するモデル群を、切替演出中の位置と見た目へ揃える。
 void TitleScene::UpdateStageRoomObjectGroup(
     std::vector<StageRoomObject>& roomObjects,
     float offsetX,
@@ -857,6 +870,7 @@ void TitleScene::UpdateStageRoomObjectGroup(
     }
 }
 
+// 部屋を入れ替えるアニメーションを進め、完了時に選択を確定する。
 void TitleScene::UpdateStageRoomTransition(float deltaTime)
 {
     if (stages_.empty()) {
@@ -932,6 +946,7 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
     }
 }
 
+// 現在のタイトル状態へ入力と更新を渡し、背景とUIの演出を進める。
 void TitleScene::Update()
 {
     const float deltaTime =
@@ -955,6 +970,7 @@ void TitleScene::Update()
     UpdateInterface(deltaTime);
 }
 
+// チュートリアルの進行状況などに応じて、ゲーム開始後の行き先を決める。
 void TitleScene::StartGame()
 {
     if (viewState_ != ViewState::Title) return;
@@ -965,6 +981,7 @@ void TitleScene::StartGame()
     StartTutorial();
 }
 
+// チュートリアルへ進むための開始演出に切り替える。
 void TitleScene::StartTutorial()
 {
     if (viewState_ != ViewState::Title) return;
@@ -972,6 +989,7 @@ void TitleScene::StartTutorial()
     ChangeState(ViewState::StartingTutorial);
 }
 
+// 訓練開始前のカメラと機体アニメーションの初期状態を作る。
 void TitleScene::InitializeTutorialAnimation()
 {
     SoundManager::GetInstance()->Play("UiConfirm");
@@ -994,6 +1012,7 @@ void TitleScene::InitializeTutorialAnimation()
     simulationText_->SetFontSize(26.0f);
 }
 
+// 訓練への出発演出を進め、演出終了後にシーンを切り替える。
 void TitleScene::UpdateTutorialStart(float deltaTime)
 {
     animationTime_ += deltaTime;
@@ -1021,6 +1040,7 @@ void TitleScene::UpdateTutorialStart(float deltaTime)
     }
 }
 
+// タイトルからステージ選択へ移る演出を開始する。
 void TitleScene::StartStageSelectTransition()
 {
     if (viewState_ != ViewState::Title) {
@@ -1030,6 +1050,7 @@ void TitleScene::StartStageSelectTransition()
     ChangeState(ViewState::EnteringStageSelect);
 }
 
+// ステージ選択からタイトルへ戻る演出を開始する。
 void TitleScene::StartTitleReturn()
 {
     if (viewState_ != ViewState::StageSelect) {
@@ -1038,6 +1059,7 @@ void TitleScene::StartTitleReturn()
     ChangeState(ViewState::LeavingStageSelect);
 }
 
+// 選んだステージを確定し、出発の演出へ進める。
 void TitleScene::ConfirmStage()
 {
     if (viewState_ != ViewState::StageSelect || stages_.empty()) {
@@ -1046,6 +1068,7 @@ void TitleScene::ConfirmStage()
     ChangeState(ViewState::ConfirmingStage);
 }
 
+// 設定画面を開く・閉じる方向を記録し、画面遷移を開始する。
 void TitleScene::StartSettingsTransition(bool opening)
 {
     if (opening && viewState_ != ViewState::Title) {
@@ -1062,6 +1085,7 @@ void TitleScene::StartSettingsTransition(bool opening)
     }
 }
 
+// タイトル待機中のカメラを更新する。
 void TitleScene::UpdateTitleCamera(float deltaTime)
 {
     (void)deltaTime;
@@ -1070,6 +1094,7 @@ void TitleScene::UpdateTitleCamera(float deltaTime)
     camera_->Update();
 }
 
+// タイトルとステージ選択の間で、カメラや表示位置を滑らかに切り替える。
 void TitleScene::UpdateStageSelectTransition(float deltaTime)
 {
     animationTime_ += deltaTime;
@@ -1108,6 +1133,7 @@ void TitleScene::UpdateStageSelectTransition(float deltaTime)
     }
 }
 
+// ステージ選択中の表示と背景の動きを更新する。
 void TitleScene::UpdateStageSelection(float deltaTime)
 {
     (void)deltaTime;
@@ -1146,6 +1172,7 @@ void TitleScene::UpdateStageSelection(float deltaTime)
     camera_->Update();
 }
 
+// 決定後の出発演出を進め、読み込み画面へつなげる。
 void TitleScene::UpdateStageConfirmation(float deltaTime)
 {
     animationTime_ += deltaTime;
@@ -1164,6 +1191,7 @@ void TitleScene::UpdateStageConfirmation(float deltaTime)
     }
 }
 
+// 設定画面の開閉演出を進め、完了後の状態へ移る。
 void TitleScene::UpdateSettingsTransition(float deltaTime)
 {
     animationTime_ += deltaTime;
@@ -1204,6 +1232,7 @@ void TitleScene::UpdateSettingsTransition(float deltaTime)
     }
 }
 
+// 現在の状態と遷移の進み具合を、各UIの位置・透明度へ反映する。
 void TitleScene::UpdateInterface(float deltaTime)
 {
     const Input* input = Input::GetInstance();
@@ -1373,12 +1402,14 @@ float TitleScene::Clamp01(float value)
     return std::clamp(value, 0.0f, 1.0f);
 }
 
+// 開始と終了で変化が緩やかになる補間値を作り、画面遷移に使う。
 float TitleScene::SmoothStep(float value)
 {
     const float clamped = Clamp01(value);
     return clamped * clamped * (3.0f - 2.0f * clamped);
 }
 
+// 目標を少し通り越して戻る補間値を作り、UIの出現に弾みを付ける。
 float TitleScene::EaseOutBack(float value)
 {
     const float clamped = Clamp01(value);
@@ -1389,6 +1420,7 @@ float TitleScene::EaseOutBack(float value)
         c1 * shifted * shifted;
 }
 
+// 画面に重ねるスプライトや文字を描画する。
 void TitleScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
@@ -1419,6 +1451,7 @@ void TitleScene::Draw2D()
     }
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void TitleScene::Draw3D()
 {
     if (oceanSurface_ != nullptr) {
@@ -1435,6 +1468,7 @@ void TitleScene::Draw3D()
     DrawVisibleRoomObjects(nullptr);
 }
 
+// 指定されたステージ紹介部屋のモデル群を描画する。
 void TitleScene::DrawRoomObjects(
     const std::vector<StageRoomObject>* roomObjects, ShadowMapRenderer* shadows)
 {
@@ -1448,6 +1482,7 @@ void TitleScene::DrawRoomObjects(
     }
 }
 
+// 部屋のモデルをレイトレーシング用のシーンへ登録する。
 void TitleScene::SubmitRaytracingRoom(const std::vector<StageRoomObject>* roomObjects, DxrRenderer& renderer) {
     if (!roomObjects) { return; }
     for (const StageRoomObject& roomObject : *roomObjects) {
@@ -1455,6 +1490,7 @@ void TitleScene::SubmitRaytracingRoom(const std::vector<StageRoomObject>* roomOb
     }
 }
 
+// 描画対象をレイトレーシング用のシーンへ登録する。
 bool TitleScene::SubmitRaytracingScene(DxrRenderer& renderer) {
     for (const auto& object : baseObjects_) {
         if (object) { object->SubmitRaytracing(renderer); }
@@ -1470,6 +1506,7 @@ bool TitleScene::SubmitRaytracingScene(DxrRenderer& renderer) {
     return true;
 }
 
+// 遷移元と遷移先を考慮し、今必要な部屋だけを通常描画または影描画へ渡す。
 void TitleScene::DrawVisibleRoomObjects(ShadowMapRenderer* shadows)
 {
 
@@ -1492,6 +1529,7 @@ void TitleScene::DrawVisibleRoomObjects(ShadowMapRenderer* shadows)
     }
 }
 
+// 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void TitleScene::DrawShadow(ShadowMapRenderer& renderer)
 {
     for (const auto& object : baseObjects_) { object->DrawShadow(renderer); }
@@ -1500,6 +1538,7 @@ void TitleScene::DrawShadow(ShadowMapRenderer& renderer)
     DrawVisibleRoomObjects(&renderer);
 }
 
+// タイトル背景に適した影の描画範囲と設定を返す。
 ShadowSettings TitleScene::GetShadowSettings() const
 {
     ShadowSettings settings;
@@ -1512,6 +1551,7 @@ ShadowSettings TitleScene::GetShadowSettings() const
     return settings;
 }
 
+// 表示中の背景とステージに合わせて、照明や霧を更新する。
 void TitleScene::UpdateSceneLighting()
 {
     float roomAmount = 1.0f;
@@ -1553,6 +1593,7 @@ void TitleScene::UpdateSceneLighting()
     SceneManager::GetInstance()->SetSceneFogColor({ fog.x, fog.y, fog.z, 1.0f });
 }
 
+// タイトル内のリソースと演出状態を片付ける。
 void TitleScene::Finalize()
 {
     if (currentState_) currentState_->Exit(*this);
@@ -1564,14 +1605,18 @@ void TitleScene::Finalize()
     Object3dManager::GetInstance()->SetDefaultCamera(nullptr);
 }
 
+// このクラスではこの描画経路を使用しないため、処理を行わない。
 void TitleScene::DrawParticle() {}
+// このクラスではこの描画経路を使用しないため、処理を行わない。
 void TitleScene::DrawImGui() {}
 
+// タイトルの操作状態を切り替え、遷移先の開始処理を呼ぶ。
 void TitleScene::ChangeState(ViewState state)
 {
     ChangeState(GetTitleState(state));
 }
 
+// タイトルの操作状態を切り替え、遷移先の開始処理を呼ぶ。
 void TitleScene::ChangeState(const BaseTitleState& state)
 {
     if (currentState_ == &state) return;
@@ -1581,6 +1626,7 @@ void TitleScene::ChangeState(const BaseTitleState& state)
     currentState_->Enter(*this);
 }
 
+// 設定画面が見やすい位置へカメラを配置する。
 void TitleScene::UpdateSettingsCamera()
 {
     camera_->LookAt(kSettingsEye, kSettingsTarget);

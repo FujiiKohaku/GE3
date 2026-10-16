@@ -4,13 +4,7 @@
     <ClCompile Include="App\Game\Tutorial\TutorialController.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Tutorial\BaseTutorialStep.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClInclude Include="App\Game\Tutorial\TutorialController.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Tutorial\BaseTutorialStep.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClCompile Include="App\Game\Tutorial\TutorialCommPanel.cpp">
@@ -110,29 +104,11 @@
     <Filter Include="Player">
       <UniqueIdentifier>{0a321359-6667-4f8c-b0dc-d2d513976287}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Player\Aim">
-      <UniqueIdentifier>{0f052af1-6067-4a10-aa03-f7ea983000a8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Player\Movement">
-      <UniqueIdentifier>{5a69857f-c53b-42fb-a191-9178be7f485a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Player\Weapon">
       <UniqueIdentifier>{65703d92-c1ef-45d7-aec2-a890830802ec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Player\Health">
-      <UniqueIdentifier>{8f56e3d7-e380-4713-ac9e-d9a5f9d0cb35}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Player\Bullet">
       <UniqueIdentifier>{0d9a3e83-416c-4c37-859a-6c6cb810deac}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Player\Movement\Roll">
-      <UniqueIdentifier>{d85e35b7-10ab-4e1a-881c-0c968e6ab3ba}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Player\Movement\Steering">
-      <UniqueIdentifier>{726816da-ede0-4b9a-9529-a873f4510cfe}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Player\Movement\ScreenConstraint">
-      <UniqueIdentifier>{6e6e725f-6394-4a13-a637-2539a7368413}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -331,39 +307,6 @@
     <ClCompile Include="Engine\Particle\ParticleData.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player\Weapon\PlayerHomingLock.cpp">
-      <Filter>Player\Weapon</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
-      <Filter>Player\Weapon</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Weapon\BasePlayerWeapon.cpp">
-      <Filter>Player\Weapon</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.cpp">
-      <Filter>Player\Movement\ScreenConstraint</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\Roll\PlayerRollController.cpp">
-      <Filter>Player\Movement\Roll</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\Steering\PlayerSteeringController.cpp">
-      <Filter>Player\Movement\Steering</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Movement\PlayerMovementController.cpp">
-      <Filter>Player\Movement</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Control\BasePlayerControl.cpp">
-      <Filter>Player\Movement</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Health\PlayerHealth.cpp">
-      <Filter>Player\Health</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Aim\PlayerAimController.cpp">
-      <Filter>Player\Aim</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponHeat.cpp">
-      <Filter>Player\Weapon</Filter>
-    </ClCompile>
     <ClCompile Include="App\Game\Player\Player.cpp">
       <Filter>Player</Filter>
     </ClCompile>
@@ -411,9 +354,6 @@
     </ClCompile>
     <ClCompile Include="Engine\PostEffect\PostEffectType.cpp">
       <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp">
-      <Filter>Player\Bullet</Filter>
     </ClCompile>
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp">
       <Filter>ソース ファイル</Filter>
@@ -553,9 +493,6 @@
     <ClCompile Include="Engine\PostEffect\PostEffectType.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player\Bullet\MissileBullet.cpp">
-      <Filter>Player\Bullet</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\LevelEditor\LevelData.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -587,49 +524,45 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Enemy\BaseEnemy.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Enemy\MoveEnemy\BaseEnemyMovement.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>App\Game\Enemy</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Enemy\Debug\EnemyDebugViews.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>App\Game\Enemy\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\Bullet\EnemyBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="App\Game\Enemy\Bullet\Common\EnemyBullet.cpp">
+      <Filter>App\Game\Enemy\Bullet\Common</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\Bullet\NormalEnemyBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="App\Game\Enemy\Bullet\EnemyBulletManager.cpp">
+      <Filter>App\Game\Enemy\Bullet</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\Bullet\SwarmPulseBullet.cpp" />
-    <ClCompile Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="App\Game\Enemy\Bullet\Types\NormalEnemyBullet.cpp">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\Bullet\PaintBullet.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="App\Game\Enemy\Bullet\Types\SwarmPulseBullet.cpp">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\Types\NormalEnemy.cpp">
-      <Filter>ソース ファイル</Filter>
+    <ClCompile Include="App\Game\Enemy\Bullet\Types\TrackingEnemyBullet.cpp">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Enemy\Types\ArmoredEnemy.cpp" />
-    <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
-    <ClCompile Include="App\Game\Enemy\SwarmEnemy\BaseSwarmFormation.cpp" />
+    <ClCompile Include="App\Game\Enemy\Bullet\Types\PaintBullet.cpp">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Enemy\NormalEnemy\NormalEnemy.cpp">
+      <Filter>App\Game\Enemy\NormalEnemy</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Enemy\ArmoredEnemy\ArmoredEnemy.cpp">
+      <Filter>App\Game\Enemy\ArmoredEnemy</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp">
+      <Filter>App\Game\Enemy\SwarmEnemy</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp">
-      <Filter>ソース ファイル</Filter>
+      <Filter>App\Game\Enemy\PaintEnemy</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.cpp">
-      <Filter>App\Game\Boss\AngerBlockBoss</Filter>
-    </ClCompile>
     <ClCompile Include="App\Game\Boss\Encounter\BossEncounterController.cpp">
-      <Filter>App\Game\Boss\Encounter</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\Encounter\BaseBossFactory.cpp">
-      <Filter>App\Game\Boss\Encounter</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Boss\Presentation\BaseBossPresentation.cpp">
       <Filter>App\Game\Boss\Encounter</Filter>
     </ClCompile>
     <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfish.cpp">
@@ -638,15 +571,6 @@
     <ClCompile Include="App\Game\Common\Bullet\BaseBullet.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Game\Player\Bullet\PlayerBullet.cpp">
-      <Filter>Player\Bullet</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Bullet\NormalBullet.cpp">
-      <Filter>Player\Bullet</Filter>
-    </ClCompile>
-    <ClCompile Include="App\Game\Player\Bullet\HomingMissileBullet.cpp">
-      <Filter>Player\Bullet</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="resources\Shaders\Object3D\Object3d.VS.hlsl" />
@@ -654,10 +578,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>App\Game\Enemy\PaintEnemy</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\Bullet\PaintBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Enemy\Bullet\Types\PaintBullet.h">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClInclude>
     <ClInclude Include="Engine\D3DResourceLeakChecker\D3DResourceLeakChecker.h">
       <Filter>ヘッダー ファイル</Filter>
@@ -841,39 +765,6 @@
     <ClInclude Include="Engine\Particle\ParticleData.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player\Weapon\PlayerHomingLock.h">
-      <Filter>Player\Weapon</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponController.h">
-      <Filter>Player\Weapon</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Weapon\BasePlayerWeapon.h">
-      <Filter>Player\Weapon</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\ScreenConstraint\PlayerScreenConstraint.h">
-      <Filter>Player\Movement\ScreenConstraint</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\Roll\PlayerRollController.h">
-      <Filter>Player\Movement\Roll</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\Steering\PlayerSteeringController.h">
-      <Filter>Player\Movement\Steering</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Movement\PlayerMovementController.h">
-      <Filter>Player\Movement</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Control\BasePlayerControl.h">
-      <Filter>Player\Movement</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Health\PlayerHealth.h">
-      <Filter>Player\Health</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Aim\PlayerAimController.h">
-      <Filter>Player\Aim</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponHeat.h">
-      <Filter>Player\Weapon</Filter>
-    </ClInclude>
     <ClInclude Include="App\Game\Player\Player.h">
       <Filter>Player</Filter>
     </ClInclude>
@@ -928,9 +819,6 @@
     <ClInclude Include="Engine\PostEffect\PostEffectType.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player\Bullet\MissileBullet.h">
-      <Filter>Player\Bullet</Filter>
-    </ClInclude>
     <ClInclude Include="Engine\LevelEditor\LevelData.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
@@ -962,62 +850,43 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Enemy\BaseEnemy.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Enemy\MoveEnemy\BaseEnemyMovement.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>App\Game\Enemy</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Enemy\Debug\BaseEnemyDebugView.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>App\Game\Enemy\Debug</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\Bullet\EnemyBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Enemy\Bullet\Common\EnemyBullet.h">
+      <Filter>App\Game\Enemy\Bullet\Common</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\Bullet\NormalEnemyBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Enemy\Bullet\Types\NormalEnemyBullet.h">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\Bullet\SwarmPulseBullet.h" />
-    <ClInclude Include="App\Game\Enemy\Bullet\TrackingEnemyBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Enemy\Bullet\Types\SwarmPulseBullet.h">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\Types\NormalEnemy.h">
-      <Filter>ヘッダー ファイル</Filter>
+    <ClInclude Include="App\Game\Enemy\Bullet\Types\TrackingEnemyBullet.h">
+      <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Enemy\Types\ArmoredEnemy.h" />
-    <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
-    <ClInclude Include="App\Game\Enemy\SwarmEnemy\BaseSwarmFormation.h" />
+    <ClInclude Include="App\Game\Enemy\NormalEnemy\NormalEnemy.h">
+      <Filter>App\Game\Enemy\NormalEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\ArmoredEnemy\ArmoredEnemy.h">
+      <Filter>App\Game\Enemy\ArmoredEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\SwarmEnemy\SwarmEnemy.h">
+      <Filter>App\Game\Enemy\SwarmEnemy</Filter>
+    </ClInclude>
     <ClInclude Include="App\Game\Boss\FearWormEnemy\FearWormEnemy.h">
       <Filter>App\Game\Boss\FearWormEnemy</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\AngerBlockBoss\AngerBlockBoss.h">
-      <Filter>App\Game\Boss\AngerBlockBoss</Filter>
-    </ClInclude>
     <ClInclude Include="App\Game\Boss\Encounter\BossEncounterController.h">
-      <Filter>App\Game\Boss\Encounter</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Boss\Encounter\BaseBossFactory.h">
-      <Filter>App\Game\Boss\Encounter</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Boss\Presentation\BaseBossPresentation.h">
       <Filter>App\Game\Boss\Encounter</Filter>
     </ClInclude>
     <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfish.h">
       <Filter>App\Game\Boss\IceJellyfish</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.h">
-      <Filter>App\Game\Boss\IceJellyfish</Filter>
-    </ClInclude>
     <ClInclude Include="App\Game\Common\Bullet\BaseBullet.h">
       <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Bullet\PlayerBullet.h">
-      <Filter>Player\Bullet</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Bullet\NormalBullet.h">
-      <Filter>Player\Bullet</Filter>
-    </ClInclude>
-    <ClInclude Include="App\Game\Player\Bullet\HomingMissileBullet.h">
-      <Filter>Player\Bullet</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1101,14 +970,132 @@
     <Filter Include="App\Game\Boss\Encounter">
       <UniqueIdentifier>{385e906c-a63f-5fbf-8edc-ee187bafb5e1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="App\Game\Boss\AngerBlockBoss">
-      <UniqueIdentifier>{e395594d-f2ae-5192-982d-2eb67bbead81}</UniqueIdentifier>
-    </Filter>
     <Filter Include="App\Game\Boss\FearWormEnemy">
       <UniqueIdentifier>{3e1089a6-bc4a-5161-b575-aed6262c4950}</UniqueIdentifier>
     </Filter>
     <Filter Include="App\Game\Boss\IceJellyfish">
       <UniqueIdentifier>{15081e1b-16a9-5293-8d88-ef1ae7f06370}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App\Game\Enemy\Bullet\EnemyBulletManager.h">
+      <Filter>App\Game\Enemy\Bullet</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Enemy">
+      <UniqueIdentifier>{19104477-ff38-5c7f-83da-cca8eb972b61}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\Bullet">
+      <UniqueIdentifier>{b6e95b65-8a0f-5296-8000-bcbb9f4e3a22}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\Bullet\Common">
+      <UniqueIdentifier>{49f30e79-db19-527b-b918-5786630d0aff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\Bullet\Types">
+      <UniqueIdentifier>{3037587e-8624-5c8f-9352-e04f20064f86}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Enemy\ArmoredEnemy">
+      <UniqueIdentifier>{0a6e21cb-4104-52ec-a459-c6ab0c2b012b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\Debug">
+      <UniqueIdentifier>{6801f471-5193-558b-88bc-8f3dd18a356e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\NormalEnemy">
+      <UniqueIdentifier>{e76e3407-1f12-5ce9-8771-e7e1a4c24240}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\PaintEnemy">
+      <UniqueIdentifier>{ddf5122d-65e7-5651-94f0-b5a3cb7165ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Enemy\SwarmEnemy">
+      <UniqueIdentifier>{d5a48a87-8836-5a96-b000-e474ca0fbc1b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App\Game\Player\Bullet\Common\PlayerBullet.cpp">
+      <Filter>Player\Bullet\Common</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Bullet\Common\PlayerBullet.h">
+      <Filter>Player\Bullet\Common</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Bullet\Types\HomingMissileBullet.cpp">
+      <Filter>Player\Bullet\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Bullet\Types\HomingMissileBullet.h">
+      <Filter>Player\Bullet\Types</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Bullet\Types\MissileBullet.cpp">
+      <Filter>Player\Bullet\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Bullet\Types\MissileBullet.h">
+      <Filter>Player\Bullet\Types</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Bullet\Types\NormalBullet.cpp">
+      <Filter>Player\Bullet\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Bullet\Types\NormalBullet.h">
+      <Filter>Player\Bullet\Types</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Common\AutomaticPlayerWeapon.cpp">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Common\AutomaticPlayerWeapon.h">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Player\Weapon\Common\BasePlayerWeapon.h">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Common\PlayerHomingLock.cpp">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Common\PlayerHomingLock.h">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Common\PlayerWeaponHeat.cpp">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Common\PlayerWeaponHeat.h">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
+      <Filter>Player\Weapon</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponController.h">
+      <Filter>Player\Weapon</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Types\HomingPlayerWeapon.cpp">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Types\HomingPlayerWeapon.h">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Types\MinigunPlayerWeapon.cpp">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Types\MinigunPlayerWeapon.h">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Types\MissilePlayerWeapon.cpp">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Types\MissilePlayerWeapon.h">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Weapon\Types\NormalPlayerWeapon.cpp">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Weapon\Types\NormalPlayerWeapon.h">
+      <Filter>Player\Weapon\Types</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Player\Weapon\Common"><UniqueIdentifier>{86f03c7c-03a6-4218-9337-e3a13f2d5eda}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Weapon\Types"><UniqueIdentifier>{be2a9dd9-66cc-4a30-9eb1-18ae0887fb70}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Bullet\Common"><UniqueIdentifier>{ceebabf6-faa1-4dfd-a702-b3ecf976ec07}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Bullet\Types"><UniqueIdentifier>{3f5f7dcb-78b9-4efb-b968-8c0e536f56e2}</UniqueIdentifier></Filter>
   </ItemGroup>
 </Project>

@@ -19,6 +19,9 @@ SamplerState gSampler : register(s0);
 #if defined(KOHAKU_RUINS_ROTOR)
 #include "../RuinsRotor/Surface.PS.hlsli"
 #endif
+#if defined(KOHAKU_MOUNTAIN_RUINS)
+#include "../MountainRuins/Surface.PS.hlsli"
+#endif
 
 struct PixelShaderOutput
 {
@@ -59,6 +62,9 @@ PixelShaderOutput main(VertexShaderOutput input)
 #if defined(KOHAKU_FLOATING_RUINS)
     ResolveRuinsTiles(input, uv, baseColor, N);
 #endif
+#if defined(KOHAKU_MOUNTAIN_RUINS)
+    ResolveMountainSurface(input, textureColor.rgb, baseColor, N);
+#endif
     float3 L = normalize(-gDirectionalLight.direction);
     float3 V = normalize(gCamera.worldPosition - input.worldPosition);
     float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
@@ -67,11 +73,21 @@ PixelShaderOutput main(VertexShaderOutput input)
 #endif
     float3 direct = max(gDirectionalLight.color.rgb, 0.0f) *
         max(gDirectionalLight.intensity, 0.0f) * visibility * GetDirectLightingStrength(gAmbientLight);
+#if defined(KOHAKU_MOUNTAIN_RUINS)
+    float3 indirectColor = baseColor *
+        SurfaceDiffuseWeight(baseColor, gMaterial.metallic, gMaterial.specularStrength, dot(N, V)) *
+        HemisphereAmbient(gAmbientLight, N);
+#else
     float3 indirectColor = ShadowToonSurfaceIndirect(baseColor, N, V);
+#endif
 #if defined(KOHAKU_RUINS_ROTOR)
     indirectColor += rotorEmission;
 #endif
+#if defined(KOHAKU_MOUNTAIN_RUINS)
+    float3 directionalColor = StandardSurfaceDirect(baseColor, N, V, L) * direct;
+#else
     float3 directionalColor = ShadowToonSurfaceDirect(baseColor, N, V, L) * direct;
+#endif
     float3 color = indirectColor + directionalColor;
 
 
@@ -82,7 +98,7 @@ PixelShaderOutput main(VertexShaderOutput input)
     output.color = float4(color, gMaterial.color.a * textureColor.a);
     output.surfaceMaterial = float4(saturate(baseColor), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
-#if defined(KOHAKU_FLOATING_RUINS)
+#if defined(KOHAKU_FLOATING_RUINS) || defined(KOHAKU_MOUNTAIN_RUINS)
     output.encodedNormal = float4(N * 0.5f + 0.5f, input.position.z);
 #endif
 #if defined(KOHAKU_RT_CAPTURE)

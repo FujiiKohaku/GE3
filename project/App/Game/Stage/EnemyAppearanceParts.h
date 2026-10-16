@@ -1,8 +1,10 @@
+// 敵の外見名と、追加パーツのモデル・動き方の対応表を定義する。
 #pragma once
 #include "App/Game/Enemy/EnemyAppearanceMotion.h"
 #include <array>
 #include <string_view>
 
+// 外見名と追加モデル、そのパーツに適用する動き方を組にする。
 struct EnemyAppearancePartEntry {
     std::string_view appearance;
     std::string_view model;

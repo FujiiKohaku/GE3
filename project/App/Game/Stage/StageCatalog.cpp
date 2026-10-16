@@ -1,3 +1,4 @@
+// ステージ一覧と各ステージのJSON設定を読み込み、IDで参照できるようにする。
 #include "StageCatalog.h"
 
 #include "externals/json.hpp"
@@ -18,12 +19,14 @@ Vector3 ReadVector3(const nlohmann::json& value, const Vector3& fallback)
 }
 }
 
+// アプリ内で共有するステージ一覧を返す。
 StageCatalog* StageCatalog::GetInstance()
 {
     static StageCatalog instance;
     return &instance;
 }
 
+// 一覧JSONから各設定を読み込み、IDの重複や読み込み失敗を検出する。
 bool StageCatalog::Load(const std::string& catalogPath)
 {
     stages_.clear();
@@ -74,6 +77,7 @@ bool StageCatalog::Load(const std::string& catalogPath)
     return true;
 }
 
+// ステージIDに一致する設定を探す。見つからない場合はnullptrを返す。
 const StageSettings* StageCatalog::Find(const std::string& id) const
 {
     for (const StageSettings& stage : stages_) {
@@ -84,6 +88,7 @@ const StageSettings* StageCatalog::Find(const std::string& id) const
     return nullptr;
 }
 
+// レイアウト・見た目・敵などのステージ固有設定をJSONから取り込む。
 bool StageCatalog::LoadStageSettings(
     const std::string& settingsPath,
     StageSettings& settings)

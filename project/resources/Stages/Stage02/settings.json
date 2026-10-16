@@ -43,7 +43,7 @@
     ]
   },
   "boss": {
-    "type": "AngerBlock",
+    "type": "None",
     "spawn_distance": 3500.0,
     "position": [84.0, 33.0, 3242.0],
     "rail_auto_extension": false,

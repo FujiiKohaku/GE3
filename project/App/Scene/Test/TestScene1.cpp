@@ -1,3 +1,4 @@
+// モデル・アニメーション・足の接地補正・エフェクトなどを確認するための開発用シーン。
 #include "App/Scene/Test/TestScene1.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -342,6 +343,7 @@ void ApplyKneePoleCorrection(
 }
 }
 
+// 検証対象のモデル・地形・アニメーションと、操作・描画の設定を準備する。
 void TestScene1::Initialize()
 {
     // カメラの初期化
@@ -543,6 +545,7 @@ void TestScene1::Initialize()
 #endif
 }
 
+// 開発用の入力を処理し、モデルの移動・アニメーション・足の接地補正と演出を更新する。
 void TestScene1::Update()
 {
     // タイトルシーンに戻る
@@ -614,7 +617,7 @@ void TestScene1::Update()
         }
     }
 
-    // 1. 氷の中心から6方向への花火飛翔発射
+    // 氷の中心から6方向への花火飛翔発射
     if (isSixTrailPending_) {
         sixTrailTimer_ -= 1.0f / 60.0f;
         if (sixTrailTimer_ <= 0.0f) {
@@ -623,7 +626,7 @@ void TestScene1::Update()
         }
     }
 
-    // 2. 【第1弾爆発】6方向の到達地点（＋中央）の全7箇所での3重連動大爆発！
+    // 【第1弾爆発】6方向の到達地点（＋中央）の全7箇所での3重連動大爆発！
     if (isSixBlastPending_) {
         sixBlastTimer_ -= 1.0f / 60.0f;
         if (sixBlastTimer_ <= 0.0f) {
@@ -653,7 +656,7 @@ void TestScene1::Update()
         }
     }
 
-    // 3. 【第2弾二重破裂】第1弾爆発の直後に追いかけてドガガガーン！と広範囲で2度目の二重破裂！
+    // 【第2弾二重破裂】第1弾爆発の直後に追いかけてドガガガーン！と広範囲で2度目の二重破裂！
     if (isSecondBlastPending_) {
         secondBlastTimer_ -= 1.0f / 60.0f;
         if (secondBlastTimer_ <= 0.0f) {
@@ -703,11 +706,11 @@ void TestScene1::Update()
         ApplySelectedPostEffect();
     }
 
-    // 1. マウスによるTPSカメラ操作（回転）は無効化 (完全固定カメラ)
+    // マウスによるTPSカメラ操作（回転）は無効化 (完全固定カメラ)
     cameraYaw_ = 0.0f;
     cameraPitch_ = 0.35f;
 
-    // 2. WASDによる移動操作 (攻撃中は動けない)
+    // WASDによる移動操作 (攻撃中は動けない)
     Vector3 moveDir = { 0.0f, 0.0f, 0.0f };
     bool hasMoveInput = false;
 
@@ -768,7 +771,7 @@ void TestScene1::Update()
         // 移動していないときは向きを変更せず、直前の向きをそのままキープする
     }
 
-    // 3. ジャンプ、攻撃、およびアニメーションステート制御
+    // ジャンプ、攻撃、およびアニメーションステート制御
     float playerGroundHeight = -5.0f;
     const float facingYaw =
         playerRot_.y - playerRotOffset_;
@@ -1103,6 +1106,7 @@ void TestScene1::Update()
 #endif
 }
 
+// 画面に重ねるスプライトや文字を描画する。
 void TestScene1::Draw2D()
 {
     if (!showSkeletonDebug_) {
@@ -1116,6 +1120,7 @@ void TestScene1::Draw2D()
     }
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void TestScene1::Draw3D()
 {
     // 床の描画
@@ -1150,6 +1155,7 @@ void TestScene1::Draw3D()
     }
 }
 
+// 描画対象をレイトレーシング用のシーンへ登録する。
 bool TestScene1::SubmitRaytracingScene(DxrRenderer& renderer) {
     if (floorObj_) { floorObj_->SubmitRaytracing(renderer); }
     if (ikTerrainObj_) { ikTerrainObj_->SubmitRaytracing(renderer); }
@@ -1163,12 +1169,14 @@ bool TestScene1::SubmitRaytracingScene(DxrRenderer& renderer) {
     return true;
 }
 
+// このシーンで使用するパーティクルを描画する。
 void TestScene1::DrawParticle()
 {
     EffectManager::GetInstance()->PreDraw();
     EffectManager::GetInstance()->Draw();
 }
 
+// 開発用の画面に内部状態や調整項目を表示する。
 void TestScene1::DrawImGui()
 {
 #ifdef USE_IMGUI
@@ -1232,6 +1240,7 @@ void TestScene1::DrawImGui()
 }
 
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
+// 開発用パネルへこのシーンを登録し、内部状態の確認や設定変更を受け付ける。
 void TestScene1::RegisterDevelopmentPanel()
 {
     DevelopmentWebPanel::GetInstance().RegisterSource(this, "test", "テストシーン", true,
@@ -1240,6 +1249,7 @@ void TestScene1::RegisterDevelopmentPanel()
         &TestScene1::ExecuteDevelopmentCommand);
 }
 
+// 開発用パネルに表示する操作項目をJSONとして組み立てる。
 nlohmann::json TestScene1::GetDevelopmentControls() const
 {
     static const nlohmann::json kControls = nlohmann::json::array({
@@ -1273,23 +1283,27 @@ nlohmann::json TestScene1::GetDevelopmentControls() const
     return controls;
 }
 
+// 開発パネルからの真偽値変更を、共通の設定反映処理へ渡す。
 bool TestScene1::SetDevelopmentBool(const std::string& key, bool isEnabled)
 {
     if (isEnabled) { return ApplyDevelopmentAction(key, "true"); }
     return ApplyDevelopmentAction(key, "false");
 }
 
+// 開発パネルからの数値変更を、共通の設定反映処理へ渡す。
 bool TestScene1::SetDevelopmentNumber(const std::string& key, double value)
 {
     if (!std::isfinite(value)) { return false; }
     return ApplyDevelopmentAction(key, nlohmann::json(value).dump());
 }
 
+// 開発パネルで指定されたコマンドを実行する。
 bool TestScene1::ExecuteDevelopmentCommand(const std::string& key)
 {
     return ApplyDevelopmentAction(key, "");
 }
 
+// シーンの現在状態を、開発パネル向けのJSONへまとめる。
 nlohmann::json TestScene1::GetDevelopmentState() const
 {
     nlohmann::json state = {
@@ -1317,11 +1331,13 @@ nlohmann::json TestScene1::GetDevelopmentState() const
     return state;
 }
 
+// シーンの開発用状態をJSON文字列に変換する。
 std::string TestScene1::GetDevelopmentStateJson() const
 {
     return GetDevelopmentState().dump();
 }
 
+// 指定されたキーと値を調べ、対応する検証用設定や操作へ反映する。
 bool TestScene1::ApplyDevelopmentAction(const std::string& key, const std::string& value)
 {
     if ((key == "enableFootIK" || key == "showFootIKDebug" || key == "showFieldDebug" || key == "showSkeletonDebug") && value != "true" && value != "false") { return false; }
@@ -1360,6 +1376,7 @@ bool TestScene1::ApplyDevelopmentAction(const std::string& key, const std::strin
 }
 #endif
 
+// 検証用のエフェクトやモデル、外部登録を終了する。
 void TestScene1::Finalize()
 {
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -1441,6 +1458,7 @@ void TestScene1::Finalize()
     lightManager->SetSpotLightDistance(7.0f);
 }
 
+// 手などの取り付け先の姿勢から、刀の位置と向きを更新する。
 void TestScene1::UpdateKatanaAttachment()
 {
     if (!katanaObj_ || !playerActor_ || !playerActor_->GetObject()) {
@@ -1480,6 +1498,7 @@ void TestScene1::UpdateKatanaAttachment()
     katanaObj_->Update();
 }
 
+// アニメーション内のイベントを受け取り、攻撃や効果音・エフェクトの開始へつなげる。
 void TestScene1::ProcessAnimationEvents()
 {
     if (!playerActor_ || !playerActor_->GetPlayAnimation()) {
@@ -1594,6 +1613,7 @@ void TestScene1::ProcessAnimationEvents()
     }
 }
 
+// 移動状態に応じて砂煙などの追従エフェクトを更新する。
 void TestScene1::UpdateMovementEffects()
 {
     EffectManager* effectManager = EffectManager::GetInstance();
@@ -1644,6 +1664,7 @@ void TestScene1::UpdateMovementEffects()
     }
 }
 
+// ダッシュ開始の瞬間にだけ、勢いを示すエフェクトを出す。
 void TestScene1::PlayDashStartBurst()
 {
     EffectManager* effectManager = EffectManager::GetInstance();
@@ -1690,6 +1711,7 @@ void TestScene1::PlayDashStartBurst()
         burstPosition + Vector3{ 0.0f, 0.04f, 0.0f });
 }
 
+// 移動に追従するループエフェクトを停止する。
 void TestScene1::StopMovementEffects()
 {
     EffectManager* effectManager = EffectManager::GetInstance();
@@ -1703,6 +1725,7 @@ void TestScene1::StopMovementEffects()
     }
 }
 
+// 指定した位置付近の地形を調べ、接地位置と面の向きを求める。
 bool TestScene1::SampleTerrainSurface(
     float worldX,
     float worldZ,
@@ -1877,6 +1900,7 @@ bool TestScene1::SampleTerrainSurface(
     return true;
 }
 
+// 足裏の複数地点から地形を調べ、足を置く面の位置と向きを求める。
 bool TestScene1::SampleFootSoleSurface(
     const Vector3& footJointPosition,
     float& worldHeight,
@@ -1952,6 +1976,7 @@ bool TestScene1::SampleFootSoleSurface(
     return false;
 }
 
+// 腰側・膝・足先の関係から、目標位置に足を置くための脚の姿勢を計算する。
 void TestScene1::SolveLegIK(
     const std::string& upperLegName,
     const std::string& lowerLegName,
@@ -2077,6 +2102,7 @@ void TestScene1::SolveLegIK(
     playerActor_->ApplySkeletonPose(pose);
 }
 
+// 左右の足が地面に沿うように、地形の高さと傾きをボーンへ反映する。
 void TestScene1::ApplyFootIK()
 {
     if (!enableFootIK_ ||
@@ -2271,6 +2297,7 @@ void TestScene1::ApplyFootIK()
     }
 }
 
+// 指定したボーンを探し、見つかった場合にワールド位置を書き出す。
 bool TestScene1::TryGetJointWorldPosition(
     const std::string& jointName,
     Vector3& worldPosition) const
@@ -2302,6 +2329,7 @@ bool TestScene1::TryGetJointWorldPosition(
     return true;
 }
 
+// 砂ゴーレムの各ボーンを現在の検証設定に合わせて配置する。
 void TestScene1::UpdateSandGolemSkeletonPose()
 {
     if (!isSandGolemMode_ ||
@@ -2358,6 +2386,7 @@ void TestScene1::UpdateSandGolemSkeletonPose()
     }
 }
 
+// 開発画面で選択された画面効果とパラメーターを適用する。
 void TestScene1::ApplySelectedPostEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
@@ -2372,6 +2401,7 @@ void TestScene1::ApplySelectedPostEffect()
     sceneManager->SetBlackHoleStrength(1.0f);
 }
 
+// 現在のモデルからボーン名を集め、開発画面で選択できるようにする。
 void TestScene1::UpdateBoneNames()
 {
     if (!showSkeletonDebug_) {

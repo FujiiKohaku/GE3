@@ -1,8 +1,9 @@
+// 次のステージのリソースや文字を準備し、読み込みが完了したらプレイ画面へ切り替える。
 #include "App/Scene/Loading/LoadingScene.h"
 
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
-#include "App/Game/Tutorial/BaseTutorialStep.h"
+#include "App/Game/Tutorial/TutorialController.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -23,6 +24,7 @@ constexpr float kProgressBarTop = 540.0f;
 constexpr const char* kWhiteTexturePath = "resources/Textures/white.png";
 }
 
+// 読み込み画面を準備し、遷移先に必要なリソースの読み込みを開始する。
 void LoadingScene::Initialize()
 {
     // 起動時から遅延ロードされたデフォルトテクスチャ
@@ -65,6 +67,7 @@ void LoadingScene::Initialize()
 
 }
 
+// 読み込みの完了を確認し、必要な文字も準備してから遷移先へ進む。
 void LoadingScene::Update()
 {
     if (!hasDrawnFirstFrame_) {
@@ -73,7 +76,7 @@ void LoadingScene::Update()
         FontManager* fontManager = FontManager::GetInstance();
         const FontHandle fontHandle = fontManager->LoadFont(
             "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
-        fontManager->EnsureGlyphs(fontHandle, GetTutorialGlyphText());
+        fontManager->EnsureGlyphs(fontHandle, TutorialController::GetGlyphText());
         // このフレームの描画前にアトラス更新・転送を終えてから、次の準備へ進む。
         hasPreparedTutorialFont_ = true;
     } else if (!gameResourcesInitialized_) {
@@ -118,6 +121,7 @@ void LoadingScene::Update()
     }
 }
 
+// 読み込み中の表示を画面へ描画する。
 void LoadingScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
@@ -130,7 +134,10 @@ void LoadingScene::Draw2D()
     }
 }
 
+// このクラスではこの描画経路を使用しないため、処理を行わない。
 void LoadingScene::Draw3D() {}
+// このクラスではこの描画経路を使用しないため、処理を行わない。
 void LoadingScene::DrawParticle() {}
+// このクラスではこの描画経路を使用しないため、処理を行わない。
 void LoadingScene::DrawImGui() {}
 void LoadingScene::Finalize() {}

@@ -14,7 +14,7 @@
 #include "Engine/2D/Text/Text.h"
 #include "Engine/2D/Text/TextRenderer.h"
 #include "Engine/Light/LightManager.h"
-#include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 #include <cassert>
 #include <d3d12sdklayers.h>
 

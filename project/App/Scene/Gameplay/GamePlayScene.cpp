@@ -1,8 +1,10 @@
+// ステージ進行の中心。プレイヤー・敵・ボス・背景・HUD・演出を組み合わせて更新する。
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
+#include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
-#include "App/Game/Enemy/Bullet/PaintBullet.h"
+#include "App/Game/Enemy/Bullet/Types/PaintBullet.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "Engine/Animation/AnimationLoder.h"
 #include "Engine/CollisionManager/CollisionManager.h"
@@ -149,6 +151,7 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 
 }
 
+// ステージ設定を読み、機体・敵・ボス・背景・UIと演出をプレイ開始状態へ揃える。
 void GamePlayScene::Initialize()
 {
     Input::GetInstance()->BlockPrimaryFireUntilRelease();
@@ -164,6 +167,7 @@ void GamePlayScene::Initialize()
         { "BrakeStart", "resources/Audio/GameSfx/brake_start.wav", 0.18f, 0.15f },
         { "EnemyDestroyed", "resources/Audio/GameSfx/enemy_destroyed.wav", 0.25f, 0.10f },
         { "BossDestroyed", "resources/Audio/GameSfx/boss_destroyed.wav", 0.42f, 0.50f },
+        { "FearWormCutIn", "resources/Audio/GameSfx/fear_worm_cut_in.wav", 0.40f, 0.50f },
         { "EnemyShot", "resources/Audio/GameSfx/enemy_shot.wav", 0.10f, 0.12f },
         { "HomingLock", "resources/Audio/GameSfx/homing_lock.wav", 0.20f, 0.12f },
         { "PauseToggle", "resources/Audio/GameSfx/pause_toggle.wav", 0.18f, 0.15f },
@@ -282,7 +286,6 @@ void GamePlayScene::Initialize()
     }
     enemyBulletModel_ = ModelManager::GetInstance()->Load("Enemy/Bullet/LowPolySphere/lowPolySphere.obj");
     fearWormEnemyModel_ = ModelManager::GetInstance()->Load("Debug/Sphere/sphere.obj");
-    angerBlockModel_ = ModelManager::GetInstance()->Load("Environment/Block/block.obj");
     // animationskinLoad
     // skinningWalk
     ModelManager::GetInstance()->Load("Characters/Animation/Walk/walk.gltf");
@@ -403,7 +406,7 @@ void GamePlayScene::Initialize()
     // ホワイトPNG (resources/Textures/white.png) を使用した縦長ポーズUIスプライトの初期化
     TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
 
-    // 1. 縦長背景パネル (280x380)
+    // 縦長背景パネル (280x380)
     pauseMenuPanelSprite_ = std::make_unique<Sprite>();
     pauseMenuPanelSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseMenuPanelSprite_->SetSize({ 400.0f, 520.0f });
@@ -412,7 +415,7 @@ void GamePlayScene::Initialize()
     pauseMenuPanelSprite_->SetColor({ 0.06f, 0.06f, 0.09f, 0.92f });
     pauseMenuPanelSprite_->Update();
 
-    // 2. 「再開」ボタン用枠
+    // 「再開」ボタン用枠
     pauseResumeBtnSprite_ = std::make_unique<Sprite>();
     pauseResumeBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseResumeBtnSprite_->SetSize({ 220.0f, 44.0f });
@@ -421,7 +424,7 @@ void GamePlayScene::Initialize()
     pauseResumeBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
     pauseResumeBtnSprite_->Update();
 
-    // 3. 「リトライ」ボタン用枠
+    // 「リトライ」ボタン用枠
     pauseRetryBtnSprite_ = std::make_unique<Sprite>();
     pauseRetryBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseRetryBtnSprite_->SetSize({ 220.0f, 44.0f });
@@ -430,7 +433,7 @@ void GamePlayScene::Initialize()
     pauseRetryBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
     pauseRetryBtnSprite_->Update();
 
-    // 4. 「タイトルに戻る」ボタン用枠
+    // 「タイトルに戻る」ボタン用枠
     pauseTitleBtnSprite_ = std::make_unique<Sprite>();
     pauseTitleBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseTitleBtnSprite_->SetSize({ 220.0f, 44.0f });
@@ -649,10 +652,10 @@ void GamePlayScene::Initialize()
 
     bossNameText_ = std::make_unique<Text>();
     bossNameText_->Initialize(kDefaultFont);
-    bossNameText_->SetText(stageSettings_.bossType == "AngerBlock"
-        ? "BOSS: ANGER"
-        : (stageSettings_.bossType == "IceJellyfish"
-            ? "BOSS: ICE JELLYFISH" : "BOSS: FEAR WORM"));
+    bossNameText_->SetText("BOSS: FEAR WORM");
+    if (stageSettings_.bossType == "IceJellyfish") {
+        bossNameText_->SetText("BOSS: ICE JELLYFISH");
+    }
     bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
     bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
     bossNameText_->SetFontSize(20.0f);
@@ -661,9 +664,10 @@ void GamePlayScene::Initialize()
 
     bossHeadHpText_ = std::make_unique<Text>();
     bossHeadHpText_->Initialize(kDefaultFont);
-    bossHeadHpText_->SetText(stageSettings_.bossType == "AngerBlock"
-        ? "ANGER CORE"
-        : (stageSettings_.bossType == "IceJellyfish" ? "CORE HP" : "HEAD CORE"));
+    bossHeadHpText_->SetText("HEAD CORE");
+    if (stageSettings_.bossType == "IceJellyfish") {
+        bossHeadHpText_->SetText("CORE HP");
+    }
     bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
     bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossHeadHpText_->SetFontSize(14.0f);
@@ -672,9 +676,10 @@ void GamePlayScene::Initialize()
 
     bossBodyHpText_ = std::make_unique<Text>();
     bossBodyHpText_->Initialize(kDefaultFont);
-    bossBodyHpText_->SetText(stageSettings_.bossType == "AngerBlock"
-        ? "FISTS"
-        : (stageSettings_.bossType == "IceJellyfish" ? "TENTACLE PARTS" : "BODY SHIELD"));
+    bossBodyHpText_->SetText("BODY SHIELD");
+    if (stageSettings_.bossType == "IceJellyfish") {
+        bossBodyHpText_->SetText("TENTACLE PARTS");
+    }
     bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
     bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossBodyHpText_->SetFontSize(14.0f);
@@ -733,13 +738,15 @@ void GamePlayScene::Initialize()
         stageSettings_.bossSpawnDistance,
         stageSettings_.bossPosition,
         fearWormEnemyModel_,
-        angerBlockModel_,
         enemyBulletModel_,
         player_.get(),
         camera_.get(),
         rail_.get(),
         stageSettings_.bossRailAutoExtension,
-        stageSettings_.bossRailExtensionBuffer);
+        stageSettings_.bossRailExtensionBuffer,
+        stageSettings_.floorHeight);
+
+    InitializeBossCutIn();
 
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     if (!stageSettings_.recoveryItemDistances.empty()) {
@@ -848,6 +855,7 @@ void GamePlayScene::Initialize()
 #endif
 }
 
+// 少し先のレール位置から進行方向を求め、向きが求められない場合の代替方向も用意する。
 Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railPosition) const
 {
     if (rail_ == nullptr) {
@@ -884,6 +892,7 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
     return forward;
 }
 
+// エンカウンターが所有しているボスを参照する。シーン自身はボスを所有しない。
 BaseBoss* GamePlayScene::GetActiveBoss() const
 {
     if (bossController_ == nullptr) {
@@ -892,6 +901,7 @@ BaseBoss* GamePlayScene::GetActiveBoss() const
     return bossController_->GetActiveBoss();
 }
 
+// 進行方向をもとに、レール上の左右・上下を表す直交方向を作る。
 void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const
 {
     Vector3 normalizedForward = Normalize(forward);
@@ -918,6 +928,7 @@ void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, V
     }
 }
 
+// ポーズや演出の状態を確認し、レール・機体・敵・判定・カメラ・UIを更新する。
 void GamePlayScene::Update()
 {
     if (UpdateTutorialPresentation()) return;
@@ -1018,6 +1029,8 @@ void GamePlayScene::Update()
 
     // HPが尽きた後は通常のゲーム進行を止め、落下と爆発だけを更新する。
     if (player_ && player_->IsDead()) {
+        RestoreBossCutInTimeScale();
+        bossCutInTimerSeconds_ = -1.0f;
         StopPlayerEngineEffects();
         player_->Update();
 
@@ -1102,46 +1115,26 @@ void GamePlayScene::Update()
         player_->GetTranslate(),
         currentRailForward);
 
-    float pirateShipSpawnDistance = -1.0f;
-    float pirateShipPositionDistance = 0.0f;
-    if (stageId_ == "stage03" && stageSettings_.bossType != "None") {
-        pirateShipSpawnDistance = 1250.0f;
-        pirateShipPositionDistance = 1340.0f;
-    }
-
-    if (pirateShipSpawnDistance >= 0.0f &&
-        !isPirateShipMidBossSpawned_ &&
-        railDistance_ >= pirateShipSpawnDistance) {
-        auto pirateShip = std::make_unique<PirateShipMidBoss>();
-        pirateShip->Initialize(angerBlockModel_, enemyBulletModel_, player_.get());
-        Vector3 spawnPosition = rail_->GetPositionByDistance(pirateShipPositionDistance);
-        spawnPosition.y = stageSettings_.floorHeight;
-        pirateShip->SetPosition(spawnPosition);
-        enemies_.push_back(std::move(pirateShip));
-        isPirateShipMidBossSpawned_ = true;
-    }
-
     // プレイヤーのZ座標を取得
     UpdateSwarmWaveSpawning();
 
     // ボス出現処理
     bossController_->Update(railDistance_);
-    BossPresentationContext presentationContext;
-    presentationContext.followFog = stageId_ == "stage03";
-    presentationContext.setSpotPosition = [this](const Vector3& position) {
-        LightManager::GetInstance()->SetSpotLightPosition(bossSpotLightHandle_, position);
-    };
-    presentationContext.setPointPosition = [this](const Vector3& position) {
-        LightManager::GetInstance()->SetPointLightPosition(bossPointLightHandle_, position);
-    };
-    presentationContext.setFogCenter = [](uint32_t index, const Vector3& center) {
-        if (auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
-            auto fog = volume->GetFogVolumes()[index];
-            fog.center = center;
-            volume->SetFogVolume(index, fog);
+    UpdateBossCutIn();
+    if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
+        const auto positions = jellyfish->GetPresentationPositions();
+        LightManager::GetInstance()->SetSpotLightPosition(bossSpotLightHandle_, positions.spotLightPosition);
+        LightManager::GetInstance()->SetPointLightPosition(bossPointLightHandle_, positions.pointLightPosition);
+        if (stageId_ == "stage03") {
+            if (auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+                for (uint32_t index = 0; index < positions.fogCenters.size(); ++index) {
+                    auto fog = volume->GetFogVolumes()[index];
+                    fog.center = positions.fogCenters[index];
+                    volume->SetFogVolume(index, fog);
+                }
+            }
         }
-    };
-    bossController_->UpdatePresentation(presentationContext);
+    }
     if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
         oceanSurface_->SetLength(rail_->GetTotalLength());
     }
@@ -1223,7 +1216,7 @@ void GamePlayScene::Update()
     // エディターマネージャーの更新にカメラを渡す
     editorManager_->Update(camera_.get());
 
-    // 1. レールの移動座標・方向ベクトルの計算
+    // レールの移動座標・方向ベクトルの計算
     Vector3 currentPosition {};
     Vector3 forward {};
     Vector3 railRight {};
@@ -1231,6 +1224,14 @@ void GamePlayScene::Update()
     float nextRailDistance = 0.0f;
     player_->UpdateBoostState();
     UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
+
+    if (stageId_ == "stage02" && stageSettings_.bossType == "None"
+        && nextRailDistance >= rail_->GetTotalLength()) {
+        StopPlayerEngineEffects();
+        ResetGameplayPostEffects();
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+        return;
+    }
 
     // 静的フラグ（初回フレームのログ出力用）
     static bool isFirstFrame = true;
@@ -1244,7 +1245,7 @@ void GamePlayScene::Update()
         enemies_,
         GetActiveBoss());
 
-    // 2. プレイヤーの位置・回転などのワールドトランスフォームの確定
+    // プレイヤーの位置・回転などのワールドトランスフォームの確定
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
     if (stageSettings_.allRangeMode) {
         currentPosition = player_->GetTranslate();
@@ -1258,7 +1259,7 @@ void GamePlayScene::Update()
     // 進行距離を更新
     railDistance_ = nextRailDistance;
 
-    // 3. 描画用カメラと仮想カメラの同期・更新
+    // 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
     // カメラの追従・FOV変更後も、表示される機体と照準の距離を制限する。
     player_->ConstrainGamepadAimToPlayer();
@@ -1405,8 +1406,8 @@ void GamePlayScene::Update()
 
     // -------------------------------------------------
     // 加点要素: Vignetting (3点)
-    // 1. ダメージを受けた瞬間は一瞬だけ暗く赤くフラッシュ
-    // 2. HPが3以下になったら常時ドクンドクンと脈動（鼓動パルス）
+    // ダメージを受けた瞬間は一瞬だけ暗く赤くフラッシュ
+    // HPが3以下になったら常時ドクンドクンと脈動（鼓動パルス）
     // -------------------------------------------------
     if (player_) {
         int currentHp = player_->GetCurrentHp();
@@ -1707,6 +1708,7 @@ void GamePlayScene::Update()
 #pragma endregion
 }
 
+// 速度と進行状態から次のレール距離を求め、チュートリアル中の進行制限も反映する。
 void GamePlayScene::UpdateRailMovement(
     Vector3& outPosition,
     Vector3& outForward,
@@ -1740,6 +1742,7 @@ void GamePlayScene::UpdateRailMovement(
     CalculateRailBasis(outForward, outRight, outUp);
 }
 
+// レール上の基準姿勢とプレイヤー操作を合わせて機体の位置・向きを更新する。
 void GamePlayScene::UpdatePlayerTransform(
     const Vector3& currentPosition,
     const Vector3& railRight,
@@ -1818,6 +1821,7 @@ void GamePlayScene::UpdatePlayerTransform(
     player_->SetTranslate(playerPosition);
 }
 
+// 機体とレールに追従する視点を作り、加減速や旋回によるカメラ演出を加える。
 void GamePlayScene::UpdateCamera(
     const Vector3& currentPosition,
     const Vector3& forward,
@@ -1975,7 +1979,7 @@ void GamePlayScene::UpdateCamera(
     // 描画用カメラの行列を最新に確定
     camera_->Update();
 
-    // 2. エイム用仮想カメラ（aimCamera_）の更新 (遅延なしの最新情報でLookAt)
+    // エイム用仮想カメラ（aimCamera_）の更新 (遅延なしの最新情報でLookAt)
     Vector3 targetCameraPosition = currentPosition - forward * cameraBackwardOffset;
     targetCameraPosition.y += kCameraUpwardOffset;
     Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
@@ -1988,6 +1992,7 @@ void GamePlayScene::UpdateCamera(
     aimCamera_->Update();
 }
 
+// ステージ内で出現する水柱の配置と出現条件を準備する。
 void GamePlayScene::InitializeWaterPillars()
 {
     auto addPillar = [this](float triggerDistance, float sideOffset, float delay) {
@@ -2015,6 +2020,7 @@ void GamePlayScene::InitializeWaterPillars()
     addPillar(1480.0f, -9.0f, 0.65f);
 }
 
+// 海中や海上の生き物を、背景演出用の位置へ配置する。
 void GamePlayScene::InitializeOceanLife()
 {
     Model* fishModel = ModelManager::GetInstance()->Load("fish/fish.obj");
@@ -2044,6 +2050,7 @@ void GamePlayScene::InitializeOceanLife()
     }
 }
 
+// 進行位置と時間に合わせて、背景の生き物を動かす。
 void GamePlayScene::UpdateOceanLife(
     const Vector3& railPosition,
     const Vector3& forward,
@@ -2103,6 +2110,7 @@ void GamePlayScene::UpdateOceanLife(
 
 }
 
+// 背景・ステージ・機体・敵などの立体物を、各描画経路へ渡す。
 void GamePlayScene::Draw3D()
 {
     // skyBOx
@@ -2166,6 +2174,7 @@ void GamePlayScene::Draw3D()
 
 }
 
+// レイトレーシングに参加する立体物を登録する。通常描画の可視判定とは別に扱う。
 bool GamePlayScene::SubmitRaytracingScene(DxrRenderer& renderer) {
     for (const auto& object : levelObjects_) {
         if (object) { object->SubmitRaytracing(renderer); }
@@ -2194,12 +2203,14 @@ bool GamePlayScene::SubmitRaytracingScene(DxrRenderer& renderer) {
     return true;
 }
 
+// このシーンで使用するパーティクルを描画する。
 void GamePlayScene::DrawParticle()
 {
     EffectManager::GetInstance()->PreDraw();
     EffectManager::GetInstance()->Draw();
 }
 
+// 回復アイテムのモデルと配置状態を準備する。
 void GamePlayScene::InitializeRecoveryItems(Model* model)
 {
     if (model == nullptr) {
@@ -2228,6 +2239,7 @@ void GamePlayScene::InitializeRecoveryItems(Model* model)
     }
 }
 
+// 回復アイテムの見た目とプレイヤーとの接触を更新する。
 void GamePlayScene::UpdateRecoveryItems()
 {
     if (player_ == nullptr) {
@@ -2287,9 +2299,70 @@ void GamePlayScene::UpdateRecoveryItems()
     }
 }
 
+// ボス登場時のカットインに使う画像・文字・進行状態を準備する。
+void GamePlayScene::InitializeBossCutIn()
+{
+    RestoreBossCutInTimeScale();
+    bossCutInTimerSeconds_ = -1.0f;
+    hasPlayedBossCutIn_ = false;
+    bossCutInSprite_.reset();
+    if (stageSettings_.bossType != "FearWorm") { return; }
+    bossCutInSprite_ = std::make_unique<Sprite>();
+    bossCutInSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    bossCutInSprite_->SetShaderPaths("resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+        "resources/Shaders/Sprite/FearWormCutIn/Render.PS.hlsl");
+    bossCutInSprite_->SetPosition({ 0.0f, 0.0f });
+    bossCutInSprite_->SetSize({ static_cast<float>(WinApp::kClientWidth), static_cast<float>(WinApp::kClientHeight) });
+    bossCutInSprite_->Update();
+}
+
+// カットインで変更した時間の進み方を元に戻す。
+void GamePlayScene::RestoreBossCutInTimeScale()
+{
+    if (!isBossCutInSlowMotionActive_) { return; }
+    TimeManager::GetInstance()->SetTimeScale(bossCutInPreviousTimeScale_);
+    isBossCutInSlowMotionActive_ = false;
+}
+
+// ボス登場の通知からカットインを開始し、表示と時間演出を進める。
+void GamePlayScene::UpdateBossCutIn()
+{
+    if (!bossCutInSprite_) { return; }
+    const auto* fearWorm = dynamic_cast<const FearWormEnemy*>(GetActiveBoss());
+    if (fearWorm == nullptr || fearWorm->IsDead()) {
+        RestoreBossCutInTimeScale();
+        bossCutInTimerSeconds_ = -1.0f;
+        return;
+    }
+    if (!hasPlayedBossCutIn_ && fearWorm->HasBreachedSurface()) {
+        hasPlayedBossCutIn_ = true;
+        bossCutInTimerSeconds_ = 0.0f;
+        bossCutInPreviousTimeScale_ = TimeManager::GetInstance()->GetTimeScale();
+        TimeManager::GetInstance()->SetTimeScale(bossCutInPreviousTimeScale_ * 0.22f);
+        isBossCutInSlowMotionActive_ = true;
+        SoundManager::GetInstance()->Play("FearWormCutIn");
+    } else if (bossCutInTimerSeconds_ >= 0.0f) {
+        bossCutInTimerSeconds_ += TimeManager::GetInstance()->GetUnscaledDeltaTime();
+    }
+    if (bossCutInTimerSeconds_ < 0.0f) { return; }
+    if (bossCutInTimerSeconds_ >= kBossCutInSlowDurationSeconds) {
+        RestoreBossCutInTimeScale();
+    }
+    if (bossCutInTimerSeconds_ >= kBossCutInDurationSeconds) {
+        bossCutInTimerSeconds_ = -1.0f;
+        return;
+    }
+    bossCutInSprite_->SetEffectPhase(bossCutInTimerSeconds_);
+    bossCutInSprite_->Update();
+}
+
+// 照準・HP・得点・通信パネルなど、画面に重ねる情報を描画する。
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
+    if (!isPaused_ && bossCutInSprite_ && bossCutInTimerSeconds_ >= 0.0f) {
+        bossCutInSprite_->Draw();
+    }
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
         overheatGaugeSprite_->Draw();
@@ -2363,6 +2436,7 @@ void GamePlayScene::Draw2D()
     }
 }
 
+// 訓練の開始・成功・完了を示す表示と演出を準備する。
 void GamePlayScene::InitializeTutorialPresentation()
 {
     if (stageId_ != "tutorial") return;
@@ -2398,6 +2472,7 @@ void GamePlayScene::InitializeTutorialPresentation()
     UpdateTutorialPresentation();
 }
 
+// チュートリアルの進行に合わせて案内を切り替え、開始や完了の演出を進める。
 bool GamePlayScene::UpdateTutorialPresentation()
 {
     if (stageId_ != "tutorial" || !tutorialTitleText_) return false;
@@ -2477,6 +2552,7 @@ bool GamePlayScene::UpdateTutorialPresentation()
     return true;
 }
 
+// ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
 void GamePlayScene::UpdateBossHpHud()
 {
     if (GetActiveBoss() == nullptr) {
@@ -2545,6 +2621,7 @@ void GamePlayScene::UpdateBossHpHud()
     }
 }
 
+// ポーズ画面が参照・変更する値と操作を、一つの情報にまとめて渡す。
 PauseStateContext GamePlayScene::MakePauseContext()
 {
     PauseStateContext context { pauseSelection_ };
@@ -2585,6 +2662,7 @@ PauseStateContext GamePlayScene::MakePauseContext()
     return context;
 }
 
+// ポーズ画面の表示先と選択位置を切り替える。
 void GamePlayScene::ChangePauseState(PauseViewState state, int selection)
 {
     auto context = MakePauseContext();
@@ -2594,17 +2672,20 @@ void GamePlayScene::ChangePauseState(PauseViewState state, int selection)
     pauseSelection_ = selection;
 }
 
+// 設定画面から操舵感度を変更し、許可された範囲へ収める。
 void GamePlayScene::AdjustPauseSensitivity(float amount)
 {
     auto context = MakePauseContext();
     pauseState_->AdjustSensitivity(context, amount);
 }
 
+// ポーズ画面で選択中の項目を決定する。
 void GamePlayScene::ActivatePauseSelection()
 {
     auto context = MakePauseContext();
     pauseState_->Activate(context);
 }
+// 開発用の画面に内部状態や調整項目を表示する。
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
@@ -2676,13 +2757,14 @@ void GamePlayScene::DrawImGui()
         if (ImGui::Begin("Boss HP HUD", nullptr, windowFlags)) {
             // ボス名称
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-            const char* debugBossName = stageSettings_.bossType == "AngerBlock"
-                ? "ANGER"
-                : (stageSettings_.bossType == "IceJellyfish" ? "ICE JELLYFISH" : "FEAR WORM");
+            const char* debugBossName = "FEAR WORM";
+            if (stageSettings_.bossType == "IceJellyfish") {
+                debugBossName = "ICE JELLYFISH";
+            }
             ImGui::Text("BOSS: %s", debugBossName);
             ImGui::PopStyleColor();
 
-            // 1. 頭部HPバー (ネオンブルー)
+            // 頭部HPバー (ネオンブルー)
             float headFraction = GetActiveBoss()->GetHeadHpFraction();
             ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "CORE HP  " : "HEAD CORE  ");
             ImGui::SameLine();
@@ -2691,7 +2773,7 @@ void GamePlayScene::DrawImGui()
             ImGui::ProgressBar(headFraction, ImVec2(-1, 14.0f), "");
             ImGui::PopStyleColor(2);
 
-            // 2. 胴体HPバー (ネオンレッド + 胴体数に応じた9分割の区切り線)
+            // 胴体HPバー (ネオンレッド + 胴体数に応じた9分割の区切り線)
             float bodyFraction = GetActiveBoss()->GetBodyHpFraction();
             ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "TENTACLES  " : "BODY SHIELD");
             ImGui::SameLine();
@@ -2778,6 +2860,7 @@ void GamePlayScene::DrawImGui()
 #endif
 }
 
+// 衝突システムの結果を受け取り、得点・ダメージ演出・ステージイベントへ反映する。
 void GamePlayScene::CheckCollision()
 {
 
@@ -2812,6 +2895,7 @@ void GamePlayScene::CheckCollision()
 
 }
 
+// ペイント弾の命中を受けて、画面に付着したような表示を開始する。
 void GamePlayScene::StartPaintHitEffect()
 {
     if (isPaintEffectActive_) {
@@ -2852,12 +2936,14 @@ void GamePlayScene::StartPaintHitEffect()
     SceneManager::GetInstance()->SetPaintIntensity(1.0f);
 }
 
+// 水滴が画面に付く演出を開始する。
 void GamePlayScene::StartWaterDropEffect()
 {
     waterDropEffectTimer_ = kWaterDropEffectDuration;
     SceneManager::GetInstance()->SetWaterEffectIntensity(1.0f);
 }
 
+// 水滴演出の経過時間と表示の強さを更新する。
 void GamePlayScene::UpdateWaterDropEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
@@ -2886,6 +2972,7 @@ void GamePlayScene::UpdateWaterDropEffect()
 }
 
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
+// 開発用パネルへこのシーンを登録し、内部状態の確認や設定変更を受け付ける。
 void GamePlayScene::RegisterDevelopmentPanel()
 {
     DevelopmentWebPanel::GetInstance().RegisterSource(this, "gameplay", "ゲームプレイ", true,
@@ -2894,6 +2981,7 @@ void GamePlayScene::RegisterDevelopmentPanel()
         &GamePlayScene::ExecuteDevelopmentCommand);
 }
 
+// 開発用パネルに表示する操作項目をJSONとして組み立てる。
 nlohmann::json GamePlayScene::GetDevelopmentControls() const
 {
     static const nlohmann::json kControls = nlohmann::json::array({
@@ -3000,23 +3088,27 @@ nlohmann::json GamePlayScene::GetDevelopmentControls() const
     }    return controls;
 }
 
+// 開発パネルからの真偽値変更を、共通の設定反映処理へ渡す。
 bool GamePlayScene::SetDevelopmentBool(const std::string& key, bool isEnabled)
 {
     if (isEnabled) { return ApplyDevelopmentAction(key, "true"); }
     return ApplyDevelopmentAction(key, "false");
 }
 
+// 開発パネルからの数値変更を、共通の設定反映処理へ渡す。
 bool GamePlayScene::SetDevelopmentNumber(const std::string& key, double value)
 {
     if (!std::isfinite(value)) { return false; }
     return ApplyDevelopmentAction(key, nlohmann::json(value).dump());
 }
 
+// 開発パネルで指定されたコマンドを実行する。
 bool GamePlayScene::ExecuteDevelopmentCommand(const std::string& key)
 {
     return ApplyDevelopmentAction(key, "");
 }
 
+// シーンの現在状態を、開発パネル向けのJSONへまとめる。
 nlohmann::json GamePlayScene::GetDevelopmentState() const
 {
     const BaseBoss* boss = GetActiveBoss();
@@ -3109,11 +3201,13 @@ nlohmann::json GamePlayScene::GetDevelopmentState() const
     return state;
 }
 
+// シーンの開発用状態をJSON文字列に変換する。
 std::string GamePlayScene::GetDevelopmentStateJson() const
 {
     return GetDevelopmentState().dump();
 }
 
+// 指定されたキーと値を調べ、対応する検証用設定や操作へ反映する。
 bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::string& value)
 {
     if ((key == "invincibleMode" || key == "lightEnabled" || key == "pointEnabled" || key == "spotEnabled" || key == "freeCamera" || key == "paused" || key == "showRail" || key == "showCollision" || key == "showPlayer" || key == "showEnemy" || key == "showStage" || key == "showBullet" || key == "showIce" || key == "collisionOverlay") && value != "true" && value != "false") { return false; }
@@ -3333,6 +3427,7 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
 #endif
 
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+// 開発中に障害物・敵・トリガーの当たり判定を可視化する。
 void GamePlayScene::DrawCollisionDebug()
 {
     DebugRenderer* debugRenderer = DebugRenderer::GetInstance();
@@ -3449,8 +3544,11 @@ void GamePlayScene::DrawCollisionDebug()
 }
 #endif
 
+// プレイ専用の演出や外部登録を終了し、シーンのリソースを片付ける。
 void GamePlayScene::Finalize()
 {
+    RestoreBossCutInTimeScale();
+    bossCutInTimerSeconds_ = -1.0f;
     LightManager::GetInstance()->RemoveSpotLight(bossSpotLightHandle_);
     LightManager::GetInstance()->RemovePointLight(bossPointLightHandle_);
     bossSpotLightHandle_ = kInvalidSpotLightHandle;
@@ -3475,6 +3573,7 @@ void GamePlayScene::Finalize()
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
 
+// ブーストなどの状態に応じて、プレイ中の画面効果を組み合わせる。
 void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
 {
     std::string presetId = "default";
@@ -3517,6 +3616,7 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
     UpdateWeaponHeatPostEffect();
 }
 
+// 武器の熱量から画面端の演出強度を計算し、過熱や冷却の変化を滑らかに見せる。
 void GamePlayScene::UpdateWeaponHeatPostEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
@@ -3583,6 +3683,7 @@ void GamePlayScene::UpdateWeaponHeatPostEffect()
     sceneManager->SetPostEffectParameters(PostEffectType::FXAA, heatParameters);
 }
 
+// 開発用パネルで指定した照明設定を描画へ反映する。
 void GamePlayScene::ApplyDevelopmentLighting()
 {
     LightManager* lightManager = LightManager::GetInstance();
@@ -3613,6 +3714,7 @@ void GamePlayScene::ApplyDevelopmentLighting()
         std::numbers::pi_v<float> / 180.0f));
 }
 
+// ステージに指定された照明・霧・画面効果のプリセットを適用する。
 void GamePlayScene::ApplyStageVisualPreset()
 {
     const LightingPreset lighting = VisualPresetLibrary::GetInstance().GetLighting(stageId_);
@@ -3623,6 +3725,7 @@ void GamePlayScene::ApplyStageVisualPreset()
     LightManager::GetInstance()->ApplyLightingPreset(VisualPresetLibrary::GetInstance().GetLighting(stageId_));
 }
 
+// プレイ専用の画面効果を解除し、次の画面へ設定を残さないようにする。
 void GamePlayScene::ResetGameplayPostEffects()
 {
     if (playerHeatSteamHandle_ != kInvalidEffectHandle) {
@@ -3659,6 +3762,7 @@ void GamePlayScene::ResetGameplayPostEffects()
     SceneManager::GetInstance()->SetWaterEffectIntensity(0.0f);
 }
 
+// 被弾や演出による揺れの強さを更新し、画面効果に反映する。
 void GamePlayScene::UpdateCameraShakePostEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
@@ -3701,6 +3805,7 @@ void GamePlayScene::UpdateCameraShakePostEffect()
     }
 }
 
+// 機体に追従している噴射エフェクトを停止し、参照を解除する。
 void GamePlayScene::StopPlayerEngineEffects()
 {
     EffectManager* effectManager = EffectManager::GetInstance();
@@ -3717,6 +3822,7 @@ void GamePlayScene::StopPlayerEngineEffects()
 
 }
 
+// レールの進行距離を確認し、未出現の群れ編隊を必要なタイミングで出す。
 void GamePlayScene::UpdateSwarmWaveSpawning()
 {
     if (player_ == nullptr) {
@@ -3771,6 +3877,7 @@ void GamePlayScene::UpdateSwarmWaveSpawning()
     nextSwarmWaveIndex_ += 1;
 }
 
+// 編隊設定から各個体の担当位置を決め、群れの敵を生成する。
 void GamePlayScene::SpawnSwarmWave(
     SwarmFormationType formationType,
     int32_t travelDirection)
@@ -3806,6 +3913,7 @@ void GamePlayScene::SpawnSwarmWave(
     }
 }
 
+// ステージの配置情報を、敵や編隊の出現条件へ変換する。
 void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
 {
     normalEnemyLevels_.Load();
@@ -3849,6 +3957,7 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
     }
 }
 
+// 減速の開始と継続に合わせて、視点や機体の反応を調整する。
 void GamePlayScene::UpdateBrakeReaction(bool isPlayerBraking)
 {
     if (isPlayerBraking && !wasPlayerBraking_) {
@@ -3880,6 +3989,7 @@ void GamePlayScene::UpdateBrakeReaction(bool isPlayerBraking)
     brakeFovStrength_ += (targetStrength - brakeFovStrength_) * fovBlendRatio;
 }
 
+// ブースト開始時の勢いを示す一時的なカメラ変化を更新する。
 void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
 {
     if (isPlayerBoosting && !wasBoostingForKick_) {
@@ -3905,6 +4015,7 @@ void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
     }
 }
 
+// レールの進行先をもとに、ブーストの放射状効果の中心を更新する。
 void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting)
 {
     Vector2 targetCenter {};
@@ -3921,6 +4032,7 @@ void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isP
     SceneManager::GetInstance()->SetPostEffectCenter(smoothedBoostPostEffectCenter_);
 }
 
+// 少し先の進行方向を画面へ投影し、速度演出を集める中心位置を求める。
 Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) const
 {
     Vector2 center {};
@@ -3982,6 +4094,7 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
     return center;
 }
 
+// 配置データの種類に応じてモデル・障害物・トリガーなどを生成する。
 void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 {
     normalEnemyLevels_.Load();
@@ -4033,6 +4146,16 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 levelObject->SetMaterial("resources/Shaders/Object3D/ShadowToon");
                 levelObject->SetCastShadow(true);
                 levelObject->SetReceiveShadow(true);
+            }
+            if (objData.fileName == "Environment/MountainRuins/rock_mountain_ruins.obj") {
+                levelObject->SetShadingMode(MaterialShadingMode::Standard);
+                // SetShadingMode selects a default PS; assign the custom PS afterward.
+                levelObject->SetMaterial("resources/Shaders/Object3D/MountainRuins");
+                levelObject->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+                levelObject->SetSurfaceProperties(0.90f, 0.0f, 0.20f);
+                levelObject->SetShininess(48.0f);
+                levelObject->SetEnvironmentMapStrength(0.0f);
+                levelObject->SetNormalMapStrength(0.0f);
             }
             if (objData.fileName == "Environment/Ocean/FloatingRuins/floating_earth_wall_masonry.obj" ||
                 objData.fileName == "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj" ||
@@ -4181,6 +4304,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
     }
 }
 
+// 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
 void GamePlayScene::HotReloadLevel()
 {
     ClearLevelObjects();
@@ -4213,6 +4337,7 @@ void GamePlayScene::HotReloadLevel()
     }
 }
 
+// レベルから生成したオブジェクトと、それに付随する判定情報を破棄する。
 void GamePlayScene::ClearLevelObjects()
 {
     stageTriggers_.clear();
@@ -4226,6 +4351,7 @@ void GamePlayScene::ClearLevelObjects()
     levelObjects_.clear();
 }
 
+// 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void GamePlayScene::DrawShadow(ShadowMapRenderer& renderer)
 {
     for (const auto& object : levelObjects_) { object->DrawShadow(renderer); }
@@ -4234,6 +4360,7 @@ void GamePlayScene::DrawShadow(ShadowMapRenderer& renderer)
     if (GetActiveBoss() != nullptr) { GetActiveBoss()->DrawShadow(renderer); }
 }
 
+// 氷ステージ向けに敵の外見と描画設定を調整する。
 void GamePlayScene::ConfigureFrozenEnemyAppearance(BaseEnemy& enemy)
 {
     const std::string_view modelPath = FindEnemyAppearance(stageId_, enemy.GetAppearanceId());

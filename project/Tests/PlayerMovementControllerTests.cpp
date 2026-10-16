@@ -1,8 +1,9 @@
-#include "App/Game/Player/Movement/PlayerMovementController.h"
+#include "Tests/PlayerTestAccess.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/Winapp/WinApp.h"
 #include "Engine/input/Input.h"
 #include <cassert>
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
@@ -71,53 +72,54 @@ void TestGamepadFireAndDeadZone()
 void TestGamepadAimAndRailControls()
 {
     Input& input = *Input::GetInstance();
-    PlayerAimController aim;
+    Player aim;
     const float halfHeight = WinApp::GetInstance()->GetClientHeight() * 0.5f;
     const float halfWidth = WinApp::GetInstance()->GetClientWidth() * 0.5f;
-    aim.Initialize();
-    aim.UpdateGamepadAim(0.5f, 0.0f, false, 0.05f);
+    PlayerTestAccess::InitializeAim(aim);
+    PlayerTestAccess::UpdateGamepadAim(aim, 0.5f, 0.0f, false, 0.05f);
     const float halfStickDisplacement = aim.GetAimScreenPosition().x - halfWidth;
-    aim.Initialize();
-    aim.UpdateGamepadAim(1.0f, 0.0f, false, 0.05f);
+    PlayerTestAccess::InitializeAim(aim);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 0.05f);
     const float fullStickDisplacement = aim.GetAimScreenPosition().x - halfWidth;
     assert(halfStickDisplacement > 0.0f);
     assert(std::abs(halfStickDisplacement / fullStickDisplacement - 0.375f) < 0.0001f);
-    aim.UpdateGamepadAim(1.0f, 0.0f, false, 10.0f);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 10.0f);
     assert(std::abs(aim.GetAimScreenPosition().x - (halfWidth * 2.0f - 64.0f)) < 0.001f);
-    aim.UpdateGamepadAim(0.0f, 1.0f, true, 10.0f);
+    PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 1.0f, true, 10.0f);
     assert(aim.GetAimScreenPosition().y > halfHeight);
-    aim.UpdateGamepadAim(0.0f, 1.0f, false, 10.0f);
+    PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 1.0f, false, 10.0f);
     assert(aim.GetAimScreenPosition().y < halfHeight);
-    aim.Initialize();
-    aim.UpdateGamepadAim(0.0f, 0.0f, true, 1.0f / 60.0f);
+    PlayerTestAccess::InitializeAim(aim);
+    PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 0.0f, true, 1.0f / 60.0f);
     assert(aim.GetAimScreenPosition().x == halfWidth);
     assert(aim.GetAimScreenPosition().y == halfHeight);
     EulerTransform transform{};
-    PlayerMovementController movement(transform, aim);
-    movement.Initialize();
-    movement.SetControlMode(PlayerMovementController::ControlMode::KeyboardAndMouse);
-    aim.UpdateGamepadAim(1.0f, 0.0f, true, 10.0f);
+    Player& movement = aim;
+    PlayerTestAccess::Transform(movement) = transform;
+    PlayerTestAccess::InitializeMovement(movement);
+    movement.SetControlMode(Player::ControlMode::KeyboardAndMouse);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, true, 10.0f);
     XINPUT_GAMEPAD pad{};
     pad.wButtons = XINPUT_GAMEPAD_LEFT_SHOULDER;
     InputTestAccess::Set(input, pad);
-    movement.UpdateMovement(&input);
+    PlayerTestAccess::UpdateMovement(movement, &input);
     assert(movement.GetRailOffset().x > 0.0f); // WASDモードでもパッドは照準から操舵する。
     assert(movement.GetManualBank() > 0.0f);
     assert(!movement.IsRolling());
     InputTestAccess::Set(input, {}, pad);
-    movement.UpdateMovement(&input);
+    PlayerTestAccess::UpdateMovement(movement, &input);
     InputTestAccess::Set(input, pad);
-    movement.UpdateMovement(&input);
+    PlayerTestAccess::UpdateMovement(movement, &input);
     assert(movement.IsRolling());
-    movement.Stop();
+    PlayerTestAccess::StopMovement(movement);
     assert(!movement.IsRolling());
     assert(movement.GetManualBank() == 0.0f);
     pad.wButtons = XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y;
     InputTestAccess::Set(input, pad);
-    movement.UpdateBoost(&input, false);
+    PlayerTestAccess::UpdateBoost(movement, &input, false);
     assert(!movement.IsBoosting());
     assert(movement.GetForwardSpeedMultiplier() == 0.5f);
-    movement.UpdateBoost(&input, true);
+    PlayerTestAccess::UpdateBoost(movement, &input, true);
     assert(movement.GetForwardSpeedMultiplier() == 1.0f);
     InputTestAccess::Set(input, {});
 }
@@ -133,24 +135,24 @@ void TestGamepadAimSlowReturnAndFrameRates()
     float baseline = 0.0f;
     const int frameRates[] = { 30, 60, 120 };
     for (int framesPerSecond : frameRates) {
-        PlayerAimController aim;
-        aim.Initialize();
+        Player aim;
+        PlayerTestAccess::InitializeAim(aim);
         const float dt = 1.0f / static_cast<float>(framesPerSecond);
-        aim.UpdateGamepadAim(1.0f, 0.0f, false, dt);
+        PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, dt);
         assert(aim.GetAimScreenPosition().x > halfWidth);
         assert(aim.GetAimScreenPosition().x < halfWidth * 1.75f);
         for (int frame = 1; frame < framesPerSecond; ++frame) {
-            aim.UpdateGamepadAim(1.0f, 0.0f, false, dt);
+            PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, dt);
         }
         const float startOffset = aim.GetAimScreenPosition().x - halfWidth;
         const float previousPosition = aim.GetAimScreenPosition().x;
-        aim.UpdateGamepadAim(0.0f, 0.0f, false, 0.0f);
+        PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 0.0f, false, 0.0f);
         assert(aim.GetAimScreenPosition().x == previousPosition);
-        aim.UpdateGamepadAim(0.0f, 0.0f, false, dt);
+        PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 0.0f, false, dt);
         assert(aim.GetAimScreenPosition().x > halfWidth + startOffset * 0.95f);
         assert(aim.GetAimScreenPosition().x < previousPosition);
         for (int frame = 1; frame < framesPerSecond; ++frame) {
-            aim.UpdateGamepadAim(0.0f, 0.0f, false, dt);
+            PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 0.0f, false, dt);
         }
         const float remainingOffset = aim.GetAimScreenPosition().x - halfWidth;
         assert(std::abs(remainingOffset / startOffset - std::exp(-0.8f)) < 0.0001f);
@@ -160,15 +162,15 @@ void TestGamepadAimSlowReturnAndFrameRates()
             assert(std::abs(remainingOffset - baseline) < 0.01f);
         }
         // 操作中は中央へ引き戻されず、弱く倒すと同じ方向へゆっくり進む。
-        aim.Initialize();
-        aim.UpdateGamepadAim(1.0f, 0.0f, false, 0.05f);
+        PlayerTestAccess::InitializeAim(aim);
+        PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 0.05f);
         const float beforeSmallInput = aim.GetAimScreenPosition().x;
-        aim.UpdateGamepadAim(0.5f, 0.0f, false, dt);
+        PlayerTestAccess::UpdateGamepadAim(aim, 0.5f, 0.0f, false, dt);
         assert(aim.GetAimScreenPosition().x > beforeSmallInput);
         // 反対側への明示的な入力は、遅い復帰速度に縛られない。
-        aim.UpdateGamepadAim(-1.0f, 0.0f, false, 2.0f);
+        PlayerTestAccess::UpdateGamepadAim(aim, -1.0f, 0.0f, false, 2.0f);
         assert(aim.GetAimScreenPosition().x < halfWidth);
-        aim.Initialize();
+        PlayerTestAccess::InitializeAim(aim);
         assert(aim.GetAimScreenPosition().x == halfWidth);
     }
 }
@@ -177,23 +179,23 @@ void TestGamepadAimEdgesAndConstantSpeed()
 {
     const float width = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
     const float height = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
-    PlayerAimController aim;
-    aim.Initialize();
-    aim.UpdateGamepadAim(1.0f, 0.0f, false, 0.01f);
+    Player aim;
+    PlayerTestAccess::InitializeAim(aim);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 0.01f);
     const float firstStep = aim.GetAimScreenPosition().x - width * 0.5f;
     const float timeToNearEdge = 0.01f * (width * 0.5f * 0.85f / firstStep - 1.0f);
-    aim.UpdateGamepadAim(1.0f, 0.0f, false, timeToNearEdge);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, timeToNearEdge);
     const float nearEdge = aim.GetAimScreenPosition().x;
-    aim.UpdateGamepadAim(1.0f, 0.0f, false, 0.01f);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 0.01f);
     assert(std::abs(aim.GetAimScreenPosition().x - nearEdge - firstStep) < 0.001f);
-    aim.UpdateGamepadAim(1.0f, 0.0f, false, 10.0f);
+    PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 10.0f);
     assert(std::abs(aim.GetAimScreenPosition().x - (width - 64.0f)) < 0.001f);
-    aim.Initialize();
+    PlayerTestAccess::InitializeAim(aim);
     const float diagonal = 1.0f / std::sqrt(2.0f);
-    aim.UpdateGamepadAim(diagonal, -diagonal, false, 10.0f);
+    PlayerTestAccess::UpdateGamepadAim(aim, diagonal, -diagonal, false, 10.0f);
     assert(std::abs(aim.GetAimScreenPosition().x - (width - 64.0f)) < 0.001f);
     assert(std::abs(aim.GetAimScreenPosition().y - (height - 64.0f)) < 0.001f);
-    aim.UpdateGamepadAim(-diagonal, diagonal, false, 10.0f);
+    PlayerTestAccess::UpdateGamepadAim(aim, -diagonal, diagonal, false, 10.0f);
     assert(std::abs(aim.GetAimScreenPosition().x - 64.0f) < 0.001f);
     assert(std::abs(aim.GetAimScreenPosition().y - 64.0f) < 0.001f);
 }
@@ -203,39 +205,39 @@ void TestGamepadAimDistanceLimit()
     const float width = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
     const float height = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
     const Vector2 center{ width * 0.5f, height * 0.5f };
-    const float radius = (width < height ? width : height) * 0.30f;
+    const float radius = (std::min)(width, height) * 0.40f;
     const Vector2 directions[] = { {1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {-1,1}, {1,-1}, {-1,-1} };
     for (const Vector2& direction : directions) {
-        PlayerAimController aim;
-        aim.Initialize();
-        aim.UpdateGamepadAim(direction.x, direction.y, false, 10.0f);
-        aim.ClampGamepadAimToPlayer(center);
+        Player aim;
+        PlayerTestAccess::InitializeAim(aim);
+        PlayerTestAccess::UpdateGamepadAim(aim, direction.x, direction.y, false, 10.0f);
+        PlayerTestAccess::ClampGamepadAimToPlayer(aim, center);
         const Vector2 position = aim.GetAimScreenPosition();
         const float dx = position.x - center.x;
         const float dy = position.y - center.y;
         assert(std::abs(std::sqrt(dx * dx + dy * dy) - radius) < 0.001f);
     }
-    PlayerAimController aim;
-    aim.Initialize();
+    Player aim;
+    PlayerTestAccess::InitializeAim(aim);
     for (int frame = 0; frame < 120; ++frame) {
-        aim.UpdateGamepadAim(1.0f, 0.0f, false, 1.0f / 60.0f);
-        aim.ClampGamepadAimToPlayer(center);
+        PlayerTestAccess::UpdateGamepadAim(aim, 1.0f, 0.0f, false, 1.0f / 60.0f);
+        PlayerTestAccess::ClampGamepadAimToPlayer(aim, center);
         assert(aim.GetAimScreenPosition().x <= center.x + radius + 0.001f);
     }
     const float atLimit = aim.GetAimScreenPosition().x;
-    aim.UpdateGamepadAim(-1.0f, 0.0f, false, 1.0f / 60.0f);
-    aim.ClampGamepadAimToPlayer(center);
+    PlayerTestAccess::UpdateGamepadAim(aim, -1.0f, 0.0f, false, 1.0f / 60.0f);
+    PlayerTestAccess::ClampGamepadAimToPlayer(aim, center);
     assert(aim.GetAimScreenPosition().x < atLimit); // 上限で入力を蓄積せず、すぐ切り返す。
     const Vector2 movedPlayer{ center.x + 100.0f, center.y + 50.0f };
-    aim.ClampGamepadAimToPlayer(movedPlayer);
+    PlayerTestAccess::ClampGamepadAimToPlayer(aim, movedPlayer);
     const Vector2 afterMove = aim.GetAimScreenPosition();
     const float dx = afterMove.x - movedPlayer.x;
     const float dy = afterMove.y - movedPlayer.y;
     assert(dx * dx + dy * dy <= radius * radius + 0.1f);
     const Vector2 corners[] = { {64,64}, {width-64,64}, {64,height-64}, {width-64,height-64} };
     for (const Vector2& corner : corners) {
-        aim.Initialize();
-        aim.ClampGamepadAimToPlayer(corner);
+        PlayerTestAccess::InitializeAim(aim);
+        PlayerTestAccess::ClampGamepadAimToPlayer(aim, corner);
         const Vector2 position = aim.GetAimScreenPosition();
         const float cx = position.x - corner.x;
         const float cy = position.y - corner.y;
@@ -244,44 +246,45 @@ void TestGamepadAimDistanceLimit()
         assert(position.y >= 64.0f && position.y <= height - 64.0f);
     }
     const Vector2 beforeInvalid = aim.GetAimScreenPosition();
-    aim.ClampGamepadAimToPlayer({ std::numeric_limits<float>::quiet_NaN(), center.y });
+    PlayerTestAccess::ClampGamepadAimToPlayer(aim, { std::numeric_limits<float>::quiet_NaN(), center.y });
     assert(aim.GetAimScreenPosition().x == beforeInvalid.x);
     assert(aim.GetAimScreenPosition().y == beforeInvalid.y);
-    aim.Initialize();
-    aim.ClampGamepadAimToPlayer({ 200.0f, center.y });
+    PlayerTestAccess::InitializeAim(aim);
+    PlayerTestAccess::ClampGamepadAimToPlayer(aim, { 200.0f, center.y });
     assert(aim.GetAimScreenPosition().x < center.x);
     // 機体より右の照準には右へ操舵する。画面中央より左でも端へ押し続けない。
-    assert(aim.GetGamepadSteeringScreenPosition().x > center.x);
-    aim.UpdateGamepadAim(0.0f, 0.0f, false, 1.0f / 60.0f);
-    aim.ClampGamepadAimToPlayer({ 200.0f, center.y });
-    assert(aim.GetGamepadSteeringScreenPosition().x > center.x);
-    aim.Initialize();
-    assert(aim.GetGamepadSteeringScreenPosition().x == center.x);
+    assert(PlayerTestAccess::GetGamepadSteeringScreenPosition(aim).x > center.x);
+    PlayerTestAccess::UpdateGamepadAim(aim, 0.0f, 0.0f, false, 1.0f / 60.0f);
+    PlayerTestAccess::ClampGamepadAimToPlayer(aim, { 200.0f, center.y });
+    assert(PlayerTestAccess::GetGamepadSteeringScreenPosition(aim).x > center.x);
+    PlayerTestAccess::InitializeAim(aim);
+    assert(PlayerTestAccess::GetGamepadSteeringScreenPosition(aim).x == center.x);
 }
 
 void TestRailFrameAndAreaForce()
 {
     EulerTransform transform{};
     transform.translate = { 10.0f, 20.0f, 30.0f };
-    PlayerAimController aim;
-    PlayerMovementController movement(transform, aim);
-    movement.Initialize();
+    Player aim;
+    Player& movement = aim;
+    PlayerTestAccess::Transform(movement) = transform;
+    PlayerTestAccess::InitializeMovement(movement);
     movement.SetRailFrame({ 10.0f, 20.0f, 30.0f }, { 0.0f, 0.0f, 1.0f },
         { 0.0f, 1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f });
     movement.ApplyRailAreaForce({ 100.0f, -100.0f, 0.0f });
     assert(movement.GetRailOffset().x == 20.0f);
     assert(movement.GetRailOffset().y == -15.0f);
-    movement.ApplyRailPosition();
-    assert(transform.translate.x == 10.0f);
-    assert(transform.translate.y == 5.0f);
-    assert(transform.translate.z == 50.0f);
+    PlayerTestAccess::ApplyRailPosition(movement);
+    assert(PlayerTestAccess::Transform(movement).translate.x == 10.0f);
+    assert(PlayerTestAccess::Transform(movement).translate.y == 5.0f);
+    assert(PlayerTestAccess::Transform(movement).translate.z == 50.0f);
     assert(movement.GetAutomaticWorldVelocity().x == -0.5f);
-    transform.translate = { 4.0f, 5.0f, 6.0f };
-    movement.SynchronizePosition();
-    movement.ApplyRailPosition();
-    assert(transform.translate.x == 4.0f);
-    assert(transform.translate.y == 5.0f);
-    assert(transform.translate.z == 6.0f);
+    PlayerTestAccess::Transform(movement).translate = { 4.0f, 5.0f, 6.0f };
+    PlayerTestAccess::SynchronizePosition(movement);
+    PlayerTestAccess::ApplyRailPosition(movement);
+    assert(PlayerTestAccess::Transform(movement).translate.x == 4.0f);
+    assert(PlayerTestAccess::Transform(movement).translate.y == 5.0f);
+    assert(PlayerTestAccess::Transform(movement).translate.z == 6.0f);
 }
 
 void TestAllRangeAndControls()
@@ -289,9 +292,10 @@ void TestAllRangeAndControls()
     EulerTransform transform{};
     transform.translate = { 12.0f, 34.0f, 56.0f };
     transform.rotate = { 0.2f, 0.4f, 0.0f };
-    PlayerAimController aim;
-    PlayerMovementController movement(transform, aim);
-    movement.Initialize();
+    Player aim;
+    Player& movement = aim;
+    PlayerTestAccess::Transform(movement) = transform;
+    PlayerTestAccess::InitializeMovement(movement);
     movement.ApplyRailAreaForce({ 3.0f, 4.0f, 0.0f });
     movement.EnableAllRangeMode(600.0f, 5.0f, 180.0f);
     assert(movement.IsAllRangeMode());
@@ -302,18 +306,18 @@ void TestAllRangeAndControls()
     assert(IsNear(forward.x, std::sin(-0.4f) * std::cos(-0.2f)));
     assert(IsNear(forward.y, std::sin(-0.2f)));
     assert(IsNear(forward.z, std::cos(-0.4f) * std::cos(-0.2f)));
-    movement.ApplyRailPosition();
-    assert(transform.translate.x == 12.0f);
-    assert(transform.translate.y == 34.0f);
-    assert(transform.translate.z == 56.0f);
+    PlayerTestAccess::ApplyRailPosition(movement);
+    assert(PlayerTestAccess::Transform(movement).translate.x == 12.0f);
+    assert(PlayerTestAccess::Transform(movement).translate.y == 34.0f);
+    assert(PlayerTestAccess::Transform(movement).translate.z == 56.0f);
     movement.SetMouseSensitivity(0.0f);
     assert(movement.GetMouseSensitivity() == 0.5f);
     movement.SetMouseSensitivity(10.0f);
     assert(movement.GetMouseSensitivity() == 2.0f);
-    movement.SetControlMode(PlayerMovementController::ControlMode::KeyboardAndMouse);
-    assert(movement.GetControlMode() == PlayerMovementController::ControlMode::KeyboardAndMouse);
-    transform.rotate = { 0.3f, -0.5f, 0.0f };
-    movement.SynchronizeOrientation();
+    movement.SetControlMode(Player::ControlMode::KeyboardAndMouse);
+    assert(movement.GetControlMode() == Player::ControlMode::KeyboardAndMouse);
+    PlayerTestAccess::Transform(movement).rotate = { 0.3f, -0.5f, 0.0f };
+    PlayerTestAccess::SynchronizeOrientation(movement);
     const Vector3 synchronizedForward = movement.GetFlightForward();
     assert(IsNear(synchronizedForward.x, std::sin(0.5f) * std::cos(-0.3f)));
     assert(IsNear(synchronizedForward.y, std::sin(-0.3f)));
@@ -327,11 +331,12 @@ void TestScreenConstraintWithCamera()
     const Vector3 right{ 1.0f, 0.0f, 0.0f };
     const Vector3 up{ 0.0f, 1.0f, 0.0f };
     const Vector3 forward{ 0.0f, 0.0f, 1.0f };
-    PlayerScreenConstraint constraint(basePosition, right, up, forward);
+    Player constraint;
+    constraint.SetRailFrame(basePosition, right, up, forward);
     constraint.SetCamera(&camera);
-    const Vector3 correctedOffset = constraint.ClampRailOffsetToScreen({ 20.0f, 12.0f, 99.0f });
+    const Vector3 correctedOffset = PlayerTestAccess::ClampRailOffsetToScreen(constraint, { 20.0f, 12.0f, 99.0f });
     assert(correctedOffset.z == 0.0f);
-    const Vector3 worldPosition = constraint.CalculateRailWorldPosition(correctedOffset);
+    const Vector3 worldPosition = PlayerTestAccess::CalculateRailWorldPosition(constraint, correctedOffset);
     const float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
     const float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
     for (int cornerIndex = 0; cornerIndex < 4; ++cornerIndex) {
@@ -350,7 +355,8 @@ void TestScreenConstraintWithCamera()
         assert(screenPosition.y <= screenHeight - 99.0f);
     }
     basePosition = { 0.0f, 0.0f, 50.0f };
-    const Vector3 updatedWorldPosition = constraint.CalculateRailWorldPosition({ 1.0f, 2.0f, 0.0f });
+    constraint.SetRailFrame(basePosition, right, up, forward);
+    const Vector3 updatedWorldPosition = PlayerTestAccess::CalculateRailWorldPosition(constraint, { 1.0f, 2.0f, 0.0f });
     assert(updatedWorldPosition.z == 50.0f);
 }
 }

@@ -1,3 +1,4 @@
+// シーン切替後に画面へ色を重ね、徐々に薄くする引き継ぎ演出を扱う。
 #pragma once
 
 #include "Engine/2D/Sprite.h"
@@ -7,9 +8,11 @@
 #include <cmath>
 
 namespace PageTransition {
+// 次に開くシーンへ渡す色と時間を保持する、一度限りの演出予約。
 class RevealRequest {
 public:
     static RevealRequest& GetInstance() { static RevealRequest request; return request; }
+    // 次のシーンで開始する画面色・継続時間などを予約する。
     void Request(const Vector4& color, float duration)
     {
         if (!std::isfinite(duration) || !std::isfinite(color.x) ||
@@ -18,6 +21,7 @@ public:
         color_ = color;
         duration_ = (std::max)(duration, 0.01f);
     }
+    // 予約された演出を受け取り、同じ予約を繰り返し使わないよう消費する。
     bool Consume(Vector4& color, float& duration)
     {
         if (!pending_) { return false; }
@@ -41,8 +45,10 @@ inline void RequestReveal(
     RevealRequest::GetInstance().Request(color, duration);
 }
 
+// 遷移先で予約を受け取り、画面を覆う色を時間とともに薄くする。
 class RevealOverlay {
 public:
+    // 演出の予約がある場合だけ、画面全体を覆うスプライトを作る。
     void InitializeIfRequested()
     {
         if (!RevealRequest::GetInstance().Consume(color_, duration_)) {
@@ -60,6 +66,7 @@ public:
         sprite_->Update();
     }
 
+    // 重ねた色を徐々に薄くし、演出時間が終わったらスプライトを破棄する。
     void Update(float deltaTime)
     {
         if (!sprite_) {
@@ -77,6 +84,7 @@ public:
         }
     }
 
+    // 切替演出が残っている間だけ、画面を覆うスプライトを描画する。
     void Draw()
     {
         if (sprite_) {

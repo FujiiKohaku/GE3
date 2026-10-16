@@ -1,11 +1,13 @@
+// 移動パターンに沿って位置を変えながら、プレイヤーに向けて射撃する敵を扱う。
 #include "MoveEnemy.h"
 
-#include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/math/MathStruct.h"
 #include "Engine/Time/TimeManager.h"
 #include <cmath>
 
+// 移動の開始位置とパターン、射撃用のモデルやプレイヤー参照を準備する。
 void MoveEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
     BaseEnemy::Initialize(model);
@@ -24,12 +26,39 @@ void MoveEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
     startPosition_ = transform_.translate;
 }
 
+// 基底クラスを通じて、この敵の移動・射撃・見た目を更新する。
 void MoveEnemy::Update()
 {
     // 親クラスの更新処理を呼び出す
     BaseEnemy::Update();
 }
 
+// 選択された移動パターンに応じて、開始位置からの変位を求める。
+Vector3 MoveEnemy::CalculateMovementPosition(MovePattern pattern, const Vector3& startPosition,
+    float elapsedSeconds, float speed, float amplitude, float frequency)
+{
+    Vector3 position = startPosition;
+    switch (pattern) {
+    case MovePattern::UpDown:
+        position.y += std::sin(elapsedSeconds * speed) * amplitude;
+        break;
+    case MovePattern::ZigZag:
+        position.x += std::sin(elapsedSeconds * speed) * amplitude;
+        position.y += std::sin(elapsedSeconds * speed * 2.0f) * amplitude * 0.5f;
+        break;
+    case MovePattern::SineWave:
+        position.y += std::sin(elapsedSeconds * frequency) * amplitude;
+        position.z -= elapsedSeconds * speed * 1.5f;
+        break;
+    case MovePattern::LeftRight:
+    default:
+        position.x += std::sin(elapsedSeconds * speed) * amplitude;
+        break;
+    }
+    return position;
+}
+
+// 経過時間を進め、選択した軌道上の位置へ本体を移動する。
 void MoveEnemy::Move()
 {
     if (isStartPositionInitialized_ == false) {
@@ -39,9 +68,10 @@ void MoveEnemy::Move()
 
     moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
 
-    const EnemyMovementContext context { startPosition_, moveTime_, moveSpeed_, amplitude_, frequency_ };
-    transform_.translate = movement_->CalculatePosition(context);
+    transform_.translate = CalculateMovementPosition(
+        movePattern_, startPosition_, moveTime_, moveSpeed_, amplitude_, frequency_);
 }
+// プレイヤーとの距離や向きを確認し、射撃可能な場合だけ発射タイマーを進める。
 void MoveEnemy::Attack()
 {
     if (player_ == nullptr) {
@@ -76,6 +106,7 @@ void MoveEnemy::Attack()
     }
 }
 
+// 現在位置からプレイヤーを狙う弾を生成する。
 void MoveEnemy::FireBullet()
 {
     if (player_ == nullptr) {

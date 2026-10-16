@@ -1,3 +1,4 @@
+// ポーズ画面の状態ごとに、選択操作と決定・キャンセル時の動作を分ける。
 #pragma once
 #include <array>
 #include <functional>
@@ -44,7 +45,9 @@ public:
     virtual void HandleControlToggle(PauseStateContext&, bool) const {}
     virtual PauseDisplay GetDisplay(const PauseDisplayInput& input) const = 0;
 protected:
+    // 上下入力で選択位置を移動し、決定・キャンセルを現在のポーズ状態へ渡す。
     static void Navigate(PauseStateContext& context, const PauseStateInput& input);
 };
 
+// メニューか設定かに応じて、共有のポーズ状態オブジェクトを返す。
 const BasePauseState& GetPauseState(PauseViewState state);

@@ -1,3 +1,4 @@
+// アプリの入口。終了要求を受けるまでゲームの更新と描画を繰り返す。
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/Logger/Logger.h"
 #include "App/Scene/Application/Game.h"
@@ -10,19 +11,26 @@
 #include "Tests/BeamStateTests.h"
 #include "Tests/JellyfishAttackTests.h"
 #include "Tests/EnemyDebugViewTests.h"
-#include "Tests/BossFactoryTests.h"
+#include "Tests/BossSpawnTests.h"
 #include "Tests/BossPresentationTests.h"
 #include "Tests/EnemyAppearanceTests.h"
 #include "Tests/EnemyMovementTests.h"
 #include "Tests/SwarmFormationTests.h"
 #include "Tests/FearWormMovementTests.h"
+#include "Tests/FearWormEntryTests.h"
 #include "Tests/PlayerControlTests.h"
 #include <cstring>
 #endif
 
+// 起動時の準備を行い、入力・更新・描画を繰り返した後にゲームを終了する。
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
+// デバッグ用の検証指定がある場合は、通常のゲーム起動より先に実行する。
 #ifdef _DEBUG
+    if (std::strstr(commandLine, "--verify-fear-worm-entry")) {
+        if (RunFearWormEntryTests()) { return 0; }
+        return 1;
+    }
     if (std::strstr(commandLine, "--verify-player-controls")) {
         return RunPlayerControlTests() ? 0 : 1;
     }
@@ -41,8 +49,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     if (std::strstr(commandLine, "--verify-boss-presentations")) {
         return RunBossPresentationTests() ? 0 : 1;
     }
-    if (std::strstr(commandLine, "--verify-boss-factories")) {
-        return RunBossFactoryTests() ? 0 : 1;
+    if (std::strstr(commandLine, "--verify-boss-spawn") || std::strstr(commandLine, "--verify-boss-factories")) {
+        if (RunBossSpawnTests()) { return 0; }
+        return 1;
     }
     if (std::strstr(commandLine, "--verify-enemy-debug-views")) {
         return RunEnemyDebugViewTests() ? 0 : 1;
@@ -78,6 +87,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 
     bool hasLoggedStartupTime = false;
 
+    // ウィンドウの終了・ゲームからの終了要求のどちらでもループを抜ける。
     MSG msg {};
     while (msg.message != WM_QUIT) {
 
@@ -91,6 +101,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             break;
         }
 
+        // 状態を更新してから描画することで、そのフレームの操作結果を画面へ反映する。
         game.Update();
         game.Draw();
 

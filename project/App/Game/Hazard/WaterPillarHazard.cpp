@@ -1,3 +1,4 @@
+// レール上の進行に合わせて出現する水柱の、予告・表示・接触判定を扱う。
 #include "WaterPillarHazard.h"
 
 #include "Engine/3D/WaterPillarRenderer.h"
@@ -30,6 +31,7 @@ float SmoothStep(float t)
 }
 }
 
+// 水柱の位置・出現距離・遅延時間と、描画に使う参照を記録する。
 void WaterPillarHazard::Initialize(
     WaterPillarRenderer* renderer,
     const Vector3& position,
@@ -44,6 +46,7 @@ void WaterPillarHazard::Initialize(
     ApplyVisuals();
 }
 
+// 出現距離に到達してから、予告・上昇・維持・消失の順に状態を進める。
 void WaterPillarHazard::Update(float railDistance, float deltaTime)
 {
     if (state_ == State::Waiting) {
@@ -76,6 +79,7 @@ void WaterPillarHazard::Update(float railDistance, float deltaTime)
     ApplyVisuals();
 }
 
+// 状態と経過時間から水柱の高さと透明度を求め、急な出現や消失を避ける。
 void WaterPillarHazard::ApplyVisuals()
 {
     float pillarRatio = 0.0f;
@@ -111,6 +115,7 @@ void WaterPillarHazard::DrawPillar()
     renderer_->Draw(position_, pillarScale_, pillarColor_);
 }
 
+// 予告中は当たらないようにし、十分に上昇した水柱の半径と高さの範囲を調べる。
 bool WaterPillarHazard::CheckCollision(const Vector3& playerPosition) const
 {
     const float risingHeightRatio = kPreviewHeightRatio +

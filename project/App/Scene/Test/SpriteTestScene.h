@@ -1,3 +1,4 @@
+// スプライトや画像の表示・配置を確認するための開発用シーン。
 #pragma once
 
 #include "App/Scene/Common/BaseScene.h"
@@ -8,8 +9,10 @@
 
 class SpriteTestScene : public BaseScene {
 public:
+    // 検証用の画像とスプライトを作り、表示位置や色を設定する。
     void Initialize() override;
     void Finalize() override;
+    // 検証用の入力や時間変化を、スプライトの配置・表示へ反映する。
     void Update() override;
     void Draw2D() override;
     void Draw3D() override;

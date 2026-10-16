@@ -1,4 +1,4 @@
-#include "App/Game/Player/Weapon/PlayerWeaponHeat.h"
+#include "App/Game/Player/Weapon/Common/PlayerWeaponHeat.h"
 #include <cassert>
 #include <cmath>
 

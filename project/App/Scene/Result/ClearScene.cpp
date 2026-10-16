@@ -1,3 +1,4 @@
+// クリア時の表示と入力を扱い、次の画面へ移るまでの結果画面を構成する。
 #include "App/Scene/Result/ClearScene.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
@@ -6,6 +7,7 @@
 
 #include "App/Scene/Title/TitleScene.h"
 #include "Engine/audio/SoundManager.h"
+// クリア表示用のモデル・文字と画面配置を準備する。
 void ClearScene::Initialize()
 {
     returnGuideText_ = std::make_unique<Text>();
@@ -46,6 +48,7 @@ void ClearScene::Initialize()
     titleSprite_->SetSize({ 1280.0f, 720.0f });
 }
 
+// クリア画面の入力を受け付け、選ばれた画面への遷移を予約する。
 void ClearScene::Update()
 {
     if (Input::GetInstance()->IsKeyTrigger(DIK_SPACE) ||
@@ -63,6 +66,7 @@ void ClearScene::Update()
     returnGuideText_->Update();
 }
 
+// 画面に重ねるスプライトや文字を描画する。
 void ClearScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
@@ -72,16 +76,19 @@ void ClearScene::Draw2D()
     ;
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void ClearScene::Draw3D()
 {
     Object3dManager::GetInstance()->PreDraw();
     // titleObj_->Draw();
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void ClearScene::DrawParticle()
 {
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void ClearScene::DrawImGui()
 {
 }

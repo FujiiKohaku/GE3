@@ -1,3 +1,4 @@
+// ステージごとの照明・霧・材質・画面効果を、共通のプリセットとして定義する。
 #pragma once
 #include "Engine/Light/LightManager.h"
 #include "App/Scene/Common/SceneManager.h"
@@ -10,29 +11,34 @@
 // Asset identifiers and preset selection belong to application data, not the renderer.
 class VisualPresetLibrary {
 public:
+    // JSONから読み込んだ見た目の設定を、アプリ内で共有する。
     static VisualPresetLibrary& GetInstance()
     {
         static VisualPresetLibrary library;
         return library;
     }
+    // 照明プリセットを探し、未登録の名前ならdefaultの照明を返す。
     const LightingPreset& GetLighting(const std::string& presetId) const
     {
         const auto preset = lightingPresets_.find(presetId);
         if (preset == lightingPresets_.end()) { return lightingPresets_.at("default"); }
         return preset->second;
     }
+    // 霧や露出のプリセットを探し、未登録の名前ならdefaultの設定を返す。
     const AtmospherePreset& GetAtmosphere(const std::string& presetId) const
     {
         const auto preset = atmospherePresets_.find(presetId);
         if (preset == atmospherePresets_.end()) { return atmospherePresets_.at("default"); }
         return preset->second;
     }
+    // モデルに割り当てられた材質を返す。個別指定がなければ標準材質を使う。
     const std::string& GetMaterial(const std::string& modelPath) const
     {
         const auto material = materials_.find(modelPath);
         if (material == materials_.end()) { return defaultMaterial_; }
         return material->second;
     }
+    // 指定したプリセットの画面効果を、適用順を保った一覧として返す。
     const std::vector<PostEffectInfo>& GetPostEffects(const std::string& presetId) const
     {
         return effectChains_.at(presetId);
@@ -40,6 +46,7 @@ public:
     float GetShininess(const std::string& presetId) const { return shininess_.at(presetId); }
 
 private:
+    // 照明・霧・材質・画面効果の対応表を読み込み、未定義の効果名などを検出する。
     VisualPresetLibrary()
     {
         std::ifstream file("resources/Graphics/visual-presets.json");

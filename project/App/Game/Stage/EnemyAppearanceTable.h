@@ -1,7 +1,9 @@
+// ステージの敵タイプと、表示に使用するモデル・外見名の対応を定義する。
 #pragma once
 #include <array>
 #include <string_view>
 
+// ステージと敵の外見名から、表示するモデルを選ぶための一行分の設定。
 struct EnemyAppearanceEntry {
     std::string_view stage;
     std::string_view appearance;

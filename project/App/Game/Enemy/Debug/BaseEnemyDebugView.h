@@ -1,3 +1,4 @@
+// 敵の種類に応じた開発用表示を、共通の呼び出し方で描画するための窓口。
 #pragma once
 #include "externals/json.hpp"
 #include "Engine/math/MathStruct.h"

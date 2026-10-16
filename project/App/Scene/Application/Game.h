@@ -1,3 +1,4 @@
+// エンジン機能とシーンを起動し、毎フレームの入力・更新・描画と終了時の解放を統括する。
 #pragma once
 // ======================= 標準ライブラリ ==========================
 #define _USE_MATH_DEFINES
@@ -72,8 +73,11 @@ public:
     // 基本処理
     // ------------------------------
     void Initialize();
+    // 入力と各管理機能を更新し、現在のシーンを一フレーム進める。
     void Update();
+    // 描画処理を実行し、更新済みのゲーム画面を表示する。
     void Draw();
+    // シーンやエンジン機能を終了し、確保したリソースを解放する。
     void Finalize();
 
     WinApp* GetWinApp() const { return WinApp::GetInstance(); }
@@ -84,11 +88,15 @@ private:
 #if defined(KOHAKU_RENDER_TESTS)
     friend class FxaaRenderTest;
 #endif
+    // 操作中にマウスがゲームの表示範囲から出ないようにする。
     void LockCursorToWindow();
+    // ウィンドウへのマウス固定を解除し、通常のカーソル操作へ戻す。
     void UnlockCursor();
 
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+    // 性能計測ログを記録するための出力先と開始状態を準備する。
     void InitializePerformanceLog();
+    // フレームの計測値を集計し、一定の間隔で性能ログへ書き出す。
     void UpdatePerformanceLog();
 #endif
 

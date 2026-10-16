@@ -16,8 +16,11 @@
     <Link><SubSystem>Console</SubSystem></Link>
     <ClCompile><UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions></ClCompile>
   </ItemDefinitionGroup>
+  <!-- Player統合後のテストは、先にビルドしたゲームのオブジェクトを再利用する。 -->
   <ItemGroup>
-    <ClCompile Remove="$(projectRootPath)App\main.cpp" />
+    <GameBuildSource Include="@(ClCompile)" />
+    <ClCompile Remove="@(ClCompile)" />
     <ClCompile Include="$(projectRootPath)Tests\PlayerMovementControllerTests.cpp" />
+    <Object Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(Configuration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(Configuration)\main.obj" />
   </ItemGroup>
 </Project>

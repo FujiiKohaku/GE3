@@ -1,0 +1,39 @@
+{
+  "triangles": 9158,
+  "materialTextures": 17,
+  "colliderBoxes": 32,
+  "dimensions": [
+    335.82908821105957,
+    154.0149938762188,
+    105.04556941986084
+  ],
+  "enginePosition": [
+    0,
+    -30.0,
+    440.0
+  ],
+  "engineYawRadians": 3.141592653589793,
+  "engineScale": [
+    14.0,
+    9.5,
+    9.5
+  ],
+  "passageSamples": 1140,
+  "minimumMeshClearance": 10.819404304027557,
+  "verifiedCorridor": {
+    "x": [
+      -16,
+      16
+    ],
+    "y": [
+      -5,
+      5
+    ],
+    "z": [
+      370,
+      520
+    ]
+  },
+  "gameplayVerified": false,
+  "containsWaterfall": false
+}

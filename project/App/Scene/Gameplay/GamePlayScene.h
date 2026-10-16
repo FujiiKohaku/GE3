@@ -1,3 +1,4 @@
+// ステージ進行の中心。プレイヤー・敵・ボス・背景・HUD・演出を組み合わせて更新する。
 #pragma once
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
 #include "externals/json.hpp"
@@ -54,13 +55,12 @@
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 
-#include "App/Game/Enemy/Types/NormalEnemy.h"
-#include "App/Game/Enemy/Types/ArmoredEnemy.h"
+#include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
+#include "App/Game/Enemy/ArmoredEnemy/ArmoredEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
 #include "App/Game/Boss/Encounter/BossEncounterController.h"
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Boss/Common/BaseBoss.h"
-#include "App/Game/Enemy/PirateShipMidBoss/PirateShipMidBoss.h"
 
 struct LevelData;
 
@@ -69,31 +69,58 @@ public:
     explicit GamePlayScene(const std::string& stageId = "stage01")
         : stageId_(stageId) {}
 
+    // ステージ設定を読み、機体・敵・ボス・背景・UIと演出をプレイ開始状態へ揃える。
     void Initialize() override;
 
+    // プレイ専用の演出や外部登録を終了し、シーンのリソースを片付ける。
     void Finalize() override;
 
+    // ポーズや演出の状態を確認し、レール・機体・敵・判定・カメラ・UIを更新する。
     void Update() override;
 
+    // 照準・HP・得点・通信パネルなど、画面に重ねる情報を描画する。
     void Draw2D() override;
+    // 背景・ステージ・機体・敵などの立体物を、各描画経路へ渡す。
     void Draw3D() override;
+    // レイトレーシングに参加する立体物を登録する。通常描画の可視判定とは別に扱う。
     bool SubmitRaytracingScene(DxrRenderer& renderer) override;
     void DrawShadow(ShadowMapRenderer& renderer) override;
     ShadowSettings GetShadowSettings() const override { return stageSettings_.shadows; }
     void DrawParticle() override;
     void DrawImGui() override;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
+    // 開発用パネルへこのシーンを登録し、内部状態の確認や設定変更を受け付ける。
     void RegisterDevelopmentPanel();
+    // 開発用パネルに表示する操作項目をJSONとして組み立てる。
     nlohmann::json GetDevelopmentControls() const;
+    // 開発パネルからの真偽値変更を、共通の設定反映処理へ渡す。
     bool SetDevelopmentBool(const std::string& key, bool isEnabled);
+    // 開発パネルからの数値変更を、共通の設定反映処理へ渡す。
     bool SetDevelopmentNumber(const std::string& key, double value);
+    // 開発パネルで指定されたコマンドを実行する。
     bool ExecuteDevelopmentCommand(const std::string& key);
+    // シーンの現在状態を、開発パネル向けのJSONへまとめる。
     nlohmann::json GetDevelopmentState() const;
+    // シーンの開発用状態をJSON文字列に変換する。
     std::string GetDevelopmentStateJson() const;
+    // 指定されたキーと値を調べ、対応する検証用設定や操作へ反映する。
     bool ApplyDevelopmentAction(const std::string& key, const std::string& value);
 #endif
 
 private:
+    // ボス登場時のカットインに使う画像・文字・進行状態を準備する。
+    void InitializeBossCutIn();
+    // ボス登場の通知からカットインを開始し、表示と時間演出を進める。
+    void UpdateBossCutIn();
+    // カットインで変更した時間の進み方を元に戻す。
+    void RestoreBossCutInTimeScale();
+    static constexpr float kBossCutInDurationSeconds = 0.65f;
+    static constexpr float kBossCutInSlowDurationSeconds = 0.40f;
+    std::unique_ptr<Sprite> bossCutInSprite_;
+    float bossCutInTimerSeconds_ = -1.0f;
+    float bossCutInPreviousTimeScale_ = 1.0f;
+    bool hasPlayedBossCutIn_ = false;
+    bool isBossCutInSlowMotionActive_ = false;
 #if defined(KOHAKU_RENDER_TESTS)
     friend class ShadowTestStage;
 #endif
@@ -137,46 +164,80 @@ private:
     std::string stageId_ = "stage01";
     StageSettings stageSettings_;
 
+    // 配置データの種類に応じてモデル・障害物・トリガーなどを生成する。
     void CreateLevelObjects(const LevelData& levelData);
+    // レベルから生成したオブジェクトと、それに付随する判定情報を破棄する。
     void ClearLevelObjects();
+    // 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
     void HotReloadLevel();
+    // ステージの配置情報を、敵や編隊の出現条件へ変換する。
     void LoadEnemyPopData(const LevelData& levelData);
+    // 衝突システムの結果を受け取り、得点・ダメージ演出・ステージイベントへ反映する。
     void CheckCollision();
+    // ペイント弾の命中を受けて、画面に付着したような表示を開始する。
     void StartPaintHitEffect();
+    // 水滴が画面に付く演出を開始する。
     void StartWaterDropEffect();
+    // 水滴演出の経過時間と表示の強さを更新する。
     void UpdateWaterDropEffect();
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
+    // 開発中に障害物・敵・トリガーの当たり判定を可視化する。
     void DrawCollisionDebug();
 #endif
+    // 少し先のレール位置から進行方向を求め、向きが求められない場合の代替方向も用意する。
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
+    // 進行方向をもとに、レール上の左右・上下を表す直交方向を作る。
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
+    // エンカウンターが所有しているボスを参照する。シーン自身はボスを所有しない。
     BaseBoss* GetActiveBoss() const;
+    // 氷ステージ向けに敵の外見と描画設定を調整する。
     void ConfigureFrozenEnemyAppearance(BaseEnemy& enemy);
 
     // Updateメソッドの処理分割用ヘルパー関数
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
+    // レール上の基準姿勢とプレイヤー操作を合わせて機体の位置・向きを更新する。
     void UpdatePlayerTransform(const Vector3& currentPosition, const Vector3& railRight, const Vector3& railUp, const Vector3& forward);
+    // 機体とレールに追従する視点を作り、加減速や旋回によるカメラ演出を加える。
     void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
+    // ブースト開始時の勢いを示す一時的なカメラ変化を更新する。
     void UpdateBoostKick(bool isPlayerBoosting);
+    // 減速の開始と継続に合わせて、視点や機体の反応を調整する。
     void UpdateBrakeReaction(bool isPlayerBraking);
+    // レールの進行先をもとに、ブーストの放射状効果の中心を更新する。
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
+    // 被弾や演出による揺れの強さを更新し、画面効果に反映する。
     void UpdateCameraShakePostEffect();
+    // 少し先の進行方向を画面へ投影し、速度演出を集める中心位置を求める。
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
+    // ブーストなどの状態に応じて、プレイ中の画面効果を組み合わせる。
     void ConfigureGameplayPostEffects(bool isPlayerBoosting);
+    // 武器の熱量から画面端の演出強度を計算し、過熱や冷却の変化を滑らかに見せる。
     void UpdateWeaponHeatPostEffect();
+    // ステージに指定された照明・霧・画面効果のプリセットを適用する。
     void ApplyStageVisualPreset();
+    // 開発用パネルで指定した照明設定を描画へ反映する。
     void ApplyDevelopmentLighting();
+    // プレイ専用の画面効果を解除し、次の画面へ設定を残さないようにする。
     void ResetGameplayPostEffects();
+    // 機体に追従している噴射エフェクトを停止し、参照を解除する。
     void StopPlayerEngineEffects();
+    // ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
     void UpdateBossHpHud();
+    // レールの進行距離を確認し、未出現の群れ編隊を必要なタイミングで出す。
     void UpdateSwarmWaveSpawning();
+    // 編隊設定から各個体の担当位置を決め、群れの敵を生成する。
     void SpawnSwarmWave(
         SwarmFormationType formationType,
         int32_t travelDirection);
+    // 回復アイテムのモデルと配置状態を準備する。
     void InitializeRecoveryItems(Model* model);
+    // 回復アイテムの見た目とプレイヤーとの接触を更新する。
     void UpdateRecoveryItems();
+    // 海中や海上の生き物を、背景演出用の位置へ配置する。
     void InitializeOceanLife();
+    // ステージ内で出現する水柱の配置と出現条件を準備する。
     void InitializeWaterPillars();
+    // 進行位置と時間に合わせて、背景の生き物を動かす。
     void UpdateOceanLife(const Vector3& railPosition, const Vector3& forward, const Vector3& railRight);
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
@@ -333,7 +394,6 @@ private:
     Model* enemyModel_ = nullptr;
     Model* enemyBulletModel_ = nullptr;
     Model* fearWormEnemyModel_ = nullptr;
-    Model* angerBlockModel_ = nullptr;
 
     // カメラオフセット定数
     static constexpr float kCameraBackwardOffset = 35.0f;
@@ -384,7 +444,6 @@ private:
     bool collisionOverlay_ = true;
     float collisionDrawDistance_ = 500.0f;
 #endif
-    bool isPirateShipMidBossSpawned_ = false;
 
     // カメラシェイク演出用
     float cameraShakeTime_ = 0.0f;
@@ -420,11 +479,17 @@ private:
     bool isPaused_ = false;
     int pauseSelection_ = 0;
     const BasePauseState* pauseState_ = &GetPauseState(PauseViewState::Menu);
+    // ポーズ画面が参照・変更する値と操作を、一つの情報にまとめて渡す。
     PauseStateContext MakePauseContext();
+    // ポーズ画面の表示先と選択位置を切り替える。
     void ChangePauseState(PauseViewState state, int selection = 0);
+    // ポーズ画面で選択中の項目を決定する。
     void ActivatePauseSelection();
+    // 設定画面から操舵感度を変更し、許可された範囲へ収める。
     void AdjustPauseSensitivity(float amount);
+    // 訓練の開始・成功・完了を示す表示と演出を準備する。
     void InitializeTutorialPresentation();
+    // チュートリアルの進行に合わせて案内を切り替え、開始や完了の演出を進める。
     bool UpdateTutorialPresentation();
     std::unique_ptr<Text> tutorialTitleText_;
     std::unique_ptr<TutorialCommPanel> tutorialCommPanel_;

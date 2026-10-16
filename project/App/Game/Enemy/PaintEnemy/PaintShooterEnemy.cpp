@@ -1,8 +1,10 @@
+// プレイヤーに向けてペイント弾を発射する敵を扱う。
 #include "PaintShooterEnemy.h"
-#include "App/Game/Enemy/Bullet/PaintBullet.h"
+#include "App/Game/Enemy/Bullet/Types/PaintBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/math/MathStruct.h"
 
+// 共通の敵を初期化し、ペイント弾の発射に使うモデルと狙う相手を設定する。
 void PaintShooterEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
     BaseEnemy::Initialize(model);
@@ -11,11 +13,13 @@ void PaintShooterEnemy::Initialize(Model* model, Model* bulletModel, Player* pla
     SetHealth(7.0f);
 }
 
+// 共通の更新経路から移動とペイント射撃を進める。
 void PaintShooterEnemy::Update()
 {
     BaseEnemy::Update();
 }
 
+// 射程や発射間隔を確認し、プレイヤーへペイント弾を発射する。
 void PaintShooterEnemy::Attack()
 {
     if (player_ == nullptr) {
@@ -49,6 +53,7 @@ void PaintShooterEnemy::Attack()
     }
 }
 
+// プレイヤーを狙う方向を求め、ペイント弾を敵弾管理へ渡す。
 void PaintShooterEnemy::FirePaintBullet()
 {
     if (!player_ || !bulletModel_) {

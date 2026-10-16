@@ -1,3 +1,4 @@
+// ステージ一覧と各ステージのJSON設定を読み込み、IDで参照できるようにする。
 #pragma once
 
 #include "Engine/math/EngineStruct.h"
@@ -38,15 +39,19 @@ struct StageSettings {
 
 class StageCatalog {
 public:
+    // アプリ内で共有するステージ一覧を返す。
     static StageCatalog* GetInstance();
 
+    // 一覧JSONから各設定を読み込み、IDの重複や読み込み失敗を検出する。
     bool Load(const std::string& catalogPath =
         "resources/Stages/catalog.json");
     const std::vector<StageSettings>& GetStages() const { return stages_; }
+    // ステージIDに一致する設定を探す。見つからない場合はnullptrを返す。
     const StageSettings* Find(const std::string& id) const;
     const std::string& GetLastError() const { return lastError_; }
 
 private:
+    // レイアウト・見た目・敵などのステージ固有設定をJSONから取り込む。
     bool LoadStageSettings(
         const std::string& settingsPath,
         StageSettings& settings);

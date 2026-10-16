@@ -1,6 +1,6 @@
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
-#include "App/Game/Player/Weapon/PlayerHomingLock.h"
+#include "App/Game/Player/Weapon/Common/PlayerHomingLock.h"
 #include "App/Game/Boss/Common/BaseBoss.h"
 #include <cassert>
 #include <type_traits>
@@ -8,7 +8,6 @@
 #if defined(VERIFY_GAME_OBJECTS)
 #include "App/Scene/Common/SceneManager.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
-#include "App/Game/Boss/AngerBlockBoss/AngerBlockBoss.h"
 #include "Engine/Animation/AnimationActor.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/Renderer/SceneRenderResolution.h"
@@ -127,10 +126,6 @@ int main()
     bullet.SetCollisionRadius(-1.0f);
     bullet.SetCollisionRadius(std::numeric_limits<float>::infinity());
     assert(bullet.GetDamage() == 1 && bullet.GetCollisionRadius() == 1.0f);
-    AngerBlockBoss boss;
-    boss.ApplyDamageToPart(1, -10.0f);
-    boss.ApplyDamageToPart(2, std::numeric_limits<float>::quiet_NaN());
-    assert(boss.GetBodyHpFraction() == 1.0f);
     MoveEnemy movingEnemy;
     movingEnemy.SetMoveSpeed(2.0f);
     movingEnemy.SetMoveSpeed(-1.0f);

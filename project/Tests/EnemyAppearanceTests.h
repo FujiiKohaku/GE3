@@ -1,7 +1,7 @@
 #pragma once
 #include "App/Game/Stage/EnemyAppearanceTable.h"
-#include "App/Game/Enemy/Types/NormalEnemy.h"
-#include "App/Game/Enemy/Types/ArmoredEnemy.h"
+#include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
+#include "App/Game/Enemy/ArmoredEnemy/ArmoredEnemy.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"

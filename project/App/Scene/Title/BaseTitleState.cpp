@@ -1,11 +1,14 @@
+// タイトル・ステージ選択・設定の状態ごとに、入力と遷移中の更新を切り替える。
 #include "BaseTitleState.h"
 #include "TitleScene.h"
 #include "Engine/Input/Input.h"
 #include "Engine/audio/SoundManager.h"
 #include <array>
 
+// 状態へ入るたびに、画面遷移用の経過時間をリセットする。
 void BaseTitleState::Enter(TitleScene& scene) const { scene.animationTime_ = 0.0f; }
 
+// タイトル待機中の入力とカメラの更新を担当する。
 class TitleMenuState final : public BaseTitleState {
 public:
     TitleViewState GetType() const override { return TitleViewState::Title; }
@@ -20,6 +23,7 @@ public:
     void Update(TitleScene& scene, float dt) const override { scene.UpdateTitleCamera(dt); }
 };
 
+// チュートリアルへ出発する演出の開始と進行を担当する。
 class TutorialStartState final : public BaseTitleState {
 public:
     TitleViewState GetType() const override { return TitleViewState::StartingTutorial; }
@@ -30,6 +34,7 @@ public:
     void Update(TitleScene& scene, float dt) const override { scene.UpdateTutorialStart(dt); }
 };
 
+// ステージ選択中の左右移動・決定・タイトルへ戻る入力を受け付ける。
 class StageSelectState final : public BaseTitleState {
 public:
     TitleViewState GetType() const override { return TitleViewState::StageSelect; }
@@ -53,6 +58,7 @@ public:
     void Update(TitleScene& scene, float dt) const override { scene.UpdateStageSelection(dt); }
 };
 
+// タイトルとステージ選択の間を行き来する遷移演出を進める。
 class StageSelectTransitionState final : public BaseTitleState {
 public:
     explicit StageSelectTransitionState(bool entering) : entering_(entering) {}
@@ -68,6 +74,7 @@ private:
     bool entering_;
 };
 
+// 選択決定音を鳴らし、ステージへの出発演出を進める。
 class StageConfirmState final : public BaseTitleState {
 public:
     TitleViewState GetType() const override { return TitleViewState::ConfirmingStage; }
@@ -78,6 +85,7 @@ public:
     void Update(TitleScene& scene, float dt) const override { scene.UpdateStageConfirmation(dt); }
 };
 
+// 設定画面の入力を受け付け、上下反転の切替や戻る操作を処理する。
 class SettingsState final : public BaseTitleState {
 public:
     TitleViewState GetType() const override { return TitleViewState::Settings; }
@@ -96,6 +104,7 @@ public:
     void Update(TitleScene& scene, float) const override { scene.UpdateSettingsCamera(); }
 };
 
+// 設定画面を開く・閉じる方向に応じた遷移演出を進める。
 class SettingsTransitionState final : public BaseTitleState {
 public:
     explicit SettingsTransitionState(bool opening) : opening_(opening) {}
@@ -107,6 +116,7 @@ private:
     bool opening_;
 };
 
+// 指定状態に対応する共有の振る舞いを返す。状態オブジェクトを毎回作り直さない。
 const BaseTitleState& GetTitleState(TitleViewState type)
 {
     static const TitleMenuState title;

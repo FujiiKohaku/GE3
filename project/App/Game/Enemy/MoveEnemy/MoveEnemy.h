@@ -1,8 +1,10 @@
+// 移動パターンに沿って位置を変えながら、プレイヤーに向けて射撃する敵を扱う。
 #pragma once
 
 #include "App/Game/Enemy/BaseEnemy.h"
-#include "BaseEnemyMovement.h"
 #include <cmath>
+
+enum class MovePattern { LeftRight, UpDown, ZigZag, SineWave };
 
 class Player;
 class Model;
@@ -10,11 +12,13 @@ class Model;
 class MoveEnemy : public BaseEnemy {
 public:
     std::string_view GetAppearanceId() const override { return "MoveEnemy"; }
+    // 移動の開始位置とパターン、射撃用のモデルやプレイヤー参照を準備する。
     void Initialize(
         Model* model,
         Model* bulletModel,
         Player* player);
 
+    // 基底クラスを通じて、この敵の移動・射撃・見た目を更新する。
     void Update() override;
 
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -26,7 +30,6 @@ public:
     void SetMovePattern(MovePattern pattern) {
         if (pattern >= MovePattern::LeftRight && pattern <= MovePattern::SineWave) {
             movePattern_ = pattern;
-            movement_ = &GetEnemyMovement(pattern);
         }
     }
 
@@ -41,8 +44,15 @@ public:
     void ResetPosition() { moveTime_ = 0.0f; transform_.translate = startPosition_; }
 
 private:
+    friend bool RunEnemyMovementCalculationTests();
+    // 選択された移動パターンに応じて、開始位置からの変位を求める。
+    static Vector3 CalculateMovementPosition(MovePattern pattern, const Vector3& startPosition,
+        float elapsedSeconds, float speed, float amplitude, float frequency);
+    // 経過時間を進め、選択した軌道上の位置へ本体を移動する。
     void Move() override;
+    // プレイヤーとの距離や向きを確認し、射撃可能な場合だけ発射タイマーを進める。
     void Attack() override;
+    // 現在位置からプレイヤーを狙う弾を生成する。
     void FireBullet();
 
 private:
@@ -55,7 +65,6 @@ private:
 
     // 移動制御用メンバ変数 (プロンプトの指定通り、名前は省略しない)
     MovePattern movePattern_ = MovePattern::LeftRight;
-    const BaseEnemyMovement* movement_ = &GetEnemyMovement(MovePattern::LeftRight);
     float moveSpeed_;
     float amplitude_;
     float frequency_;

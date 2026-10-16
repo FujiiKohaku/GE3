@@ -1,11 +1,14 @@
+// ポーズ画面の状態ごとに、選択操作と決定・キャンセル時の動作を分ける。
 #include "BasePauseState.h"
 
+// 上下入力で選択位置を移動し、決定・キャンセルを現在のポーズ状態へ渡す。
 void BasePauseState::Navigate(PauseStateContext& context, const PauseStateInput& input)
 {
     if (input.up) context.selection = (context.selection + 3) % 4;
     if (input.down) context.selection = (context.selection + 1) % 4;
 }
 
+// ポーズのメニュー項目を表示し、続行・再挑戦・設定などの決定を処理する。
 class PauseMenuState final : public BasePauseState {
 public:
     PauseViewState GetType() const override { return PauseViewState::Menu; }
@@ -32,6 +35,7 @@ public:
     }
 };
 
+// ポーズ中の感度調整・上下反転などの設定操作を処理する。
 class PauseSettingsState final : public BasePauseState {
 public:
     PauseViewState GetType() const override { return PauseViewState::Settings; }
@@ -67,6 +71,7 @@ public:
     }
 };
 
+// メニューか設定かに応じて、共有のポーズ状態オブジェクトを返す。
 const BasePauseState& GetPauseState(PauseViewState state)
 {
     static const PauseMenuState menu;

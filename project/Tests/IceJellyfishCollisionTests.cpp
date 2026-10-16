@@ -1,9 +1,35 @@
-#include "App/Game/Boss/IceJellyfish/IceJellyfishCollision.h"
+#include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
+#include "Engine/Math/MatrixMath.h"
 #include <cmath>
 #include <iostream>
 #include <cstdlib>
 
 namespace {
+SweepHit SweepJellyfishCollision(const Sphere& bullet, const Vector3& movement,
+    const std::vector<OBB>& bell, const std::vector<OBB>& tentacles,
+    const Sphere& core, bool& hitCore)
+{
+    SweepHit nearest {};
+    hitCore = false;
+    for (const OBB& box : bell) {
+        const SweepHit hit = CollisionManager::SweepSphere(bullet, movement, box);
+        if (hit.isHit && (!nearest.isHit || hit.time < nearest.time)) {
+            nearest = hit;
+        }
+    }
+    for (const OBB& box : tentacles) {
+        const SweepHit hit = CollisionManager::SweepSphere(bullet, movement, box);
+        if (hit.isHit && (!nearest.isHit || hit.time < nearest.time)) {
+            nearest = hit;
+        }
+    }
+    const SweepHit coreHit = CollisionManager::SweepSphere(bullet, movement, core);
+    if (coreHit.isHit && (!nearest.isHit || coreHit.time < nearest.time)) {
+        nearest = coreHit;
+        hitCore = true;
+    }
+    return nearest;
+}
 int checks = 0;
 
 void Check(bool passed, const char* description)
@@ -16,39 +42,39 @@ void Check(bool passed, const char* description)
 }
 }
 
-int main()
+int RunIceJellyfishCollisionTests()
 {
     const Matrix4x4 identity = MatrixMath::MakeIdentity4x4();
     std::vector<OBB> bell;
     std::vector<OBB> tentacles;
     const Sphere core { { 0.0f, -2.0f, 0.0f }, 3.6f };
     bool hitCore = false;
-    IceJellyfishCollision::BuildBell(identity, 0.0f, bell);
+    IceJellyfish::BuildBellColliders(identity, 0.0f, bell);
     Check(bell.size() == 208, "bell panels and icicle boxes are present");
 
-    SweepHit hit = IceJellyfishCollision::Sweep(
+    SweepHit hit = SweepJellyfishCollision(
         Sphere { { 0.0f, -20.0f, 0.0f }, 0.2f }, { 0.0f, 50.0f, 0.0f },
         bell, tentacles, core, hitCore);
     Check(hit.isHit && hitCore, "a shot from below enters the hollow bell and hits the core");
-    hit = IceJellyfishCollision::Sweep(
+    hit = SweepJellyfishCollision(
         Sphere { { 0.0f, 30.0f, 0.0f }, 0.2f }, { 0.0f, -60.0f, 0.0f },
         bell, tentacles, core, hitCore);
     Check(hit.isHit && !hitCore && hit.time < 0.4f, "a fast shot from above hits armor before the core");
-    hit = IceJellyfishCollision::Sweep(
+    hit = SweepJellyfishCollision(
         Sphere { { 8.0f, 0.0f, -10.0f }, 0.2f }, { 0.0f, 0.0f, 20.0f },
         bell, tentacles, core, hitCore);
     Check(!hit.isHit, "empty interior is not filled by the bell collision");
-    hit = IceJellyfishCollision::Sweep(
+    hit = SweepJellyfishCollision(
         Sphere { { 0.0f, -20.0f, 0.0f }, 0.2f }, { 0.0f, 1.0f, 0.0f },
         bell, tentacles, core, hitCore);
     Check(!hit.isHit, "sweep does not extend beyond this frame's movement");
-    hit = IceJellyfishCollision::Sweep(
+    hit = SweepJellyfishCollision(
         Sphere { core.center, 0.2f }, {}, bell, tentacles, core, hitCore);
     Check(hit.isHit && hitCore && hit.time == 0.0f, "starting inside the core resolves without movement");
 
     const Matrix4x4 segmentWorld = MatrixMath::MakeAffineMatrix(
         { 6.6f, 8.1f, 6.6f }, Vector3 { 0.3f, 0.5f, 0.8f }, { 30.0f, 5.0f, 0.0f });
-    const OBB segment = IceJellyfishCollision::TransformBox(
+    const OBB segment = IceJellyfish::MakeCollisionBox(
         segmentWorld, { 0.0f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f });
     Check(std::abs(segment.size.y - 8.1f) < 0.0001f, "longer link scale is included in its OBB");
     const Vector3 expectedCenter = MatrixMath::Transform({ 0.0f, -0.5f, 0.0f }, segmentWorld);
@@ -64,26 +90,26 @@ int main()
         CollisionManager::MakeOBB({ -6.0f, -10.0f, 0.0f }, { 2.0f, 8.0f, 2.0f }, {}),
         CollisionManager::MakeOBB({ 6.0f, -10.0f, 0.0f }, { 2.0f, 8.0f, 2.0f }, {})
     };
-    hit = IceJellyfishCollision::Sweep(
+    hit = SweepJellyfishCollision(
         Sphere { { 0.0f, -10.0f, -20.0f }, 0.2f }, { 0.0f, 0.0f, 40.0f },
         bell, tentacles, core, hitCore);
     Check(!hit.isHit, "bullet passes between separated tentacles");
     tentacles = { CollisionManager::MakeOBB({ 0.0f, -2.0f, 8.0f }, { 2.0f, 2.0f, 2.0f }, {}) };
     const Sphere approach { { 0.0f, -2.0f, -20.0f }, 0.2f };
-    hit = IceJellyfishCollision::Sweep(approach, { 0.0f, 0.0f, 40.0f }, bell, tentacles, core, hitCore);
+    hit = SweepJellyfishCollision(approach, { 0.0f, 0.0f, 40.0f }, bell, tentacles, core, hitCore);
     Check(hit.isHit && hitCore, "core wins when armor is behind it");
     tentacles[0].center.z = -8.0f;
-    hit = IceJellyfishCollision::Sweep(approach, { 0.0f, 0.0f, 40.0f }, bell, tentacles, core, hitCore);
+    hit = SweepJellyfishCollision(approach, { 0.0f, 0.0f, 40.0f }, bell, tentacles, core, hitCore);
     Check(hit.isHit && !hitCore, "front armor prevents damage to a core behind it");
 
     const Matrix4x4 body = MatrixMath::MakeAffineMatrix(
         { 1.0f, 1.0f, 1.0f }, Vector3 { 0.04f, 0.12f, -0.045f }, { 3.0f, 22.4f, 3000.0f });
-    IceJellyfishCollision::BuildBell(body, 1.0f, bell);
+    IceJellyfish::BuildBellColliders(body, 1.0f, bell);
     tentacles.clear();
     const Sphere movingCore { MatrixMath::Transform(core.center, body), core.radius };
     const Vector3 start = MatrixMath::Transform({ 0.0f, -20.0f, 0.0f }, body);
     const Vector3 end = MatrixMath::Transform({ 0.0f, 30.0f, 0.0f }, body);
-    hit = IceJellyfishCollision::Sweep(Sphere { start, 0.2f }, end - start,
+    hit = SweepJellyfishCollision(Sphere { start, 0.2f }, end - start,
         bell, tentacles, movingCore, hitCore);
     Check(hit.isHit && hitCore, "pulsing and tilting the bell preserves the opening");
 
@@ -101,4 +127,10 @@ int main()
     Check(!manager->Raycast(aim, aimHit), "scene cleanup removes all dynamic aim targets");
     CollisionManager::Finalize();
     std::cout << "Passed " << checks << " ice jellyfish collision checks.\n";
+    return 0;
+}
+
+int main()
+{
+    return RunIceJellyfishCollisionTests();
 }

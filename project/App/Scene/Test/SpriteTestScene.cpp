@@ -1,3 +1,4 @@
+// スプライトや画像の表示・配置を確認するための開発用シーン。
 #include "App/Scene/Test/SpriteTestScene.h"
 
 #include "Engine/2D/SpriteManager.h"
@@ -16,6 +17,7 @@ constexpr Vector4 kBackgroundColor = { 0.015f, 0.02f, 0.045f, 1.0f };
 constexpr Vector4 kFrameColor = { 0.08f, 0.32f, 0.52f, 1.0f };
 }
 
+// 検証用の画像とスプライトを作り、表示位置や色を設定する。
 void SpriteTestScene::Initialize()
 {
     Object3dManager::GetInstance()->SetDefaultCamera(nullptr);
@@ -46,6 +48,7 @@ void SpriteTestScene::Finalize()
 {
 }
 
+// 検証用の入力や時間変化を、スプライトの配置・表示へ反映する。
 void SpriteTestScene::Update()
 {
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
@@ -70,6 +73,7 @@ void SpriteTestScene::Update()
     previewSprite_->Update();
 }
 
+// 画面に重ねるスプライトや文字を描画する。
 void SpriteTestScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
@@ -78,14 +82,17 @@ void SpriteTestScene::Draw2D()
     previewSprite_->Draw();
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void SpriteTestScene::Draw3D()
 {
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void SpriteTestScene::DrawParticle()
 {
 }
 
+// 開発用の画面に内部状態や調整項目を表示する。
 void SpriteTestScene::DrawImGui()
 {
 #ifdef USE_IMGUI

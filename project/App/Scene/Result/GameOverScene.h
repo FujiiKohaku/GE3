@@ -1,3 +1,4 @@
+// ゲームオーバー時の表示と入力を扱い、再挑戦やタイトルへの遷移につなげる。
 #pragma once
 #include "App/Scene/Common/BaseScene.h"
 
@@ -13,10 +14,12 @@ class GameOverScene : public BaseScene {
 public:
     explicit GameOverScene(const std::string& stageId = "stage01")
         : stageId_(stageId) {}
+    // ゲームオーバー表示と再挑戦・タイトルへ戻る操作案内を準備する。
     void Initialize()override;
 
     void Finalize() override;
 
+    // 再挑戦なら同じステージを開き直し、戻る操作ならタイトルへの遷移を予約する。
     void Update() override;
 
     void Draw2D() override;

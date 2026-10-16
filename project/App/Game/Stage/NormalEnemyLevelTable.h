@@ -1,5 +1,6 @@
+// 通常敵のレベルごとの設定を読み、ステージ側の個別指定を反映する。
 #pragma once
-#include "App/Game/Enemy/Types/NormalEnemySettings.h"
+#include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
 #include "Engine/Logger/Logger.h"
 #include "externals/json.hpp"
 #include <array>
@@ -9,6 +10,7 @@
 
 class NormalEnemyLevelTable {
 public:
+    // レベル別の設定を検証しながら読む。欠落や不正なレベルは従来の設定を使う。
     bool Load(const std::string& filePath = "resources/Enemies/normal-enemy-levels.json")
     {
         settings_.fill(NormalEnemySettings {});
@@ -35,6 +37,7 @@ public:
         return isValid;
     }
 
+    // 指定レベルの設定を返す。範囲外のレベルは警告を出して従来値へ戻す。
     NormalEnemySettings GetSettings(int level) const
     {
         if (level < 1 || level > static_cast<int>(settings_.size())) {
@@ -45,6 +48,7 @@ public:
     }
 
 private:
+    // 必要な項目・型・数値範囲を確認し、有効な場合だけ設定を置き換える。
     static bool ReadSettings(const nlohmann::json& data, NormalEnemySettings& settings)
     {
         if (!data.is_object() || !data.contains("hp") || !data["hp"].is_number() ||

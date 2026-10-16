@@ -1,3 +1,4 @@
+// 現在と次のシーンを管理し、シーン切替と描画・ポストエフェクト設定の受け渡しを行う。
 #pragma once
 #include "App/Scene/Common/BaseScene.h"
 #include "App/Scene/Common/PageTransition.h"
@@ -55,33 +56,43 @@ public:
         SetNextScene(std::move(loadingScene));
     }
 
+    // 放射状ブラーの設定を検証し、適用できる場合だけ変更する。
     bool SetRadialBlurSettings(const RadialBlurSettings& settings);
     const RadialBlurSettings& GetRadialBlurSettings() const { return radialBlurSettings_; }
     void SetPostEffectParameters(PostEffectType type, const Vector3& parameters) { if (std::isfinite(parameters.x) && std::isfinite(parameters.y) && std::isfinite(parameters.z)) { effectParameters_[type] = parameters; } }
+    // 画面効果を探し、その設定値を参照する。見つからない場合はnullptrを返す。
     const Vector3* FindPostEffectParameters(PostEffectType type) const;
+    // シーン全体の霧や空気感に関する設定をまとめて適用する。
     void ApplyAtmospherePreset(const AtmospherePreset& preset);
+    // 渡された一覧で画面効果の適用順と設定を更新する。
     void ApplyPostEffectChain(const std::vector<PostEffectInfo>& effects);
+    // 予約されたシーンへの切替と、現在のシーンの更新を行う。
     void Update();
+    // 保持しているシーンを終了し、シーン固有のリソースを解放する。
     void Finalize();
     void DrawImGui();
     void Draw2D();
     void Draw3D();
     bool SubmitRaytracingScene(DxrRenderer& renderer);
+    // 現在のシーンに、影を落とす物体の描画を依頼する。
     void DrawShadow(ShadowMapRenderer& renderer);
     ShadowSettings GetShadowSettings() const;
     void DrawParticle();
     // PostEffectTypeのセッターとゲッター
     void SetPostEffectType(PostEffectType postEffectType);
     PostEffectType GetPostEffectType() const;
+    // 画面効果をチェーンへ追加し、同じ種類がある場合の扱いを調整する。
     void AddPostEffect(
         PostEffectType type,
         PostEffectStage stage = PostEffectStage::BeforeParticle);
+    // 指定した種類の画面効果を適用対象から外す。
     void RemovePostEffect(PostEffectType type);
     void ClearPostEffects();
     void SetPostEffectEnabled(PostEffectType type, bool enable);
     const std::vector<PostEffectInfo>& GetPostEffects() const;
     void SetPostEffectCenter(const Vector2& center);
     const Vector2& GetPostEffectCenter() const;
+    // カメラ揺れの強さを設定し、許可された値に収める。
     void SetCameraShakeStrength(float strength);
     float GetCameraShakeStrength() const;
     void SetPaintProgress(float progress) { if (std::isfinite(progress)) { paintProgress_ = std::clamp(progress, 0.0f, 1.0f); } }
@@ -125,6 +136,7 @@ public:
         ++sceneFogRevision_;
     }
     const DistanceFogData& GetSceneDistanceFog() const { return sceneDistanceFog_; }
+    // 現在のシーンを表示するときの露出を設定する。
     void SetSceneExposure(float exposure);
     float GetSceneExposure() const { return sceneExposure_; }
     uint64_t GetSceneExposureRevision() const { return sceneExposureRevision_; }

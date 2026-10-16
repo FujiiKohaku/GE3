@@ -1,3 +1,4 @@
+// 頭と胴体が連なるボス。水面からの登場、移動、各種攻撃、部位破壊と死亡演出を扱う。
 #include "FearWormEnemy.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/Time/TimeManager.h"
@@ -7,14 +8,14 @@
 #include <algorithm>
 #include <cmath>
 #include "Engine/Camera/Camera.h"
-#include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
-#include "App/Game/Enemy/Bullet/TrackingEnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Types/TrackingEnemyBullet.h"
 #include <utility>
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/ModelManager.h"
 
 namespace {
-constexpr float kHeadHp = 20.0f;
+constexpr float kHeadHp = 40.0f;
 constexpr float kBaseMoveSpeed = 0.10f;
 constexpr float kInitialHeadChargeCooldown = 1.80f;
 constexpr Vector3 kDefaultHeadAimDirection = { 0.0f, 0.0f, -1.0f };
@@ -24,6 +25,7 @@ FearWormEnemy::FearWormEnemy() = default;
 
 FearWormEnemy::BossState FearWormEnemy::GetBossState() const { return state_; }
 
+// 現在のボス状態に対応する処理を呼び、登場・戦闘・死亡の流れを進める。
 void FearWormEnemy::UpdateState()
 {
     switch (state_) {
@@ -34,6 +36,7 @@ void FearWormEnemy::UpdateState()
     }
 }
 
+// 状態を切り替え、切替先に必要な開始処理を実行する。
 void FearWormEnemy::ChangeState(BossState state)
 {
     if (state_ == state) return;
@@ -45,6 +48,7 @@ void FearWormEnemy::ChangeState(BossState state)
     }
 }
 
+// 敵としての共通状態、連結部位とビームなどの攻撃用リソースを準備する。
 void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
     bulletModel_ = bulletModel;
@@ -58,14 +62,18 @@ void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 
     InitializeSegments(model);
     InitializeBeam();
+    InitializeEntrySurface();
     SetPosition(transform_.translate);
 }
 
+// ボスの配置を更新し、頭や連結部位の基準位置にも反映する。
 void FearWormEnemy::SetPosition(const Vector3& position)
 {
     // 基準位置と行動状態を初期状態へ戻す。
     transform_.translate = position;
     startPosition_ = position;
+    enterTimer_ = 0.0f;
+    hasPlayedEntrySplash_ = false;
     ChangeState(BossState::Wait);
     ChangeMovementPattern(MovementPattern::Orbit);
     movementPatternTimer_ = 0.0f;
@@ -104,6 +112,7 @@ Vector3 FearWormEnemy::GetPosition() const
     return segments_[0].position;
 }
 
+// ボスの状態を進め、連結部位と描画オブジェクトを現在の位置へ追従させる。
 void FearWormEnemy::Update()
 {
     // 外部から撃破された場合も、死亡状態への移行は一度だけ行う。
@@ -131,6 +140,7 @@ bool FearWormEnemy::IsDeathSequenceFinished() const
     return isDeathSequenceFinished_;
 }
 
+// 撃破後の演出へ切り替え、通常の戦闘処理を終える。
 void FearWormEnemy::OnDeath()
 {
     ChangeState(BossState::Dead);
@@ -144,6 +154,7 @@ constexpr float kMissileFireInterval = 0.45f;    // ミサイルの発射間隔�
 constexpr float kOrbitAngularSpeed = 1.15f;
 }
 
+// プレイヤーとの位置関係を確認し、登場演出を始めるまで待機する。
 void FearWormEnemy::UpdateWait()
 {
     float movementSpeedRate = MovementSpeedRate();
@@ -168,23 +179,66 @@ void FearWormEnemy::UpdateWait()
     transform_.translate = segments_[0].position;
 }
 
+// 部位が多いほど後ろの部位まで出現する時間を確保する。
+float FearWormEnemy::CalculateEntryDurationSeconds(size_t segmentCount)
+{
+    size_t delayedSegmentCount = 0;
+    if (segmentCount > 0) {
+        delayedSegmentCount = segmentCount - 1;
+    }
+    return kEntryShadowDurationSeconds + kEntryFlightDurationSeconds
+        + static_cast<float>(delayedSegmentCount) * kEntrySegmentDelaySeconds;
+}
+
+// 水面から戦闘位置へ向かう軌道にうねりを加え、部位ごとに遅れて飛び出させる。
+Vector3 FearWormEnemy::CalculateEntryPosition(const Vector3& surfacePosition, const Vector3& battlePosition,
+    float elapsedSeconds, size_t segmentIndex, float segmentSpacing)
+{
+    float flightRate = std::clamp((elapsedSeconds - kEntryShadowDurationSeconds
+        - static_cast<float>(segmentIndex) * kEntrySegmentDelaySeconds) / kEntryFlightDurationSeconds, 0.0f, 1.0f);
+    float easedRate = flightRate * flightRate * (3.0f - 2.0f * flightRate);
+    Vector3 target = battlePosition;
+    target.z -= static_cast<float>(segmentIndex) * segmentSpacing;
+    Vector3 start = surfacePosition;
+    start.y -= 12.0f;
+    float arcHeight = (std::max)(battlePosition.y - surfacePosition.y + 25.0f, 50.0f);
+    float arcEnvelope = std::sin(flightRate * 3.1415926535f);
+    float waveEnvelope = arcEnvelope * arcEnvelope;
+    float wavePhase = elapsedSeconds * 5.2f - static_cast<float>(segmentIndex) * 0.70f;
+    // 頭から尾へ位相をずらし、着地点に近づくほど振幅を落とす。
+    float lateralWave = std::sin(wavePhase) * 6.0f * waveEnvelope;
+    float verticalWave = std::sin(wavePhase + 0.9f) * 1.8f * waveEnvelope;
+    float forwardWave = std::cos(wavePhase) * 2.0f * waveEnvelope;
+    return {
+        start.x + (target.x - start.x) * easedRate + lateralWave,
+        start.y + (target.y - start.y) * easedRate + arcEnvelope * arcHeight + verticalWave,
+        start.z + (target.z - start.z) * easedRate + forwardWave
+    };
+}
+
+// 水面から出現する演出の開始状態を作り、影・波紋と各部位の位置を準備する。
 void FearWormEnemy::EnterEntry()
 {
     if (player_ == nullptr) { return; }
     const Vector3 playerPosition = player_->GetTranslate();
     // 登場用タイマーと移動パターンを初期状態へ戻す。
     enterTimer_ = 0.0f;
+    hasPlayedEntrySplash_ = false;
     orbitAngle_ = kInitialOrbitAngle;
     ChangeMovementPattern(MovementPattern::Orbit);
     movementPatternTimer_ = 0.0f;
 
-    // 頭部を登場開始位置へ移す。
-    Vector3 entryPosition = EntryStartPosition(playerPosition); // playerの左上に登場
-
-    segments_[0].position = entryPosition;
-    transform_.translate = entryPosition;
+    const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
+    const Vector3 battlePosition = MovementTargetPosition(playerPosition);
+    for (size_t index = 0; index < segments_.size(); ++index) {
+        segments_[index].position = CalculateEntryPosition(
+            surfacePosition, battlePosition, enterTimer_, index, segmentSpacing_);
+    }
+    transform_.translate = segments_[0].position;
+    UpdateEntrySurface();
 }
 
+// 登場中の部位を順番に水面から引き上げ、完了したら戦闘状態へ移る。
 void FearWormEnemy::UpdateEntry()
 {
     if (player_ == nullptr) {
@@ -192,25 +246,68 @@ void FearWormEnemy::UpdateEntry()
         return;
     }
 
-    float movementSpeedRate = MovementSpeedRate();
-    Vector3 playerPosition = player_->GetTranslate();
-
-    // 回転角度の更新
-    orbitAngle_ += TimeManager::GetInstance()->GetDeltaTime() * kOrbitAngularSpeed * movementSpeedRate;
-
-    // 登場目的地を計算
-    Vector3 target = EntryTarget(playerPosition);
-
-    // 移動処理
-    segments_[0].position = Lerp(segments_[0].position, target, moveSpeed_ * movementSpeedRate);
+    enterTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+    const Vector3 playerPosition = player_->GetTranslate();
+    const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
+    const Vector3 battlePosition = MovementTargetPosition(playerPosition);
+    for (size_t index = 0; index < segments_.size(); ++index) {
+        segments_[index].position = CalculateEntryPosition(
+            surfacePosition, battlePosition, enterTimer_, index, segmentSpacing_);
+    }
     transform_.translate = segments_[0].position;
-
-    // 登場時間が終わったら戦闘状態へ移行
-    if (enterTimer_ >= enterDuration_) {
+    if (!hasPlayedEntrySplash_ && segments_[0].position.y >= entryWaterHeight_) {
+        Vector3 splashPosition = segments_[0].position;
+        splashPosition.y = entryWaterHeight_ + 1.0f;
+        EffectManager::GetInstance()->PlayEffect("FearWormBreachSplash", splashPosition);
+        hasPlayedEntrySplash_ = true;
+    }
+    UpdateEntrySurface();
+    if (enterTimer_ >= CalculateEntryDurationSeconds(segments_.size())) {
         ChangeState(BossState::Battle);
     }
 }
 
+// プレイヤーの位置と水位をもとに、飛び出す水面上の基準位置を求める。
+Vector3 FearWormEnemy::EntrySurfacePosition(const Vector3& playerPosition) const
+{
+    return { playerPosition.x - 12.0f, entryWaterHeight_, playerPosition.z + 86.0f };
+}
+
+// 出現前の影と波紋を表示するための水面オブジェクトを準備する。
+void FearWormEnemy::InitializeEntrySurface()
+{
+    entrySurface_ = std::make_unique<Object3d>();
+    entrySurface_->Initialize(Object3dManager::GetInstance());
+    entrySurface_->SetModel(ModelManager::GetInstance()->CreatePlane());
+    entrySurface_->SetEnableLighting(false);
+    entrySurface_->SetMaterial("resources/Shaders/Object3D/FearWormEntrySurface");
+    entrySurface_->SetTransparent(true);
+    entrySurface_->SetTransparentDepthWrite(false);
+    entrySurface_->SetCastShadow(false);
+    entrySurface_->SetReceiveShadow(false);
+    entrySurface_->SetRaytracingEnabled(false);
+    entrySurface_->SetRotate({ 1.5707963268f, 0.0f, 0.0f });
+    entrySurface_->SetScale({ 42.0f, 68.0f, 1.0f });
+}
+
+// 出現の進み具合に合わせて水面の影と波紋を変化させ、登場後は消す。
+void FearWormEnemy::UpdateEntrySurface()
+{
+    if (!entrySurface_ || !player_) { return; }
+    Vector3 surfacePosition = EntrySurfacePosition(player_->GetTranslate());
+    // 海面の波頂より上に置き、深度の競合を避ける。
+    surfacePosition.y += 2.5f;
+    surfacePosition.z -= 14.0f;
+    entrySurface_->SetTranslate(surfacePosition);
+    float shadowVisibility = 1.0f;
+    if (hasPlayedEntrySplash_) {
+        shadowVisibility = 0.0f;
+    }
+    entrySurface_->SetColor({ enterTimer_, CalculateEntryDurationSeconds(segments_.size()), shadowVisibility, 1.0f });
+    entrySurface_->Update();
+}
+
+// 通常戦闘の移動・攻撃を進め、HPなどに応じて戦闘状態を調整する。
 void FearWormEnemy::UpdateBattle()
 {
     if (player_ == nullptr) {
@@ -226,6 +323,7 @@ void FearWormEnemy::UpdateBattle()
     UpdateBattleAttack();
 }
 
+// 激昂中の攻撃と移動を更新し、通常時とは異なる圧力をかける。
 void FearWormEnemy::UpdateMadMode(float movementSpeedRate)
 {
     // HP30%以下かつ未発動かつ未完了のときに発狂トリガー
@@ -266,6 +364,7 @@ void FearWormEnemy::UpdateMadMode(float movementSpeedRate)
     }
 }
 
+// 部位からミサイルを撃つ順番と発射タイミングを管理する。
 void FearWormEnemy::UpdateMissileAttack()
 {
     // ミサイル攻撃の進行管理（発狂モード中は行わない）
@@ -345,6 +444,7 @@ void FearWormEnemy::UpdateMissileAttack()
     }
 }
 
+// プレイヤーを基準に移動先を決め、速度倍率を反映して頭を動かす。
 void FearWormEnemy::UpdateBattleMovement(const Vector3& playerPosition, float movementSpeedRate)
 {
     // 戦闘目的地を計算
@@ -363,6 +463,7 @@ void FearWormEnemy::UpdateBattleMovement(const Vector3& playerPosition, float mo
     transform_.translate = segments_[0].position;
 }
 
+// 戦闘中の攻撃タイマーを進め、選択された攻撃の処理へつなげる。
 void FearWormEnemy::UpdateBattleAttack()
 {
     // 攻撃処理の実行
@@ -384,6 +485,7 @@ void FearWormEnemy::UpdateBattleAttack()
     }
 }
 
+// 撃破演出のタイマーや部位の状態を初期化し、攻撃を終了する。
 void FearWormEnemy::EnterDead()
 {
     // 攻撃状態をクリア（発射済みの弾はManager側で飛び続ける）
@@ -395,15 +497,15 @@ void FearWormEnemy::EnterDead()
     isDeathSequenceFinished_ = false;
     deathSequenceTimer_ = 0.0f;
 
-    // 1. 胴体セグメントは即座にすべて非表示にする
+    // 胴体セグメントは即座にすべて非表示にする
     for (size_t index = 1; index < segments_.size(); ++index) {
         segments_[index].isAlive = false;
     }
 
-    // 2. 頭部の位置で大爆発エフェクトを即座に再生
+    // 頭部の位置で大爆発エフェクトを即座に再生
     EffectManager::GetInstance()->PlayEffect("WormDeathExplosion", segments_[0].position);
 
-    // 3. 落下物理パラメータの初期化
+    // 落下物理パラメータの初期化
     // 前方（Zマイナス方向＝手前）へ飛び出しながら、上方向にポンと跳ね上がる初速を設定
     deathVelocity_ = { 0.0f, 11.5f, -9.0f };
     // 落下中にクルクルと回転させる回転速度を設定
@@ -411,6 +513,7 @@ void FearWormEnemy::EnterDead()
     currentDeathRotation_ = segments_[0].object->GetRotate();
 }
 
+// 撃破後も部位の動きと爆発演出を進め、終了判定を更新する。
 void FearWormEnemy::UpdateDead()
 {
     if (isDeathSequenceFinished_) {
@@ -420,26 +523,26 @@ void FearWormEnemy::UpdateDead()
     const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
     deathSequenceTimer_ += deltaTime;
 
-    // 1. 重力を適用して落下速度を下方向（Yマイナス）に引っ張る
+    // 重力を適用して落下速度を下方向（Yマイナス）に引っ張る
     constexpr float kGravity = 26.0f; // ゲーム的な落下速度に合わせた重力加速度
     deathVelocity_.y -= kGravity * deltaTime;
 
-    // 2. 速度を頭部座標に適用
+    // 速度を頭部座標に適用
     segments_[0].position.x += deathVelocity_.x * deltaTime;
     segments_[0].position.y += deathVelocity_.y * deltaTime;
     segments_[0].position.z += deathVelocity_.z * deltaTime;
 
-    // 3. 回転速度を頭部回転角に適用
+    // 回転速度を頭部回転角に適用
     currentDeathRotation_.x += deathRotation_.x * deltaTime;
     currentDeathRotation_.y += deathRotation_.y * deltaTime;
     currentDeathRotation_.z += deathRotation_.z * deltaTime;
     segments_[0].object->SetRotate(currentDeathRotation_);
 
-    // 4. 頭部の座標だけを更新するため、Object3dの更新を呼ぶ
+    // 頭部の座標だけを更新するため、Object3dの更新を呼ぶ
     segments_[0].object->SetTranslate(segments_[0].position);
     segments_[0].object->Update();
 
-    // 5. 落下時間（1.6秒）が経過するか、十分に下へ落ちたら演出を完了する
+    // 落下時間（1.6秒）が経過するか、十分に下へ落ちたら演出を完了する
     constexpr float kDeathFallbackDuration = 1.6f;
     if (deathSequenceTimer_ >= kDeathFallbackDuration || segments_[0].position.y < -35.0f) {
         isDeathSequenceFinished_ = true;
@@ -478,6 +581,7 @@ constexpr float kDriftDepthAmplitude = 2.0f;
 
 } // namespace
 
+// プレイヤーの周囲を回り込む軌道上の目標位置を求める。
 Vector3 FearWormEnemy::CalculateOrbitTarget(const FearWormMovementContext& context)
 {
     Vector3 result = context.playerPosition;
@@ -499,6 +603,7 @@ Vector3 FearWormEnemy::CalculateOrbitTarget(const FearWormMovementContext& conte
     return result;
 }
 
+// 巻き付くように周回する目標位置を求める。
 Vector3 FearWormEnemy::CalculateCoilTarget(const FearWormMovementContext& context)
 {
     Vector3 result = context.playerPosition;
@@ -516,6 +621,7 @@ Vector3 FearWormEnemy::CalculateCoilTarget(const FearWormMovementContext& contex
     return result;
 }
 
+// 左右や上下に揺れながら進む目標位置を求める。
 Vector3 FearWormEnemy::CalculateWeaveTarget(const FearWormMovementContext& context)
 {
     Vector3 result = context.playerPosition;
@@ -530,6 +636,7 @@ Vector3 FearWormEnemy::CalculateWeaveTarget(const FearWormMovementContext& conte
     return result;
 }
 
+// ゆっくり漂う移動パターンの目標位置を求める。
 Vector3 FearWormEnemy::CalculateDriftTarget(const FearWormMovementContext& context)
 {
     Vector3 result = context.playerPosition;
@@ -542,6 +649,7 @@ Vector3 FearWormEnemy::CalculateDriftTarget(const FearWormMovementContext& conte
     return result;
 }
 
+// 渦を描く移動パターンの目標位置を求める。
 Vector3 FearWormEnemy::CalculateSpiralTarget(const FearWormMovementContext& context)
 {
     Vector3 result = context.playerPosition;
@@ -570,6 +678,7 @@ Vector3 FearWormEnemy::CalculateSpiralTarget(const FearWormMovementContext& cont
     return result;
 }
 
+// 直線移動パターンの目標位置を求める。
 Vector3 FearWormEnemy::CalculateLineTarget(const FearWormMovementContext& context)
 {
     Vector3 result = context.playerPosition;
@@ -579,6 +688,7 @@ Vector3 FearWormEnemy::CalculateLineTarget(const FearWormMovementContext& contex
     return result;
 }
 
+// 移動の種類に対応する軌道計算を選ぶ。
 Vector3 FearWormEnemy::CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context)
 {
     switch (type) {
@@ -591,6 +701,7 @@ Vector3 FearWormEnemy::CalculateFearWormTarget(FearWormMovementType type, const 
     }
 }
 
+// 次に使用する移動パターンを選ぶ。
 FearWormEnemy::FearWormMovementType FearWormEnemy::NextFearWormMovement(FearWormMovementType type)
 {
     switch (type) {
@@ -615,6 +726,7 @@ constexpr float kEntryExtraForwardOffset = 22.0f;
 constexpr float kMaximumMovementSpeedAdd = 0.45f;
 }
 
+// 通常の目標を使えない場合に備え、代わりの移動先を返す。
 Vector3 FearWormEnemy::FallbackTarget()
 {
     Vector3 target = startPosition_;
@@ -624,17 +736,7 @@ Vector3 FearWormEnemy::FallbackTarget()
     return target;
 }
 
-Vector3 FearWormEnemy::EntryTarget(const Vector3& playerPosition)
-{
-    enterTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-    float enterRate = enterTimer_ / enterDuration_;
-    if (enterRate > 1.0f) {
-        enterRate = 1.0f;
-    }
-    // 登場演出中は、登場開始位置から目標位置まで線形補間する
-    return Lerp(EntryStartPosition(playerPosition), MovementTargetPosition(playerPosition), enterRate);
-}
-
+// 戦闘用の軌道と経過時間をもとに、現在の追従先を計算する。
 Vector3 FearWormEnemy::BattleTarget(const Vector3& playerPosition, float rate)
 {
     UpdateMovementPattern(rate);
@@ -662,6 +764,7 @@ Vector3 FearWormEnemy::BattleTarget(const Vector3& playerPosition, float rate)
     return MovementTargetPosition(adjustedPlayerPosition);
 }
 
+// 登場演出を始める位置をプレイヤー基準で求める。
 Vector3 FearWormEnemy::EntryStartPosition(const Vector3& playerPosition) const
 {
     // プレイヤーの左上かつ前方を登場開始位置にする。
@@ -672,6 +775,7 @@ Vector3 FearWormEnemy::EntryStartPosition(const Vector3& playerPosition) const
     return result;
 }
 
+// 現在の移動状態に応じた目標位置を取得する。
 Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) const
 {
     const FearWormMovementContext context { playerPosition, orbitAngle_, movementPatternTimer_,
@@ -679,6 +783,7 @@ Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) con
     return CalculateFearWormTarget(movementPattern_, context);
 }
 
+// 経過時間を確認し、移動パターンの継続と切替を行う。
 void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
 {
     if (movementPattern_ == MovementPattern::Line || movementPattern_ == MovementPattern::Spiral) return;
@@ -688,6 +793,7 @@ void FearWormEnemy::UpdateMovementPattern(float movementSpeedRate)
     }
 }
 
+// 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
 void FearWormEnemy::ChangeMovementPattern(MovementPattern pattern)
 {
     movementPattern_ = pattern;
@@ -698,8 +804,10 @@ void FearWormEnemy::ChangeMovementPattern(MovementPattern pattern)
     }
 }
 
+// 頭から後ろへ順に追従位置を計算し、胴体がつながってうねる形を作る。
 void FearWormEnemy::UpdateSegments()
 {
+    if (state_ == BossState::Entry) { return; }
     if (segments_.empty()) {
         return;
     }
@@ -722,12 +830,12 @@ void FearWormEnemy::UpdateSegments()
         }
         aliveOrder++;
 
-        // 1. 通常の追従目標位置 (縦並び - 元の引き戻し拘束)
+        // 通常の追従目標位置 (縦並び - 元の引き戻し拘束)
         Vector3 diff = segment.position - previousSegment->position;
         Vector3 direction = Normalize(diff);
         Vector3 posNormal = previousSegment->position + direction * segmentSpacing_;
 
-        // 2. Line状態の目標位置 (横並び＋うねうね)
+        // Line状態の目標位置 (横並び＋うねうね)
         float waveScaleY = 3.2f;
         float waveScaleZ = 2.0f;
         float waveFrequency = 4.2f;
@@ -738,7 +846,7 @@ void FearWormEnemy::UpdateSegments()
             segments_[0].position.z + std::cos(moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(aliveOrder) * 0.6f) * waveScaleZ
         };
 
-        // 3. 通常位置とLine位置をブレンドして直接適用する
+        // 通常位置とLine位置をブレンドして直接適用する
         // blendT = 0.0f のときは posNormal (従来と100%同一の挙動) になります
         segment.position = Lerp(posNormal, posLine, blendT);
 
@@ -746,6 +854,7 @@ void FearWormEnemy::UpdateSegments()
     }
 }
 
+// 状態や残りHPに応じた移動速度の倍率を返す。
 float FearWormEnemy::MovementSpeedRate() const
 {
     // HPが減るほど移動と攻撃の速度倍率を上げる。
@@ -773,10 +882,11 @@ constexpr float kChargedBulletLifeTime = 20.0f;
 constexpr float kHeadMuzzleOffset = 4.2f;
 }
 
+// 射撃タイミングを管理し、通常弾や特殊攻撃を開始する。
 void FearWormEnemy::Attack()
 {
     // 登場前、攻撃対象なし、弾モデルなしの場合は攻撃しない。
-    if (GetBossState() == BossState::Wait) {
+    if (GetBossState() != BossState::Battle) {
         return;
     }
 
@@ -833,6 +943,7 @@ void FearWormEnemy::Attack()
     }
 }
 
+// 頭の溜め攻撃を、準備・発射・終了の順に進める。
 void FearWormEnemy::UpdateHeadChargeAttack(float attackSpeedRate)
 {
     float deltaTime = TimeManager::GetInstance()->GetDeltaTime() * attackSpeedRate;
@@ -888,6 +999,7 @@ void FearWormEnemy::UpdateHeadChargeAttack(float attackSpeedRate)
     }
 }
 
+// 頭の溜め攻撃に必要なタイマーと照準状態を準備する。
 void FearWormEnemy::StartHeadChargeAttack()
 {
     // チャージ状態へ移行し、各タイマーと発射数を初期化する。
@@ -907,6 +1019,7 @@ void FearWormEnemy::StartHeadChargeAttack()
         HeadMuzzlePosition());
 }
 
+// 溜め攻撃の状態を解除し、次の攻撃へ戻れるようにする。
 void FearWormEnemy::FinishHeadChargeAttack()
 {
     // チャージ状態を解除し、次回攻撃までの待機時間を設定する。
@@ -919,6 +1032,7 @@ void FearWormEnemy::FinishHeadChargeAttack()
     headChargeCooldownTimer_ = kHeadChargeCooldown;
 }
 
+// プレイヤーの位置へ頭の狙いを合わせる。
 void FearWormEnemy::UpdateHeadAimDirection()
 {
     if (player_ == nullptr) {
@@ -938,6 +1052,7 @@ void FearWormEnemy::UpdateHeadAimDirection()
             kHeadAimFollowRate));
 }
 
+// 指定した部位の位置から、通常射撃用の弾を生成する。
 void FearWormEnemy::FireBullet(const Vector3& position)
 {
     // 通常弾を生成し、発射位置からプレイヤーへの速度を設定する。
@@ -962,6 +1077,7 @@ void FearWormEnemy::FireBullet(const Vector3& position)
         position);
 }
 
+// 溜め終わった頭から強化された弾を発射する。
 void FearWormEnemy::FireChargedBullet()
 {
     if (player_ == nullptr) {
@@ -1005,6 +1121,7 @@ void FearWormEnemy::FireChargedBullet()
         position);
 }
 
+// 頭の向きと大きさを考慮して、弾を出す位置を求める。
 Vector3 FearWormEnemy::HeadMuzzlePosition() const
 {
     // 頭部中心から照準方向へ発射口分だけ前進させる。
@@ -1019,6 +1136,7 @@ Vector3 FearWormEnemy::HeadMuzzlePosition() const
     return position;
 }
 
+// 頭が照準方向を向くように描画用の回転角を計算する。
 Vector3 FearWormEnemy::HeadLookRotation() const
 {
     // 正規化した照準方向をピッチ角とヨー角へ変換する。
@@ -1032,6 +1150,7 @@ Vector3 FearWormEnemy::HeadLookRotation() const
     return rotate;
 }
 
+// 指定した部位から追尾ミサイルを一発生成する。
 void FearWormEnemy::FireSingleMissile(size_t segmentIndex)
 {
     if (player_ == nullptr || bulletModel_ == nullptr) {
@@ -1084,6 +1203,7 @@ Matrix4x4 FearWormEnemy::MakeRotateAxisAngleMatrix(const Vector3& axis, float an
     return mat;
 }
 
+// 発射角度を回転させながら弾を出し、渦状の弾幕を作る。
 void FearWormEnemy::UpdateSpiralBarrage()
 {
     // 最初の2秒間（威嚇中）は弾を撃たずにプレイヤーに猶予を与える
@@ -1126,6 +1246,7 @@ void FearWormEnemy::UpdateSpiralBarrage()
     FireDirectionalBullet(headPos, dir2);
 }
 
+// 指定された位置と方向を使って弾を生成する。
 void FearWormEnemy::FireDirectionalBullet(const Vector3& position, const Vector3& direction)
 {
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
@@ -1145,6 +1266,7 @@ void FearWormEnemy::FireDirectionalBullet(const Vector3& position, const Vector3
     EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
 }
 
+// ビーム本体と溜め演出を描画するリソースを準備する。
 void FearWormEnemy::InitializeBeam()
 {
     // ビーム用クロスPlaneモデルのロード
@@ -1165,6 +1287,7 @@ void FearWormEnemy::InitializeBeam()
     beamRotateTheta_ = 0.0f;
 }
 
+// 頭の位置と狙いにビームを追従させ、ビーム状態を更新する。
 void FearWormEnemy::UpdateBeamAttack()
 {
     if (player_ == nullptr) {
@@ -1203,12 +1326,12 @@ void FearWormEnemy::UpdateBeamAttack()
     beamMuzzlePosition_ = headPos;
     UpdateBeamState(deltaTime);
 
-    // 1. 射向ベクトル (Lerpでゆっくり追従しているheadAimDirection_をそのままビームの進行方向軸とする)
+    // 射向ベクトル (Lerpでゆっくり追従しているheadAimDirection_をそのままビームの進行方向軸とする)
     Vector3 zAxis = headAimDirection_;
     float length = beamCurrentLength_;
     if (length < 0.001f) length = 0.001f;
 
-    // 2. 正規直交基底の作成 (仮の上方向と射向ベクトルの外積から右方向を算出)
+    // 正規直交基底の作成 (仮の上方向と射向ベクトルの外積から右方向を算出)
     Vector3 tempUp = { 0.0f, 1.0f, 0.0f };
     if (std::abs(zAxis.y) > 0.999f) {
         tempUp = { 0.0f, 0.0f, 1.0f }; // 真上・真下を向いている場合のフォールバック
@@ -1217,7 +1340,7 @@ void FearWormEnemy::UpdateBeamAttack()
     Vector3 xAxis = NormalizeSafe(Cross(tempUp, zAxis));
     Vector3 yAxis = Cross(zAxis, xAxis); // すでに直交かつ正規化されている
 
-    // 3. 進行方向(zAxis)まわりの自転適用 (xAxis と yAxis を theta で回転)
+    // 進行方向(zAxis)まわりの自転適用 (xAxis と yAxis を theta で回転)
     float cosT = std::cos(beamRotateTheta_);
     float sinT = std::sin(beamRotateTheta_);
 
@@ -1233,23 +1356,24 @@ void FearWormEnemy::UpdateBeamAttack()
         -xAxis.z * sinT + yAxis.z * cosT
     };
 
-    // 4. 回転行列の直接構築 (基底ベクトルを直接代入)
+    // 回転行列の直接構築 (基底ベクトルを直接代入)
     Matrix4x4 matRot = MatrixMath::MakeIdentity4x4();
     matRot.m[0][0] = xAxisRot.x;  matRot.m[0][1] = xAxisRot.y;  matRot.m[0][2] = xAxisRot.z;
     matRot.m[1][0] = yAxisRot.x;  matRot.m[1][1] = yAxisRot.y;  matRot.m[1][2] = yAxisRot.z;
     matRot.m[2][0] = zAxis.x;     matRot.m[2][1] = zAxis.y;     matRot.m[2][2] = zAxis.z;
 
-    // 5. スケールと平行移動の合成 (Scale -> Rotate -> Translate)
+    // スケールと平行移動の合成 (Scale -> Rotate -> Translate)
     Matrix4x4 matScale = MatrixMath::Matrix4x4MakeScaleMatrix({ beamCurrentWidth_, beamCurrentWidth_, length });
     Matrix4x4 matTrans = MatrixMath::MakeTranslateMatrix(headPos);
 
     Matrix4x4 worldMat = MatrixMath::Multiply(MatrixMath::Multiply(matScale, matRot), matTrans);
 
-    // 6. ワールド行列を直接設定
+    // ワールド行列を直接設定
     beamPlane_->SetCustomWorldMatrix(worldMat);
     beamPlane_->Update();
 }
 
+// 現在のビーム状態に必要な溜め演出や光線を描画する。
 void FearWormEnemy::DrawBeam()
 {
     if (GetBossState() == BossState::Wait || segments_.empty()) {
@@ -1271,6 +1395,7 @@ void FearWormEnemy::DrawBeam()
     }
 }
 
+// 発射中の光線とプレイヤーの距離を調べ、命中時のダメージを処理する。
 void FearWormEnemy::CheckBeamCollision()
 {
     isBeamHittingPlayer_ = false; // 毎フレーム初期化
@@ -1327,6 +1452,7 @@ void FearWormEnemy::CheckBeamCollision()
     }
 }
 
+// 待機・溜め・発射・消失のうち、現在のビーム状態を進める。
 void FearWormEnemy::UpdateBeamState(float deltaTime)
 {
     switch (beamState_) {
@@ -1337,6 +1463,7 @@ void FearWormEnemy::UpdateBeamState(float deltaTime)
     }
 }
 
+// 次のビームを開始できる条件が整うまで待つ。
 void FearWormEnemy::UpdateBeamWait(float)
 {
     beamCurrentLength_ = 0.0f;
@@ -1345,6 +1472,7 @@ void FearWormEnemy::UpdateBeamWait(float)
     if (beamTimer_ >= 4.0f) ChangeBeamState(BeamState::Charge);
 }
 
+// 溜め時間と見た目を更新し、準備が終わったら発射へ移る。
 void FearWormEnemy::UpdateBeamCharge(float dt)
 {
     beamCurrentLength_ = 0.0f;
@@ -1359,6 +1487,7 @@ void FearWormEnemy::UpdateBeamCharge(float dt)
     if (beamTimer_ >= 1.5f) ChangeBeamState(BeamState::Fire);
 }
 
+// 発射時間を進め、時間切れでビームを消す状態へ移る。
 void FearWormEnemy::UpdateBeamFire(float dt)
 {
     beamCurrentLength_ = (std::min)(400.0f, beamCurrentLength_ + 1000.0f * dt);
@@ -1374,6 +1503,7 @@ void FearWormEnemy::UpdateBeamFire(float dt)
     if (beamTimer_ >= 3.0f) ChangeBeamState(BeamState::FadeOut);
 }
 
+// 光線を徐々に消し、次の発射までの待機状態へ戻す。
 void FearWormEnemy::UpdateBeamFadeOut(float dt)
 {
     beamCurrentWidth_ = (std::max)(0.0f, beamCurrentWidth_ - 8.0f * dt);
@@ -1382,6 +1512,7 @@ void FearWormEnemy::UpdateBeamFadeOut(float dt)
     if (beamTimer_ >= 0.5f) ChangeBeamState(BeamState::Wait);
 }
 
+// ビーム状態を切り替え、各状態のタイマーや表示を設定する。
 void FearWormEnemy::ChangeBeamState(BeamState state)
 {
     if (beamState_ == state) return;
@@ -1410,7 +1541,7 @@ void FearWormEnemy::ChangeBeamState(BeamState state)
 
 namespace {
 constexpr int32_t kWormSegmentCount = 10;
-constexpr float kBodyHp = 6.0f;
+constexpr float kBodyHp = 12.0f;
 constexpr float kBodyScale = 2.45f;
 constexpr float kHeadScale = 3.45f;
 constexpr float kTailScale = 2.15f;
@@ -1432,6 +1563,7 @@ constexpr float kGuardHitFlashDuration = 0.08f;
 constexpr float kMinimumHealth = 0.0001f;
 }
 
+// 頭・胴体・尾の部位データと描画オブジェクトを生成する。
 void FearWormEnemy::InitializeSegments(Model* model)
 {
     // 体のセグメントを初期化
@@ -1470,6 +1602,7 @@ void FearWormEnemy::InitializeSegments(Model* model)
     }
 }
 
+// 計算済みの部位位置と向きを、描画用のオブジェクトへ反映する。
 void FearWormEnemy::UpdateSegmentObjects()
 {
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
@@ -1542,10 +1675,17 @@ void FearWormEnemy::UpdateSegmentObjects()
     }
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void FearWormEnemy::Draw()
 {
+    if (state_ == BossState::Entry && entrySurface_) {
+        entrySurface_->Draw();
+    }
     if (GetBossState() != BossState::Wait) {
         for (Segment& segment : segments_) {
+            if (state_ == BossState::Entry && segment.position.y + segment.scale.y < entryWaterHeight_) {
+                continue;
+            }
             if (!segment.isAlive) {
                 continue;
             }
@@ -1561,17 +1701,21 @@ void FearWormEnemy::Draw()
     DrawBeam();
 }
 
+// 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void FearWormEnemy::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (GetBossState() == BossState::Wait) { return; }
     for (Segment& segment : segments_) {
+        if (state_ == BossState::Entry && segment.position.y < entryWaterHeight_) { continue; }
         if (segment.isAlive && segment.object != nullptr) { segment.object->DrawShadow(renderer); }
     }
 }
 
+// 描画対象をレイトレーシング用のシーンへ登録する。
 void FearWormEnemy::SubmitRaytracing(DxrRenderer& renderer) {
     if (GetBossState() == BossState::Wait) { return; }
     for (const Segment& segment : segments_) {
+        if (state_ == BossState::Entry && segment.position.y < entryWaterHeight_) { continue; }
         if (segment.isAlive && segment.object) { segment.object->SubmitRaytracing(renderer); }
     }
     if (!segments_.empty() && segments_[0].isAlive && beamPlane_
@@ -1580,9 +1724,10 @@ void FearWormEnemy::SubmitRaytracing(DxrRenderer& renderer) {
     }
 }
 
+// 現在存在する部位の位置と半径を、衝突判定用の一覧へ書き出す。
 void FearWormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
 {
-    if (GetBossState() == BossState::Wait) {
+    if (GetBossState() == BossState::Wait || GetBossState() == BossState::Entry) {
         return;
     }
 
@@ -1603,8 +1748,10 @@ void FearWormEnemy::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) co
     }
 }
 
+// 部位が生存し、現在の状態でダメージを受けられるかを調べる。
 bool FearWormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
 {
+    if (state_ != BossState::Battle) { return false; }
     // 範囲外または破壊済みの部位にはダメージを通さない。
     if (!IsValidSegmentIndex(partIndex)) {
         return false;
@@ -1623,6 +1770,7 @@ bool FearWormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
     return true;
 }
 
+// 命中した部位のHPを減らし、破壊や頭の弱点状態の変化を反映する。
 void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
 {
     if (IsDead() || !std::isfinite(damage) || damage <= 0.0f) { return; }
@@ -1662,6 +1810,7 @@ void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
     }
 }
 
+// ダメージを防いだ部位に、ガードされたことが分かる演出を出す。
 void FearWormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& position)
 {
     if (!IsValidSegmentIndex(partIndex)) {
@@ -1673,21 +1822,25 @@ void FearWormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& pos
     PlayHeadGuardEffect(position);
 }
 
+// 胴体が破壊された位置に、破片や爆発の演出を出す。
 void FearWormEnemy::PlayBodyBreakEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect("WormBodyBreak", position);
 }
 
+// 頭が攻撃を防いだ位置へ、ガードのエフェクトを出す。
 void FearWormEnemy::PlayHeadGuardEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect("WormHeadGuard", position);
 }
 
+// 頭の弱点に命中した位置へ、ダメージのエフェクトを出す。
 void FearWormEnemy::PlayHeadVulnerableEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect("WormHeadVulnerable", position);
 }
 
+// 残りHPの割合を求め、速度や攻撃の変化に使う。
 float FearWormEnemy::HealthRate() const
 {
     float currentHealth = 0.0f;
@@ -1728,6 +1881,7 @@ float FearWormEnemy::HealthRate() const
     return healthRate;
 }
 
+// 生き残っている胴体部位があるかを確認する。
 bool FearWormEnemy::HasAliveBodyParts() const
 {
     // 先頭の頭部を除き、生存している胴体を探す。
@@ -1740,6 +1894,7 @@ bool FearWormEnemy::HasAliveBodyParts() const
     return false;
 }
 
+// 部位番号が配列の有効範囲内かを確認し、範囲外アクセスを防ぐ。
 bool FearWormEnemy::IsValidSegmentIndex(int32_t partIndex) const
 {
     // 負数と配列末尾より後ろの番号を無効とする。
@@ -1754,6 +1909,7 @@ bool FearWormEnemy::IsValidSegmentIndex(int32_t partIndex) const
     return true;
 }
 
+// 頭の残りHPを割合で返し、ボスのHP表示に使う。
 float FearWormEnemy::GetHeadHpFraction() const
 {
     if (segments_.empty()) {
@@ -1762,6 +1918,7 @@ float FearWormEnemy::GetHeadHpFraction() const
     return (std::max)(0.0f, segments_[0].hp) / kHeadHp;
 }
 
+// 胴体の残りHPをまとめて割合で返し、ボスのHP表示に使う。
 float FearWormEnemy::GetBodyHpFraction() const
 {
     if (segments_.size() <= 1) {

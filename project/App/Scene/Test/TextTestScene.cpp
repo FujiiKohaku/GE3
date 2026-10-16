@@ -1,3 +1,4 @@
+// フォント・文字配置・スクロールなど、テキスト表示の挙動を確認するための開発用シーン。
 #include "App/Scene/Test/TextTestScene.h"
 
 #include "Engine/2D/SpriteManager.h"
@@ -17,6 +18,7 @@ constexpr const char* kDefaultFont =
 constexpr Vector4 kBackgroundColor = { 0.012f, 0.018f, 0.038f, 1.0f };
 }
 
+// 表示を比較するフォントや文章を準備し、テキストの検証用配置を作る。
 void TextTestScene::Initialize()
 {
     Object3dManager::GetInstance()->SetDefaultCamera(nullptr);
@@ -126,6 +128,7 @@ void TextTestScene::Finalize()
 {
 }
 
+// 入力や経過時間に応じて、検証用テキストの表示状態を更新する。
 void TextTestScene::Update()
 {
     if (Input::GetInstance()->IsKeyTrigger(DIK_BACKSPACE)) {
@@ -151,6 +154,7 @@ void TextTestScene::Update()
     instructionText_->Update();
 }
 
+// 検証用の文字を描画し、フォントや配置の違いを画面で確認する。
 void TextTestScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
@@ -170,14 +174,17 @@ void TextTestScene::Draw2D()
     instructionText_->Draw();
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void TextTestScene::Draw3D()
 {
 }
 
+// このシーンではこの描画経路を使用しないため、処理を行わない。
 void TextTestScene::DrawParticle()
 {
 }
 
+// 開発用の画面に内部状態や調整項目を表示する。
 void TextTestScene::DrawImGui()
 {
 #ifdef USE_IMGUI

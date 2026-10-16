@@ -42,31 +42,39 @@ void TestInstalledArchOpening()
 {
     LevelDataLoader loader;
     const LevelData level = loader.Load("project/resources/Scenes/stage01.json");
-    int wallCount = 0;
-    int groundCount = 0;
+    int mountainCount = 0;
     for (const LevelData::ObjectData& object : level.objects) {
-        if (object.name == "Gate01_FloatingRuins_ground") {
-            ++groundCount;
-            assert(object.collider.exists);
-        }
-        if (object.name != "Gate01_FloatingRuins_masonry") { continue; }
-        ++wallCount;
-        assert(object.translation.x == 0 && object.translation.y == -7 && object.translation.z == 240);
-        assert(object.scale.x == 6 && object.scale.y == 4 && object.scale.z == 2);
-        assert(object.colliders.size() == 17);
+        assert(object.name != "Gate01_FloatingRuins_ground" && object.name != "Gate01_FloatingRuins_masonry");
+        if (object.name != "Stage01_MountainRuins") { continue; }
+        ++mountainCount;
+        assert(object.fileName == "Environment/MountainRuins/rock_mountain_ruins.obj");
+        assert(object.translation.x == 0 && object.translation.y == -30 && object.translation.z == 440);
+        assert(object.scale.x == 14.0f && object.scale.y == 9.5f && object.scale.z == 9.5f);
+        assert(std::abs(object.rotation.y - 3.14159265f) < 0.00001f);
+        assert(object.colliders.size() == 32);
         bool hasLeftWall = false;
         bool hasArchTop = false;
         for (const LevelData::ObjectData::ColliderData& box : object.colliders) {
-            // World height zero corresponds to local offset seven at this placement.
-            assert(!ContainsPoint(box, { 0, 7, -0.72f }));
-            assert(!ContainsPoint(box, { 5, 7, -0.72f }));
-            assert(!ContainsPoint(box, { -5, 7, -0.72f }));
-            hasLeftWall = hasLeftWall || ContainsPoint(box, { -20, 9, -0.72f });
-            hasArchTop = hasArchTop || ContainsPoint(box, { 0, 14.5f, -0.72f });
+            assert(box.size.x > 0 && box.size.y > 0 && box.size.z > 0);
+            for (float positionX : { -16.0f, 0.0f, 16.0f }) {
+                for (float height : { -5.0f, 0.0f, 5.0f }) {
+                    for (float progress = 370.0f; progress <= 520.0f; progress += 2.0f) {
+                        const Vector3 point { positionX, height, progress };
+                        const Vector3 center { object.translation.x + box.center.x,
+                            object.translation.y + box.center.y, object.translation.z + box.center.z };
+                        const float deltaX = (std::max)(0.0f, std::abs(point.x - center.x) - box.size.x * 0.5f);
+                        const float deltaY = (std::max)(0.0f, std::abs(point.y - center.y) - box.size.y * 0.5f);
+                        const float deltaZ = (std::max)(0.0f, std::abs(point.z - center.z) - box.size.z * 0.5f);
+                        assert(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ > 1.5f * 1.5f);
+                    }
+                }
+            }
+            hasLeftWall = hasLeftWall || ContainsPoint(box, { -50, 30, 0 });
+            hasArchTop = hasArchTop || ContainsPoint(box, { 0, 80, 0 });
         }
         assert(hasLeftWall && hasArchTop);
     }
-    assert(wallCount == 1 && groundCount == 1);
+    assert(mountainCount == 1);
 }
 
 void TestSlalomPassage()

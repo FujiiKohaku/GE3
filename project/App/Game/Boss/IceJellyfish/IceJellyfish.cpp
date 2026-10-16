@@ -1,7 +1,7 @@
+// 頭・触手・氷柱で構成するボス。攻撃パターン、部位ごとのHPと当たり判定を扱う。
 #include "IceJellyfish.h"
-#include "IceJellyfishCollision.h"
 
-#include "App/Game/Enemy/Bullet/NormalEnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
@@ -81,6 +81,7 @@ Vector4 LerpColor(const Vector4& from, const Vector4& to, float t)
 }
 }
 
+// モデルと描画設定から、ボスの一部として使うオブジェクトを生成する。
 std::unique_ptr<Object3d> IceJellyfish::CreatePart(
     Camera* camera, const char* modelPath, const Vector4& color, bool ice)
 {
@@ -99,6 +100,7 @@ std::unique_ptr<Object3d> IceJellyfish::CreatePart(
     return object;
 }
 
+// 頭・触手・結晶と氷柱を用意し、攻撃と部位HPを初期状態にする。
 void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player)
 {
     camera_ = camera;
@@ -165,6 +167,7 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     UpdatePartTransforms();
 }
 
+// 配置の基準位置を変更し、部位の位置も更新する。
 void IceJellyfish::SetPosition(const Vector3& position)
 {
     basePosition_ = position;
@@ -175,6 +178,19 @@ void IceJellyfish::SetPosition(const Vector3& position)
     UpdatePartTransforms();
 }
 
+// 登場や撃破演出が参照する頭・胴体などの位置をまとめる。
+IceJellyfish::PresentationPositions IceJellyfish::GetPresentationPositions() const
+{
+    const Vector3 position = GetPosition();
+    PresentationPositions positions;
+    positions.spotLightPosition = position + Vector3 { -55.0f, 100.0f, -45.0f };
+    positions.pointLightPosition = position + Vector3 { 45.0f, 20.0f, -35.0f };
+    positions.fogCenters[0] = { position.x, 4.0f, position.z };
+    positions.fogCenters[1] = position + Vector3 { 0.0f, 25.0f, 0.0f };
+    return positions;
+}
+
+// 生存状態を確認し、攻撃の進行と部位の姿勢を更新する。
 void IceJellyfish::Update()
 {
     const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
@@ -208,6 +224,7 @@ void IceJellyfish::Update()
     UpdatePartTransforms();
 }
 
+// 攻撃の経過時間を進め、パターンと個別攻撃を更新する。
 void IceJellyfish::UpdateAttackSequence(float floatPhase, float deltaTime)
 {
     UpdatePulseBarrageAttack(deltaTime);
@@ -226,6 +243,7 @@ void IceJellyfish::UpdateAttackSequence(float floatPhase, float deltaTime)
     pulseAttackArmed_ = false;
 }
 
+// 選ばれた触手から、狙い先に向けて氷槍の弾を発射する。
 void IceJellyfish::FireIceSpearVolley()
 {
     if (player_ == nullptr || bulletModel_ == nullptr) return;
@@ -275,6 +293,7 @@ void IceJellyfish::FireIceSpearVolley()
     }
 }
 
+// 氷柱を出す位置を決め、出現前に危険な場所を予告する。
 void IceJellyfish::PrepareIcePillarWarning()
 {
     if (player_ == nullptr || icePillarWave_ < 0 || icePillarWave_ >= 3) return;
@@ -295,6 +314,7 @@ void IceJellyfish::PrepareIcePillarWarning()
     }
 }
 
+// 攻撃パターンを切り替え、そのパターンの開始処理を実行する。
 void IceJellyfish::BeginPattern(AttackPattern pattern)
 {
     ExitPattern();
@@ -304,6 +324,7 @@ void IceJellyfish::BeginPattern(AttackPattern pattern)
     currentPattern_ = pattern;
     EnterPattern();
 }
+// 次に行う攻撃パターンを選び、戦闘の流れを切り替える。
 void IceJellyfish::SelectNextPattern()
 {
     if (phase_ == 1) {
@@ -328,6 +349,7 @@ void IceJellyfish::SelectNextPattern()
     BeginPattern(patterns[patternIndex_]);
 }
 
+// 現在の攻撃パターンに対応する動作を呼び出す。
 void IceJellyfish::UpdatePattern(float deltaTime)
 {
     previousAttackTimer_ = attackTimer_;
@@ -344,6 +366,7 @@ void IceJellyfish::UpdatePattern(float deltaTime)
         SelectNextPattern();
     }
 }
+// 同じ攻撃枠で連続してダメージを与えないよう、命中済みの記録を確認する。
 void IceJellyfish::DamagePlayerOnce(int slot, int damage)
 {
     if (player_ == nullptr || slot < 0 || slot >= static_cast<int>(attackHitApplied_.size()) ||
@@ -356,6 +379,7 @@ void IceJellyfish::DamagePlayerOnce(int slot, int damage)
     }
 }
 
+// プレイヤーを狙う方向を中心に、幅を持たせて弾を発射する。
 void IceJellyfish::FireAimedBurst(int count, float spread, float speed, int damage)
 {
     if (player_ == nullptr || bulletModel_ == nullptr || count <= 0) return;
@@ -374,6 +398,7 @@ void IceJellyfish::FireAimedBurst(int count, float spread, float speed, int dama
     }
 }
 
+// 周囲へ等間隔に弾を並べ、放射状の弾幕を作る。
 void IceJellyfish::FireRadialBurst(int count, float speed, int damage, float angleOffset)
 {
     if (bulletModel_ == nullptr || count <= 0) return;
@@ -393,6 +418,7 @@ void IceJellyfish::FireRadialBurst(int count, float speed, int damage, float ang
     }
 }
 
+// リング状に弾を配置して発射し、波のように広がる弾幕を作る。
 void IceJellyfish::FirePulseRing(
     int count, float spread, float speed, float angleOffset, bool includeCenter)
 {
@@ -431,12 +457,14 @@ void IceJellyfish::FirePulseRing(
     }
 }
 
+// 指定した触手の節が破壊されずに残っているかを調べる。
 bool IceJellyfish::IsSegmentAlive(size_t tentacle, size_t segment) const
 {
     const float segmentThreshold = kSegmentHp * static_cast<float>(segment);
     return tentacleHp_[tentacle] > segmentThreshold;
 }
 
+// すべての触手の破壊状態を確認する。
 bool IceJellyfish::AreAllTentaclesDestroyed() const
 {
     for (float hp : tentacleHp_) {
@@ -445,6 +473,7 @@ bool IceJellyfish::AreAllTentaclesDestroyed() const
     return true;
 }
 
+// 指定した節が、氷槍の発射元になるかを調べる。
 bool IceJellyfish::IsIceSpearEmitter(size_t tentacle, size_t segment) const
 {
     if (iceSpearVolley_ < 0 || !IsSegmentAlive(tentacle, segment)) return false;
@@ -452,6 +481,7 @@ bool IceJellyfish::IsIceSpearEmitter(size_t tentacle, size_t segment) const
     return segment + 1 == kSegmentsPerTentacle || !IsSegmentAlive(tentacle, segment + 1);
 }
 
+// 今回の氷槍攻撃で使う触手かを確認する。
 bool IceJellyfish::IsIceSpearTentacleSelected(size_t tentacle) const
 {
     if (iceSpearVolley_ < 0) return false;
@@ -463,6 +493,7 @@ bool IceJellyfish::IsIceSpearTentacleSelected(size_t tentacle) const
     return false;
 }
 
+// 触手ごとの発射方向に使う狙い先を求める。
 Vector3 IceJellyfish::GetIceSpearAimTarget(size_t tentacle) const
 {
     constexpr std::array<Vector3, 3> targetOffsets = {
@@ -478,11 +509,13 @@ Vector3 IceJellyfish::GetIceSpearAimTarget(size_t tentacle) const
     return lockedTarget_;
 }
 
+// 触手番号と節番号を、当たり判定で共通に使う部位番号へ変換する。
 int32_t IceJellyfish::SegmentPartIndex(size_t tentacle, size_t segment) const
 {
     return kFirstSegmentPart + static_cast<int32_t>(tentacle * kSegmentsPerTentacle + segment);
 }
 
+// 攻撃の姿勢と揺れを反映して、頭や触手の位置・回転・大きさを更新する。
 void IceJellyfish::UpdatePartTransforms()
 {
     if (bell_ == nullptr) return;
@@ -524,7 +557,7 @@ void IceJellyfish::UpdatePartTransforms()
     core_->Update();
     coreCollider_ = { MatrixMath::Transform({}, core_->GetWorldMatrix()), 3.6f * coreScale };
 
-    IceJellyfishCollision::BuildBell(bodyMatrix, pulse, bellColliders_);
+    BuildBellColliders(bodyMatrix, pulse, bellColliders_);
     tentacleColliders_.clear();
     tentacleColliderParts_.clear();
 
@@ -643,7 +676,7 @@ void IceJellyfish::UpdatePartTransforms()
                 (1.2f + object.GetModelBoundsRadius() * 0.020f));
             object.Update();
             if (IsSegmentAlive(tentacle, segment)) {
-                tentacleColliders_.push_back(IceJellyfishCollision::TransformBox(
+                tentacleColliders_.push_back(MakeCollisionBox(
                     object.GetWorldMatrix(), { 0.0f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }));
                 tentacleColliderParts_.push_back(SegmentPartIndex(tentacle, segment));
             }
@@ -655,6 +688,7 @@ void IceJellyfish::UpdatePartTransforms()
     UpdateIcePillarModelTransforms();
 }
 
+// ボス周辺の結晶を、現在の姿勢と演出状態へ追従させる。
 void IceJellyfish::UpdateCrystalTransforms()
 {
     constexpr std::array<Vector3, 4> offsets = {
@@ -673,6 +707,7 @@ void IceJellyfish::UpdateCrystalTransforms()
     }
 }
 
+// 氷柱の出現状態を、表示位置と大きさへ反映する。
 void IceJellyfish::UpdateIcePillarModelTransforms()
 {
     if (!icePillarModelSpawnedForWave_) return;
@@ -693,6 +728,7 @@ void IceJellyfish::UpdateIcePillarModelTransforms()
     }
 }
 
+// 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) { return; }
@@ -715,6 +751,7 @@ void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
     }
 }
 
+// 現在表示するモデルや追加パーツを描画する。
 void IceJellyfish::Draw()
 {
     if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) return;
@@ -745,6 +782,7 @@ void IceJellyfish::Draw()
     }
 }
 
+// 描画対象をレイトレーシング用のシーンへ登録する。
 void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
     if (!bell_ || !camera_ || (IsDead() && deathTimer_ >= 2.0f)) { return; }
     for (size_t crystalIndex = 0; crystalIndex < crystals_.size(); ++crystalIndex) {
@@ -768,6 +806,7 @@ void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
     }
 }
 
+// 弾の移動区間と各部位を調べ、最も手前で当たった部位を返す。
 SweepHit IceJellyfish::SweepBullet(
     const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const
 {
@@ -796,6 +835,7 @@ SweepHit IceJellyfish::SweepBullet(
     return nearest;
 }
 
+// 命中した部位へダメージを渡し、命中位置を使う演出につなげる。
 void IceJellyfish::OnBulletHit(int32_t partIndex, float damage, const Vector3& position)
 {
     if (IsCollisionPartDamageable(partIndex)) {
@@ -806,6 +846,7 @@ void IceJellyfish::OnBulletHit(int32_t partIndex, float damage, const Vector3& p
     }
 }
 
+// 指定部位が現在ダメージを受けられるかを確認する。
 bool IceJellyfish::IsCollisionPartDamageable(int32_t partIndex) const
 {
     if (partIndex == kCorePart) return coreExposed_;
@@ -821,6 +862,7 @@ bool IceJellyfish::IsCollisionPartDamageable(int32_t partIndex) const
     return false;
 }
 
+// 頭や触手など、命中先の部位に対応するHPを減らす。
 void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
 {
     if (IsDead() || !std::isfinite(damage) || damage <= 0.0f) return;
@@ -860,11 +902,13 @@ void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
     }
 }
 
+// 防御中の部位に命中したことを、エフェクトで伝える。
 void IceJellyfish::OnCollisionPartGuarded(int32_t, const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect("HitEffect", position);
 }
 
+// 現在の部位配置を、接触判定に使う球の一覧へ変換する。
 void IceJellyfish::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const
 {
     parts.clear();
@@ -876,6 +920,7 @@ void IceJellyfish::GetCollisionParts(std::vector<EnemyCollisionPart>& parts) con
     }
 }
 
+// 照準が頭や触手を狙えるように、各部位をレイ判定へ登録する。
 void IceJellyfish::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
 {
     if (bell_ == nullptr || IsDead()) return;
@@ -892,6 +937,7 @@ void IceJellyfish::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
     manager->RegisterRaycastSphereTarget(nextObjectId++, coreCollider_);
 }
 
+// 部位や特殊攻撃の当たり判定を、開発用の線で可視化する。
 void IceJellyfish::DrawCollisionDebug() const
 {
     if (bell_ == nullptr || IsDead()) return;
@@ -925,11 +971,13 @@ void IceJellyfish::DrawCollisionDebug() const
         { 1.0f, 0.6f, 0.1f, 1.0f }, 2.0f);
 }
 
+// 頭の残りHPをHUD用の割合として返す。
 float IceJellyfish::GetHeadHpFraction() const
 {
     return std::clamp(GetHealth() / kMaxHp, 0.0f, 1.0f);
 }
 
+// 触手などの残りHPをHUD用の割合として返す。
 float IceJellyfish::GetBodyHpFraction() const
 {
     float remaining = 0.0f;
@@ -945,6 +993,7 @@ void IceJellyfish::StartPulseBarrageAttack()
     pulseBarrageTimer_ = 0.0f;
 }
 
+// 発射間隔に合わせてリング弾を放ち、攻撃時間を進める。
 void IceJellyfish::UpdatePulseBarrageAttack(float deltaTime)
 {
     if (pulseBarrageWave_ >= 0) {
@@ -976,6 +1025,7 @@ void IceJellyfish::UpdatePulseBarrageAttack(float deltaTime)
 
 }
 
+// 氷槍を撃つ触手や狙い先を準備する。
 void IceJellyfish::StartIceSpearAttack()
 {
     iceSpearTentacles_.fill(-1);
@@ -1002,6 +1052,7 @@ void IceJellyfish::StartIceSpearAttack()
     iceSpearPoseWeight_ = 0.0f;
 }
 
+// 氷槍の予備動作と発射タイミングを進める。
 void IceJellyfish::UpdateIceSpearAttack(float deltaTime)
 {
     if (iceSpearVolley_ >= 0) {
@@ -1025,6 +1076,7 @@ void IceJellyfish::UpdateIceSpearAttack(float deltaTime)
 
 }
 
+// 氷柱攻撃のタイマーと予告位置を準備する。
 void IceJellyfish::StartIcePillarAttack()
 {
     if (player_ == nullptr || icePillarWave_ >= 0) return;
@@ -1037,6 +1089,7 @@ void IceJellyfish::StartIcePillarAttack()
     PrepareIcePillarWarning();
 }
 
+// 予告から氷柱の出現・命中判定・消失までを進める。
 void IceJellyfish::UpdateIcePillarAttack(float deltaTime)
 {
     if (icePillarWave_ < 0) return;
@@ -1114,6 +1167,7 @@ void IceJellyfish::EnterPattern()
     }
 }
 
+// パターン終了時に攻撃状態や表示を片付ける。
 void IceJellyfish::ExitPattern()
 {
     if (currentPattern_ == AttackPattern::CrystalPrison) {
@@ -1121,6 +1175,7 @@ void IceJellyfish::ExitPattern()
     }
 }
 
+// 凍結した掃引攻撃の進行に合わせて、射撃や姿勢を更新する。
 void IceJellyfish::UpdateFrozenSweepPattern()
 {
     if (Crossed(previousAttackTimer_, attackTimer_, 0.8f) && player_ != nullptr) {
@@ -1137,6 +1192,7 @@ void IceJellyfish::UpdateFrozenSweepPattern()
     coreExposed_ = AreAllTentaclesDestroyed();
 }
 
+// 氷の弾が広がる攻撃パターンを進める。
 void IceJellyfish::UpdateIcicleBloomPattern()
 {
     int32_t waves = 3;
@@ -1153,6 +1209,7 @@ void IceJellyfish::UpdateIcicleBloomPattern()
     coreExposed_ = AreAllTentaclesDestroyed();
 }
 
+// 触手を突き出す攻撃パターンを進める。
 void IceJellyfish::UpdateTentacleThrustPattern()
 {
     if (Crossed(previousAttackTimer_, attackTimer_, 0.9f) && player_ != nullptr) {
@@ -1171,6 +1228,7 @@ void IceJellyfish::UpdateTentacleThrustPattern()
     coreExposed_ = AreAllTentaclesDestroyed();
 }
 
+// 吹雪のように弾を流す攻撃パターンを進める。
 void IceJellyfish::UpdateBlizzardCurrentPattern()
 {
     if (player_ != nullptr && attackTimer_ >= 1.0f && attackTimer_ < 5.2f) {
@@ -1189,6 +1247,7 @@ void IceJellyfish::UpdateBlizzardCurrentPattern()
     coreExposed_ = AreAllTentaclesDestroyed();
 }
 
+// 結晶で囲む攻撃パターンを進める。
 void IceJellyfish::UpdateCrystalPrisonPattern()
 {
     UpdateCrystalTransforms();
@@ -1208,6 +1267,7 @@ void IceJellyfish::UpdateCrystalPrisonPattern()
     coreExposed_ = AreAllTentaclesDestroyed();
 }
 
+// 最終段階の複合攻撃パターンを進める。
 void IceJellyfish::UpdateAbsoluteZeroPattern()
 {
     int32_t released = 0;
@@ -1225,6 +1285,7 @@ void IceJellyfish::UpdateAbsoluteZeroPattern()
     }
 }
 
+// 攻撃の種類と段階に応じた継続時間を返す。
 float IceJellyfish::GetPatternDuration(AttackPattern pattern, int phase)
 {
     switch (pattern) {
@@ -1239,6 +1300,7 @@ float IceJellyfish::GetPatternDuration(AttackPattern pattern, int phase)
     }
 }
 
+// 今回の命中が現在の候補より手前なら、命中結果と部位番号を置き換える。
 void IceJellyfish::ConsiderNearestHit(SweepHit& nearest, int32_t& partIndex,
     const SweepHit& hit, int32_t candidatePart)
 {

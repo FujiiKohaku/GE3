@@ -1,5 +1,4 @@
-#include "App/Game/Player/Movement/Roll/PlayerRollController.h"
-#include "App/Game/Player/Movement/Steering/PlayerSteeringController.h"
+#include "Tests/PlayerTestAccess.h"
 #include <cassert>
 #include <cmath>
 
@@ -11,45 +10,45 @@ bool IsNear(float actual, float expected)
 
 void TestRollDurationAndCooldown()
 {
-    PlayerRollController roll;
+    Player roll;
     EulerTransform transform{};
-    roll.Update(transform, true, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
     assert(!roll.IsRolling());
-    roll.Update(transform, true, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
     assert(roll.IsRolling());
-    roll.Update(transform, false, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, false);
     assert(transform.rotate.z > 0.0f);
     for (int frameIndex = 0; frameIndex < 28; ++frameIndex) {
-        roll.Update(transform, false, false);
+        PlayerTestAccess::UpdateRoll(roll, transform, false, false);
     }
     assert(roll.IsRolling());
-    roll.Update(transform, false, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, false);
     assert(!roll.IsRolling());
     assert(transform.rotate.z == 0.0f);
-    roll.Update(transform, false, true);
-    roll.Update(transform, false, true);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
     assert(!roll.IsRolling());
     for (int frameIndex = 0; frameIndex < 58; ++frameIndex) {
-        roll.Update(transform, false, false);
+        PlayerTestAccess::UpdateRoll(roll, transform, false, false);
     }
-    roll.Update(transform, false, true);
-    roll.Update(transform, false, true);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
     assert(roll.IsRolling());
-    roll.Update(transform, false, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, false, false);
     assert(transform.rotate.z < 0.0f);
-    roll.Stop();
+    PlayerTestAccess::StopRoll(roll);
     assert(!roll.IsRolling());
 }
 
 void TestRollTapExpiry()
 {
-    PlayerRollController roll;
+    Player roll;
     EulerTransform transform{};
-    roll.Update(transform, true, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
     for (int frameIndex = 0; frameIndex < 15; ++frameIndex) {
-        roll.Update(transform, false, false);
+        PlayerTestAccess::UpdateRoll(roll, transform, false, false);
     }
-    roll.Update(transform, true, false);
+    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
     assert(!roll.IsRolling());
 }
 
@@ -57,18 +56,18 @@ void TestRollAtDifferentFrameRates()
 {
     const int frameRates[] = { 30, 120 };
     for (int framesPerSecond : frameRates) {
-        PlayerRollController roll;
+        Player roll;
         EulerTransform transform{};
         const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
-        roll.Update(transform, true, false, deltaTimeSeconds);
-        roll.Update(transform, true, false, deltaTimeSeconds);
+        PlayerTestAccess::UpdateRoll(roll, transform, true, false, deltaTimeSeconds);
+        PlayerTestAccess::UpdateRoll(roll, transform, true, false, deltaTimeSeconds);
         assert(roll.IsRolling());
         const int durationFrames = framesPerSecond / 2;
         for (int frameIndex = 0; frameIndex < durationFrames - 1; ++frameIndex) {
-            roll.Update(transform, false, false, deltaTimeSeconds);
+            PlayerTestAccess::UpdateRoll(roll, transform, false, false, deltaTimeSeconds);
         }
         assert(roll.IsRolling());
-        roll.Update(transform, false, false, deltaTimeSeconds);
+        PlayerTestAccess::UpdateRoll(roll, transform, false, false, deltaTimeSeconds);
         assert(!roll.IsRolling());
         assert(transform.rotate.z == 0.0f);
     }
@@ -76,33 +75,33 @@ void TestRollAtDifferentFrameRates()
 
 void TestSteeringDeadZoneAndReset()
 {
-    PlayerSteeringController steering;
+    Player steering;
     const Vector2 screenSizePixels{ 1280.0f, 720.0f };
-    steering.Update({ 650.0f, 360.0f }, screenSizePixels, false, 1.0f / 60.0f);
-    assert(steering.GetSteeringInput().x == 0.0f);
-    steering.Update({ 1280.0f, 0.0f }, screenSizePixels, false, 1.0f / 60.0f);
-    assert(IsNear(steering.GetSteeringInput().x, 1.0f));
-    assert(IsNear(steering.GetSteeringInput().y, 1.0f));
-    steering.Update({ 640.0f, 360.0f }, { 0.0f, 720.0f }, false, 1.0f / 60.0f);
-    assert(IsNear(steering.GetSteeringInput().x, 1.0f));
-    steering.Reset();
-    assert(steering.GetSteeringInput().x == 0.0f);
-    assert(steering.GetSteeringInput().y == 0.0f);
+    PlayerTestAccess::UpdateSteering(steering, { 650.0f, 360.0f }, screenSizePixels, false, 1.0f / 60.0f);
+    assert(steering.GetStarFoxSteeringInput().x == 0.0f);
+    PlayerTestAccess::UpdateSteering(steering, { 1280.0f, 0.0f }, screenSizePixels, false, 1.0f / 60.0f);
+    assert(IsNear(steering.GetStarFoxSteeringInput().x, 1.0f));
+    assert(IsNear(steering.GetStarFoxSteeringInput().y, 1.0f));
+    PlayerTestAccess::UpdateSteering(steering, { 640.0f, 360.0f }, { 0.0f, 720.0f }, false, 1.0f / 60.0f);
+    assert(IsNear(steering.GetStarFoxSteeringInput().x, 1.0f));
+    PlayerTestAccess::ResetSteering(steering);
+    assert(steering.GetStarFoxSteeringInput().x == 0.0f);
+    assert(steering.GetStarFoxSteeringInput().y == 0.0f);
 }
 
 void TestAllRangeSteeringTimeStep()
 {
-    PlayerSteeringController fullStep;
-    PlayerSteeringController halfStep;
+    Player fullStep;
+    Player halfStep;
     const Vector2 aimPosition{ 1280.0f, 360.0f };
     const Vector2 screenSizePixels{ 1280.0f, 720.0f };
-    fullStep.Update(aimPosition, screenSizePixels, true, 1.0f / 60.0f);
-    halfStep.Update(aimPosition, screenSizePixels, true, 1.0f / 120.0f);
-    halfStep.Update(aimPosition, screenSizePixels, true, 1.0f / 120.0f);
-    assert(IsNear(fullStep.GetSteeringInput().x, halfStep.GetSteeringInput().x));
-    const float previousInput = fullStep.GetSteeringInput().x;
-    fullStep.Update(aimPosition, screenSizePixels, true, 0.0f);
-    assert(fullStep.GetSteeringInput().x == previousInput);
+    PlayerTestAccess::UpdateSteering(fullStep, aimPosition, screenSizePixels, true, 1.0f / 60.0f);
+    PlayerTestAccess::UpdateSteering(halfStep, aimPosition, screenSizePixels, true, 1.0f / 120.0f);
+    PlayerTestAccess::UpdateSteering(halfStep, aimPosition, screenSizePixels, true, 1.0f / 120.0f);
+    assert(IsNear(fullStep.GetStarFoxSteeringInput().x, halfStep.GetStarFoxSteeringInput().x));
+    const float previousInput = fullStep.GetStarFoxSteeringInput().x;
+    PlayerTestAccess::UpdateSteering(fullStep, aimPosition, screenSizePixels, true, 0.0f);
+    assert(fullStep.GetStarFoxSteeringInput().x == previousInput);
     fullStep.SetMouseSensitivity(0.0f);
     assert(fullStep.GetMouseSensitivity() == 0.5f);
     fullStep.SetMouseSensitivity(100.0f);
@@ -113,22 +112,22 @@ void TestGamepadSteeringIndependentOfMouse()
 {
     const bool modes[] = { false, true };
     for (bool allRange : modes) {
-        PlayerSteeringController padLowMouse;
-        PlayerSteeringController padHighMouse;
+        Player padLowMouse;
+        Player padHighMouse;
         padLowMouse.SetMouseSensitivity(0.5f);
         padHighMouse.SetMouseSensitivity(2.0f);
         const Vector2 aim{ 1120.0f, 90.0f };
         const Vector2 size{ 1280.0f, 720.0f };
-        padLowMouse.Update(aim, size, allRange, 1.0f / 60.0f, true);
-        padHighMouse.Update(aim, size, allRange, 1.0f / 60.0f, true);
-        assert(IsNear(padLowMouse.GetSteeringInput().x, 0.75f));
-        assert(IsNear(padLowMouse.GetSteeringInput().y, 0.75f));
-        assert(IsNear(padLowMouse.GetSteeringInput().x, padHighMouse.GetSteeringInput().x));
-        assert(IsNear(padLowMouse.GetSteeringInput().y, padHighMouse.GetSteeringInput().y));
-        padLowMouse.Reset();
-        padLowMouse.Update({ 644.0f, 356.0f }, size, allRange, 1.0f / 60.0f, true);
-        assert(padLowMouse.GetSteeringInput().x > 0.0f);
-        assert(padLowMouse.GetSteeringInput().y > 0.0f);
+        PlayerTestAccess::UpdateSteering(padLowMouse, aim, size, allRange, 1.0f / 60.0f, true);
+        PlayerTestAccess::UpdateSteering(padHighMouse, aim, size, allRange, 1.0f / 60.0f, true);
+        assert(IsNear(padLowMouse.GetStarFoxSteeringInput().x, 0.75f));
+        assert(IsNear(padLowMouse.GetStarFoxSteeringInput().y, 0.75f));
+        assert(IsNear(padLowMouse.GetStarFoxSteeringInput().x, padHighMouse.GetStarFoxSteeringInput().x));
+        assert(IsNear(padLowMouse.GetStarFoxSteeringInput().y, padHighMouse.GetStarFoxSteeringInput().y));
+        PlayerTestAccess::ResetSteering(padLowMouse);
+        PlayerTestAccess::UpdateSteering(padLowMouse, { 644.0f, 356.0f }, size, allRange, 1.0f / 60.0f, true);
+        assert(padLowMouse.GetStarFoxSteeringInput().x > 0.0f);
+        assert(padLowMouse.GetStarFoxSteeringInput().y > 0.0f);
     }
 }
 
@@ -138,18 +137,18 @@ void TestGamepadImmediateFollowAndReversal()
     const int frameRates[] = { 30, 60, 120 };
     for (bool allRange : modes) {
         for (int framesPerSecond : frameRates) {
-            PlayerSteeringController steering;
+            Player steering;
             const float dt = 1.0f / static_cast<float>(framesPerSecond);
             const Vector2 size{ 1280.0f, 720.0f };
-            steering.Update({ 1120.0f, 90.0f }, size, allRange, dt, true);
-            assert(IsNear(steering.GetSteeringInput().x, 0.75f));
-            assert(IsNear(steering.GetSteeringInput().y, 0.75f));
-            steering.Update({ 160.0f, 630.0f }, size, allRange, dt, true);
-            assert(IsNear(steering.GetSteeringInput().x, -0.75f));
-            assert(IsNear(steering.GetSteeringInput().y, -0.75f));
-            steering.Update({ 640.0f, 360.0f }, size, allRange, dt, true);
-            assert(steering.GetSteeringInput().x == 0.0f);
-            assert(steering.GetSteeringInput().y == 0.0f);
+            PlayerTestAccess::UpdateSteering(steering, { 1120.0f, 90.0f }, size, allRange, dt, true);
+            assert(IsNear(steering.GetStarFoxSteeringInput().x, 0.75f));
+            assert(IsNear(steering.GetStarFoxSteeringInput().y, 0.75f));
+            PlayerTestAccess::UpdateSteering(steering, { 160.0f, 630.0f }, size, allRange, dt, true);
+            assert(IsNear(steering.GetStarFoxSteeringInput().x, -0.75f));
+            assert(IsNear(steering.GetStarFoxSteeringInput().y, -0.75f));
+            PlayerTestAccess::UpdateSteering(steering, { 640.0f, 360.0f }, size, allRange, dt, true);
+            assert(steering.GetStarFoxSteeringInput().x == 0.0f);
+            assert(steering.GetStarFoxSteeringInput().y == 0.0f);
         }
     }
 }

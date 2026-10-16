@@ -1,3 +1,4 @@
+// 移動敵とクラゲボスの内部状態を、開発用の画面から確認できるようにする。
 #include "BaseEnemyDebugView.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"

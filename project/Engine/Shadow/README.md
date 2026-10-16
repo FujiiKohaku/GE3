@@ -99,7 +99,7 @@ the shadow ON/OFF comparison and requires a visible pixel difference.
 
 ## Dynamic actors
 
-Player, normal enemies, pirate mid-boss, FearWorm segments, AngerBlock parts,
+Player, normal enemies, FearWorm segments,
 and opaque IceJellyfish core/crystals/pillars cast shadows through the same
 culled depth pass. Destroyed parts and player blink visibility follow normal
 rendering. Toon and Standard receivers select shadow-aware materials while

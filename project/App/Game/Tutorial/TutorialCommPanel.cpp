@@ -1,3 +1,4 @@
+// チュートリアルのメッセージ・操作ボタン・達成状況をパネルとして描画する。
 #include "TutorialCommPanel.h"
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
@@ -10,6 +11,7 @@ constexpr Vector4 kCyan { 0.18f, 0.86f, 1.0f, 1.0f };
 constexpr const char* kFont = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
 }
 
+// パネルの文字と図形を準備し、表示を開始できる状態にする。
 void TutorialCommPanel::Initialize()
 {
     parts_.clear();
@@ -41,6 +43,7 @@ void TutorialCommPanel::Initialize()
     Update(0.0f);
 }
 
+// 説明文・操作文・ボタン一覧を受け取り、現在の案内表示を更新する。
 void TutorialCommPanel::ShowMessage(const std::string& message, const std::string& operation,
     const std::vector<std::string>& buttons)
 {
@@ -63,6 +66,7 @@ void TutorialCommPanel::SetProgress(int completed, int total)
     completed_ = std::clamp(completed, 0, total_);
 }
 
+// 表示の透明度や経過時間を進め、パネルの位置と文字・図形の配置を更新する。
 void TutorialCommPanel::Update(float deltaTime)
 {
     if (!header_) return;
@@ -213,6 +217,7 @@ void TutorialCommPanel::Update(float deltaTime)
     }
 }
 
+// 現在使用しているパネル部品と文字を描画する。
 void TutorialCommPanel::Draw()
 {
     if (alpha_ < 0.001f) return;
@@ -228,6 +233,7 @@ void TutorialCommPanel::Draw()
     for (auto& label : buttonLabels_) label->Draw();
 }
 
+// パネル内で共通して使う設定のテキストを生成する。
 std::unique_ptr<Text> TutorialCommPanel::CreateText() const
 {
     auto text = std::make_unique<Text>();
@@ -236,6 +242,7 @@ std::unique_ptr<Text> TutorialCommPanel::CreateText() const
     return text;
 }
 
+// 描画用の矩形を用意し、位置・大きさ・色を設定する。
 void TutorialCommPanel::AddRectangle(float centerX, float centerY, float width, float height,
     Vector4 color, float rotation)
 {
@@ -255,6 +262,7 @@ void TutorialCommPanel::AddRectangle(float centerX, float centerY, float width, 
     sprite.Update();
 }
 
+// 始点と終点から長さと角度を求め、細い矩形で線を表す。
 void TutorialCommPanel::AddLine(float startX, float startY, float endX, float endY, Vector4 color)
 {
     const float differenceX = endX - startX;
@@ -264,6 +272,7 @@ void TutorialCommPanel::AddLine(float startX, float startY, float endX, float en
         std::atan2(differenceY, differenceX));
 }
 
+// 矩形と角の部品を組み合わせ、角を丸めたパネル形状を作る。
 void TutorialCommPanel::AddRoundedRectangle(float centerX, float centerY, float width, float height,
     float radius, Vector4 color)
 {
@@ -277,6 +286,7 @@ void TutorialCommPanel::AddRoundedRectangle(float centerX, float centerY, float 
     }
 }
 
+// 文字の表示位置・サイズ・色を現在のパネル配置に揃える。
 void TutorialCommPanel::UpdateText(Text& text, float x, float y, float fontSize, Vector4 color)
 {
     text.SetPosition({ panelPosition_.x + x * panelScale_, panelPosition_.y + y * panelScale_ });

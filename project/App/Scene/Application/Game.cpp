@@ -1,3 +1,4 @@
+// エンジン機能とシーンを起動し、毎フレームの入力・更新・描画と終了時の解放を統括する。
 #include "App/Scene/Application/Game.h"
 #include "Engine/Debug/Profiler/Profiler.h"
 #include "Engine/Debug/Profiler/BootProfiler.h"
@@ -65,6 +66,7 @@ uint64_t GetCurrentProcessCpuTime()
 #endif
 }
 
+// ウィンドウ・描画・入力・音声・シーンなど、アプリ全体で使う機能を準備する。
 void Game::Initialize()
 {
     auto prevTime = std::chrono::steady_clock::now();
@@ -174,6 +176,7 @@ void Game::Initialize()
     Logger::Log("Game Initialize End");
 }
 
+// 入力と各管理機能を更新し、現在のシーンを一フレーム進める。
 void Game::Update()
 {
     TimeManager::GetInstance()->Update();
@@ -287,11 +290,13 @@ void Game::Update()
     Profiler::GetInstance()->EndFrame();
 }
 
+// 描画処理を実行し、更新済みのゲーム画面を表示する。
 void Game::Draw()
 {
     renderer_->Draw(SceneManager::GetInstance());
 }
 
+// シーンやエンジン機能を終了し、確保したリソースを解放する。
 void Game::Finalize()
 {
     Logger::Log("Game Finalize Start");
@@ -338,6 +343,7 @@ void Game::Finalize()
 }
 
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
+// 性能計測ログを記録するための出力先と開始状態を準備する。
 void Game::InitializePerformanceLog()
 {
     SYSTEM_INFO systemInfo {};
@@ -352,6 +358,7 @@ void Game::InitializePerformanceLog()
     performanceLogFrameCount_ = 0;
 }
 
+// フレームの計測値を集計し、一定の間隔で性能ログへ書き出す。
 void Game::UpdatePerformanceLog()
 {
     performanceLogFrameCount_++;
@@ -415,6 +422,7 @@ void Game::UpdatePerformanceLog()
 }
 #endif
 
+// 操作中にマウスがゲームの表示範囲から出ないようにする。
 void Game::LockCursorToWindow()
 {
     HWND hwnd = WinApp::GetInstance()->GetHwnd();
@@ -442,6 +450,7 @@ void Game::LockCursorToWindow()
     ClipCursor(&clipRect);
 }
 
+// ウィンドウへのマウス固定を解除し、通常のカーソル操作へ戻す。
 void Game::UnlockCursor()
 {
     ClipCursor(nullptr);
