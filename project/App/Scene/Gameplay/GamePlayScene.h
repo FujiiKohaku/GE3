@@ -36,6 +36,7 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Stage/StageCatalog.h"
+#include "App/Game/Stage/NormalEnemyLevelTable.h"
 #include "App/Game/Tutorial/TutorialCommPanel.h"
 #include "App/Game/Tutorial/TutorialController.h"
 #include "App/Game/Hazard/WaterPillarHazard.h"
@@ -162,6 +163,7 @@ private:
     void UpdateCameraShakePostEffect();
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
     void ConfigureGameplayPostEffects(bool isPlayerBoosting);
+    void UpdateWeaponHeatPostEffect();
     void ApplyStageVisualPreset();
     void ApplyDevelopmentLighting();
     void ResetGameplayPostEffects();
@@ -305,6 +307,12 @@ private:
     Vector3 smoothedLookAheadPosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 smoothedCameraForward_ = { 0.0f, 0.0f, 1.0f };
     Vector2 smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
+    float weaponHeatEdgeIntensity_ = 0.0f;
+    NormalEnemyLevelTable normalEnemyLevels_;
+    float weaponOverheatFlashRemainingSeconds_ = 0.0f;
+    float weaponRecoveryFlashRemainingSeconds_ = 0.0f;
+    bool wasWeaponOverheated_ = false;
+    EffectHandle playerHeatSteamHandle_ = kInvalidEffectHandle;
     Vector3 cameraOffset_ = {
         0.0f,
         5.0f,

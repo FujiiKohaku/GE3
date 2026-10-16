@@ -39,11 +39,26 @@ PixelShaderOutput main(VertexShaderOutput input)
     bulletColor *= texColor.rgb;
 
     // コアに近づくにつれて白く
+#if defined(KOHAKU_PLAYER_BULLET)
+    // A small bright core leaves the heat color readable across most of the sphere.
+    float playerCore = pow(NdotV, 18.0f);
+    float3 coreColor = lerp(bulletColor, float3(1.0f, 1.0f, 1.0f), 0.22f);
+    float3 finalRgb = lerp(bulletColor, coreColor, playerCore);
+    finalRgb *= 1.25f + playerCore * 1.8f;
+
+    // Keep the silhouette opaque and unlit so it survives bright ocean backgrounds.
+    const float3 kPlayerOutlineColor = float3(0.008f, 0.018f, 0.045f);
+    float outlineSoftness = clamp(fwidth(NdotV) * 0.5f, 0.015f, 0.08f);
+    float outlineMask = 1.0f - smoothstep(0.28f - outlineSoftness, 0.42f + outlineSoftness, NdotV);
+    finalRgb = lerp(finalRgb, kPlayerOutlineColor, outlineMask);
+    alpha = saturate(materialParameters.color.a);
+#else
     float3 finalRgb = lerp(bulletColor, float3(1.0f, 1.0f, 1.0f), core);
 
     // 5. 発光・ブルーム強調
     // 全体的に自発光させつつ、コアは強いHDR輝度にしてBloomを誘発
     finalRgb *= (1.4f + core * 2.6f);
+#endif
 
     output.color = float32_t4(finalRgb, alpha);
     output.encodedNormal = float32_t4(N * 0.5f + 0.5f, input.position.z);

@@ -1,0 +1,147 @@
+{
+  "stage": "stage01",
+  "progress": 760,
+  "masonryTriangles": 52,
+  "wallColliders": 6,
+  "sharedGroundModel": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+  "parts": [
+    {
+      "name": "Slalom01_LeftWall",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj",
+      "transform": {
+        "translation": [
+          -12.0,
+          760.0,
+          -12.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.55,
+          2.0,
+          3.0
+        ]
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            7.78875,
+            -0.0,
+            10.86
+          ],
+          "size": [
+            1.9375,
+            4.0,
+            18.48
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            5.6575,
+            -0.0,
+            12.06
+          ],
+          "size": [
+            2.325,
+            4.0,
+            20.88
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            2.015,
+            -0.0,
+            12.81
+          ],
+          "size": [
+            4.96,
+            4.0,
+            22.38
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -1.20125,
+            -0.0,
+            11.835
+          ],
+          "size": [
+            1.4725,
+            4.0,
+            20.43
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -3.83625,
+            -0.0,
+            12.435
+          ],
+          "size": [
+            3.7975,
+            4.0,
+            21.63
+          ]
+        },
+        {
+          "type": "BOX",
+          "center": [
+            -7.24625,
+            -0.0,
+            10.485
+          ],
+          "size": [
+            3.0225,
+            4.0,
+            17.73
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Slalom01_FloatingRuinsGround",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/FloatingRuins/floating_earth_wall_ground.obj",
+      "transform": {
+        "translation": [
+          -12.0,
+          760.0,
+          -12.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.55,
+          2.0,
+          3.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          -0.0,
+          -0.0,
+          -4.8
+        ],
+        "size": [
+          19.685,
+          10.6,
+          15.0
+        ]
+      }
+    }
+  ],
+  "rightPassageValidated": true
+}

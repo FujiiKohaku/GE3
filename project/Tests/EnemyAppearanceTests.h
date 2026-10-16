@@ -19,7 +19,9 @@ inline bool RunEnemyAppearanceTests()
         const auto id = enemies[i]->GetAppearanceId();
         if (id != kEnemyAppearances[i].appearance ||
             FindEnemyAppearance("stage03", id) != kEnemyAppearances[i].model ||
-            !FindEnemyAppearance("stage01", id).empty()) return false;
+            FindEnemyAppearance("stage01", id) != kEnemyAppearances[i + 5].model ||
+            !FindEnemyAppearance("stage02", id).empty() ||
+            !FindEnemyAppearance("tutorial", id).empty()) return false;
     }
     const NormalEnemy* inherited = &armored;
     return inherited->GetAppearanceId() == "ArmoredEnemy" && ordinary.GetAppearanceId().empty() &&

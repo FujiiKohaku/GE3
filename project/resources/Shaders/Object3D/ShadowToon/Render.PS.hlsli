@@ -13,6 +13,12 @@ SamplerState gSampler : register(s0);
 #include "../NormalMapping.PS.hlsli"
 #include "../LocalLighting.hlsli"
 #include "../SurfaceLighting.hlsli"
+#if defined(KOHAKU_FLOATING_RUINS)
+#include "../FloatingRuins/Tiles.PS.hlsli"
+#endif
+#if defined(KOHAKU_RUINS_ROTOR)
+#include "../RuinsRotor/Surface.PS.hlsli"
+#endif
 
 struct PixelShaderOutput
 {
@@ -47,6 +53,12 @@ PixelShaderOutput main(VertexShaderOutput input)
     }
     float3 baseColor = gMaterial.color.rgb * textureColor.rgb;
     float3 N = ApplyNormalMap(input.worldPosition, input.normal, uv);
+#if defined(KOHAKU_RUINS_ROTOR)
+    float3 rotorEmission = ResolveRotorSurface(uv, baseColor);
+#endif
+#if defined(KOHAKU_FLOATING_RUINS)
+    ResolveRuinsTiles(input, uv, baseColor, N);
+#endif
     float3 L = normalize(-gDirectionalLight.direction);
     float3 V = normalize(gCamera.worldPosition - input.worldPosition);
     float visibility = ShadowDirectFactor(SampleShadowVisibility(input.worldPosition, normalize(input.normal)));
@@ -56,6 +68,9 @@ PixelShaderOutput main(VertexShaderOutput input)
     float3 direct = max(gDirectionalLight.color.rgb, 0.0f) *
         max(gDirectionalLight.intensity, 0.0f) * visibility * GetDirectLightingStrength(gAmbientLight);
     float3 indirectColor = ShadowToonSurfaceIndirect(baseColor, N, V);
+#if defined(KOHAKU_RUINS_ROTOR)
+    indirectColor += rotorEmission;
+#endif
     float3 directionalColor = ShadowToonSurfaceDirect(baseColor, N, V, L) * direct;
     float3 color = indirectColor + directionalColor;
 
@@ -67,6 +82,9 @@ PixelShaderOutput main(VertexShaderOutput input)
     output.color = float4(color, gMaterial.color.a * textureColor.a);
     output.surfaceMaterial = float4(saturate(baseColor), (1 + saturate(gMaterial.metallic) * 254) / 255);
     output.encodedNormal = float4(normalize(input.normal) * 0.5f + 0.5f, input.position.z);
+#if defined(KOHAKU_FLOATING_RUINS)
+    output.encodedNormal = float4(N * 0.5f + 0.5f, input.position.z);
+#endif
 #if defined(KOHAKU_RT_CAPTURE)
     output.directionalLight = float4(directionalColor, input.position.z);
 #elif defined(KOHAKU_RT_REFLECTION_CAPTURE)

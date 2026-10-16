@@ -95,8 +95,7 @@ void BaseBullet::SetTranslate(const Vector3& translate)
 
 void BaseBullet::Move()
 {
-    const float timeScale =
-        GetTimeScale() * TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
+    const float timeScale =GetTimeScale() * TimeManager::GetInstance()->GetDeltaTime() * 60.0f;
     transform_.translate.x += velocity_.x * timeScale;
     transform_.translate.y += velocity_.y * timeScale;
     transform_.translate.z += velocity_.z * timeScale;

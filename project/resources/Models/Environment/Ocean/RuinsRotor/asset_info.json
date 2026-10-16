@@ -1,0 +1,259 @@
+{
+  "triangles": {
+    "ruins_rotor_hub_bar": 1676,
+    "ruins_rotor_bar": 1320
+  },
+  "materials": 4,
+  "nativeBarLength": 46.0,
+  "hubDiameter": 7.2,
+  "installedBars": [
+    {
+      "name": "RotatingLaser_BarA",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/RuinsRotor/ruins_rotor_hub_bar.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2350.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          46.0,
+          6.0,
+          2.0
+        ]
+      },
+      "gimmick": {
+        "type": "ROTATION",
+        "speed": 0.9,
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hazard": {
+        "type": "LASER",
+        "damage": 2
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            7.2,
+            6.0,
+            7.2
+          ]
+        }
+      ]
+    },
+    {
+      "name": "RotatingLaser_BarB",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/RuinsRotor/ruins_rotor_bar.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          2350.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          1.5708,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          46.0,
+          6.0,
+          2.0
+        ]
+      },
+      "gimmick": {
+        "type": "ROTATION",
+        "speed": 0.9,
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hazard": {
+        "type": "LASER",
+        "damage": 2
+      }
+    },
+    {
+      "name": "FinalDefenseLaser_A",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/RuinsRotor/ruins_rotor_hub_bar.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          4620.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0434782608695652,
+          1.0434782608695652,
+          1.0434782608695652
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          48.0,
+          6.0,
+          2.0
+        ]
+      },
+      "gimmick": {
+        "type": "ROTATION",
+        "speed": -1.05,
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hazard": {
+        "type": "LASER",
+        "damage": 2
+      },
+      "colliders": [
+        {
+          "type": "BOX",
+          "center": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            7.51304347826087,
+            6.0,
+            7.51304347826087
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FinalDefenseLaser_B",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/RuinsRotor/ruins_rotor_bar.obj",
+      "transform": {
+        "translation": [
+          0.0,
+          4620.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          1.5708,
+          0.0
+        ],
+        "scale": [
+          1.0434782608695652,
+          1.0434782608695652,
+          1.0434782608695652
+        ]
+      },
+      "collider": {
+        "type": "BOX",
+        "center": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "size": [
+          48.0,
+          6.0,
+          2.0
+        ]
+      },
+      "gimmick": {
+        "type": "ROTATION",
+        "speed": -1.05,
+        "axis": [
+          0.0,
+          1.0,
+          0.0
+        ],
+        "range": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "hazard": {
+        "type": "LASER",
+        "damage": 2
+      }
+    }
+  ],
+  "surfaceUvBands": [
+    "stone",
+    "bronze",
+    "orangeEmission",
+    "cyanEmission"
+  ]
+}

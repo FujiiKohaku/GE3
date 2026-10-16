@@ -18,7 +18,18 @@ public:
     void Draw();
 
 private:
+    std::unique_ptr<Text> CreateText() const;
+    void AddRectangle(float centerX, float centerY, float width, float height,
+        Vector4 color, float rotation = 0.0f);
+    void AddLine(float startX, float startY, float endX, float endY, Vector4 color);
+    void AddRoundedRectangle(float centerX, float centerY, float width, float height,
+        float radius, Vector4 color);
+    void UpdateText(Text& text, float x, float y, float fontSize, Vector4 color);
+
     std::vector<std::unique_ptr<Sprite>> parts_;
+    size_t activePartCount_ = 0;
+    Vector2 panelPosition_ {};
+    float panelScale_ = 1.0f;
     std::unique_ptr<Text> header_;
     std::unique_ptr<Text> status_;
     std::unique_ptr<Text> message_;

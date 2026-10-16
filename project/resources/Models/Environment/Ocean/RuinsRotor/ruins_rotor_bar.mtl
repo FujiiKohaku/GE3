@@ -1,0 +1,32 @@
+# Blender 4.4.1 MTL File: 'None'
+# www.blender.org
+
+newmtl RotorBronze
+Ns 270.399994
+Ka 0.650000 0.650000 0.650000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/RotorBronze.png
+
+newmtl RotorDanger
+Ns 422.499969
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 3.500000 0.560000 0.052500
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/RotorDanger.png
+
+newmtl RotorSandstone
+Ns 14.400002
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/RotorSandstone.png

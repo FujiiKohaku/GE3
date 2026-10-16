@@ -1,5 +1,41 @@
 #include "BaseTutorialStep.h"
 
+std::string GetTutorialGlyphText()
+{
+    std::string glyphText =
+        "SIMULATION INITIALIZING TRAINING START TRAINING AI ONLINE "
+        "TRAINING COMPLETE // GATE OPEN SIMULATION COMPLETE // LAUNCH STAGE 1 "
+        "SKIP → STAGE 1 [BACK / VIEW] [ENTER] 0123456789 "
+        "完了 練習中 できました！ この練習は完了です。 練習クリア "
+        "訓練完了。出撃ゲートを開きました。\n前方の緑色のゲートへ進んでください。 前方のゲートへ進む";
+    auto steps = CreateTutorialSteps();
+    for (auto& step : steps) {
+        const TutorialStepData& data = step->GetData();
+        glyphText += data.title + data.keyboardInstruction + data.gamepadInstruction +
+            data.keyboardOperation + data.gamepadOperation + data.practiceWeapon;
+        for (const std::string& button : data.buttonHints) {
+            glyphText += button;
+        }
+        for (int deviceIndex = 0; deviceIndex < 2; ++deviceIndex) {
+            TutorialStepInput input;
+            input.gamepadConnected = deviceIndex == 1;
+            input.usingGamepad = input.gamepadConnected;
+            input.invertedPitch = true;
+            input.weapon = data.practiceWeapon;
+            step->Enter(input);
+            glyphText += step->GetOperation(input);
+            // 発熱後に変わる操作文とボタンも先に登録する。数値の進捗はASCIIで共通。
+            input.heat = 0.5f;
+            step->Update(input, 0.0f);
+            glyphText += step->GetOperation(input);
+            for (const std::string& button : step->GetButtonHints()) {
+                glyphText += button;
+            }
+        }
+    }
+    return glyphText;
+}
+
 std::string BaseTutorialStep::GetOperation(const TutorialStepInput& input) const
 {
     return input.gamepadConnected ? data_.gamepadOperation : data_.keyboardOperation;

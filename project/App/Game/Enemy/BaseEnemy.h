@@ -9,6 +9,7 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 
 #include "App/Game/Enemy/Bullet/EnemyBullet.h"
+#include "App/Game/Enemy/EnemyAppearanceMotion.h"
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
 #include "Debug/BaseEnemyDebugView.h"
 #endif
@@ -34,6 +35,9 @@ public:
     virtual void Initialize(Model* model);
     // ステージ固有のモデルへ差し替え、テクスチャ本来の色で表示する。
     virtual void SetAppearance(Model* model);
+    void SetAppearanceMaterial(const std::string& materialPath);
+    void AddAppearancePart(Model* model, EnemyAppearancePart motion);
+    void SetAppearanceTarget(const Vector3& position) { appearanceTarget_ = position; }
     virtual void Update();
     virtual void Draw();
     virtual void SubmitRaytracing(DxrRenderer& renderer);
@@ -80,6 +84,21 @@ protected:
     void InitializeHealth(float hp);
 
 private:
+    struct AppearancePart {
+        std::unique_ptr<Object3d> object_;
+        EnemyAppearancePart motion_;
+        float maxTranslate_ = 0.0f;
+    };
+    void UpdateAppearanceParts();
+    std::vector<AppearancePart> appearanceParts_;
+    std::string appearanceMaterialPath_;
+    Vector3 appearanceTarget_ {};
+    Vector3 appearanceEyeOffset_ {};
+    Vector3 appearanceEyeTravel_ {};
+    Vector3 appearanceEyeAnchor_ {};
+    float appearanceTimeSeconds_ = 0.0f;
+    float appearancePhaseRadians_ = 0.0f;
+    float appearanceRecoilSeconds_ = 0.0f;
     bool isDead_ = false;
 
     float hp_ = 1.0f;

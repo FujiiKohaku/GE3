@@ -55,3 +55,6 @@ protected:
 
 constexpr int kTutorialStepCount = 14;
 std::array<std::unique_ptr<BaseTutorialStep>, kTutorialStepCount> CreateTutorialSteps();
+
+// 静的な説明文と、進捗に応じて変わる操作文の使用文字をロード中に準備する。
+std::string GetTutorialGlyphText();

@@ -13,8 +13,7 @@
 void PlayerWeaponController::Initialize()
 {
     shotsFired_ = 0;
-    ModelManager::GetInstance()->Load("Debug/block/block.obj");
-    bulletModel_ = ModelManager::GetInstance()->Load("Debug/block/block.obj");
+    bulletModel_ = ModelManager::GetInstance()->Load("Enemy/Bullet/LowPolySphere/lowPolySphere.obj");
 }
 
 void PlayerWeaponController::SetCamera(Camera* camera)
@@ -84,6 +83,16 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEn
     auto context = MakeWeaponContext(&activeCamera);
     std::unique_ptr<PlayerBullet> bullet = GetCurrentWeapon().CreateBullet(
         bulletModel_, context, homingTarget, shotSpeed);
+    constexpr Vector4 kColdBulletColor = { 0.12f, 0.48f, 1.0f, 1.0f };
+    constexpr Vector4 kHotBulletColor = { 0.85f, 0.015f, 0.008f, 1.0f };
+    const float heatRatio = std::clamp(weaponHeat_.GetHeatRatio(), 0.0f, 1.0f);
+    const Vector4 bulletColor = {
+        kColdBulletColor.x + (kHotBulletColor.x - kColdBulletColor.x) * heatRatio,
+        kColdBulletColor.y + (kHotBulletColor.y - kColdBulletColor.y) * heatRatio,
+        kColdBulletColor.z + (kHotBulletColor.z - kColdBulletColor.z) * heatRatio,
+        1.0f
+    };
+    bullet->SetColor(bulletColor);
     bullet->SetCamera(camera_);
     Vector3 muzzlePosition = CalculateMuzzlePosition();
     EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzlePosition);

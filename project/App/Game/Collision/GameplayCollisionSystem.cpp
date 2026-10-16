@@ -132,11 +132,8 @@ void GameplayCollisionSystem::UpdateStageCollisions(
     const Sphere playerSphere { playerPosition, kPlayerObstacleRadius };
 
     for (const std::unique_ptr<Object3d>& levelObject : levelObjects) {
-        BoxCollider* collider = levelObject->GetCollider();
-        if (collider == nullptr) {
-            continue;
-        }
-
+      for (size_t colliderIndex = 0; colliderIndex < levelObject->GetColliderCount(); ++colliderIndex) {
+        BoxCollider* collider = levelObject->GetCollider(colliderIndex);
         const OBB obstacleBox = CollisionManager::MakeOBB(
             collider->GetCenter(),
             collider->GetSize(),
@@ -148,7 +145,9 @@ void GameplayCollisionSystem::UpdateStageCollisions(
                     "DamageHit",
                     playerPosition);
             }
+            break;
         }
+      }
     }
 
     for (const std::unique_ptr<PlayerBullet>& bullet : player.GetBullets()) {

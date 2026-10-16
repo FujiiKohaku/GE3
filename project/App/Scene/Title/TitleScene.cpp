@@ -162,6 +162,8 @@ float FindHangarPathTimeByDistance(float distanceProgress)
 }
 }
 
+bool TitleScene::hasStartedTutorial_ = false;
+
 void TitleScene::Initialize()
 {
     SoundManager::GetInstance()->RegisterSounds({
@@ -195,6 +197,10 @@ void TitleScene::Initialize()
     InitializeInterface();
     InitializeStageSelection();
     ChangeState(ViewState::Title);
+    if (shouldOpenStageSelect_) {
+        ChangeState(ViewState::StageSelect);
+        UpdateStageSelection(0.0f);
+    }
     UpdateInterface(0.0f);
 
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
@@ -949,9 +955,20 @@ void TitleScene::Update()
     UpdateInterface(deltaTime);
 }
 
+void TitleScene::StartGame()
+{
+    if (viewState_ != ViewState::Title) return;
+    if (hasStartedTutorial_) {
+        StartStageSelectTransition();
+        return;
+    }
+    StartTutorial();
+}
+
 void TitleScene::StartTutorial()
 {
     if (viewState_ != ViewState::Title) return;
+    hasStartedTutorial_ = true;
     ChangeState(ViewState::StartingTutorial);
 }
 

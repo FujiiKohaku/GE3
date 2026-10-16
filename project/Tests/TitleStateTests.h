@@ -36,5 +36,17 @@ inline bool RunTitleStateTests()
     if (scene.animationTime_ != 0.0f || calls.back() != 23) return false;
     scene.animationTime_ = 3.0f;
     scene.ChangeState(TitleViewState::Title);
-    return scene.animationTime_ == 0.0f && scene.currentState_->GetType() == TitleViewState::Title;
+    if (scene.animationTime_ != 0.0f || scene.currentState_->GetType() != TitleViewState::Title) return false;
+
+    // タイトルを作り直しても、今回の起動中に訓練を開始済みならセレクトへ進む。
+    const bool hadStartedTutorial = TitleScene::hasStartedTutorial_;
+    TitleScene::hasStartedTutorial_ = true;
+    TitleScene returnedScene;
+    returnedScene.StartGame();
+    const bool hasOpenedStageSelect = returnedScene.viewState_ == TitleViewState::EnteringStageSelect;
+    returnedScene.ChangeState(TitleViewState::Settings);
+    returnedScene.StartGame();
+    const bool hasKeptSettings = returnedScene.viewState_ == TitleViewState::Settings;
+    TitleScene::hasStartedTutorial_ = hadStartedTutorial;
+    return hasOpenedStageSelect && hasKeptSettings;
 }

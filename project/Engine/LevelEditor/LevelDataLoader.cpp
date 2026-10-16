@@ -2,6 +2,27 @@
 
 #include <cassert>
 #include <fstream>
+#include "Engine/Logger/Logger.h"
+
+namespace {
+int ReadEnemyLevel(const nlohmann::json& objectJson)
+{
+    constexpr int kDefaultEnemyLevel = 2;
+    if (!objectJson.contains("level")) {
+        return kDefaultEnemyLevel;
+    }
+    const nlohmann::json& level = objectJson["level"];
+    if (level.is_number_integer()) {
+        const double levelValue = level.get<double>();
+        if (levelValue >= 1.0 && levelValue <= 3.0) {
+            return level.get<int>();
+        }
+    }
+    Logger::Warning("Invalid enemy level for " + objectJson.value("name", std::string("unnamed")) +
+        "; using level 2");
+    return kDefaultEnemyLevel;
+}
+}
 
 LevelData LevelDataLoader::Load(const std::string& filePath)
 {
@@ -41,6 +62,10 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     }
 
     std::string typeStr = objectJson["type"].get<std::string>();
+    int enemyLevel = 2;
+    if (typeStr == "EnemySpawn") {
+        enemyLevel = ReadEnemyLevel(objectJson);
+    }
     if (typeStr == "PlayerSpawn") {
         LevelData::PlayerSpawnData spawnData {};
 
@@ -66,6 +91,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     }
     else if (typeStr == "EnemySpawn") {
         LevelData::EnemySpawnData spawnData {};
+        spawnData.enemyLevel = enemyLevel;
 
         if (objectJson.contains("file_name")) {
             spawnData.fileName = objectJson["file_name"].get<std::string>();
@@ -92,6 +118,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     }
 
     LevelData::ObjectData objectData;
+    objectData.enemyLevel = enemyLevel;
 
     objectData.type = objectJson["type"].get<std::string>();
 
@@ -150,6 +177,25 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
             objectData.collider.size.x = collider["size"][0].get<float>();
             objectData.collider.size.y = collider["size"][2].get<float>();
             objectData.collider.size.z = collider["size"][1].get<float>();
+        }
+    }
+
+    if (objectJson.contains("colliders")) {
+        for (const nlohmann::json& colliderJson : objectJson["colliders"]) {
+            LevelData::ObjectData::ColliderData colliderData {};
+            colliderData.exists = true;
+            colliderData.type = colliderJson.at("type").get<std::string>();
+            colliderData.center = {
+                colliderJson.at("center")[0].get<float>(),
+                colliderJson.at("center")[2].get<float>(),
+                colliderJson.at("center")[1].get<float>()
+            };
+            colliderData.size = {
+                colliderJson.at("size")[0].get<float>(),
+                colliderJson.at("size")[2].get<float>(),
+                colliderJson.at("size")[1].get<float>()
+            };
+            objectData.colliders.push_back(colliderData);
         }
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "NormalEnemySettings.h"
 
 class Player;
 class Model;
@@ -15,6 +16,7 @@ public:
 
     void Update() override;
     void SetRadialShotEnabled(bool isEnabled);
+    void ApplySettings(const NormalEnemySettings& settings);
 
 protected:
     void SetBulletSpeed(float bulletSpeed);

@@ -1,0 +1,11 @@
+{
+  "triangles": 1002,
+  "meshObjects": 16,
+  "materials": 6,
+  "normalizedDimensions": [
+    0.9999999403953552,
+    0.6594119668006897,
+    0.8376924395561218
+  ],
+  "obj": "C:\\Projects\\KohakuEngine\\project\\resources\\Models\\Environment\\Ocean\\FloatingRock\\floating_rock.obj"
+}

@@ -25,8 +25,8 @@ void Text::Initialize(const std::string& fontPath)
 void Text::Update()
 {
     assert(fontHandle_ != 0);
-    FontManager::GetInstance()->EnsureGlyphs(fontHandle_, text_);
     if (geometryDirty_) {
+        FontManager::GetInstance()->EnsureGlyphs(fontHandle_, text_);
         BuildGeometry();
         geometryDirty_ = false;
     }
@@ -63,6 +63,9 @@ void Text::SetFontSize(float fontSize)
     if (fontSize <= 0.0f) {
         fontSize = 1.0f;
     }
+    if (fontSize_ == fontSize) {
+        return;
+    }
     fontSize_ = fontSize;
     geometryDirty_ = true;
 }
@@ -72,24 +75,36 @@ void Text::SetMaxWidth(float maxWidth)
     if (maxWidth < 0.0f) {
         maxWidth = 0.0f;
     }
+    if (maxWidth_ == maxWidth) {
+        return;
+    }
     maxWidth_ = maxWidth;
     geometryDirty_ = true;
 }
 
 void Text::SetLetterSpacing(float letterSpacing)
 {
+    if (letterSpacing_ == letterSpacing) {
+        return;
+    }
     letterSpacing_ = letterSpacing;
     geometryDirty_ = true;
 }
 
 void Text::SetLineSpacing(float lineSpacing)
 {
+    if (lineSpacing_ == lineSpacing) {
+        return;
+    }
     lineSpacing_ = lineSpacing;
     geometryDirty_ = true;
 }
 
 void Text::SetHorizontalAlignment(TextHorizontalAlignment alignment)
 {
+    if (horizontalAlignment_ == alignment) {
+        return;
+    }
     horizontalAlignment_ = alignment;
     geometryDirty_ = true;
 }

@@ -1,0 +1,62 @@
+# Blender 4.4.1 MTL File: 'None'
+# www.blender.org
+
+newmtl CrystalFacet
+Ns 490.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.032400 0.131400 0.109800
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/CrystalFacet.png
+
+newmtl FractureInterior
+Ns 0.399999
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/FractureInterior.png
+
+newmtl Sandstone
+Ns 14.400002
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/Sandstone.png
+
+newmtl SeaCrystal
+Ns 462.399994
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.015400 0.145600 0.120400
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/SeaCrystal.png
+
+newmtl SunlitStone
+Ns 10.000005
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/SunlitStone.png
+
+newmtl WeatheredStone
+Ns 3.600000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/WeatheredStone.png

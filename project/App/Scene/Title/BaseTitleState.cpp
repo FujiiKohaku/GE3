@@ -12,7 +12,7 @@ public:
     void HandleInput(TitleScene& scene, const Input& input) const override {
         if (input.IsKeyTrigger(DIK_SPACE) || input.IsKeyTrigger(DIK_RETURN) ||
             input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
-            scene.StartTutorial();
+            scene.StartGame();
         } else if (input.IsKeyTrigger(DIK_S) || input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_Y)) {
             scene.StartSettingsTransition(true);
         }

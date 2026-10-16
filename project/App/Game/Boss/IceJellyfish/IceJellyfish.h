@@ -1,8 +1,6 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
-#include "JellyfishAttackPattern.h"
-#include "BaseJellyfishAttack.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include <array>
 #include <memory>
@@ -19,7 +17,9 @@ public:
     static constexpr size_t kSegmentsPerTentacle = 7;
     static constexpr size_t kIcePillarModelCount = 6;
 
-    using AttackPattern = JellyfishPatternType;
+    enum class AttackPattern {
+        FrozenSweep, IcicleBloom, TentacleThrust, BlizzardCurrent, CrystalPrison, AbsoluteZero
+    };
 
     void Initialize(Camera* camera, Model* bulletModel, Player* player);
     void Update() override;
@@ -50,20 +50,10 @@ public:
     float GetHeadHpFraction() const override;
     float GetBodyHpFraction() const override;
     float GetHp() const { return GetHealth(); }
-    AttackPattern GetAttackPattern() const { return currentPattern_->GetType(); }
+    AttackPattern GetAttackPattern() const { return currentPattern_; }
 
 private:
-    friend class PulseBarrageAttack;
-    friend class IceSpearAttack;
-    friend class IcePillarAttack;
     friend bool RunJellyfishAttackTests();
-    friend class JellyfishAttackPattern;
-    friend class FrozenSweepPattern;
-    friend class IcicleBloomPattern;
-    friend class TentacleThrustPattern;
-    friend class BlizzardCurrentPattern;
-    friend class CrystalPrisonPattern;
-    friend class AbsoluteZeroPattern;
     friend bool RunJellyfishAttackPatternTests();
     static constexpr float kHoverDistance = 125.0f;
     static constexpr float kSegmentHp = 9.0f;
@@ -75,6 +65,24 @@ private:
 
     std::unique_ptr<Object3d> CreatePart(
         Camera* camera, const char* modelPath, const Vector4& color, bool ice);
+    // 現行の3攻撃。
+    void StartPulseBarrageAttack();
+    void UpdatePulseBarrageAttack(float deltaTime);
+    void StartIceSpearAttack();
+    void UpdateIceSpearAttack(float deltaTime);
+    void StartIcePillarAttack();
+    void UpdateIcePillarAttack(float deltaTime);
+
+    // 旧6パターン。通常のUpdateからは呼ばない。
+    void EnterPattern();
+    void ExitPattern();
+    static float GetPatternDuration(AttackPattern pattern, int phase);
+    void UpdateFrozenSweepPattern();
+    void UpdateIcicleBloomPattern();
+    void UpdateTentacleThrustPattern();
+    void UpdateBlizzardCurrentPattern();
+    void UpdateCrystalPrisonPattern();
+    void UpdateAbsoluteZeroPattern();
     void BeginPattern(AttackPattern pattern);
     void SelectNextPattern();
     void UpdatePattern(float deltaTime);
@@ -95,6 +103,8 @@ private:
     bool IsIceSpearEmitter(size_t tentacle, size_t segment) const;
     Vector3 GetIceSpearAimTarget(size_t tentacle) const;
     int32_t SegmentPartIndex(size_t tentacle, size_t segment) const;
+    static void ConsiderNearestHit(SweepHit& nearest, int32_t& partIndex,
+        const SweepHit& hit, int32_t candidatePart);
 
     std::unique_ptr<Object3d> bell_;
     std::unique_ptr<Object3d> core_;
@@ -147,8 +157,7 @@ private:
     int32_t nextAttackIndex_ = 0;
     bool absoluteZeroUsed_ = false;
     bool absoluteInterrupted_ = false;
-    const JellyfishAttackPattern* currentPattern_ =
-        &GetJellyfishAttackPattern(AttackPattern::FrozenSweep);
+    AttackPattern currentPattern_ = AttackPattern::FrozenSweep;
 
     std::vector<OBB> bellColliders_;
     std::vector<OBB> tentacleColliders_;

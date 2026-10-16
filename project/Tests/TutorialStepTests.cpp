@@ -1,9 +1,59 @@
 #include "App/Game/Tutorial/BaseTutorialStep.h"
+#include "Engine/2D/Text/Utf8Utility.h"
 #include <cassert>
 #include <iostream>
+#include <unordered_set>
+
+void VerifyGlyphCoverage(const std::unordered_set<uint32_t>& preparedGlyphs, const std::string& text)
+{
+    for (uint32_t codepoint : Utf8Utility::Decode(text)) {
+        assert(preparedGlyphs.contains(codepoint));
+    }
+}
+
+void VerifyTutorialGlyphCoverage()
+{
+    const auto codepoints = Utf8Utility::Decode(GetTutorialGlyphText());
+    std::unordered_set<uint32_t> preparedGlyphs(codepoints.begin(), codepoints.end());
+    // フォント読込時に登録済みのASCIIも含め、アトラスの1024セルに収まることを確認する。
+    for (uint32_t codepoint = 32; codepoint <= 126; ++codepoint) {
+        preparedGlyphs.insert(codepoint);
+    }
+    assert(preparedGlyphs.size() <= 1024);
+    auto steps = CreateTutorialSteps();
+    for (auto& step : steps) {
+        const TutorialStepData& data = step->GetData();
+        VerifyGlyphCoverage(preparedGlyphs, data.keyboardInstruction);
+        VerifyGlyphCoverage(preparedGlyphs, data.gamepadInstruction);
+        for (int deviceIndex = 0; deviceIndex < 2; ++deviceIndex) {
+            TutorialStepInput input;
+            input.gamepadConnected = deviceIndex == 1;
+            input.usingGamepad = input.gamepadConnected;
+            input.invertedPitch = true;
+            input.weapon = data.practiceWeapon;
+            step->Enter(input);
+            VerifyGlyphCoverage(preparedGlyphs, step->GetOperation(input));
+            for (int sampleIndex = 0; sampleIndex < 3; ++sampleIndex) {
+                input.heat = 0.5f;
+                if (sampleIndex == 2) input.heat = 0.0f;
+                input.defeatedTargets = data.requiredKills;
+                input.moveX = 1.0f;
+                input.bank = 1.0f;
+                input.rolling = true;
+                step->Update(input, 0.5f);
+                VerifyGlyphCoverage(preparedGlyphs, step->GetOperation(input));
+                for (const std::string& button : step->GetButtonHints()) {
+                    VerifyGlyphCoverage(preparedGlyphs, button);
+                }
+            }
+        }
+    }
+    std::cout << "Tutorial glyph coverage passed (" << preparedGlyphs.size() << " codepoints)\n";
+}
 
 int main()
 {
+    VerifyTutorialGlyphCoverage();
     auto steps = CreateTutorialSteps();
     TutorialStepInput input;
     for (const auto& step : steps) {
