@@ -738,13 +738,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\Types\MissileBullet.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\Types\NormalBullet.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\Types\NormalBullet.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Common\AutomaticPlayerWeapon.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Common\AutomaticPlayerWeapon.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Common\BasePlayerWeapon.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Common\PlayerHomingLock.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Common\PlayerHomingLock.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Common\PlayerWeaponHeat.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Common\PlayerWeaponHeat.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Types\HomingPlayerWeapon.cpp" />
@@ -755,5 +749,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Types\MissilePlayerWeapon.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Types\NormalPlayerWeapon.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Types\NormalPlayerWeapon.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Common\BasePlayerWeapon.cpp" />
   </ItemGroup>
 </Project>

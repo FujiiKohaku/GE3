@@ -1,4 +1,5 @@
 #pragma once
+#include "App/Game/Player/Weapon/PlayerWeaponController.h"
 #include "App/Game/Player/Weapon/Types/HomingPlayerWeapon.h"
 #include "App/Game/Player/Weapon/Types/MissilePlayerWeapon.h"
 #include "App/Game/Player/Weapon/Types/MinigunPlayerWeapon.h"

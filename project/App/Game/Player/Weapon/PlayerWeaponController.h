@@ -1,8 +1,6 @@
 // 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
 #pragma once
 #include "App/Game/Player/Bullet/Common/PlayerBullet.h"
-#include "App/Game/Player/Weapon/Common/PlayerWeaponHeat.h"
-#include "App/Game/Player/Weapon/Common/PlayerHomingLock.h"
 #include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
 #include "App/Game/Player/Weapon/Types/NormalPlayerWeapon.h"
 #include "App/Game/Player/Weapon/Types/MinigunPlayerWeapon.h"
@@ -18,6 +16,57 @@ class Model;
 class Camera;
 class Input;
 class Player;
+
+// 武器管理の補助状態。発熱とロックオンもこのファイルにまとめ、武器全体の状態を追いやすくする。
+// 通常弾とミニガンで共有する熱量・冷却・過熱状態を保持する。
+class PlayerWeaponHeat {
+public:
+    // 連射中の過熱猶予と、射撃停止中・過熱中の冷却を進める。
+    void Update(float deltaTimeSeconds, bool isFireHeld);
+    // 発射した武器に応じた熱量を加え、満タンになったときの猶予を準備する。
+    void AddShotHeat(bool isMinigun);
+    float GetHeatRatio() const { return heatRatio_; }
+    bool IsOverheated() const { return isOverheated_; }
+    // 熱量が高いほど威力を増やす。発射時点の熱量でその弾の威力を決める。
+    int GetShotDamage(int baseDamage) const;
+
+private:
+    float heatRatio_ = 0.0f;
+    bool isOverheated_ = false;
+    float graceRemainingSeconds_ = 0.0f;
+    static constexpr float kGraceDurationSeconds = 30.0f / 60.0f;
+    static constexpr float kNormalShotHeat = 0.08f;
+    static constexpr float kMinigunShotHeat = 0.025f;
+    static constexpr float kCoolingPerSecond = 0.20f;
+    static constexpr float kOverheatCoolingPerSecond = 0.25f;
+};
+
+// ロック候補と確定した対象を保持し、ボタンを離した瞬間の発射を判定する。
+class PlayerHomingLock {
+public:
+    // 現在の候補一覧を共有データへ反映し、弾が対象の生存を確認できるようにする。
+    void SetTargets(const std::vector<BaseEnemy*>& targets);
+    // 押下中のロック更新と、ボタンを離した瞬間の発射要求を判定する。
+    bool UpdateFireInput(bool isFireHeld, bool isEnabled, Camera* camera,
+        const Vector3& position, const Vector3& forward, const Vector2& aimPosition);
+    void ClearTargets() { lockedTargets_.clear(); }
+    // ロック対象と前回の押下状態を消し、次の射撃入力を新しく受け付ける。
+    void Reset();
+    // 生存中のロック対象の位置を集め、画面のロックマーカー表示に使う。
+    void GetPositions(std::vector<Vector3>& positions) const;
+    const std::vector<BaseEnemy*>& GetLockedTargets() const { return lockedTargets_; }
+    std::shared_ptr<const std::vector<BaseEnemy*>> GetTargets() const { return targets_; }
+
+private:
+    // 前方距離と画面上の照準との近さを調べ、条件を満たす敵を上限数までロックする。
+    void UpdateTargets(bool isLocking, Camera* camera, const Vector3& position,
+        const Vector3& forward, const Vector2& aimPosition);
+    std::shared_ptr<std::vector<BaseEnemy*>> targets_ = std::make_shared<std::vector<BaseEnemy*>>();
+    std::vector<BaseEnemy*> lockedTargets_;
+    bool wasFireHeld_ = false;
+    static constexpr float kMaxForwardDistance = 250.0f;
+    static constexpr size_t kMaxLockCount = 6;
+};
 
 class PlayerWeaponController {
 public:

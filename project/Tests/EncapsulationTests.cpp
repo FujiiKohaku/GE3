@@ -1,6 +1,6 @@
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
-#include "App/Game/Player/Weapon/Common/PlayerHomingLock.h"
+#include "App/Game/Player/Weapon/PlayerWeaponController.h"
 #include "App/Game/Boss/Common/BaseBoss.h"
 #include <cassert>
 #include <type_traits>

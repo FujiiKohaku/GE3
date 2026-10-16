@@ -2,6 +2,7 @@
 #include "App/Game/Player/Weapon/Types/HomingPlayerWeapon.h"
 #include "App/Game/Player/Bullet/Types/HomingMissileBullet.h"
 #include "Engine/audio/SoundManager.h"
+#include "App/Game/Player/Weapon/PlayerWeaponController.h"
 
 // 押している間はロックを更新し、離した際に発射できたらロックを解除する。
 void HomingPlayerWeapon::Update(PlayerWeaponContext& context, bool held, bool, float)

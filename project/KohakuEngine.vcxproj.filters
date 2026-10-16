@@ -1040,25 +1040,7 @@
     <ClInclude Include="App\Game\Player\Bullet\Types\NormalBullet.h">
       <Filter>Player\Bullet\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Common\AutomaticPlayerWeapon.cpp">
-      <Filter>Player\Weapon\Common</Filter>
-    </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Common\AutomaticPlayerWeapon.h">
-      <Filter>Player\Weapon\Common</Filter>
-    </ClInclude>
     <ClInclude Include="App\Game\Player\Weapon\Common\BasePlayerWeapon.h">
-      <Filter>Player\Weapon\Common</Filter>
-    </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Common\PlayerHomingLock.cpp">
-      <Filter>Player\Weapon\Common</Filter>
-    </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Common\PlayerHomingLock.h">
-      <Filter>Player\Weapon\Common</Filter>
-    </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Common\PlayerWeaponHeat.cpp">
-      <Filter>Player\Weapon\Common</Filter>
-    </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Common\PlayerWeaponHeat.h">
       <Filter>Player\Weapon\Common</Filter>
     </ClInclude>
     <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
@@ -1097,5 +1079,10 @@
     <Filter Include="Player\Weapon\Types"><UniqueIdentifier>{be2a9dd9-66cc-4a30-9eb1-18ae0887fb70}</UniqueIdentifier></Filter>
     <Filter Include="Player\Bullet\Common"><UniqueIdentifier>{ceebabf6-faa1-4dfd-a702-b3ecf976ec07}</UniqueIdentifier></Filter>
     <Filter Include="Player\Bullet\Types"><UniqueIdentifier>{3f5f7dcb-78b9-4efb-b968-8c0e536f56e2}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App\Game\Player\Weapon\Common\BasePlayerWeapon.cpp">
+      <Filter>Player\Weapon\Common</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

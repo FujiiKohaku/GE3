@@ -1,6 +1,7 @@
 // 通常弾とミニガンに共通する連射間隔・発熱・弾生成の処理をまとめる。
-#include "App/Game/Player/Weapon/Common/AutomaticPlayerWeapon.h"
+#include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
 #include "App/Game/Player/Bullet/Types/NormalBullet.h"
+#include "App/Game/Player/Weapon/PlayerWeaponController.h"
 #include "Engine/audio/SoundManager.h"
 #include <algorithm>
 

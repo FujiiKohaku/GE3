@@ -1,6 +1,6 @@
 // 一発の威力を抑え、短い間隔で連射するミニガンの設定を定義する。
 #pragma once
-#include "App/Game/Player/Weapon/Common/AutomaticPlayerWeapon.h"
+#include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
 
 class MinigunPlayerWeapon final : public AutomaticPlayerWeapon {
 public:

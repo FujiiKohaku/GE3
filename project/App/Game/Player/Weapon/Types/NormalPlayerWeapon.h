@@ -1,6 +1,6 @@
 // 標準の威力・発射間隔で連射する、通常弾の武器設定を定義する。
 #pragma once
-#include "App/Game/Player/Weapon/Common/AutomaticPlayerWeapon.h"
+#include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
 
 class NormalPlayerWeapon final : public AutomaticPlayerWeapon {
 public:
