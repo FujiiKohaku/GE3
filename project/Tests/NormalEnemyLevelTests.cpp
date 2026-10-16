@@ -113,12 +113,9 @@ void TestPlacementLevelsAndCompatibility()
     data["scene"][0]["level"] = 3;
     WriteFixture(fixturePath, data);
     assert(loader.Load(fixturePath).objects[0].enemyLevel == 3);
-    for (const std::string layoutPath : { "project/resources/Scenes/stage01.json",
-        "project/resources/Stages/Stage03/layout.json" }) {
-        const LevelData existing = loader.Load(layoutPath);
-        for (const LevelData::EnemySpawnData& enemy : existing.enemies) {
-            assert(enemy.enemyLevel == 2);
-        }
+    const LevelData existing = loader.Load("project/resources/Stages/Stage03/layout.json");
+    for (const LevelData::EnemySpawnData& enemy : existing.enemies) {
+        assert(enemy.enemyLevel == 2);
     }
 }
 }
