@@ -26,6 +26,7 @@
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Screenshot/ScreenshotManager.h"
+#include "Engine/Capture/GifRecordingManager.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include "Engine/Shadow/LocalShadowRenderer.h"
@@ -488,11 +489,14 @@ void Renderer::Draw(SceneManager* sceneManager)
     // 2D draw
     sceneManager->Draw2D();
 
+    GifRecordingManager::GetInstance()->PrepareCapture();
+
     // ImGui is not initialized in the Release configuration.
 #ifdef USE_IMGUI
     ImGuiManager::GetInstance()->Draw();
 #endif
 
+    GifRecordingManager::GetInstance()->DrawNotification();
     ScreenshotManager::GetInstance()->DrawNotification();
     ScreenshotManager::GetInstance()->PrepareCapture();
 
@@ -514,6 +518,7 @@ void Renderer::Draw(SceneManager* sceneManager)
     temporalSuperResolution_->ReadCompleted();
     RecordGpuSample();
     ScreenshotManager::GetInstance()->CompleteCapture();
+    GifRecordingManager::GetInstance()->CompleteCapture();
 }
 
 void Renderer::SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled)

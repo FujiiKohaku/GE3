@@ -25,6 +25,7 @@ struct PauseDisplayInput {
     bool invertedPitch;
     float padSensitivity;
     float mouseSensitivity;
+    int gifRecordingSeconds = 5;
 };
 struct PauseDisplay {
     std::string title;

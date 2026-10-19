@@ -1,3 +1,4 @@
+#include "Engine/Capture/GifRecordingManager.h"
 // ステージ進行の中心。プレイヤー・敵・ボス・背景・HUD・演出を組み合わせて更新する。
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
@@ -450,7 +451,7 @@ void GamePlayScene::Initialize()
     pauseControlBtnSprite_->SetColor({ 0.25f, 0.55f, 0.45f, 0.90f });
     pauseControlBtnSprite_->Update();
 
-    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 190.0f });
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 210.0f });
     pauseTitleBtnSprite_->Update();
 
     // -------------------------------------------------
@@ -501,14 +502,14 @@ void GamePlayScene::Initialize()
     pauseControlText_->SetFontSize(19.0f);
     pauseControlText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
-    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 190.0f });
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 210.0f });
     pauseTitleBtnText_->Update();
 
     pauseSensitivityText_ = std::make_unique<Text>();
     pauseSensitivityText_->Initialize(kDefaultFont);
-    pauseSensitivityText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 125.0f });
+    pauseSensitivityText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 140.0f });
     pauseSensitivityText_->SetAnchorPoint({ 0.5f, 0.5f });
-    pauseSensitivityText_->SetFontSize(18.0f);
+    pauseSensitivityText_->SetFontSize(16.0f);
     pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
 
     // 画面左下に表示する現在武器HUD
@@ -939,7 +940,8 @@ void GamePlayScene::Update()
         developmentPaused_ = !developmentPaused_;
         stepDevelopmentFrame_ = false;
     }
-    if (developmentPaused_ && input != nullptr && input->IsKeyTrigger(DIK_F7)) {
+    if (developmentPaused_ && input != nullptr && input->IsKeyTrigger(DIK_F7) &&
+        (input->IsKeyPressed(DIK_LSHIFT) || input->IsKeyPressed(DIK_RSHIFT))) {
         stepDevelopmentFrame_ = true;
     }
     if (developmentPaused_ && !stepDevelopmentFrame_) {
@@ -990,7 +992,8 @@ void GamePlayScene::Update()
         }
         const PauseDisplay display = pauseState_->GetDisplay({
             pauseSelection_, input && input->IsUsingGamepad(), input && input->IsGamepadPitchInverted(),
-            input ? input->GetGamepadAimSensitivity() : 1.0f, gMouseSensitivity });
+            input ? input->GetGamepadAimSensitivity() : 1.0f, gMouseSensitivity,
+            GifRecordingManager::GetInstance()->GetRecordingSeconds() });
         if (pauseTitleText_) pauseTitleText_->SetText(display.title);
         if (pauseResumeText_) pauseResumeText_->SetText(display.rows[0]);
         if (pauseRetryText_) pauseRetryText_->SetText(display.rows[1]);

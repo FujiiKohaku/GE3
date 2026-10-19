@@ -62,6 +62,8 @@ public:
         PauseDisplay display { "設定", {}, input.gamepad ?
             "十字キー上下: 選択 / 左右: 感度\nA: 上下反転 / B: 戻る" :
             "↑↓: 選択 / ←→: 感度 / ENTER: 決定\nC: マウス操作切替 / ESC: 戻る" };
+        display.hint += "\nGIF録画時間: " + std::to_string(input.gifRecordingSeconds) + "秒（5 / 10 / 15 / 30秒）";
+        display.hint += "\nF7: 短く / F8: 長く / F9: 録画・停止";
         display.rows = { "PAD AIM: " + std::to_string(static_cast<int>(input.padSensitivity * 100.0f + 0.5f)) + "%",
             std::string("PAD PITCH: ") + (input.invertedPitch ? "INVERTED" : "NORMAL"),
             "MOUSE: " + std::to_string(static_cast<int>(input.mouseSensitivity * 100.0f + 0.5f)) + "%",

@@ -12,6 +12,7 @@
 #endif
 #include "Engine/audio/SoundManager.h"
 #include "Engine/Screenshot/ScreenshotManager.h"
+#include "Engine/Capture/GifRecordingManager.h"
 
 #include <format>
 
@@ -149,6 +150,9 @@ void Game::Initialize()
     ScreenshotManager::GetInstance()->Initialize(
         DirectXCommon::GetInstance(),
         WinApp::GetInstance());
+    GifRecordingManager::GetInstance()->Initialize(
+        DirectXCommon::GetInstance(),
+        WinApp::GetInstance());
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     renderer_->GetPostEffectManager()->RegisterDevelopmentPanel();
 #endif
@@ -193,6 +197,18 @@ void Game::Update()
     Input::GetInstance()->Update();
 
     ScreenshotManager::GetInstance()->Update();
+    GifRecordingManager::GetInstance()->Update();
+    const bool gifShiftHeld = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT) ||
+        Input::GetInstance()->IsKeyPressed(DIK_RSHIFT);
+    if (!gifShiftHeld && Input::GetInstance()->IsKeyTrigger(DIK_F7)) {
+        GifRecordingManager::GetInstance()->ChangeRecordingDuration(-1);
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F8)) {
+        GifRecordingManager::GetInstance()->ChangeRecordingDuration(1);
+    }
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F9)) {
+        GifRecordingManager::GetInstance()->ToggleRecording();
+    }
     if (Input::GetInstance()->IsKeyTrigger(DIK_F12)) {
         bool savePng = false;
         if (Input::GetInstance()->IsKeyPressed(DIK_LSHIFT) ||
@@ -316,6 +332,7 @@ void Game::Finalize()
     SceneManager::GetInstance()->SetVolumetricLightRenderer(nullptr);
     renderer_.reset();
 
+    GifRecordingManager::Finalize();
     ScreenshotManager::Finalize();
 
     SkinningObject3dManager::GetInstance()->Finalize();
