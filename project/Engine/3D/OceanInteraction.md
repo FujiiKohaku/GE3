@@ -66,3 +66,12 @@ Yaw follows the shortest arc with a 0.18-second time constant and a 2.5-radian/s
 Movement below 0.5 units/sec holds heading to avoid stationary jitter. Pause holds state; death,
 teleports and missing movement history reset it to the aircraft flight heading before following again.
 The forward spawn offset uses the same smoothed heading. Existing stamps retain their saved direction.
+
+
+## Near-field speed references
+Stage01 adds six small reef clusters alternating left/right at Z=65,145,260,385,535,720.
+The existing model is flattened and partially submerged; the new decorative objects have no colliders.
+Thin foam streaks use a sparse, jittered 14 x 40 world-space cell pattern with bent lines and broken tips.
+The pattern stays anchored to world XZ, so camera travel supplies the visual motion. Blending is capped
+at 0.18, with derivative-based antialiasing and distance fade from 80 to 170 units. No new textures,
+particles or per-frame CPU objects are needed. Crest foam and the disabled airborne spray are unchanged.

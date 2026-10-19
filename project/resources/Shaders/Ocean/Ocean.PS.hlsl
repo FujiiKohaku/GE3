@@ -42,6 +42,31 @@ float SampleCrestFoam(float2 position, float2 wakeData, float time)
     return crest * brokenCoverage * holes * 0.50f;
 }
 
+// Sparse world-anchored foam provides a near-surface reference for forward speed.
+float SampleFoamStreaks(float2 position, float cameraDistance)
+{
+    const float2 cellSize = float2(14.0f, 40.0f);
+    float2 cell = floor(position / cellSize);
+    float4 seed = frac(sin(float4(dot(cell, float2(127.1f, 311.7f)),
+        dot(cell, float2(269.5f, 183.3f)), dot(cell, float2(419.2f, 371.9f)),
+        dot(cell, float2(93.7f, 247.1f)))) * 43758.5453f);
+    float2 local = position - cell * cellSize;
+    float2 center = float2(2.0f + seed.x * 10.0f, 14.0f + seed.y * 12.0f);
+    float along = (local.y - center.y) / (6.0f + seed.z * 6.0f);
+    float bend = sin((local.y - center.y) * 0.18f + seed.w * 6.283185f) * 0.30f;
+    float across = local.x - center.x - bend;
+    float width = 0.10f + seed.z * 0.17f;
+    float footprint = max(fwidth(across), 0.025f);
+    float strand = (1.0f - smoothstep(width, width + footprint, abs(across)))
+        * saturate(width * 2.0f / footprint);
+    float tips = 1.0f - smoothstep(0.45f, 1.0f, abs(along));
+    float grain = HashNoise(position * float2(2.1f, 0.85f));
+    float breakup = smoothstep(0.27f, 0.60f, grain);
+    float sparse = smoothstep(0.55f, 0.78f, seed.w);
+    float nearFade = 1.0f - smoothstep(80.0f, 170.0f, cameraDistance);
+    return strand * tips * breakup * sparse * nearFade * 0.18f;
+}
+
 float4 main(OceanVertexOutput input) : SV_TARGET
 {
     float3 N = normalize(input.normal);
@@ -107,5 +132,8 @@ float4 main(OceanVertexOutput input) : SV_TARGET
 
     water = lerp(water, float3(0.86f, 0.97f, 1.0f), foam * 0.92f);
     float3 crestFoamColor = lerp(float3(0.50f, 0.68f, 0.73f), float3(0.86f, 0.95f, 0.96f), visibility);
-    return float4(lerp(water, crestFoamColor, wakeFoam), 1.0f);
+    water = lerp(water, crestFoamColor, wakeFoam);
+    float streakFoam = SampleFoamStreaks(input.worldPosition.xz,
+        length(input.worldPosition.xz - gOcean.cameraPositionAndTime.xz));
+    return float4(lerp(water, crestFoamColor, streakFoam), 1.0f);
 }

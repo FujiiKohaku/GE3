@@ -14,7 +14,7 @@
   "description": "Fly through the block gates and defeat Fear Worm.",
   "layout": "resources/Scenes/stage01.json",
   "rail": {
-    "length": 7200.0, "point_interval": 50.0, "speed": 0.5,
+    "length": 7200.0, "point_interval": 50.0, "speed": 0.8,
     "control_points": [
       [0.0, -20.0, 0.0],
       [0.0, -20.0, 50.0],
