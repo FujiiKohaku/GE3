@@ -441,6 +441,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\3D\Object3dManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\3D\Object3d.h" />
     <ClInclude Include="$(projectRootPath)Engine\3D\OceanSurface.h" />
+    <ClInclude Include="$(projectRootPath)Engine\3D\OceanInteraction.h" />
     <ClInclude Include="$(projectRootPath)Engine\3D\WaterPillarRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\3D\ModelCommon.h" />
     <ClInclude Include="$(projectRootPath)Engine\3D\ModelManager.h" />
@@ -775,5 +776,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Capture\GifWriter.h" />
     <ClCompile Include="$(projectRootPath)Engine\Capture\GifRecordingManager.cpp" />
     <ClInclude Include="$(projectRootPath)Engine\Capture\GifRecordingManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(projectRootPath)App\Game\Camera\CameraPreferences.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Camera\CameraPreferences.cpp" />
   </ItemGroup>
 </Project>

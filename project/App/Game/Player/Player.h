@@ -56,6 +56,7 @@ public:
     void ApplyRailAreaForce(const Vector3& force);
     // 使用クラス：GamePlayScene。レール基準位置からの左右・上下の移動量を返す。
     const Vector3& GetRailOffset() const { return railOffset_; }
+    void SetRailMinimumHeight(float height) { railMinimumHeight_ = height; hasRailMinimumHeight_ = true; }
     // 敵の照準などに使う前進速度を返す。死亡時は0、レール飛行では通常速度を使う。
     Vector3 GetAutomaticWorldVelocity() const;
     // 使用クラス：GamePlaySceneなど。カメラ配置やエフェクトに使う飛行方向を返す。
@@ -286,6 +287,8 @@ private:
 
     float railMoveLimitX_ = 20.0f;
     float railMoveLimitY_ = 15.0f;
+    float railMinimumHeight_ = 0.0f;
+    bool hasRailMinimumHeight_ = false;
     // 画面端に残す余白。単位はピクセル。
     float playerClampMarginX_ = 100.0f;
     float playerClampMarginY_ = 100.0f;

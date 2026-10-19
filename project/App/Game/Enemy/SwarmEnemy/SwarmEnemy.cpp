@@ -25,7 +25,8 @@ void SwarmEnemy::Initialize(
     const std::shared_ptr<SwarmGroupState>& groupState,
     SwarmFormationType formationType,
     int32_t slotIndex,
-    int32_t travelDirection)
+    int32_t travelDirection,
+    float baseHeight)
 {
     BaseEnemy::Initialize(model);
 
@@ -35,6 +36,7 @@ void SwarmEnemy::Initialize(
     formationType_ = formationType;
     slotIndex_ = slotIndex;
     travelDirection_ = travelDirection;
+    baseHeight_ = baseHeight;
     if (player_ != nullptr) {
         previousPlayerPositionZ_ = player_->GetTranslate().z;
         forwardPositionZ_ = previousPlayerPositionZ_ + forwardDistance_;

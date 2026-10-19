@@ -1,6 +1,8 @@
 #include "Engine/Capture/GifRecordingManager.h"
 // ステージ進行の中心。プレイヤー・敵・ボス・背景・HUD・演出を組み合わせて更新する。
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
+#include "Engine/Renderer/Renderer.h"
+#include "Engine/3D/OceanInteraction.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
@@ -232,6 +234,10 @@ void GamePlayScene::Initialize()
     camera_->Initialize();
     camera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
+    cameraPreferences_.Load();
+    cameraBackwardOffset_ = cameraPreferences_.distance;
+    camera_->SetFovY(cameraPreferences_.FovRadians());
+    boostFovY_ = cameraPreferences_.BoostFovRadians();
     normalFovY_ = camera_->GetFovY();
     currentFovY_ = normalFovY_;
 
@@ -512,6 +518,26 @@ void GamePlayScene::Initialize()
     pauseSensitivityText_->SetFontSize(16.0f);
     pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
 
+    for (int i = 0; i < 8; ++i) {
+        const auto rect = GetPauseAdjustmentRect(i / 2, i % 2 == 0 ? -1 : 1);
+        auto& sprite = pauseAdjustSprites_[i];
+        sprite = std::make_unique<Sprite>();
+        sprite->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+        sprite->SetPosition({rect.x, rect.y});
+        sprite->SetSize({rect.width, rect.height});
+        sprite->SetColor({0.18f, 0.45f, 0.75f, 0.95f});
+        sprite->Update();
+        auto& text = pauseAdjustTexts_[i];
+        text = std::make_unique<Text>();
+        text->Initialize(kDefaultFont);
+        text->SetText(i % 2 == 0 ? "−" : "+");
+        text->SetAnchorPoint({0.5f, 0.5f});
+        text->SetPosition({rect.x + rect.width / 2, rect.y + rect.height / 2});
+        text->SetFontSize(24);
+        text->SetColor({1, 1, 1, 1});
+        text->Update();
+    }
+
     // 画面左下に表示する現在武器HUD
     InitializeHudFrame(
         weaponHudFrameSprites_,
@@ -721,6 +747,10 @@ void GamePlayScene::Initialize()
         playerStartRot = spawn.rotation;
     }
 
+    if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
+        player_->SetRailMinimumHeight(stageSettings_.floorHeight + 3.0f);
+        playerStartPos = rail_->GetPositionByDistance(0.0f);
+    }
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
@@ -728,7 +758,7 @@ void GamePlayScene::Initialize()
         player_->EnableAllRangeMode(stageSettings_.flightAreaRadius,
             stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
         camera_->SetFarClip(4000.0f);
-        camera_->LookAt(playerStartPos - player_->GetFlightForward() * kCameraBackwardOffset +
+        camera_->LookAt(playerStartPos - player_->GetFlightForward() * cameraBackwardOffset_ +
             Vector3 { 0.0f, kAllRangeCameraUpwardOffset, 0.0f }, playerStartPos + player_->GetFlightForward() * 60.0f);
         camera_->Update();
     }
@@ -971,9 +1001,11 @@ void GamePlayScene::Update()
         if (player_) player_->ResetHomingLock();
     }
 
+    SceneManager::GetInstance()->SetPauseMenuOpen(isPaused_);
     if (isPaused_) {
         auto context = MakePauseContext();
-        if (!pauseChanged && input != nullptr) {
+        const bool mouseHandled = !pauseChanged && HandlePauseMouseInput();
+        if (!pauseChanged && !mouseHandled && isPaused_ && input != nullptr) {
             PauseStateInput pauseInput;
             pauseInput.up = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_UP) || input->IsKeyTrigger(DIK_UP);
             pauseInput.down = input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_DOWN) || input->IsKeyTrigger(DIK_DOWN);
@@ -990,10 +1022,27 @@ void GamePlayScene::Update()
             pauseState_->HandleInput(context, pauseInput);
             pauseState_->HandleControlToggle(context, input->IsKeyTrigger(DIK_C));
         }
+        auto* graphicsRenderer = SceneManager::GetInstance()->GetRenderer();
+        static const char* aaNames[] = { "OFF", "DLAA", "FXAA", "DLAA + FXAA", "TAA", "TAA + FXAA" };
+        static const char* qualityNames[] = { "高品質", "標準", "軽量", "カスタム" };
         const PauseDisplay display = pauseState_->GetDisplay({
             pauseSelection_, input && input->IsUsingGamepad(), input && input->IsGamepadPitchInverted(),
             input ? input->GetGamepadAimSensitivity() : 1.0f, gMouseSensitivity,
-            GifRecordingManager::GetInstance()->GetRecordingSeconds() });
+            GifRecordingManager::GetInstance()->GetRecordingSeconds(), cameraPreferences_.PresetName(),
+            cameraPreferences_.distance, cameraPreferences_.verticalFovDegrees, cameraSaveSucceeded_,
+            graphicsRenderer ? aaNames[graphicsRenderer->GetAntiAliasingMode()] : "利用不可",
+            graphicsRenderer ? qualityNames[static_cast<int>(graphicsRenderer->GetRenderQualityPreset())] : "利用不可",
+            !graphicsRenderer || !graphicsRenderer->IsDlaaAvailable() ? "DLAA非対応環境では選択をスキップ" :
+                (graphicsRenderer->IsDlaaActive() ? "DLAA: 動作中" : "DLAA: 利用可能（現在は未動作）") });
+        Sprite* rowSprites[] = { pauseResumeBtnSprite_.get(), pauseRetryBtnSprite_.get(), pauseControlBtnSprite_.get(), pauseTitleBtnSprite_.get() };
+        for (int row = 0; row < 4; ++row) {
+            if (!rowSprites[row]) continue;
+            const auto rect = GetPauseRowRect(pauseState_->GetType(), row);
+            rowSprites[row]->SetPosition({rect.x + rect.width / 2, rect.y + rect.height / 2});
+            rowSprites[row]->SetSize({rect.width, rect.height});
+            rowSprites[row]->SetColor(row == pauseSelection_ ? Vector4{0.28f, 0.65f, 0.85f, 0.95f} : Vector4{0.18f, 0.32f, 0.45f, 0.9f});
+            rowSprites[row]->Update();
+        }
         if (pauseTitleText_) pauseTitleText_->SetText(display.title);
         if (pauseResumeText_) pauseResumeText_->SetText(display.rows[0]);
         if (pauseRetryText_) pauseRetryText_->SetText(display.rows[1]);
@@ -1013,6 +1062,7 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter, PostEffectStage::BeforeParticle);
             SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale, PostEffectStage::BeforeParticle);
         }
+        SceneManager::GetInstance()->SetPauseMenuOpen(isPaused_);
         // ポーズ中はゲームオブジェクトの更新を停止する。
         debugCameraController_->Update();
         camera_->Update();
@@ -1517,6 +1567,42 @@ void GamePlayScene::Update()
     // スカイボックスの更新
     skyBox_->Update(camera_.get());
 
+    if (oceanSurface_) {
+        const float dt = TimeManager::GetInstance()->GetDeltaTime();
+        oceanSurface_->Update(dt);
+        const Vector3 position = player_->GetTranslate();
+        const Vector3 delta = position - previousOceanPlayerPosition_;
+        const float distance = std::sqrt(delta.x * delta.x + delta.z * delta.z);
+        if (!player_->IsDead() && hasOceanPlayerPosition_ && dt > 0.0f && distance < 40.0f) {
+            if (!hasOceanWakeForward_) {
+                oceanWakeForward_ = OceanInteraction::HorizontalDirection(player_->GetFlightForward());
+                hasOceanWakeForward_ = true;
+            }
+            const Vector3 oceanVelocity{delta.x / dt, 0, delta.z / dt};
+            oceanWakeForward_ = OceanInteraction::FollowWakeDirection(oceanWakeForward_, oceanVelocity, dt);
+            const float strength = oceanSurface_->UpdateInteraction(position, oceanWakeForward_,
+                distance / dt, player_->IsBoosting(), dt);
+            oceanSprayCooldown_ = (std::max)(0.0f, oceanSprayCooldown_ - dt);
+            // Temporarily hide white spray so the geometric ocean response is easier to inspect.
+            constexpr bool kEnableOceanSpray = false;
+            if (kEnableOceanSpray && strength > 0.04f && oceanSprayCooldown_ <= 0.0f) {
+                // Use the same forward source and displaced height as the visible wake.
+                Vector3 sprayPosition = OceanInteraction::SourcePosition(position, oceanWakeForward_, distance / dt);
+                sprayPosition.y = oceanSurface_->GetHeightAt(sprayPosition.x, sprayPosition.z) + 0.12f;
+                const auto handle = EffectManager::GetInstance()->PlayEffect("OceanSpray", sprayPosition);
+                EffectManager::GetInstance()->SetEffectDirection(handle, oceanWakeForward_);
+                EffectManager::GetInstance()->SetEffectVelocity(handle, {0.0f, strength, 0.0f});
+                oceanSprayCooldown_ = (player_->IsBoosting() ? 0.055f : 0.085f) / (0.4f + strength * 0.6f);
+            }
+        } else {
+            oceanSurface_->EndInteraction();
+            oceanSprayCooldown_ = 0.0f;
+            hasOceanWakeForward_ = false;
+        }
+        previousOceanPlayerPosition_ = position;
+        hasOceanPlayerPosition_ = !player_->IsDead();
+    }
+
     // 各種マネージャー、オブジェクト、コリジョンの更新
     EffectManager::GetInstance()->Update();
     sceneObjectManager_->Update();
@@ -1542,9 +1628,7 @@ void GamePlayScene::Update()
     if (floorObj_) {
         floorObj_->Update();
     }
-    if (oceanSurface_) {
-        oceanSurface_->Update(TimeManager::GetInstance()->GetDeltaTime());
-    }
+
 
     // コリジョン判定の実行
     CheckCollision();
@@ -1846,7 +1930,7 @@ void GamePlayScene::UpdateCamera(
     if (player_->IsBoosting() || debugCameraController_->GetDebugMode()) {
         brakeKickStrength = 0.0f;
     }
-    const float cameraBackwardOffset = kCameraBackwardOffset *
+    const float cameraBackwardOffset = cameraBackwardOffset_ *
         (1.0f - kBrakeCameraDistanceReduction * brakeReactionStrength_ -
             kBrakeCameraKickReduction * brakeKickStrength);
     if (stageSettings_.allRangeMode) {
@@ -2402,6 +2486,10 @@ void GamePlayScene::Draw2D()
         if (pauseTitleBtnSprite_) pauseTitleBtnSprite_->Draw();
         if (pauseControlBtnSprite_) pauseControlBtnSprite_->Draw();
 
+        for (int i = 0; i < 8; ++i) {
+            if (pauseState_->HasSensitivityControls(i / 2) && pauseAdjustSprites_[i]) pauseAdjustSprites_[i]->Draw();
+        }
+
         // 独自TextRendererによるRelease構成対応の超高画質日本語テキスト描画
         TextRenderer::GetInstance()->PreDraw();
         if (pauseTitleText_) pauseTitleText_->Draw();
@@ -2410,6 +2498,9 @@ void GamePlayScene::Draw2D()
         if (pauseTitleBtnText_) pauseTitleBtnText_->Draw();
         if (pauseControlText_) pauseControlText_->Draw();
         if (pauseSensitivityText_) pauseSensitivityText_->Draw();
+        for (int i = 0; i < 8; ++i) {
+            if (pauseState_->HasSensitivityControls(i / 2) && pauseAdjustTexts_[i]) pauseAdjustTexts_[i]->Draw();
+        }
     } else {
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
@@ -2526,7 +2617,7 @@ bool GamePlayScene::UpdateTutorialPresentation()
                 }
             }
             camera_->LookAt(Lerp(Vector3 { 0.0f, 10.0f, -55.0f },
-                Vector3 { 0.0f, kCameraUpwardOffset, -kCameraBackwardOffset }, eased),
+                Vector3 { 0.0f, kCameraUpwardOffset, -cameraBackwardOffset_ }, eased),
                 { 0.0f, 0.0f, cameraLookAheadDistance_ });
             camera_->Update();
             aimCamera_->LookAt(camera_->GetTranslate(), { 0.0f, 0.0f, cameraLookAheadDistance_ });
@@ -2662,7 +2753,33 @@ PauseStateContext GamePlayScene::MakePauseContext()
             Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
         if (player_) player_->SetControlMode(gControlMode);
     };
+    context.cycleAntiAliasing = [](int direction) {
+        if (auto* renderer = SceneManager::GetInstance()->GetRenderer()) renderer->CycleAntiAliasing(direction);
+    };
+    context.cycleRenderQuality = [](int direction) {
+        if (auto* renderer = SceneManager::GetInstance()->GetRenderer()) {
+            int current = static_cast<int>(renderer->GetRenderQualityPreset());
+            int next = current == 3 ? (direction < 0 ? 2 : 0) : (current + (direction < 0 ? 2 : 1)) % 3;
+            renderer->SetRenderQualityPreset(static_cast<RenderQualityPreset>(next));
+        }
+    };
+    context.cycleCameraPreset = [this](int direction) { cameraPreferences_.CyclePreset(direction); ApplyCameraPreferences(); };
+    context.adjustCameraDistance = [this](float amount) { cameraPreferences_.AdjustDistance(amount); ApplyCameraPreferences(); };
+    context.adjustCameraFov = [this](float amount) { cameraPreferences_.AdjustFov(amount); ApplyCameraPreferences(); };
     return context;
+}
+
+void GamePlayScene::ApplyCameraPreferences()
+{
+    cameraBackwardOffset_ = cameraPreferences_.distance;
+    normalFovY_ = cameraPreferences_.FovRadians();
+    currentFovY_ = normalFovY_;
+    boostFovY_ = cameraPreferences_.BoostFovRadians();
+    hasCameraFollowState_ = false;
+    cameraSaveSucceeded_ = cameraPreferences_.Save();
+    if (!cameraSaveSucceeded_) Logger::Warning("Camera settings could not be saved");
+    if (camera_) camera_->SetFovY(currentFovY_);
+    if (aimCamera_) aimCamera_->SetFovY(currentFovY_);
 }
 
 // ポーズ画面の表示先と選択位置を切り替える。
@@ -2688,50 +2805,37 @@ void GamePlayScene::ActivatePauseSelection()
     auto context = MakePauseContext();
     pauseState_->Activate(context);
 }
+// Convert OS cursor coordinates to the same logical canvas used by pause sprites.
+bool GamePlayScene::HandlePauseMouseInput()
+{
+    auto* input = Input::GetInstance();
+    const HWND hwnd = WinApp::GetInstance()->GetHwnd();
+    if (!input || GetForegroundWindow() != hwnd) return false;
+    POINT point{};
+    RECT client{};
+    if (!GetCursorPos(&point) || !ScreenToClient(hwnd, &point) || !GetClientRect(hwnd, &client)
+        || client.right <= 0 || client.bottom <= 0) return false;
+    const float x = float(point.x) * WinApp::kClientWidth / client.right;
+    const float y = float(point.y) * WinApp::kClientHeight / client.bottom;
+    const auto hit = HitTestPauseButtons(*pauseState_, x, y);
+    const bool click = input->IsMouseTrigger(0);
+    if (hit.row < 0) return false;
+    if (click || input->GetMouseDeltaX() != 0 || input->GetMouseDeltaY() != 0) pauseSelection_ = hit.row;
+    if (!click) return false;
+    pauseSelection_ = hit.row;
+    if (hit.adjustment != 0 || pauseState_->HasSensitivityControls(hit.row)) {
+        AdjustPauseSensitivity(hit.adjustment < 0 ? -0.1f : 0.1f);
+    } else {
+        ActivatePauseSelection();
+    }
+    return true;
+}
+
 // 開発用の画面に内部状態や調整項目を表示する。
 void GamePlayScene::DrawImGui()
 {
 #ifdef USE_IMGUI
-    if (isPaused_) {
-        if (Input::GetInstance()->IsUsingGamepad()) return;
-        ImGui::SetNextWindowPos(ImVec2(WinApp::kClientWidth * 0.5f, WinApp::kClientHeight * 0.5f),
-            ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowSize(ImVec2(400.0f, 520.0f));
-        const ImGuiWindowFlags flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-            ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoSavedSettings;
-        if (ImGui::Begin("VerticalPauseWindow", nullptr, flags)) {
-            // 表示はDraw2Dの日本語UIに統一し、ここではマウスの当たり判定を配置する。
-            const float rowPositions[] = { 168.0f, 238.0f, 308.0f, 428.0f };
-            for (int row = 0; row < 4; ++row) {
-                if (pauseState_->HasSensitivityControls(row)) {
-                    ImGui::PushID(row);
-                    ImGui::SetCursorPos(ImVec2(18.0f, rowPositions[row]));
-                    if (ImGui::Button("-", ImVec2(32.0f, 44.0f))) {
-                        pauseSelection_ = row;
-                        AdjustPauseSensitivity(-0.1f);
-                    }
-                    ImGui::SetCursorPos(ImVec2(350.0f, rowPositions[row]));
-                    if (ImGui::Button("+", ImVec2(32.0f, 44.0f))) {
-                        pauseSelection_ = row;
-                        AdjustPauseSensitivity(0.1f);
-                    }
-                    ImGui::PopID();
-                } else {
-                    ImGui::SetCursorPos(ImVec2(50.0f, rowPositions[row]));
-                    const std::string id = "##pauseRow" + std::to_string(row);
-                    if (ImGui::InvisibleButton(id.c_str(), ImVec2(300.0f, 44.0f))) {
-                        pauseSelection_ = row;
-                        ActivatePauseSelection();
-                        // ページ変更後に同じクリックを別の項目へ渡さない。
-                        break;
-                    }
-                }
-            }
-        }
-        ImGui::End();
-        return;
-    }
+    if (isPaused_) return; // Native UI handles all pause mouse input, including Release.
 #endif
 #if defined(ENABLE_DEVELOPMENT_TOOLS) && !defined(_DEBUG)
     // Keep the TAB pause menu. F10 can reveal older ImGui tools when needed.
@@ -3550,6 +3654,7 @@ void GamePlayScene::DrawCollisionDebug()
 // プレイ専用の演出や外部登録を終了し、シーンのリソースを片付ける。
 void GamePlayScene::Finalize()
 {
+    SceneManager::GetInstance()->SetPauseMenuOpen(false);
     RestoreBossCutInTimeScale();
     bossCutInTimerSeconds_ = -1.0f;
     LightManager::GetInstance()->RemoveSpotLight(bossSpotLightHandle_);
@@ -3910,7 +4015,8 @@ void GamePlayScene::SpawnSwarmWave(
             groupState,
             formationType,
             slotIndex,
-            travelDirection);
+            travelDirection,
+            stageId_ == "stage01" ? rail_->GetPositionByDistance(railDistance_).y + 2.0f : 2.0f);
         ConfigureFrozenEnemyAppearance(*swarmEnemy);
         enemies_.push_back(std::move(swarmEnemy));
     }
@@ -4328,6 +4434,10 @@ void GamePlayScene::HotReloadLevel()
         playerStartRot = spawn.rotation;
     }
 
+    if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
+        player_->SetRailMinimumHeight(stageSettings_.floorHeight + 3.0f);
+        playerStartPos = rail_->GetPositionByDistance(0.0f);
+    }
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });

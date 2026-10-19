@@ -27,10 +27,15 @@ struct PostEffectInfo {
     int priority = 0;
 };
 
+class Renderer;
 class VolumetricLightRenderer;
 
 class SceneManager {
 public:
+    void SetRenderer(Renderer* renderer) { renderer_ = renderer; }
+    Renderer* GetRenderer() const { return renderer_; }
+    void SetPauseMenuOpen(bool open) { isPauseMenuOpen_ = open; }
+    bool IsPauseMenuOpen() const { return isPauseMenuOpen_; }
     void SetVolumetricLightRenderer(VolumetricLightRenderer* renderer) { volumetricLightRenderer_ = renderer; }
     VolumetricLightRenderer* GetVolumetricLightRenderer() const { return volumetricLightRenderer_; }
     static constexpr float kDefaultCameraShakeStrength = 0.008f;
@@ -144,6 +149,8 @@ public:
     uint64_t GetSceneRevision() const { return sceneRevision_; }
 
 private:
+    bool isPauseMenuOpen_ = false;
+    Renderer* renderer_ = nullptr; // Borrowed; cleared before Game destroys the renderer.
     VolumetricLightRenderer* volumetricLightRenderer_ = nullptr;
     SceneManager() = default;
     ~SceneManager() = default;

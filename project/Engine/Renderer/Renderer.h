@@ -55,6 +55,10 @@ public:
     DxrGlobalIlluminationRenderer* GetDxrGlobalIlluminationRenderer() const { return dxrGlobalIlluminationRenderer_.get(); }
     DxrLocalShadowRenderer* GetDxrLocalShadowRenderer() const { return dxrLocalShadowRenderer_.get(); }
     void SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled);
+    uint32_t GetAntiAliasingMode() const;
+    void CycleAntiAliasing(int direction);
+    bool IsDlaaAvailable() const;
+    bool IsDlaaActive() const;
     double GetFrameGpuTimeMs() const { return frameTimer_.GetDurationMs(); }
     double GetDlaaGpuTimeMs() const { return dlaaTimer_.GetDurationMs(); }
     bool HasGpuTimingSample() const { return frameTimer_.HasSample(); }
@@ -83,7 +87,6 @@ private:
         double dlaaTotalMs = 0;
         double finalPassTotalMs = 0;
     };
-    uint32_t GetAntiAliasingMode() const;
     void RecordGpuSample();
     GpuTimestampTimer frameTimer_;
     GpuTimestampTimer dlaaTimer_;

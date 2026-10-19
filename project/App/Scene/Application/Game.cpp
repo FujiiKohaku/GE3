@@ -140,6 +140,7 @@ void Game::Initialize()
 
     renderer_ = std::make_unique<Renderer>();
     renderer_->Initialize();
+    SceneManager::GetInstance()->SetRenderer(renderer_.get());
     SceneManager::GetInstance()->SetVolumetricLightRenderer(renderer_->GetPostEffectManager()->GetVolumetricLightRenderer());
 #if defined(_DEBUG)
     if (std::wstring(GetCommandLineW()).find(L"--verify-object-fog") != std::wstring::npos) {
@@ -223,19 +224,7 @@ void Game::Update()
 #endif
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_F2)) {
-
         isMouseCursorVisible_ = !isMouseCursorVisible_;
-
-        if (isMouseCursorVisible_) {
-
-            ShowCursor(TRUE);
-            UnlockCursor();
-
-        } else {
-
-            ShowCursor(FALSE);
-            LockCursorToWindow();
-        }
     }
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_F10)) {
@@ -247,7 +236,7 @@ void Game::Update()
 #endif
     }
 
-    if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE)) {
+    if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE) && !SceneManager::GetInstance()->IsPauseMenuOpen()) {
         Logger::Log("Escape exit confirmation opened");
         const int result = MessageBoxW(
             WinApp::GetInstance()->GetHwnd(),
@@ -273,11 +262,19 @@ void Game::Update()
         SceneManager::GetInstance()->Update();
     }
     
+    const bool wantsCursor = isMouseCursorVisible_ || SceneManager::GetInstance()->IsPauseMenuOpen();
+    if (wantsCursor != isSystemCursorVisible_) {
+        ShowCursor(wantsCursor ? TRUE : FALSE);
+        if (wantsCursor) UnlockCursor();
+        else LockCursorToWindow();
+        isSystemCursorVisible_ = wantsCursor;
+    }
+
     DebugRenderer::GetInstance()->Update();
     
 #ifdef USE_IMGUI
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
-    // The game's TAB pause menu still uses ImGui; gameplay controls are in the browser.
+    // Pause controls use the game's own UI in every configuration.
     SceneManager::GetInstance()->DrawImGui();
 #else
     if (showDebugUI_) {
@@ -330,6 +327,7 @@ void Game::Finalize()
     ImGuiManager::Finalize();
 #endif
     SceneManager::GetInstance()->SetVolumetricLightRenderer(nullptr);
+    SceneManager::GetInstance()->SetRenderer(nullptr);
     renderer_.reset();
 
     GifRecordingManager::Finalize();

@@ -28,10 +28,26 @@ float Fbm(float2 p)
     return value;
 }
 
+// Use the actual displaced crest, avoiding a second per-pixel loop over wake stamps.
+float SampleCrestFoam(float2 position, float2 wakeData, float time)
+{
+    float crest = smoothstep(0.06f, 0.32f, wakeData.x);
+    crest *= 1.0f - smoothstep(0.5f, 1.4f, wakeData.y) * 0.4f;
+    float2 drift = float2(time * 0.14f, -time * 0.10f);
+    float patches = HashNoise(position * 0.85f + drift) * 0.65f
+        + HashNoise(position * 2.4f - drift * 0.7f) * 0.35f;
+    float antialias = max(fwidth(patches) * 0.75f, 0.035f);
+    float brokenCoverage = smoothstep(0.42f - antialias, 0.60f + antialias, patches);
+    float holes = 1.0f - smoothstep(0.62f, 0.82f, HashNoise(position * 4.0f + drift)) * 0.45f;
+    return crest * brokenCoverage * holes * 0.50f;
+}
+
 float4 main(OceanVertexOutput input) : SV_TARGET
 {
     float3 N = normalize(input.normal);
     float time = gOcean.cameraPositionAndTime.w;
+    static const bool kEnableInteractionFoam = true;
+    float wakeFoam = kEnableInteractionFoam ? SampleCrestFoam(input.worldPosition.xz, input.wakeData, time) : 0.0f;
 
     // Derive fine normals from irregular FBM instead of parallel sine bands.
     float2 finePosition = input.worldPosition.xz * 0.16f + float2(time * 0.09f, -time * 0.065f);
@@ -89,5 +105,7 @@ float4 main(OceanVertexOutput input) : SV_TARGET
         steep * brokenCoverage * 0.34f + isolatedFlecks * 0.28f;
     float foam = smoothstep(0.24f, 0.68f, foamSignal);
 
-    return float4(lerp(water, float3(0.86f, 0.97f, 1.0f), foam * 0.92f), 1.0f);
+    water = lerp(water, float3(0.86f, 0.97f, 1.0f), foam * 0.92f);
+    float3 crestFoamColor = lerp(float3(0.50f, 0.68f, 0.73f), float3(0.86f, 0.95f, 0.96f), visibility);
+    return float4(lerp(water, crestFoamColor, wakeFoam), 1.0f);
 }

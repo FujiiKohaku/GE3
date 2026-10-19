@@ -1034,6 +1034,15 @@ Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
     correctedRailOffset.y = std::clamp(
         correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
     correctedRailOffset.z = 0.0f;
+    // Keep the configured ocean clearance after both input and screen-space correction.
+    const auto enforceMinimumHeight = [this](Vector3& offset) {
+        if (hasRailMinimumHeight_ && railUp_.y > 0.0001f) {
+            const float minimumOffset = (railMinimumHeight_ - railBasePosition_.y - railRight_.y * offset.x) / railUp_.y;
+            offset.y = (std::max)(offset.y, (std::min)(minimumOffset, railMoveLimitY_));
+        }
+    };
+    enforceMinimumHeight(correctedRailOffset);
+
 
     if (camera_ == nullptr) {
         return correctedRailOffset;
@@ -1093,6 +1102,7 @@ Vector3 Player::ClampRailOffsetToScreen(const Vector3& railOffset) const
         correctedRailOffset.x = std::clamp(correctedRailOffset.x, -railMoveLimitX_, railMoveLimitX_);
         correctedRailOffset.y = std::clamp(correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
         correctedRailOffset.z = 0.0f;
+        enforceMinimumHeight(correctedRailOffset);
     }
 
     return correctedRailOffset;

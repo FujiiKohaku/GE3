@@ -1,6 +1,8 @@
 #include "Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include <cmath>
+#include <format>
+#include <stdexcept>
 Camera::Camera()
     : transform_({ { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -20.0f } })
     , fovY_(0.45f)
@@ -18,7 +20,14 @@ void Camera::Initialize()
 {
     cameraResource_ = DirectXCommon::GetInstance()->CreateBufferResource(sizeof(CameraForGPU));
 
-    cameraResource_->Map(0, nullptr, reinterpret_cast<void**>(&cameraData_));
+    const HRESULT result = cameraResource_->Map(0, nullptr, reinterpret_cast<void**>(&cameraData_));
+    if (FAILED(result) || cameraData_ == nullptr) {
+        const std::string message = std::format("Camera buffer Map failed: HRESULT=0x{:08X}",
+            static_cast<unsigned int>(result));
+        Logger::Error(message);
+        Logger::Flush();
+        throw std::runtime_error(message);
+    }
 
 }
 

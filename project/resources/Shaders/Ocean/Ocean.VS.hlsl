@@ -1,4 +1,5 @@
 #include "Ocean.hlsli"
+#include "OceanWakeShape.hlsli"
 
 struct VertexInput
 {
@@ -31,6 +32,10 @@ OceanVertexOutput main(VertexInput input)
 {
     OceanVertexOutput output;
     float3 worldPosition = mul(input.position, gOcean.world).xyz;
+    float2 minimum = mul(float4(-0.5f, 0.0f, -0.5f, 1.0f), gOcean.world).xz;
+    float2 maximum = mul(float4(0.5f, 0.0f, 0.5f, 1.0f), gOcean.world).xz;
+    worldPosition.x = OceanFocusedCoordinate(input.position.x + 0.5f, minimum.x, maximum.x, gOcean.wakeMeta.y);
+    worldPosition.z = OceanFocusedCoordinate(input.position.z + 0.5f, minimum.y, maximum.y, gOcean.wakeMeta.z);
     float2 p = worldPosition.xz;
     float time = gOcean.cameraPositionAndTime.w;
     float amplitude = gOcean.waveParameters.x;
@@ -44,21 +49,27 @@ OceanVertexOutput main(VertexInput input)
 
     float3 displacement = 0.0f;
     float2 gradient = 0.0f;
-    AddGerstnerWave(p, float2(0.98f, 0.18f), frequency * 0.61f,
-        amplitude * 0.36f * localStrength, 0.56f, 0.72f, time, 0.4f, displacement, gradient);
-    AddGerstnerWave(p, float2(-0.24f, 0.97f), frequency * 0.89f,
-        amplitude * 0.27f * localStrength, 0.77f, 0.66f, time, 2.1f, displacement, gradient);
-    AddGerstnerWave(p, float2(0.63f, 0.78f), frequency * 1.31f,
-        amplitude * 0.19f * localStrength, 1.03f, 0.58f, time, 4.7f, displacement, gradient);
-    AddGerstnerWave(p, float2(-0.91f, 0.42f), frequency * 1.86f,
-        amplitude * 0.115f * localStrength, 1.39f, 0.48f, time, 1.3f, displacement, gradient);
-    AddGerstnerWave(p, float2(0.15f, -0.99f), frequency * 2.63f,
-        amplitude * 0.065f * localStrength, 1.82f, 0.36f, time, 5.6f, displacement, gradient);
+#define OCEAN_WAVE(dx, dz, f, a, speed, steepness, phase) \
+    AddGerstnerWave(p, float2(dx, dz), frequency * f, amplitude * a * localStrength, speed, steepness, time, phase, displacement, gradient);
+#include "OceanWaveLayers.hlsli"
+#undef OCEAN_WAVE
 
     worldPosition += displacement;
+    float3 wake = 0.0f;
+    [loop]
+    for (uint i = 0; i < (uint)gOcean.wakeMeta.x; ++i) {
+        OceanWakePoint stamp = gOcean.wakes[i];
+        float2 delta = worldPosition.xz - stamp.positionTimeStrength.xy;
+        wake += OceanWakeProfile(delta.x, delta.y, time - stamp.positionTimeStrength.z,
+            stamp.positionTimeStrength.w, stamp.directionSize.z, stamp.directionSize.x, stamp.directionSize.y);
+    }
+    wake = LimitOceanWake(wake);
+    worldPosition.y += wake.y;
+    gradient += wake.xz;
     output.position = mul(float4(worldPosition, 1.0f), gOcean.viewProjection);
     output.worldPosition = worldPosition;
     output.normal = normalize(float3(-gradient.x, 1.0f, -gradient.y));
     output.waveData = float2(displacement.y / max(amplitude * localStrength, 0.0001f), length(gradient));
+    output.wakeData = float2(wake.y, length(wake.xz));
     return output;
 }

@@ -4,7 +4,7 @@
 #include <functional>
 #include <string>
 
-enum class PauseViewState { Menu, Settings };
+enum class PauseViewState { Menu, Settings, Camera, Graphics };
 struct PauseStateInput {
     bool up = false, down = false, left = false, right = false;
     bool back = false, confirm = false;
@@ -18,6 +18,11 @@ struct PauseStateContext {
     std::function<void(float)> adjustMouse;
     std::function<void()> togglePitch;
     std::function<void()> toggleControl;
+    std::function<void(int)> cycleCameraPreset;
+    std::function<void(float)> adjustCameraDistance;
+    std::function<void(float)> adjustCameraFov;
+    std::function<void(int)> cycleAntiAliasing;
+    std::function<void(int)> cycleRenderQuality;
 };
 struct PauseDisplayInput {
     int selection;
@@ -26,6 +31,13 @@ struct PauseDisplayInput {
     float padSensitivity;
     float mouseSensitivity;
     int gifRecordingSeconds = 5;
+    std::string cameraPreset = "標準";
+    float cameraDistance = 35.0f;
+    float cameraFovDegrees = 25.7831f;
+    bool cameraSaveSucceeded = true;
+    std::string antiAliasing = "OFF";
+    std::string renderQuality = "カスタム";
+    std::string dlaaStatus;
 };
 struct PauseDisplay {
     std::string title;
@@ -49,6 +61,18 @@ protected:
     // 上下入力で選択位置を移動し、決定・キャンセルを現在のポーズ状態へ渡す。
     static void Navigate(PauseStateContext& context, const PauseStateInput& input);
 };
+
+// Shared by drawing and mouse picking in the 1280 x 720 UI coordinate system.
+struct PauseButtonRect {
+    float x, y, width, height;
+    bool Contains(float px, float py) const {
+        return px >= x && px < x + width && py >= y && py < y + height;
+    }
+};
+struct PauseMouseHit { int row = -1; int adjustment = 0; };
+PauseButtonRect GetPauseRowRect(PauseViewState page, int row);
+PauseButtonRect GetPauseAdjustmentRect(int row, int direction);
+PauseMouseHit HitTestPauseButtons(const BasePauseState& page, float x, float y);
 
 // メニューか設定かに応じて、共有のポーズ状態オブジェクトを返す。
 const BasePauseState& GetPauseState(PauseViewState state);

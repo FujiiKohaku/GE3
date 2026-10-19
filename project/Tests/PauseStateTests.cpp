@@ -50,10 +50,34 @@ int main()
     state->HandleControlToggle(context, true); assert(toggles == 1);
     state->Activate(context); assert(state->GetType() == PauseViewState::Settings && selection == 0);
     selection = 3; state->Activate(context);
+    assert(state->GetType() == PauseViewState::Graphics && selection == 0);
+    input = {}; input.back = true; state->HandleInput(context, input);
+    assert(state->GetType() == PauseViewState::Settings && selection == 3);
+    state->HandleInput(context, input);
     assert(state->GetType() == PauseViewState::Menu && selection == 2);
     const auto menuDisplay = state->GetDisplay({2, false, false, 1.0f, 1.0f});
     assert(menuDisplay.title == "PAUSE MENU" && menuDisplay.rows[2] == "> 設定 [S / ENTER]");
     context.changeState(PauseViewState::Menu, 0); // ポーズ開始・切断時はメニュー先頭へ戻す。
     assert(selection == 0);
-    std::cout << "PauseState tests passed\n";
+    // Pick visible buttons and reject gaps, outside coordinates and hidden +/- controls.
+    const auto& menu = GetPauseState(PauseViewState::Menu);
+    const auto& settings = GetPauseState(PauseViewState::Settings);
+    const auto& camera = GetPauseState(PauseViewState::Camera);
+    const auto& graphics = GetPauseState(PauseViewState::Graphics);
+    assert(HitTestPauseButtons(menu, 640, 290).row == 0);
+    assert(HitTestPauseButtons(menu, 640, 570).row == 3);
+    assert(HitTestPauseButtons(menu, 640, 500).row == -1);
+    assert(HitTestPauseButtons(menu, -1, 290).row == -1);
+    assert(HitTestPauseButtons(menu, 474, 290).row == -1);
+    auto hit = HitTestPauseButtons(settings, 474, 290);
+    assert(hit.row == 0 && hit.adjustment == -1);
+    hit = HitTestPauseButtons(settings, 806, 430);
+    assert(hit.row == 2 && hit.adjustment == 1);
+    assert(HitTestPauseButtons(settings, 806, 360).row == -1);
+    assert(HitTestPauseButtons(camera, 490, 268).row == 0);
+    assert(HitTestPauseButtons(camera, 790, 312).row == -1);
+    assert(HitTestPauseButtons(graphics, 806, 360).adjustment == 1);
+    assert(HitTestPauseButtons(graphics, 806, 430).row == -1);
+    assert(HitTestPauseButtons(graphics, 640, 430).row == 2);
+    std::cout << "PauseState tests passed (including mouse picking and button boundaries)\n";
 }

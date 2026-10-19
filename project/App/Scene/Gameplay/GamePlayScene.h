@@ -11,6 +11,7 @@
 
 #include "App/Scene/Common/BaseScene.h"
 #include "Pause/BasePauseState.h"
+#include "App/Game/Camera/CameraPreferences.h"
 #include "Engine/2D/Text/Text.h"
 #include "Engine/2D/Text/TextRenderer.h"
 
@@ -263,6 +264,11 @@ private:
     // std::unique_ptr<Object3d> plane_;
     std::unique_ptr<Object3d> floorObj_;
     std::unique_ptr<OceanSurface> oceanSurface_;
+    Vector3 previousOceanPlayerPosition_{};
+    bool hasOceanPlayerPosition_ = false;
+    Vector3 oceanWakeForward_{0, 0, 1};
+    bool hasOceanWakeForward_ = false;
+    float oceanSprayCooldown_ = 0.0f;
     std::unique_ptr<WaterPillarRenderer> waterPillarRenderer_;
     std::vector<std::unique_ptr<Object3d>> oceanFish_;
     std::vector<std::unique_ptr<Object3d>> oceanBirds_;
@@ -396,7 +402,10 @@ private:
     Model* fearWormEnemyModel_ = nullptr;
 
     // カメラオフセット定数
-    static constexpr float kCameraBackwardOffset = 35.0f;
+    float cameraBackwardOffset_ = 35.0f;
+    CameraPreferences cameraPreferences_;
+    bool cameraSaveSucceeded_ = true;
+    void ApplyCameraPreferences();
     // EXZODIAC-like low chase view: keep the eye slightly below the rail
     // center so the player is framed against the horizon instead of seen
     // from above.
@@ -485,6 +494,7 @@ private:
     void ChangePauseState(PauseViewState state, int selection = 0);
     // ポーズ画面で選択中の項目を決定する。
     void ActivatePauseSelection();
+    bool HandlePauseMouseInput();
     // 設定画面から操舵感度を変更し、許可された範囲へ収める。
     void AdjustPauseSensitivity(float amount);
     // 訓練の開始・成功・完了を示す表示と演出を準備する。
@@ -515,6 +525,8 @@ private:
     std::unique_ptr<Text> pauseTitleBtnText_;
     std::unique_ptr<Text> pauseControlText_;
     std::unique_ptr<Text> pauseSensitivityText_;
+    std::array<std::unique_ptr<Sprite>, 8> pauseAdjustSprites_;
+    std::array<std::unique_ptr<Text>, 8> pauseAdjustTexts_;
 
     // 画面右側のプレイヤーHPゲージUI
     std::unique_ptr<Sprite> playerHpBgSprite_;

@@ -800,3 +800,14 @@ uint64_t Renderer::UpdateTemporalRadianceRevision() {
     previousTemporalSunDirection_ = {sun.direction.x, sun.direction.y, sun.direction.z}; hasTemporalRadiance_ = true;
     return temporalRadianceRevision_;
 }
+
+// Unsupported DLAA entries are skipped; the UI reads the actual requested mode.
+bool Renderer::IsDlaaAvailable() const { return dlssSuperResolution_->IsAvailable(); }
+bool Renderer::IsDlaaActive() const { return dlssSuperResolution_->IsActive(); }
+void Renderer::CycleAntiAliasing(int direction) {
+    int mode = static_cast<int>(GetAntiAliasingMode());
+    do { mode = (mode + (direction < 0 ? 5 : 1)) % 6; }
+    while ((mode == 1 || mode == 3) && !IsDlaaAvailable());
+    if (mode >= 4) SetTemporalAntiAliasing(true, mode == 5);
+    else SetAntiAliasing(mode == 1 || mode == 3, mode == 2 || mode == 3);
+}

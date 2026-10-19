@@ -1,5 +1,6 @@
 #include "OceanSurface.h"
 #include "Object3dManager.h"
+#include "OceanInteraction.h"
 
 #include "Engine/Camera/Camera.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
@@ -11,6 +12,7 @@
 
 void OceanSurface::Initialize(Camera* camera, float width, float length, float height)
 {
+    static_assert(sizeof(OceanConstants) == 208 + 32 * kMaxWakePoints, "Ocean CPU/HLSL constant layout mismatch");
     assert(camera != nullptr);
     camera_ = camera;
     dxCommon_ = DirectXCommon::GetInstance();
@@ -36,6 +38,9 @@ void OceanSurface::Update(float deltaTime)
     }
 
     time_ += deltaTime;
+    if (wakeCount_ > 0 && time_ - lastWakeTime_ > 2.5f) {
+        wakeCount_ = 0; nextWake_ = 0; hasWakePosition_ = false;
+    }
     constants_->viewProjection = camera_->GetViewProjectionMatrix();
     const Vector3 scale = { width_, 1.0f, length_ };
     const Vector3 rotation = { 0.0f, 0.0f, 0.0f };
@@ -47,6 +52,57 @@ void OceanSurface::Update(float deltaTime)
     constants_->waveParameters = { waveAmplitude_, waveFrequency_, 0.0f, 0.0f };
     constants_->deepColor = deepColor_;
     constants_->crestColor = crestColor_;
+    constants_->wakeMeta = {static_cast<float>(wakeCount_), interactionFocus_.x, interactionFocus_.z, 0.0f};
+    constants_->wakes = wakes_;
+}
+
+float OceanSurface::GetHeightAt(float worldX, float worldZ) const
+{
+    Vector3 wake{};
+    for (uint32_t i = 0; i < wakeCount_; ++i) {
+        const auto& stamp = wakes_[i];
+        const auto wave = OceanInteraction::OceanWakeProfile(worldX - stamp.positionTimeStrength.x,
+            worldZ - stamp.positionTimeStrength.y, time_ - stamp.positionTimeStrength.z,
+            stamp.positionTimeStrength.w, stamp.directionSize.z, stamp.directionSize.x, stamp.directionSize.y);
+        wake.x += wave.x; wake.y += wave.y; wake.z += wave.z;
+    }
+    return OceanInteraction::Height(worldX, worldZ, time_, height_, waveAmplitude_, waveFrequency_)
+        + OceanInteraction::LimitOceanWake(wake).y;
+}
+
+void OceanSurface::EndInteraction()
+{
+    hasWakePosition_ = false;
+    interactionStrength_ = 0.0f;
+}
+
+float OceanSurface::UpdateInteraction(const Vector3& position, const Vector3& forward,
+    float speed, bool boosting, float deltaTime)
+{
+    if (deltaTime <= 0.0f) return interactionStrength_;
+    interactionFocus_ = position;
+    const Vector3 source = OceanInteraction::SourcePosition(position, forward, speed);
+    const float clearance = position.y - 1.0f - GetHeightAt(source.x, source.z);
+    const float target = OceanInteraction::Strength(clearance, speed);
+    interactionStrength_ += (target - interactionStrength_) * (1.0f - std::exp(-12.0f * deltaTime));
+    if (target <= 0.001f && interactionStrength_ < 0.01f) { EndInteraction(); return 0.0f; }
+    const float dx = position.x - lastWakePosition_.x, dz = position.z - lastWakePosition_.z;
+    const float distanceSquared = dx * dx + dz * dz;
+    if (hasWakePosition_ && distanceSquared > 1600.0f) {
+        // Scene jumps must not leave a line connecting unrelated positions.
+        EndInteraction(); return 0.0f;
+    }
+    if (!hasWakePosition_ || distanceSquared >= 2.25f || time_ - lastWakeTime_ >= 0.12f) {
+        const float length = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+        const float fx = length > 0.001f ? forward.x / length : 0.0f;
+        const float fz = length > 0.001f ? forward.z / length : 1.0f;
+        wakes_[nextWake_] = {{source.x, source.z, time_, interactionStrength_},
+            {fx, fz, boosting ? 1.45f : 1.0f, 0.0f}};
+        nextWake_ = (nextWake_ + 1) % kMaxWakePoints;
+        wakeCount_ = (std::min)(wakeCount_ + 1, kMaxWakePoints);
+        lastWakePosition_ = position; lastWakeTime_ = time_; hasWakePosition_ = true;
+    }
+    return interactionStrength_;
 }
 
 void OceanSurface::Draw()

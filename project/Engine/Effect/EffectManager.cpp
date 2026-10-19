@@ -377,6 +377,12 @@ float EffectManager::GetWarmUpProgress() const
 
 bool EffectManager::WarmUpEffect(const std::string& effectName)
 {
+    // A newly initialized resource is referenced by commands that have not run yet.
+    // Never create/dispatch it if returning it would immediately discard it at the pool limit.
+    if (pooledResources_.size() >= kMaxPooledResources) {
+        Logger::Warning(std::format("[EffectWarmUp] Pool full; skipped before GPU dispatch: {}", effectName));
+        return false;
+    }
     const Vector3 warmUpPosition = { 0.0f, -10000.0f, 0.0f };
     std::unordered_map<std::string, EffectRuntime>::const_iterator runtimeIterator =
         effects_.find(effectName);

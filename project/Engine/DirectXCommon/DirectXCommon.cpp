@@ -9,6 +9,7 @@
 #include <fstream>
 #include <format>
 #include <stdexcept>
+#include <vector>
 #include <wrl.h>
 
 namespace {
@@ -791,7 +792,27 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateBufferResource(size_
         &uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
         IID_PPV_ARGS(&bufferResource));
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr) || !bufferResource) {
+        const HRESULT removedReason = device->GetDeviceRemovedReason();
+        const std::string message = std::format(
+            "CreateBufferResource failed: bytes={}, HRESULT=0x{:08X}, deviceRemovedReason=0x{:08X}",
+            sizeInBytes, static_cast<unsigned int>(hr), static_cast<unsigned int>(removedReason));
+        Logger::Error(message);
+        Microsoft::WRL::ComPtr<ID3D12InfoQueue> queue;
+        if (SUCCEEDED(device.As(&queue))) {
+            const UINT64 count = queue->GetNumStoredMessagesAllowedByRetrievalFilter();
+            const UINT64 first = count > 16 ? count - 16 : 0;
+            for (UINT64 index = first; index < count; ++index) {
+                SIZE_T length = 0;
+                if (FAILED(queue->GetMessage(index, nullptr, &length)) || length == 0) continue;
+                std::vector<unsigned char> storage(length);
+                auto* gpuMessage = reinterpret_cast<D3D12_MESSAGE*>(storage.data());
+                if (SUCCEEDED(queue->GetMessage(index, gpuMessage, &length))) Logger::Error(gpuMessage->pDescription);
+            }
+        }
+        Logger::Flush();
+        throw std::runtime_error(message);
+    }
 
     return bufferResource;
 }

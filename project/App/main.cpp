@@ -2,6 +2,8 @@
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/Logger/Logger.h"
 #include "App/Scene/Application/Game.h"
+#include "App/Scene/Gameplay/GamePlayScene.h"
+#include "App/Scene/Loading/LoadingScene.h"
 
 #include <chrono>
 #ifdef _DEBUG
@@ -91,6 +93,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     game.Initialize();
 
     bool hasLoggedStartupTime = false;
+    const bool verifyOceanTransition = std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
+    int oceanVerificationFrame = 0;
 
     // ウィンドウの終了・ゲームからの終了要求のどちらでもループを抜ける。
     MSG msg {};
@@ -107,8 +111,27 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         }
 
         // 状態を更新してから描画することで、そのフレームの操作結果を画面へ反映する。
-        game.Update();
-        game.Draw();
+        try {
+            game.Update();
+            game.Draw();
+        } catch (const std::exception& error) {
+            if (!verifyOceanTransition) throw;
+            Logger::Error(std::string("[OceanSmoke] FAIL: ") + error.what());
+            Logger::Flush();
+            return 1;
+        }
+        if (verifyOceanTransition) {
+            Logger::Flush();
+            ++oceanVerificationFrame;
+            if (oceanVerificationFrame == 60) {
+                Logger::Log("[OceanSmoke] Request title -> stage01 transition");
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::make_unique<GamePlayScene>("stage01")));
+            }
+            if (oceanVerificationFrame == 300) {
+                Logger::Log("[OceanSmoke] PASS: title -> stage01 initialization after loading and rendered gameplay");
+                break;
+            }
+        }
 
         if (!hasLoggedStartupTime) {
             const long long startupMilliseconds =

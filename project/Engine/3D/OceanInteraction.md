@@ -1,0 +1,68 @@
+# Low-altitude water interaction
+
+- OceanSurface records up to 48 world-space wake stamps. They expand and fade over 2.5 seconds;
+  old stamps stop being evaluated after the last wake expires. Stamps do not follow the aircraft.
+- Wake vertex displacement and slope normals are added in Ocean.VS.hlsl; rings and V-shaped foam are added to Ocean.PS.hlsl.
+  Broad bounds reject unrelated water pixels before calculating the detailed shape.
+- Clearance uses player center minus 1 world unit (the existing vertical screen bounds).
+  Interaction fades between 0.5 and 6 units above the sampled waves, and is scaled by actual XZ speed.
+- CPU height queries invert Gerstner horizontal displacement with six iterations. CPU and VS use
+  the same OceanWaveLayers.hlsli coefficients. The mesh is coarse, so analytic height can differ
+  slightly from the final triangle interpolation.
+- OceanSpray emits pooled one-shot bursts: small falling droplets plus softer expanding mist.
+  Spawned particles stay in world space; no attachment is used. Direction and strength are per burst.
+  Normal maximum rate is about 12 bursts/second, boost about 18; each burst has at most 20 particles.
+- Boost widens wakes and increases the spray rate. Rising/stopping reduces intensity smoothly.
+- Ocean and wake time pause with gameplay. Existing sprays follow EffectManager's game-time update.
+  Death stops new emission; remaining stamps/particles expire. Scene reload/teleports cannot join distant stamps.
+
+Validation: compile Ocean VS/PS and OceanSpray Emit/Update; compile and run
+Tests/OceanInteractionTests.cpp with the project include directory. It checks displaced-coordinate
+height reconstruction across the stage, two wave amplitudes plus flat water, stationary cutoff,
+altitude fade, and speed scaling. Verify appearance/performance in game at the lower flight bound,
+while climbing, boosting, pausing, and changing scenes.
+
+## Warmup pool safety
+OceanSpray reserves 14 resource sets, keeping the shipped prewarm total at the EffectManager
+pool capacity of 80. Run Tests/EffectWarmUpBudgetTests.py after changing reservations.
+WarmUpEffect rejects a full pool before recording DispatchInitialize, so excess reservations
+cannot destroy resources referenced by pending GPU commands.
+The engine command-line option --verify-ocean-transition runs title -> loading -> STAGE1,
+renders gameplay, and exits; its OceanSmoke markers are written to runtime/logs/EngineLog_*.txt.
+CreateBufferResource logs the HRESULT and device removal reason before throwing on allocation
+failure; Camera also checks Map rather than continuing with an invalid mapped pointer.
+
+## Spray framing
+Spray and wake origins lead the aircraft by 0.30 seconds of horizontal travel, clamped to 9-16 world units.
+Height is sampled at that projected location. Droplets are split evenly into left/right fans,
+with reduced backward velocity and taller mist. Lifetime, particle count, and pool reservation
+are unchanged; the camera is unchanged.
+
+
+## Directional geometric wakes
+OceanWakeShape.hlsli is shared by C++ and HLSL. Each stamp uses its saved flight direction.
+Two narrow crests open to the sides and trail behind the source as a V; the center mound is removed.
+Each lateral profile is a second derivative of a Gaussian, with flanking troughs and zero cross-section
+integral before soft saturation. This avoids accumulating a broad positive water mound.
+Each arm travels outward at 3.2 units/sec, widen by 0.42 units per unit aft, and fade over 2.5 seconds.
+Height gradients include the lateral, longitudinal and front-mask derivatives for consistent normals.
+The existing ocean Gerstner waves remain; this directional wake adds vertical displacement only.
+GetHeightAt includes the same wake shape. The 48-stamp limit, 1.90 soft height cap and existing
+128 x 512 focused mesh remain. This analytic approximation does not simulate collisions/reflections.
+
+Crest foam is enabled with Ocean.PS's kEnableInteractionFoam=true; airborne spray stays disabled
+with GamePlayScene's kEnableOceanSpray=false. The vertex shader passes signed interaction height
+and slope to the pixel shader. Only raised crests receive patchy, softly antialiased foam, with
+world-space noise holes, a maximum blend of 0.50 and a shadow-aware pale blue-white color.
+The obsolete circular wake foam is removed; there is no per-pixel loop over wake stamps.
+Natural ocean foam, geometric wake displacement, normal calculation and height queries remain active.
+
+The directional profile retains amplitude 0.64 and soft height limit 1.90.
+
+
+## Smooth heading follow
+New stamps follow the actual frame-to-frame horizontal player velocity, including lateral steering.
+Yaw follows the shortest arc with a 0.18-second time constant and a 2.5-radian/sec turn-speed limit.
+Movement below 0.5 units/sec holds heading to avoid stationary jitter. Pause holds state; death,
+teleports and missing movement history reset it to the aircraft flight heading before following again.
+The forward spawn offset uses the same smoothed heading. Existing stamps retain their saved direction.

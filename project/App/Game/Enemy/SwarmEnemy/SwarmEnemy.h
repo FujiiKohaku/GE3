@@ -43,7 +43,8 @@ public:
         const std::shared_ptr<SwarmGroupState>& groupState,
         SwarmFormationType formationType,
         int32_t slotIndex,
-        int32_t travelDirection);
+        int32_t travelDirection,
+        float baseHeight = 2.0f);
 
     // 編隊内の移動と射撃を、基底クラスの更新経路で進める。
     void Update() override;

@@ -177,7 +177,8 @@ private:
     bool endRequest_ = false;
     std::unique_ptr<Renderer> renderer_;
 
-    bool isMouseCursorVisible_ = false;
+    bool isMouseCursorVisible_ = false; // F2 preference
+    bool isSystemCursorVisible_ = false;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     bool showDebugUI_ = false;
 #else

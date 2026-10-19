@@ -2,6 +2,7 @@
 
 #include "Engine/Math/MathStruct.h"
 #include <cstdint>
+#include <array>
 #include <d3d12.h>
 #include <wrl.h>
 
@@ -13,6 +14,10 @@ public:
     void Initialize(Camera* camera, float width, float length, float height);
     void Update(float deltaTime);
     void Draw();
+    float GetHeightAt(float worldX, float worldZ) const;
+    float UpdateInteraction(const Vector3& position, const Vector3& forward, float speed, bool boosting, float deltaTime);
+    void EndInteraction();
+
 
     void SetWaveAmplitude(float amplitude) { waveAmplitude_ = amplitude; }
     void SetWaveFrequency(float frequency) { waveFrequency_ = frequency; }
@@ -29,6 +34,8 @@ private:
         Vector4 position;
     };
 
+    static constexpr uint32_t kMaxWakePoints = 48;
+    struct WakePoint { Vector4 positionTimeStrength; Vector4 directionSize; };
     struct OceanConstants {
         Matrix4x4 viewProjection;
         Matrix4x4 world;
@@ -36,6 +43,8 @@ private:
         Vector4 waveParameters;
         Vector4 deepColor;
         Vector4 crestColor;
+        Vector4 wakeMeta;
+        std::array<WakePoint, kMaxWakePoints> wakes;
     };
 
     void CreateMesh(uint32_t columns, uint32_t rows);
@@ -58,6 +67,13 @@ private:
     float height_ = 0.0f;
     float startZ_ = 0.0f;
     float time_ = 0.0f;
+    std::array<WakePoint, kMaxWakePoints> wakes_{};
+    uint32_t wakeCount_ = 0, nextWake_ = 0;
+    Vector3 lastWakePosition_{};
+    Vector3 interactionFocus_{};
+    bool hasWakePosition_ = false;
+    float lastWakeTime_ = 0.0f;
+    float interactionStrength_ = 0.0f;
     float waveAmplitude_ = 1.55f;
     float waveFrequency_ = 0.075f;
     Vector4 deepColor_ = { 0.006f, 0.055f, 0.19f, 1.0f };
