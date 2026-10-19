@@ -2,12 +2,18 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "Wait/FearWormWaitState.h"
+#include "Entry/FearWormEntryState.h"
+#include "Battle/FearWormBattleState.h"
+#include "Dead/FearWormDeadState.h"
 class Model;
 class Object3d;
 class Player;
 
 class FearWormEnemy : public BaseBoss {
 public:
+
+    // ボスの大まかな状態を表す列挙型。各状態はFearWormState派生クラスで処理される。
     enum class BossState {
         Wait,    // プレイヤーを待つ待機状態
         Entry,   // 水面の予兆から順に飛び出す登場演出
@@ -54,8 +60,8 @@ public:
 
     // 現在の状態を取得する
     BossState GetBossState() const;
-    bool HasBreachedSurface() const { return hasPlayedEntrySplash_; }
-    void SetEntryWaterHeight(float waterHeight) { entryWaterHeight_ = waterHeight; }
+    bool HasBreachedSurface() const { return entryState_.HasBreachedSurface(); }
+    void SetEntryWaterHeight(float waterHeight) { entryState_.SetWaterHeight(waterHeight); }
     bool IsMadModeActive() const override { return isMadModeActive_; }
     bool IsBeamHittingPlayer() const override { return isBeamHittingPlayer_; }
 
@@ -65,18 +71,117 @@ public:
     float GetBodyHpFraction() const override;
 
 private:
+    friend class FearWormWaitState;
+    friend class FearWormEntryState;
+    friend class FearWormJumOutState;
+    friend class FearWormWaitForBodyState;
+    friend class FearWormBattleState;
+    friend class FearWormDeadState;
+
     friend bool RunBeamStateTests();
     friend bool RunFearWormMovementTests();
     friend bool RunFearWormEntryTests();
+    friend bool RunFearWormStateTests();
 
-    static constexpr float kEntryShadowDurationSeconds = 2.0f;
-    static constexpr float kEntryFlightDurationSeconds = 2.4f;
-    static constexpr float kEntrySegmentDelaySeconds = 0.075f;
-    // 部位が多いほど後ろの部位まで出現する時間を確保する。
-    static float CalculateEntryDurationSeconds(size_t segmentCount);
-    // 水面から戦闘位置へ向かう軌道にうねりを加え、部位ごとに遅れて飛び出させる。
-    static Vector3 CalculateEntryPosition(const Vector3& surfacePosition, const Vector3& battlePosition,
-        float elapsedSeconds, size_t segmentIndex, float segmentSpacing);
+    // 基本設定
+    static constexpr float kHeadHp = 40.0f;
+    static constexpr float kBaseMoveSpeed = 0.10f;
+    static constexpr float kInitialHeadChargeCooldown = 1.80f;
+    static constexpr Vector3 kDefaultHeadAimDirection = { 0.0f, 0.0f, -1.0f };
+
+    // ミサイル攻撃と周回速度
+    static constexpr float kMissileAimWaitDuration = 2.0f;   // 整列完了（前準備）を待つ時間（秒）
+    static constexpr float kMissileAttackInterval = 18.0f;  // ミサイル攻撃の間隔（秒）
+    static constexpr float kMissileFireInterval = 0.45f;    // ミサイルの発射間隔（秒）
+    static constexpr float kOrbitAngularSpeed = 1.15f;
+
+    // 移動パターン
+    static constexpr float kOrbitRadiusX = 16.0f;
+    static constexpr float kOrbitRadiusY = 7.0f;
+    static constexpr float kOrbitHeight = 7.0f;
+    static constexpr float kOrbitLateralSwayFrequency = 2.0f;
+    static constexpr float kOrbitLateralSwayAmplitude = 2.0f;
+    static constexpr float kOrbitDepthSwayFrequency = 0.80f;
+    static constexpr float kOrbitDepthSwayAmplitude = 3.0f;
+    static constexpr float kCoilAngleRate = 2.35f;
+    static constexpr float kCoilBaseRadius = 8.0f;
+    static constexpr float kCoilRadiusFrequency = 3.2f;
+    static constexpr float kCoilRadiusAmplitude = 2.0f;
+    static constexpr float kCoilHeight = 8.0f;
+    static constexpr float kCoilVerticalScale = 0.75f;
+    static constexpr float kCoilDepthFrequency = 0.50f;
+    static constexpr float kCoilDepthAmplitude = 2.5f;
+    static constexpr float kWeaveAngleRate = 1.35f;
+    static constexpr float kWeaveWidth = 13.0f;
+    static constexpr float kWeaveHeight = 7.0f;
+    static constexpr float kWeaveVerticalFrequency = 2.0f;
+    static constexpr float kWeaveVerticalAmplitude = 9.0f;
+    static constexpr float kWeaveDepthAmplitude = 2.5f;
+    static constexpr float kDriftHorizontalFrequency = 0.65f;
+    static constexpr float kDriftHorizontalAmplitude = 8.0f;
+    static constexpr float kDriftHeight = 8.0f;
+    static constexpr float kDriftVerticalFrequency = 0.85f;
+    static constexpr float kDriftVerticalAmplitude = 4.5f;
+    static constexpr float kDriftDepthFrequency = 0.50f;
+    static constexpr float kDriftDepthAmplitude = 2.0f;
+
+    // 待機中の移動と登場位置
+    static constexpr float kFallbackMoveXFrequency = 1.00f;
+    static constexpr float kFallbackMoveXAmplitude = 6.0f;
+    static constexpr float kFallbackMoveYFrequency = 1.30f;
+    static constexpr float kFallbackMoveYAmplitude = 2.5f;
+    static constexpr float kFallbackMoveZFrequency = 0.60f;
+    static constexpr float kFallbackMoveZAmplitude = 3.0f;
+    static constexpr float kEntryOffsetX = -34.0f;
+    static constexpr float kEntryOffsetY = 18.0f;
+    static constexpr float kEntryExtraForwardOffset = 22.0f;
+    static constexpr float kMaximumMovementSpeedAdd = 0.45f;
+
+    // 頭部の溜め攻撃
+    static constexpr float kAttackRange = 240.0f;
+    static constexpr float kHeadChargeDuration = 0.85f;
+    static constexpr float kHeadChargeShotInterval = 0.22f;
+    static constexpr float kHeadChargeCooldown = 3.10f;
+    static constexpr float kHeadChargeEffectInterval = 0.14f;
+    static constexpr float kChargedBulletSpeed = 1.55f;
+    static constexpr float kChargedBulletScale = 0.88f;
+    static constexpr float kChargedBulletCollisionRadius = 2.75f;
+    static constexpr int32_t kHeadChargeShotMax = 3;
+    static constexpr int32_t kChargedBulletDamage = 3;
+    static constexpr float kHeadAimFollowRate = 0.18f;
+    static constexpr Vector4 kChargedBulletColor = { 1.0f, 0.353f, 0.239f, 1.0f };
+    static constexpr float kChargedBulletLifeTime = 20.0f;
+    static constexpr float kHeadMuzzleOffset = 4.2f;
+
+    // 部位のHP・外見・被弾演出
+    static constexpr int32_t kWormSegmentCount = 10;
+    static constexpr float kBodyHp = 12.0f;
+    static constexpr float kBodyScale = 2.45f;
+    static constexpr float kHeadScale = 3.45f;
+    static constexpr float kTailScale = 2.15f;
+    static constexpr float kCollisionRadiusScale = 0.90f;
+    static constexpr Vector4 kHeadColor = { 0.30f, 0.88f, 1.0f, 1.0f };
+    static constexpr Vector4 kVulnerableHeadColor = { 1.0f, 0.18f, 0.04f, 1.0f };
+    static constexpr Vector4 kChargingHeadColor = { 1.0f, 0.48f, 0.08f, 1.0f };
+    static constexpr Vector4 kFiringHeadColor = { 1.0f, 0.08f, 0.02f, 1.0f };
+    static constexpr Vector4 kBodyColor = { 0.78f, 0.20f, 1.0f, 1.0f };
+    static constexpr Vector4 kHitFlashColor = { 1.0f, 0.95f, 0.35f, 1.0f };
+    static constexpr float kBodyPulseFrequency = 5.5f;
+    static constexpr float kBodyPulseAmplitude = 0.08f;
+    static constexpr float kChargePulseAdd = 0.12f;
+    static constexpr float kChargePulseFrequency = 24.0f;
+    static constexpr float kChargePulseAmplitude = 0.08f;
+    static constexpr float kSegmentRotationOffset = 0.35f;
+    static constexpr float kDamageHitFlashDuration = 0.10f;
+    static constexpr float kGuardHitFlashDuration = 0.08f;
+    static constexpr float kMinimumHealth = 0.0001f;
+
+    // 弾幕・ビーム・ミサイル終了時の設定
+    static constexpr float kMissilePostFireCooldown = 1.8f; // 撃ち終わった後の隙（秒）
+    static constexpr float kPi = 3.1415926535f;
+    static constexpr float kBeamUvScrollSpeed = -6.5f; // より高速に流す
+    static constexpr float kBeamRotateSpeedRadiansPerSecond = 45.0f; // 高速自転（うねりの表現を強化）
+    static constexpr int kBeamDamage = 1;
 
     enum class FearWormMovementType { Orbit, Coil, Weave, Drift, Line, Spiral };
 
@@ -105,29 +210,11 @@ private:
 
     // Updateの入口と状態の選択。
     void UpdateState();
-    // 状態を切り替え、切替先に必要な開始処理を実行する。
+    // 現在の状態を終了し、切替先の開始処理を実行する。
     void ChangeState(BossState state);
     // 撃破後の演出へ切り替え、通常の戦闘処理を終える。
     void OnDeath() override;
 
-    // 待機 → 登場 → 戦闘 → 死亡。
-    void EnterEntry();
-    // 撃破演出のタイマーや部位の状態を初期化し、攻撃を終了する。
-    void EnterDead();
-    // プレイヤーとの位置関係を確認し、登場演出を始めるまで待機する。
-    void UpdateWait();
-    // 登場中の部位を順番に水面から引き上げ、完了したら戦闘状態へ移る。
-    void UpdateEntry();
-    // 出現前の影と波紋を表示するための水面オブジェクトを準備する。
-    void InitializeEntrySurface();
-    // 出現の進み具合に合わせて水面の影と波紋を変化させ、登場後は消す。
-    void UpdateEntrySurface();
-    // プレイヤーの位置と水位をもとに、飛び出す水面上の基準位置を求める。
-    Vector3 EntrySurfacePosition(const Vector3& playerPosition) const;
-    // 通常戦闘の移動・攻撃を進め、HPなどに応じて戦闘状態を調整する。
-    void UpdateBattle();
-    // 撃破後も部位の動きと爆発演出を進め、終了判定を更新する。
-    void UpdateDead();
     // 激昂中の攻撃と移動を更新し、通常時とは異なる圧力をかける。
     void UpdateMadMode(float movementSpeedRate);
     // 部位からミサイルを撃つ順番と発射タイミングを管理する。
@@ -235,7 +322,14 @@ private:
     // 発射中の光線とプレイヤーの距離を調べ、命中時のダメージを処理する。
     void CheckBeamCollision();
 
+    // 各ボスが自分専用の状態オブジェクトを持つ。
+    FearWormWaitState waitState_;
+    FearWormEntryState entryState_;
+    FearWormBattleState battleState_;
+    FearWormDeadState deadState_;
+
     BossState state_ = BossState::Wait;
+    FearWormState* currentState_ = nullptr;
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
@@ -248,10 +342,6 @@ private:
     float bulletSpeed_ = 1.05f;
     float activationLeadDistance_ = 160.0f;
     float parallelForwardOffset_ = 52.0f;
-    float enterTimer_ = 0.0f;
-    float entryWaterHeight_ = -30.0f;
-    bool hasPlayedEntrySplash_ = false;
-    std::unique_ptr<Object3d> entrySurface_;
     float orbitAngle_ = 0.0f;
     float movementPatternTimer_ = 0.0f;
     float movementPatternDuration_ = 3.40f;

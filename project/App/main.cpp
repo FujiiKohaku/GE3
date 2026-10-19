@@ -18,6 +18,7 @@
 #include "Tests/SwarmFormationTests.h"
 #include "Tests/FearWormMovementTests.h"
 #include "Tests/FearWormEntryTests.h"
+#include "Tests/FearWormStateTests.h"
 #include "Tests/PlayerControlTests.h"
 #include <cstring>
 #endif
@@ -27,6 +28,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
 // デバッグ用の検証指定がある場合は、通常のゲーム起動より先に実行する。
 #ifdef _DEBUG
+    if (std::strstr(commandLine, "--verify-fear-worm-states")) {
+        if (RunFearWormStateTests()) { return 0; }
+        return 1;
+    }
     if (std::strstr(commandLine, "--verify-fear-worm-entry")) {
         if (RunFearWormEntryTests()) { return 0; }
         return 1;

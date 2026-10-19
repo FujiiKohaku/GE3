@@ -1085,4 +1085,79 @@
       <Filter>Player\Weapon\Common</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Wait\FearWormWaitState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy\Wait</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Wait\FearWormWaitState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Wait</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Entry\FearWormEntryState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Entry\FearWormEntryState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\FearWormBattleState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy\Battle</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\FearWormBattleState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Battle</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Dead\FearWormDeadState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy\Dead</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Dead\FearWormDeadState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Dead</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\State\FearWormState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\State</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Wait">
+      <UniqueIdentifier>{AA17CC5C-C9E7-5729-9C4B-C38960593A6B}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Entry">
+      <UniqueIdentifier>{F32B289A-4D5C-5B97-9B3D-7675572B2452}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle">
+      <UniqueIdentifier>{E4ADB393-E8E3-5FDA-B2FA-65639910173C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Dead">
+      <UniqueIdentifier>{E836C823-8895-5445-8424-77D95CA86678}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy\State">
+      <UniqueIdentifier>{336F2509-A1AA-54E7-A4C1-118233D7035C}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="Tests\FearWormStateTests.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Entry\State\FearWormEntryPhase.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry\State</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Entry\JumOut\FearWormJumOutState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry\JumOut</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Entry\JumOut\FearWormJumOutState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry\JumOut</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Entry\WaitForBody\FearWormWaitForBodyState.h">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry\WaitForBody</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Entry\WaitForBody\FearWormWaitForBodyState.cpp">
+      <Filter>App\Game\Boss\FearWormEnemy\Entry\WaitForBody</Filter>
+    </ClCompile>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Entry\State">
+      <UniqueIdentifier>{3A88AF3E-7F8C-585A-8C05-62A14AA384D1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Entry\JumOut">
+      <UniqueIdentifier>{4311106B-3C39-5AB6-8E7C-FCA76AD68A0A}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Entry\WaitForBody">
+      <UniqueIdentifier>{AC35309A-1356-5F00-A292-E2AD6DC03B52}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
 </Project>

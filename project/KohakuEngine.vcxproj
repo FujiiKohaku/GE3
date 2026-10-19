@@ -320,6 +320,10 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Wait\FearWormWaitState.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\FearWormEntryState.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\FearWormBattleState.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Dead\FearWormDeadState.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\Encounter\BossEncounterController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfish.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\PaintBullet.cpp" />
@@ -483,6 +487,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
+    <ClInclude Include="$(projectRootPath)Tests\FearWormStateTests.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\State\FearWormState.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Wait\FearWormWaitState.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\FearWormEntryState.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\FearWormBattleState.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Dead\FearWormDeadState.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\Encounter\BossEncounterController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfish.h" />
   </ItemGroup>
@@ -752,5 +762,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Common\BasePlayerWeapon.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\State\FearWormEntryPhase.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\JumOut\FearWormJumOutState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\JumOut\FearWormJumOutState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\WaitForBody\FearWormWaitForBodyState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\WaitForBody\FearWormWaitForBodyState.cpp" />
   </ItemGroup>
 </Project>

@@ -14,38 +14,51 @@
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/ModelManager.h"
 
-namespace {
-constexpr float kHeadHp = 40.0f;
-constexpr float kBaseMoveSpeed = 0.10f;
-constexpr float kInitialHeadChargeCooldown = 1.80f;
-constexpr Vector3 kDefaultHeadAimDirection = { 0.0f, 0.0f, -1.0f };
+// コンストラクタ。初期状態を待機状態に設定する。
+FearWormEnemy::FearWormEnemy()
+{
+    ChangeState(BossState::Wait);
 }
-
-FearWormEnemy::FearWormEnemy() = default;
 
 FearWormEnemy::BossState FearWormEnemy::GetBossState() const { return state_; }
 
 // 現在のボス状態に対応する処理を呼び、登場・戦闘・死亡の流れを進める。
 void FearWormEnemy::UpdateState()
 {
-    switch (state_) {
-    case BossState::Wait:   UpdateWait(); break;
-    case BossState::Entry:  UpdateEntry(); break;
-    case BossState::Battle: UpdateBattle(); break;
-    case BossState::Dead:   UpdateDead(); break;
-    }
+    currentState_->Update(*this);
 }
 
-// 状態を切り替え、切替先に必要な開始処理を実行する。
+// 終了処理を実行してから状態を切り替え、切替先の開始処理を実行する。
 void FearWormEnemy::ChangeState(BossState state)
 {
-    if (state_ == state) return;
-    state_ = state;
-    switch (state_) {
-    case BossState::Entry: EnterEntry(); break;
-    case BossState::Dead:  EnterDead(); break;
-    default: break;
+    if (currentState_ != nullptr && state_ == state) {
+        return;
     }
+
+    FearWormState* nextState = nullptr;
+    switch (state) {
+    case BossState::Wait:
+        nextState = &waitState_;
+        break;
+    case BossState::Entry:
+        nextState = &entryState_;
+        break;
+    case BossState::Battle:
+        nextState = &battleState_;
+        break;
+    case BossState::Dead:
+        nextState = &deadState_;
+        break;
+    default:
+        return;
+    }
+
+    if (currentState_ != nullptr) {
+        currentState_->Exit(*this);
+    }
+    state_ = state;
+    currentState_ = nextState;
+    currentState_->Enter(*this);
 }
 
 // 敵としての共通状態、連結部位とビームなどの攻撃用リソースを準備する。
@@ -62,7 +75,7 @@ void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 
     InitializeSegments(model);
     InitializeBeam();
-    InitializeEntrySurface();
+    entryState_.Initialize();
     SetPosition(transform_.translate);
 }
 
@@ -72,9 +85,8 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     // 基準位置と行動状態を初期状態へ戻す。
     transform_.translate = position;
     startPosition_ = position;
-    enterTimer_ = 0.0f;
-    hasPlayedEntrySplash_ = false;
     ChangeState(BossState::Wait);
+    entryState_.Reset();
     ChangeMovementPattern(MovementPattern::Orbit);
     movementPatternTimer_ = 0.0f;
     isHeadChargeActive_ = false;
@@ -144,183 +156,6 @@ bool FearWormEnemy::IsDeathSequenceFinished() const
 void FearWormEnemy::OnDeath()
 {
     ChangeState(BossState::Dead);
-}
-
-namespace {
-constexpr float kInitialOrbitAngle = 2.35f;
-constexpr float kMissileAimWaitDuration = 2.0f;   // 整列完了（前準備）を待つ時間（秒）
-constexpr float kMissileAttackInterval = 18.0f;  // ミサイル攻撃の間隔（秒）
-constexpr float kMissileFireInterval = 0.45f;    // ミサイルの発射間隔（秒）
-constexpr float kOrbitAngularSpeed = 1.15f;
-}
-
-// プレイヤーとの位置関係を確認し、登場演出を始めるまで待機する。
-void FearWormEnemy::UpdateWait()
-{
-    float movementSpeedRate = MovementSpeedRate();
-    Vector3 target;
-
-    if (player_ == nullptr) {
-        target = FallbackTarget();
-    } else {
-        Vector3 playerPosition = player_->GetTranslate();
-
-        // 起動条件チェック
-        if (playerPosition.z >= startPosition_.z - activationLeadDistance_) {
-            ChangeState(BossState::Entry); // 登場状態へ移行
-            return;
-        }
-
-        target = EntryStartPosition(playerPosition);
-    }
-
-    // 移動処理
-    segments_[0].position = Lerp(segments_[0].position, target, moveSpeed_ * movementSpeedRate);
-    transform_.translate = segments_[0].position;
-}
-
-// 部位が多いほど後ろの部位まで出現する時間を確保する。
-float FearWormEnemy::CalculateEntryDurationSeconds(size_t segmentCount)
-{
-    size_t delayedSegmentCount = 0;
-    if (segmentCount > 0) {
-        delayedSegmentCount = segmentCount - 1;
-    }
-    return kEntryShadowDurationSeconds + kEntryFlightDurationSeconds
-        + static_cast<float>(delayedSegmentCount) * kEntrySegmentDelaySeconds;
-}
-
-// 水面から戦闘位置へ向かう軌道にうねりを加え、部位ごとに遅れて飛び出させる。
-Vector3 FearWormEnemy::CalculateEntryPosition(const Vector3& surfacePosition, const Vector3& battlePosition,
-    float elapsedSeconds, size_t segmentIndex, float segmentSpacing)
-{
-    float flightRate = std::clamp((elapsedSeconds - kEntryShadowDurationSeconds
-        - static_cast<float>(segmentIndex) * kEntrySegmentDelaySeconds) / kEntryFlightDurationSeconds, 0.0f, 1.0f);
-    float easedRate = flightRate * flightRate * (3.0f - 2.0f * flightRate);
-    Vector3 target = battlePosition;
-    target.z -= static_cast<float>(segmentIndex) * segmentSpacing;
-    Vector3 start = surfacePosition;
-    start.y -= 12.0f;
-    float arcHeight = (std::max)(battlePosition.y - surfacePosition.y + 25.0f, 50.0f);
-    float arcEnvelope = std::sin(flightRate * 3.1415926535f);
-    float waveEnvelope = arcEnvelope * arcEnvelope;
-    float wavePhase = elapsedSeconds * 5.2f - static_cast<float>(segmentIndex) * 0.70f;
-    // 頭から尾へ位相をずらし、着地点に近づくほど振幅を落とす。
-    float lateralWave = std::sin(wavePhase) * 6.0f * waveEnvelope;
-    float verticalWave = std::sin(wavePhase + 0.9f) * 1.8f * waveEnvelope;
-    float forwardWave = std::cos(wavePhase) * 2.0f * waveEnvelope;
-    return {
-        start.x + (target.x - start.x) * easedRate + lateralWave,
-        start.y + (target.y - start.y) * easedRate + arcEnvelope * arcHeight + verticalWave,
-        start.z + (target.z - start.z) * easedRate + forwardWave
-    };
-}
-
-// 水面から出現する演出の開始状態を作り、影・波紋と各部位の位置を準備する。
-void FearWormEnemy::EnterEntry()
-{
-    if (player_ == nullptr) { return; }
-    const Vector3 playerPosition = player_->GetTranslate();
-    // 登場用タイマーと移動パターンを初期状態へ戻す。
-    enterTimer_ = 0.0f;
-    hasPlayedEntrySplash_ = false;
-    orbitAngle_ = kInitialOrbitAngle;
-    ChangeMovementPattern(MovementPattern::Orbit);
-    movementPatternTimer_ = 0.0f;
-
-    const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
-    const Vector3 battlePosition = MovementTargetPosition(playerPosition);
-    for (size_t index = 0; index < segments_.size(); ++index) {
-        segments_[index].position = CalculateEntryPosition(
-            surfacePosition, battlePosition, enterTimer_, index, segmentSpacing_);
-    }
-    transform_.translate = segments_[0].position;
-    UpdateEntrySurface();
-}
-
-// 登場中の部位を順番に水面から引き上げ、完了したら戦闘状態へ移る。
-void FearWormEnemy::UpdateEntry()
-{
-    if (player_ == nullptr) {
-        ChangeState(BossState::Wait);
-        return;
-    }
-
-    enterTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-    const Vector3 playerPosition = player_->GetTranslate();
-    const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
-    const Vector3 battlePosition = MovementTargetPosition(playerPosition);
-    for (size_t index = 0; index < segments_.size(); ++index) {
-        segments_[index].position = CalculateEntryPosition(
-            surfacePosition, battlePosition, enterTimer_, index, segmentSpacing_);
-    }
-    transform_.translate = segments_[0].position;
-    if (!hasPlayedEntrySplash_ && segments_[0].position.y >= entryWaterHeight_) {
-        Vector3 splashPosition = segments_[0].position;
-        splashPosition.y = entryWaterHeight_ + 1.0f;
-        EffectManager::GetInstance()->PlayEffect("FearWormBreachSplash", splashPosition);
-        hasPlayedEntrySplash_ = true;
-    }
-    UpdateEntrySurface();
-    if (enterTimer_ >= CalculateEntryDurationSeconds(segments_.size())) {
-        ChangeState(BossState::Battle);
-    }
-}
-
-// プレイヤーの位置と水位をもとに、飛び出す水面上の基準位置を求める。
-Vector3 FearWormEnemy::EntrySurfacePosition(const Vector3& playerPosition) const
-{
-    return { playerPosition.x - 12.0f, entryWaterHeight_, playerPosition.z + 86.0f };
-}
-
-// 出現前の影と波紋を表示するための水面オブジェクトを準備する。
-void FearWormEnemy::InitializeEntrySurface()
-{
-    entrySurface_ = std::make_unique<Object3d>();
-    entrySurface_->Initialize(Object3dManager::GetInstance());
-    entrySurface_->SetModel(ModelManager::GetInstance()->CreatePlane());
-    entrySurface_->SetEnableLighting(false);
-    entrySurface_->SetMaterial("resources/Shaders/Object3D/FearWormEntrySurface");
-    entrySurface_->SetTransparent(true);
-    entrySurface_->SetTransparentDepthWrite(false);
-    entrySurface_->SetCastShadow(false);
-    entrySurface_->SetReceiveShadow(false);
-    entrySurface_->SetRaytracingEnabled(false);
-    entrySurface_->SetRotate({ 1.5707963268f, 0.0f, 0.0f });
-    entrySurface_->SetScale({ 42.0f, 68.0f, 1.0f });
-}
-
-// 出現の進み具合に合わせて水面の影と波紋を変化させ、登場後は消す。
-void FearWormEnemy::UpdateEntrySurface()
-{
-    if (!entrySurface_ || !player_) { return; }
-    Vector3 surfacePosition = EntrySurfacePosition(player_->GetTranslate());
-    // 海面の波頂より上に置き、深度の競合を避ける。
-    surfacePosition.y += 2.5f;
-    surfacePosition.z -= 14.0f;
-    entrySurface_->SetTranslate(surfacePosition);
-    float shadowVisibility = 1.0f;
-    if (hasPlayedEntrySplash_) {
-        shadowVisibility = 0.0f;
-    }
-    entrySurface_->SetColor({ enterTimer_, CalculateEntryDurationSeconds(segments_.size()), shadowVisibility, 1.0f });
-    entrySurface_->Update();
-}
-
-// 通常戦闘の移動・攻撃を進め、HPなどに応じて戦闘状態を調整する。
-void FearWormEnemy::UpdateBattle()
-{
-    if (player_ == nullptr) {
-        return;
-    }
-
-    float movementSpeedRate = MovementSpeedRate();
-    Vector3 playerPosition = player_->GetTranslate();
-
-    UpdateMadMode(movementSpeedRate);
-    UpdateMissileAttack();
-    UpdateBattleMovement(playerPosition, movementSpeedRate);
-    UpdateBattleAttack();
 }
 
 // 激昂中の攻撃と移動を更新し、通常時とは異なる圧力をかける。
@@ -431,7 +266,6 @@ void FearWormEnemy::UpdateMissileAttack()
                 }
             } else {
                 // 撃ち終わった後の硬直フェーズ（隙を見せる）
-                constexpr float kMissilePostFireCooldown = 1.8f; // 撃ち終わった後の隙（秒）
                 if (missileFireTimer_ >= kMissilePostFireCooldown) {
                     // 硬直終了！通常状態に戻り、Orbitへ復帰
                     isFiringMissilesSequence_ = false;
@@ -484,102 +318,6 @@ void FearWormEnemy::UpdateBattleAttack()
         }
     }
 }
-
-// 撃破演出のタイマーや部位の状態を初期化し、攻撃を終了する。
-void FearWormEnemy::EnterDead()
-{
-    // 攻撃状態をクリア（発射済みの弾はManager側で飛び続ける）
-    isHeadChargeActive_ = false;
-    isHeadChargeFiring_ = false;
-    ChangeBeamState(BeamState::Wait);
-    beamCurrentLength_ = 0.0f;
-    beamCurrentWidth_ = 0.0f;
-    isDeathSequenceFinished_ = false;
-    deathSequenceTimer_ = 0.0f;
-
-    // 胴体セグメントは即座にすべて非表示にする
-    for (size_t index = 1; index < segments_.size(); ++index) {
-        segments_[index].isAlive = false;
-    }
-
-    // 頭部の位置で大爆発エフェクトを即座に再生
-    EffectManager::GetInstance()->PlayEffect("WormDeathExplosion", segments_[0].position);
-
-    // 落下物理パラメータの初期化
-    // 前方（Zマイナス方向＝手前）へ飛び出しながら、上方向にポンと跳ね上がる初速を設定
-    deathVelocity_ = { 0.0f, 11.5f, -9.0f };
-    // 落下中にクルクルと回転させる回転速度を設定
-    deathRotation_ = { 1.8f, 2.5f, 0.8f };
-    currentDeathRotation_ = segments_[0].object->GetRotate();
-}
-
-// 撃破後も部位の動きと爆発演出を進め、終了判定を更新する。
-void FearWormEnemy::UpdateDead()
-{
-    if (isDeathSequenceFinished_) {
-        return;
-    }
-
-    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
-    deathSequenceTimer_ += deltaTime;
-
-    // 重力を適用して落下速度を下方向（Yマイナス）に引っ張る
-    constexpr float kGravity = 26.0f; // ゲーム的な落下速度に合わせた重力加速度
-    deathVelocity_.y -= kGravity * deltaTime;
-
-    // 速度を頭部座標に適用
-    segments_[0].position.x += deathVelocity_.x * deltaTime;
-    segments_[0].position.y += deathVelocity_.y * deltaTime;
-    segments_[0].position.z += deathVelocity_.z * deltaTime;
-
-    // 回転速度を頭部回転角に適用
-    currentDeathRotation_.x += deathRotation_.x * deltaTime;
-    currentDeathRotation_.y += deathRotation_.y * deltaTime;
-    currentDeathRotation_.z += deathRotation_.z * deltaTime;
-    segments_[0].object->SetRotate(currentDeathRotation_);
-
-    // 頭部の座標だけを更新するため、Object3dの更新を呼ぶ
-    segments_[0].object->SetTranslate(segments_[0].position);
-    segments_[0].object->Update();
-
-    // 落下時間（1.6秒）が経過するか、十分に下へ落ちたら演出を完了する
-    constexpr float kDeathFallbackDuration = 1.6f;
-    if (deathSequenceTimer_ >= kDeathFallbackDuration || segments_[0].position.y < -35.0f) {
-        isDeathSequenceFinished_ = true;
-    }
-}
-
-namespace {
-constexpr float kOrbitRadiusX = 16.0f;
-constexpr float kOrbitRadiusY = 7.0f;
-constexpr float kOrbitHeight = 7.0f;
-constexpr float kOrbitLateralSwayFrequency = 2.0f;
-constexpr float kOrbitLateralSwayAmplitude = 2.0f;
-constexpr float kOrbitDepthSwayFrequency = 0.80f;
-constexpr float kOrbitDepthSwayAmplitude = 3.0f;
-constexpr float kCoilAngleRate = 2.35f;
-constexpr float kCoilBaseRadius = 8.0f;
-constexpr float kCoilRadiusFrequency = 3.2f;
-constexpr float kCoilRadiusAmplitude = 2.0f;
-constexpr float kCoilHeight = 8.0f;
-constexpr float kCoilVerticalScale = 0.75f;
-constexpr float kCoilDepthFrequency = 0.50f;
-constexpr float kCoilDepthAmplitude = 2.5f;
-constexpr float kWeaveAngleRate = 1.35f;
-constexpr float kWeaveWidth = 13.0f;
-constexpr float kWeaveHeight = 7.0f;
-constexpr float kWeaveVerticalFrequency = 2.0f;
-constexpr float kWeaveVerticalAmplitude = 9.0f;
-constexpr float kWeaveDepthAmplitude = 2.5f;
-constexpr float kDriftHorizontalFrequency = 0.65f;
-constexpr float kDriftHorizontalAmplitude = 8.0f;
-constexpr float kDriftHeight = 8.0f;
-constexpr float kDriftVerticalFrequency = 0.85f;
-constexpr float kDriftVerticalAmplitude = 4.5f;
-constexpr float kDriftDepthFrequency = 0.50f;
-constexpr float kDriftDepthAmplitude = 2.0f;
-
-} // namespace
 
 // プレイヤーの周囲を回り込む軌道上の目標位置を求める。
 Vector3 FearWormEnemy::CalculateOrbitTarget(const FearWormMovementContext& context)
@@ -711,19 +449,6 @@ FearWormEnemy::FearWormMovementType FearWormEnemy::NextFearWormMovement(FearWorm
     case FearWormMovementType::Drift: return FearWormMovementType::Orbit;
     default: return type;
     }
-}
-
-namespace {
-constexpr float kFallbackMoveXFrequency = 1.00f;
-constexpr float kFallbackMoveXAmplitude = 6.0f;
-constexpr float kFallbackMoveYFrequency = 1.30f;
-constexpr float kFallbackMoveYAmplitude = 2.5f;
-constexpr float kFallbackMoveZFrequency = 0.60f;
-constexpr float kFallbackMoveZAmplitude = 3.0f;
-constexpr float kEntryOffsetX = -34.0f;
-constexpr float kEntryOffsetY = 18.0f;
-constexpr float kEntryExtraForwardOffset = 22.0f;
-constexpr float kMaximumMovementSpeedAdd = 0.45f;
 }
 
 // 通常の目標を使えない場合に備え、代わりの移動先を返す。
@@ -863,23 +588,6 @@ float FearWormEnemy::MovementSpeedRate() const
     float damageRate = 1.0f - healthRate;
 
     return 1.0f + damageRate * kMaximumMovementSpeedAdd;
-}
-
-namespace {
-constexpr float kAttackRange = 240.0f;
-constexpr float kHeadChargeDuration = 0.85f;
-constexpr float kHeadChargeShotInterval = 0.22f;
-constexpr float kHeadChargeCooldown = 3.10f;
-constexpr float kHeadChargeEffectInterval = 0.14f;
-constexpr float kChargedBulletSpeed = 1.55f;
-constexpr float kChargedBulletScale = 0.88f;
-constexpr float kChargedBulletCollisionRadius = 2.75f;
-constexpr int32_t kHeadChargeShotMax = 3;
-constexpr int32_t kChargedBulletDamage = 3;
-constexpr float kHeadAimFollowRate = 0.18f;
-constexpr Vector4 kChargedBulletColor = { 1.0f, 0.353f, 0.239f, 1.0f };
-constexpr float kChargedBulletLifeTime = 20.0f;
-constexpr float kHeadMuzzleOffset = 4.2f;
 }
 
 // 射撃タイミングを管理し、通常弾や特殊攻撃を開始する。
@@ -1232,7 +940,6 @@ void FearWormEnemy::UpdateSpiralBarrage()
     Vector3 up = NormalizeSafe(Cross(toPlayer, right));
 
     float spread = (std::sin(barrageAngle_ * 2.5f) * 0.22f) + 0.22f; // 0.0(正確に狙う)〜0.44(周囲に拡散)を変動させる
-    constexpr float kPi = 3.1415926535f;
 
     // プレイヤー方向を軸とした直交平面上で対角線上に広がる2つの螺旋オフセットベクトル
     Vector3 offset1 = right * (std::cos(barrageAngle_) * spread) + up * (std::sin(barrageAngle_) * spread);
@@ -1298,8 +1005,7 @@ void FearWormEnemy::UpdateBeamAttack()
     beamTimer_ += deltaTime;
 
     // UVスクロールオフセットを更新
-    constexpr float kUVScrollSpeed = -6.5f; // より高速に流す
-    beamUVScrollOffset_ += kUVScrollSpeed * deltaTime;
+    beamUVScrollOffset_ += kBeamUvScrollSpeed * deltaTime;
     if (beamUVScrollOffset_ < -1.0f) {
         beamUVScrollOffset_ += 1.0f;
     }
@@ -1312,9 +1018,7 @@ void FearWormEnemy::UpdateBeamAttack()
     }
 
     // ビームの自転角度を更新
-    constexpr float kRotateSpeed = 45.0f; // 高速自転（うねりの表現を強化）
-    beamRotateTheta_ += kRotateSpeed * deltaTime;
-    constexpr float kPi = 3.1415926535f;
+    beamRotateTheta_ += kBeamRotateSpeedRadiansPerSecond * deltaTime;
     if (beamRotateTheta_ > kPi * 2.0f) {
         beamRotateTheta_ -= kPi * 2.0f;
     }
@@ -1438,7 +1142,6 @@ void FearWormEnemy::CheckBeamCollision()
     if (distanceSq <= hitRadiusSq) {
         isBeamHittingPlayer_ = true; // プレイヤーへの接触状態をON
 
-        constexpr int kBeamDamage = 1;
         player_->ApplyDamage(kBeamDamage); // HP減少は無敵時間が適用される
 
         // 無敵時間に関わらず、接触している間は被弾火花エフェクトを3フレームに1回に間引いて発生させる (FPS低下防止)
@@ -1537,30 +1240,6 @@ void FearWormEnemy::ChangeBeamState(BeamState state)
     }
     default: break;
     }
-}
-
-namespace {
-constexpr int32_t kWormSegmentCount = 10;
-constexpr float kBodyHp = 12.0f;
-constexpr float kBodyScale = 2.45f;
-constexpr float kHeadScale = 3.45f;
-constexpr float kTailScale = 2.15f;
-constexpr float kCollisionRadiusScale = 0.90f;
-constexpr Vector4 kHeadColor = { 0.30f, 0.88f, 1.0f, 1.0f };
-constexpr Vector4 kVulnerableHeadColor = { 1.0f, 0.18f, 0.04f, 1.0f };
-constexpr Vector4 kChargingHeadColor = { 1.0f, 0.48f, 0.08f, 1.0f };
-constexpr Vector4 kFiringHeadColor = { 1.0f, 0.08f, 0.02f, 1.0f };
-constexpr Vector4 kBodyColor = { 0.78f, 0.20f, 1.0f, 1.0f };
-constexpr Vector4 kHitFlashColor = { 1.0f, 0.95f, 0.35f, 1.0f };
-constexpr float kBodyPulseFrequency = 5.5f;
-constexpr float kBodyPulseAmplitude = 0.08f;
-constexpr float kChargePulseAdd = 0.12f;
-constexpr float kChargePulseFrequency = 24.0f;
-constexpr float kChargePulseAmplitude = 0.08f;
-constexpr float kSegmentRotationOffset = 0.35f;
-constexpr float kDamageHitFlashDuration = 0.10f;
-constexpr float kGuardHitFlashDuration = 0.08f;
-constexpr float kMinimumHealth = 0.0001f;
 }
 
 // 頭・胴体・尾の部位データと描画オブジェクトを生成する。
@@ -1678,12 +1357,12 @@ void FearWormEnemy::UpdateSegmentObjects()
 // 現在表示するモデルや追加パーツを描画する。
 void FearWormEnemy::Draw()
 {
-    if (state_ == BossState::Entry && entrySurface_) {
-        entrySurface_->Draw();
+    if (state_ == BossState::Entry) {
+        entryState_.Draw();
     }
     if (GetBossState() != BossState::Wait) {
         for (Segment& segment : segments_) {
-            if (state_ == BossState::Entry && segment.position.y + segment.scale.y < entryWaterHeight_) {
+            if (state_ == BossState::Entry && segment.position.y + segment.scale.y < entryState_.GetWaterHeight()) {
                 continue;
             }
             if (!segment.isAlive) {
@@ -1706,7 +1385,7 @@ void FearWormEnemy::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (GetBossState() == BossState::Wait) { return; }
     for (Segment& segment : segments_) {
-        if (state_ == BossState::Entry && segment.position.y < entryWaterHeight_) { continue; }
+        if (state_ == BossState::Entry && segment.position.y < entryState_.GetWaterHeight()) { continue; }
         if (segment.isAlive && segment.object != nullptr) { segment.object->DrawShadow(renderer); }
     }
 }
@@ -1715,7 +1394,7 @@ void FearWormEnemy::DrawShadow(ShadowMapRenderer& renderer)
 void FearWormEnemy::SubmitRaytracing(DxrRenderer& renderer) {
     if (GetBossState() == BossState::Wait) { return; }
     for (const Segment& segment : segments_) {
-        if (state_ == BossState::Entry && segment.position.y < entryWaterHeight_) { continue; }
+        if (state_ == BossState::Entry && segment.position.y < entryState_.GetWaterHeight()) { continue; }
         if (segment.isAlive && segment.object) { segment.object->SubmitRaytracing(renderer); }
     }
     if (!segments_.empty() && segments_[0].isAlive && beamPlane_
