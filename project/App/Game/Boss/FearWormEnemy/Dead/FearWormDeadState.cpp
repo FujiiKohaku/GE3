@@ -7,11 +7,7 @@
 void FearWormDeadState::Enter(FearWormEnemy& boss)
 {
     // 攻撃状態をクリア（発射済みの弾はManager側で飛び続ける）
-    boss.isHeadChargeActive_ = false;
-    boss.isHeadChargeFiring_ = false;
-    boss.ChangeBeamState(FearWormEnemy::BeamState::Wait);
-    boss.beamCurrentLength_ = 0.0f;
-    boss.beamCurrentWidth_ = 0.0f;
+    boss.battleState_.StopAttacksForDeath(boss);
     isDeathSequenceFinished_ = false;
     elapsedSeconds_ = 0.0f;
 

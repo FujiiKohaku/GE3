@@ -34,40 +34,40 @@ void FearWormBattleState::Update(FearWormEnemy& boss)
 void FearWormBattleState::UpdateMadMode(FearWormEnemy& boss, float movementSpeedRate)
 {
     // HP30%以下かつ未発動かつ未完了のときに発狂トリガー
-    bool shouldTriggerMad = (boss.HealthRate() <= 0.30f) && !boss.isMadModeActive_ && !boss.isMadModeFinished_;
+    bool shouldTriggerMad = (boss.HealthRate() <= 0.30f) && !isMadModeActive_ && !isMadModeFinished_;
 
     if (shouldTriggerMad) {
-        boss.isMadModeActive_ = true;
-        boss.madModeTimer_ = 0.0f;
+        isMadModeActive_ = true;
+        madModeTimer_ = 0.0f;
         ChangeMovementPattern(boss, MovementPattern::Spiral);
-        boss.spiralAngle_ = 0.0f;
-        boss.barrageAngle_ = 0.0f;
+        spiralAngle_ = 0.0f;
+        barrageAngle_ = 0.0f;
 
-        if (boss.isHeadChargeActive_) {
+        if (isHeadChargeActive_) {
             FinishHeadChargeAttack(boss);
         }
-        boss.isMissileAttackActive_ = false;
-        boss.isFiringMissilesSequence_ = false;
+        isMissileAttackActive_ = false;
+        isFiringMissilesSequence_ = false;
     }
 
     // 発狂モードタイマー更新 (7秒制限: 2秒威嚇 + 5秒大暴れ)
-    if (boss.isMadModeActive_) {
-        boss.madModeTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-        if (boss.madModeTimer_ >= 7.0f) {
-            boss.isMadModeActive_ = false;
-            boss.isMadModeFinished_ = true; // 終了フラグを立てて、再度発狂しないようにする
+    if (isMadModeActive_) {
+        madModeTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+        if (madModeTimer_ >= 7.0f) {
+            isMadModeActive_ = false;
+            isMadModeFinished_ = true; // 終了フラグを立てて、再度発狂しないようにする
             ChangeMovementPattern(boss, MovementPattern::Orbit); // 通常パターンに復帰
-            boss.movementPatternTimer_ = 0.0f;
-            boss.missileAttackTimer_ = 0.0f;
+            movementPatternTimer_ = 0.0f;
+            missileAttackTimer_ = 0.0f;
         }
     }
 
     // 回転角度の更新
-    boss.orbitAngle_ += TimeManager::GetInstance()->GetDeltaTime() * FearWormEnemy::kOrbitAngularSpeed * movementSpeedRate;
+    orbitAngle_ += TimeManager::GetInstance()->GetDeltaTime() * kOrbitAngularSpeed * movementSpeedRate;
 
-    if (boss.isMadModeActive_) {
-        boss.spiralAngle_ += TimeManager::GetInstance()->GetDeltaTime() * 2.5f * movementSpeedRate;
-        boss.barrageAngle_ += TimeManager::GetInstance()->GetDeltaTime() * 4.0f;
+    if (isMadModeActive_) {
+        spiralAngle_ += TimeManager::GetInstance()->GetDeltaTime() * 2.5f * movementSpeedRate;
+        barrageAngle_ += TimeManager::GetInstance()->GetDeltaTime() * 4.0f;
     }
 }
 
@@ -75,29 +75,29 @@ void FearWormBattleState::UpdateMadMode(FearWormEnemy& boss, float movementSpeed
 void FearWormBattleState::UpdateMissileAttack(FearWormEnemy& boss)
 {
     // ミサイル攻撃の進行管理（発狂モード中は行わない）
-    if (!boss.isMadModeActive_) {
-        if (!boss.isMissileAttackActive_ && !boss.isFiringMissilesSequence_) {
-            boss.missileAttackTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-            if (boss.missileAttackTimer_ >= FearWormEnemy::kMissileAttackInterval) {
-                boss.isMissileAttackActive_ = true;
-                boss.hasFiredMissiles_ = false;
-                boss.missilePhaseTimer_ = 0.0f;
+    if (!isMadModeActive_) {
+        if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
+            missileAttackTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+            if (missileAttackTimer_ >= kMissileAttackInterval) {
+                isMissileAttackActive_ = true;
+                hasFiredMissiles_ = false;
+                missilePhaseTimer_ = 0.0f;
                 ChangeMovementPattern(boss, MovementPattern::Line);
-                boss.lineTransitionTimer_ = 0.0f;
+                lineTransitionTimer_ = 0.0f;
                 // 進行中のチャージ攻撃があればキャンセルする
-                if (boss.isHeadChargeActive_) {
+                if (isHeadChargeActive_) {
                     FinishHeadChargeAttack(boss);
                 }
             }
-        } else if (boss.isMissileAttackActive_) {
+        } else if (isMissileAttackActive_) {
             // Line状態（前準備・チャージ警告演出）
-            boss.missilePhaseTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-            if (boss.missilePhaseTimer_ >= FearWormEnemy::kMissileAimWaitDuration) {
+            missilePhaseTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+            if (missilePhaseTimer_ >= kMissileAimWaitDuration) {
                 // Line準備完了！発射シーケンスを開始する（Line状態・移動パターンは維持）
-                boss.isMissileAttackActive_ = false;
+                isMissileAttackActive_ = false;
 
                 // 生存しているセグメントのインデックスをリストアップ
-                boss.missileTargetIndices_.clear();
+                missileTargetIndices_.clear();
                 std::vector<size_t> aliveIndices;
                 for (size_t index = 0; index < boss.segments_.size(); ++index) {
                     if (boss.segments_[index].isAlive) {
@@ -106,44 +106,44 @@ void FearWormBattleState::UpdateMissileAttack(FearWormEnemy& boss)
                 }
 
                 if (!aliveIndices.empty()) {
-                    boss.isFiringMissilesSequence_ = true;
-                    boss.missileFireTimer_ = FearWormEnemy::kMissileFireInterval; // 最初は即座に撃ち出すようにタイマーを満たす
-                    boss.missileShotCount_ = 0;
+                    isFiringMissilesSequence_ = true;
+                    missileFireTimer_ = kMissileFireInterval; // 最初は即座に撃ち出すようにタイマーを満たす
+                    missileShotCount_ = 0;
 
                     // 生存している全部位から、頭側から順番にミサイルを発射する。
-                    boss.missileTargetIndices_ = aliveIndices;
+                    missileTargetIndices_ = aliveIndices;
                 } else {
                     // 生存セグメントがない（通常はあり得ないが安全のため）
                     ChangeMovementPattern(boss, MovementPattern::Orbit);
-                    boss.movementPatternTimer_ = 0.0f;
-                    boss.missileAttackTimer_ = 0.0f;
+                    movementPatternTimer_ = 0.0f;
+                    missileAttackTimer_ = 0.0f;
                 }
             }
         }
 
         // 時間差ミサイル発射シーケンスの実行（Line状態のまま実行される）
-        if (boss.isFiringMissilesSequence_ && boss.player_ != nullptr && boss.bulletModel_ != nullptr) {
-            boss.missileFireTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-            int32_t maxShots = static_cast<int32_t>(boss.missileTargetIndices_.size());
+        if (isFiringMissilesSequence_ && boss.player_ != nullptr && bulletModel_ != nullptr) {
+            missileFireTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+            int32_t maxShots = static_cast<int32_t>(missileTargetIndices_.size());
 
-            if (boss.missileShotCount_ < maxShots) {
+            if (missileShotCount_ < maxShots) {
                 // 発射フェーズ
-                if (boss.missileFireTimer_ >= FearWormEnemy::kMissileFireInterval) {
-                    boss.missileFireTimer_ = 0.0f;
-                    size_t segmentIndex = boss.missileTargetIndices_[boss.missileShotCount_];
+                if (missileFireTimer_ >= kMissileFireInterval) {
+                    missileFireTimer_ = 0.0f;
+                    size_t segmentIndex = missileTargetIndices_[missileShotCount_];
                     if (segmentIndex < boss.segments_.size() && boss.segments_[segmentIndex].isAlive) {
                         FireSingleMissile(boss, segmentIndex);
                     }
-                    boss.missileShotCount_++;
+                    missileShotCount_++;
                 }
             } else {
                 // 撃ち終わった後の硬直フェーズ（隙を見せる）
-                if (boss.missileFireTimer_ >= FearWormEnemy::kMissilePostFireCooldown) {
+                if (missileFireTimer_ >= kMissilePostFireCooldown) {
                     // 硬直終了！通常状態に戻り、Orbitへ復帰
-                    boss.isFiringMissilesSequence_ = false;
-                    boss.missileAttackTimer_ = 0.0f;
+                    isFiringMissilesSequence_ = false;
+                    missileAttackTimer_ = 0.0f;
                     ChangeMovementPattern(boss, MovementPattern::Orbit);
-                    boss.movementPatternTimer_ = 0.0f;
+                    movementPatternTimer_ = 0.0f;
                 }
             }
         }
@@ -158,7 +158,7 @@ void FearWormBattleState::UpdateBattleMovement(FearWormEnemy& boss, const Vector
 
     // 移動処理
     // 頭だけかつビーム発射フェーズ（Charge, Fire, FadeOut）のときは、X・Y軸の移動のみ静止し、Z軸の前進は維持する
-    bool isBeamActive = !boss.HasAliveBodyParts() && (boss.beamState_ == BeamState::Charge || boss.beamState_ == BeamState::Fire || boss.beamState_ == BeamState::FadeOut);
+    bool isBeamActive = !boss.HasAliveBodyParts() && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut);
     if (isBeamActive) {
         // Z座標のみ追従前進させる (floatのLerp)
         float t = boss.moveSpeed_ * movementSpeedRate;
@@ -175,17 +175,17 @@ void FearWormBattleState::UpdateBattleAttack(FearWormEnemy& boss)
     // 攻撃処理の実行
     if (!boss.HasAliveBodyParts()) {
         // 頭部だけになったらビーム攻撃に移行
-        if (boss.isHeadChargeActive_) {
+        if (isHeadChargeActive_) {
             FinishHeadChargeAttack(boss);
         }
-        boss.isMissileAttackActive_ = false;
-        boss.isFiringMissilesSequence_ = false;
+        isMissileAttackActive_ = false;
+        isFiringMissilesSequence_ = false;
 
         UpdateBeamAttack(boss);
-    } else if (boss.isMadModeActive_) {
+    } else if (isMadModeActive_) {
         UpdateSpiralBarrage(boss);
     } else {
-        if (!boss.isMissileAttackActive_ && !boss.isFiringMissilesSequence_) {
+        if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
             boss.Attack();
         }
     }
@@ -197,17 +197,17 @@ Vector3 FearWormBattleState::CalculateOrbitTarget(const FearWormMovementContext&
     Vector3 result = context.playerPosition;
 
     // 基本の楕円軌道を計算する。
-    float orbitX = std::cos(context.orbitAngle) * FearWormEnemy::kOrbitRadiusX;
+    float orbitX = std::cos(context.orbitAngle) * kOrbitRadiusX;
 
-    float orbitY = std::sin(context.orbitAngle) * FearWormEnemy::kOrbitRadiusY;
+    float orbitY = std::sin(context.orbitAngle) * kOrbitRadiusY;
 
     // 単調な周回にならないよう、横揺れと奥行きの揺れを加える。
-    float lateralSway = std::sin(context.orbitAngle * FearWormEnemy::kOrbitLateralSwayFrequency) * FearWormEnemy::kOrbitLateralSwayAmplitude;
+    float lateralSway = std::sin(context.orbitAngle * kOrbitLateralSwayFrequency) * kOrbitLateralSwayAmplitude;
 
-    float depthSway = std::sin(context.orbitAngle * FearWormEnemy::kOrbitDepthSwayFrequency) * FearWormEnemy::kOrbitDepthSwayAmplitude;
+    float depthSway = std::sin(context.orbitAngle * kOrbitDepthSwayFrequency) * kOrbitDepthSwayAmplitude;
 
     result.x += orbitX + lateralSway;
-    result.y += FearWormEnemy::kOrbitHeight + orbitY;
+    result.y += kOrbitHeight + orbitY;
     result.z += context.forwardOffset + depthSway;
 
     return result;
@@ -219,14 +219,14 @@ Vector3 FearWormBattleState::CalculateCoilTarget(const FearWormMovementContext& 
     Vector3 result = context.playerPosition;
 
     // 通常の軌道角を速めて、巻き付くような回転角を作る。
-    float coilAngle = context.orbitAngle * FearWormEnemy::kCoilAngleRate;
+    float coilAngle = context.orbitAngle * kCoilAngleRate;
 
     // 時間経過で半径を伸縮させる。
-    float radius = FearWormEnemy::kCoilBaseRadius + std::sin(context.patternTime * FearWormEnemy::kCoilRadiusFrequency) * FearWormEnemy::kCoilRadiusAmplitude;
+    float radius = kCoilBaseRadius + std::sin(context.patternTime * kCoilRadiusFrequency) * kCoilRadiusAmplitude;
 
     result.x += std::cos(coilAngle) * radius;
-    result.y += FearWormEnemy::kCoilHeight + std::sin(coilAngle) * radius * FearWormEnemy::kCoilVerticalScale;
-    result.z += context.forwardOffset + std::sin(coilAngle * FearWormEnemy::kCoilDepthFrequency) * FearWormEnemy::kCoilDepthAmplitude;
+    result.y += kCoilHeight + std::sin(coilAngle) * radius * kCoilVerticalScale;
+    result.z += context.forwardOffset + std::sin(coilAngle * kCoilDepthFrequency) * kCoilDepthAmplitude;
 
     return result;
 }
@@ -237,11 +237,11 @@ Vector3 FearWormBattleState::CalculateWeaveTarget(const FearWormMovementContext&
     Vector3 result = context.playerPosition;
 
     // 横方向と縦方向で異なる周期を使い、波打つ軌道を作る。
-    float waveAngle = context.orbitAngle * FearWormEnemy::kWeaveAngleRate;
+    float waveAngle = context.orbitAngle * kWeaveAngleRate;
 
-    result.x += std::sin(waveAngle) * FearWormEnemy::kWeaveWidth;
-    result.y += FearWormEnemy::kWeaveHeight + std::sin(waveAngle * FearWormEnemy::kWeaveVerticalFrequency) * FearWormEnemy::kWeaveVerticalAmplitude;
-    result.z += context.forwardOffset + std::cos(waveAngle) * FearWormEnemy::kWeaveDepthAmplitude;
+    result.x += std::sin(waveAngle) * kWeaveWidth;
+    result.y += kWeaveHeight + std::sin(waveAngle * kWeaveVerticalFrequency) * kWeaveVerticalAmplitude;
+    result.z += context.forwardOffset + std::cos(waveAngle) * kWeaveDepthAmplitude;
 
     return result;
 }
@@ -252,9 +252,9 @@ Vector3 FearWormBattleState::CalculateDriftTarget(const FearWormMovementContext&
     Vector3 result = context.playerPosition;
 
     // 各軸を異なる周期で揺らし、緩やかに漂う軌道を作る。
-    result.x += std::sin(context.orbitAngle * FearWormEnemy::kDriftHorizontalFrequency) * FearWormEnemy::kDriftHorizontalAmplitude;
-    result.y += FearWormEnemy::kDriftHeight + std::sin(context.orbitAngle * FearWormEnemy::kDriftVerticalFrequency) * FearWormEnemy::kDriftVerticalAmplitude;
-    result.z += context.forwardOffset + std::cos(context.orbitAngle * FearWormEnemy::kDriftDepthFrequency) * FearWormEnemy::kDriftDepthAmplitude;
+    result.x += std::sin(context.orbitAngle * kDriftHorizontalFrequency) * kDriftHorizontalAmplitude;
+    result.y += kDriftHeight + std::sin(context.orbitAngle * kDriftVerticalFrequency) * kDriftVerticalAmplitude;
+    result.z += context.forwardOffset + std::cos(context.orbitAngle * kDriftDepthFrequency) * kDriftDepthAmplitude;
 
     return result;
 }
@@ -352,31 +352,31 @@ Vector3 FearWormBattleState::BattleTarget(FearWormEnemy& boss, const Vector3& pl
 }
 
 // 現在の移動状態に応じた目標位置を取得する。
-Vector3 FearWormBattleState::MovementTargetPosition(const FearWormEnemy& boss, const Vector3& playerPosition)
+Vector3 FearWormBattleState::MovementTargetPosition(const FearWormEnemy& boss, const Vector3& playerPosition) const
 {
-    const FearWormMovementContext context { playerPosition, boss.orbitAngle_, boss.movementPatternTimer_,
-        boss.parallelForwardOffset_, boss.madModeTimer_, boss.spiralAngle_ };
-    return CalculateFearWormTarget(boss.movementPattern_, context);
+    const FearWormMovementContext context { playerPosition, orbitAngle_, movementPatternTimer_,
+        boss.parallelForwardOffset_, madModeTimer_, spiralAngle_ };
+    return CalculateFearWormTarget(movementPattern_, context);
 }
 
 // 経過時間を確認し、移動パターンの継続と切替を行う。
 void FearWormBattleState::UpdateMovementPattern(FearWormEnemy& boss, float movementSpeedRate)
 {
-    if (boss.movementPattern_ == MovementPattern::Line || boss.movementPattern_ == MovementPattern::Spiral) return;
-    boss.movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime() * movementSpeedRate;
-    if (boss.movementPatternTimer_ >= boss.movementPatternDuration_) {
-        ChangeMovementPattern(boss, NextFearWormMovement(boss.movementPattern_));
+    if (movementPattern_ == MovementPattern::Line || movementPattern_ == MovementPattern::Spiral) return;
+    movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime() * movementSpeedRate;
+    if (movementPatternTimer_ >= movementPatternDuration_) {
+        ChangeMovementPattern(boss, NextFearWormMovement(movementPattern_));
     }
 }
 
 // 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
 void FearWormBattleState::ChangeMovementPattern(FearWormEnemy& boss, MovementPattern pattern)
 {
-    boss.movementPattern_ = pattern;
+    movementPattern_ = pattern;
     if (pattern == MovementPattern::Line) {
-        boss.lineTransitionTimer_ = 0.0f;
+        lineTransitionTimer_ = 0.0f;
     } else if (pattern != MovementPattern::Spiral) {
-        boss.movementPatternTimer_ = 0.0f;
+        movementPatternTimer_ = 0.0f;
     }
 }
 
@@ -392,7 +392,7 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
         return;
     }
 
-    if (boss.bulletModel_ == nullptr) {
+    if (bulletModel_ == nullptr) {
         return;
     }
 
@@ -400,8 +400,8 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
     Vector3 toPlayer = boss.player_->GetTranslate() - boss.GetPosition();
     float distance = Vector3Length(toPlayer);
 
-    if (distance > FearWormEnemy::kAttackRange) {
-        if (boss.isHeadChargeActive_) {
+    if (distance > kAttackRange) {
+        if (isHeadChargeActive_) {
             FinishHeadChargeAttack(boss);
         }
         return;
@@ -411,32 +411,32 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
     UpdateHeadAimDirection(boss);
     UpdateHeadChargeAttack(boss, boss.MovementSpeedRate());
 
-    if (boss.isHeadChargeActive_) {
+    if (isHeadChargeActive_) {
         return;
     }
 
     // チャージ中でなければ通常弾の発射間隔を数える。
-    boss.fireTimer_ = boss.fireTimer_ + 1;
-    if (boss.fireTimer_ < boss.fireInterval_) {
+    fireTimer_ = fireTimer_ + 1;
+    if (fireTimer_ < fireInterval_) {
         return;
     }
 
-    boss.fireTimer_ = 0;
+    fireTimer_ = 0;
 
     // 生存部位を順番に探し、見つかった最初の部位から発射する。
     int32_t segmentCount = static_cast<int32_t>(boss.segments_.size());
     for (int32_t count = 0; count < segmentCount; count = count + 1) {
-        boss.fireSegmentIndex_ = boss.fireSegmentIndex_ + 1;
+        fireSegmentIndex_ = fireSegmentIndex_ + 1;
 
-        if (boss.fireSegmentIndex_ >= segmentCount) {
-            boss.fireSegmentIndex_ = 0;
+        if (fireSegmentIndex_ >= segmentCount) {
+            fireSegmentIndex_ = 0;
         }
 
-        if (!boss.segments_[boss.fireSegmentIndex_].isAlive) {
+        if (!boss.segments_[fireSegmentIndex_].isAlive) {
             continue;
         }
 
-        FireBullet(boss, boss.segments_[boss.fireSegmentIndex_].position);
+        FireBullet(boss, boss.segments_[fireSegmentIndex_].position);
         break;
     }
 }
@@ -446,11 +446,11 @@ void FearWormBattleState::UpdateHeadChargeAttack(FearWormEnemy& boss, float atta
 {
     float deltaTime = TimeManager::GetInstance()->GetDeltaTime() * attackSpeedRate;
 
-    if (!boss.isHeadChargeActive_) {
-        if (boss.headChargeCooldownTimer_ > 0.0f) {
-            boss.headChargeCooldownTimer_ -= deltaTime;
-            if (boss.headChargeCooldownTimer_ < 0.0f) {
-                boss.headChargeCooldownTimer_ = 0.0f;
+    if (!isHeadChargeActive_) {
+        if (headChargeCooldownTimer_ > 0.0f) {
+            headChargeCooldownTimer_ -= deltaTime;
+            if (headChargeCooldownTimer_ < 0.0f) {
+                headChargeCooldownTimer_ = 0.0f;
             }
             return;
         }
@@ -461,38 +461,38 @@ void FearWormBattleState::UpdateHeadChargeAttack(FearWormEnemy& boss, float atta
 
     UpdateHeadAimDirection(boss);
 
-    if (!boss.isHeadChargeFiring_) {
-        boss.headChargeTimer_ += deltaTime;
-        boss.headChargeEffectTimer_ += deltaTime;
+    if (!isHeadChargeFiring_) {
+        headChargeTimer_ += deltaTime;
+        headChargeEffectTimer_ += deltaTime;
 
-        if (boss.headChargeEffectTimer_ >= FearWormEnemy::kHeadChargeEffectInterval) {
-            boss.headChargeEffectTimer_ = 0.0f;
+        if (headChargeEffectTimer_ >= kHeadChargeEffectInterval) {
+            headChargeEffectTimer_ = 0.0f;
             EffectManager::GetInstance()->PlayEffect(
                 "WormShotFlash",
                 HeadMuzzlePosition(boss));
         }
 
-        if (boss.headChargeTimer_ < FearWormEnemy::kHeadChargeDuration) {
+        if (headChargeTimer_ < kHeadChargeDuration) {
             return;
         }
 
-        boss.isHeadChargeFiring_ = true;
-        boss.headChargeShotTimer_ = FearWormEnemy::kHeadChargeShotInterval;
+        isHeadChargeFiring_ = true;
+        headChargeShotTimer_ = kHeadChargeShotInterval;
         return;
     }
 
-    boss.headChargeTimer_ += deltaTime;
-    boss.headChargeShotTimer_ += deltaTime;
+    headChargeTimer_ += deltaTime;
+    headChargeShotTimer_ += deltaTime;
 
-    if (boss.headChargeShotTimer_ < FearWormEnemy::kHeadChargeShotInterval) {
+    if (headChargeShotTimer_ < kHeadChargeShotInterval) {
         return;
     }
 
-    boss.headChargeShotTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
     FireChargedBullet(boss);
-    boss.headChargeShotCount_ = boss.headChargeShotCount_ + 1;
+    headChargeShotCount_ = headChargeShotCount_ + 1;
 
-    if (boss.headChargeShotCount_ >= FearWormEnemy::kHeadChargeShotMax) {
+    if (headChargeShotCount_ >= kHeadChargeShotMax) {
         FinishHeadChargeAttack(boss);
     }
 }
@@ -501,13 +501,13 @@ void FearWormBattleState::UpdateHeadChargeAttack(FearWormEnemy& boss, float atta
 void FearWormBattleState::StartHeadChargeAttack(FearWormEnemy& boss)
 {
     // チャージ状態へ移行し、各タイマーと発射数を初期化する。
-    boss.isHeadChargeActive_ = true;
-    boss.isHeadChargeFiring_ = false;
-    boss.headChargeTimer_ = 0.0f;
-    boss.headChargeShotTimer_ = 0.0f;
-    boss.headChargeEffectTimer_ = 0.0f;
-    boss.headChargeShotCount_ = 0;
-    boss.fireTimer_ = 0;
+    isHeadChargeActive_ = true;
+    isHeadChargeFiring_ = false;
+    headChargeTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
+    headChargeEffectTimer_ = 0.0f;
+    headChargeShotCount_ = 0;
+    fireTimer_ = 0;
 
     // 開始時点の照準を確定し、発射口にチャージ演出を出す。
     UpdateHeadAimDirection(boss);
@@ -521,13 +521,13 @@ void FearWormBattleState::StartHeadChargeAttack(FearWormEnemy& boss)
 void FearWormBattleState::FinishHeadChargeAttack(FearWormEnemy& boss)
 {
     // チャージ状態を解除し、次回攻撃までの待機時間を設定する。
-    boss.isHeadChargeActive_ = false;
-    boss.isHeadChargeFiring_ = false;
-    boss.headChargeTimer_ = 0.0f;
-    boss.headChargeShotTimer_ = 0.0f;
-    boss.headChargeEffectTimer_ = 0.0f;
-    boss.headChargeShotCount_ = 0;
-    boss.headChargeCooldownTimer_ = FearWormEnemy::kHeadChargeCooldown;
+    isHeadChargeActive_ = false;
+    isHeadChargeFiring_ = false;
+    headChargeTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
+    headChargeEffectTimer_ = 0.0f;
+    headChargeShotCount_ = 0;
+    headChargeCooldownTimer_ = kHeadChargeCooldown;
 }
 
 // プレイヤーの位置へ頭の狙いを合わせる。
@@ -543,11 +543,11 @@ void FearWormBattleState::UpdateHeadAimDirection(FearWormEnemy& boss)
 
     Vector3 targetDirection = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
 
-    boss.headAimDirection_ = NormalizeSafe(
+    headAimDirection_ = NormalizeSafe(
         Lerp(
-            boss.headAimDirection_,
+            headAimDirection_,
             targetDirection,
-            FearWormEnemy::kHeadAimFollowRate));
+            kHeadAimFollowRate));
 }
 
 // 指定した部位の位置から、通常射撃用の弾を生成する。
@@ -556,13 +556,13 @@ void FearWormBattleState::FireBullet(FearWormEnemy& boss, const Vector3& positio
     // 通常弾を生成し、発射位置からプレイヤーへの速度を設定する。
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
     bullet->SetFogEnabled(false);
-    bullet->Initialize(boss.bulletModel_);
+    bullet->Initialize(bulletModel_);
 
     Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - position);
     Vector3 velocity { };
-    velocity.x = direction.x * boss.bulletSpeed_;
-    velocity.y = direction.y * boss.bulletSpeed_;
-    velocity.z = direction.z * boss.bulletSpeed_;
+    velocity.x = direction.x * bulletSpeed_;
+    velocity.y = direction.y * bulletSpeed_;
+    velocity.z = direction.z * bulletSpeed_;
 
     bullet->SetTranslate(position);
     bullet->SetVelocity(velocity);
@@ -582,32 +582,32 @@ void FearWormBattleState::FireChargedBullet(FearWormEnemy& boss)
         return;
     }
 
-    if (boss.bulletModel_ == nullptr) {
+    if (bulletModel_ == nullptr) {
         return;
     }
 
     // 頭部の発射位置からプレイヤーへ向かう弾を生成する。
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
     bullet->SetFogEnabled(false);
-    bullet->Initialize(boss.bulletModel_);
+    bullet->Initialize(bulletModel_);
 
     Vector3 position = HeadMuzzlePosition(boss);
 
     Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - position);
 
     Vector3 velocity { };
-    velocity.x = direction.x * FearWormEnemy::kChargedBulletSpeed;
-    velocity.y = direction.y * FearWormEnemy::kChargedBulletSpeed;
-    velocity.z = direction.z * FearWormEnemy::kChargedBulletSpeed;
+    velocity.x = direction.x * kChargedBulletSpeed;
+    velocity.y = direction.y * kChargedBulletSpeed;
+    velocity.z = direction.z * kChargedBulletSpeed;
 
     // 通常弾より強い見た目、威力、当たり判定、寿命を設定する。
-    bullet->SetScale({ FearWormEnemy::kChargedBulletScale,
-        FearWormEnemy::kChargedBulletScale,
-        FearWormEnemy::kChargedBulletScale });
-    bullet->SetColor(FearWormEnemy::kChargedBulletColor);
-    bullet->SetDamage(FearWormEnemy::kChargedBulletDamage);
-    bullet->SetCollisionRadius(FearWormEnemy::kChargedBulletCollisionRadius);
-    bullet->SetMaxLifeTime(FearWormEnemy::kChargedBulletLifeTime);
+    bullet->SetScale({ kChargedBulletScale,
+        kChargedBulletScale,
+        kChargedBulletScale });
+    bullet->SetColor(kChargedBulletColor);
+    bullet->SetDamage(kChargedBulletDamage);
+    bullet->SetCollisionRadius(kChargedBulletCollisionRadius);
+    bullet->SetMaxLifeTime(kChargedBulletLifeTime);
     bullet->SetTranslate(position);
     bullet->SetVelocity(velocity);
 
@@ -620,25 +620,25 @@ void FearWormBattleState::FireChargedBullet(FearWormEnemy& boss)
 }
 
 // 頭の向きと大きさを考慮して、弾を出す位置を求める。
-Vector3 FearWormBattleState::HeadMuzzlePosition(const FearWormEnemy& boss)
+Vector3 FearWormBattleState::HeadMuzzlePosition(const FearWormEnemy& boss) const
 {
     // 頭部中心から照準方向へ発射口分だけ前進させる。
     Vector3 position = boss.GetPosition();
 
-    Vector3 direction = NormalizeSafe(boss.headAimDirection_);
+    Vector3 direction = NormalizeSafe(headAimDirection_);
 
-    position.x += direction.x * FearWormEnemy::kHeadMuzzleOffset;
-    position.y += direction.y * FearWormEnemy::kHeadMuzzleOffset;
-    position.z += direction.z * FearWormEnemy::kHeadMuzzleOffset;
+    position.x += direction.x * kHeadMuzzleOffset;
+    position.y += direction.y * kHeadMuzzleOffset;
+    position.z += direction.z * kHeadMuzzleOffset;
 
     return position;
 }
 
 // 頭が照準方向を向くように描画用の回転角を計算する。
-Vector3 FearWormBattleState::HeadLookRotation(const FearWormEnemy& boss)
+Vector3 FearWormBattleState::HeadLookRotation(const FearWormEnemy& boss) const
 {
     // 正規化した照準方向をピッチ角とヨー角へ変換する。
-    Vector3 direction = NormalizeSafe(boss.headAimDirection_);
+    Vector3 direction = NormalizeSafe(headAimDirection_);
 
     Vector3 rotate { };
     rotate.x = -std::asin(direction.y);
@@ -651,12 +651,12 @@ Vector3 FearWormBattleState::HeadLookRotation(const FearWormEnemy& boss)
 // 指定した部位から追尾ミサイルを一発生成する。
 void FearWormBattleState::FireSingleMissile(FearWormEnemy& boss, size_t segmentIndex)
 {
-    if (boss.player_ == nullptr || boss.bulletModel_ == nullptr) {
+    if (boss.player_ == nullptr || bulletModel_ == nullptr) {
         return;
     }
 
     std::unique_ptr<TrackingEnemyBullet> bullet = std::make_unique<TrackingEnemyBullet>();
-    bullet->Initialize(boss.bulletModel_);
+    bullet->Initialize(bulletModel_);
     bullet->SetPlayer(boss.player_);
 
     // 発射座標を設定
@@ -705,15 +705,15 @@ Matrix4x4 FearWormBattleState::MakeRotateAxisAngleMatrix(const Vector3& axis, fl
 void FearWormBattleState::UpdateSpiralBarrage(FearWormEnemy& boss)
 {
     // 最初の2秒間（威嚇中）は弾を撃たずにプレイヤーに猶予を与える
-    if (boss.madModeTimer_ < 2.0f) {
+    if (madModeTimer_ < 2.0f) {
         return;
     }
 
-    boss.barrageFireTimer_++;
-    if (boss.barrageFireTimer_ < 3) {
+    barrageFireTimer_++;
+    if (barrageFireTimer_ < 3) {
         return;
     }
-    boss.barrageFireTimer_ = 0;
+    barrageFireTimer_ = 0;
 
     Vector3 headPos = boss.GetPosition();
     Vector3 playerPos = boss.player_->GetTranslate();
@@ -729,11 +729,11 @@ void FearWormBattleState::UpdateSpiralBarrage(FearWormEnemy& boss)
     Vector3 right = NormalizeSafe(Cross(tempUp, toPlayer));
     Vector3 up = NormalizeSafe(Cross(toPlayer, right));
 
-    float spread = (std::sin(boss.barrageAngle_ * 2.5f) * 0.22f) + 0.22f; // 0.0(正確に狙う)〜0.44(周囲に拡散)を変動させる
+    float spread = (std::sin(barrageAngle_ * 2.5f) * 0.22f) + 0.22f; // 0.0(正確に狙う)〜0.44(周囲に拡散)を変動させる
 
     // プレイヤー方向を軸とした直交平面上で対角線上に広がる2つの螺旋オフセットベクトル
-    Vector3 offset1 = right * (std::cos(boss.barrageAngle_) * spread) + up * (std::sin(boss.barrageAngle_) * spread);
-    Vector3 offset2 = right * (std::cos(boss.barrageAngle_ + FearWormEnemy::kPi) * spread) + up * (std::sin(boss.barrageAngle_ + FearWormEnemy::kPi) * spread);
+    Vector3 offset1 = right * (std::cos(barrageAngle_) * spread) + up * (std::sin(barrageAngle_) * spread);
+    Vector3 offset2 = right * (std::cos(barrageAngle_ + kPi) * spread) + up * (std::sin(barrageAngle_ + kPi) * spread);
 
     // プレイヤー方向ベクトルと螺旋オフセットを合成して最終的な発射方向を決定
     Vector3 dir1 = NormalizeSafe(toPlayer + offset1);
@@ -748,12 +748,12 @@ void FearWormBattleState::FireDirectionalBullet(FearWormEnemy& boss, const Vecto
 {
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
     bullet->SetFogEnabled(false);
-    bullet->Initialize(boss.bulletModel_);
+    bullet->Initialize(bulletModel_);
 
     Vector3 velocity { };
-    velocity.x = direction.x * boss.bulletSpeed_;
-    velocity.y = direction.y * boss.bulletSpeed_;
-    velocity.z = direction.z * boss.bulletSpeed_;
+    velocity.x = direction.x * bulletSpeed_;
+    velocity.y = direction.y * bulletSpeed_;
+    velocity.z = direction.z * bulletSpeed_;
 
     bullet->SetTranslate(position);
     bullet->SetVelocity(velocity);
@@ -770,18 +770,18 @@ void FearWormBattleState::InitializeBeam(FearWormEnemy& boss)
     Model* beamModel = ModelManager::GetInstance()->CreateBeamCross("resources/Textures/beam.jpg");
 
     // ビームオブジェクトの初期化
-    boss.beamPlane_ = std::make_unique<Object3d>();
-    boss.beamPlane_->Initialize(Object3dManager::GetInstance());
-    boss.beamPlane_->SetModel(beamModel);
-    boss.beamPlane_->SetEnableLighting(false);
+    beamPlane_ = std::make_unique<Object3d>();
+    beamPlane_->Initialize(Object3dManager::GetInstance());
+    beamPlane_->SetModel(beamModel);
+    beamPlane_->SetEnableLighting(false);
 
     // 初期状態の設定
-    boss.beamState_ = BeamState::Wait;
-    boss.beamTimer_ = 0.0f;
-    boss.beamUVScrollOffset_ = 0.0f;
-    boss.beamCurrentLength_ = 0.0f;
-    boss.beamCurrentWidth_ = 0.0f;
-    boss.beamRotateTheta_ = 0.0f;
+    beamState_ = BeamState::Wait;
+    beamTimer_ = 0.0f;
+    beamUVScrollOffset_ = 0.0f;
+    beamCurrentLength_ = 0.0f;
+    beamCurrentWidth_ = 0.0f;
+    beamRotateTheta_ = 0.0f;
 }
 
 // 頭の位置と狙いにビームを追従させ、ビーム状態を更新する。
@@ -792,37 +792,37 @@ void FearWormBattleState::UpdateBeamAttack(FearWormEnemy& boss)
     }
 
     float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
-    boss.beamTimer_ += deltaTime;
+    beamTimer_ += deltaTime;
 
     // UVスクロールオフセットを更新
-    boss.beamUVScrollOffset_ += FearWormEnemy::kBeamUvScrollSpeed * deltaTime;
-    if (boss.beamUVScrollOffset_ < -1.0f) {
-        boss.beamUVScrollOffset_ += 1.0f;
+    beamUVScrollOffset_ += kBeamUvScrollSpeed * deltaTime;
+    if (beamUVScrollOffset_ < -1.0f) {
+        beamUVScrollOffset_ += 1.0f;
     }
 
     // UVスクロール行列を作成してマテリアルにセット
-    Vector3 uvTranslation = { 0.0f, boss.beamUVScrollOffset_, 0.0f }; // V方向にスクロール
+    Vector3 uvTranslation = { 0.0f, beamUVScrollOffset_, 0.0f }; // V方向にスクロール
     Matrix4x4 uvMat = MatrixMath::MakeTranslateMatrix(uvTranslation);
-    if (boss.beamPlane_->GetMaterial()) {
-        boss.beamPlane_->SetUvTransform(uvMat);
+    if (beamPlane_->GetMaterial()) {
+        beamPlane_->SetUvTransform(uvMat);
     }
 
     // ビームの自転角度を更新
-    boss.beamRotateTheta_ += FearWormEnemy::kBeamRotateSpeedRadiansPerSecond * deltaTime;
-    if (boss.beamRotateTheta_ > FearWormEnemy::kPi * 2.0f) {
-        boss.beamRotateTheta_ -= FearWormEnemy::kPi * 2.0f;
+    beamRotateTheta_ += kBeamRotateSpeedRadiansPerSecond * deltaTime;
+    if (beamRotateTheta_ > kPi * 2.0f) {
+        beamRotateTheta_ -= kPi * 2.0f;
     }
 
     // プレイヤーの座標
     Vector3 headPos = HeadMuzzlePosition(boss);
 
     // 照準を更新する前のマズル位置を、予兆・発射エフェクトで共有する。
-    boss.beamMuzzlePosition_ = headPos;
+    beamMuzzlePosition_ = headPos;
     UpdateBeamState(boss, deltaTime);
 
     // 射向ベクトル (Lerpでゆっくり追従しているheadAimDirection_をそのままビームの進行方向軸とする)
-    Vector3 zAxis = boss.headAimDirection_;
-    float length = boss.beamCurrentLength_;
+    Vector3 zAxis = headAimDirection_;
+    float length = beamCurrentLength_;
     if (length < 0.001f) length = 0.001f;
 
     // 正規直交基底の作成 (仮の上方向と射向ベクトルの外積から右方向を算出)
@@ -835,8 +835,8 @@ void FearWormBattleState::UpdateBeamAttack(FearWormEnemy& boss)
     Vector3 yAxis = Cross(zAxis, xAxis); // すでに直交かつ正規化されている
 
     // 進行方向(zAxis)まわりの自転適用 (xAxis と yAxis を theta で回転)
-    float cosT = std::cos(boss.beamRotateTheta_);
-    float sinT = std::sin(boss.beamRotateTheta_);
+    float cosT = std::cos(beamRotateTheta_);
+    float sinT = std::sin(beamRotateTheta_);
 
     Vector3 xAxisRot = {
         xAxis.x * cosT + yAxis.x * sinT,
@@ -857,14 +857,14 @@ void FearWormBattleState::UpdateBeamAttack(FearWormEnemy& boss)
     matRot.m[2][0] = zAxis.x;     matRot.m[2][1] = zAxis.y;     matRot.m[2][2] = zAxis.z;
 
     // スケールと平行移動の合成 (Scale -> Rotate -> Translate)
-    Matrix4x4 matScale = MatrixMath::Matrix4x4MakeScaleMatrix({ boss.beamCurrentWidth_, boss.beamCurrentWidth_, length });
+    Matrix4x4 matScale = MatrixMath::Matrix4x4MakeScaleMatrix({ beamCurrentWidth_, beamCurrentWidth_, length });
     Matrix4x4 matTrans = MatrixMath::MakeTranslateMatrix(headPos);
 
     Matrix4x4 worldMat = MatrixMath::Multiply(MatrixMath::Multiply(matScale, matRot), matTrans);
 
     // ワールド行列を直接設定
-    boss.beamPlane_->SetCustomWorldMatrix(worldMat);
-    boss.beamPlane_->Update();
+    beamPlane_->SetCustomWorldMatrix(worldMat);
+    beamPlane_->Update();
 }
 
 // 現在のビーム状態に必要な溜め演出や光線を描画する。
@@ -878,11 +878,11 @@ void FearWormBattleState::DrawBeam(FearWormEnemy& boss)
         return;
     }
 
-    if (boss.beamState_ == BeamState::Charge || boss.beamState_ == BeamState::Fire || boss.beamState_ == BeamState::FadeOut) {
-        if (boss.beamPlane_) {
+    if (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut) {
+        if (beamPlane_) {
             // 加算ブレンドを適用して、黒背景を透過させ発光感を出す
             Object3dManager::GetInstance()->SetBlendMode(kBlendModeAdd);
-            boss.beamPlane_->Draw();
+            beamPlane_->Draw();
             // 通常ブレンドに戻す
             Object3dManager::GetInstance()->SetBlendMode(kBlendModeNormal);
         }
@@ -892,20 +892,20 @@ void FearWormBattleState::DrawBeam(FearWormEnemy& boss)
 // 発射中の光線とプレイヤーの距離を調べ、命中時のダメージを処理する。
 void FearWormBattleState::CheckBeamCollision(FearWormEnemy& boss)
 {
-    boss.isBeamHittingPlayer_ = false; // 毎フレーム初期化
+    isBeamHittingPlayer_ = false; // 毎フレーム初期化
 
-    if (boss.player_ == nullptr || boss.beamCurrentLength_ <= 0.0f || boss.beamCurrentWidth_ <= 0.0f) {
+    if (boss.player_ == nullptr || beamCurrentLength_ <= 0.0f || beamCurrentWidth_ <= 0.0f) {
         return;
     }
 
     // ビームの始点と終点
     Vector3 beamStart = HeadMuzzlePosition(boss);
-    Vector3 beamEnd = beamStart + boss.headAimDirection_ * boss.beamCurrentLength_;
+    Vector3 beamEnd = beamStart + headAimDirection_ * beamCurrentLength_;
 
     // プレイヤーの座標と半径
     Vector3 playerPos = boss.player_->GetTranslate();
     float playerRadius = 1.0f;
-    float beamRadius = boss.beamCurrentWidth_ * 0.5f;
+    float beamRadius = beamCurrentWidth_ * 0.5f;
 
     // 線分 AB (ビーム) と点 C (プレイヤー) の最短距離を求める
     Vector3 AB = beamEnd - beamStart;
@@ -930,25 +930,25 @@ void FearWormBattleState::CheckBeamCollision(FearWormEnemy& boss)
     float hitRadiusSq = hitRadius * hitRadius;
 
     if (distanceSq <= hitRadiusSq) {
-        boss.isBeamHittingPlayer_ = true; // プレイヤーへの接触状態をON
+        isBeamHittingPlayer_ = true; // プレイヤーへの接触状態をON
 
-        boss.player_->ApplyDamage(FearWormEnemy::kBeamDamage); // HP減少は無敵時間が適用される
+        boss.player_->ApplyDamage(kBeamDamage); // HP減少は無敵時間が適用される
 
         // 無敵時間に関わらず、接触している間は被弾火花エフェクトを3フレームに1回に間引いて発生させる (FPS低下防止)
-        boss.beamHitEffectFrameCount_++;
-        if (boss.beamHitEffectFrameCount_ >= 3) {
-            boss.beamHitEffectFrameCount_ = 0;
+        beamHitEffectFrameCount_++;
+        if (beamHitEffectFrameCount_ >= 3) {
+            beamHitEffectFrameCount_ = 0;
             EffectManager::GetInstance()->PlayEffect("DamageHit", playerPos);
         }
     } else {
-        boss.beamHitEffectFrameCount_ = 0;
+        beamHitEffectFrameCount_ = 0;
     }
 }
 
 // 待機・溜め・発射・消失のうち、現在のビーム状態を進める。
 void FearWormBattleState::UpdateBeamState(FearWormEnemy& boss, float deltaTime)
 {
-    switch (boss.beamState_) {
+    switch (beamState_) {
     case BeamState::Wait: UpdateBeamWait(boss, deltaTime); break;
     case BeamState::Charge: UpdateBeamCharge(boss, deltaTime); break;
     case BeamState::Fire: UpdateBeamFire(boss, deltaTime); break;
@@ -959,75 +959,194 @@ void FearWormBattleState::UpdateBeamState(FearWormEnemy& boss, float deltaTime)
 // 次のビームを開始できる条件が整うまで待つ。
 void FearWormBattleState::UpdateBeamWait(FearWormEnemy& boss, float)
 {
-    boss.beamCurrentLength_ = 0.0f;
-    boss.beamCurrentWidth_ = 0.0f;
+    beamCurrentLength_ = 0.0f;
+    beamCurrentWidth_ = 0.0f;
     boss.Attack();
-    if (boss.beamTimer_ >= 4.0f) ChangeBeamState(boss, BeamState::Charge);
+    if (beamTimer_ >= 4.0f) ChangeBeamState(boss, BeamState::Charge);
 }
 
 // 溜め時間と見た目を更新し、準備が終わったら発射へ移る。
 void FearWormBattleState::UpdateBeamCharge(FearWormEnemy& boss, float dt)
 {
-    boss.beamCurrentLength_ = 0.0f;
-    boss.beamCurrentWidth_ = 0.0f;
+    beamCurrentLength_ = 0.0f;
+    beamCurrentWidth_ = 0.0f;
     const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
-    boss.headAimDirection_ = NormalizeSafe(Lerp(boss.headAimDirection_, direction, 0.08f));
-    boss.beamEffectTimer_ += dt;
-    if (boss.beamEffectTimer_ >= 0.25f) {
-        boss.beamEffectTimer_ = 0.0f;
-        EffectManager::GetInstance()->PlayEffect("WormShotFlash", boss.beamMuzzlePosition_);
+    headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, direction, 0.08f));
+    beamEffectTimer_ += dt;
+    if (beamEffectTimer_ >= 0.25f) {
+        beamEffectTimer_ = 0.0f;
+        EffectManager::GetInstance()->PlayEffect("WormShotFlash", beamMuzzlePosition_);
     }
-    if (boss.beamTimer_ >= 1.5f) ChangeBeamState(boss, BeamState::Fire);
+    if (beamTimer_ >= 1.5f) ChangeBeamState(boss, BeamState::Fire);
 }
 
 // 発射時間を進め、時間切れでビームを消す状態へ移る。
 void FearWormBattleState::UpdateBeamFire(FearWormEnemy& boss, float dt)
 {
-    boss.beamCurrentLength_ = (std::min)(400.0f, boss.beamCurrentLength_ + 1000.0f * dt);
-    boss.beamCurrentWidth_ = 3.5f;
+    beamCurrentLength_ = (std::min)(400.0f, beamCurrentLength_ + 1000.0f * dt);
+    beamCurrentWidth_ = 3.5f;
     const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
-    boss.headAimDirection_ = NormalizeSafe(Lerp(boss.headAimDirection_, direction, 0.015f));
+    headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, direction, 0.015f));
     CheckBeamCollision(boss);
-    boss.beamEffectTimer_ += dt;
-    if (boss.beamEffectTimer_ >= 0.2f) {
-        boss.beamEffectTimer_ = 0.0f;
-        EffectManager::GetInstance()->PlayEffect("WormShotFlash", boss.beamMuzzlePosition_);
+    beamEffectTimer_ += dt;
+    if (beamEffectTimer_ >= 0.2f) {
+        beamEffectTimer_ = 0.0f;
+        EffectManager::GetInstance()->PlayEffect("WormShotFlash", beamMuzzlePosition_);
     }
-    if (boss.beamTimer_ >= 3.0f) ChangeBeamState(boss, BeamState::FadeOut);
+    if (beamTimer_ >= 3.0f) ChangeBeamState(boss, BeamState::FadeOut);
 }
 
 // 光線を徐々に消し、次の発射までの待機状態へ戻す。
 void FearWormBattleState::UpdateBeamFadeOut(FearWormEnemy& boss, float dt)
 {
-    boss.beamCurrentWidth_ = (std::max)(0.0f, boss.beamCurrentWidth_ - 8.0f * dt);
+    beamCurrentWidth_ = (std::max)(0.0f, beamCurrentWidth_ - 8.0f * dt);
     const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
-    boss.headAimDirection_ = NormalizeSafe(Lerp(boss.headAimDirection_, direction, 0.01f));
-    if (boss.beamTimer_ >= 0.5f) ChangeBeamState(boss, BeamState::Wait);
+    headAimDirection_ = NormalizeSafe(Lerp(headAimDirection_, direction, 0.01f));
+    if (beamTimer_ >= 0.5f) ChangeBeamState(boss, BeamState::Wait);
 }
 
 // ビーム状態を切り替え、各状態のタイマーや表示を設定する。
 void FearWormBattleState::ChangeBeamState(FearWormEnemy& boss, BeamState state)
 {
-    if (boss.beamState_ == state) return;
-    boss.beamState_ = state;
-    boss.beamTimer_ = 0.0f;
+    if (beamState_ == state) return;
+    beamState_ = state;
+    beamTimer_ = 0.0f;
     switch (state) {
     case BeamState::Charge: {
-        if (boss.isHeadChargeActive_) FinishHeadChargeAttack(boss);
-        boss.beamEffectTimer_ = 0.0f;
+        if (isHeadChargeActive_) FinishHeadChargeAttack(boss);
+        beamEffectTimer_ = 0.0f;
         if (boss.player_ && !boss.segments_.empty()) {
-            boss.headAimDirection_ = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
-            EffectManager::GetInstance()->PlayEffect("WormShotFlash", boss.beamMuzzlePosition_);
+            headAimDirection_ = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
+            EffectManager::GetInstance()->PlayEffect("WormShotFlash", beamMuzzlePosition_);
         }
         break;
     }
     case BeamState::Fire: {
-        boss.beamEffectTimer_ = 0.0f;
+        beamEffectTimer_ = 0.0f;
         if (boss.player_ && !boss.segments_.empty()) {
-            EffectManager::GetInstance()->PlayEffect("WormShotFlash", boss.beamMuzzlePosition_);
+            EffectManager::GetInstance()->PlayEffect("WormShotFlash", beamMuzzlePosition_);
         }
         break;
     }
     default: break;
+    }
+}
+
+FearWormBattleState::FearWormBattleState() = default;
+FearWormBattleState::~FearWormBattleState() = default;
+
+void FearWormBattleState::Initialize(Model* bulletModel)
+{
+    bulletModel_ = bulletModel;
+    isMadModeActive_ = false;
+    isMadModeFinished_ = false;
+    madModeTimer_ = 0.0f;
+}
+
+void FearWormBattleState::Reset(FearWormEnemy& boss)
+{
+    ChangeMovementPattern(boss, MovementPattern::Orbit);
+    movementPatternTimer_ = 0.0f;
+    isHeadChargeActive_ = false;
+    isHeadChargeFiring_ = false;
+    headChargeTimer_ = 0.0f;
+    headChargeShotTimer_ = 0.0f;
+    headChargeCooldownTimer_ = kInitialHeadChargeCooldown;
+    headChargeEffectTimer_ = 0.0f;
+    headChargeShotCount_ = 0;
+    headAimDirection_ = kDefaultHeadAimDirection;
+
+    // 追尾ミサイル関連の初期化
+    missileAttackTimer_ = 0.0f;
+    isMissileAttackActive_ = false;
+    missilePhaseTimer_ = 0.0f;
+    hasFiredMissiles_ = false;
+    isFiringMissilesSequence_ = false;
+    missileFireTimer_ = 0.0f;
+    missileShotCount_ = 0;
+    missileTargetIndices_.clear();
+}
+
+void FearWormBattleState::PrepareEntryMovement(FearWormEnemy& boss, float orbitAngle)
+{
+    orbitAngle_ = orbitAngle;
+    ChangeMovementPattern(boss, MovementPattern::Orbit);
+    movementPatternTimer_ = 0.0f;
+}
+
+void FearWormBattleState::StopAttacksForDeath(FearWormEnemy& boss)
+{
+    isHeadChargeActive_ = false;
+    isHeadChargeFiring_ = false;
+    ChangeBeamState(boss, BeamState::Wait);
+    beamCurrentLength_ = 0.0f;
+    beamCurrentWidth_ = 0.0f;
+}
+
+float FearWormBattleState::UpdateFormationBlend()
+{
+    float blendT = 0.0f;
+    if (movementPattern_ == MovementPattern::Line) {
+        lineTransitionTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+        blendT = (std::min)(lineTransitionTimer_, 1.0f);
+    } else {
+        lineTransitionTimer_ = 0.0f;
+    }
+    return blendT;
+}
+
+Vector3 FearWormBattleState::CalculateFormationPosition(const FearWormEnemy& boss, int32_t segmentOrder,
+    const Vector3& followPosition, float formationBlend) const
+{
+    // ミサイル攻撃時の横並びと揺れを、共通の追従位置へ合成する。
+    float waveScaleY = 3.2f;
+    float waveScaleZ = 2.0f;
+    float waveFrequency = 4.2f;
+
+    Vector3 posLine = {
+        boss.segments_[0].position.x - (boss.segmentSpacing_ * static_cast<float>(segmentOrder)),
+        boss.segments_[0].position.y + std::sin(boss.moveTime_ * waveFrequency + static_cast<float>(segmentOrder) * 0.8f) * waveScaleY,
+        boss.segments_[0].position.z + std::cos(boss.moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(segmentOrder) * 0.6f) * waveScaleZ
+    };
+
+    // 補間率0では、通常の追従位置を維持する。
+    return Lerp(followPosition, posLine, formationBlend);
+}
+
+Vector4 FearWormBattleState::HeadAttackColor(const Vector4& baseColor) const
+{
+    Vector4 color = baseColor;
+    if (isHeadChargeActive_) {
+        color = kChargingHeadColor;
+    }
+
+    if (isHeadChargeFiring_) {
+        color = kFiringHeadColor;
+    }
+    return color;
+}
+
+float FearWormBattleState::ApplyHeadChargePulse(float basePulse) const
+{
+    float pulse = basePulse;
+    if (isHeadChargeActive_) {
+        pulse += kChargePulseAdd;
+        pulse += std::sin(headChargeTimer_ * kChargePulseFrequency) * kChargePulseAmplitude;
+    }
+    return pulse;
+}
+
+bool FearWormBattleState::ShouldAimHead(const FearWormEnemy& boss) const
+{
+    bool isBeamAiming = !boss.HasAliveBodyParts()
+        && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut);
+    return isHeadChargeActive_ || isBeamAiming;
+}
+
+void FearWormBattleState::SubmitRaytracing(FearWormEnemy& boss, DxrRenderer& renderer)
+{
+    if (!boss.segments_.empty() && boss.segments_[0].isAlive && beamPlane_
+        && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut)) {
+        beamPlane_->SubmitRaytracing(renderer);
     }
 }

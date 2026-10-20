@@ -52,17 +52,17 @@ inline bool RunFearWormStateTests()
     }
 
     // 死亡の開始処理が攻撃を終了し、胴体を非表示にする。
-    boss.isHeadChargeActive_ = true;
-    boss.isHeadChargeFiring_ = true;
-    boss.beamState_ = FearWormEnemy::BeamState::Fire;
-    boss.beamCurrentLength_ = 100.0f;
-    boss.beamCurrentWidth_ = 3.0f;
+    boss.battleState_.isHeadChargeActive_ = true;
+    boss.battleState_.isHeadChargeFiring_ = true;
+    boss.battleState_.beamState_ = FearWormEnemy::BeamState::Fire;
+    boss.battleState_.beamCurrentLength_ = 100.0f;
+    boss.battleState_.beamCurrentWidth_ = 3.0f;
     boss.OnDeath();
     if (boss.GetBossState() != BossState::Dead
         || boss.currentState_ != &boss.deadState_
-        || boss.isHeadChargeActive_ || boss.isHeadChargeFiring_
-        || boss.beamState_ != FearWormEnemy::BeamState::Wait
-        || boss.beamCurrentLength_ != 0.0f || boss.beamCurrentWidth_ != 0.0f
+        || boss.battleState_.isHeadChargeActive_ || boss.battleState_.isHeadChargeFiring_
+        || boss.battleState_.beamState_ != FearWormEnemy::BeamState::Wait
+        || boss.battleState_.beamCurrentLength_ != 0.0f || boss.battleState_.beamCurrentWidth_ != 0.0f
         || boss.segments_[1].isAlive || boss.deadState_.isDeathSequenceFinished_) {
         return false;
     }
@@ -76,10 +76,19 @@ inline bool RunFearWormStateTests()
         return false;
     }
 
+    // 配置し直したボスの攻撃状態だけを初期化し、別個体には影響させない。
+    boss.battleState_.isHeadChargeActive_ = true;
+    boss.battleState_.isFiringMissilesSequence_ = true;
+    boss.battleState_.missileTargetIndices_ = { 1 };
+    otherBoss.battleState_.headChargeTimer_ = 2.0f;
     boss.SetPosition({ 10.0f, 20.0f, 30.0f });
     if (boss.GetBossState() != BossState::Wait
         || boss.currentState_ != &boss.waitState_
-        || otherBoss.currentState_ != &otherBoss.waitState_) {
+        || otherBoss.currentState_ != &otherBoss.waitState_
+        || boss.battleState_.isHeadChargeActive_
+        || boss.battleState_.isFiringMissilesSequence_
+        || !boss.battleState_.missileTargetIndices_.empty()
+        || otherBoss.battleState_.headChargeTimer_ != 2.0f) {
         return false;
     }
     boss.ChangeState(static_cast<BossState>(99));

@@ -17,9 +17,7 @@ void FearWormJumOutState::Enter(FearWormEntryState& entry, FearWormEnemy& boss)
         return;
     }
     isSurfaceVisible_ = true;
-    boss.orbitAngle_ = kInitialOrbitAngle;
-    boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Orbit);
-    boss.movementPatternTimer_ = 0.0f;
+    boss.battleState_.PrepareEntryMovement(boss, kInitialOrbitAngle);
     // 経過時間0秒の水中配置と水面の予兆を、登場開始時から反映する。
     entry.UpdateSegmentPositions(boss);
     UpdateSurface(entry, boss);

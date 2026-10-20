@@ -59,14 +59,11 @@ void FearWormEnemy::ChangeState(BossState state)
 // 敵としての共通状態、連結部位とビームなどの攻撃用リソースを準備する。
 void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
-    bulletModel_ = bulletModel;
     player_ = player;
     SetHealth(kHeadHp);
     moveSpeed_ = kBaseMoveSpeed;
 
-    isMadModeActive_ = false;
-    isMadModeFinished_ = false;
-    madModeTimer_ = 0.0f;
+    battleState_.Initialize(bulletModel);
 
     InitializeSegments(model);
     InitializeBeam();
@@ -82,26 +79,7 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     waitState_.SetStartPosition(position);
     ChangeState(BossState::Wait);
     entryState_.Reset();
-    ChangeMovementPattern(MovementPattern::Orbit);
-    movementPatternTimer_ = 0.0f;
-    isHeadChargeActive_ = false;
-    isHeadChargeFiring_ = false;
-    headChargeTimer_ = 0.0f;
-    headChargeShotTimer_ = 0.0f;
-    headChargeCooldownTimer_ = kInitialHeadChargeCooldown;
-    headChargeEffectTimer_ = 0.0f;
-    headChargeShotCount_ = 0;
-    headAimDirection_ = kDefaultHeadAimDirection;
-
-    // 追尾ミサイル関連の初期化
-    missileAttackTimer_ = 0.0f;
-    isMissileAttackActive_ = false;
-    missilePhaseTimer_ = 0.0f;
-    hasFiredMissiles_ = false;
-    isFiringMissilesSequence_ = false;
-    missileFireTimer_ = 0.0f;
-    missileShotCount_ = 0;
-    missileTargetIndices_.clear();
+    battleState_.Reset(*this);
     // 全セグメントを基準位置から後方へ等間隔に並べる。
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
         float offset = segmentSpacing_ * static_cast<float>(index);
@@ -185,13 +163,7 @@ void FearWormEnemy::UpdateSegments()
         return;
     }
 
-    float blendT = 0.0f;
-    if (movementPattern_ == MovementPattern::Line) {
-        lineTransitionTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-        blendT = (std::min)(lineTransitionTimer_, 1.0f);
-    } else {
-        lineTransitionTimer_ = 0.0f;
-    }
+    const float formationBlend = battleState_.UpdateFormationBlend();
     Segment* previousSegment = &segments_[0];
     int32_t aliveOrder = 0;
 
@@ -208,20 +180,7 @@ void FearWormEnemy::UpdateSegments()
         Vector3 direction = Normalize(diff);
         Vector3 posNormal = previousSegment->position + direction * segmentSpacing_;
 
-        // Line状態の目標位置 (横並び＋うねうね)
-        float waveScaleY = 3.2f;
-        float waveScaleZ = 2.0f;
-        float waveFrequency = 4.2f;
-
-        Vector3 posLine = {
-            segments_[0].position.x - (segmentSpacing_ * static_cast<float>(aliveOrder)),
-            segments_[0].position.y + std::sin(moveTime_ * waveFrequency + static_cast<float>(aliveOrder) * 0.8f) * waveScaleY,
-            segments_[0].position.z + std::cos(moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(aliveOrder) * 0.6f) * waveScaleZ
-        };
-
-        // 通常位置とLine位置をブレンドして直接適用する
-        // blendT = 0.0f のときは posNormal (従来と100%同一の挙動) になります
-        segment.position = Lerp(posNormal, posLine, blendT);
+        segment.position = battleState_.CalculateFormationPosition(*this, aliveOrder, posNormal, formationBlend);
 
         previousSegment = &segment;
     }
@@ -338,13 +297,7 @@ void FearWormEnemy::UpdateSegmentObjects()
                 color = kVulnerableHeadColor;
             }
 
-            if (isHeadChargeActive_) {
-                color = kChargingHeadColor;
-            }
-
-            if (isHeadChargeFiring_) {
-                color = kFiringHeadColor;
-            }
+            color = battleState_.HeadAttackColor(color);
         } else {
             color = kBodyColor;
         }
@@ -354,9 +307,8 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         float pulse = 1.0f + std::sin(moveTime_ * kBodyPulseFrequency + static_cast<float>(index)) * kBodyPulseAmplitude;
-        if (segment.isHead && isHeadChargeActive_) {
-            pulse += kChargePulseAdd;
-            pulse += std::sin(headChargeTimer_ * kChargePulseFrequency) * kChargePulseAmplitude;
+        if (segment.isHead) {
+            pulse = battleState_.ApplyHeadChargePulse(pulse);
         }
 
         Vector3 scale { };
@@ -373,8 +325,7 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         rotate.y = moveTime_ + static_cast<float>(index) * kSegmentRotationOffset;
-        bool isBeamAiming = !HasAliveBodyParts() && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut);
-        if (segment.isHead && (isHeadChargeActive_ || isBeamAiming)) {
+        if (segment.isHead && battleState_.ShouldAimHead(*this)) {
             rotate = HeadLookRotation();
         }
 
@@ -429,10 +380,7 @@ void FearWormEnemy::SubmitRaytracing(DxrRenderer& renderer) {
         if (state_ == BossState::Entry && segment.position.y < entryState_.GetWaterHeight()) { continue; }
         if (segment.isAlive && segment.object) { segment.object->SubmitRaytracing(renderer); }
     }
-    if (!segments_.empty() && segments_[0].isAlive && beamPlane_
-        && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut)) {
-        beamPlane_->SubmitRaytracing(renderer);
-    }
+    battleState_.SubmitRaytracing(*this, renderer);
 }
 
 // 現在存在する部位の位置と半径を、衝突判定用の一覧へ書き出す。

@@ -34,30 +34,30 @@ inline bool RunFearWormMovementTests()
     context.playerPosition.y = -100.0f;
     if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Spiral, context).y != 1.5f) return false;
     FearWormEnemy boss;
-    boss.movementPatternTimer_ = 3.0f;
-    boss.lineTransitionTimer_ = 5.0f;
+    boss.battleState_.movementPatternTimer_ = 3.0f;
+    boss.battleState_.lineTransitionTimer_ = 5.0f;
     boss.ChangeMovementPattern(FearWormMovementType::Line);
-    if (boss.movementPattern_ != FearWormMovementType::Line || boss.movementPatternTimer_ != 3.0f ||
-        boss.lineTransitionTimer_ != 0.0f) return false;
+    if (boss.battleState_.movementPattern_ != FearWormMovementType::Line || boss.battleState_.movementPatternTimer_ != 3.0f ||
+        boss.battleState_.lineTransitionTimer_ != 0.0f) return false;
     boss.ChangeMovementPattern(FearWormMovementType::Spiral);
-    if (boss.movementPatternTimer_ != 3.0f) return false;
+    if (boss.battleState_.movementPatternTimer_ != 3.0f) return false;
     boss.ChangeMovementPattern(FearWormMovementType::Orbit);
-    if (boss.movementPatternTimer_ != 0.0f) return false;
+    if (boss.battleState_.movementPatternTimer_ != 0.0f) return false;
 
     // 整列への補間はクラスではなく、実際の胴体更新を通して確認する。
     boss.segments_.resize(2);
     boss.segments_[0].position = {0.0f, 0.0f, 0.0f};
     boss.segments_[1].position = {0.0f, 0.0f, -5.0f};
     boss.ChangeMovementPattern(FearWormMovementType::Line);
-    boss.lineTransitionTimer_ = 0.5f;
+    boss.battleState_.lineTransitionTimer_ = 0.5f;
     boss.UpdateSegments();
     if (!IsFearWormValueClose(boss.segments_[1].position.x, -2.5f)) return false;
-    boss.lineTransitionTimer_ = 1.5f;
+    boss.battleState_.lineTransitionTimer_ = 1.5f;
     boss.UpdateSegments();
     if (!IsFearWormValueClose(boss.segments_[1].position.x, -5.0f)) return false;
     boss.ChangeMovementPattern(FearWormMovementType::Orbit);
     boss.UpdateSegments();
-    if (boss.lineTransitionTimer_ != 0.0f) { return false; }
+    if (boss.battleState_.lineTransitionTimer_ != 0.0f) { return false; }
 
     // 登場中の接触・被弾を止め、戦闘開始後に部位判定を復帰する。
     boss.ChangeState(FearWormEnemy::BossState::Entry);
