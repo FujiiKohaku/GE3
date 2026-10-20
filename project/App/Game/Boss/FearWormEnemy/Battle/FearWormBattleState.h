@@ -91,9 +91,13 @@ private:
     static constexpr float kBeamRotateSpeedRadiansPerSecond = 45.0f; // 高速自転（うねりの表現を強化）
     static constexpr int kBeamDamage = 1;
     static constexpr float kCoilBarrageFireIntervalSeconds = 0.6f;
-    static constexpr int32_t kCoilBarrageBulletCount = 12;
+    static constexpr int32_t kCoilBarrageBulletCount = 6;
     static constexpr float kCoilBarrageSegmentAngleRadians = 0.17f;
     static constexpr float kCoilBarrageAngularSpeedRadiansPerSecond = 0.35f;
+    static constexpr float kCoilBarrageSpreadRatio = 0.35f;
+    static constexpr float kNormalSpreadAngleRadians = 0.14f;
+    static constexpr int32_t kNormalBurstShotCount = 3;
+    static constexpr float kNormalBurstShotIntervalSeconds = 0.12f;
 
 
 
@@ -110,6 +114,7 @@ private:
 
     using MovementPattern = FearWormMovementType;
     enum class BeamState { Wait, Charge, Fire, FadeOut };
+    enum class NormalAttackType { Single, Spread, FixedBurst };
 
     // 激昂中の攻撃と移動を更新し、通常時とは異なる圧力をかける。
     void UpdateMadMode(FearWormEnemy& boss, float movementSpeedRate);
@@ -155,6 +160,11 @@ private:
     void UpdateHeadAimDirection(FearWormEnemy& boss);
     // 指定した部位の位置から、通常射撃用の弾を生成する。
     void FireBullet(FearWormEnemy& boss, const Vector3& position);
+    // 単発・扇状弾・固定方向の連射を順番に開始する。
+    void FireNormalAttack(FearWormEnemy& boss, int32_t segmentIndex);
+    void FireSpreadBullets(FearWormEnemy& boss, const Vector3& position, const Vector3& direction);
+    void UpdateNormalBurst(FearWormEnemy& boss);
+    void CancelNormalBurst();
     // 溜め終わった頭から強化された弾を発射する。
     void FireChargedBullet(FearWormEnemy& boss);
     // 頭の向きと大きさを考慮して、弾を出す位置を求める。
@@ -219,6 +229,11 @@ private:
     int32_t fireTimer_ = 0;
     int32_t fireInterval_ = 22;
     int32_t fireSegmentIndex_ = 0;
+    NormalAttackType normalAttackType_ = NormalAttackType::Single;
+    int32_t normalBurstSegmentIndex_ = 0;
+    int32_t normalBurstShotsRemaining_ = 0;
+    float normalBurstShotTimerSeconds_ = 0.0f;
+    Vector3 normalBurstDirection_ = { 0.0f, 0.0f, -1.0f };
     int32_t headChargeShotCount_ = 0;
     float headChargeTimer_ = 0.0f;
     float headChargeShotTimer_ = 0.0f;

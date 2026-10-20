@@ -172,6 +172,10 @@ void FearWormBattleState::UpdateBattleMovement(FearWormEnemy& boss, const Vector
 // 戦闘中の攻撃タイマーを進め、選択された攻撃の処理へつなげる。
 void FearWormBattleState::UpdateBattleAttack(FearWormEnemy& boss)
 {
+    if (!boss.HasAliveBodyParts() || isMadModeActive_
+        || isMissileAttackActive_ || isFiringMissilesSequence_) {
+        CancelNormalBurst();
+    }
     // 攻撃処理の実行
     if (!boss.HasAliveBodyParts()) {
         // 頭部だけになったらビーム攻撃に移行
@@ -377,6 +381,7 @@ void FearWormBattleState::UpdateMovementPattern(FearWormEnemy& boss, float movem
 // 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
 void FearWormBattleState::ChangeMovementPattern(FearWormEnemy& boss, MovementPattern pattern)
 {
+    CancelNormalBurst();
     coilBarrageNextFireSeconds_ = 0.0f;
     movementPattern_ = pattern;
     if (pattern == MovementPattern::Line) {
@@ -407,13 +412,15 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
     float distance = Vector3Length(toPlayer);
 
     if (distance > kAttackRange) {
+        CancelNormalBurst();
         if (isHeadChargeActive_) {
             FinishHeadChargeAttack(boss);
         }
         return;
     }
-    // とぐろ移動中は360度弾幕を通常攻撃として使用
+    // とぐろ移動中は後方へ進む円形弾幕を通常攻撃として使用
     if (movementPattern_ == MovementPattern::Coil && boss.HasAliveBodyParts()) {
+        CancelNormalBurst();
         if (isHeadChargeActive_) {
             FinishHeadChargeAttack(boss);
         }
@@ -423,6 +430,12 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
     } else {
         coilBarrageNextFireSeconds_ = 0.0f;
     }
+    // 開始済みの連射は同じ狙いのまま撃ち切り、次の攻撃との重複を防ぐ。
+    if (normalBurstShotsRemaining_ > 0) {
+        UpdateNormalBurst(boss);
+        return;
+    }
+
     // 頭部の照準とチャージ攻撃を優先して更新する。
     UpdateHeadAimDirection(boss);
     UpdateHeadChargeAttack(boss, boss.MovementSpeedRate());
@@ -452,7 +465,7 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
             continue;
         }
 
-        FireBullet(boss, boss.segments_[fireSegmentIndex_].position);
+        FireNormalAttack(boss, fireSegmentIndex_);
         break;
     }
 }
@@ -572,6 +585,74 @@ void FearWormBattleState::FireBullet(FearWormEnemy& boss, const Vector3& positio
     // プレイヤーへの発射方向を求め、共通の弾生成処理へ渡す。
     Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - position);
     FireDirectionalBullet(boss, position, direction);
+}
+
+void FearWormBattleState::FireNormalAttack(FearWormEnemy& boss, int32_t segmentIndex)
+{
+    const Vector3 position = boss.segments_[segmentIndex].position;
+    const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - position);
+
+    switch (normalAttackType_) {
+    case NormalAttackType::Single:
+        FireBullet(boss, position);
+        normalAttackType_ = NormalAttackType::Spread;
+        break;
+    case NormalAttackType::Spread:
+        FireSpreadBullets(boss, position, direction);
+        normalAttackType_ = NormalAttackType::FixedBurst;
+        break;
+    case NormalAttackType::FixedBurst:
+        // 初弾で方向を記憶し、残りの弾ではプレイヤー座標を再取得しない。
+        normalBurstSegmentIndex_ = segmentIndex;
+        normalBurstDirection_ = direction;
+        normalBurstShotsRemaining_ = kNormalBurstShotCount - 1;
+        normalBurstShotTimerSeconds_ = 0.0f;
+        FireDirectionalBullet(boss, position, normalBurstDirection_);
+        normalAttackType_ = NormalAttackType::Single;
+        break;
+    }
+}
+
+void FearWormBattleState::FireSpreadBullets(FearWormEnemy& boss, const Vector3& position,
+    const Vector3& direction)
+{
+    Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
+    if (std::abs(direction.y) > 0.99f) {
+        referenceUp = { 0.0f, 0.0f, 1.0f };
+    }
+    const Vector3 right = NormalizeSafe(Cross(referenceUp, direction));
+    for (int32_t shotIndex = -1; shotIndex <= 1; shotIndex++) {
+        const float angle = static_cast<float>(shotIndex) * kNormalSpreadAngleRadians;
+        const Vector3 shotDirection = NormalizeSafe(direction * std::cos(angle) + right * std::sin(angle));
+        FireDirectionalBullet(boss, position, shotDirection, false);
+    }
+    EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+}
+
+void FearWormBattleState::UpdateNormalBurst(FearWormEnemy& boss)
+{
+    if (normalBurstSegmentIndex_ < 0
+        || static_cast<size_t>(normalBurstSegmentIndex_) >= boss.segments_.size()
+        || !boss.segments_[normalBurstSegmentIndex_].isAlive) {
+        CancelNormalBurst();
+        return;
+    }
+
+    normalBurstShotTimerSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
+    if (normalBurstShotTimerSeconds_ < kNormalBurstShotIntervalSeconds) {
+        return;
+    }
+
+    // 処理落ち時にも一度の更新でまとめて生成しない。
+    normalBurstShotTimerSeconds_ = 0.0f;
+    FireDirectionalBullet(boss, boss.segments_[normalBurstSegmentIndex_].position, normalBurstDirection_);
+    normalBurstShotsRemaining_--;
+}
+
+void FearWormBattleState::CancelNormalBurst()
+{
+    normalBurstShotsRemaining_ = 0;
+    normalBurstShotTimerSeconds_ = 0.0f;
 }
 
 // 溜め終わった頭から強化された弾を発射する。
@@ -1048,6 +1129,8 @@ void FearWormBattleState::Initialize(Model* bulletModel)
 void FearWormBattleState::Reset(FearWormEnemy& boss)
 {
     ChangeMovementPattern(boss, MovementPattern::Orbit);
+    normalAttackType_ = NormalAttackType::Single;
+    fireTimer_ = 0;
     movementPatternTimer_ = 0.0f;
     isHeadChargeActive_ = false;
     isHeadChargeFiring_ = false;
@@ -1078,6 +1161,7 @@ void FearWormBattleState::PrepareEntryMovement(FearWormEnemy& boss, float orbitA
 
 void FearWormBattleState::StopAttacksForDeath(FearWormEnemy& boss)
 {
+    CancelNormalBurst();
     isHeadChargeActive_ = false;
     isHeadChargeFiring_ = false;
     ChangeBeamState(boss, BeamState::Wait);
@@ -1157,7 +1241,7 @@ void FearWormBattleState::SubmitRaytracing(FearWormEnemy& boss, DxrRenderer& ren
         beamPlane_->SubmitRaytracing(renderer);
     }
 }
-// とぐろ移動中に360度全方向へ弾幕を発射する
+// とぐろ移動中に上下左右360度へ広がり、ステージ後方へ進む円形弾幕を発射する
 void FearWormBattleState::UpdateCoilBarrage(FearWormEnemy& boss)
 {
     if (boss.player_ == nullptr || bulletModel_ == nullptr || !IsCoilFiring()) {
@@ -1176,6 +1260,9 @@ void FearWormBattleState::UpdateCoilBarrage(FearWormEnemy& boss)
 
     // 360度を弾数で均等に分割
     float angleStep = (2.0f * kPi) / static_cast<float>(kCoilBarrageBulletCount);
+    // 全弾の速さを維持し、広がる速さと後方へ進む速さの比率を決める。
+    const float backwardSpeedRatio = 1.0f / std::sqrt(1.0f + kCoilBarrageSpreadRatio * kCoilBarrageSpreadRatio);
+    const float radialSpeedRatio = kCoilBarrageSpreadRatio * backwardSpeedRatio;
 
     // 生存している各部位から発射
     for (size_t segmentIndex = 0; segmentIndex < boss.segments_.size(); segmentIndex++) {
@@ -1192,11 +1279,11 @@ void FearWormBattleState::UpdateCoilBarrage(FearWormEnemy& boss)
 
             float angle = angleStep * static_cast<float>(bulletIndex) + angleOffset;
 
-            // XZ平面で360度に発射
+            // プレイヤー座標を使わず、XY平面で360度へ広げながら-Z方向へ進める。
             Vector3 direction = {
-                std::cos(angle),
-                0.0f,
-                std::sin(angle)
+                std::cos(angle) * radialSpeedRatio,
+                std::sin(angle) * radialSpeedRatio,
+                -backwardSpeedRatio
             };
 
             FireDirectionalBullet(boss, position, direction, false);
