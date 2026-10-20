@@ -55,9 +55,11 @@ std::wstring GetShaderProfile(const std::filesystem::path& sourcePath)
     return {};
 }
 
-bool IsShaderCacheOutdated(
+}
+
+bool DirectXCommon::IsShaderCacheOutdated(
     const std::filesystem::path& sourcePath,
-    const std::filesystem::path& compiledPath)
+    const std::filesystem::path& compiledPath) const
 {
     if (!std::filesystem::is_regular_file(compiledPath)) {
         return true;
@@ -68,6 +70,14 @@ bool IsShaderCacheOutdated(
     if (std::filesystem::last_write_time(sourcePath) > cacheWriteTime) {
         return true;
     }
+
+    return hasShaderIncludeFiles_ && latestShaderIncludeWriteTime_ > cacheWriteTime;
+}
+
+void DirectXCommon::RefreshShaderIncludeWriteTime()
+{
+    hasShaderIncludeFiles_ = false;
+    latestShaderIncludeWriteTime_ = (std::filesystem::file_time_type::min)();
 
     const std::filesystem::path includeRoots[] = {
         std::filesystem::path("resources/Shaders"),
@@ -87,14 +97,13 @@ bool IsShaderCacheOutdated(
             if (entry.path().extension() != L".hlsli") {
                 continue;
             }
-            if (entry.last_write_time() > cacheWriteTime) {
-                return true;
+            const auto writeTime = entry.last_write_time();
+            if (!hasShaderIncludeFiles_ || writeTime > latestShaderIncludeWriteTime_) {
+                latestShaderIncludeWriteTime_ = writeTime;
             }
+            hasShaderIncludeFiles_ = true;
         }
     }
-
-    return false;
-}
 }
 
 std::unique_ptr<DirectXCommon> DirectXCommon::instance_ = nullptr;
@@ -120,6 +129,7 @@ void DirectXCommon::Initialize(WinApp* winApp)
     // NULLチェック
     assert(winApp);
     winApp_ = winApp;
+    RefreshShaderIncludeWriteTime();
     // ここに初期化処理を書いていく
     // デバイス初期化
     InitializeDevice();

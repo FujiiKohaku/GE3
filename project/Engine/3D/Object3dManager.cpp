@@ -208,6 +208,7 @@ void Object3dManager::SetNormalPSO()
 void Object3dManager::ReloadMaterialPipelines()
 {
     dxCommon_->WaitForGPU();
+    dxCommon_->RefreshShaderIncludeWriteTime();
     materialPipelineCache_.clear();
 }
 

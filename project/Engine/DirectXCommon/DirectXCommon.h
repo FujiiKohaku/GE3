@@ -52,6 +52,8 @@ public:
 
     // HLSLのパスから対応するコンパイル済みDXILを読み込む。
     Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShader(const std::wstring& hlslPath);
+    // 初期化時とシェーダー再読み込み時に、共通ファイルの最新更新日時を取得する。
+    void RefreshShaderIncludeWriteTime();
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateTextureResource(Microsoft::WRL::ComPtr<ID3D12Device> device, const DirectX::TexMetadata& metadata);
     Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages);
@@ -91,6 +93,9 @@ private:
     void InitializeViewport();
     void InitializeScissorRect();
     void InitializeDxcCompiler();
+    bool IsShaderCacheOutdated(
+        const std::filesystem::path& sourcePath,
+        const std::filesystem::path& compiledPath) const;
     Microsoft::WRL::ComPtr<IDxcBlob> CompileShaderAndSaveCache(
         const std::filesystem::path& sourcePath,
         const std::filesystem::path& compiledPath);
@@ -127,4 +132,6 @@ private:
     Microsoft::WRL::ComPtr<IDxcUtils> dxcUtils;
     Microsoft::WRL::ComPtr<IDxcCompiler3> dxcCompiler;
     Microsoft::WRL::ComPtr<IDxcIncludeHandler> dxcIncludeHandler;
+    std::filesystem::file_time_type latestShaderIncludeWriteTime_ {};
+    bool hasShaderIncludeFiles_ = false;
 };
