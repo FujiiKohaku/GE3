@@ -142,8 +142,10 @@ private:
 
     // カメラシェイク
     static constexpr float kCameraShakeFadeDuration = 5.0f;
-    static constexpr float kPlayerDamageShakeDuration = 0.35f;
-    static constexpr float kPlayerDamageShakeStrength = 0.006f;
+    static constexpr float kPlayerDamageShakeDurationSeconds = 0.8f;
+    static constexpr float kPlayerDamageShakeStrength = 0.0085f;
+    static constexpr float kPlayerDamageFlashDurationSeconds = 0.35f;
+    static constexpr float kPlayerDamageFlashStrength = 0.85f;
     static constexpr float kBossMadShakeDuration = 7.0f;
     static constexpr float kBossMadShakeStrength = 0.008f;
     static constexpr float kBossBeamShakeDuration = 0.1f;
@@ -208,6 +210,8 @@ private:
     void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
     // 被弾や演出による揺れの強さを更新し、画面効果に反映する。
     void UpdateCameraShakePostEffect();
+    // 衝突判定後のHP変化から、赤い周辺効果と短い被弾シェイクを更新する。
+    void UpdatePlayerDamagePostEffects();
     // 少し先の進行方向を画面へ投影し、速度演出を集める中心位置を求める。
     Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
     // ブーストなどの状態に応じて、プレイ中の画面効果を組み合わせる。
@@ -468,7 +472,8 @@ private:
     float waterDropEffectTimer_ = 0.0f;
 
     // 被弾フラッシュ演出用
-    float damageFlashTimer_ = 0.0f;
+    float damageFlashRemainingSeconds_ = 0.0f;
+    float lowHpPulseElapsedSeconds_ = 0.0f;
     int lastPlayerHp_ = 20;
 
     // プレイヤー爆発後、ゲームオーバー画面へ移るまでの待機時間

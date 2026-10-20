@@ -125,16 +125,6 @@ private:
     static constexpr float kDriftDepthFrequency = 0.50f;
     static constexpr float kDriftDepthAmplitude = 2.0f;
 
-    // 待機中の移動と登場位置
-    static constexpr float kFallbackMoveXFrequency = 1.00f;
-    static constexpr float kFallbackMoveXAmplitude = 6.0f;
-    static constexpr float kFallbackMoveYFrequency = 1.30f;
-    static constexpr float kFallbackMoveYAmplitude = 2.5f;
-    static constexpr float kFallbackMoveZFrequency = 0.60f;
-    static constexpr float kFallbackMoveZAmplitude = 3.0f;
-    static constexpr float kEntryOffsetX = -34.0f;
-    static constexpr float kEntryOffsetY = 18.0f;
-    static constexpr float kEntryExtraForwardOffset = 22.0f;
     static constexpr float kMaximumMovementSpeedAdd = 0.45f;
 
     // 頭部の溜め攻撃
@@ -183,19 +173,10 @@ private:
     static constexpr float kBeamRotateSpeedRadiansPerSecond = 45.0f; // 高速自転（うねりの表現を強化）
     static constexpr int kBeamDamage = 1;
 
-    enum class FearWormMovementType { Orbit, Coil, Weave, Drift, Line, Spiral };
-
-    struct FearWormMovementContext {
-        Vector3 playerPosition;
-        float orbitAngle;
-        float patternTime;
-        float forwardOffset;
-        float madModeTime;
-        float spiralAngle;
-    };
-
-    using MovementPattern = FearWormMovementType;
-    enum class BeamState { Wait, Charge, Fire, FadeOut };
+    using FearWormMovementType = FearWormBattleState::FearWormMovementType;
+    using FearWormMovementContext = FearWormBattleState::FearWormMovementContext;
+    using MovementPattern = FearWormBattleState::MovementPattern;
+    using BeamState = FearWormBattleState::BeamState;
 
     struct Segment {
         std::unique_ptr<Object3d> object;
@@ -215,45 +196,14 @@ private:
     // 撃破後の演出へ切り替え、通常の戦闘処理を終える。
     void OnDeath() override;
 
-    // 激昂中の攻撃と移動を更新し、通常時とは異なる圧力をかける。
-    void UpdateMadMode(float movementSpeedRate);
-    // 部位からミサイルを撃つ順番と発射タイミングを管理する。
-    void UpdateMissileAttack();
-    // プレイヤーを基準に移動先を決め、速度倍率を反映して頭を動かす。
-    void UpdateBattleMovement(const Vector3& playerPosition, float movementSpeedRate);
-    // 戦闘中の攻撃タイマーを進め、選択された攻撃の処理へつなげる。
-    void UpdateBattleAttack();
-
-    // 目的地、移動パターン、胴体の追従。
-    static Vector3 CalculateOrbitTarget(const FearWormMovementContext& context);
-    // 巻き付くように周回する目標位置を求める。
-    static Vector3 CalculateCoilTarget(const FearWormMovementContext& context);
-    // 左右や上下に揺れながら進む目標位置を求める。
-    static Vector3 CalculateWeaveTarget(const FearWormMovementContext& context);
-    // ゆっくり漂う移動パターンの目標位置を求める。
-    static Vector3 CalculateDriftTarget(const FearWormMovementContext& context);
-    // 直線移動パターンの目標位置を求める。
-    static Vector3 CalculateLineTarget(const FearWormMovementContext& context);
-    // 渦を描く移動パターンの目標位置を求める。
-    static Vector3 CalculateSpiralTarget(const FearWormMovementContext& context);
     // 移動の種類に対応する軌道計算を選ぶ。
     static Vector3 CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context);
     // 次に使用する移動パターンを選ぶ。
     static FearWormMovementType NextFearWormMovement(FearWormMovementType type);
-    // 指定軸の周りに回す行列を作り、弾の発射方向の回転などに使う。
-    static Matrix4x4 MakeRotateAxisAngleMatrix(const Vector3& axis, float angle);
-    // 通常の目標を使えない場合に備え、代わりの移動先を返す。
-    Vector3 FallbackTarget();
-    // 戦闘用の軌道と経過時間をもとに、現在の追従先を計算する。
-    Vector3 BattleTarget(const Vector3& playerPosition, float rate);
-    // 登場演出を始める位置をプレイヤー基準で求める。
-    Vector3 EntryStartPosition(const Vector3& playerPosition) const;
     // 現在の移動状態に応じた目標位置を取得する。
     Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
     // 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
     void ChangeMovementPattern(MovementPattern pattern);
-    // 経過時間を確認し、移動パターンの継続と切替を行う。
-    void UpdateMovementPattern(float movementSpeedRate);
     // 頭から後ろへ順に追従位置を計算し、胴体がつながってうねる形を作る。
     void UpdateSegments();
     // 状態や残りHPに応じた移動速度の倍率を返す。
@@ -261,28 +211,8 @@ private:
 
     // 通常弾、チャージ弾、ミサイル、弾幕。
     void Attack() override;
-    // 指定した部位の位置から、通常射撃用の弾を生成する。
-    void FireBullet(const Vector3& position);
-    // 指定した部位から追尾ミサイルを一発生成する。
-    void FireSingleMissile(size_t segmentIndex);
-    // 頭の溜め攻撃を、準備・発射・終了の順に進める。
-    void UpdateHeadChargeAttack(float attackSpeedRate);
-    // 頭の溜め攻撃に必要なタイマーと照準状態を準備する。
-    void StartHeadChargeAttack();
-    // 溜め攻撃の状態を解除し、次の攻撃へ戻れるようにする。
-    void FinishHeadChargeAttack();
-    // プレイヤーの位置へ頭の狙いを合わせる。
-    void UpdateHeadAimDirection();
-    // 溜め終わった頭から強化された弾を発射する。
-    void FireChargedBullet();
-    // 頭の向きと大きさを考慮して、弾を出す位置を求める。
-    Vector3 HeadMuzzlePosition() const;
     // 頭が照準方向を向くように描画用の回転角を計算する。
     Vector3 HeadLookRotation() const;
-    // 発射角度を回転させながら弾を出し、渦状の弾幕を作る。
-    void UpdateSpiralBarrage();
-    // 指定された位置と方向を使って弾を生成する。
-    void FireDirectionalBullet(const Vector3& position, const Vector3& direction);
 
     // 部位の生成、描画、当たり判定、HP。
     void InitializeSegments(Model* model);
@@ -303,24 +233,12 @@ private:
 
     // 待機 → チャージ → 発射 → 終了。
     void InitializeBeam();
-    // 頭の位置と狙いにビームを追従させ、ビーム状態を更新する。
-    void UpdateBeamAttack();
     // ビーム状態を切り替え、各状態のタイマーや表示を設定する。
     void ChangeBeamState(BeamState state);
     // 待機・溜め・発射・消失のうち、現在のビーム状態を進める。
     void UpdateBeamState(float deltaTime);
-    // 次のビームを開始できる条件が整うまで待つ。
-    void UpdateBeamWait(float deltaTime);
-    // 溜め時間と見た目を更新し、準備が終わったら発射へ移る。
-    void UpdateBeamCharge(float deltaTime);
-    // 発射時間を進め、時間切れでビームを消す状態へ移る。
-    void UpdateBeamFire(float deltaTime);
-    // 光線を徐々に消し、次の発射までの待機状態へ戻す。
-    void UpdateBeamFadeOut(float deltaTime);
     // 現在のビーム状態に必要な溜め演出や光線を描画する。
     void DrawBeam();
-    // 発射中の光線とプレイヤーの距離を調べ、命中時のダメージを処理する。
-    void CheckBeamCollision();
 
     // 各ボスが自分専用の状態オブジェクトを持つ。
     FearWormWaitState waitState_;
@@ -335,12 +253,9 @@ private:
 
     std::vector<Segment> segments_;
 
-    Vector3 startPosition_ = { 0.0f, 0.0f, 0.0f };
-
     float moveTime_ = 0.0f;
     float segmentSpacing_ = 5.0f;
     float bulletSpeed_ = 1.05f;
-    float activationLeadDistance_ = 160.0f;
     float parallelForwardOffset_ = 52.0f;
     float orbitAngle_ = 0.0f;
     float movementPatternTimer_ = 0.0f;
@@ -360,9 +275,6 @@ private:
     bool vulnerableEffectPlayed_ = false;
     bool isHeadChargeActive_ = false;
     bool isHeadChargeFiring_ = false;
-    bool isDeathSequenceFinished_ = false;
-    float deathSequenceTimer_ = 0.0f;
-    int32_t nextDeathSegmentIndex_ = -1;
     MovementPattern movementPattern_ = MovementPattern::Orbit;
 
     // 追尾ミサイル攻撃用のタイマー・フラグ
@@ -389,11 +301,6 @@ private:
     float madModeTimer_ = 0.0f;
     bool isMadModeActive_ = false;
     bool isMadModeFinished_ = false;
-
-    // 死亡演出（落下）用のパラメータ
-    Vector3 deathVelocity_ = { 0.0f, 0.0f, 0.0f };      // 落下速度ベクトル
-    Vector3 deathRotation_ = { 0.0f, 0.0f, 0.0f };      // 落下中の回転速度ベクトル
-    Vector3 currentDeathRotation_ = { 0.0f, 0.0f, 0.0f };// 現在の回転角
 
     // ビーム攻撃用メンバー変数
     std::unique_ptr<Object3d> beamPlane_;

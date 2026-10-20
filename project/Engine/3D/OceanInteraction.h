@@ -39,21 +39,31 @@ inline Vector3 SourcePosition(const Vector3& position, const Vector3& forward, f
     return {position.x + fx * lead, position.y, position.z + fz * lead};
 }
 
+#define OCEAN_WAVE_VECTOR Vector3
+#define OCEAN_WAVE_MAKE(x, y, z) Vector3{x, y, z}
+#define OCEAN_WAVE_FLOOR(value) std::floor(value)
+#define OCEAN_WAVE_SQRT(value) std::sqrt(value)
+#define OCEAN_WAVE_SIN(value) std::sin(value)
+#define OCEAN_WAVE_COS(value) std::cos(value)
+#define OCEAN_WAVE_INLINE inline
+#include "../../resources/Shaders/Ocean/OceanWaveShape.hlsli"
+#undef OCEAN_WAVE_VECTOR
+#undef OCEAN_WAVE_MAKE
+#undef OCEAN_WAVE_FLOOR
+#undef OCEAN_WAVE_SQRT
+#undef OCEAN_WAVE_SIN
+#undef OCEAN_WAVE_COS
+#undef OCEAN_WAVE_INLINE
+
 inline Vector3 Displacement(float x, float z, float time, float amplitude, float frequency) {
-    const float noise = std::sin(x * 0.0041f + z * 0.0027f + time * 0.07f) * 0.5f +
-        std::sin(x * -0.0019f + z * 0.0053f - time * 0.045f) * 0.5f;
-    const float strength = 0.58f + (1.22f - 0.58f) * (noise * 0.5f + 0.5f);
     Vector3 result{};
-    const auto add = [&](float dx, float dz, float f, float a, float speed, float steepness, float phaseOffset) {
-        const float invLength = 1.0f / std::sqrt(dx * dx + dz * dz);
-        dx *= invLength; dz *= invLength;
-        const float phase = (dx * x + dz * z) * frequency * f + time * speed + phaseOffset;
-        const float height = amplitude * a * strength;
-        result.x += dx * steepness * height * std::cos(phase);
-        result.y += height * std::sin(phase);
-        result.z += dz * steepness * height * std::cos(phase);
-    };
-#define OCEAN_WAVE(dx, dz, f, a, speed, steepness, phase) add(dx, dz, f, a, speed, steepness, phase);
+#define OCEAN_WAVE(dx, dz, f, a, speed, steepness, phase) \
+    { \
+        const auto wave = EvaluateOceanWave(x, z, time, amplitude, frequency, dx, dz, f, a, speed, steepness, phase); \
+        result.x += wave.displacement.x; \
+        result.y += wave.displacement.y; \
+        result.z += wave.displacement.z; \
+    }
 #include "../../resources/Shaders/Ocean/OceanWaveLayers.hlsli"
 #undef OCEAN_WAVE
     return result;

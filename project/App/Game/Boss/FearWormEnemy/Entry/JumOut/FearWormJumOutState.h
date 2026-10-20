@@ -14,11 +14,13 @@ public:
     void Initialize();
     void Enter(FearWormEntryState& entry, FearWormEnemy& boss) override;
     void Update(FearWormEntryState& entry, FearWormEnemy& boss) override;
-    void PlaySplashIfNeeded(FearWormEntryState& entry, FearWormEnemy& boss);
-    void UpdateSurface(FearWormEntryState& entry, FearWormEnemy& boss);
+    void Exit(FearWormEntryState& entry, FearWormEnemy& boss) override;
     void Draw();
 
 private:
+    void PlaySplashIfNeeded(FearWormEntryState& entry, FearWormEnemy& boss);
+    void UpdateSurface(FearWormEntryState& entry, FearWormEnemy& boss);
+
     static constexpr float kInitialOrbitAngle = 2.35f;
     static constexpr float kSplashHeightOffset = 1.0f;
     static constexpr float kSurfaceRotationRadians = 1.5707963268f;
@@ -27,4 +29,5 @@ private:
     static constexpr float kSurfaceOffsetZ = -14.0f;
 
     std::unique_ptr<Object3d> surface_;
+    bool isSurfaceVisible_ = false;
 };

@@ -123,7 +123,8 @@ inline bool RunFearWormEntryTests()
                 || boss.entryState_.elapsedSeconds_ != 0.0f || boss.HasBreachedSurface()) { return false; }
             boss.entryState_.elapsedSeconds_ = entryDurationSeconds + 1.0f;
             boss.UpdateState();
-            if (boss.GetBossState() != FearWormEnemy::BossState::Battle) { return false; }
+            if (boss.GetBossState() != FearWormEnemy::BossState::Battle
+                || !boss.HasBreachedSurface()) { return false; }
 
             // 登場の中断で内部ステートを終了し、水位設定を保ったまま配置し直す。
             boss.ChangeState(FearWormEnemy::BossState::Entry);

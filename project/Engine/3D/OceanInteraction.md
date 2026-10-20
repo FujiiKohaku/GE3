@@ -9,6 +9,18 @@
 - CPU height queries invert Gerstner horizontal displacement with six iterations. CPU and VS use
   the same OceanWaveLayers.hlsli coefficients. The mesh is coarse, so analytic height can differ
   slightly from the final triangle interpolation.
+- OceanWaveShape.hlsli shares the wave evaluation between CPU and VS. Each component has its
+  own smooth world-space amplitude envelope (0.40 to 1.35) and phase warp (up to 0.35 radians).
+  The fields drift slowly using game time; pausing also holds their motion. Five wave components
+  remain, with two four-corner value-noise evaluations per component instead of the common
+  two-sine strength modulation. No additional mesh vertices, draw passes or textures are allocated.
+- Wave tangents include amplitude/phase derivatives and horizontal Gerstner displacement.
+  Wake slopes are transformed through those tangents before computing the surface normal.
+  Natural crest foam requires broken noise coverage; crest height alone no longer paints a stripe.
+  Foam remains procedural without a persistent history buffer.
+- The noise also runs during CPU height reconstruction (seven displacement evaluations per query).
+  Actual GPU/CPU timing and appearance require in-game measurement; compilation and analytic
+  height/tangent tests alone do not establish visual quality or a performance budget.
 - OceanSpray emits pooled one-shot bursts: small falling droplets plus softer expanding mist.
   Spawned particles stay in world space; no attachment is used. Direction and strength are per burst.
   Normal maximum rate is about 12 bursts/second, boost about 18; each burst has at most 20 particles.

@@ -63,16 +63,16 @@ inline bool RunFearWormStateTests()
         || boss.isHeadChargeActive_ || boss.isHeadChargeFiring_
         || boss.beamState_ != FearWormEnemy::BeamState::Wait
         || boss.beamCurrentLength_ != 0.0f || boss.beamCurrentWidth_ != 0.0f
-        || boss.segments_[1].isAlive || boss.isDeathSequenceFinished_) {
+        || boss.segments_[1].isAlive || boss.deadState_.isDeathSequenceFinished_) {
         return false;
     }
 
     // 撃破通知を繰り返しても、死亡演出の経過と完了状態をリセットしない。
-    boss.deathSequenceTimer_ = 0.75f;
-    boss.isDeathSequenceFinished_ = true;
+    boss.deadState_.elapsedSeconds_ = 0.75f;
+    boss.deadState_.isDeathSequenceFinished_ = true;
     boss.OnDeath();
     boss.UpdateState();
-    if (boss.deathSequenceTimer_ != 0.75f || !boss.IsDeathSequenceFinished()) {
+    if (boss.deadState_.elapsedSeconds_ != 0.75f || !boss.IsDeathSequenceFinished()) {
         return false;
     }
 

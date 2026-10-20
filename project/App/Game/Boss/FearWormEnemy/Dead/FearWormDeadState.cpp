@@ -12,8 +12,8 @@ void FearWormDeadState::Enter(FearWormEnemy& boss)
     boss.ChangeBeamState(FearWormEnemy::BeamState::Wait);
     boss.beamCurrentLength_ = 0.0f;
     boss.beamCurrentWidth_ = 0.0f;
-    boss.isDeathSequenceFinished_ = false;
-    boss.deathSequenceTimer_ = 0.0f;
+    isDeathSequenceFinished_ = false;
+    elapsedSeconds_ = 0.0f;
 
     // 胴体セグメントは即座にすべて非表示にする
     for (size_t index = 1; index < boss.segments_.size(); ++index) {
@@ -25,43 +25,39 @@ void FearWormDeadState::Enter(FearWormEnemy& boss)
 
     // 落下物理パラメータの初期化
     // 前方（Zマイナス方向＝手前）へ飛び出しながら、上方向にポンと跳ね上がる初速を設定
-    boss.deathVelocity_ = { 0.0f, 11.5f, -9.0f };
-    // 落下中にクルクルと回転させる回転速度を設定
-    boss.deathRotation_ = { 1.8f, 2.5f, 0.8f };
-    boss.currentDeathRotation_ = boss.segments_[0].object->GetRotate();
+    velocityUnitsPerSecond_ = kInitialVelocityUnitsPerSecond;
+    rotationRadians_ = boss.segments_[0].object->GetRotate();
 }
 
 void FearWormDeadState::Update(FearWormEnemy& boss)
 {
-    if (boss.isDeathSequenceFinished_) {
+    if (isDeathSequenceFinished_) {
         return;
     }
 
-    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
-    boss.deathSequenceTimer_ += deltaTime;
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    elapsedSeconds_ += deltaTimeSeconds;
 
     // 重力を適用して落下速度を下方向（Yマイナス）に引っ張る
-    constexpr float kGravity = 26.0f; // ゲーム的な落下速度に合わせた重力加速度
-    boss.deathVelocity_.y -= kGravity * deltaTime;
+    velocityUnitsPerSecond_.y -= kGravityUnitsPerSecondSquared * deltaTimeSeconds;
 
     // 速度を頭部座標に適用
-    boss.segments_[0].position.x += boss.deathVelocity_.x * deltaTime;
-    boss.segments_[0].position.y += boss.deathVelocity_.y * deltaTime;
-    boss.segments_[0].position.z += boss.deathVelocity_.z * deltaTime;
+    boss.segments_[0].position.x += velocityUnitsPerSecond_.x * deltaTimeSeconds;
+    boss.segments_[0].position.y += velocityUnitsPerSecond_.y * deltaTimeSeconds;
+    boss.segments_[0].position.z += velocityUnitsPerSecond_.z * deltaTimeSeconds;
 
     // 回転速度を頭部回転角に適用
-    boss.currentDeathRotation_.x += boss.deathRotation_.x * deltaTime;
-    boss.currentDeathRotation_.y += boss.deathRotation_.y * deltaTime;
-    boss.currentDeathRotation_.z += boss.deathRotation_.z * deltaTime;
-    boss.segments_[0].object->SetRotate(boss.currentDeathRotation_);
+    rotationRadians_.x += kAngularVelocityRadiansPerSecond.x * deltaTimeSeconds;
+    rotationRadians_.y += kAngularVelocityRadiansPerSecond.y * deltaTimeSeconds;
+    rotationRadians_.z += kAngularVelocityRadiansPerSecond.z * deltaTimeSeconds;
+    boss.segments_[0].object->SetRotate(rotationRadians_);
 
     // 頭部の座標だけを更新するため、Object3dの更新を呼ぶ
     boss.segments_[0].object->SetTranslate(boss.segments_[0].position);
     boss.segments_[0].object->Update();
 
     // 落下時間（1.6秒）が経過するか、十分に下へ落ちたら演出を完了する
-    constexpr float kDeathFallbackDuration = 1.6f;
-    if (boss.deathSequenceTimer_ >= kDeathFallbackDuration || boss.segments_[0].position.y < -35.0f) {
-        boss.isDeathSequenceFinished_ = true;
+    if (elapsedSeconds_ >= kDeathFallbackDurationSeconds || boss.segments_[0].position.y < kDeathFinishHeight) {
+        isDeathSequenceFinished_ = true;
     }
 }

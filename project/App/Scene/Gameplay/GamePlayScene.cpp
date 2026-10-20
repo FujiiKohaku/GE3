@@ -733,7 +733,9 @@ void GamePlayScene::Initialize()
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetControlMode(gControlMode);
     player_->SetMouseSensitivity(gMouseSensitivity);
-    lastPlayerHp_ = player_->GetMaxHp();
+    lastPlayerHp_ = player_->GetCurrentHp();
+    damageFlashRemainingSeconds_ = 0.0f;
+    lowHpPulseElapsedSeconds_ = 0.0f;
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
     Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
@@ -1135,6 +1137,7 @@ void GamePlayScene::Update()
         }
 
         EffectManager::GetInstance()->Update();
+        UpdatePlayerDamagePostEffects();
         UpdateCameraShakePostEffect();
         return;
     }
@@ -1195,18 +1198,6 @@ void GamePlayScene::Update()
         const float floorLength = rail_->GetTotalLength();
         floorObj_->SetTranslate({ 0.0f, stageSettings_.floorHeight, floorLength * 0.5f });
         floorObj_->SetScale({ 1000.0f, floorLength, 1.0f });
-    }
-
-    // プレイヤーのHP減少検知による被弾カメラシェイク
-    if (player_) {
-        static int lastPlayerHp = player_->GetCurrentHp();
-        int currentPlayerHp = player_->GetCurrentHp();
-        if (currentPlayerHp < lastPlayerHp) {
-            cameraShakeTime_ = kPlayerDamageShakeDuration;
-            cameraShakeDuration_ = kPlayerDamageShakeDuration;
-            cameraShakeStrength_ = kPlayerDamageShakeStrength;
-        }
-        lastPlayerHp = currentPlayerHp;
     }
 
     // ボスの更新
@@ -1458,50 +1449,6 @@ void GamePlayScene::Update()
     UpdateWaterDropEffect();
 
     // -------------------------------------------------
-    // 加点要素: Vignetting (3点)
-    // ダメージを受けた瞬間は一瞬だけ暗く赤くフラッシュ
-    // HPが3以下になったら常時ドクンドクンと脈動（鼓動パルス）
-    // -------------------------------------------------
-    if (player_) {
-        int currentHp = player_->GetCurrentHp();
-
-        // ダメージ検知
-        if (currentHp < lastPlayerHp_) {
-            damageFlashTimer_ = 0.35f;
-            if (currentHp <= 3 && lastPlayerHp_ > 3) {
-                SoundManager::GetInstance()->Play("LowHpWarning");
-            }
-        }
-        lastPlayerHp_ = currentHp;
-
-        // ダメージフラッシュタイマー消化
-        if (damageFlashTimer_ > 0.0f) {
-            damageFlashTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
-            if (damageFlashTimer_ < 0.0f) damageFlashTimer_ = 0.0f;
-        }
-
-        // (A) 被弾瞬間の一瞬暗赤色フラッシュ (小さめでスタイリッシュな範囲)
-        if (damageFlashTimer_ > 0.0f) {
-            float flashRatio = damageFlashTimer_ / 0.35f;
-            SceneManager::GetInstance()->SetVignetteStrength(0.35f + 0.35f * flashRatio);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Vignette,
-                PostEffectStage::BeforeParticle);
-        }
-        // (B) HP ≦ 3 時の常時ドクンドクン脈動演出 (小さめの四隅赤色鼓動)
-        else if (currentHp <= 3) {
-            static float vignettePulseTimer = 0.0f;
-            vignettePulseTimer += TimeManager::GetInstance()->GetDeltaTime();
-
-            float pulseFactor = 0.45f + 0.25f * std::sin(vignettePulseTimer * 8.5f);
-            SceneManager::GetInstance()->SetVignetteStrength(pulseFactor);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Vignette,
-                PostEffectStage::BeforeParticle);
-        }
-    }
-
-    // -------------------------------------------------
     // 画面右側のプレイヤーHPゲージのリアルタイム更新
     // -------------------------------------------------
     if (player_ && playerHpBarSprite_ && playerHpText_) {
@@ -1632,6 +1579,7 @@ void GamePlayScene::Update()
 
     // コリジョン判定の実行
     CheckCollision();
+    UpdatePlayerDamagePostEffects();
     UpdateCameraShakePostEffect();
 
 #pragma region
@@ -3867,7 +3815,56 @@ void GamePlayScene::ResetGameplayPostEffects()
     cameraShakeDuration_ = 0.0f;
     cameraShakeStrength_ = 0.0f;
     waterDropEffectTimer_ = 0.0f;
+    damageFlashRemainingSeconds_ = 0.0f;
+    lowHpPulseElapsedSeconds_ = 0.0f;
+    SceneManager::GetInstance()->SetVignetteStrength(0.0f);
     SceneManager::GetInstance()->SetWaterEffectIntensity(0.0f);
+}
+
+// 同じフレームの全衝突を処理した後に、実際のHP減少だけを演出へ反映する。
+void GamePlayScene::UpdatePlayerDamagePostEffects()
+{
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (player_ == nullptr) {
+        sceneManager->RemovePostEffect(PostEffectType::Vignette);
+        return;
+    }
+
+    const float deltaTimeSeconds = (std::max)(TimeManager::GetInstance()->GetDeltaTime(), 0.0f);
+    const int currentHp = player_->GetCurrentHp();
+    const bool hasTakenDamage = currentHp < lastPlayerHp_;
+    damageFlashRemainingSeconds_ = (std::max)(0.0f, damageFlashRemainingSeconds_ - deltaTimeSeconds);
+    if (hasTakenDamage) {
+        damageFlashRemainingSeconds_ = kPlayerDamageFlashDurationSeconds;
+        // ボス演出など、すでに強い揺れがある場合は弱い被弾シェイクで上書きしない。
+        if (cameraShakeTime_ <= 0.0f || cameraShakeStrength_ <= kPlayerDamageShakeStrength) {
+            cameraShakeTime_ = kPlayerDamageShakeDurationSeconds;
+            cameraShakeDuration_ = kPlayerDamageShakeDurationSeconds;
+            cameraShakeStrength_ = kPlayerDamageShakeStrength;
+        }
+        if (currentHp <= 3 && lastPlayerHp_ > 3) {
+            SoundManager::GetInstance()->Play("LowHpWarning");
+        }
+    }
+    lastPlayerHp_ = currentHp;
+
+    float vignetteStrength = 0.0f;
+    if (currentHp > 0 && currentHp <= 3) {
+        lowHpPulseElapsedSeconds_ += deltaTimeSeconds;
+        vignetteStrength = 0.45f + 0.25f * std::sin(lowHpPulseElapsedSeconds_ * 8.5f);
+    } else {
+        lowHpPulseElapsedSeconds_ = 0.0f;
+    }
+    if (damageFlashRemainingSeconds_ > 0.0f) {
+        const float flashRatio = damageFlashRemainingSeconds_ / kPlayerDamageFlashDurationSeconds;
+        vignetteStrength = (std::max)(vignetteStrength, kPlayerDamageFlashStrength * flashRatio);
+    }
+    if (vignetteStrength > 0.0f) {
+        sceneManager->SetVignetteStrength(vignetteStrength);
+        sceneManager->AddPostEffect(PostEffectType::Vignette, PostEffectStage::BeforeParticle);
+    } else {
+        sceneManager->RemovePostEffect(PostEffectType::Vignette);
+    }
 }
 
 // 被弾や演出による揺れの強さを更新し、画面効果に反映する。

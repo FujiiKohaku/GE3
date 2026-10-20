@@ -1,5 +1,6 @@
 #include "FearWormEntryState.h"
 #include "../FearWormEnemy.h"
+#include "App/Game/Player/Player.h"
 #include "Engine/Time/TimeManager.h"
 #include <algorithm>
 #include <cmath>
@@ -84,6 +85,23 @@ void FearWormEntryState::ChangePhase(EntryPhase phase, FearWormEnemy& boss)
     phase_ = phase;
     currentPhase_ = nextPhase;
     currentPhase_->Enter(*this, boss);
+}
+
+void FearWormEntryState::UpdateSegmentPositions(FearWormEnemy& boss)
+{
+    if (boss.segments_.empty()) {
+        return;
+    }
+
+    const Vector3 playerPosition = boss.player_->GetTranslate();
+    const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
+    const Vector3 battlePosition = boss.MovementTargetPosition(playerPosition);
+    // 頭から尾へ開始時刻をずらし、段階が変わっても同じ軌道を継続する。
+    for (size_t index = 0; index < boss.segments_.size(); ++index) {
+        boss.segments_[index].position = CalculateEntryPosition(
+            surfacePosition, battlePosition, elapsedSeconds_, index, boss.segmentSpacing_);
+    }
+    boss.transform_.translate = boss.segments_[0].position;
 }
 
 float FearWormEntryState::CalculateEntryDurationSeconds(size_t segmentCount)

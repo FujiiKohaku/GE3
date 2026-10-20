@@ -72,7 +72,10 @@ float4 main(OceanVertexOutput input) : SV_TARGET
     float3 N = normalize(input.normal);
     float time = gOcean.cameraPositionAndTime.w;
     static const bool kEnableInteractionFoam = true;
-    float wakeFoam = kEnableInteractionFoam ? SampleCrestFoam(input.worldPosition.xz, input.wakeData, time) : 0.0f;
+    float wakeFoam = 0.0f;
+    if (kEnableInteractionFoam) {
+        wakeFoam = SampleCrestFoam(input.worldPosition.xz, input.wakeData, time);
+    }
 
     // Derive fine normals from irregular FBM instead of parallel sine bands.
     float2 finePosition = input.worldPosition.xz * 0.16f + float2(time * 0.09f, -time * 0.065f);
@@ -126,8 +129,9 @@ float4 main(OceanVertexOutput input) : SV_TARGET
     float steep = smoothstep(0.055f, 0.17f, input.waveData.y);
     float isolatedFlecks = smoothstep(0.72f, 0.91f, detailPatch) *
         smoothstep(0.42f, 0.74f, height01);
-    float foamSignal = crest * (0.10f + brokenCoverage * 0.90f) +
-        steep * brokenCoverage * 0.34f + isolatedFlecks * 0.28f;
+    // Only broken, locally steep crests whiten; height alone must not draw stripes.
+    float foamSignal = crest * brokenCoverage * (0.35f + steep * 0.65f) +
+        steep * brokenCoverage * 0.24f + isolatedFlecks * 0.18f;
     float foam = smoothstep(0.24f, 0.68f, foamSignal);
 
     water = lerp(water, float3(0.86f, 0.97f, 1.0f), foam * 0.92f);

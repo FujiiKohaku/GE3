@@ -12,55 +12,48 @@ FearWormJumOutState::~FearWormJumOutState() = default;
 
 void FearWormJumOutState::Enter(FearWormEntryState& entry, FearWormEnemy& boss)
 {
+    isSurfaceVisible_ = false;
     if (boss.player_ == nullptr) {
         return;
     }
+    isSurfaceVisible_ = true;
     boss.orbitAngle_ = kInitialOrbitAngle;
     boss.ChangeMovementPattern(FearWormEnemy::MovementPattern::Orbit);
     boss.movementPatternTimer_ = 0.0f;
-    // Œo‰ßŠÔ0•b‚Ì…’†”z’u‚Æ…–Ê‚Ì—\’›‚ğA“oêŠJn‚©‚ç”½‰f‚·‚éB
-    Update(entry, boss);
+    // çµŒéæ™‚é–“0ç§’ã®æ°´ä¸­é…ç½®ã¨æ°´é¢ã®äºˆå…†ã‚’ã€ç™»å ´é–‹å§‹æ™‚ã‹ã‚‰åæ˜ ã™ã‚‹ã€‚
+    entry.UpdateSegmentPositions(boss);
+    UpdateSurface(entry, boss);
 }
 
 void FearWormJumOutState::Update(FearWormEntryState& entry, FearWormEnemy& boss)
 {
-    // Œo‰ßŠÔ‚ğXV‚·‚é
+    entry.UpdateSegmentPositions(boss);
+    // é ­ãŒæ°´é¢ã«é”ã—ãŸã‚‰ã€æ°´ã—ã¶ãã‚’ä¸€åº¦ã ã‘å†ç”Ÿã™ã‚‹ã€‚
+    PlaySplashIfNeeded(entry, boss);
+    // é£›ã³å‡ºã—ä¸­ã‚‚æ°´é¢ã®å½±ãƒ»æ³¢ç´‹ã‚’æ›´æ–°ã—ã€æ°´ã—ã¶ãå†ç”Ÿå¾Œã¯å½±ã‚’æ¶ˆã™ã€‚
+    UpdateSurface(entry, boss);
+
+    // æ™‚é–“ãŒå¤§ããé€²ã‚“ã å ´åˆã‚‚ã€ä½ç½®æ›´æ–°ã¨æ°´ã—ã¶ãåˆ¤å®šã‚’çµ‚ãˆã¦ã‹ã‚‰æ¬¡ã¸ç§»ã‚‹ã€‚
     if (entry.IsHeadFlightFinished()) {
         entry.ChangePhase(FearWormEntryState::EntryPhase::WaitForBody, boss);
-        return;
     }
-    // ƒZƒOƒƒ“ƒg‚ª‘¶İ‚·‚éê‡AƒvƒŒƒCƒ„[‚ÌˆÊ’u‚ÉŠî‚Ã‚¢‚ÄŠeƒZƒOƒƒ“ƒg‚ÌˆÊ’u‚ğŒvZ‚·‚é
-    if (!boss.segments_.empty()) {
-        // ƒvƒŒƒCƒ„[‚ÌŒ»İˆÊ’u‚ğAoŒ»ˆÊ’u‚Æ“’…ˆÊ’u‚ğŒˆ‚ß‚éŠî€‚É‚·‚éB
-        const Vector3 playerPosition = boss.player_->GetTranslate();
-        // ”ò‚Ño‚µ‚Ìo”­“_‚Æ‚È‚é…–Êã‚ÌˆÊ’u‚ğ‹‚ß‚éB
-        const Vector3 surfacePosition = entry.EntrySurfacePosition(playerPosition);
-        // “oêŒã‚É‚Â‚È‚ª‚éí“¬’†‚ÌˆÚ“®æ‚ğA‹O“¹‚Ì“’…ˆÊ’u‚Æ‚µ‚Ä‹‚ß‚éB
-        const Vector3 battlePosition = boss.MovementTargetPosition(playerPosition);
-        // “ª‚©‚ç”ö‚Ü‚ÅA•”ˆÊ”Ô†‚É‰‚¶‚ÄŠJn‚ğ‚¸‚ç‚µ‚½‹O“¹ã‚Ö”z’u‚·‚éB
-        for (size_t index = 0; index < boss.segments_.size(); ++index) {
-            // “oê‘S‘Ì‚ÌŒo‰ßŠÔ‚ğg‚¢Aó‘Ô‚ª•Ï‚í‚Á‚Ä‚à•”ˆÊ‚²‚Æ‚ÌŠÔ·‚ğ•Û‚ÂB
-            boss.segments_[index].position = FearWormEntryState::CalculateEntryPosition(
-                surfacePosition, battlePosition, entry.elapsedSeconds_, index, boss.segmentSpacing_);
-        }
-        // ƒ{ƒX–{‘Ì‚Ì‘ã•\ˆÊ’u‚ğAæ“ª‚Ì•”ˆÊi“ªj‚ÌˆÊ’u‚É‡‚í‚¹‚éB
-        boss.transform_.translate = boss.segments_[0].position;
-    }
-    // “ª‚ª…–Ê‚É’B‚µ‚½‚çA…‚µ‚Ô‚«‚ğˆê“x‚¾‚¯Ä¶‚·‚éB
-    PlaySplashIfNeeded(entry, boss);
-    // ”ò‚Ño‚µ’†‚à…–Ê‚Ì‰eE”g–ä‚ğXV‚µA…‚µ‚Ô‚«Ä¶Œã‚Í‰e‚ğÁ‚·B
-    UpdateSurface(entry, boss);
 }
 
-// ƒZƒOƒƒ“ƒg‚ª…–Ê‚ğ“Ë”j‚µ‚½‚Æ‚«‚Éˆê“x‚¾‚¯…‚µ‚Ô‚«ƒGƒtƒFƒNƒg‚ğÄ¶‚·‚é
+// æ¬¡ã®æ®µéšã¸ã®é·ç§»ã‚„ç™»å ´ã®ä¸­æ–­æ™‚ã«ã€æ°´é¢ã®äºˆå…†ãƒ»æ³¢ç´‹ã‚’æç”»å¯¾è±¡ã‹ã‚‰å¤–ã™ã€‚
+void FearWormJumOutState::Exit(FearWormEntryState&, FearWormEnemy&)
+{
+    isSurfaceVisible_ = false;
+}
+
+// ã‚»ã‚°ãƒ¡ãƒ³ãƒˆãŒæ°´é¢ã‚’çªç ´ã—ãŸã¨ãã«ä¸€åº¦ã ã‘æ°´ã—ã¶ãã‚¨ãƒ•ã‚§ã‚¯ãƒˆã‚’å†ç”Ÿã™ã‚‹
 void FearWormJumOutState::PlaySplashIfNeeded(FearWormEntryState& entry, FearWormEnemy& boss)
 {
 
-    // ‚·‚Å‚É…‚µ‚Ô‚«ƒGƒtƒFƒNƒg‚ğÄ¶Ï‚İA‚Ü‚½‚ÍƒZƒOƒƒ“ƒg‚ª‘¶İ‚µ‚È‚¢A‚Ü‚½‚ÍÅ‰‚ÌƒZƒOƒƒ“ƒg‚ª…–Ê‚æ‚è‰º‚É‚ ‚éê‡‚Í‰½‚à‚µ‚È‚¢
+    // ã™ã§ã«æ°´ã—ã¶ãã‚¨ãƒ•ã‚§ã‚¯ãƒˆã‚’å†ç”Ÿæ¸ˆã¿ã€ã¾ãŸã¯ã‚»ã‚°ãƒ¡ãƒ³ãƒˆãŒå­˜åœ¨ã—ãªã„ã€ã¾ãŸã¯æœ€åˆã®ã‚»ã‚°ãƒ¡ãƒ³ãƒˆãŒæ°´é¢ã‚ˆã‚Šä¸‹ã«ã‚ã‚‹å ´åˆã¯ä½•ã‚‚ã—ãªã„
     if (entry.hasPlayedSplash_ || boss.segments_.empty()|| boss.segments_[0].position.y < entry.waterHeight_) {
         return;
     }
-    // …‚µ‚Ô‚«ƒGƒtƒFƒNƒg‚ğÄ¶‚·‚éˆÊ’u‚ğŒvZ‚·‚é
+    // æ°´ã—ã¶ãã‚¨ãƒ•ã‚§ã‚¯ãƒˆã‚’å†ç”Ÿã™ã‚‹ä½ç½®ã‚’è¨ˆç®—ã™ã‚‹
     Vector3 splashPosition = boss.segments_[0].position;
     splashPosition.y = entry.waterHeight_ + kSplashHeightOffset;
     EffectManager::GetInstance()->PlayEffect("FearWormBreachSplash", splashPosition);
@@ -88,7 +81,7 @@ void FearWormJumOutState::UpdateSurface(FearWormEntryState& entry, FearWormEnemy
 {
     if (!surface_ || !boss.player_) { return; }
     Vector3 surfacePosition = entry.EntrySurfacePosition(boss.player_->GetTranslate());
-    // ŠC–Ê‚Ì”g’¸‚æ‚èã‚É’u‚«A[“x‚Ì‹£‡‚ğ”ğ‚¯‚éB
+    // æµ·é¢ã®æ³¢é ‚ã‚ˆã‚Šä¸Šã«ç½®ãã€æ·±åº¦ã®ç«¶åˆã‚’é¿ã‘ã‚‹ã€‚
     surfacePosition.y += kSurfaceHeightOffset;
     surfacePosition.z += kSurfaceOffsetZ;
     surface_->SetTranslate(surfacePosition);
@@ -102,7 +95,7 @@ void FearWormJumOutState::UpdateSurface(FearWormEntryState& entry, FearWormEnemy
 
 void FearWormJumOutState::Draw()
 {
-    if (surface_) {
+    if (isSurfaceVisible_ && surface_) {
         surface_->Draw();
     }
 }

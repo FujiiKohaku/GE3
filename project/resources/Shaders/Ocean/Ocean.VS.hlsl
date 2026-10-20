@@ -6,27 +6,14 @@ struct VertexInput
     float4 position : POSITION0;
 };
 
-void AddGerstnerWave(
-    float2 basePosition,
-    float2 direction,
-    float waveNumber,
-    float amplitude,
-    float speed,
-    float steepness,
-    float time,
-    float phaseOffset,
-    inout float3 displacement,
-    inout float2 heightGradient)
-{
-    direction = normalize(direction);
-    float phase = dot(direction, basePosition) * waveNumber + time * speed + phaseOffset;
-    float sinePhase = sin(phase);
-    float cosinePhase = cos(phase);
-
-    displacement.xz += direction * (steepness * amplitude * cosinePhase);
-    displacement.y += amplitude * sinePhase;
-    heightGradient += direction * (amplitude * waveNumber * cosinePhase);
-}
+#define OCEAN_WAVE_VECTOR float3
+#define OCEAN_WAVE_MAKE(x, y, z) float3(x, y, z)
+#define OCEAN_WAVE_FLOOR(value) floor(value)
+#define OCEAN_WAVE_SQRT(value) sqrt(value)
+#define OCEAN_WAVE_SIN(value) sin(value)
+#define OCEAN_WAVE_COS(value) cos(value)
+#define OCEAN_WAVE_INLINE
+#include "OceanWaveShape.hlsli"
 
 OceanVertexOutput main(VertexInput input)
 {
@@ -41,16 +28,16 @@ OceanVertexOutput main(VertexInput input)
     float amplitude = gOcean.waveParameters.x;
     float frequency = gOcean.waveParameters.y;
 
-    // Broad spatial modulation creates calm and rough patches without a hard
-    // boundary. The two incommensurate bands take a long distance to repeat.
-    float regionNoise = sin(p.x * 0.0041f + p.y * 0.0027f + time * 0.07f) * 0.5f +
-        sin(p.x * -0.0019f + p.y * 0.0053f - time * 0.045f) * 0.5f;
-    float localStrength = lerp(0.58f, 1.22f, regionNoise * 0.5f + 0.5f);
-
     float3 displacement = 0.0f;
-    float2 gradient = 0.0f;
+    float3 tangentX = float3(1.0f, 0.0f, 0.0f);
+    float3 tangentZ = float3(0.0f, 0.0f, 1.0f);
 #define OCEAN_WAVE(dx, dz, f, a, speed, steepness, phase) \
-    AddGerstnerWave(p, float2(dx, dz), frequency * f, amplitude * a * localStrength, speed, steepness, time, phase, displacement, gradient);
+    { \
+        OceanWaveSample wave = EvaluateOceanWave(p.x, p.y, time, amplitude, frequency, dx, dz, f, a, speed, steepness, phase); \
+        displacement += wave.displacement; \
+        tangentX += wave.derivativeX; \
+        tangentZ += wave.derivativeZ; \
+    }
 #include "OceanWaveLayers.hlsli"
 #undef OCEAN_WAVE
 
@@ -65,11 +52,14 @@ OceanVertexOutput main(VertexInput input)
     }
     wake = LimitOceanWake(wake);
     worldPosition.y += wake.y;
-    gradient += wake.xz;
+    tangentX.y += dot(wake.xz, tangentX.xz);
+    tangentZ.y += dot(wake.xz, tangentZ.xz);
+    float3 surfaceNormal = normalize(cross(tangentZ, tangentX));
+    float2 gradient = -surfaceNormal.xz / max(surfaceNormal.y, 0.001f);
     output.position = mul(float4(worldPosition, 1.0f), gOcean.viewProjection);
     output.worldPosition = worldPosition;
-    output.normal = normalize(float3(-gradient.x, 1.0f, -gradient.y));
-    output.waveData = float2(displacement.y / max(amplitude * localStrength, 0.0001f), length(gradient));
+    output.normal = surfaceNormal;
+    output.waveData = float2(displacement.y / max(amplitude, 0.0001f), length(gradient));
     output.wakeData = float2(wake.y, length(wake.xz));
     return output;
 }

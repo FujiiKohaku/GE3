@@ -50,6 +50,8 @@ private:
     static constexpr int kMaxPhaseUpdatesPerFrame = 2;
 
     void ChangePhase(EntryPhase phase, FearWormEnemy& boss);
+    // 両段階で共通の登場時刻を使い、全身の位置とボスの代表位置を更新する。
+    void UpdateSegmentPositions(FearWormEnemy& boss);
     Vector3 EntrySurfacePosition(const Vector3& playerPosition) const;
 
     FearWormJumOutState jumOutState_;

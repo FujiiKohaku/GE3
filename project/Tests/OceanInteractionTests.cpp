@@ -4,6 +4,29 @@
 
 int main() {
     try {
+        // Check the shared analytic tangents, including envelope and phase warp.
+        for (float timeSeconds : {0.0f, 17.0f, 300.0f}) {
+            for (float positionX : {-140.0f, 0.0f, 35.0f, 900.0f}) {
+                for (float positionZ : {-80.0f, 4.0f, 7200.0f}) {
+                    const float kDerivativeStep = 0.02f;
+#define OCEAN_WAVE(dx, dz, f, a, speed, steepness, phase) \
+                    { \
+                        const auto wave = OceanInteraction::EvaluateOceanWave(positionX, positionZ, timeSeconds, 1.55f, 0.075f, dx, dz, f, a, speed, steepness, phase); \
+                        const auto beforeX = OceanInteraction::EvaluateOceanWave(positionX - kDerivativeStep, positionZ, timeSeconds, 1.55f, 0.075f, dx, dz, f, a, speed, steepness, phase); \
+                        const auto afterX = OceanInteraction::EvaluateOceanWave(positionX + kDerivativeStep, positionZ, timeSeconds, 1.55f, 0.075f, dx, dz, f, a, speed, steepness, phase); \
+                        const auto beforeZ = OceanInteraction::EvaluateOceanWave(positionX, positionZ - kDerivativeStep, timeSeconds, 1.55f, 0.075f, dx, dz, f, a, speed, steepness, phase); \
+                        const auto afterZ = OceanInteraction::EvaluateOceanWave(positionX, positionZ + kDerivativeStep, timeSeconds, 1.55f, 0.075f, dx, dz, f, a, speed, steepness, phase); \
+                        const Vector3 numericalX{(afterX.displacement.x - beforeX.displacement.x) / (2 * kDerivativeStep), (afterX.displacement.y - beforeX.displacement.y) / (2 * kDerivativeStep), (afterX.displacement.z - beforeX.displacement.z) / (2 * kDerivativeStep)}; \
+                        const Vector3 numericalZ{(afterZ.displacement.x - beforeZ.displacement.x) / (2 * kDerivativeStep), (afterZ.displacement.y - beforeZ.displacement.y) / (2 * kDerivativeStep), (afterZ.displacement.z - beforeZ.displacement.z) / (2 * kDerivativeStep)}; \
+                        if (std::abs(numericalX.x - wave.derivativeX.x) > 0.003f || std::abs(numericalX.y - wave.derivativeX.y) > 0.003f || std::abs(numericalX.z - wave.derivativeX.z) > 0.003f \
+                            || std::abs(numericalZ.x - wave.derivativeZ.x) > 0.003f || std::abs(numericalZ.y - wave.derivativeZ.y) > 0.003f || std::abs(numericalZ.z - wave.derivativeZ.z) > 0.003f) \
+                            throw std::runtime_error("Ocean wave tangents must match displacement derivatives"); \
+                    }
+#include "../resources/Shaders/Ocean/OceanWaveLayers.hlsli"
+#undef OCEAN_WAVE
+                }
+            }
+        }
         float worstError = 0;
         int samples = 0;
         for (float amplitude : {0.0f, 0.65f, 1.55f}) {
