@@ -46,13 +46,13 @@ private:
     static constexpr float kOrbitDepthSwayFrequency = 0.80f;
     static constexpr float kOrbitDepthSwayAmplitude = 3.0f;
     static constexpr float kCoilAngleRate = 2.35f;
-    static constexpr float kCoilBaseRadius = 8.0f;
-    static constexpr float kCoilRadiusFrequency = 3.2f;
-    static constexpr float kCoilRadiusAmplitude = 2.0f;
-    static constexpr float kCoilHeight = 8.0f;
-    static constexpr float kCoilVerticalScale = 0.75f;
-    static constexpr float kCoilDepthFrequency = 0.50f;
-    static constexpr float kCoilDepthAmplitude = 2.5f;
+    static constexpr float kCoilBaseRadius = 7.0f;
+    static constexpr float kCoilHeight = 30.0f;
+    static constexpr float kCoilSegmentAngleRadians = 0.65f;
+    static constexpr float kCoilSegmentHeightRate = 0.46f;
+    static constexpr float kCoilFormationDurationSeconds = 1.1f;
+    static constexpr float kCoilAttackDurationSeconds = 2.4f;
+    static constexpr float kCoilReleaseDurationSeconds = 0.8f;
     static constexpr float kWeaveAngleRate = 1.35f;
     static constexpr float kWeaveWidth = 13.0f;
     static constexpr float kWeaveHeight = 7.0f;
@@ -90,6 +90,11 @@ private:
     static constexpr float kBeamUvScrollSpeed = -6.5f; // より高速に流す
     static constexpr float kBeamRotateSpeedRadiansPerSecond = 45.0f; // 高速自転（うねりの表現を強化）
     static constexpr int kBeamDamage = 1;
+    static constexpr float kCoilBarrageFireIntervalSeconds = 0.6f;
+    static constexpr int32_t kCoilBarrageBulletCount = 12;
+    static constexpr float kCoilBarrageSegmentAngleRadians = 0.17f;
+    static constexpr float kCoilBarrageAngularSpeedRadiansPerSecond = 0.35f;
+
 
 
     enum class FearWormMovementType { Orbit, Coil, Weave, Drift, Line, Spiral };
@@ -163,7 +168,8 @@ private:
     // 発射角度を回転させながら弾を出し、渦状の弾幕を作る。
     void UpdateSpiralBarrage(FearWormEnemy& boss);
     // 指定された位置と方向を使って弾を生成する。
-    void FireDirectionalBullet(FearWormEnemy& boss, const Vector3& position, const Vector3& direction);
+    void FireDirectionalBullet(FearWormEnemy& boss, const Vector3& position, const Vector3& direction,
+        bool shouldPlayMuzzleEffect = true);
     // ビーム本体と溜め演出を描画するリソースを準備する。
     void InitializeBeam(FearWormEnemy& boss);
     // 頭の位置と狙いにビームを追従させ、ビーム状態を更新する。
@@ -184,7 +190,12 @@ private:
     void UpdateBeamFadeOut(FearWormEnemy& boss, float dt);
     // ビーム状態を切り替え、各状態のタイマーや表示を設定する。
     void ChangeBeamState(FearWormEnemy& boss, BeamState state);
-
+    // とぐろ弾幕攻撃
+    void UpdateCoilBarrage(FearWormEnemy& boss);
+    float CoilFormationBlend() const;
+    bool IsCoilFiring() const;
+    static Vector3 CalculateCoilSegmentPosition(const Vector3& headPosition, float orbitAngle,
+        int32_t segmentOrder, float segmentSpacing);
     // 共通の胴体追従へ、攻撃用の隊形を合成する。
     float UpdateFormationBlend();
     Vector3 CalculateFormationPosition(const FearWormEnemy& boss, int32_t segmentOrder,
@@ -230,6 +241,7 @@ private:
 
     // 隊形補間・渦巻き弾幕・激昂。
     float lineTransitionTimer_ = 0.0f;
+    float coilBarrageNextFireSeconds_ = 0.0f;
     float spiralAngle_ = 0.0f;
     float barrageAngle_ = 0.0f;
     int32_t barrageFireTimer_ = 0;

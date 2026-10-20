@@ -14,7 +14,7 @@ inline bool RunFearWormMovementTests()
     using FearWormMovementContext = FearWormEnemy::FearWormMovementContext;
     FearWormMovementContext context { {10.0f, 20.0f, 30.0f}, 0.0f, 0.0f, 100.0f, 0.0f, 0.0f };
     const std::array<Vector3, 6> expected {{
-        {26, 27, 130}, {18, 28, 130}, {10, 27, 132.5f}, {10, 28, 132}, {30, 23, 205}, {10, 27, 180}
+        {26, 27, 130}, {17, 50, 130}, {10, 27, 132.5f}, {10, 28, 132}, {30, 23, 205}, {10, 27, 180}
     }};
     for (int i = 0; i < 6; ++i) {
         const Vector3 target = FearWormEnemy::CalculateFearWormTarget(static_cast<FearWormMovementType>(i), context);
@@ -58,6 +58,33 @@ inline bool RunFearWormMovementTests()
     boss.ChangeMovementPattern(FearWormMovementType::Orbit);
     boss.UpdateSegments();
     if (boss.battleState_.lineTransitionTimer_ != 0.0f) { return false; }
+
+    // とぐろは通常位置から形成し、形成後だけ射撃し、解除後に通常位置へ戻す。
+    boss.ChangeMovementPattern(FearWormMovementType::Coil);
+    const Vector3 followPosition = {0.0f, 0.0f, -5.0f};
+    boss.battleState_.movementPatternTimer_ = 0.0f;
+    Vector3 coilPosition = boss.battleState_.CalculateFormationPosition(boss, 1, followPosition, 0.0f);
+    if (!IsFearWormValueClose(coilPosition.z, followPosition.z)
+        || boss.battleState_.IsCoilFiring()) { return false; }
+    boss.battleState_.movementPatternTimer_ = FearWormBattleState::kCoilFormationDurationSeconds;
+    if (!boss.battleState_.IsCoilFiring()
+        || !IsFearWormValueClose(boss.battleState_.CoilFormationBlend(), 1.0f)) { return false; }
+    Vector3 previousPosition = {7.0f, 30.0f, 0.0f};
+    for (int32_t segmentOrder = 1; segmentOrder < 10; ++segmentOrder) {
+        const Vector3 position = FearWormBattleState::CalculateCoilSegmentPosition(
+            {7.0f, 30.0f, 0.0f}, 0.0f, segmentOrder, 5.0f);
+        const float distance = Vector3Length(position - previousPosition);
+        const float radiusSquared = position.x * position.x + position.z * position.z;
+        if (!IsFearWormValueClose(radiusSquared, 49.0f) || position.y >= previousPosition.y
+            || distance < 4.9f || distance > 5.1f) { return false; }
+        previousPosition = position;
+    }
+    boss.battleState_.movementPatternTimer_ = FearWormBattleState::kCoilFormationDurationSeconds
+        + FearWormBattleState::kCoilAttackDurationSeconds;
+    if (boss.battleState_.IsCoilFiring()) { return false; }
+    boss.battleState_.movementPatternTimer_ += FearWormBattleState::kCoilReleaseDurationSeconds;
+    if (!IsFearWormValueClose(boss.battleState_.CoilFormationBlend(), 0.0f)) { return false; }
+    boss.ChangeMovementPattern(FearWormMovementType::Orbit);
 
     // 登場中の接触・被弾を止め、戦闘開始後に部位判定を復帰する。
     boss.ChangeState(FearWormEnemy::BossState::Entry);

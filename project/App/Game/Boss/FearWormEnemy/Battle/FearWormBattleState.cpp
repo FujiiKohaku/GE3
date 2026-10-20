@@ -78,7 +78,7 @@ void FearWormBattleState::UpdateMissileAttack(FearWormEnemy& boss)
     if (!isMadModeActive_) {
         if (!isMissileAttackActive_ && !isFiringMissilesSequence_) {
             missileAttackTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-            if (missileAttackTimer_ >= kMissileAttackInterval) {
+            if (missileAttackTimer_ >= kMissileAttackInterval && movementPattern_ != MovementPattern::Coil) {
                 isMissileAttackActive_ = true;
                 hasFiredMissiles_ = false;
                 missilePhaseTimer_ = 0.0f;
@@ -216,18 +216,15 @@ Vector3 FearWormBattleState::CalculateOrbitTarget(const FearWormMovementContext&
 // 巻き付くように周回する目標位置を求める。
 Vector3 FearWormBattleState::CalculateCoilTarget(const FearWormMovementContext& context)
 {
+    // 解除中は次の移動先へ頭を向け、胴体も通常の追従へ戻す。
+    if (context.patternTime >= kCoilFormationDurationSeconds + kCoilAttackDurationSeconds) {
+        return CalculateWeaveTarget(context);
+    }
     Vector3 result = context.playerPosition;
-
-    // 通常の軌道角を速めて、巻き付くような回転角を作る。
     float coilAngle = context.orbitAngle * kCoilAngleRate;
-
-    // 時間経過で半径を伸縮させる。
-    float radius = kCoilBaseRadius + std::sin(context.patternTime * kCoilRadiusFrequency) * kCoilRadiusAmplitude;
-
-    result.x += std::cos(coilAngle) * radius;
-    result.y += kCoilHeight + std::sin(coilAngle) * radius * kCoilVerticalScale;
-    result.z += context.forwardOffset + std::sin(coilAngle * kCoilDepthFrequency) * kCoilDepthAmplitude;
-
+    result.x += std::cos(coilAngle) * kCoilBaseRadius;
+    result.y += kCoilHeight;
+    result.z += context.forwardOffset + std::sin(coilAngle) * kCoilBaseRadius;
     return result;
 }
 
@@ -363,6 +360,14 @@ Vector3 FearWormBattleState::MovementTargetPosition(const FearWormEnemy& boss, c
 void FearWormBattleState::UpdateMovementPattern(FearWormEnemy& boss, float movementSpeedRate)
 {
     if (movementPattern_ == MovementPattern::Line || movementPattern_ == MovementPattern::Spiral) return;
+    if (movementPattern_ == MovementPattern::Coil) {
+        movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+        if (movementPatternTimer_ >= kCoilFormationDurationSeconds
+            + kCoilAttackDurationSeconds + kCoilReleaseDurationSeconds) {
+            ChangeMovementPattern(boss, MovementPattern::Weave);
+        }
+        return;
+    }
     movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime() * movementSpeedRate;
     if (movementPatternTimer_ >= movementPatternDuration_) {
         ChangeMovementPattern(boss, NextFearWormMovement(movementPattern_));
@@ -372,6 +377,7 @@ void FearWormBattleState::UpdateMovementPattern(FearWormEnemy& boss, float movem
 // 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
 void FearWormBattleState::ChangeMovementPattern(FearWormEnemy& boss, MovementPattern pattern)
 {
+    coilBarrageNextFireSeconds_ = 0.0f;
     movementPattern_ = pattern;
     if (pattern == MovementPattern::Line) {
         lineTransitionTimer_ = 0.0f;
@@ -406,7 +412,17 @@ void FearWormBattleState::Attack(FearWormEnemy& boss)
         }
         return;
     }
+    // とぐろ移動中は360度弾幕を通常攻撃として使用
+    if (movementPattern_ == MovementPattern::Coil && boss.HasAliveBodyParts()) {
+        if (isHeadChargeActive_) {
+            FinishHeadChargeAttack(boss);
+        }
 
+        UpdateCoilBarrage(boss);
+        return;
+    } else {
+        coilBarrageNextFireSeconds_ = 0.0f;
+    }
     // 頭部の照準とチャージ攻撃を優先して更新する。
     UpdateHeadAimDirection(boss);
     UpdateHeadChargeAttack(boss, boss.MovementSpeedRate());
@@ -727,7 +743,8 @@ void FearWormBattleState::UpdateSpiralBarrage(FearWormEnemy& boss)
 }
 
 // 指定された位置と方向を使って弾を生成する。
-void FearWormBattleState::FireDirectionalBullet(FearWormEnemy& boss, const Vector3& position, const Vector3& direction)
+void FearWormBattleState::FireDirectionalBullet(FearWormEnemy& boss, const Vector3& position, const Vector3& direction,
+    bool shouldPlayMuzzleEffect)
 {
     std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
     bullet->SetFogEnabled(false);
@@ -743,7 +760,9 @@ void FearWormBattleState::FireDirectionalBullet(FearWormEnemy& boss, const Vecto
 
     boss.AddEnemyBullet(std::move(bullet));
 
-    EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+    if (shouldPlayMuzzleEffect) {
+        EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+    }
 }
 
 // ビーム本体と溜め演出を描画するリソースを準備する。
@@ -1081,6 +1100,11 @@ float FearWormBattleState::UpdateFormationBlend()
 Vector3 FearWormBattleState::CalculateFormationPosition(const FearWormEnemy& boss, int32_t segmentOrder,
     const Vector3& followPosition, float formationBlend) const
 {
+    if (movementPattern_ == MovementPattern::Coil) {
+        const Vector3 coilPosition = CalculateCoilSegmentPosition(
+            boss.segments_[0].position, orbitAngle_, segmentOrder, boss.segmentSpacing_);
+        return Lerp(followPosition, coilPosition, CoilFormationBlend());
+    }
     // ミサイル攻撃時の横並びと揺れを、共通の追従位置へ合成する。
     float waveScaleY = 3.2f;
     float waveScaleZ = 2.0f;
@@ -1132,4 +1156,81 @@ void FearWormBattleState::SubmitRaytracing(FearWormEnemy& boss, DxrRenderer& ren
         && (beamState_ == BeamState::Charge || beamState_ == BeamState::Fire || beamState_ == BeamState::FadeOut)) {
         beamPlane_->SubmitRaytracing(renderer);
     }
+}
+// とぐろ移動中に360度全方向へ弾幕を発射する
+void FearWormBattleState::UpdateCoilBarrage(FearWormEnemy& boss)
+{
+    if (boss.player_ == nullptr || bulletModel_ == nullptr || !IsCoilFiring()) {
+        coilBarrageNextFireSeconds_ = 0.0f;
+        return;
+    }
+
+    // 攻撃開始からの経過時間で、次の発射時刻を判定する。
+    const float attackElapsedSeconds = movementPatternTimer_ - kCoilFormationDurationSeconds;
+    if (attackElapsedSeconds < coilBarrageNextFireSeconds_) {
+        return;
+    }
+
+    // 処理落ちからの復帰時も、同じフレームに大量の弾を生成しない。
+    coilBarrageNextFireSeconds_ = attackElapsedSeconds + kCoilBarrageFireIntervalSeconds;
+
+    // 360度を弾数で均等に分割
+    float angleStep = (2.0f * kPi) / static_cast<float>(kCoilBarrageBulletCount);
+
+    // 生存している各部位から発射
+    for (size_t segmentIndex = 0; segmentIndex < boss.segments_.size(); segmentIndex++) {
+
+        if (!boss.segments_[segmentIndex].isAlive) {
+            continue;
+        }
+
+        const Vector3 position = boss.segments_[segmentIndex].position;
+        const float angleOffset = static_cast<float>(segmentIndex) * kCoilBarrageSegmentAngleRadians
+            + movementPatternTimer_ * kCoilBarrageAngularSpeedRadiansPerSecond;
+
+        for (int32_t bulletIndex = 0; bulletIndex < kCoilBarrageBulletCount; bulletIndex++) {
+
+            float angle = angleStep * static_cast<float>(bulletIndex) + angleOffset;
+
+            // XZ平面で360度に発射
+            Vector3 direction = {
+                std::cos(angle),
+                0.0f,
+                std::sin(angle)
+            };
+
+            FireDirectionalBullet(boss, position, direction, false);
+        }
+        EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+    }
+}
+
+float FearWormBattleState::CoilFormationBlend() const
+{
+    float blend = std::clamp(movementPatternTimer_ / kCoilFormationDurationSeconds, 0.0f, 1.0f);
+    const float releaseStartSeconds = kCoilFormationDurationSeconds + kCoilAttackDurationSeconds;
+    if (movementPatternTimer_ >= releaseStartSeconds) {
+        blend = 1.0f - std::clamp(
+            (movementPatternTimer_ - releaseStartSeconds) / kCoilReleaseDurationSeconds, 0.0f, 1.0f);
+    }
+    return blend * blend * (3.0f - 2.0f * blend);
+}
+
+bool FearWormBattleState::IsCoilFiring() const
+{
+    return movementPattern_ == MovementPattern::Coil
+        && movementPatternTimer_ >= kCoilFormationDurationSeconds
+        && movementPatternTimer_ < kCoilFormationDurationSeconds + kCoilAttackDurationSeconds;
+}
+
+Vector3 FearWormBattleState::CalculateCoilSegmentPosition(const Vector3& headPosition, float orbitAngle,
+    int32_t segmentOrder, float segmentSpacing)
+{
+    const float headAngle = orbitAngle * kCoilAngleRate;
+    const float segmentAngle = headAngle - static_cast<float>(segmentOrder) * kCoilSegmentAngleRadians;
+    Vector3 position = headPosition;
+    position.x += (std::cos(segmentAngle) - std::cos(headAngle)) * kCoilBaseRadius;
+    position.y -= static_cast<float>(segmentOrder) * segmentSpacing * kCoilSegmentHeightRate;
+    position.z += (std::sin(segmentAngle) - std::sin(headAngle)) * kCoilBaseRadius;
+    return position;
 }

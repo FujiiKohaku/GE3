@@ -188,7 +188,7 @@ private:
 
     float moveTime_ = 0.0f;
     float segmentSpacing_ = 5.0f;
-    float parallelForwardOffset_ = 52.0f;
+    float parallelForwardOffset_ = 92.0f;
 
     bool vulnerableEffectPlayed_ = false;
 
