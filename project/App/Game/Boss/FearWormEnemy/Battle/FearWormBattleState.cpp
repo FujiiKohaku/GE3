@@ -553,26 +553,9 @@ void FearWormBattleState::UpdateHeadAimDirection(FearWormEnemy& boss)
 // 指定した部位の位置から、通常射撃用の弾を生成する。
 void FearWormBattleState::FireBullet(FearWormEnemy& boss, const Vector3& position)
 {
-    // 通常弾を生成し、発射位置からプレイヤーへの速度を設定する。
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
-    bullet->SetFogEnabled(false);
-    bullet->Initialize(bulletModel_);
-
+    // プレイヤーへの発射方向を求め、共通の弾生成処理へ渡す。
     Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - position);
-    Vector3 velocity { };
-    velocity.x = direction.x * bulletSpeed_;
-    velocity.y = direction.y * bulletSpeed_;
-    velocity.z = direction.z * bulletSpeed_;
-
-    bullet->SetTranslate(position);
-    bullet->SetVelocity(velocity);
-
-    // 管理リストへ追加して発射エフェクトを再生する。
-    boss.AddEnemyBullet(std::move(bullet));
-
-    EffectManager::GetInstance()->PlayEffect(
-        "WormShotFlash",
-        position);
+    FireDirectionalBullet(boss, position, direction);
 }
 
 // 溜め終わった頭から強化された弾を発射する。
