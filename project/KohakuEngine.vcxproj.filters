@@ -1160,4 +1160,41 @@
       <UniqueIdentifier>{AC35309A-1356-5F00-A292-E2AD6DC03B52}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\OrbitShot\FearWormOrbitShotState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\OrbitShot</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\OrbitShot\FearWormOrbitShotState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\OrbitShot</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\WeaveSpread\FearWormWeaveSpreadState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\WeaveSpread</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\WeaveSpread\FearWormWeaveSpreadState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\WeaveSpread</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\DriftBurst\FearWormDriftBurstState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\DriftBurst</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\DriftBurst\FearWormDriftBurstState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\DriftBurst</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\CoilBarrage\FearWormCoilBarrageState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\CoilBarrage</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\CoilBarrage\FearWormCoilBarrageState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\CoilBarrage</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\HeadCharge\FearWormHeadChargeState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\HeadCharge</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\HeadCharge\FearWormHeadChargeState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\HeadCharge</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\LineMissile\FearWormLineMissileState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\LineMissile</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\LineMissile\FearWormLineMissileState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\LineMissile</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage\FearWormSpiralBarrageState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage\FearWormSpiralBarrageState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeamState.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\Beam</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeamState.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\Beam</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\State\FearWormBattleAction.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\State</Filter></ClInclude>
+    <ClInclude Include="Tests\FearWormBattleActionTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\OrbitShot" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\WeaveSpread" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\DriftBurst" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\CoilBarrage" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\HeadCharge" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\LineMissile" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\Beam" />
+    <Filter Include="App\Game\Boss\FearWormEnemy\Battle\State" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeam.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\Beam</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeam.cpp"><Filter>App\Game\Boss\FearWormEnemy\Battle\Beam</Filter></ClCompile>
+  </ItemGroup>
 </Project>

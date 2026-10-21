@@ -76,12 +76,22 @@ private:
     friend class FearWormJumOutState;
     friend class FearWormWaitForBodyState;
     friend class FearWormBattleState;
+    friend class FearWormOrbitShotState;
+    friend class FearWormWeaveSpreadState;
+    friend class FearWormDriftBurstState;
+    friend class FearWormCoilBarrageState;
+    friend class FearWormHeadChargeState;
+    friend class FearWormLineMissileState;
+    friend class FearWormSpiralBarrageState;
+    friend class FearWormBeamState;
+
     friend class FearWormDeadState;
 
     friend bool RunBeamStateTests();
     friend bool RunFearWormMovementTests();
     friend bool RunFearWormEntryTests();
     friend bool RunFearWormStateTests();
+    friend bool RunFearWormBattleActionTests();
 
     // 基本設定
     static constexpr float kHeadHp = 40.0f;
@@ -109,8 +119,6 @@ private:
 
     using FearWormMovementType = FearWormBattleState::FearWormMovementType;
     using FearWormMovementContext = FearWormBattleState::FearWormMovementContext;
-    using MovementPattern = FearWormBattleState::MovementPattern;
-    using BeamState = FearWormBattleState::BeamState;
 
     struct Segment {
         std::unique_ptr<Object3d> object;
@@ -132,19 +140,13 @@ private:
 
     // 移動の種類に対応する軌道計算を選ぶ。
     static Vector3 CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context);
-    // 次に使用する移動パターンを選ぶ。
-    static FearWormMovementType NextFearWormMovement(FearWormMovementType type);
     // 現在の移動状態に応じた目標位置を取得する。
     Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
-    // 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
-    void ChangeMovementPattern(MovementPattern pattern);
     // 頭から後ろへ順に追従位置を計算し、胴体がつながってうねる形を作る。
     void UpdateSegments();
     // 状態や残りHPに応じた移動速度の倍率を返す。
     float MovementSpeedRate() const;
 
-    // 通常弾、チャージ弾、ミサイル、弾幕。
-    void Attack() override;
     // 頭が照準方向を向くように描画用の回転角を計算する。
     Vector3 HeadLookRotation() const;
 
@@ -167,10 +169,6 @@ private:
 
     // 待機 → チャージ → 発射 → 終了。
     void InitializeBeam();
-    // ビーム状態を切り替え、各状態のタイマーや表示を設定する。
-    void ChangeBeamState(BeamState state);
-    // 待機・溜め・発射・消失のうち、現在のビーム状態を進める。
-    void UpdateBeamState(float deltaTime);
     // 現在のビーム状態に必要な溜め演出や光線を描画する。
     void DrawBeam();
 

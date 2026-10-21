@@ -52,19 +52,17 @@ inline bool RunFearWormStateTests()
     }
 
     // 死亡の開始処理が攻撃を終了し、胴体を非表示にする。
-    boss.battleState_.isHeadChargeActive_ = true;
-    boss.battleState_.isHeadChargeFiring_ = true;
-    boss.battleState_.normalBurstShotsRemaining_ = 2;
-    boss.battleState_.beamState_ = FearWormEnemy::BeamState::Fire;
-    boss.battleState_.beamCurrentLength_ = 100.0f;
-    boss.battleState_.beamCurrentWidth_ = 3.0f;
+    boss.battleState_.ChangeAction(FearWormBattleState::ActionType::DriftBurst, boss);
+    boss.battleState_.driftBurstState_.shotsRemaining_ = 2;
+    boss.battleState_.beamActionState_.phase_ = FearWormBeamState::Phase::Fire;
+    boss.battleState_.beamActionState_.beam_.SetDimensions(100.0f, 3.0f);
     boss.OnDeath();
     if (boss.GetBossState() != BossState::Dead
         || boss.currentState_ != &boss.deadState_
-        || boss.battleState_.isHeadChargeActive_ || boss.battleState_.isHeadChargeFiring_
-        || boss.battleState_.normalBurstShotsRemaining_ != 0
-        || boss.battleState_.beamState_ != FearWormEnemy::BeamState::Wait
-        || boss.battleState_.beamCurrentLength_ != 0.0f || boss.battleState_.beamCurrentWidth_ != 0.0f
+        || boss.battleState_.headChargeState_.isActive_ || boss.battleState_.headChargeState_.isFiring_
+        || boss.battleState_.driftBurstState_.shotsRemaining_ != 0
+        || boss.battleState_.beamActionState_.phase_ != FearWormBeamState::Phase::Wait
+        || boss.battleState_.beamActionState_.beam_.GetLength() != 0.0f || boss.battleState_.beamActionState_.beam_.GetWidth() != 0.0f
         || boss.segments_[1].isAlive || boss.deadState_.isDeathSequenceFinished_) {
         return false;
     }
@@ -79,40 +77,26 @@ inline bool RunFearWormStateTests()
     }
 
     // 配置し直したボスの攻撃状態だけを初期化し、別個体には影響させない。
-    boss.battleState_.isHeadChargeActive_ = true;
-    boss.battleState_.isFiringMissilesSequence_ = true;
-    boss.battleState_.normalAttackType_ = FearWormBattleState::NormalAttackType::FixedBurst;
-    boss.battleState_.normalBurstShotsRemaining_ = 2;
-    boss.battleState_.normalBurstShotTimerSeconds_ = 0.1f;
-    boss.battleState_.missileTargetIndices_ = { 1 };
-    otherBoss.battleState_.headChargeTimer_ = 2.0f;
-    otherBoss.battleState_.normalBurstShotsRemaining_ = 1;
+    boss.battleState_.driftBurstState_.shotsRemaining_ = 2;
+    boss.battleState_.driftBurstState_.shotTimerSeconds_ = 0.1f;
+    boss.battleState_.lineMissileState_.targetIndices_ = { 1 };
+    otherBoss.battleState_.headChargeState_.elapsedSeconds_ = 2.0f;
+    otherBoss.battleState_.driftBurstState_.shotsRemaining_ = 1;
     boss.SetPosition({ 10.0f, 20.0f, 30.0f });
     if (boss.GetBossState() != BossState::Wait
         || boss.currentState_ != &boss.waitState_
         || otherBoss.currentState_ != &otherBoss.waitState_
-        || boss.battleState_.isHeadChargeActive_
-        || boss.battleState_.isFiringMissilesSequence_
-        || boss.battleState_.normalAttackType_ != FearWormBattleState::NormalAttackType::Single
-        || boss.battleState_.normalBurstShotsRemaining_ != 0
-        || boss.battleState_.normalBurstShotTimerSeconds_ != 0.0f
-        || !boss.battleState_.missileTargetIndices_.empty()
-        || otherBoss.battleState_.normalBurstShotsRemaining_ != 1
-        || otherBoss.battleState_.headChargeTimer_ != 2.0f) {
+        || boss.battleState_.headChargeState_.isActive_
+        || boss.battleState_.currentAction_ != nullptr
+        || boss.battleState_.driftBurstState_.shotsRemaining_ != 0
+        || boss.battleState_.driftBurstState_.shotTimerSeconds_ != 0.0f
+        || !boss.battleState_.lineMissileState_.targetIndices_.empty()
+        || otherBoss.battleState_.driftBurstState_.shotsRemaining_ != 1
+        || otherBoss.battleState_.headChargeState_.elapsedSeconds_ != 2.0f) {
         return false;
     }
     boss.ChangeState(static_cast<BossState>(99));
     if (boss.GetBossState() != BossState::Wait) { return false; }
-
-    // 発射元の破壊と移動パターンの切替で、残りの連射を中止する。
-    boss.battleState_.normalBurstSegmentIndex_ = 1;
-    boss.battleState_.normalBurstShotsRemaining_ = 2;
-    boss.segments_[1].isAlive = false;
-    boss.battleState_.UpdateNormalBurst(boss);
-    if (boss.battleState_.normalBurstShotsRemaining_ != 0) { return false; }
-    boss.battleState_.normalBurstShotsRemaining_ = 2;
-    boss.battleState_.ChangeMovementPattern(boss, FearWormBattleState::MovementPattern::Coil);
-    if (boss.battleState_.normalBurstShotsRemaining_ != 0) { return false; }
 
     std::puts("FearWorm states: dispatch, entry, battle, death and reset passed.");
     return true;

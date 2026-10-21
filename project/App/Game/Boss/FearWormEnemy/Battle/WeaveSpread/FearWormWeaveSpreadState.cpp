@@ -1,0 +1,52 @@
+#include "FearWormWeaveSpreadState.h"
+#include "../FearWormBattleState.h"
+#include "../../FearWormEnemy.h"
+#include "App/Game/Player/Player.h"
+#include "Engine/Time/TimeManager.h"
+#include "Engine/Effect/EffectManager.h"
+#include "Engine/3D/Object3d.h"
+#include <cmath>
+#include <algorithm>
+
+void FearWormWeaveSpreadState::Enter(FearWormBattleState& battle, FearWormEnemy&)
+{
+    isFinished_ = false;
+    fireTimer_ = 0;
+    battle.movementPattern_ = FearWormBattleState::MovementPattern::Weave;
+}
+
+void FearWormWeaveSpreadState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
+{
+    const float actionDeltaSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.MovementSpeedRate();
+    battle.movementPatternTimer_ += actionDeltaSeconds;
+    battle.UpdateBattleMovement(boss, boss.player_->GetTranslate(), boss.MovementSpeedRate());
+    if (battle.CanFire(boss)) {
+        const int32_t segmentIndex = battle.SelectFiringSegment(boss, fireTimer_);
+        if (segmentIndex >= 0) {
+            const Vector3 position = boss.segments_[segmentIndex].position;
+            FireSpreadBullets(battle, boss, position, NormalizeSafe(boss.player_->GetTranslate() - position));
+        }
+    }
+    isFinished_ = battle.movementPatternTimer_ >= battle.movementPatternDuration_;
+}
+
+void FearWormWeaveSpreadState::Exit(FearWormBattleState&, FearWormEnemy&)
+{
+    fireTimer_ = 0;
+}
+
+void FearWormWeaveSpreadState::FireSpreadBullets(FearWormBattleState& battle, FearWormEnemy& boss, const Vector3& position,
+    const Vector3& direction)
+{
+    Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
+    if (std::abs(direction.y) > 0.99f) {
+        referenceUp = { 0.0f, 0.0f, 1.0f };
+    }
+    const Vector3 right = NormalizeSafe(Cross(referenceUp, direction));
+    for (int32_t shotIndex = -1; shotIndex <= 1; shotIndex++) {
+        const float angle = static_cast<float>(shotIndex) * kNormalSpreadAngleRadians;
+        const Vector3 shotDirection = NormalizeSafe(direction * std::cos(angle) + right * std::sin(angle));
+        battle.FireDirectionalBullet(boss, position, shotDirection, false);
+    }
+    EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+}

@@ -781,4 +781,29 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Camera\CameraPreferences.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Camera\CameraPreferences.cpp" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\OrbitShot\FearWormOrbitShotState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\OrbitShot\FearWormOrbitShotState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\WeaveSpread\FearWormWeaveSpreadState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\WeaveSpread\FearWormWeaveSpreadState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\DriftBurst\FearWormDriftBurstState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\DriftBurst\FearWormDriftBurstState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\CoilBarrage\FearWormCoilBarrageState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\CoilBarrage\FearWormCoilBarrageState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\HeadCharge\FearWormHeadChargeState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\HeadCharge\FearWormHeadChargeState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\LineMissile\FearWormLineMissileState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\LineMissile\FearWormLineMissileState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage\FearWormSpiralBarrageState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\SpiralBarrage\FearWormSpiralBarrageState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeamState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeamState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\State\FearWormBattleAction.h" />
+    <ClInclude Include="$(projectRootPath)Tests\FearWormBattleActionTests.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeam.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Battle\Beam\FearWormBeam.cpp" />
+  </ItemGroup>
 </Project>

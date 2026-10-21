@@ -137,11 +137,6 @@ Vector3 FearWormEnemy::CalculateFearWormTarget(FearWormMovementType type, const 
     return FearWormBattleState::CalculateFearWormTarget(type, context);
 }
 
-// 次に使用する移動パターンを選ぶ。
-FearWormEnemy::FearWormMovementType FearWormEnemy::NextFearWormMovement(FearWormMovementType type)
-{
-    return FearWormBattleState::NextFearWormMovement(type);
-}
 
 // 現在の移動状態に応じた目標位置を取得する。
 Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) const
@@ -149,11 +144,6 @@ Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) con
     return battleState_.MovementTargetPosition(*this, playerPosition);
 }
 
-// 移動パターンを変更し、そのパターンで使う経過時間をリセットする。
-void FearWormEnemy::ChangeMovementPattern(MovementPattern pattern)
-{
-    battleState_.ChangeMovementPattern(*this, pattern);
-}
 
 // 頭から後ろへ順に追従位置を計算し、胴体がつながってうねる形を作る。
 void FearWormEnemy::UpdateSegments()
@@ -197,11 +187,6 @@ float FearWormEnemy::MovementSpeedRate() const
     return 1.0f + damageRate * kMaximumMovementSpeedAdd;
 }
 
-// 射撃タイミングを管理し、通常弾や特殊攻撃を開始する。
-void FearWormEnemy::Attack()
-{
-    battleState_.Attack(*this);
-}
 
 // 頭が照準方向を向くように描画用の回転角を計算する。
 Vector3 FearWormEnemy::HeadLookRotation() const
@@ -219,18 +204,6 @@ void FearWormEnemy::InitializeBeam()
 void FearWormEnemy::DrawBeam()
 {
     battleState_.DrawBeam(*this);
-}
-
-// 待機・溜め・発射・消失のうち、現在のビーム状態を進める。
-void FearWormEnemy::UpdateBeamState(float deltaTime)
-{
-    battleState_.UpdateBeamState(*this, deltaTime);
-}
-
-// ビーム状態を切り替え、各状態のタイマーや表示を設定する。
-void FearWormEnemy::ChangeBeamState(BeamState state)
-{
-    battleState_.ChangeBeamState(*this, state);
 }
 
 // 頭・胴体・尾の部位データと描画オブジェクトを生成する。
