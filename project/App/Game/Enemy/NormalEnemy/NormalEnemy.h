@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cstdint>
 
-// 通常敵の難易度設定。間隔はフレーム数、弾速は一フレームの移動量で指定する。
+// 設定ファイルとの互換性のため60FPS基準の値を受け取り、実行時の射撃間隔は秒へ変換する。
 struct NormalEnemySettings {
     float hp = 4.0f;
     int32_t fireIntervalFrames = 120;
@@ -44,6 +44,7 @@ protected:
     void SetFireInterval(int32_t fireIntervalFrames);
 
 private:
+    friend bool RunAppTimingTests();
     // プレイヤーの前方かつ射程内にいる場合だけ発射タイマーを進める。
     void Attack() override;
     // プレイヤーへ向かう弾と、設定に応じた放射状の追加弾を発射する。
@@ -56,9 +57,9 @@ private:
 
     Model* bulletModel_ = nullptr;
 
-    int32_t fireTimer_ = 0;
+    float fireElapsedSeconds_ = 0.0f;
 
-    int32_t fireInterval_ = 120;
+    float fireIntervalSeconds_ = 2.0f;
 
     float bulletSpeed_ = 0.48f;
     bool isRadialShotEnabled_ = true;

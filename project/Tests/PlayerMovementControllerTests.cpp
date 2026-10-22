@@ -2,6 +2,9 @@
 #include "Engine/Camera/Camera.h"
 #include "Engine/Winapp/WinApp.h"
 #include "Engine/input/Input.h"
+#include "Engine/Time/TimeManager.h"
+#include <chrono>
+#include <thread>
 #include <cassert>
 #include <algorithm>
 #include <cmath>
@@ -365,6 +368,13 @@ int main()
 {
     _set_error_mode(_OUT_TO_STDERR);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    // 移動更新には実際の経過秒が必要。各テスト中は60FPS相当の値を維持する。
+    TimeManager* timeManager = TimeManager::GetInstance();
+    timeManager->Initialize();
+    timeManager->SetMaxDeltaTime(0.001f);
+    timeManager->SetTimeScale((1.0f / 60.0f) / 0.001f);
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    timeManager->Update();
     TestGamepadFireAndDeadZone();
     TestGamepadAimAndRailControls();
     TestGamepadAimSlowReturnAndFrameRates();

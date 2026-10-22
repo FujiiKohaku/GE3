@@ -11,10 +11,16 @@ class DirectXCommon;
 
 class OceanSurface {
 public:
+    enum class WakeType { Directional, Radial };
+    enum class WakeSource { Player, Boss };
     void Initialize(Camera* camera, float width, float length, float height);
     void Update(float deltaTime);
     void Draw();
     float GetHeightAt(float worldX, float worldZ) const;
+    float GetNaturalHeightAt(float worldX, float worldZ) const;
+    bool Contains(float worldX, float worldZ) const;
+    bool AddWake(const Vector3& position, const Vector3& direction, float strength, float scale,
+        WakeType wakeType, WakeSource wakeSource, float ageSeconds = 0.0f);
     float UpdateInteraction(const Vector3& position, const Vector3& forward, float speed, bool boosting, float deltaTime);
     void EndInteraction();
 
@@ -68,11 +74,12 @@ private:
     float startZ_ = 0.0f;
     float time_ = 0.0f;
     std::array<WakePoint, kMaxWakePoints> wakes_{};
-    uint32_t wakeCount_ = 0, nextWake_ = 0;
+    std::array<WakeSource, kMaxWakePoints> wakeSources_{};
+    uint32_t wakeCount_ = 0;
     Vector3 lastWakePosition_{};
     Vector3 interactionFocus_{};
     bool hasWakePosition_ = false;
-    float lastWakeTime_ = 0.0f;
+    float lastPlayerWakeTime_ = 0.0f;
     float interactionStrength_ = 0.0f;
     float waveAmplitude_ = 1.55f;
     float waveFrequency_ = 0.075f;

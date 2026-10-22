@@ -2,6 +2,10 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "Wait/IceJellyfishWaitState.h"
+#include "Entry/IceJellyfishEntryState.h"
+#include "Battle/IceJellyfishBattleState.h"
+#include "Dead/IceJellyfishDeadState.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Math/MatrixMath.h"
 #include <array>
@@ -16,6 +20,9 @@ class Player;
 
 class IceJellyfish final : public BaseBoss {
 public:
+    enum class BossState { Wait, Entry, Battle, Dead };
+    IceJellyfish();
+    BossState GetBossState() const { return state_; }
     static constexpr float kMaxHp = 120.0f;
     static constexpr size_t kTentacleCount = 6;
     static constexpr size_t kSegmentsPerTentacle = 7;
@@ -68,7 +75,7 @@ public:
     // 防御中の部位に命中したことを、エフェクトで伝える。
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
-    bool IsDeathSequenceFinished() const override { return deathTimer_ >= 2.0f; }
+    bool IsDeathSequenceFinished() const override { return deadState_.IsDeathSequenceFinished(); }
     bool IsMadModeActive() const override { return GetHealth() <= kMaxHp * 0.35f; }
     bool IsBeamHittingPlayer() const override { return false; }
     // 頭の残りHPをHUD用の割合として返す。
@@ -79,6 +86,16 @@ public:
     AttackPattern GetAttackPattern() const { return currentPattern_; }
 
 private:
+    friend class IceJellyfishWaitState;
+    friend class IceJellyfishEntryState;
+    friend class IceJellyfishBattleState;
+    friend class IceJellyfishDeadState;
+    friend bool RunIceJellyfishStateTests();
+    static constexpr int32_t kMaxStateUpdatesPerFrame = 3;
+    void ChangeState(BossState state);
+    void ResetStates();
+    void UpdateState();
+    void OnDeath() override;
     friend bool RunJellyfishAttackTests();
     friend bool RunJellyfishAttackPatternTests();
     friend int RunIceJellyfishCollisionTests();
@@ -210,8 +227,6 @@ private:
     // リング状に弾を配置して発射し、波のように広がる弾幕を作る。
     void FirePulseRing(
         int count, float spread, float speed, float angleOffset, bool includeCenter);
-    // 攻撃の経過時間を進め、パターンと個別攻撃を更新する。
-    void UpdateAttackSequence(float floatPhase, float deltaTime);
     // 選ばれた触手から、狙い先に向けて氷槍の弾を発射する。
     void FireIceSpearVolley();
     // 氷柱を出す位置を決め、出現前に危険な場所を予告する。
@@ -269,12 +284,10 @@ private:
     float attackTimer_ = 0.0f;
     float previousAttackTimer_ = 0.0f;
     float hitFlashTime_ = 0.0f;
-    float deathTimer_ = 0.0f;
     int32_t patternIndex_ = 0;
     int32_t phase_ = 1;
     int32_t firedWave_ = 0;
     bool coreExposed_ = false;
-    bool pulseAttackArmed_ = false;
     int32_t pulseBarrageWave_ = -1;
     float pulseBarrageTimer_ = 0.0f;
     std::array<int32_t, 3> iceSpearTentacles_ {};
@@ -288,7 +301,6 @@ private:
     std::array<Vector3, kIcePillarModelCount> icePillarModelPositions_ {};
     float icePillarModelTimer_ = 0.0f;
     bool icePillarModelSpawnedForWave_ = false;
-    int32_t nextAttackIndex_ = 0;
     bool absoluteZeroUsed_ = false;
     bool absoluteInterrupted_ = false;
     AttackPattern currentPattern_ = AttackPattern::FrozenSweep;
@@ -298,4 +310,11 @@ private:
     std::vector<int32_t> tentacleColliderParts_;
     std::array<Sphere, 4> crystalColliders_ {};
     Sphere coreCollider_ {};
+
+    IceJellyfishWaitState waitState_;
+    IceJellyfishEntryState entryState_;
+    IceJellyfishBattleState battleState_;
+    IceJellyfishDeadState deadState_;
+    BossState state_ = BossState::Wait;
+    IceJellyfishState* currentState_ = nullptr;
 };

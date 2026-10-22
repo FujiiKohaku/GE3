@@ -174,16 +174,22 @@ void SwarmEnemy::Attack()
         return;
     }
 
-    attackTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    if (deltaTimeSeconds <= 0.0f) {
+        return;
+    }
+    attackTimer_ -= deltaTimeSeconds;
     if (attackTimer_ > 0.0f) {
         return;
     }
 
     FireMovingBullet();
     shotsFired_ += 1;
-    attackTimer_ =
+    const float intervalSeconds =
         kAttackIntervalBase +
         static_cast<float>(slotIndex_ % 4) * 0.12f;
+    // 発射は1更新1回に制限し、周期の端数だけを次へ引き継ぐ。
+    attackTimer_ = intervalSeconds - std::fmod(-attackTimer_, intervalSeconds);
 }
 
 // 群れの一体を撃破した際の演出を開始する。

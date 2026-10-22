@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/Math/MathStruct.h"
 
 class FearWormBattleState;
 class FearWormEnemy;
@@ -10,6 +11,10 @@ public:
     virtual void Enter(FearWormBattleState& battle, FearWormEnemy& boss) = 0;
     virtual void Update(FearWormBattleState& battle, FearWormEnemy& boss) = 0;
     virtual void Exit(FearWormBattleState& battle, FearWormEnemy& boss) = 0;
+    // 行動固有の姿勢と見た目。通常行動では元の状態を維持する。
+    virtual bool ShouldAimHead(const FearWormEnemy&) const { return false; }
+    virtual Vector4 HeadAttackColor(const Vector4& baseColor) const { return baseColor; }
+    virtual float ApplyHeadChargePulse(float basePulse) const { return basePulse; }
     bool IsFinished() const { return isFinished_; }
 
 protected:

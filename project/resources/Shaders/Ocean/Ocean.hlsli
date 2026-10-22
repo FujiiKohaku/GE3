@@ -1,7 +1,7 @@
 struct OceanWakePoint
 {
     float4 positionTimeStrength; // world XZ, birth time, strength
-    float4 directionSize; // forward XZ, boost width, unused
+    float4 directionSize; // forward XZ (radial: reveal delay, 0), width, kind (0: directional, 1: radial)
 };
 
 struct OceanConstants

@@ -4,6 +4,73 @@
 
 int main() {
     try {
+        bool isImpactArmed = false;
+        if (!OceanInteraction::ShouldEmitSphereImpact(isImpactArmed, -5.0f, 0.1f, 2.0f)) {
+            throw std::runtime_error("A submerged-to-air crossing must emit one impact");
+        }
+        for (int crossingIndex = 0; crossingIndex < 20; ++crossingIndex) {
+            if (OceanInteraction::ShouldEmitSphereImpact(isImpactArmed, 0.1f, -0.1f, 2.0f)
+                || OceanInteraction::ShouldEmitSphereImpact(isImpactArmed, -0.1f, 0.1f, 2.0f)) {
+                throw std::runtime_error("Surface jitter must not rearm impact rings");
+            }
+        }
+        if (OceanInteraction::ShouldEmitSphereImpact(isImpactArmed, 0.1f, 5.0f, 2.0f)
+            || !OceanInteraction::ShouldEmitSphereImpact(isImpactArmed, 5.0f, -5.0f, 2.0f)) {
+            throw std::runtime_error("An impact must rearm after clearing the surface");
+        }
+        float lowRateStrength = 0.0f;
+        float highRateStrength = 0.0f;
+        for (int frameIndex = 0; frameIndex < 30; ++frameIndex) {
+            lowRateStrength = OceanInteraction::FollowWakeValue(lowRateStrength, 1.0f, 1.0f / 30.0f);
+        }
+        for (int frameIndex = 0; frameIndex < 120; ++frameIndex) {
+            highRateStrength = OceanInteraction::FollowWakeValue(highRateStrength, 1.0f, 1.0f / 120.0f);
+        }
+        if (std::abs(lowRateStrength - highRateStrength) > 0.00001f
+            || OceanInteraction::FollowWakeValue(0.5f, 1.0f, 0.0f) != 0.5f
+            || OceanInteraction::FollowWakeValue(0.0f, 1.0f, 1.0f / 60.0f) >= 0.2f) {
+            throw std::runtime_error("Wake smoothing must bound spikes and be frame-rate independent");
+        }
+        const auto delayedBirth = OceanInteraction::EvaluateOceanWakeProfile(6.0f, 0.0f, 0.5f, 1.0f, 2.0f, 0.5f, 0.0f, 1.0f);
+        const auto delayedVisible = OceanInteraction::EvaluateOceanWakeProfile(6.0f, 0.0f, 0.6f, 1.0f, 2.0f, 0.5f, 0.0f, 1.0f);
+        const auto samePhysicalAge = OceanInteraction::OceanRadialWakeProfile(6.0f, 0.0f, 0.6f, 1.0f, 2.0f);
+        if (delayedBirth.y != 0.0f || std::abs(delayedVisible.y - samePhysicalAge.y) > 0.00001f) {
+            throw std::runtime_error("Queued rings must reveal smoothly without restarting their propagation");
+        }
+        using OceanInteraction::FindSphereContactFraction;
+        if (FindSphereContactFraction(8.0f, 7.0f, 2.0f) >= 0.0f
+            || FindSphereContactFraction(-8.0f, -7.0f, 2.0f) >= 0.0f
+            || FindSphereContactFraction(0.0f, 0.0f, 0.0f) >= 0.0f
+            || FindSphereContactFraction(3.0f, 2.0f, 2.0f) != 1.0f
+            || FindSphereContactFraction(-3.0f, -2.0f, 2.0f) != 1.0f
+            || std::abs(FindSphereContactFraction(-6.0f, 4.0f, 2.0f) - 0.6f) > 0.00001f
+            || std::abs(FindSphereContactFraction(4.0f, -6.0f, 2.0f) - 0.4f) > 0.00001f) {
+            throw std::runtime_error("Sphere contact must detect entry and swept crossings, excluding deep water and air");
+        }
+        for (float ageSeconds : {0.05f, 0.4f, 1.5f, 2.49f}) {
+            for (float scale : {0.8f, 2.0f, 3.5f}) {
+                for (float positionX : {0.0f, 0.5f, 3.0f, 8.0f, 20.0f}) {
+                    for (float positionZ : {0.0f, -2.0f, 4.0f, 15.0f}) {
+                        const auto wave = OceanInteraction::OceanRadialWakeProfile(positionX, positionZ, ageSeconds, 1.2f, scale);
+                        const float kDerivativeStep = 0.002f;
+                        const float derivativeX = (OceanInteraction::OceanRadialWakeProfile(positionX + kDerivativeStep, positionZ, ageSeconds, 1.2f, scale).y
+                            - OceanInteraction::OceanRadialWakeProfile(positionX - kDerivativeStep, positionZ, ageSeconds, 1.2f, scale).y) / (2.0f * kDerivativeStep);
+                        const float derivativeZ = (OceanInteraction::OceanRadialWakeProfile(positionX, positionZ + kDerivativeStep, ageSeconds, 1.2f, scale).y
+                            - OceanInteraction::OceanRadialWakeProfile(positionX, positionZ - kDerivativeStep, ageSeconds, 1.2f, scale).y) / (2.0f * kDerivativeStep);
+                        const auto selected = OceanInteraction::EvaluateOceanWakeProfile(positionX, positionZ, ageSeconds, 1.2f, scale, 0.0f, 1.0f, 1.0f);
+                        if (!std::isfinite(wave.y) || std::abs(wave.x - derivativeX) > 0.002f
+                            || std::abs(wave.z - derivativeZ) > 0.002f || selected.y != wave.y) {
+                            throw std::runtime_error("Radial wake gradients and CPU/VS profile selection must agree");
+                        }
+                    }
+                }
+            }
+        }
+        for (float ageSeconds : {-0.1f, 0.0f, 2.5f, 3.0f}) {
+            if (OceanInteraction::OceanRadialWakeProfile(3.0f, 0.0f, ageSeconds, 1.0f, 2.0f).y != 0.0f) {
+                throw std::runtime_error("Radial wakes must start at zero and expire");
+            }
+        }
         // Check the shared analytic tangents, including envelope and phase warp.
         for (float timeSeconds : {0.0f, 17.0f, 300.0f}) {
             for (float positionX : {-140.0f, 0.0f, 35.0f, 900.0f}) {

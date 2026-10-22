@@ -6,8 +6,10 @@
 
 class FearWormHeadChargeState final : public FearWormBattleAction {
 public:
-    Vector4 HeadAttackColor(const Vector4& baseColor) const;
-    float ApplyHeadChargePulse(float basePulse) const;
+    void Reset();
+    bool ShouldAimHead(const FearWormEnemy&) const override { return isActive_; }
+    Vector4 HeadAttackColor(const Vector4& baseColor) const override;
+    float ApplyHeadChargePulse(float basePulse) const override;
     void Enter(FearWormBattleState& battle, FearWormEnemy& boss) override;
     void Update(FearWormBattleState& battle, FearWormEnemy& boss) override;
     void Exit(FearWormBattleState& battle, FearWormEnemy& boss) override;
@@ -30,7 +32,6 @@ private:
     static constexpr float kChargePulseFrequency = 24.0f;
     static constexpr float kChargePulseAmplitude = 0.08f;
 
-    friend class FearWormBattleState;
     friend bool RunFearWormStateTests();
     friend bool RunFearWormBattleActionTests();
     void UpdateHeadAimDirection(FearWormBattleState& battle, FearWormEnemy& boss);

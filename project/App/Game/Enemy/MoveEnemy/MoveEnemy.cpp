@@ -1,5 +1,6 @@
 // 移動パターンに沿って位置を変えながら、プレイヤーに向けて射撃する敵を扱う。
 #include "MoveEnemy.h"
+#include "App/Game/Common/GameTiming.h"
 
 #include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
@@ -15,6 +16,7 @@ void MoveEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 
     bulletModel_ = bulletModel;
     player_ = player;
+    fireElapsedSeconds_ = 0.0f;
 
     // デフォルトパラメータの設定 (三項演算子、auto、ラムダ式は使用禁止)
     SetMovePattern(MovePattern::LeftRight);
@@ -97,11 +99,10 @@ void MoveEnemy::Attack()
     float distance = Vector3Length(toEnemy);
 
     if (distance <= 120.0f) {
-        fireTimer_ = fireTimer_ + 1;
-
-        if (fireTimer_ >= fireInterval_) {
+        const int32_t shotCount = GameTiming::AdvanceInterval(fireElapsedSeconds_,
+            kFireIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 3);
+        for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
             FireBullet();
-            fireTimer_ = 0;
         }
     }
 }

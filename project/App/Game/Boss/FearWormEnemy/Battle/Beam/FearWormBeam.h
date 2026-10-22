@@ -36,7 +36,7 @@ private:
     static constexpr float kMinimumDrawLength = 0.001f;
     static constexpr float kPlayerCollisionRadius = 1.0f;
     static constexpr int32_t kDamage = 1;
-    static constexpr int32_t kHitEffectFrameInterval = 3;
+    static constexpr float kHitEffectIntervalSeconds = 0.05f;
 
     std::unique_ptr<Object3d> object_;
     Vector3 position_ {};
@@ -45,6 +45,6 @@ private:
     float width_ = 0.0f;
     float uvScrollOffset_ = 0.0f;
     float rotateAngleRadians_ = 0.0f;
-    int32_t hitEffectFrameCount_ = 0;
+    float hitEffectElapsedSeconds_ = 0.0f;
     bool isHittingPlayer_ = false;
 };

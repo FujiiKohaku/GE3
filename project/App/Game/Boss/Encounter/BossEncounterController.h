@@ -29,10 +29,8 @@ public:
         float railExtensionBuffer,
         float waterHeight = -30.0f);
 
-    // 出現距離を確認し、所有するボスを更新する。状態変化を記録し、生存中だけレールを延長する。
+    // 出現距離を確認し、生存・死亡を問わずボスを1回更新する。生存中だけレールを延長する。
     void Update(float railDistance);
-    // 死亡したボスの更新を続け、戦闘終了後も死亡演出を進める。
-    void UpdateDeathSequence();
 
     // 現在所有しているボスを返す。呼び出し元へ所有権は渡さない。
     BaseBoss* GetActiveBoss() const;
@@ -48,6 +46,7 @@ public:
     bool DidExtendRailThisFrame() const;
 
 private:
+    friend bool RunFearWormStateTests();
     void SpawnBoss();
 
     std::unique_ptr<BaseBoss> activeBoss_;

@@ -4,6 +4,46 @@
 #include <cmath>
 
 namespace OceanInteraction {
+inline float FollowWakeValue(float current, float target, float deltaTimeSeconds) {
+    if (deltaTimeSeconds <= 0.0f) {
+        return current;
+    }
+    constexpr float kFollowTimeSeconds = 0.15f;
+    return current + (target - current) * (1.0f - std::exp(-deltaTimeSeconds / kFollowTimeSeconds));
+}
+
+inline bool ShouldEmitSphereImpact(bool& isArmed, float previousOffset, float currentOffset, float radius) {
+    constexpr float kRearmMargin = 0.5f;
+    if (radius <= 0.0f) {
+        isArmed = false;
+        return false;
+    }
+    if (std::abs(previousOffset) > radius + kRearmMargin || std::abs(currentOffset) > radius + kRearmMargin) {
+        isArmed = true;
+    }
+    const bool hasCrossed = (previousOffset < 0.0f && currentOffset >= 0.0f)
+        || (previousOffset > 0.0f && currentOffset <= 0.0f);
+    if (isArmed && hasCrossed) {
+        isArmed = false;
+        return true;
+    }
+    return false;
+}
+
+// Includes a complete crossing between frames, while rejecting fully submerged motion.
+inline float FindSphereContactFraction(float previousOffset, float currentOffset, float radius) {
+    if (radius <= 0.0f) {
+        return -1.0f;
+    }
+    if (std::abs(currentOffset) <= radius) {
+        return 1.0f;
+    }
+    if (previousOffset * currentOffset < 0.0f) {
+        return std::clamp(previousOffset / (previousOffset - currentOffset), 0.0f, 1.0f);
+    }
+    return -1.0f;
+}
+
 #define OCEAN_WAKE_VECTOR Vector3
 #define OCEAN_WAKE_MAKE(x, y, z) Vector3{x, y, z}
 #define OCEAN_WAKE_EXP(x) std::exp(x)

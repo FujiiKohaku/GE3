@@ -1,6 +1,8 @@
 // 頭と胴体が連なるボス。水面からの登場、移動、各種攻撃、部位破壊と死亡演出を扱う。
 #include "FearWormEnemy.h"
 #include "Engine/3D/Object3d.h"
+#include "Engine/3D/OceanSurface.h"
+#include "Engine/3D/OceanInteraction.h"
 #include "Engine/Time/TimeManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Math/MathStruct.h"
@@ -16,6 +18,118 @@ FearWormEnemy::FearWormEnemy()
 }
 
 FearWormEnemy::BossState FearWormEnemy::GetBossState() const { return state_; }
+
+void FearWormEnemy::UpdateOceanInteraction(OceanSurface& oceanSurface, float deltaTimeSeconds)
+{
+    constexpr float kBossWakeIntervalSeconds = 0.18f;
+    constexpr float kSegmentWakeIntervalSeconds = 0.18f;
+    constexpr float kImpactRetentionSeconds = 0.8f;
+    constexpr float kStationaryWakeIntervalSeconds = 0.4f;
+    constexpr float kTeleportDistanceSquared = 1600.0f;
+    if (deltaTimeSeconds <= 0.0f || segments_.empty()) {
+        return;
+    }
+    oceanWakeCooldownSeconds_ = (std::max)(0.0f, oceanWakeCooldownSeconds_ - deltaTimeSeconds);
+    const size_t startIndex = nextOceanSegment_ % segments_.size();
+    for (size_t offsetIndex = 0; offsetIndex < segments_.size(); ++offsetIndex) {
+        const size_t segmentIndex = (startIndex + offsetIndex) % segments_.size();
+        Segment& segment = segments_[segmentIndex];
+        if (!segment.isAlive || state_ == BossState::Wait || state_ == BossState::Dead
+            || !oceanSurface.Contains(segment.position.x, segment.position.z)) {
+            segment.hasOceanPosition_ = false;
+            segment.isOceanImpactArmed_ = false;
+            segment.oceanVelocity_ = {};
+            segment.oceanWakeStrength_ = 0.0f;
+            segment.pendingOceanImpactStrength_ = 0.0f;
+            continue;
+        }
+        const float waterHeight = oceanSurface.GetNaturalHeightAt(segment.position.x, segment.position.z);
+        const float currentOffset = segment.position.y - waterHeight;
+        const Vector3 movement = segment.position - segment.previousOceanPosition_;
+        const float movementSquared = movement.x * movement.x + movement.y * movement.y + movement.z * movement.z;
+        const bool hasMovementHistory = segment.hasOceanPosition_ && movementSquared < kTeleportDistanceSquared;
+        if (hasMovementHistory) {
+            segment.oceanWakeElapsedSeconds_ += deltaTimeSeconds;
+            segment.pendingOceanImpactAgeSeconds_ += deltaTimeSeconds;
+            if (segment.pendingOceanImpactAgeSeconds_ > kImpactRetentionSeconds) {
+                segment.pendingOceanImpactStrength_ = 0.0f;
+            }
+            const Vector3 velocity = movement * (1.0f / deltaTimeSeconds);
+            segment.oceanVelocity_.x = OceanInteraction::FollowWakeValue(segment.oceanVelocity_.x, velocity.x, deltaTimeSeconds);
+            segment.oceanVelocity_.y = OceanInteraction::FollowWakeValue(segment.oceanVelocity_.y, velocity.y, deltaTimeSeconds);
+            segment.oceanVelocity_.z = OceanInteraction::FollowWakeValue(segment.oceanVelocity_.z, velocity.z, deltaTimeSeconds);
+            const float horizontalSpeed = std::sqrt(segment.oceanVelocity_.x * segment.oceanVelocity_.x
+                + segment.oceanVelocity_.z * segment.oceanVelocity_.z);
+            const float verticalSpeed = std::abs(segment.oceanVelocity_.y);
+            segment.oceanWakeDirection_ = OceanInteraction::FollowWakeDirection(
+                segment.oceanWakeDirection_, segment.oceanVelocity_, deltaTimeSeconds);
+            const float contactFraction = OceanInteraction::FindSphereContactFraction(
+                segment.previousOceanOffset_, currentOffset, segment.radius);
+            const bool hasImpact = OceanInteraction::ShouldEmitSphereImpact(
+                segment.isOceanImpactArmed_, segment.previousOceanOffset_, currentOffset, segment.radius);
+            Vector3 source = segment.position;
+            float contactOffset = currentOffset;
+            if (contactFraction >= 0.0f && contactFraction < 1.0f) {
+                source = segment.previousOceanPosition_ + movement * contactFraction;
+                contactOffset = 0.0f;
+            }
+            const float contactRadius = std::sqrt((std::max)(0.0f,
+                segment.radius * segment.radius - contactOffset * contactOffset));
+            const float contactAmount = contactRadius / (std::max)(segment.radius, 0.001f);
+            const float targetStrength = contactAmount * std::clamp(horizontalSpeed / 20.0f, 0.0f, 1.0f);
+            segment.oceanWakeStrength_ = OceanInteraction::FollowWakeValue(
+                segment.oceanWakeStrength_, targetStrength, deltaTimeSeconds);
+            const float stableScale = std::clamp(segment.radius * 0.7f, 0.8f, 3.5f);
+            if (hasImpact && verticalSpeed > 1.0f) {
+                // Keep a crossing until the shared emission budget can accept it.
+                const float crossingFraction = std::clamp(segment.previousOceanOffset_
+                    / (segment.previousOceanOffset_ - currentOffset), 0.0f, 1.0f);
+                segment.pendingOceanImpactPosition_ = segment.previousOceanPosition_ + movement * crossingFraction;
+                segment.pendingOceanImpactStrength_ = std::clamp(verticalSpeed / 15.0f, 0.0f, 1.5f);
+                segment.pendingOceanImpactScale_ = stableScale;
+                segment.pendingOceanImpactAgeSeconds_ = deltaTimeSeconds * (1.0f - crossingFraction);
+            }
+            const bool hasPendingImpact = segment.pendingOceanImpactStrength_ >= 0.005f;
+            const Vector3 wakeMovement = source - segment.lastOceanWakePosition_;
+            const float wakeDistanceSquared = wakeMovement.x * wakeMovement.x + wakeMovement.z * wakeMovement.z;
+            if ((contactFraction >= 0.0f || hasPendingImpact) && oceanWakeCooldownSeconds_ <= 0.0f
+                && segment.oceanWakeElapsedSeconds_ >= kSegmentWakeIntervalSeconds
+                && (hasPendingImpact || hasImpact || wakeDistanceSquared >= 9.0f
+                    || segment.oceanWakeElapsedSeconds_ >= kStationaryWakeIntervalSeconds)) {
+                OceanSurface::WakeType wakeType = OceanSurface::WakeType::Directional;
+                float strength = segment.oceanWakeStrength_;
+                float scale = stableScale;
+                float ageSeconds = 0.0f;
+                if (hasPendingImpact) {
+                    wakeType = OceanSurface::WakeType::Radial;
+                    source = segment.pendingOceanImpactPosition_;
+                    strength = segment.pendingOceanImpactStrength_;
+                    scale = segment.pendingOceanImpactScale_;
+                    ageSeconds = segment.pendingOceanImpactAgeSeconds_;
+                }
+                if (oceanSurface.AddWake(source, segment.oceanWakeDirection_, strength, scale,
+                    wakeType, OceanSurface::WakeSource::Boss, ageSeconds)) {
+                    segment.lastOceanWakePosition_ = source;
+                    segment.oceanWakeElapsedSeconds_ = 0.0f;
+                    segment.pendingOceanImpactStrength_ = 0.0f;
+                    oceanWakeCooldownSeconds_ = kBossWakeIntervalSeconds;
+                    nextOceanSegment_ = (segmentIndex + 1) % segments_.size();
+                }
+            }
+        } else {
+            segment.oceanWakeElapsedSeconds_ = kSegmentWakeIntervalSeconds;
+            segment.pendingOceanImpactStrength_ = 0.0f;
+            segment.oceanVelocity_ = {};
+            segment.oceanWakeStrength_ = 0.0f;
+            segment.isOceanImpactArmed_ = false;
+            segment.lastOceanWakePosition_ = segment.position;
+            segment.oceanWakeDirection_ = {0.0f, 0.0f, 1.0f};
+        }
+        segment.previousOceanPosition_ = segment.position;
+        segment.previousOceanOffset_ = currentOffset;
+        segment.hasOceanPosition_ = true;
+    }
+}
 
 // 現在のボス状態に対応する処理を呼び、登場・戦闘・死亡の流れを進める。
 void FearWormEnemy::UpdateState()
@@ -51,6 +165,10 @@ void FearWormEnemy::ChangeState(BossState state)
     if (currentState_ != nullptr) {
         currentState_->Exit(*this);
     }
+    // 登場の終点と戦闘開始の軌道を揃える。兄弟State間の準備は本体が仲介する。
+    if (state_ == BossState::Entry && state == BossState::Battle) {
+        battleState_.SetStartOrbitAngleRadians(entryState_.GetExitOrbitAngleRadians());
+    }
     state_ = state;
     currentState_ = nextState;
     currentState_->Enter(*this);
@@ -80,11 +198,18 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     ChangeState(BossState::Wait);
     entryState_.Reset();
     battleState_.Reset(*this);
+    oceanWakeCooldownSeconds_ = 0.0f;
+    nextOceanSegment_ = 0;
     // 全セグメントを基準位置から後方へ等間隔に並べる。
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
         float offset = segmentSpacing_ * static_cast<float>(index);
         segments_[index].position = position;
         segments_[index].position.z -= offset;
+        segments_[index].hasOceanPosition_ = false;
+        segments_[index].isOceanImpactArmed_ = false;
+        segments_[index].oceanVelocity_ = {};
+        segments_[index].oceanWakeStrength_ = 0.0f;
+        segments_[index].pendingOceanImpactStrength_ = 0.0f;
     }
 }
 
@@ -132,17 +257,12 @@ void FearWormEnemy::OnDeath()
 }
 
 // 移動の種類に対応する軌道計算を選ぶ。
-Vector3 FearWormEnemy::CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context)
+Vector3 FearWormEnemy::CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context,
+    float actionElapsedSeconds, float spiralAngleRadians)
 {
-    return FearWormBattleState::CalculateFearWormTarget(type, context);
+    return FearWormBattleState::CalculateFearWormTarget(type, context, actionElapsedSeconds, spiralAngleRadians);
 }
 
-
-// 現在の移動状態に応じた目標位置を取得する。
-Vector3 FearWormEnemy::MovementTargetPosition(const Vector3& playerPosition) const
-{
-    return battleState_.MovementTargetPosition(*this, playerPosition);
-}
 
 
 // 頭から後ろへ順に追従位置を計算し、胴体がつながってうねる形を作る。

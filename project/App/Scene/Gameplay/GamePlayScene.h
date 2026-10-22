@@ -555,4 +555,7 @@ private:
     bool hasCameraPoint_ = false;
     LevelData::ObjectData cameraPointObject_ {};
     float cameraPointLerpTime_ = 0.0f;
+    bool hasCameraPointStart_ = false;
+    Vector3 cameraPointStartPosition_ {};
+    Vector3 cameraPointStartTarget_ {};
 };

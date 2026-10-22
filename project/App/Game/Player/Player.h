@@ -205,7 +205,7 @@ private:
         bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad = false);
     void ResetSteering() { steeringInput_ = {}; }
     // 左右のロール開始と進行を処理し、一回転後に通常姿勢へ戻す。
-    void UpdateRoll(EulerTransform& transform, bool isLeftTriggered, bool isRightTriggered, float deltaTimeSeconds = 1.0f / 60.0f);
+    void UpdateRoll(EulerTransform& transform, bool isLeftTriggered, bool isRightTriggered, float deltaTimeSeconds);
     void StopRoll() { isRolling_ = false; }
     // 機体の大きさとカメラ投影を考慮し、画面からはみ出ないレール上のずれへ補正する。
     Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
@@ -219,7 +219,7 @@ private:
     // HP・無敵時間・死亡演出。
     bool ApplyHealthDamage(int damage);
     // 被弾後の無敵時間を減らし、時間切れで通常の被弾状態へ戻す。
-    void UpdateInvincibility(float deltaTimeSeconds = 1.0f / 60.0f);
+    void UpdateInvincibility(float deltaTimeSeconds);
     // 死亡後の落下と回転を進め、爆発へ移れる時点を記録する。
     void UpdateDeathAnimation(EulerTransform& transform, float deltaTimeSeconds);
     bool IsAlive() const { return deathState_ == DeathState::Alive; }

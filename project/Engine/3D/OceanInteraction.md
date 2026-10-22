@@ -1,5 +1,40 @@
 # Low-altitude water interaction
 
+## FearWorm surface contact
+
+- Player and boss emit through OceanSurface::AddWake. The existing 48 records and 32-byte
+  CPU/HLSL layout are retained; directionSize.w selects directional (0) or radial (1) waves.
+- Expired records are compacted each update. Boss records are capped at 16, preserving at
+  least 32 player slots. Without boss records the player can still use all 48 slots.
+  Full boss history rejects new records until an old record expires; player emission only
+  replaces player records. Existing boss crests are never removed early to make room.
+- After boss movement, each living segment samples natural ocean height, excluding wakes
+  to avoid feedback. A sphere/water intersection sets wake strength; width stays fixed per
+  segment to avoid changing wave shape during motion. A linear
+  swept signed-height check also detects complete crossings between frames.
+- Horizontal movement emits directional wakes; vertical center crossings queue radial
+  impacts. Analytic radial slopes are shared between CPU sampling and VS normals.
+- Velocity and directional strength follow with a 0.15-second time constant. Impact rings
+  only rearm after the segment clears its radius plus 0.5 units, preventing surface jitter
+  from emitting repeated rings. Queued impacts retain their original birth time and fade in
+  over 0.08 seconds when uploaded; radial directionSize.x stores this reveal delay.
+- A segment emits at most once per 0.18 seconds, and the boss emits at most once per 0.18
+  seconds. Round-robin selection prevents the head monopolizing emission. Pending impacts
+  expire after 0.8 seconds. No new particles, draw passes or textures are allocated.
+- Pause holds contact history; death, destroyed parts, waiting, out-of-ocean positions and
+  movements of 40 units or more reset contact history. Existing waves expire in 2.5 seconds.
+- Contact cost is up to ten natural height queries per frame; each query evaluates the
+  five natural waves seven times. Fixed history scans add O(48) CPU work. VS cost remains
+  proportional to active history count, with radial evaluation selected per record.
+- Validate with OceanInteractionTests (swept contact, impact rearming, frame-rate-independent
+  smoothing, queued-ring reveal, radial slopes and existing player-wave checks), plus
+  OceanWakeHistoryTests for shared-history retention. The history test can link OceanSurface.cpp
+  with OCEAN_HISTORY_STANDALONE defined to replace unused rendering dependencies with throwing
+  stubs. Compile Ocean VS/PS and build the application. In-game
+  appearance and timing still require verification, especially away from the player-focused mesh.
+
+## Player interaction and shared rendering
+
 - OceanSurface records up to 48 world-space wake stamps. They expand and fade over 2.5 seconds;
   old stamps stop being evaluated after the last wake expires. Stamps do not follow the aircraft.
 - Wake vertex displacement and slope normals are added in Ocean.VS.hlsl; rings and V-shaped foam are added to Ocean.PS.hlsl.

@@ -6,18 +6,19 @@
 
 class FearWormDriftBurstState final : public FearWormBattleAction {
 public:
+    void Reset();
     void Enter(FearWormBattleState& battle, FearWormEnemy& boss) override;
     void Update(FearWormBattleState& battle, FearWormEnemy& boss) override;
     void Exit(FearWormBattleState& battle, FearWormEnemy& boss) override;
 
 private:
+    float elapsedSeconds_ = 0.0f;
     static constexpr int32_t kNormalBurstShotCount = 3;
     static constexpr float kNormalBurstShotIntervalSeconds = 0.12f;
 
-    friend class FearWormBattleState;
     friend bool RunFearWormStateTests();
     friend bool RunFearWormBattleActionTests();
-    int32_t fireTimer_ = 0;
+    float fireElapsedSeconds_ = 0.0f;
     int32_t segmentIndex_ = 0;
     int32_t shotsRemaining_ = 0;
     float shotTimerSeconds_ = 0.0f;

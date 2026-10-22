@@ -9,6 +9,7 @@
 class Model;
 class Object3d;
 class Player;
+class OceanSurface;
 
 class FearWormEnemy : public BaseBoss {
 public:
@@ -31,6 +32,7 @@ public:
 
     // ボスの状態を進め、連結部位と描画オブジェクトを現在の位置へ追従させる。
     void Update() override;
+    void UpdateOceanInteraction(OceanSurface& oceanSurface, float deltaTimeSeconds);
 
     // 生存中の各部位とボスが発射した弾を描画する。
     void Draw() override;
@@ -121,6 +123,19 @@ private:
     using FearWormMovementContext = FearWormBattleState::FearWormMovementContext;
 
     struct Segment {
+        Vector3 previousOceanPosition_{};
+        Vector3 lastOceanWakePosition_{};
+        Vector3 oceanWakeDirection_{0.0f, 0.0f, 1.0f};
+        Vector3 oceanVelocity_{};
+        float oceanWakeStrength_ = 0.0f;
+        Vector3 pendingOceanImpactPosition_{};
+        float pendingOceanImpactStrength_ = 0.0f;
+        float pendingOceanImpactScale_ = 1.0f;
+        float pendingOceanImpactAgeSeconds_ = 0.0f;
+        float previousOceanOffset_ = 0.0f;
+        float oceanWakeElapsedSeconds_ = 0.0f;
+        bool hasOceanPosition_ = false;
+        bool isOceanImpactArmed_ = false;
         std::unique_ptr<Object3d> object;
         Vector3 position = { 0.0f, 0.0f, 0.0f };
         Vector3 scale = { 1.0f, 1.0f, 1.0f };
@@ -139,9 +154,8 @@ private:
     void OnDeath() override;
 
     // 移動の種類に対応する軌道計算を選ぶ。
-    static Vector3 CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context);
-    // 現在の移動状態に応じた目標位置を取得する。
-    Vector3 MovementTargetPosition(const Vector3& playerPosition) const;
+    static Vector3 CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context,
+        float actionElapsedSeconds = 0.0f, float spiralAngleRadians = 0.0f);
     // 頭から後ろへ順に追従位置を計算し、胴体がつながってうねる形を作る。
     void UpdateSegments();
     // 状態や残りHPに応じた移動速度の倍率を返す。
@@ -183,6 +197,8 @@ private:
     Player* player_ = nullptr;
 
     std::vector<Segment> segments_;
+    float oceanWakeCooldownSeconds_ = 0.0f;
+    size_t nextOceanSegment_ = 0;
 
     float moveTime_ = 0.0f;
     float segmentSpacing_ = 5.0f;

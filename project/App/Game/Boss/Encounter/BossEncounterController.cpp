@@ -47,7 +47,7 @@ void BossEncounterController::Initialize(
     isSpawned_ = false;
 }
 
-// 出現距離を確認し、所有するボスを更新する。状態変化を記録し、生存中だけレールを延長する。
+// 生存・死亡を問わずボスを1回更新し、状態変化とレール延長を管理する。
 void BossEncounterController::Update(float railDistance)
 {
     didSpawnThisFrame_ = false;
@@ -83,14 +83,6 @@ void BossEncounterController::Update(float railDistance)
 
     if (rail_ != nullptr) {
         didExtendRailThisFrame_ = rail_->UpdateAutoExtension(railDistance);
-    }
-}
-
-// 死亡したボスの更新を続け、戦闘終了後も死亡演出を進める。
-void BossEncounterController::UpdateDeathSequence()
-{
-    if (activeBoss_ != nullptr && activeBoss_->IsDead()) {
-        activeBoss_->Update();
     }
 }
 

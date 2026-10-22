@@ -53,7 +53,19 @@ inline bool RunFearWormEntryTests()
         Player player;
         boss.player_ = &player;
         boss.segments_.resize(kSegmentCount);
+        // 登場を経由しない戦闘開始では、既存の開始角度を保持する。
+        boss.battleState_.orbitAngle_ = 0.4f;
+        boss.ChangeState(FearWormEnemy::BossState::Battle);
+        if (boss.battleState_.orbitAngle_ != 0.4f) { return false; }
+        boss.ChangeState(FearWormEnemy::BossState::Wait);
+        boss.battleState_.movementPattern_ = FearWormBattleState::MovementPattern::Line;
+        boss.battleState_.missileAttackTimer_ = 9.0f;
         boss.ChangeState(FearWormEnemy::BossState::Entry);
+        // 登場開始は兄弟Stateの角度・パターン・待機時間を準備しない。
+        if (boss.battleState_.orbitAngle_ != 0.4f
+            || boss.battleState_.movementPattern_ != FearWormBattleState::MovementPattern::Line
+            || boss.battleState_.missileAttackTimer_ != 9.0f
+            || boss.battleState_.currentAction_ != nullptr) { return false; }
         // 同じJumOutで、予兆中と飛び出し中の両方を更新する。
         for (float elapsedSeconds : { 1.0f, 3.0f, 4.5f }) {
             EntryPhase phase = EntryPhase::JumOut;
@@ -68,7 +80,11 @@ inline bool RunFearWormEntryTests()
             boss.entryState_.currentPhase_->Update(boss.entryState_, boss);
             if (boss.entryState_.elapsedSeconds_ != elapsedSeconds) { return false; }
             const Vector3 surfacePosition = boss.entryState_.EntrySurfacePosition(player.GetTranslate());
-            const Vector3 targetPosition = boss.MovementTargetPosition(player.GetTranslate());
+            const FearWormMovementContext movementContext { player.GetTranslate(), 2.35f, boss.parallelForwardOffset_ };
+            const Vector3 targetPosition = FearWormMovement::CalculateOrbitTarget(movementContext);
+            if (boss.battleState_.orbitAngle_ != 0.4f
+                || boss.battleState_.movementPattern_ != FearWormBattleState::MovementPattern::Line
+                || boss.battleState_.missileAttackTimer_ != 9.0f) { return false; }
             for (size_t index = 0; index < kSegmentCount; ++index) {
                 const Vector3 expectedPosition = FearWormEntryState::CalculateEntryPosition(
                     surfacePosition, targetPosition, elapsedSeconds, index, boss.segmentSpacing_);
@@ -92,7 +108,8 @@ inline bool RunFearWormEntryTests()
 
             const float entryDurationSeconds = FearWormEntryState::CalculateEntryDurationSeconds(segmentCount);
             const Vector3 surfacePosition = boss.entryState_.EntrySurfacePosition(player.GetTranslate());
-            const Vector3 targetPosition = boss.MovementTargetPosition(player.GetTranslate());
+            const FearWormMovementContext movementContext { player.GetTranslate(), 2.35f, boss.parallelForwardOffset_ };
+            const Vector3 targetPosition = FearWormMovement::CalculateOrbitTarget(movementContext);
             for (float elapsedSeconds = 0.0f; elapsedSeconds < entryDurationSeconds; elapsedSeconds += deltaSeconds) {
                 boss.entryState_.elapsedSeconds_ = elapsedSeconds;
                 boss.UpdateState();
@@ -116,6 +133,9 @@ inline bool RunFearWormEntryTests()
             boss.UpdateState();
             if (boss.GetBossState() != FearWormEnemy::BossState::Battle
                 || boss.entryState_.currentPhase_ != nullptr || !boss.HasBreachedSurface()) { return false; }
+            if (boss.battleState_.orbitAngle_ != 2.35f
+                || boss.battleState_.currentAction_ != &boss.battleState_.orbitShotState_
+                || Vector3LengthSquared(boss.GetPosition() - targetPosition) > 0.000001f) { return false; }
 
             // 再登場で予兆からやり直し、大きな時間飛びでも同じフレームで戦闘へ移る。
             boss.ChangeState(FearWormEnemy::BossState::Entry);
@@ -124,7 +144,7 @@ inline bool RunFearWormEntryTests()
             boss.entryState_.elapsedSeconds_ = entryDurationSeconds + 1.0f;
             boss.UpdateState();
             if (boss.GetBossState() != FearWormEnemy::BossState::Battle
-                || !boss.HasBreachedSurface()) { return false; }
+                || !boss.HasBreachedSurface() || boss.battleState_.orbitAngle_ != 2.35f) { return false; }
 
             // 登場の中断で内部ステートを終了し、水位設定を保ったまま配置し直す。
             boss.ChangeState(FearWormEnemy::BossState::Entry);

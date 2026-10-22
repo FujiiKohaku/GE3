@@ -47,8 +47,9 @@ OceanVertexOutput main(VertexInput input)
     for (uint i = 0; i < (uint)gOcean.wakeMeta.x; ++i) {
         OceanWakePoint stamp = gOcean.wakes[i];
         float2 delta = worldPosition.xz - stamp.positionTimeStrength.xy;
-        wake += OceanWakeProfile(delta.x, delta.y, time - stamp.positionTimeStrength.z,
-            stamp.positionTimeStrength.w, stamp.directionSize.z, stamp.directionSize.x, stamp.directionSize.y);
+        wake += EvaluateOceanWakeProfile(delta.x, delta.y, time - stamp.positionTimeStrength.z,
+            stamp.positionTimeStrength.w, stamp.directionSize.z, stamp.directionSize.x, stamp.directionSize.y,
+            stamp.directionSize.w);
     }
     wake = LimitOceanWake(wake);
     worldPosition.y += wake.y;

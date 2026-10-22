@@ -6,22 +6,32 @@
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/3D/Object3d.h"
 #include <cmath>
+#include "../State/FearWormTiming.h"
 #include <algorithm>
+
+void FearWormDriftBurstState::Reset()
+{
+    isFinished_ = false;
+    elapsedSeconds_ = 0.0f;
+    fireElapsedSeconds_ = 0.0f;
+    segmentIndex_ = 0;
+    shotsRemaining_ = 0;
+    shotTimerSeconds_ = 0.0f;
+    direction_ = { 0.0f, 0.0f, -1.0f };
+}
 
 void FearWormDriftBurstState::Enter(FearWormBattleState& battle, FearWormEnemy&)
 {
-    isFinished_ = false;
-    fireTimer_ = 0;
-    shotsRemaining_ = 0;
-    shotTimerSeconds_ = 0.0f;
+    Reset();
     battle.movementPattern_ = FearWormBattleState::MovementPattern::Drift;
 }
 
 void FearWormDriftBurstState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
     const float actionDeltaSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.MovementSpeedRate();
-    battle.movementPatternTimer_ += actionDeltaSeconds;
-    battle.UpdateBattleMovement(boss, boss.player_->GetTranslate(), boss.MovementSpeedRate());
+    elapsedSeconds_ += actionDeltaSeconds;
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
+    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateDriftTarget(context), boss.MovementSpeedRate());
     if (!battle.CanFire(boss)) {
         shotsRemaining_ = 0;
         shotTimerSeconds_ = 0.0f;
@@ -30,31 +40,42 @@ void FearWormDriftBurstState::Update(FearWormBattleState& battle, FearWormEnemy&
             || !boss.segments_[segmentIndex_].isAlive) {
             shotsRemaining_ = 0;
         } else {
-            shotTimerSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
-            if (shotTimerSeconds_ >= kNormalBurstShotIntervalSeconds) {
-                shotTimerSeconds_ = 0.0f;
+            const int32_t shotCount = FearWormTiming::AdvanceInterval(shotTimerSeconds_,
+                kNormalBurstShotIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), shotsRemaining_);
+            for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
                 battle.FireDirectionalBullet(boss, boss.segments_[segmentIndex_].position, direction_);
                 shotsRemaining_--;
             }
+            if (shotsRemaining_ == 0) {
+                fireElapsedSeconds_ = shotTimerSeconds_;
+                shotTimerSeconds_ = 0.0f;
+            }
         }
-    } else if (battle.movementPatternTimer_ < battle.movementPatternDuration_) {
-        const int32_t segmentIndex = battle.SelectFiringSegment(boss, fireTimer_);
+    } else if (elapsedSeconds_ < battle.movementPatternDuration_) {
+        const int32_t shotCount = FearWormTiming::AdvanceInterval(fireElapsedSeconds_,
+            battle.kFireIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 1);
+        if (shotCount == 0) {
+            return;
+        }
+        const int32_t segmentIndex = battle.SelectFiringSegment(boss);
         if (segmentIndex >= 0) {
             segmentIndex_ = segmentIndex;
             const Vector3 position = boss.segments_[segmentIndex_].position;
             direction_ = NormalizeSafe(boss.player_->GetTranslate() - position);
             shotsRemaining_ = kNormalBurstShotCount - 1;
-            shotTimerSeconds_ = 0.0f;
+            shotTimerSeconds_ = fireElapsedSeconds_;
+            fireElapsedSeconds_ = 0.0f;
             battle.FireDirectionalBullet(boss, position, direction_);
         }
     }
     // 時間切れでも開始済みの3連射を撃ち切ってから次へ進む。
-    isFinished_ = battle.movementPatternTimer_ >= battle.movementPatternDuration_ && shotsRemaining_ == 0;
+    isFinished_ = elapsedSeconds_ >= battle.movementPatternDuration_ && shotsRemaining_ == 0;
 }
 
 void FearWormDriftBurstState::Exit(FearWormBattleState&, FearWormEnemy&)
 {
+    elapsedSeconds_ = 0.0f;
     shotsRemaining_ = 0;
     shotTimerSeconds_ = 0.0f;
-    fireTimer_ = 0;
+    fireElapsedSeconds_ = 0.0f;
 }

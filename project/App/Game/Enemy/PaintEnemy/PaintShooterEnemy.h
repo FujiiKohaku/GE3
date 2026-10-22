@@ -22,6 +22,7 @@ public:
     void Update() override;
 
 private:
+    friend bool RunAppTimingTests();
     // 射程や発射間隔を確認し、プレイヤーへペイント弾を発射する。
     void Attack() override;
     // プレイヤーを狙う方向を求め、ペイント弾を敵弾管理へ渡す。
@@ -31,7 +32,7 @@ private:
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
-    int32_t fireTimer_ = 0;
-    int32_t fireInterval_ = 90; // 発射間隔
+    float fireElapsedSeconds_ = 0.0f;
+    static constexpr float kFireIntervalSeconds = 1.5f;
     float bulletSpeed_ = 0.85f;
 };

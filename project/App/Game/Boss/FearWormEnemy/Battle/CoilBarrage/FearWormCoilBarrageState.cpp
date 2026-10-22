@@ -8,42 +8,54 @@
 #include <cmath>
 #include <algorithm>
 
-void FearWormCoilBarrageState::Enter(FearWormBattleState& battle, FearWormEnemy&)
+void FearWormCoilBarrageState::Reset()
 {
     isFinished_ = false;
+    elapsedSeconds_ = 0.0f;
     nextFireSeconds_ = 0.0f;
+}
+
+void FearWormCoilBarrageState::Enter(FearWormBattleState& battle, FearWormEnemy&)
+{
+    Reset();
     battle.movementPattern_ = FearWormBattleState::MovementPattern::Coil;
 }
 
 void FearWormCoilBarrageState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    battle.movementPatternTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-    battle.UpdateBattleMovement(boss, boss.player_->GetTranslate(), boss.MovementSpeedRate());
+    elapsedSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
+    battle.UpdateBattleMovement(boss, CalculateTarget(context, elapsedSeconds_), boss.MovementSpeedRate());
     FireBarrage(battle, boss);
-    isFinished_ = battle.movementPatternTimer_ >= battle.kCoilFormationDurationSeconds
-        + battle.kCoilAttackDurationSeconds + battle.kCoilReleaseDurationSeconds;
+    isFinished_ = elapsedSeconds_ >= kCoilFormationDurationSeconds
+        + kCoilAttackDurationSeconds + kCoilReleaseDurationSeconds;
 }
 
 void FearWormCoilBarrageState::Exit(FearWormBattleState&, FearWormEnemy&)
 {
+    elapsedSeconds_ = 0.0f;
     nextFireSeconds_ = 0.0f;
 }
 
 void FearWormCoilBarrageState::FireBarrage(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    if (!battle.CanFire(boss) || !battle.IsCoilFiring()) {
+    if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
+        return;
+    }
+    if (!battle.CanFire(boss) || !IsFiring(elapsedSeconds_)) {
         nextFireSeconds_ = 0.0f;
         return;
     }
 
     // 攻撃開始からの経過時間で、次の発射時刻を判定する。
-    const float attackElapsedSeconds = battle.movementPatternTimer_ - battle.kCoilFormationDurationSeconds;
+    const float attackElapsedSeconds = elapsedSeconds_ - kCoilFormationDurationSeconds;
     if (attackElapsedSeconds < nextFireSeconds_) {
         return;
     }
 
     // 処理落ちからの復帰時も、同じフレームに大量の弾を生成しない。
-    nextFireSeconds_ = attackElapsedSeconds + kCoilBarrageFireIntervalSeconds;
+    const float elapsedIntervals = std::floor((attackElapsedSeconds - nextFireSeconds_) / kCoilBarrageFireIntervalSeconds);
+    nextFireSeconds_ += (elapsedIntervals + 1.0f) * kCoilBarrageFireIntervalSeconds;
 
     // 360度を弾数で均等に分割
     float angleStep = (2.0f * battle.kPi) / static_cast<float>(kCoilBarrageBulletCount);
@@ -60,7 +72,7 @@ void FearWormCoilBarrageState::FireBarrage(FearWormBattleState& battle, FearWorm
 
         const Vector3 position = boss.segments_[segmentIndex].position;
         const float angleOffset = static_cast<float>(segmentIndex) * kCoilBarrageSegmentAngleRadians
-            + battle.movementPatternTimer_ * kCoilBarrageAngularSpeedRadiansPerSecond;
+            + elapsedSeconds_ * kCoilBarrageAngularSpeedRadiansPerSecond;
 
         for (int32_t bulletIndex = 0; bulletIndex < kCoilBarrageBulletCount; bulletIndex++) {
 
@@ -77,4 +89,60 @@ void FearWormCoilBarrageState::FireBarrage(FearWormBattleState& battle, FearWorm
         }
         EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
     }
+}
+
+Vector3 FearWormCoilBarrageState::CalculateTarget(const FearWormMovementContext& context, float elapsedSeconds)
+{
+    // 解除中は次の移動先へ頭を向け、胴体も通常の追従へ戻す。
+    if (elapsedSeconds >= kCoilFormationDurationSeconds + kCoilAttackDurationSeconds) {
+        return FearWormMovement::CalculateDriftTarget(context);
+    }
+    Vector3 result = context.playerPosition;
+    float coilAngle = context.orbitAngle * kCoilAngleRate;
+    result.x += std::cos(coilAngle) * kCoilBaseRadius;
+    result.y += kCoilHeight;
+    result.z += context.forwardOffset + std::sin(coilAngle) * kCoilBaseRadius;
+    return result;
+}
+
+float FearWormCoilBarrageState::CalculateFormationBlend(float elapsedSeconds)
+{
+    float blend = std::clamp(elapsedSeconds / kCoilFormationDurationSeconds, 0.0f, 1.0f);
+    const float releaseStartSeconds = kCoilFormationDurationSeconds + kCoilAttackDurationSeconds;
+    if (elapsedSeconds >= releaseStartSeconds) {
+        blend = 1.0f - std::clamp(
+            (elapsedSeconds - releaseStartSeconds) / kCoilReleaseDurationSeconds, 0.0f, 1.0f);
+    }
+    return blend * blend * (3.0f - 2.0f * blend);
+}
+
+bool FearWormCoilBarrageState::IsFiring(float elapsedSeconds)
+{
+    return elapsedSeconds >= kCoilFormationDurationSeconds
+        && elapsedSeconds < kCoilFormationDurationSeconds + kCoilAttackDurationSeconds;
+}
+
+Vector3 FearWormCoilBarrageState::CalculateSegmentPosition(const Vector3& headPosition, float orbitAngle,
+    int32_t segmentOrder, float segmentSpacing)
+{
+    const float headAngle = orbitAngle * kCoilAngleRate;
+    const float segmentAngle = headAngle - static_cast<float>(segmentOrder) * kCoilSegmentAngleRadians;
+    Vector3 position = headPosition;
+    position.x += (std::cos(segmentAngle) - std::cos(headAngle)) * kCoilBaseRadius;
+    position.y -= static_cast<float>(segmentOrder) * segmentSpacing * kCoilSegmentHeightRate;
+    position.z += (std::sin(segmentAngle) - std::sin(headAngle)) * kCoilBaseRadius;
+    return position;
+}
+
+Vector3 FearWormCoilBarrageState::CalculateFormationPosition(const Vector3& headPosition, float orbitAngle,
+    int32_t segmentOrder, float segmentSpacing, const Vector3& followPosition, float elapsedSeconds)
+{
+    const Vector3 coilPosition = CalculateSegmentPosition(headPosition, orbitAngle, segmentOrder, segmentSpacing);
+    return Lerp(followPosition, coilPosition, CalculateFormationBlend(elapsedSeconds));
+}
+
+Vector3 FearWormCoilBarrageState::CalculateFormationPosition(const Vector3& headPosition, float orbitAngle,
+    int32_t segmentOrder, float segmentSpacing, const Vector3& followPosition) const
+{
+    return CalculateFormationPosition(headPosition, orbitAngle, segmentOrder, segmentSpacing, followPosition, elapsedSeconds_);
 }

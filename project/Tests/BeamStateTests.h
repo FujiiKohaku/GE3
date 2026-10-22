@@ -2,6 +2,7 @@
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Player/Player.h"
 #include <cmath>
+#include "FearWormTimingTests.h"
 
 inline bool RunBeamStateTests()
 {
@@ -47,6 +48,8 @@ inline bool RunBeamStateTests()
         return false;
     }
 
+    FearWormTestClock testClock;
+    testClock.SetDelta(1.0f / 60.0f);
     FearWormEnemy boss;
     Player player;
     boss.player_ = &player;
@@ -110,9 +113,10 @@ inline bool RunBeamStateTests()
     // ビームの各段階でX・Y固定とZ追従を確認し、待機・終了後は通常移動へ戻す。
     boss.battleState_.movementPattern_ = FearWormBattleState::MovementPattern::Drift;
     const Vector3 startPosition = { 20.0f, 30.0f, 10.0f };
-    const Vector3 movementTarget = boss.battleState_.BattleTarget(boss, player.GetTranslate());
+    const Vector3 movementTarget = FearWormMovement::CalculateDriftTarget(boss.battleState_.CreateMovementContext(boss, player.GetTranslate()));
     const Vector3 expectedMovement = Lerp(startPosition, movementTarget,
-        boss.moveSpeed_ * boss.MovementSpeedRate());
+        FearWormTiming::CalculateFollowBlend(boss.moveSpeed_ * boss.MovementSpeedRate(),
+            TimeManager::GetInstance()->GetDeltaTime()));
     if (std::abs(expectedMovement.x - startPosition.x) < 0.0001f
         || std::abs(expectedMovement.y - startPosition.y) < 0.0001f
         || std::abs(expectedMovement.z - startPosition.z) < 0.0001f) {
@@ -143,7 +147,7 @@ inline bool RunBeamStateTests()
     // 共通移動は、ビーム側に照準状態が残っていても制限されない。
     beamState.phase_ = FearWormBeamState::Phase::Charge;
     boss.segments_[0].position = startPosition;
-    boss.battleState_.UpdateBattleMovement(boss, player.GetTranslate(), boss.MovementSpeedRate());
+    boss.battleState_.UpdateBattleMovement(boss, movementTarget, boss.MovementSpeedRate());
     if (Vector3LengthSquared(boss.segments_[0].position - expectedMovement) > 0.000001f) {
         return false;
     }

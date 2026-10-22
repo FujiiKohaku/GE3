@@ -1,4 +1,6 @@
 // プレイヤーの照準・操作・移動・HP・死亡演出を扱う。武器と弾の管理はPlayerWeaponControllerへ任せる。
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "Player.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Input/Input.h"
@@ -632,8 +634,10 @@ void Player::UpdateMovement(Input* input)
               static_cast<float>(WinApp::GetInstance()->GetClientHeight()) },
             false, TimeManager::GetInstance()->GetDeltaTime());
         Vector3 nextRailOffset = railOffset_;
-        nextRailOffset.x += control.steering.x * moveSpeed_ * control.railResponse;
-        nextRailOffset.y += control.steering.y * moveSpeed_ * control.railResponse;
+        nextRailOffset.x += control.steering.x * moveSpeed_ * control.railResponse
+            * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
+        nextRailOffset.y += control.steering.y * moveSpeed_ * control.railResponse
+            * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
         railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
     }
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
@@ -678,8 +682,9 @@ void Player::SetRailFrame(const Vector3& railBasePosition,
 
 void Player::ApplyRailAreaForce(const Vector3& force)
 {
-    railOffset_.x += force.x;
-    railOffset_.y += force.y;
+    const float referenceStep = GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
+    railOffset_.x += force.x * referenceStep;
+    railOffset_.y += force.y * referenceStep;
     railOffset_ = ClampRailOffsetToScreen(railOffset_);
 }
 

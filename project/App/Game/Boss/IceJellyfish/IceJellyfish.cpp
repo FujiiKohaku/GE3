@@ -81,6 +81,60 @@ Vector4 LerpColor(const Vector4& from, const Vector4& to, float t)
 }
 }
 
+IceJellyfish::IceJellyfish()
+{
+    ChangeState(BossState::Wait);
+}
+
+void IceJellyfish::ChangeState(BossState state)
+{
+    if (currentState_ != nullptr && state_ == state) {
+        return;
+    }
+    IceJellyfishState* nextState = nullptr;
+    switch (state) {
+    case BossState::Wait: nextState = &waitState_; break;
+    case BossState::Entry: nextState = &entryState_; break;
+    case BossState::Battle: nextState = &battleState_; break;
+    case BossState::Dead: nextState = &deadState_; break;
+    default: return;
+    }
+    if (currentState_ != nullptr) {
+        currentState_->Exit(*this);
+    }
+    state_ = state;
+    currentState_ = nextState;
+    currentState_->Enter(*this);
+}
+
+void IceJellyfish::ResetStates()
+{
+    if (currentState_ != nullptr) {
+        currentState_->Exit(*this);
+    }
+    currentState_ = nullptr;
+    battleState_.Reset();
+    deadState_.Reset();
+    ChangeState(BossState::Wait);
+}
+
+void IceJellyfish::UpdateState()
+{
+    // Waitと空のEntryを通過しても、戦闘・死亡の時間更新は1回だけにする。
+    for (int32_t stateIndex = 0; stateIndex < kMaxStateUpdatesPerFrame; stateIndex++) {
+        IceJellyfishState* previousState = currentState_;
+        currentState_->Update(*this);
+        if (currentState_ == previousState) {
+            break;
+        }
+    }
+}
+
+void IceJellyfish::OnDeath()
+{
+    ChangeState(BossState::Dead);
+}
+
 // モデルと描画設定から、ボスの一部として使うオブジェクトを生成する。
 std::unique_ptr<Object3d> IceJellyfish::CreatePart(
     Camera* camera, const char* modelPath, const Vector4& color, bool ice)
@@ -107,13 +161,12 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     bulletModel_ = bulletModel;
     player_ = player;
     InitializeHealth(kMaxHp);
+    ResetStates();
     animationTime_ = 0.0f;
     softPoseTime_ = 0.0f;
     softPoseInitialized_ = false;
-    deathTimer_ = 0.0f;
     hitFlashTime_ = 0.0f;
     absoluteZeroUsed_ = false;
-    pulseAttackArmed_ = false;
     pulseBarrageWave_ = -1;
     pulseBarrageTimer_ = 0.0f;
     iceSpearTentacles_.fill(-1);
@@ -124,7 +177,6 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     icePillarTimer_ = 0.0f;
     icePillarModelTimer_ = 0.0f;
     icePillarModelSpawnedForWave_ = false;
-    nextAttackIndex_ = 0;
     patternIndex_ = 0;
     phase_ = 1;
 
@@ -190,57 +242,17 @@ IceJellyfish::PresentationPositions IceJellyfish::GetPresentationPositions() con
     return positions;
 }
 
-// 生存状態を確認し、攻撃の進行と部位の姿勢を更新する。
+// 全体の時計を1回進め、現在の状態と共通の部位姿勢を更新する。
 void IceJellyfish::Update()
 {
-    const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
-    animationTime_ += (std::max)(deltaTime, 0.0f);
-    hitFlashTime_ = (std::max)(0.0f, hitFlashTime_ - deltaTime);
-
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    animationTime_ += (std::max)(deltaTimeSeconds, 0.0f);
+    hitFlashTime_ = (std::max)(0.0f, hitFlashTime_ - deltaTimeSeconds);
     if (IsDead()) {
-        deathTimer_ += deltaTime;
-        bodyPosition_.y -= 9.0f * deltaTime;
-        bodyPosition_.z += 5.0f * deltaTime;
-        UpdatePartTransforms();
-        return;
+        ChangeState(BossState::Dead);
     }
-
-    if (player_ != nullptr) {
-        const Vector3 playerPosition = player_->GetTranslate();
-        bodyPosition_ = {
-            hoverCenterX_ + std::sin(animationTime_ * 0.48f) * 8.0f,
-            hoverCenterY_ + std::sin(animationTime_ * 1.10f) * 5.0f,
-            playerPosition.z + kHoverDistance
-        };
-    } else {
-        bodyPosition_ = basePosition_;
-    }
-    basePosition_ = bodyPosition_;
-    transform_.translate = bodyPosition_;
-
-    coreExposed_ = AreAllTentaclesDestroyed();
-    UpdateAttackSequence(animationTime_ * 1.10f, deltaTime);
-    coreExposed_ = AreAllTentaclesDestroyed();
+    UpdateState();
     UpdatePartTransforms();
-}
-
-// 攻撃の経過時間を進め、パターンと個別攻撃を更新する。
-void IceJellyfish::UpdateAttackSequence(float floatPhase, float deltaTime)
-{
-    UpdatePulseBarrageAttack(deltaTime);
-    UpdateIceSpearAttack(deltaTime);
-    UpdateIcePillarAttack(deltaTime);
-    const float pulse = std::sin(floatPhase);
-    if (pulse <= -0.72f) pulseAttackArmed_ = true;
-    if (!pulseAttackArmed_ || pulse < -0.05f) return;
-
-    switch (nextAttackIndex_) {
-    case 0: StartPulseBarrageAttack(); break;
-    case 1: StartIceSpearAttack(); break;
-    case 2: StartIcePillarAttack(); break;
-    }
-    nextAttackIndex_ = (nextAttackIndex_ + 1) % 3;
-    pulseAttackArmed_ = false;
 }
 
 // 選ばれた触手から、狙い先に向けて氷槍の弾を発射する。
@@ -731,7 +743,7 @@ void IceJellyfish::UpdateIcePillarModelTransforms()
 // 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 {
-    if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) { return; }
+    if (bell_ == nullptr || camera_ == nullptr || (IsDead() && IsDeathSequenceFinished())) { return; }
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
         if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->DrawShadow(renderer);
@@ -754,7 +766,7 @@ void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 // 現在表示するモデルや追加パーツを描画する。
 void IceJellyfish::Draw()
 {
-    if (bell_ == nullptr || camera_ == nullptr || (IsDead() && deathTimer_ >= 2.0f)) return;
+    if (bell_ == nullptr || camera_ == nullptr || (IsDead() && IsDeathSequenceFinished())) return;
     for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
         if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
             crystals_[crystal]->Draw();
@@ -784,7 +796,7 @@ void IceJellyfish::Draw()
 
 // 描画対象をレイトレーシング用のシーンへ登録する。
 void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
-    if (!bell_ || !camera_ || (IsDead() && deathTimer_ >= 2.0f)) { return; }
+    if (!bell_ || !camera_ || (IsDead() && IsDeathSequenceFinished())) { return; }
     for (size_t crystalIndex = 0; crystalIndex < crystals_.size(); ++crystalIndex) {
         if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystalIndex] > 0 && crystals_[crystalIndex]) {
             crystals_[crystalIndex]->SubmitRaytracing(renderer);

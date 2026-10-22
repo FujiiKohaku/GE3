@@ -50,6 +50,44 @@ OCEAN_WAKE_INLINE OCEAN_WAKE_VECTOR OceanWakeProfile(float dx, float dz, float a
         (-sideSlope * forwardX - behindSlope * forwardZ) / scale);
 }
 
+// Expanding impact ring, shared by CPU height sampling and VS normals.
+OCEAN_WAKE_INLINE OCEAN_WAKE_VECTOR OceanRadialWakeProfile(float dx, float dz, float age, float strength, float scale)
+{
+    if (age < 0.0f || age >= 2.5f || strength < 0.005f || scale <= 0.0f) {
+        return OCEAN_WAKE_MAKE(0.0f, 0.0f, 0.0f);
+    }
+    float distance = OCEAN_WAKE_SQRT(dx * dx + dz * dz + 0.01f);
+    float radius = scale + age * 8.0f;
+    float width = scale * 0.55f + age * 0.45f;
+    float offset = (distance - radius) / width;
+    if (OCEAN_WAKE_ABS(offset) > 4.0f) {
+        return OCEAN_WAKE_MAKE(0.0f, 0.0f, 0.0f);
+    }
+    float startup = OCEAN_WAKE_CLAMP(age / 0.08f, 0.0f, 1.0f);
+    startup = startup * startup * (3.0f - 2.0f * startup);
+    float fade = 1.0f - age / 2.5f;
+    float amplitude = strength * startup * fade * fade;
+    float gaussian = OCEAN_WAKE_EXP(-offset * offset);
+    float height = amplitude * (1.0f - 2.0f * offset * offset) * gaussian;
+    float slope = amplitude * (4.0f * offset * offset * offset - 6.0f * offset) * gaussian / width;
+    float inverseDistance = 1.0f / distance;
+    return OCEAN_WAKE_MAKE(slope * dx * inverseDistance, height, slope * dz * inverseDistance);
+}
+
+OCEAN_WAKE_INLINE OCEAN_WAKE_VECTOR EvaluateOceanWakeProfile(float dx, float dz, float age, float strength,
+    float scale, float forwardX, float forwardZ, float waveKind)
+{
+    if (waveKind > 0.5f) {
+        float reveal = 1.0f;
+        if (forwardX > 0.0f) {
+            reveal = OCEAN_WAKE_CLAMP((age - forwardX) / 0.08f, 0.0f, 1.0f);
+            reveal = reveal * reveal * (3.0f - 2.0f * reveal);
+        }
+        return OceanRadialWakeProfile(dx, dz, age, strength * reveal, scale);
+    }
+    return OceanWakeProfile(dx, dz, age, strength, scale, forwardX, forwardZ);
+}
+
 // Soft saturation bounds overlapping impulses without clipping their normals.
 OCEAN_WAKE_INLINE OCEAN_WAKE_VECTOR LimitOceanWake(OCEAN_WAKE_VECTOR wave)
 {

@@ -1,4 +1,6 @@
 // プレイヤーに向けてペイント弾を発射する敵を扱う。
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "PaintShooterEnemy.h"
 #include "App/Game/Enemy/Bullet/Types/PaintBullet.h"
 #include "App/Game/Player/Player.h"
@@ -10,6 +12,7 @@ void PaintShooterEnemy::Initialize(Model* model, Model* bulletModel, Player* pla
     BaseEnemy::Initialize(model);
     bulletModel_ = bulletModel;
     player_ = player;
+    fireElapsedSeconds_ = 0.0f;
     SetHealth(7.0f);
 }
 
@@ -45,9 +48,9 @@ void PaintShooterEnemy::Attack()
     float distance = Vector3Length(toEnemy);
 
     if (distance <= 120.0f) {
-        fireTimer_++;
-        if (fireTimer_ >= fireInterval_) {
-            fireTimer_ = 0;
+        const int32_t shotCount = GameTiming::AdvanceInterval(fireElapsedSeconds_,
+            kFireIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 3);
+        for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
             FirePaintBullet();
         }
     }

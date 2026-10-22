@@ -1,3 +1,5 @@
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "Engine/Capture/GifRecordingManager.h"
 // ステージ進行の中心。プレイヤー・敵・ボス・背景・HUD・演出を組み合わせて更新する。
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
@@ -1104,11 +1106,11 @@ void GamePlayScene::Update()
             const Vector3 cameraPosition = Lerp(
                 camera_->GetTranslate(),
                 targetCameraPosition,
-                0.15f);
+                GameTiming::CalculateFollowBlend(0.15f, TimeManager::GetInstance()->GetDeltaTime()));
             playerDeathCameraLookTarget_ = Lerp(
                 playerDeathCameraLookTarget_,
                 playerPosition,
-                0.15f);
+                GameTiming::CalculateFollowBlend(0.15f, TimeManager::GetInstance()->GetDeltaTime()));
             camera_->LookAt(
                 cameraPosition,
                 playerDeathCameraLookTarget_);
@@ -1231,8 +1233,7 @@ void GamePlayScene::Update()
         SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
         SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
 
-        // 死亡演出(頭部の落下回転)が完了するまでボスのUpdateを回し続ける
-        bossController_->UpdateDeathSequence();
+        // 死亡演出は上のBossEncounterController::Updateで1回だけ進める。
         EffectManager::GetInstance()->Update();
 
         if (activeBoss->IsDeathSequenceFinished()) {
@@ -1465,7 +1466,7 @@ void GamePlayScene::Update()
         displayedPlayerHpRatio_ = std::lerp(
             displayedPlayerHpRatio_,
             hpRatio,
-            0.12f);
+            GameTiming::CalculateFollowBlend(0.12f, TimeManager::GetInstance()->GetDeltaTime()));
         if (std::abs(displayedPlayerHpRatio_ - hpRatio) < 0.001f) {
             displayedPlayerHpRatio_ = hpRatio;
         }
@@ -1548,6 +1549,9 @@ void GamePlayScene::Update()
         }
         previousOceanPlayerPosition_ = position;
         hasOceanPlayerPosition_ = !player_->IsDead();
+        if (auto* fearWorm = dynamic_cast<FearWormEnemy*>(GetActiveBoss())) {
+            fearWorm->UpdateOceanInteraction(*oceanSurface_, dt);
+        }
     }
 
     // 各種マネージャー、オブジェクト、コリジョンの更新
@@ -1918,6 +1922,11 @@ void GamePlayScene::UpdateCamera(
     // カメラポイント補間の適用
     if (hasCameraPoint_ && !debugCameraController_->GetDebugMode()) {
         float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
+        if (!hasCameraPointStart_) {
+            cameraPointStartPosition_ = camera_->GetTranslate();
+            cameraPointStartTarget_ = smoothedLookAheadPosition_;
+            hasCameraPointStart_ = true;
+        }
         cameraPointLerpTime_ += deltaTime;
         float moveTime = cameraPointObject_.cameraPoint.moveTime;
         if (moveTime <= 0.0f) {
@@ -1929,7 +1938,7 @@ void GamePlayScene::UpdateCamera(
         }
 
         // カメラ位置の補間
-        Vector3 currentEye = camera_->GetTranslate();
+        Vector3 currentEye = cameraPointStartPosition_;
         Vector3 targetEye = cameraPointObject_.translation;
         Vector3 eye = {
             currentEye.x + (targetEye.x - currentEye.x) * t,
@@ -1938,7 +1947,7 @@ void GamePlayScene::UpdateCamera(
         };
 
         // カメラ注視点の補間
-        Vector3 currentTarget = smoothedLookAheadPosition_;
+        Vector3 currentTarget = cameraPointStartTarget_;
         Vector3 targetTarget = cameraPointObject_.cameraPoint.target;
         Vector3 target = {
             currentTarget.x + (targetTarget.x - currentTarget.x) * t,
@@ -1963,7 +1972,8 @@ void GamePlayScene::UpdateCamera(
     }
 
     // FOVの補間計算とカメラへの適用
-    currentFovY_ += (targetFovY - currentFovY_) * fovLerpRate_;
+    currentFovY_ += (targetFovY - currentFovY_)
+        * GameTiming::CalculateFollowBlend(fovLerpRate_, TimeManager::GetInstance()->GetDeltaTime());
     const float renderFovY = currentFovY_ * (1.0f - kBrakeFovReduction * brakeFovStrength_);
     camera_->SetFovY(renderFovY);
 
@@ -1972,7 +1982,8 @@ void GamePlayScene::UpdateCamera(
         Vector3 cameraForward = forward;
 
         if (hasCameraFollowState_) {
-            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward, cameraForwardLerpRate_);
+            Vector3 lerpedForward = Lerp(smoothedCameraForward_, forward,
+                GameTiming::CalculateFollowBlend(cameraForwardLerpRate_, TimeManager::GetInstance()->GetDeltaTime()));
             if (!IsNearlyZero(lerpedForward)) {
                 cameraForward = Normalize(lerpedForward);
             }
@@ -1997,8 +2008,10 @@ void GamePlayScene::UpdateCamera(
 
         // 遅延追従（Lerp）の適用
         if (hasCameraFollowState_) {
-            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetDrawCameraPosition, cameraFollowLerpRate_);
-            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPositionDraw, cameraFollowLerpRate_);
+            smoothedCameraPosition_ = Lerp(smoothedCameraPosition_, targetDrawCameraPosition,
+                GameTiming::CalculateFollowBlend(cameraFollowLerpRate_, TimeManager::GetInstance()->GetDeltaTime()));
+            smoothedLookAheadPosition_ = Lerp(smoothedLookAheadPosition_, targetLookAheadPositionDraw,
+                GameTiming::CalculateFollowBlend(cameraFollowLerpRate_, TimeManager::GetInstance()->GetDeltaTime()));
         } else {
             smoothedCameraPosition_ = targetDrawCameraPosition;
             smoothedLookAheadPosition_ = targetLookAheadPositionDraw;
@@ -2290,15 +2303,18 @@ void GamePlayScene::UpdateRecoveryItems()
             continue;
         }
 
-        recoveryItem.animationTime += kRecoveryItemBobSpeed;
+        recoveryItem.animationTime += kRecoveryItemBobSpeed
+            * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
 
         Vector3 itemPosition = recoveryItem.basePosition;
         itemPosition.y +=
             std::sin(recoveryItem.animationTime) * kRecoveryItemBobHeight;
 
         Vector3 itemRotation = recoveryItem.object->GetRotate();
-        itemRotation.x += kRecoveryItemRotationSpeed * 0.65f;
-        itemRotation.y += kRecoveryItemRotationSpeed;
+        itemRotation.x += kRecoveryItemRotationSpeed * 0.65f
+            * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
+        itemRotation.y += kRecoveryItemRotationSpeed
+            * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
         recoveryItem.object->SetTranslate(itemPosition);
         recoveryItem.object->SetRotate(itemRotation);
         recoveryItem.object->Update();
@@ -2620,11 +2636,11 @@ void GamePlayScene::UpdateBossHpHud()
     displayedBossHeadHpRatio_ = std::lerp(
         displayedBossHeadHpRatio_,
         headHpFraction,
-        0.10f);
+        GameTiming::CalculateFollowBlend(0.10f, TimeManager::GetInstance()->GetDeltaTime()));
     displayedBossBodyHpRatio_ = std::lerp(
         displayedBossBodyHpRatio_,
         bodyHpFraction,
-        0.10f);
+        GameTiming::CalculateFollowBlend(0.10f, TimeManager::GetInstance()->GetDeltaTime()));
 
     if (std::abs(displayedBossHeadHpRatio_ - headHpFraction) < 0.001f) {
         displayedBossHeadHpRatio_ = headHpFraction;
@@ -3419,12 +3435,24 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         if (key == "cameraNearClip") { camera_->SetNearClip(std::clamp(number, 0.001f, camera_->GetFarClip() - 0.001f)); return true; }
         if (key == "cameraFarClip") { camera_->SetFarClip(std::clamp(number, camera_->GetNearClip() + 0.001f, 10000.0f)); return true; }
         if (debugCameraController_->GetDebugMode()) {
-            SET_VALUE("cameraX", camera_->GetTranslate().x, -10000.0f, 10000.0f)
-            SET_VALUE("cameraY", camera_->GetTranslate().y, -10000.0f, 10000.0f)
-            SET_VALUE("cameraZ", camera_->GetTranslate().z, -10000.0f, 10000.0f)
-            SET_VALUE("cameraRotX", camera_->GetRotate().x, -6.28f, 6.28f)
-            SET_VALUE("cameraRotY", camera_->GetRotate().y, -6.28f, 6.28f)
-            SET_VALUE("cameraRotZ", camera_->GetRotate().z, -6.28f, 6.28f)
+            if (key == "cameraX" || key == "cameraY" || key == "cameraZ") {
+                Vector3 cameraPosition = camera_->GetTranslate();
+                const float positionValue = std::clamp(number, -10000.0f, 10000.0f);
+                if (key == "cameraX") { cameraPosition.x = positionValue; }
+                if (key == "cameraY") { cameraPosition.y = positionValue; }
+                if (key == "cameraZ") { cameraPosition.z = positionValue; }
+                camera_->SetTranslate(cameraPosition);
+                return true;
+            }
+            if (key == "cameraRotX" || key == "cameraRotY" || key == "cameraRotZ") {
+                Vector3 cameraRotation = camera_->GetRotate();
+                const float rotationValue = std::clamp(number, -6.28f, 6.28f);
+                if (key == "cameraRotX") { cameraRotation.x = rotationValue; }
+                if (key == "cameraRotY") { cameraRotation.y = rotationValue; }
+                if (key == "cameraRotZ") { cameraRotation.z = rotationValue; }
+                camera_->SetRotate(cameraRotation);
+                return true;
+            }
         }
         if (key == "cameraScaleX" || key == "cameraScaleY" || key == "cameraScaleZ") {
             Vector3 scale = camera_->GetScale();
@@ -4130,7 +4158,8 @@ void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isP
 
     if (isPlayerBoosting) {
         targetCenter = CalculateBoostPostEffectCenter(nextRailDistance);
-        smoothedBoostPostEffectCenter_ = Lerp(smoothedBoostPostEffectCenter_, targetCenter, kBoostPostEffectCenterLerpRate);
+        smoothedBoostPostEffectCenter_ = Lerp(smoothedBoostPostEffectCenter_, targetCenter,
+            GameTiming::CalculateFollowBlend(kBoostPostEffectCenterLerpRate, TimeManager::GetInstance()->GetDeltaTime()));
     } else {
         smoothedBoostPostEffectCenter_ = targetCenter;
     }
@@ -4205,6 +4234,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 {
     normalEnemyLevels_.Load();
     hasCameraPoint_ = false;
+    hasCameraPointStart_ = false;
     cameraPointObject_ = {};
     cameraPointLerpTime_ = 0.0f;
 

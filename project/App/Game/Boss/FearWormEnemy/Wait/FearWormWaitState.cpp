@@ -2,6 +2,8 @@
 #include "../FearWormEnemy.h"
 #include "App/Game/Player/Player.h"
 #include <cmath>
+#include "../Battle/State/FearWormTiming.h"
+#include "Engine/Time/TimeManager.h"
 
 void FearWormWaitState::Update(FearWormEnemy& boss)
 {
@@ -23,7 +25,9 @@ void FearWormWaitState::Update(FearWormEnemy& boss)
     }
 
     // 移動処理
-    boss.segments_[0].position = Lerp(boss.segments_[0].position, target, boss.moveSpeed_ * movementSpeedRate);
+    const float movementBlend = FearWormTiming::CalculateFollowBlend(boss.moveSpeed_ * movementSpeedRate,
+        TimeManager::GetInstance()->GetDeltaTime());
+    boss.segments_[0].position = Lerp(boss.segments_[0].position, target, movementBlend);
     boss.transform_.translate = boss.segments_[0].position;
 }
 

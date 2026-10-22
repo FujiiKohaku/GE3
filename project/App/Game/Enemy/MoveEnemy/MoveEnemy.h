@@ -45,6 +45,7 @@ public:
 
 private:
     friend bool RunEnemyMovementCalculationTests();
+    friend bool RunAppTimingTests();
     // 選択された移動パターンに応じて、開始位置からの変位を求める。
     static Vector3 CalculateMovementPosition(MovePattern pattern, const Vector3& startPosition,
         float elapsedSeconds, float speed, float amplitude, float frequency);
@@ -59,8 +60,8 @@ private:
     Player* player_ = nullptr;
     Model* bulletModel_ = nullptr;
 
-    int32_t fireTimer_ = 0;
-    int32_t fireInterval_ = 60;
+    float fireElapsedSeconds_ = 0.0f;
+    static constexpr float kFireIntervalSeconds = 1.0f;
     float bulletSpeed_ = 0.8f;
 
     // 移動制御用メンバ変数 (プロンプトの指定通り、名前は省略しない)

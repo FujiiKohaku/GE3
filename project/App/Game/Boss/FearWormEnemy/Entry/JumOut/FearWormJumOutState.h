@@ -21,7 +21,6 @@ private:
     void PlaySplashIfNeeded(FearWormEntryState& entry, FearWormEnemy& boss);
     void UpdateSurface(FearWormEntryState& entry, FearWormEnemy& boss);
 
-    static constexpr float kInitialOrbitAngle = 2.35f;
     static constexpr float kSplashHeightOffset = 1.0f;
     static constexpr float kSurfaceRotationRadians = 1.5707963268f;
     static constexpr Vector3 kSurfaceScale = { 42.0f, 68.0f, 1.0f };

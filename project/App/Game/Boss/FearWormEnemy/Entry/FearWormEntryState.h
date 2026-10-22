@@ -24,6 +24,8 @@ public:
     void SetWaterHeight(float waterHeight) { waterHeight_ = waterHeight; }
     float GetWaterHeight() const { return waterHeight_; }
     EntryPhase GetPhase() const { return phase_; }
+    // 登場軌道の終点で使う周回角。次の状態への受け渡しはEnemy本体が行う。
+    float GetExitOrbitAngleRadians() const { return kExitOrbitAngleRadians; }
 
     // 頭部が登場軌道の終点に到着する時刻を過ぎたか確認する。
     bool IsHeadFlightFinished() const
@@ -44,6 +46,7 @@ private:
     static constexpr float kEntryShadowDurationSeconds = 2.0f;
     static constexpr float kEntryFlightDurationSeconds = 2.4f;
     static constexpr float kEntrySegmentDelaySeconds = 0.075f;
+    static constexpr float kExitOrbitAngleRadians = 2.35f;
     // プレイヤーを基準にした、水面上の出現位置のオフセット。
     static constexpr float kEntrySurfaceOffsetX = -12.0f;
     static constexpr float kEntrySurfaceOffsetZ = 86.0f;

@@ -1,4 +1,6 @@
 // 生存しているロック対象へ進行方向を曲げ、目標を通り過ぎた回数も管理するミサイル。
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "App/Game/Player/Bullet/Types/HomingMissileBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/Time/TimeManager.h"
@@ -36,7 +38,7 @@ void HomingMissileBullet::Move()
             const float steeringStrength =
                 homingStrength_ +
                 (kCloseHomingStrength - homingStrength_) * closeRatio;
-            const float blend = std::clamp(steeringStrength * frameScale, 0.0f, 1.0f);
+            const float blend = GameTiming::CalculateFollowBlend(steeringStrength, TimeManager::GetInstance()->GetDeltaTime());
             velocity_ = Normalize(velocity_ * (1.0f - blend) + desiredVelocity * blend) * speed;
 
             const Vector3 frameMovement = velocity_ * frameScale;

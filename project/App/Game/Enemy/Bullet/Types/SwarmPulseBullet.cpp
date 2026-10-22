@@ -1,4 +1,6 @@
 // 群れの敵が撃つ弾。進行方向に対して横へ揺れる軌道を計算する。
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/Bullet/Types/SwarmPulseBullet.h"
 
 #include "Engine/math/MathStruct.h"
@@ -58,11 +60,16 @@ void SwarmPulseBullet::SetWavePhase(float phase)
 void SwarmPulseBullet::Move()
 {
     const float timeScale = GetTimeScale();
-    waveTime_ += TimeManager::GetInstance()->GetDeltaTime() * timeScale;
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime() * timeScale;
+    if (deltaTimeSeconds <= 0.0f) {
+        return;
+    }
+    const float referenceStep = GameTiming::CalculateReferenceStep(deltaTimeSeconds);
+    waveTime_ += deltaTimeSeconds;
 
-    pathPosition_.x += velocity_.x * timeScale;
-    pathPosition_.y += velocity_.y * timeScale;
-    pathPosition_.z += velocity_.z * timeScale;
+    pathPosition_.x += velocity_.x * referenceStep;
+    pathPosition_.y += velocity_.y * referenceStep;
+    pathPosition_.z += velocity_.z * referenceStep;
 
     float waveAngle = waveTime_ * waveFrequency_ + wavePhase_;
     float sideOffset = std::sin(waveAngle) * waveAmplitude_;
@@ -71,5 +78,5 @@ void SwarmPulseBullet::Move()
     transform_.translate = pathPosition_;
     transform_.translate += waveSide_ * sideOffset;
     transform_.translate += waveUp_ * upOffset;
-    transform_.rotate.z += 0.22f * timeScale;
+    transform_.rotate.z += 13.2f * deltaTimeSeconds;
 }

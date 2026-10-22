@@ -192,8 +192,8 @@ private:
 
     // Jump Control
     bool isJumping_ = false;
-    float jumpVelocity_ = 0.0f;
-    const float gravity_ = 0.015f;
+    float jumpVelocityUnitsPerSecond_ = 0.0f;
+    static constexpr float kGravityUnitsPerSecondSquared = 54.0f;
 
     // Attack Control
     float attackTimer_ = 0.0f;

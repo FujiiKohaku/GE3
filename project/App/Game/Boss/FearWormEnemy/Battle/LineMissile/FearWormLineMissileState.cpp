@@ -11,23 +11,28 @@
 #include <cmath>
 #include <algorithm>
 
-void FearWormLineMissileState::Enter(FearWormBattleState& battle, FearWormEnemy&)
+void FearWormLineMissileState::Reset(size_t segmentCount)
 {
     isFinished_ = false;
+    formationElapsedSeconds_ = 0.0f;
     phase_ = Phase::Formation;
     phaseTimerSeconds_ = 0.0f;
     shotCount_ = 0;
     targetIndices_.clear();
+    targetIndices_.reserve(segmentCount);
+}
+
+void FearWormLineMissileState::Enter(FearWormBattleState& battle, FearWormEnemy& boss)
+{
+    Reset(boss.segments_.size());
     battle.movementPattern_ = FearWormBattleState::MovementPattern::Line;
-    battle.lineTransitionTimer_ = 0.0f;
-    battle.missileAttackTimer_ = 0.0f;
 }
 
 void FearWormLineMissileState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
-    battle.movementPatternTimer_ += deltaTimeSeconds * boss.MovementSpeedRate();
-    battle.UpdateBattleMovement(boss, boss.player_->GetTranslate(), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
+    battle.UpdateBattleMovement(boss, CalculateTarget(context), boss.MovementSpeedRate());
     phaseTimerSeconds_ += deltaTimeSeconds;
     switch (phase_) {
     case Phase::Formation:
@@ -47,8 +52,8 @@ void FearWormLineMissileState::Update(FearWormBattleState& battle, FearWormEnemy
             phaseTimerSeconds_ = 0.0f;
             break;
         }
-        if (phaseTimerSeconds_ >= kMissileFireIntervalSeconds) {
-            phaseTimerSeconds_ = 0.0f;
+        if (deltaTimeSeconds > 0.0f && phaseTimerSeconds_ >= kMissileFireIntervalSeconds) {
+            phaseTimerSeconds_ = std::fmod(phaseTimerSeconds_, kMissileFireIntervalSeconds);
             const size_t segmentIndex = targetIndices_[shotCount_];
             if (battle.CanFire(boss) && segmentIndex < boss.segments_.size()
                 && boss.segments_[segmentIndex].isAlive) {
@@ -68,6 +73,7 @@ void FearWormLineMissileState::Exit(FearWormBattleState&, FearWormEnemy&)
     targetIndices_.clear();
     shotCount_ = 0;
     phaseTimerSeconds_ = 0.0f;
+    formationElapsedSeconds_ = 0.0f;
 }
 
 void FearWormLineMissileState::FireSingleMissile(FearWormBattleState& battle, FearWormEnemy& boss, size_t segmentIndex)
@@ -88,4 +94,40 @@ void FearWormLineMissileState::FireSingleMissile(FearWormBattleState& battle, Fe
 
     // ボスの弾リストに追加
     boss.AddEnemyBullet(std::move(bullet));
+}
+
+Vector3 FearWormLineMissileState::CalculateTarget(const FearWormMovementContext& context)
+{
+    Vector3 result = context.playerPosition;
+    result.x += kTargetOffsetX;
+    result.y += kTargetOffsetY;
+    result.z += context.forwardOffset + kTargetForwardOffset;
+    return result;
+}
+
+float FearWormLineMissileState::CalculateFormationBlend(float transitionSeconds)
+{
+    return (std::min)(transitionSeconds / kFormationDurationSeconds, 1.0f);
+}
+
+Vector3 FearWormLineMissileState::CalculateFormationPosition(const Vector3& headPosition,
+    int32_t segmentOrder, float segmentSpacing, float movementElapsedSeconds,
+    const Vector3& followPosition, float formationBlend)
+{
+    // ミサイル攻撃時の横並びと揺れを、共通の追従位置へ合成する。
+    Vector3 posLine = {
+        headPosition.x - (segmentSpacing * static_cast<float>(segmentOrder)),
+        headPosition.y + std::sin(movementElapsedSeconds * kFormationWaveFrequency + static_cast<float>(segmentOrder) * kFormationVerticalPhaseStepRadians) * kFormationWaveScaleY,
+        headPosition.z + std::cos(movementElapsedSeconds * (kFormationWaveFrequency * kFormationDepthFrequencyRate) + static_cast<float>(segmentOrder) * kFormationDepthPhaseStepRadians) * kFormationWaveScaleZ
+    };
+
+    // 補間率0では、通常の追従位置を維持する。
+    return Lerp(followPosition, posLine, formationBlend);
+}
+
+float FearWormLineMissileState::UpdateFormationBlend(float deltaTimeSeconds)
+{
+    // 胴体更新から1回だけ呼び、切替直後も従来と同じ時点で整列を進める。
+    formationElapsedSeconds_ += deltaTimeSeconds;
+    return CalculateFormationBlend(formationElapsedSeconds_);
 }

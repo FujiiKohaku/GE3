@@ -38,9 +38,15 @@ void OceanSurface::Update(float deltaTime)
     }
 
     time_ += deltaTime;
-    if (wakeCount_ > 0 && time_ - lastWakeTime_ > 2.5f) {
-        wakeCount_ = 0; nextWake_ = 0; hasWakePosition_ = false;
+    uint32_t activeCount = 0;
+    for (uint32_t wakeIndex = 0; wakeIndex < wakeCount_; ++wakeIndex) {
+        if (time_ - wakes_[wakeIndex].positionTimeStrength.z < 2.5f) {
+            wakes_[activeCount] = wakes_[wakeIndex];
+            wakeSources_[activeCount] = wakeSources_[wakeIndex];
+            ++activeCount;
+        }
     }
+    wakeCount_ = activeCount;
     constants_->viewProjection = camera_->GetViewProjectionMatrix();
     const Vector3 scale = { width_, 1.0f, length_ };
     const Vector3 rotation = { 0.0f, 0.0f, 0.0f };
@@ -61,13 +67,83 @@ float OceanSurface::GetHeightAt(float worldX, float worldZ) const
     Vector3 wake{};
     for (uint32_t i = 0; i < wakeCount_; ++i) {
         const auto& stamp = wakes_[i];
-        const auto wave = OceanInteraction::OceanWakeProfile(worldX - stamp.positionTimeStrength.x,
+        const auto wave = OceanInteraction::EvaluateOceanWakeProfile(worldX - stamp.positionTimeStrength.x,
             worldZ - stamp.positionTimeStrength.y, time_ - stamp.positionTimeStrength.z,
-            stamp.positionTimeStrength.w, stamp.directionSize.z, stamp.directionSize.x, stamp.directionSize.y);
+            stamp.positionTimeStrength.w, stamp.directionSize.z, stamp.directionSize.x, stamp.directionSize.y,
+            stamp.directionSize.w);
         wake.x += wave.x; wake.y += wave.y; wake.z += wave.z;
     }
     return OceanInteraction::Height(worldX, worldZ, time_, height_, waveAmplitude_, waveFrequency_)
         + OceanInteraction::LimitOceanWake(wake).y;
+}
+
+float OceanSurface::GetNaturalHeightAt(float worldX, float worldZ) const
+{
+    return OceanInteraction::Height(worldX, worldZ, time_, height_, waveAmplitude_, waveFrequency_);
+}
+
+bool OceanSurface::Contains(float worldX, float worldZ) const
+{
+    return std::abs(worldX) <= width_ * 0.5f && worldZ >= startZ_ && worldZ <= startZ_ + length_;
+}
+
+bool OceanSurface::AddWake(const Vector3& position, const Vector3& direction, float strength, float scale,
+    WakeType wakeType, WakeSource wakeSource, float ageSeconds)
+{
+    if (!Contains(position.x, position.z) || !std::isfinite(strength) || !std::isfinite(scale)
+        || !std::isfinite(ageSeconds) || ageSeconds < 0.0f || ageSeconds >= 2.5f
+        || strength < 0.005f || scale <= 0.0f) {
+        return false;
+    }
+    constexpr uint32_t kMaxBossWakePoints = 16;
+    uint32_t sourceCount = 0;
+    uint32_t oldestSourceIndex = kMaxWakePoints;
+    for (uint32_t wakeIndex = 0; wakeIndex < wakeCount_; ++wakeIndex) {
+        if (wakeSources_[wakeIndex] == wakeSource) {
+            if (oldestSourceIndex == kMaxWakePoints) {
+                oldestSourceIndex = wakeIndex;
+            }
+            ++sourceCount;
+        }
+    }
+    uint32_t writeIndex = wakeCount_;
+    if (wakeSource == WakeSource::Boss && sourceCount >= kMaxBossWakePoints) {
+        // Keep existing impacts alive instead of visibly deleting a moving crest.
+        return false;
+    }
+    if (wakeSource == WakeSource::Boss && wakeCount_ == kMaxWakePoints) {
+        // Reserve at least thirty-two slots for player waves, retaining all forty-eight when alone.
+        if (sourceCount < kMaxBossWakePoints) {
+            for (uint32_t wakeIndex = 0; wakeIndex < wakeCount_; ++wakeIndex) {
+                if (wakeSources_[wakeIndex] == WakeSource::Player) {
+                    oldestSourceIndex = wakeIndex;
+                    break;
+                }
+            }
+        }
+        writeIndex = oldestSourceIndex;
+    } else if (wakeCount_ == kMaxWakePoints) {
+        writeIndex = oldestSourceIndex;
+    }
+    if (writeIndex < wakeCount_) {
+        for (uint32_t wakeIndex = writeIndex + 1; wakeIndex < wakeCount_; ++wakeIndex) {
+            wakes_[wakeIndex - 1] = wakes_[wakeIndex];
+            wakeSources_[wakeIndex - 1] = wakeSources_[wakeIndex];
+        }
+        --wakeCount_;
+    }
+    Vector3 forward = OceanInteraction::HorizontalDirection(direction);
+    float waveKind = 0.0f;
+    if (wakeType == WakeType::Radial) {
+        waveKind = 1.0f;
+        // Radial waves do not need heading: save the upload delay for a smooth reveal.
+        forward.x = ageSeconds;
+        forward.z = 0.0f;
+    }
+    wakes_[wakeCount_] = {{position.x, position.z, time_ - ageSeconds, strength}, {forward.x, forward.z, scale, waveKind}};
+    wakeSources_[wakeCount_] = wakeSource;
+    ++wakeCount_;
+    return true;
 }
 
 void OceanSurface::EndInteraction()
@@ -92,15 +168,15 @@ float OceanSurface::UpdateInteraction(const Vector3& position, const Vector3& fo
         // Scene jumps must not leave a line connecting unrelated positions.
         EndInteraction(); return 0.0f;
     }
-    if (!hasWakePosition_ || distanceSquared >= 2.25f || time_ - lastWakeTime_ >= 0.12f) {
-        const float length = std::sqrt(forward.x * forward.x + forward.z * forward.z);
-        const float fx = length > 0.001f ? forward.x / length : 0.0f;
-        const float fz = length > 0.001f ? forward.z / length : 1.0f;
-        wakes_[nextWake_] = {{source.x, source.z, time_, interactionStrength_},
-            {fx, fz, boosting ? 1.45f : 1.0f, 0.0f}};
-        nextWake_ = (nextWake_ + 1) % kMaxWakePoints;
-        wakeCount_ = (std::min)(wakeCount_ + 1, kMaxWakePoints);
-        lastWakePosition_ = position; lastWakeTime_ = time_; hasWakePosition_ = true;
+    if (!hasWakePosition_ || distanceSquared >= 2.25f || time_ - lastPlayerWakeTime_ >= 0.12f) {
+        float scale = 1.0f;
+        if (boosting) {
+            scale = 1.45f;
+        }
+        AddWake(source, forward, interactionStrength_, scale, WakeType::Directional, WakeSource::Player);
+        lastWakePosition_ = position;
+        lastPlayerWakeTime_ = time_;
+        hasWakePosition_ = true;
     }
     return interactionStrength_;
 }

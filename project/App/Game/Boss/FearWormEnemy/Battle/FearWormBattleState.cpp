@@ -1,5 +1,6 @@
 // 戦闘行動の切り替えと、共通の座標・弾生成・描画処理。
 #include "FearWormBattleState.h"
+#include "State/FearWormTiming.h"
 #include "../FearWormEnemy.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/Time/TimeManager.h"
@@ -28,7 +29,7 @@ void FearWormBattleState::Update(FearWormEnemy& boss)
 
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
     const float movementSpeedRate = boss.MovementSpeedRate();
-    orbitAngle_ += deltaTimeSeconds * kOrbitAngularSpeed * movementSpeedRate;
+    orbitAngle_ += deltaTimeSeconds * FearWormMovement::kOrbitAngularSpeed * movementSpeedRate;
     if (actionType_ != ActionType::LineMissile && actionType_ != ActionType::SpiralBarrage
         && actionType_ != ActionType::Beam) {
         missileAttackTimer_ += deltaTimeSeconds;
@@ -40,135 +41,32 @@ void FearWormBattleState::Update(FearWormEnemy& boss)
     }
 }
 
-// プレイヤーを基準に移動先を決め、速度倍率を反映して頭を動かす。
-void FearWormBattleState::UpdateBattleMovement(FearWormEnemy& boss, const Vector3& playerPosition, float movementSpeedRate,
-    float actionElapsedSeconds, float spiralAngleRadians)
+// 攻撃側で計算した目標位置へ、速度倍率と経過秒を反映して頭を動かす。
+void FearWormBattleState::UpdateBattleMovement(FearWormEnemy& boss, const Vector3& target, float movementSpeedRate)
 {
-    const Vector3 target = BattleTarget(boss, playerPosition, actionElapsedSeconds, spiralAngleRadians);
-    boss.segments_[0].position = Lerp(boss.segments_[0].position, target, boss.moveSpeed_ * movementSpeedRate);
+    const float movementBlend = FearWormTiming::CalculateFollowBlend(boss.moveSpeed_ * movementSpeedRate,
+        TimeManager::GetInstance()->GetDeltaTime());
+    boss.segments_[0].position = Lerp(boss.segments_[0].position, target, movementBlend);
     boss.transform_.translate = boss.segments_[0].position;
 }
 
-// プレイヤーの周囲を回り込む軌道上の目標位置を求める。
-Vector3 FearWormBattleState::CalculateOrbitTarget(const FearWormMovementContext& context)
-{
-    Vector3 result = context.playerPosition;
-
-    // 基本の楕円軌道を計算する。
-    float orbitX = std::cos(context.orbitAngle) * kOrbitRadiusX;
-
-    float orbitY = std::sin(context.orbitAngle) * kOrbitRadiusY;
-
-    // 単調な周回にならないよう、横揺れと奥行きの揺れを加える。
-    float lateralSway = std::sin(context.orbitAngle * kOrbitLateralSwayFrequency) * kOrbitLateralSwayAmplitude;
-
-    float depthSway = std::sin(context.orbitAngle * kOrbitDepthSwayFrequency) * kOrbitDepthSwayAmplitude;
-
-    result.x += orbitX + lateralSway;
-    result.y += kOrbitHeight + orbitY;
-    result.z += context.forwardOffset + depthSway;
-
-    return result;
-}
-
-// 巻き付くように周回する目標位置を求める。
-Vector3 FearWormBattleState::CalculateCoilTarget(const FearWormMovementContext& context)
-{
-    // 解除中は次の移動先へ頭を向け、胴体も通常の追従へ戻す。
-    if (context.patternTime >= kCoilFormationDurationSeconds + kCoilAttackDurationSeconds) {
-        return CalculateDriftTarget(context);
-    }
-    Vector3 result = context.playerPosition;
-    float coilAngle = context.orbitAngle * kCoilAngleRate;
-    result.x += std::cos(coilAngle) * kCoilBaseRadius;
-    result.y += kCoilHeight;
-    result.z += context.forwardOffset + std::sin(coilAngle) * kCoilBaseRadius;
-    return result;
-}
-
-// 左右や上下に揺れながら進む目標位置を求める。
-Vector3 FearWormBattleState::CalculateWeaveTarget(const FearWormMovementContext& context)
-{
-    Vector3 result = context.playerPosition;
-
-    // 横方向と縦方向で異なる周期を使い、波打つ軌道を作る。
-    float waveAngle = context.orbitAngle * kWeaveAngleRate;
-
-    result.x += std::sin(waveAngle) * kWeaveWidth;
-    result.y += kWeaveHeight + std::sin(waveAngle * kWeaveVerticalFrequency) * kWeaveVerticalAmplitude;
-    result.z += context.forwardOffset + std::cos(waveAngle) * kWeaveDepthAmplitude;
-
-    return result;
-}
-
-// ゆっくり漂う移動パターンの目標位置を求める。
-Vector3 FearWormBattleState::CalculateDriftTarget(const FearWormMovementContext& context)
-{
-    Vector3 result = context.playerPosition;
-
-    // 各軸を異なる周期で揺らし、緩やかに漂う軌道を作る。
-    result.x += std::sin(context.orbitAngle * kDriftHorizontalFrequency) * kDriftHorizontalAmplitude;
-    result.y += kDriftHeight + std::sin(context.orbitAngle * kDriftVerticalFrequency) * kDriftVerticalAmplitude;
-    result.z += context.forwardOffset + std::cos(context.orbitAngle * kDriftDepthFrequency) * kDriftDepthAmplitude;
-
-    return result;
-}
-
-// 渦を描く移動パターンの目標位置を求める。
-Vector3 FearWormBattleState::CalculateSpiralTarget(const FearWormMovementContext& context)
-{
-    Vector3 result = context.playerPosition;
-    float baseDistZ = context.forwardOffset + 50.0f;
-
-    // 最初の2秒間は画面中央に静止して威嚇
-    if (context.madModeTime < 2.0f) {
-        result.x += 0.0f;
-        result.y += 7.0f;
-        result.z += baseDistZ;
-    } else {
-        // 後半の5秒間で、中心から外側へ渦を描くように広がる (半径 0.0f 〜 25.0f)
-        float t = (context.madModeTime - 2.0f) / 5.0f;
-        float spiralRadius = t * 25.0f;
-
-        result.x += std::cos(context.spiralAngle) * spiralRadius;
-        result.y += 7.0f + std::sin(context.spiralAngle) * spiralRadius;
-        result.z += baseDistZ;
-    }
-
-    // 地面にめり込まないように下限（Y = 1.5f）をかける
-    if (result.y < 1.5f) {
-        result.y = 1.5f;
-    }
-
-    return result;
-}
-
-// 直線移動パターンの目標位置を求める。
-Vector3 FearWormBattleState::CalculateLineTarget(const FearWormMovementContext& context)
-{
-    Vector3 result = context.playerPosition;
-    result.x += 20.0f;
-    result.y += 3.0f;
-    result.z += context.forwardOffset + 75.0f;
-    return result;
-}
-
 // 移動の種類に対応する軌道計算を選ぶ。
-Vector3 FearWormBattleState::CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context)
+Vector3 FearWormBattleState::CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context,
+    float actionElapsedSeconds, float spiralAngleRadians)
 {
     switch (type) {
-    case FearWormMovementType::Coil: return CalculateCoilTarget(context);
-    case FearWormMovementType::Weave: return CalculateWeaveTarget(context);
-    case FearWormMovementType::Drift: return CalculateDriftTarget(context);
-    case FearWormMovementType::Line: return CalculateLineTarget(context);
-    case FearWormMovementType::Spiral: return CalculateSpiralTarget(context);
-    default: return CalculateOrbitTarget(context);
+    case FearWormMovementType::Coil: return FearWormCoilBarrageState::CalculateTarget(context, actionElapsedSeconds);
+    case FearWormMovementType::Weave: return FearWormWeaveSpreadState::CalculateTarget(context);
+    case FearWormMovementType::Drift: return FearWormMovement::CalculateDriftTarget(context);
+    case FearWormMovementType::Line: return FearWormLineMissileState::CalculateTarget(context);
+    case FearWormMovementType::Spiral: return FearWormSpiralBarrageState::CalculateTarget(context, actionElapsedSeconds, spiralAngleRadians);
+    default: return FearWormMovement::CalculateOrbitTarget(context);
     }
 }
 
-// 戦闘用の軌道と経過時間をもとに、現在の追従先を計算する。
-Vector3 FearWormBattleState::BattleTarget(FearWormEnemy& boss, const Vector3& playerPosition,
-    float actionElapsedSeconds, float spiralAngleRadians)
+// 視線の高さを反映した、攻撃間で共通の座標計算入力を作る。
+FearWormMovementContext FearWormBattleState::CreateMovementContext(const FearWormEnemy& boss,
+    const Vector3& playerPosition) const
 {
 
     Vector3 adjustedPlayerPosition = playerPosition;
@@ -191,16 +89,7 @@ Vector3 FearWormBattleState::BattleTarget(FearWormEnemy& boss, const Vector3& pl
         adjustedPlayerPosition.y += lookOffsetY;
     }
 
-    return MovementTargetPosition(boss, adjustedPlayerPosition, actionElapsedSeconds, spiralAngleRadians);
-}
-
-// 現在の移動状態に応じた目標位置を取得する。
-Vector3 FearWormBattleState::MovementTargetPosition(const FearWormEnemy& boss, const Vector3& playerPosition,
-    float actionElapsedSeconds, float spiralAngleRadians) const
-{
-    const FearWormMovementContext context { playerPosition, orbitAngle_, movementPatternTimer_,
-        boss.parallelForwardOffset_, actionElapsedSeconds, spiralAngleRadians };
-    return CalculateFearWormTarget(movementPattern_, context);
+    return { adjustedPlayerPosition, orbitAngle_, boss.parallelForwardOffset_ };
 }
 
 // 指定した部位の位置から、通常射撃用の弾を生成する。
@@ -291,32 +180,26 @@ void FearWormBattleState::Initialize(Model* bulletModel)
 void FearWormBattleState::Reset(FearWormEnemy& boss)
 {
     Exit(boss);
-    orbitShotState_ = FearWormOrbitShotState {};
-    weaveSpreadState_ = FearWormWeaveSpreadState {};
-    driftBurstState_ = FearWormDriftBurstState {};
-    coilBarrageState_ = FearWormCoilBarrageState {};
-    headChargeState_ = FearWormHeadChargeState {};
-    lineMissileState_ = FearWormLineMissileState {};
-    lineMissileState_.targetIndices_.reserve(boss.segments_.size());
-    spiralBarrageState_ = FearWormSpiralBarrageState {};
+    orbitShotState_.Reset();
+    weaveSpreadState_.Reset();
+    driftBurstState_.Reset();
+    coilBarrageState_.Reset();
+    headChargeState_.Reset();
+    lineMissileState_.Reset(boss.segments_.size());
+    spiralBarrageState_.Reset();
     beamActionState_.Reset();
     movementPattern_ = MovementPattern::Orbit;
-    movementPatternTimer_ = 0.0f;
     actionType_ = ActionType::OrbitShot;
     orbitAngle_ = 0.0f;
     fireSegmentIndex_ = 0;
     missileAttackTimer_ = 0.0f;
-    lineTransitionTimer_ = 0.0f;
     hasTriggeredMadMode_ = false;
     headAimDirection_ = kDefaultHeadAimDirection;
 }
 
-void FearWormBattleState::PrepareEntryMovement(FearWormEnemy& boss, float orbitAngle)
+void FearWormBattleState::SetStartOrbitAngleRadians(float orbitAngleRadians)
 {
-    Exit(boss);
-    orbitAngle_ = orbitAngle;
-    movementPattern_ = MovementPattern::Orbit;
-    movementPatternTimer_ = 0.0f;
+    orbitAngle_ = orbitAngleRadians;
 }
 
 void FearWormBattleState::StopAttacksForDeath(FearWormEnemy& boss)
@@ -327,43 +210,29 @@ void FearWormBattleState::StopAttacksForDeath(FearWormEnemy& boss)
 
 float FearWormBattleState::UpdateFormationBlend()
 {
-    float blendT = 0.0f;
     if (movementPattern_ == MovementPattern::Line) {
-        lineTransitionTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-        blendT = (std::min)(lineTransitionTimer_, 1.0f);
-    } else {
-        lineTransitionTimer_ = 0.0f;
+        return lineMissileState_.UpdateFormationBlend(TimeManager::GetInstance()->GetDeltaTime());
     }
-    return blendT;
+    return 0.0f;
 }
 
 Vector3 FearWormBattleState::CalculateFormationPosition(const FearWormEnemy& boss, int32_t segmentOrder,
     const Vector3& followPosition, float formationBlend) const
 {
     if (movementPattern_ == MovementPattern::Coil) {
-        const Vector3 coilPosition = CalculateCoilSegmentPosition(
-            boss.segments_[0].position, orbitAngle_, segmentOrder, boss.segmentSpacing_);
-        return Lerp(followPosition, coilPosition, CoilFormationBlend());
+        return coilBarrageState_.CalculateFormationPosition(boss.segments_[0].position,
+            orbitAngle_, segmentOrder, boss.segmentSpacing_, followPosition);
     }
-    // ミサイル攻撃時の横並びと揺れを、共通の追従位置へ合成する。
-    float waveScaleY = 3.2f;
-    float waveScaleZ = 2.0f;
-    float waveFrequency = 4.2f;
-
-    Vector3 posLine = {
-        boss.segments_[0].position.x - (boss.segmentSpacing_ * static_cast<float>(segmentOrder)),
-        boss.segments_[0].position.y + std::sin(boss.moveTime_ * waveFrequency + static_cast<float>(segmentOrder) * 0.8f) * waveScaleY,
-        boss.segments_[0].position.z + std::cos(boss.moveTime_ * (waveFrequency * 0.8f) + static_cast<float>(segmentOrder) * 0.6f) * waveScaleZ
-    };
-
-    // 補間率0では、通常の追従位置を維持する。
-    return Lerp(followPosition, posLine, formationBlend);
+    return FearWormLineMissileState::CalculateFormationPosition(boss.segments_[0].position,
+        segmentOrder, boss.segmentSpacing_, boss.moveTime_, followPosition, formationBlend);
 }
 
 bool FearWormBattleState::ShouldAimHead(const FearWormEnemy& boss) const
 {
-    bool isBeamAiming = !boss.HasAliveBodyParts() && beamActionState_.IsAiming();
-    return headChargeState_.isActive_ || isBeamAiming;
+    if (currentAction_ == nullptr) {
+        return false;
+    }
+    return currentAction_->ShouldAimHead(boss);
 }
 
 void FearWormBattleState::SubmitRaytracing(FearWormEnemy& boss, DxrRenderer& renderer)
@@ -372,36 +241,6 @@ void FearWormBattleState::SubmitRaytracing(FearWormEnemy& boss, DxrRenderer& ren
         beamActionState_.SubmitRaytracing(renderer);
     }
 }
-float FearWormBattleState::CoilFormationBlend() const
-{
-    float blend = std::clamp(movementPatternTimer_ / kCoilFormationDurationSeconds, 0.0f, 1.0f);
-    const float releaseStartSeconds = kCoilFormationDurationSeconds + kCoilAttackDurationSeconds;
-    if (movementPatternTimer_ >= releaseStartSeconds) {
-        blend = 1.0f - std::clamp(
-            (movementPatternTimer_ - releaseStartSeconds) / kCoilReleaseDurationSeconds, 0.0f, 1.0f);
-    }
-    return blend * blend * (3.0f - 2.0f * blend);
-}
-
-bool FearWormBattleState::IsCoilFiring() const
-{
-    return movementPattern_ == MovementPattern::Coil
-        && movementPatternTimer_ >= kCoilFormationDurationSeconds
-        && movementPatternTimer_ < kCoilFormationDurationSeconds + kCoilAttackDurationSeconds;
-}
-
-Vector3 FearWormBattleState::CalculateCoilSegmentPosition(const Vector3& headPosition, float orbitAngle,
-    int32_t segmentOrder, float segmentSpacing)
-{
-    const float headAngle = orbitAngle * kCoilAngleRate;
-    const float segmentAngle = headAngle - static_cast<float>(segmentOrder) * kCoilSegmentAngleRadians;
-    Vector3 position = headPosition;
-    position.x += (std::cos(segmentAngle) - std::cos(headAngle)) * kCoilBaseRadius;
-    position.y -= static_cast<float>(segmentOrder) * segmentSpacing * kCoilSegmentHeightRate;
-    position.z += (std::sin(segmentAngle) - std::sin(headAngle)) * kCoilBaseRadius;
-    return position;
-}
-
 void FearWormBattleState::Enter(FearWormEnemy& boss)
 {
     ChangeAction(ActionType::OrbitShot, boss);
@@ -410,12 +249,14 @@ void FearWormBattleState::Enter(FearWormEnemy& boss)
 void FearWormBattleState::Exit(FearWormEnemy& boss)
 {
     if (currentAction_ != nullptr) {
+        // 激昂の終了・中断後は、次のミサイルまでの待機を最初から数える。
+        if (actionType_ == ActionType::SpiralBarrage) {
+            missileAttackTimer_ = 0.0f;
+        }
         currentAction_->Exit(*this, boss);
         currentAction_ = nullptr;
     }
     movementPattern_ = MovementPattern::Orbit;
-    movementPatternTimer_ = 0.0f;
-    lineTransitionTimer_ = 0.0f;
 }
 
 void FearWormBattleState::ChangeAction(ActionType type, FearWormEnemy& boss)
@@ -437,7 +278,13 @@ void FearWormBattleState::ChangeAction(ActionType type, FearWormEnemy& boss)
     }
     Exit(boss);
     actionType_ = type;
-    movementPatternTimer_ = 0.0f;
+    // 攻撃選択に使う記録は統括側だけで更新する。
+    if (type == ActionType::LineMissile) {
+        missileAttackTimer_ = 0.0f;
+    }
+    if (type == ActionType::SpiralBarrage) {
+        hasTriggeredMadMode_ = true;
+    }
     currentAction_ = nextAction;
     currentAction_->Enter(*this, boss);
 }
@@ -467,13 +314,8 @@ bool FearWormBattleState::CanFire(const FearWormEnemy& boss) const
     return Vector3Length(boss.player_->GetTranslate() - boss.GetPosition()) <= kAttackRange;
 }
 
-int32_t FearWormBattleState::SelectFiringSegment(FearWormEnemy& boss, int32_t& fireTimer)
+int32_t FearWormBattleState::SelectFiringSegment(FearWormEnemy& boss)
 {
-    fireTimer++;
-    if (fireTimer < fireInterval_) {
-        return -1;
-    }
-    fireTimer = 0;
     const int32_t segmentCount = static_cast<int32_t>(boss.segments_.size());
     for (int32_t count = 0; count < segmentCount; count++) {
         fireSegmentIndex_++;
@@ -489,10 +331,16 @@ int32_t FearWormBattleState::SelectFiringSegment(FearWormEnemy& boss, int32_t& f
 
 Vector4 FearWormBattleState::HeadAttackColor(const Vector4& baseColor) const
 {
-    return headChargeState_.HeadAttackColor(baseColor);
+    if (currentAction_ == nullptr) {
+        return baseColor;
+    }
+    return currentAction_->HeadAttackColor(baseColor);
 }
 
 float FearWormBattleState::ApplyHeadChargePulse(float basePulse) const
 {
-    return headChargeState_.ApplyHeadChargePulse(basePulse);
+    if (currentAction_ == nullptr) {
+        return basePulse;
+    }
+    return currentAction_->ApplyHeadChargePulse(basePulse);
 }

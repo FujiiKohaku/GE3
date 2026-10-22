@@ -9,17 +9,24 @@
 #include <memory>
 #include <utility>
 #include <cmath>
+#include "../State/FearWormTiming.h"
 #include <algorithm>
 
-void FearWormHeadChargeState::Enter(FearWormBattleState& battle, FearWormEnemy& boss)
+void FearWormHeadChargeState::Reset()
 {
     isFinished_ = false;
-    isActive_ = true;
+    isActive_ = false;
     isFiring_ = false;
     elapsedSeconds_ = 0.0f;
     shotTimerSeconds_ = 0.0f;
     effectTimerSeconds_ = 0.0f;
     shotCount_ = 0;
+}
+
+void FearWormHeadChargeState::Enter(FearWormBattleState& battle, FearWormEnemy& boss)
+{
+    Reset();
+    isActive_ = true;
     battle.movementPattern_ = FearWormBattleState::MovementPattern::Drift;
     UpdateHeadAimDirection(battle, boss);
     if (battle.CanFire(boss)) {
@@ -30,8 +37,8 @@ void FearWormHeadChargeState::Enter(FearWormBattleState& battle, FearWormEnemy& 
 void FearWormHeadChargeState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.MovementSpeedRate();
-    battle.movementPatternTimer_ += deltaTimeSeconds;
-    battle.UpdateBattleMovement(boss, boss.player_->GetTranslate(), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
+    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateDriftTarget(context), boss.MovementSpeedRate());
     if (!battle.CanFire(boss)) {
         isFinished_ = true;
         return;
@@ -41,7 +48,7 @@ void FearWormHeadChargeState::Update(FearWormBattleState& battle, FearWormEnemy&
     if (!isFiring_) {
         effectTimerSeconds_ += deltaTimeSeconds;
         if (effectTimerSeconds_ >= kHeadChargeEffectIntervalSeconds) {
-            effectTimerSeconds_ = 0.0f;
+            effectTimerSeconds_ = std::fmod(effectTimerSeconds_, kHeadChargeEffectIntervalSeconds);
             EffectManager::GetInstance()->PlayEffect("WormShotFlash", battle.HeadMuzzlePosition(boss));
         }
         if (elapsedSeconds_ >= kHeadChargeDurationSeconds) {
@@ -51,8 +58,8 @@ void FearWormHeadChargeState::Update(FearWormBattleState& battle, FearWormEnemy&
         return;
     }
     shotTimerSeconds_ += deltaTimeSeconds;
-    if (shotTimerSeconds_ >= kHeadChargeShotIntervalSeconds) {
-        shotTimerSeconds_ = 0.0f;
+    if (deltaTimeSeconds > 0.0f && shotTimerSeconds_ >= kHeadChargeShotIntervalSeconds) {
+        shotTimerSeconds_ = std::fmod(shotTimerSeconds_, kHeadChargeShotIntervalSeconds);
         FireChargedBullet(battle, boss);
         shotCount_++;
     }
@@ -85,7 +92,7 @@ void FearWormHeadChargeState::UpdateHeadAimDirection(FearWormBattleState& battle
         Lerp(
             battle.headAimDirection_,
             targetDirection,
-            kHeadAimFollowRate));
+            FearWormTiming::CalculateFollowBlend(kHeadAimFollowRate, TimeManager::GetInstance()->GetDeltaTime())));
 }
 
 void FearWormHeadChargeState::FireChargedBullet(FearWormBattleState& battle, FearWormEnemy& boss)

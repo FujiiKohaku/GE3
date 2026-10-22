@@ -12,6 +12,7 @@ public:
     void Reset();
     void Stop();
     bool IsAiming() const { return phase_ != Phase::Wait; }
+    bool ShouldAimHead(const FearWormEnemy& boss) const override;
     bool IsHittingPlayer() const { return beam_.IsHittingPlayer(); }
     void Draw();
     void SubmitRaytracing(DxrRenderer& renderer);

@@ -1,4 +1,6 @@
 // モデル・アニメーション・足の接地補正・エフェクトなどを確認するための開発用シーン。
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "App/Scene/Test/TestScene1.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -611,7 +613,7 @@ void TestScene1::Update()
 
     // クールダウン・演出実行中ガードのタイマー更新
     if (isSequenceActive_) {
-        coolDownTimer_ -= 1.0f / 60.0f;
+        coolDownTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (coolDownTimer_ <= 0.0f) {
             isSequenceActive_ = false;
         }
@@ -619,7 +621,7 @@ void TestScene1::Update()
 
     // 氷の中心から6方向への花火飛翔発射
     if (isSixTrailPending_) {
-        sixTrailTimer_ -= 1.0f / 60.0f;
+        sixTrailTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (sixTrailTimer_ <= 0.0f) {
             isSixTrailPending_ = false;
             EffectManager::GetInstance()->PlayEffect("SixDirectionFireworkTrails", sixSeqCenterPos_);
@@ -628,7 +630,7 @@ void TestScene1::Update()
 
     // 【第1弾爆発】6方向の到達地点（＋中央）の全7箇所での3重連動大爆発！
     if (isSixBlastPending_) {
-        sixBlastTimer_ -= 1.0f / 60.0f;
+        sixBlastTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (sixBlastTimer_ <= 0.0f) {
             isSixBlastPending_ = false;
 
@@ -658,7 +660,7 @@ void TestScene1::Update()
 
     // 【第2弾二重破裂】第1弾爆発の直後に追いかけてドガガガーン！と広範囲で2度目の二重破裂！
     if (isSecondBlastPending_) {
-        secondBlastTimer_ -= 1.0f / 60.0f;
+        secondBlastTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (secondBlastTimer_ <= 0.0f) {
             isSecondBlastPending_ = false;
 
@@ -755,8 +757,8 @@ void TestScene1::Update()
         if (isDashInput) {
             speed = 0.4f;
         }
-        playerPos_.x += worldMoveDir.x * speed;
-        playerPos_.z += worldMoveDir.z * speed;
+        playerPos_.x += worldMoveDir.x * speed * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
+        playerPos_.z += worldMoveDir.z * speed * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
 
         // プレイヤーの向きを入力方向に合わせる (滑らかな旋回補間) (X軸の旋回方向を反転させてA/Dの向きを修正)
         float targetYaw = std::atan2(-worldMoveDir.x, worldMoveDir.z) + playerRotOffset_;
@@ -766,7 +768,7 @@ void TestScene1::Update()
         while (diff < -std::numbers::pi_v<float>) diff += 2.0f * std::numbers::pi_v<float>;
         while (diff > std::numbers::pi_v<float>) diff -= 2.0f * std::numbers::pi_v<float>;
 
-        playerRot_.y = currentYaw + diff * 0.15f; // 旋回補正
+        playerRot_.y = currentYaw + diff * GameTiming::CalculateFollowBlend(0.15f, TimeManager::GetInstance()->GetDeltaTime()); // 旋回補正
     } else {
         // 移動していないときは向きを変更せず、直前の向きをそのままキープする
     }
@@ -825,11 +827,11 @@ void TestScene1::Update()
             MoveTowardFloat(
                 playerPos_.y,
                 playerGroundHeight,
-                groundFollowDelta);
+                groundFollowDelta * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime()));
     }
 
     if (currentAnimState_ == PlayerAnimState::Attacking) {
-        attackTimer_ += 1.0f / 60.0f;
+        attackTimer_ += TimeManager::GetInstance()->GetDeltaTime();
 
         if (Input::GetInstance()->IsMouseTrigger(0) ||
             Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_X)) {
@@ -880,7 +882,7 @@ void TestScene1::Update()
                  Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
             // ジャンプ開始
             isJumping_ = true;
-            jumpVelocity_ = 0.35f;
+            jumpVelocityUnitsPerSecond_ = 21.45f;
             idleVariationTimer_ = 0.0f;
             combatIdleTimer_ = 0.0f;
             currentAnimState_ = PlayerAnimState::Jumping;
@@ -904,7 +906,7 @@ void TestScene1::Update()
                 }
             } else {
                 if (currentAnimState_ == PlayerAnimState::CombatIdle) {
-                    combatIdleTimer_ += 1.0f / 60.0f;
+                    combatIdleTimer_ += TimeManager::GetInstance()->GetDeltaTime();
                     if (combatIdleTimer_ >= combatIdleAnimation_.duration) {
                         currentAnimState_ = PlayerAnimState::Idle;
                         playerActor_->GetPlayAnimation()->SetAnimation(&idleAnimation_, 0.2f);
@@ -912,7 +914,7 @@ void TestScene1::Update()
                         combatIdleTimer_ = 0.0f;
                     }
                 } else if (currentAnimState_ == PlayerAnimState::Idle) {
-                    idleVariationTimer_ += 1.0f / 60.0f;
+                    idleVariationTimer_ += TimeManager::GetInstance()->GetDeltaTime();
                     if (idleVariationTimer_ >= 6.0f) {
                         currentAnimState_ = PlayerAnimState::CombatIdle;
                         playerActor_->GetPlayAnimation()->SetAnimation(&combatIdleAnimation_, 0.2f);
@@ -929,8 +931,10 @@ void TestScene1::Update()
         }
     } else {
         // 空中にいる場合
-        playerPos_.y += jumpVelocity_;
-        jumpVelocity_ -= gravity_;
+        const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+        playerPos_.y += jumpVelocityUnitsPerSecond_ * deltaTimeSeconds
+            - 0.5f * kGravityUnitsPerSecondSquared * deltaTimeSeconds * deltaTimeSeconds;
+        jumpVelocityUnitsPerSecond_ -= kGravityUnitsPerSecondSquared * deltaTimeSeconds;
 
         // 着地判定 (床の高さは -5.0f)
         if (playerPos_.y <= playerGroundHeight) {
@@ -1025,7 +1029,7 @@ void TestScene1::Update()
 
     // 更新処理 (止まっている時はアニメーション時間を進めない。ただしブレンド更新中は進める)
     bool isBlending = playerActor_ && playerActor_->GetPlayAnimation() && playerActor_->GetPlayAnimation()->IsBlending();
-    float animDeltaTime = 1.0f / 60.0f;
+    float animDeltaTime = TimeManager::GetInstance()->GetDeltaTime();
     if (currentAnimState_ == PlayerAnimState::Idle && !isBlending) {
         animDeltaTime = 0.0f;
     }
@@ -1037,7 +1041,7 @@ void TestScene1::Update()
     UpdateKatanaAttachment();
     UpdateBoneNames();
     if (sneakWalkActor_) {
-        sneakWalkActor_->Update(1.0f / 60.0f);
+        sneakWalkActor_->Update(TimeManager::GetInstance()->GetDeltaTime());
     }
     if (floorObj_) {
         floorObj_->Update();
@@ -1053,15 +1057,15 @@ void TestScene1::Update()
         }
     }
     if (recoveryCubeObj_) {
-        recoveryCubeAnimationTime_ += 0.035f;
+        recoveryCubeAnimationTime_ += 2.1f * TimeManager::GetInstance()->GetDeltaTime();
         Vector3 recoveryPosition = recoveryCubeBasePosition_;
         recoveryPosition.y +=
             std::sin(recoveryCubeAnimationTime_) * 0.35f;
 
         Vector3 recoveryRotation =
             recoveryCubeObj_->GetRotate();
-        recoveryRotation.x += 0.018f;
-        recoveryRotation.y += 0.032f;
+        recoveryRotation.x += 1.08f * TimeManager::GetInstance()->GetDeltaTime();
+        recoveryRotation.y += 1.92f * TimeManager::GetInstance()->GetDeltaTime();
         recoveryCubeObj_->SetTranslate(recoveryPosition);
         recoveryCubeObj_->SetRotate(recoveryRotation);
         recoveryCubeObj_->Update();
@@ -2178,12 +2182,12 @@ void TestScene1::ApplyFootIK()
         MoveTowardFloat(
             leftFootIkWeight_,
             leftTargetWeight,
-            0.18f);
+            10.8f * TimeManager::GetInstance()->GetDeltaTime());
     rightFootIkWeight_ =
         MoveTowardFloat(
             rightFootIkWeight_,
             rightTargetWeight,
-            0.18f);
+            10.8f * TimeManager::GetInstance()->GetDeltaTime());
 
     float activeLeftWeight = 0.0f;
     float activeRightWeight = 0.0f;

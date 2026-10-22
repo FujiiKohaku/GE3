@@ -1,5 +1,6 @@
 #include "FearWormEntryState.h"
 #include "../FearWormEnemy.h"
+#include "../Battle/Movement/FearWormMovement.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/Time/TimeManager.h"
 #include <algorithm>
@@ -95,7 +96,10 @@ void FearWormEntryState::UpdateSegmentPositions(FearWormEnemy& boss)
 
     const Vector3 playerPosition = boss.player_->GetTranslate();
     const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
-    const Vector3 battlePosition = boss.MovementTargetPosition(playerPosition);
+    const FearWormMovementContext movementContext {
+        playerPosition, kExitOrbitAngleRadians, boss.parallelForwardOffset_
+    };
+    const Vector3 battlePosition = FearWormMovement::CalculateOrbitTarget(movementContext);
     // 頭から尾へ開始時刻をずらし、段階が変わっても同じ軌道を継続する。
     for (size_t index = 0; index < boss.segments_.size(); ++index) {
         boss.segments_[index].position = CalculateEntryPosition(

@@ -6,6 +6,8 @@
 #include "Engine/Effect/EffectManager.h"
 #include <algorithm>
 #include <cmath>
+#include "../State/FearWormTiming.h"
+#include "Engine/Time/TimeManager.h"
 
 FearWormBeam::FearWormBeam() = default;
 FearWormBeam::~FearWormBeam() = default;
@@ -34,7 +36,7 @@ void FearWormBeam::Stop()
     length_ = 0.0f;
     width_ = 0.0f;
     isHittingPlayer_ = false;
-    hitEffectFrameCount_ = 0;
+    hitEffectElapsedSeconds_ = 0.0f;
 }
 
 void FearWormBeam::SetDimensions(float length, float width)
@@ -116,19 +118,20 @@ bool FearWormBeam::IntersectsSphere(const Vector3& spherePosition, float sphereR
 void FearWormBeam::CheckCollision(Player* player)
 {
     isHittingPlayer_ = false;
-    if (player == nullptr || length_ <= 0.0f || width_ <= 0.0f) {
+    if (player == nullptr || length_ <= 0.0f || width_ <= 0.0f
+        || TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
         return;
     }
     const Vector3 playerPosition = player->GetTranslate();
     if (!IntersectsSphere(playerPosition, kPlayerCollisionRadius)) {
-        hitEffectFrameCount_ = 0;
+        hitEffectElapsedSeconds_ = 0.0f;
         return;
     }
     isHittingPlayer_ = true;
     player->ApplyDamage(kDamage);
-    hitEffectFrameCount_++;
-    if (hitEffectFrameCount_ >= kHitEffectFrameInterval) {
-        hitEffectFrameCount_ = 0;
+    const int32_t effectCount = FearWormTiming::AdvanceInterval(hitEffectElapsedSeconds_,
+        kHitEffectIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 1);
+    if (effectCount > 0) {
         EffectManager::GetInstance()->PlayEffect("DamageHit", playerPosition);
     }
 }

@@ -4,6 +4,7 @@
 #include "Engine/math/MathStruct.h"
 #include "Engine/Time/TimeManager.h"
 #include <cmath>
+#include <algorithm>
 
 namespace {
 constexpr float kLaunchDuration = 0.45f;     // 打ち上げフェーズの時間（秒）
@@ -54,10 +55,14 @@ void TrackingEnemyBullet::Update()
 void TrackingEnemyBullet::Move()
 {
     const float timeScale = GetTimeScale();
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime() * timeScale;
+    if (deltaTimeSeconds <= 0.0f) {
+        return;
+    }
     if (launchTimer_ < kLaunchDuration) {
-        launchTimer_ += TimeManager::GetInstance()->GetDeltaTime() * timeScale;
+        launchTimer_ += deltaTimeSeconds;
         // 打ち上げフェーズ（EaseOutの減速上昇）
-        float t = launchTimer_ / kLaunchDuration;
+        float t = std::clamp(launchTimer_ / kLaunchDuration, 0.0f, 1.0f);
         float easeOut = 1.0f - (t * t); // イージング（後半ほど減速）
         velocity_ = { 0.0f, kLaunchUpSpeed * easeOut, 0.0f };
     } else {
@@ -71,7 +76,7 @@ void TrackingEnemyBullet::Move()
 
             // プレイヤーを通り過ぎたか、あるいは追尾制限時間を過ぎた場合に追尾終了
             if (isTracking_ && !isPassed_) {
-                trackingTimer_ += TimeManager::GetInstance()->GetDeltaTime() * timeScale;
+                trackingTimer_ += deltaTimeSeconds;
 
                 float dot = Dot(NormalizeSafe(toPlayer), NormalizeSafe(velocity_));
                 // 打ち上げ直後の上向き速度を「通過した」と誤判定しないよう、
@@ -92,12 +97,12 @@ void TrackingEnemyBullet::Move()
                 Vector3 targetDirection = NormalizeSafe(toPlayer);
                 Vector3 targetVelocity = targetDirection * currentSpeed;
 
-                velocity_ = Lerp(
-                    velocity_, targetVelocity, kTrackingRate * timeScale);
+                const float trackingBlend = 1.0f - std::pow(1.0f - kTrackingRate, deltaTimeSeconds * 60.0f);
+                velocity_ = Lerp(velocity_, targetVelocity, trackingBlend);
             }
         }
     }
 
     // 座標更新
-    transform_.translate += velocity_ * timeScale;
+    transform_.translate += velocity_ * (deltaTimeSeconds * 60.0f);
 }

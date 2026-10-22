@@ -1,4 +1,6 @@
 // 通常敵の射撃と難易度設定を扱う。発射間隔・弾速・HPなどを設定から変更できる。
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
 
 #include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
@@ -20,7 +22,8 @@ void NormalEnemy::Initialize(
     bulletModel_ = bulletModel;
 
     player_ = player;
-    fireInterval_ = 120;
+    fireIntervalSeconds_ = 2.0f;
+    fireElapsedSeconds_ = 0.0f;
     bulletSpeed_ = 0.48f;
     isRadialShotEnabled_ = true;
 }
@@ -43,7 +46,7 @@ void NormalEnemy::ApplySettings(const NormalEnemySettings& settings)
     SetFireInterval(appliedSettings.fireIntervalFrames);
     SetBulletSpeed(appliedSettings.bulletSpeedPerFrame);
     SetRadialShotEnabled(appliedSettings.isRadialShotEnabled);
-    fireTimer_ = 0;
+    fireElapsedSeconds_ = 0.0f;
 }
 
 void NormalEnemy::SetRadialShotEnabled(bool isEnabled)
@@ -58,7 +61,7 @@ void NormalEnemy::SetBulletSpeed(float bulletSpeed)
 
 void NormalEnemy::SetFireInterval(int32_t fireIntervalFrames)
 {
-    fireInterval_ = fireIntervalFrames;
+    fireIntervalSeconds_ = static_cast<float>(fireIntervalFrames) / 60.0f;
 }
 
 // プレイヤーの前方かつ射程内にいる場合だけ発射タイマーを進める。
@@ -87,13 +90,10 @@ void NormalEnemy::Attack()
     float distance = Vector3Length(toEnemy);
 
     if (distance <= 170.0f) {
-        fireTimer_++;
-
-        if (fireTimer_ >= fireInterval_) {
-
+        const int32_t shotCount = GameTiming::AdvanceInterval(fireElapsedSeconds_,
+            fireIntervalSeconds_, TimeManager::GetInstance()->GetDeltaTime(), 3);
+        for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
             FireBullet();
-
-            fireTimer_ = 0;
         }
     }
 }

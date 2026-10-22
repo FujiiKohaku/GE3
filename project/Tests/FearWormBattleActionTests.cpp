@@ -1,4 +1,6 @@
 #include "FearWormBattleActionTests.h"
+#include "FearWormTimingTests.h"
+#include "AppTimingTests.h"
 #include "FearWormStateTests.h"
 #include "FearWormMovementTests.h"
 #include "FearWormEntryTests.h"
@@ -9,7 +11,7 @@
 int main()
 {
     TimeManager::GetInstance()->Initialize();
-    if (!RunFearWormBattleActionTests() || !RunFearWormStateTests()
+    if (!RunAppTimingTests() || !RunFearWormTimingTests() || !RunFearWormBattleActionTests() || !RunFearWormStateTests()
         || !RunFearWormMovementTests() || !RunFearWormEntryTests() || !RunBeamStateTests()) {
         std::puts("FearWorm regression tests failed.");
         return 1;
