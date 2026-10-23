@@ -17,6 +17,7 @@ public:
     void Reset();
     void Update(IceJellyfish& boss) override;
     void Exit(IceJellyfish& boss) override;
+    void EmitPendingAttacks(IceJellyfish& boss) { iceSpearAttack_.EmitPendingVolleys(boss); }
     float GetIceSpearPoseWeight() const { return iceSpearAttack_.GetPoseWeight(); }
     bool HasIcePillarModels() const { return icePillarAttack_.HasModels(); }
     const std::array<Vector3, 2>& GetIcePillarPositions() const { return icePillarAttack_.GetPositions(); }

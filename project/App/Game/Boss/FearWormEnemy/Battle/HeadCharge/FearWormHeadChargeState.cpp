@@ -36,9 +36,9 @@ void FearWormHeadChargeState::Enter(FearWormBattleState& battle, FearWormEnemy& 
 
 void FearWormHeadChargeState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.MovementSpeedRate();
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
-    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateDriftTarget(context), boss.MovementSpeedRate());
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.GetAttackMovementSpeedRate();
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
+    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateDriftTarget(context), boss.GetAttackMovementSpeedRate());
     if (!battle.CanFire(boss)) {
         isFinished_ = true;
         return;
@@ -78,15 +78,15 @@ void FearWormHeadChargeState::Exit(FearWormBattleState&, FearWormEnemy&)
 
 void FearWormHeadChargeState::UpdateHeadAimDirection(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    if (boss.player_ == nullptr) {
+    if (!boss.HasAttackTarget()) {
         return;
     }
 
-    if (boss.segments_.empty()) {
+    if ((boss.GetAttackSegmentCount() == 0)) {
         return;
     }
 
-    Vector3 targetDirection = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
+    Vector3 targetDirection = NormalizeSafe(boss.GetAttackTargetPosition() - boss.GetAttackSegmentPosition(0));
 
     battle.headAimDirection_ = NormalizeSafe(
         Lerp(
@@ -97,7 +97,7 @@ void FearWormHeadChargeState::UpdateHeadAimDirection(FearWormBattleState& battle
 
 void FearWormHeadChargeState::FireChargedBullet(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    if (boss.player_ == nullptr) {
+    if (!boss.HasAttackTarget()) {
         return;
     }
 
@@ -112,7 +112,7 @@ void FearWormHeadChargeState::FireChargedBullet(FearWormBattleState& battle, Fea
 
     Vector3 position = battle.HeadMuzzlePosition(boss);
 
-    Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - position);
+    Vector3 direction = NormalizeSafe(boss.GetAttackTargetPosition() - position);
 
     Vector3 velocity { };
     velocity.x = direction.x * kChargedBulletSpeed;
@@ -131,7 +131,7 @@ void FearWormHeadChargeState::FireChargedBullet(FearWormBattleState& battle, Fea
     bullet->SetVelocity(velocity);
 
     // 管理リストへ追加して発射エフェクトを再生する。
-    boss.AddEnemyBullet(std::move(bullet));
+    boss.SpawnAttackBullet(std::move(bullet));
 
     EffectManager::GetInstance()->PlayEffect(
         "WormShotFlash",

@@ -75,16 +75,16 @@ void IceJellyfishIcePillarAttack::Reset()
 
 void IceJellyfishIcePillarAttack::PrepareWarning(IceJellyfish& boss)
 {
-    if (boss.player_ == nullptr || icePillarWave_ < 0 || icePillarWave_ >= 3) return;
+    if (!boss.HasAttackTarget() || icePillarWave_ < 0 || icePillarWave_ >= 3) return;
     icePillarModelSpawnedForWave_ = false;
     constexpr std::array<float, 3> kLaneOffsets = { -15.0f, 0.0f, 15.0f };
-    const Vector3 playerPosition = boss.player_->GetTranslate();
-    const float floorY = boss.hoverCenterY_ - kFloorOffsetBelowHover;
+    const Vector3 playerPosition = boss.GetAttackTargetPosition();
+    const float floorY = boss.GetAttackHoverCenter().y - kFloorOffsetBelowHover;
     size_t hazardIndex = 0;
     for (int32_t lane = 0; lane < 3; ++lane) {
         if (lane == icePillarSafeLane_) continue;
         Vector3 position = {
-            boss.hoverCenterX_ + kLaneOffsets[static_cast<size_t>(lane)],
+            boss.GetAttackHoverCenter().x + kLaneOffsets[static_cast<size_t>(lane)],
             floorY,
             playerPosition.z + kIcePillarAheadDistance
         };
@@ -95,7 +95,7 @@ void IceJellyfishIcePillarAttack::PrepareWarning(IceJellyfish& boss)
 
 void IceJellyfishIcePillarAttack::Start(IceJellyfish& boss)
 {
-    if (boss.player_ == nullptr || icePillarWave_ >= 0) return;
+    if (!boss.HasAttackTarget() || icePillarWave_ >= 0) return;
     std::mt19937 randomEngine(std::random_device {}());
     std::uniform_int_distribution<int32_t> laneDistribution(0, 2);
     icePillarSafeLane_ = laneDistribution(randomEngine);
@@ -131,8 +131,8 @@ void IceJellyfishIcePillarAttack::Update(IceJellyfish& boss, float deltaTimeSeco
         icePillarModelSpawnedForWave_ = true;
     }
 
-    if (boss.player_ != nullptr) {
-        const Vector3 playerPosition = boss.player_->GetTranslate();
+    if (boss.HasAttackTarget()) {
+        const Vector3 playerPosition = boss.GetAttackTargetPosition();
         if (icePillarModelSpawnedForWave_) {
             for (const Vector3& position : icePillarPositions_) {
                 const bool withinWidth = std::abs(playerPosition.x - position.x) <= kCollisionHalfWidth;
@@ -181,12 +181,12 @@ float IceJellyfishIcePillarAttack::GetModelScaleWeight() const
 
 void IceJellyfishIcePillarAttack::DamagePlayerOnce(IceJellyfish& boss, int32_t waveIndex, int damage)
 {
-    if (boss.player_ == nullptr || waveIndex < 0 || waveIndex >= static_cast<int>(hasHitPlayerByWave_.size()) ||
+    if (!boss.HasAttackTarget() || waveIndex < 0 || waveIndex >= static_cast<int>(hasHitPlayerByWave_.size()) ||
         hasHitPlayerByWave_[waveIndex]) {
         return;
     }
     hasHitPlayerByWave_[waveIndex] = true;
-    if (boss.player_->ApplyDamage(damage)) {
-        EffectManager::GetInstance()->PlayEffect("DamageHit", boss.player_->GetTranslate());
+    if (boss.ApplyAttackDamageToPlayer(damage)) {
+        EffectManager::GetInstance()->PlayEffect("DamageHit", boss.GetAttackTargetPosition());
     }
 }

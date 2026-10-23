@@ -24,21 +24,21 @@ void FearWormLineMissileState::Reset(size_t segmentCount)
 
 void FearWormLineMissileState::Enter(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    Reset(boss.segments_.size());
+    Reset(boss.GetAttackSegmentCount());
     battle.movementPattern_ = FearWormBattleState::MovementPattern::Line;
 }
 
 void FearWormLineMissileState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
-    battle.UpdateBattleMovement(boss, CalculateTarget(context), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
+    battle.UpdateBattleMovement(boss, CalculateTarget(context), boss.GetAttackMovementSpeedRate());
     phaseTimerSeconds_ += deltaTimeSeconds;
     switch (phase_) {
     case Phase::Formation:
         if (phaseTimerSeconds_ >= kMissileAimWaitDurationSeconds) {
-            for (size_t index = 0; index < boss.segments_.size(); index++) {
-                if (boss.segments_[index].isAlive) {
+            for (size_t index = 0; index < boss.GetAttackSegmentCount(); index++) {
+                if (boss.IsAttackSegmentAlive(index)) {
                     targetIndices_.push_back(index);
                 }
             }
@@ -55,8 +55,8 @@ void FearWormLineMissileState::Update(FearWormBattleState& battle, FearWormEnemy
         if (deltaTimeSeconds > 0.0f && phaseTimerSeconds_ >= kMissileFireIntervalSeconds) {
             phaseTimerSeconds_ = std::fmod(phaseTimerSeconds_, kMissileFireIntervalSeconds);
             const size_t segmentIndex = targetIndices_[shotCount_];
-            if (battle.CanFire(boss) && segmentIndex < boss.segments_.size()
-                && boss.segments_[segmentIndex].isAlive) {
+            if (battle.CanFire(boss) && segmentIndex < boss.GetAttackSegmentCount()
+                && boss.IsAttackSegmentAlive(segmentIndex)) {
                 FireSingleMissile(battle, boss, segmentIndex);
             }
             shotCount_++;
@@ -78,22 +78,22 @@ void FearWormLineMissileState::Exit(FearWormBattleState&, FearWormEnemy&)
 
 void FearWormLineMissileState::FireSingleMissile(FearWormBattleState& battle, FearWormEnemy& boss, size_t segmentIndex)
 {
-    if (boss.player_ == nullptr || battle.GetBulletModel() == nullptr) {
+    if (!boss.HasAttackTarget() || battle.GetBulletModel() == nullptr) {
         return;
     }
 
     std::unique_ptr<TrackingEnemyBullet> bullet = std::make_unique<TrackingEnemyBullet>();
     bullet->Initialize(battle.GetBulletModel());
-    bullet->SetPlayer(boss.player_);
+    boss.SetMissileTarget(*bullet);
 
     // 発射座標を設定
-    bullet->SetTranslate(boss.segments_[segmentIndex].position);
+    bullet->SetTranslate(boss.GetAttackSegmentPosition(segmentIndex));
 
     // 発射エフェクトの再生
-    EffectManager::GetInstance()->PlayEffect("WormShotFlash", boss.segments_[segmentIndex].position);
+    EffectManager::GetInstance()->PlayEffect("WormShotFlash", boss.GetAttackSegmentPosition(segmentIndex));
 
     // ボスの弾リストに追加
-    boss.AddEnemyBullet(std::move(bullet));
+    boss.SpawnAttackBullet(std::move(bullet));
 }
 
 Vector3 FearWormLineMissileState::CalculateTarget(const FearWormMovementContext& context)

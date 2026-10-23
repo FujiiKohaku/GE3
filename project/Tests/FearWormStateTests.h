@@ -204,6 +204,25 @@ inline bool RunFearWormStateTests()
     boss.ChangeState(static_cast<BossState>(99));
     if (boss.GetBossState() != BossState::Wait) { return false; }
 
+    // 描画リソースを必要としない、Initialize共通の状態リセットを検証する。
+    // 死亡演出の途中と完了後のどちらからも同じ個体を再利用できること。
+    for (const bool deathFinished : { false, true }) {
+        boss.SetDead(true);
+        boss.deadState_.isDeathSequenceFinished_ = deathFinished;
+        boss.deadState_.elapsedSeconds_ = 1.0f;
+        boss.moveTime_ = 10.0f;
+        boss.vulnerableEffectPlayed_ = true;
+        boss.ResetForInitialize();
+        boss.SetPosition({ 10.0f, 20.0f, 30.0f });
+        if (boss.IsDead() || boss.GetHealth() != FearWormEnemy::kHeadHp
+            || boss.GetBossState() != BossState::Wait || boss.currentState_ != &boss.waitState_
+            || boss.IsDeathSequenceFinished() || boss.deadState_.elapsedSeconds_ != 0.0f
+            || boss.moveTime_ != 0.0f || boss.vulnerableEffectPlayed_
+            || boss.battleState_.currentAction_ != nullptr) {
+            return false;
+        }
+    }
+
     // 死亡後も通常の更新窓口だけで進むことを、統括を通して確認する。
     FearWormTestClock deathClock;
     deathClock.SetDelta(1.0f / 60.0f);
@@ -230,6 +249,18 @@ inline bool RunFearWormStateTests()
         encounter.Update(0.0f);
     }
     if (updateProbe.GetUpdateCount() != 99 || !updateProbe.IsDeathSequenceFinished()) {
+        return false;
+    }
+
+    // 次のUpdateを待たず、再初期化直後から前回の通知を返さない。
+    encounter.didSpawnThisFrame_ = true;
+    encounter.didEnterMadModeThisFrame_ = true;
+    encounter.isBeamHittingPlayer_ = true;
+    encounter.didExtendRailThisFrame_ = true;
+    encounter.Initialize("None", 0.0f, {}, nullptr, nullptr, nullptr, nullptr, nullptr, false, 0.0f);
+    if (encounter.GetActiveBoss() != nullptr || encounter.IsSpawned()
+        || encounter.DidSpawnThisFrame() || encounter.DidEnterMadModeThisFrame()
+        || encounter.IsBeamHittingPlayer() || encounter.DidExtendRailThisFrame()) {
         return false;
     }
 

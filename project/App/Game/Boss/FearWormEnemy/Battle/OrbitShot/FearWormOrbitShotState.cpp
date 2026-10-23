@@ -24,17 +24,17 @@ void FearWormOrbitShotState::Enter(FearWormBattleState& battle, FearWormEnemy&)
 
 void FearWormOrbitShotState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    const float actionDeltaSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.MovementSpeedRate();
+    const float actionDeltaSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.GetAttackMovementSpeedRate();
     elapsedSeconds_ += actionDeltaSeconds;
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
-    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateOrbitTarget(context), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
+    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateOrbitTarget(context), boss.GetAttackMovementSpeedRate());
     if (battle.CanFire(boss)) {
         const int32_t shotCount = FearWormTiming::AdvanceInterval(fireElapsedSeconds_,
             battle.kFireIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 3);
         for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
             const int32_t segmentIndex = battle.SelectFiringSegment(boss);
             if (segmentIndex >= 0) {
-                battle.FireBullet(boss, boss.segments_[segmentIndex].position);
+                battle.FireBullet(boss, boss.GetAttackSegmentPosition(segmentIndex));
             }
         }
     }

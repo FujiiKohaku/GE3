@@ -13,6 +13,30 @@ inline bool ReportJellyfishAttackTestFailure(int32_t line)
 
 inline bool RunJellyfishAttackTests()
 {
+    // 長いフレームでも発射情報を姿勢更新後まで保持し、一度だけ消費する。
+    {
+        IceJellyfish deferredBoss;
+        auto& spear = deferredBoss.battleState_.iceSpearAttack_;
+        spear.iceSpearTentacles_ = { 0, 2, 4 };
+        spear.iceSpearVolley_ = 0;
+        spear.lockedTarget_ = { 10.0f, 20.0f, 30.0f };
+        spear.Update(deferredBoss, 10.0f);
+        if (spear.pendingVolleyCount_ != 3 || spear.iceSpearVolley_ != -1
+            || spear.pendingVolleys_[0].tentacle != 0 || spear.pendingVolleys_[1].tentacle != 2
+            || spear.pendingVolleys_[2].tentacle != 4 || spear.pendingVolleys_[2].volley != 2
+            || spear.pendingVolleys_[0].target.x != -4.0f) {
+            return ReportJellyfishAttackTestFailure(__LINE__);
+        }
+        spear.EmitPendingVolleys(deferredBoss); // 描画資源なしでは生成せずに消費する。
+        spear.EmitPendingVolleys(deferredBoss);
+        if (spear.pendingVolleyCount_ != 0) return ReportJellyfishAttackTestFailure(__LINE__);
+        spear.iceSpearTentacles_ = { 0, 2, 4 };
+        spear.iceSpearVolley_ = 0;
+        spear.Update(deferredBoss, 1.0f);
+        if (spear.pendingVolleyCount_ == 0) return ReportJellyfishAttackTestFailure(__LINE__);
+        deferredBoss.battleState_.Exit(deferredBoss);
+        if (spear.pendingVolleyCount_ != 0) return ReportJellyfishAttackTestFailure(__LINE__);
+    }
     // 破壊後、姿勢の再更新前でも古い判定が後続弾を遮らない。
     {
         IceJellyfish collisionBoss;

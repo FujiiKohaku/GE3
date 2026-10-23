@@ -49,12 +49,12 @@ Vector3 IceJellyfishIceSpearAttack::ApplyTentacleDirection(const IceJellyfish& b
     const Vector3& direction) const
 {
     if (!IsTentacleSelected(context.tentacleIndex)
-        || !boss.IsSegmentAlive(context.tentacleIndex, context.segmentIndex) || boss.player_ == nullptr) {
+        || !boss.IsSegmentAlive(context.tentacleIndex, context.segmentIndex) || !boss.HasAttackTarget()) {
         return direction;
     }
     Vector3 aimTarget = GetAimTarget(context.tentacleIndex);
-    aimTarget.z = boss.player_->GetTranslate().z;
-    const Vector3 aimDirection = Normalize((aimTarget - boss.bodyPosition_) - context.jointPosition);
+    aimTarget.z = boss.GetAttackTargetPosition().z;
+    const Vector3 aimDirection = Normalize((aimTarget - boss.GetAttackBodyPosition()) - context.jointPosition);
     const float aimWeight = (kAimBaseWeight + context.tipWeight * kAimTipWeight) * iceSpearPoseWeight_;
     return Normalize(direction * (1.0f - aimWeight) + aimDirection * aimWeight);
 }
@@ -76,6 +76,7 @@ bool IceJellyfishIceSpearAttack::TryApplyTentacleColor(const IceJellyfish& boss,
 
 void IceJellyfishIceSpearAttack::Reset()
 {
+    pendingVolleyCount_ = 0;
     lockedTarget_ = {};
     iceSpearTentacles_.fill(-1);
     iceSpearVolley_ = -1;
@@ -83,24 +84,21 @@ void IceJellyfishIceSpearAttack::Reset()
     iceSpearPoseWeight_ = 0.0f;
 }
 
-void IceJellyfishIceSpearAttack::FireVolley(IceJellyfish& boss)
+void IceJellyfishIceSpearAttack::FireVolley(IceJellyfish& boss, const PendingVolley& shot)
 {
-    if (boss.player_ == nullptr || boss.bulletModel_ == nullptr) return;
-    if (iceSpearVolley_ < 0 || iceSpearVolley_ >= 3) return;
-    const int32_t selectedTentacle = iceSpearTentacles_[iceSpearVolley_];
+    if (!boss.HasAttackTarget() || boss.GetAttackBulletModel() == nullptr) return;
+    const int32_t selectedTentacle = shot.tentacle;
     if (selectedTentacle < 0) return;
     const size_t tentacle = static_cast<size_t>(selectedTentacle);
-    Vector3 target = GetAimTarget(tentacle);
-    target.z = boss.player_->GetTranslate().z;
+    const Vector3 target = shot.target;
 
     for (size_t remaining = IceJellyfish::kSegmentsPerTentacle; remaining > 0; --remaining) {
         const size_t segment = remaining - 1;
         if (!boss.IsSegmentAlive(tentacle, segment)) continue;
-        const Vector3 muzzle = MatrixMath::Transform(
-            {}, boss.tentacles_[tentacle][segment]->GetWorldMatrix());
+        const Vector3 muzzle = boss.GetAttackSegmentPosition(tentacle, segment);
         EffectManager::GetInstance()->PlayEffect("JellyfishSpearFlash", muzzle);
         const Vector3 targetDirection = Normalize(target - muzzle);
-        const float speed = kBulletBaseSpeed + static_cast<float>(iceSpearVolley_) * kBulletSpeedPerVolley;
+        const float speed = kBulletBaseSpeed + static_cast<float>(shot.volley) * kBulletSpeedPerVolley;
         constexpr int32_t kSpearCount = 5;
         for (int32_t spear = 0; spear < kSpearCount; ++spear) {
             Vector3 direction = targetDirection;
@@ -114,7 +112,7 @@ void IceJellyfishIceSpearAttack::FireVolley(IceJellyfish& boss)
             }
 
             auto bullet = std::make_unique<NormalEnemyBullet>();
-            bullet->Initialize(boss.bulletModel_);
+            bullet->Initialize(boss.GetAttackBulletModel());
             bullet->SetTranslate(muzzle);
             bullet->SetVelocity(direction * speed);
             bullet->SetColor(kBulletColor);
@@ -126,7 +124,7 @@ void IceJellyfishIceSpearAttack::FireVolley(IceJellyfish& boss)
             }
             bullet->SetScale(bulletScale);
             bullet->SetDamage(bulletDamage);
-            boss.AddEnemyBullet(std::move(bullet));
+            boss.SpawnAttackBullet(std::move(bullet));
         }
         break;
     }
@@ -182,7 +180,7 @@ void IceJellyfishIceSpearAttack::Start(IceJellyfish& boss)
     for (size_t index = 0; index < selectedCount; ++index) {
         iceSpearTentacles_[index] = candidates[index];
     }
-    if (boss.player_ != nullptr) lockedTarget_ = boss.player_->GetTranslate();
+    if (boss.HasAttackTarget()) lockedTarget_ = boss.GetAttackTargetPosition();
     iceSpearVolley_ = -1;
     if (selectedCount > 0) {
         iceSpearVolley_ = 0;
@@ -199,7 +197,12 @@ void IceJellyfishIceSpearAttack::Update(IceJellyfish& boss, float deltaTimeSecon
             iceSpearPoseWeight_ = (std::min)(1.0f, iceSpearPoseWeight_ + deltaTimeSeconds * kPoseChargeRate);
             while (iceSpearVolley_ < 3 &&
             iceSpearTimer_ >= kFirstVolleyDelaySeconds + static_cast<float>(iceSpearVolley_) * kVolleyIntervalSeconds) {
-                FireVolley(boss);
+                const int32_t tentacle = iceSpearTentacles_[iceSpearVolley_];
+                if (tentacle >= 0 && pendingVolleyCount_ < pendingVolleys_.size()) {
+                    Vector3 target = GetAimTarget(static_cast<size_t>(tentacle));
+                    target.z = boss.GetAttackTargetPosition().z;
+                    pendingVolleys_[pendingVolleyCount_++] = { iceSpearVolley_, tentacle, target };
+                }
                 ++iceSpearVolley_;
             }
         }
@@ -212,4 +215,13 @@ void IceJellyfishIceSpearAttack::Update(IceJellyfish& boss, float deltaTimeSecon
         }
     }
 
+}
+
+void IceJellyfishIceSpearAttack::EmitPendingVolleys(IceJellyfish& boss)
+{
+    // 姿勢確定後にだけ呼び、発射位置と描画位置を一致させる。
+    for (size_t index = 0; index < pendingVolleyCount_; ++index) {
+        FireVolley(boss, pendingVolleys_[index]);
+    }
+    pendingVolleyCount_ = 0;
 }

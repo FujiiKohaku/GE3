@@ -36,13 +36,14 @@ void FearWormBeamState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
     UpdateMovement(battle, boss);
     elapsedSeconds_ += deltaTimeSeconds;
-    const bool shouldCheckCollision = phase_ == Phase::Fire;
     pendingShotEffectCount_ = 0;
     UpdatePhase(battle, boss, deltaTimeSeconds);
     // 照準と段階の更新後に姿勢を確定し、描画・判定・射撃演出で共有する。
     beam_.SetPose(battle.HeadMuzzlePosition(boss), battle.headAimDirection_);
-    if (shouldCheckCollision) {
-        beam_.CheckCollision(boss.player_);
+    if (phase_ == Phase::Fire) {
+        boss.CheckAttackBeamCollision(beam_);
+    } else {
+        beam_.ClearHitState();
     }
     for (int32_t effectIndex = 0; effectIndex < pendingShotEffectCount_; effectIndex++) {
         EffectManager::GetInstance()->PlayEffect("WormShotFlash", beam_.GetPosition());
@@ -52,8 +53,8 @@ void FearWormBeamState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 
 void FearWormBeamState::UpdateMovement(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    const float movementSpeedRate = boss.MovementSpeedRate();
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
+    const float movementSpeedRate = boss.GetAttackMovementSpeedRate();
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
     const Vector3 target = FearWormMovement::CalculateDriftTarget(context);
     if (!IsAiming()) {
         battle.UpdateBattleMovement(boss, target, movementSpeedRate);
@@ -61,11 +62,7 @@ void FearWormBeamState::UpdateMovement(FearWormBattleState& battle, FearWormEnem
     }
 
     // チャージから消失まではX・Yを固定し、Z方向の追従だけを維持する。
-    const float movementBlend = FearWormTiming::CalculateFollowBlend(boss.moveSpeed_ * movementSpeedRate,
-        TimeManager::GetInstance()->GetDeltaTime());
-    Vector3& headPosition = boss.segments_[0].position;
-    headPosition.z += (target.z - headPosition.z) * movementBlend;
-    boss.transform_.translate = headPosition;
+    boss.FollowAttackDepth(target.z, movementSpeedRate);
 }
 
 void FearWormBeamState::Exit(FearWormBattleState&, FearWormEnemy&)
@@ -75,7 +72,7 @@ void FearWormBeamState::Exit(FearWormBattleState&, FearWormEnemy&)
 
 bool FearWormBeamState::ShouldAimHead(const FearWormEnemy& boss) const
 {
-    return !boss.HasAliveBodyParts() && IsAiming();
+    return !boss.HasAttackBodyParts() && IsAiming();
 }
 
 void FearWormBeamState::Stop()
@@ -120,7 +117,7 @@ void FearWormBeamState::UpdateWait(FearWormBattleState& battle, FearWormEnemy& b
 void FearWormBeamState::UpdateCharge(FearWormBattleState& battle, FearWormEnemy& boss, float dt)
 {
     beam_.SetDimensions(0.0f, 0.0f);
-    const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
+    const Vector3 direction = NormalizeSafe(boss.GetAttackTargetPosition() - boss.GetAttackSegmentPosition(0));
     battle.headAimDirection_ = NormalizeSafe(Lerp(battle.headAimDirection_, direction,
         FearWormTiming::CalculateFollowBlend(0.08f, dt)));
     effectTimerSeconds_ += dt;
@@ -134,7 +131,7 @@ void FearWormBeamState::UpdateCharge(FearWormBattleState& battle, FearWormEnemy&
 void FearWormBeamState::UpdateFire(FearWormBattleState& battle, FearWormEnemy& boss, float dt)
 {
     beam_.SetDimensions((std::min)(400.0f, beam_.GetLength() + 1000.0f * dt), 3.5f);
-    const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
+    const Vector3 direction = NormalizeSafe(boss.GetAttackTargetPosition() - boss.GetAttackSegmentPosition(0));
     battle.headAimDirection_ = NormalizeSafe(Lerp(battle.headAimDirection_, direction,
         FearWormTiming::CalculateFollowBlend(0.015f, dt)));
     effectTimerSeconds_ += dt;
@@ -148,7 +145,7 @@ void FearWormBeamState::UpdateFire(FearWormBattleState& battle, FearWormEnemy& b
 void FearWormBeamState::UpdateFadeOut(FearWormBattleState& battle, FearWormEnemy& boss, float dt)
 {
     beam_.SetDimensions(beam_.GetLength(), (std::max)(0.0f, beam_.GetWidth() - 8.0f * dt));
-    const Vector3 direction = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
+    const Vector3 direction = NormalizeSafe(boss.GetAttackTargetPosition() - boss.GetAttackSegmentPosition(0));
     battle.headAimDirection_ = NormalizeSafe(Lerp(battle.headAimDirection_, direction,
         FearWormTiming::CalculateFollowBlend(0.01f, dt)));
     if (elapsedSeconds_ >= 0.5f) ChangePhase(battle, boss, Phase::Wait);
@@ -159,18 +156,21 @@ void FearWormBeamState::ChangePhase(FearWormBattleState& battle, FearWormEnemy& 
     if (phase_ == state) return;
     phase_ = state;
     elapsedSeconds_ = 0.0f;
+    if (state != Phase::Fire) {
+        beam_.ClearHitState();
+    }
     switch (state) {
     case Phase::Charge: {
         effectTimerSeconds_ = 0.0f;
-        if (boss.player_ && !boss.segments_.empty()) {
-            battle.headAimDirection_ = NormalizeSafe(boss.player_->GetTranslate() - boss.segments_[0].position);
+        if (boss.HasAttackTarget() && !(boss.GetAttackSegmentCount() == 0)) {
+            battle.headAimDirection_ = NormalizeSafe(boss.GetAttackTargetPosition() - boss.GetAttackSegmentPosition(0));
             pendingShotEffectCount_++;
         }
         break;
     }
     case Phase::Fire: {
         effectTimerSeconds_ = 0.0f;
-        if (boss.player_ && !boss.segments_.empty()) {
+        if (boss.HasAttackTarget() && !(boss.GetAttackSegmentCount() == 0)) {
             pendingShotEffectCount_++;
         }
         break;

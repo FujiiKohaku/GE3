@@ -10,6 +10,7 @@ class Model;
 class Object3d;
 class Player;
 class OceanSurface;
+class TrackingEnemyBullet;
 
 class FearWormEnemy : public BaseBoss {
 public:
@@ -72,20 +73,25 @@ public:
     // 胴体の残りHPをまとめて割合で返し、ボスのHP表示に使う。
     float GetBodyHpFraction() const override;
 
+    // 攻撃に渡す情報は値として公開し、部位や描画オブジェクトは公開しない。
+    bool HasAttackTarget() const { return player_ != nullptr; }
+    Vector3 GetAttackTargetPosition() const;
+    size_t GetAttackSegmentCount() const { return segments_.size(); }
+    bool IsAttackSegmentAlive(size_t index) const;
+    Vector3 GetAttackSegmentPosition(size_t index) const;
+    float GetAttackMovementSpeedRate() const { return MovementSpeedRate(); }
+    bool HasAttackBodyParts() const { return HasAliveBodyParts(); }
+    void FollowAttackDepth(float targetZ, float speedRate);
+    void CheckAttackBeamCollision(FearWormBeam& beam) const;
+    void SetMissileTarget(TrackingEnemyBullet& bullet) const;
+    void SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet);
+
 private:
     friend class FearWormWaitState;
     friend class FearWormEntryState;
     friend class FearWormJumOutState;
     friend class FearWormWaitForBodyState;
     friend class FearWormBattleState;
-    friend class FearWormOrbitShotState;
-    friend class FearWormWeaveSpreadState;
-    friend class FearWormDriftBurstState;
-    friend class FearWormCoilBarrageState;
-    friend class FearWormHeadChargeState;
-    friend class FearWormLineMissileState;
-    friend class FearWormSpiralBarrageState;
-    friend class FearWormBeamState;
 
     friend class FearWormDeadState;
 
@@ -147,6 +153,7 @@ private:
     };
 
     // Updateの入口と状態の選択。
+    void ResetForInitialize();
     void UpdateState();
     // 現在の状態を終了し、切替先の開始処理を実行する。
     void ChangeState(BossState state);

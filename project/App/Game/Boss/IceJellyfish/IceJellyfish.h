@@ -79,14 +79,22 @@ public:
     float GetBodyHpFraction() const override;
     float GetHp() const { return GetHealth(); }
 
+    // 攻撃用の読み取りと操作。モデル配列やプレイヤー自体は公開しない。
+    bool HasAttackTarget() const { return player_ != nullptr; }
+    Vector3 GetAttackTargetPosition() const;
+    Vector3 GetAttackBodyPosition() const { return bodyPosition_; }
+    Vector3 GetAttackHoverCenter() const { return { hoverCenterX_, hoverCenterY_, 0.0f }; }
+    Model* GetAttackBulletModel() const { return bulletModel_; }
+    Vector3 GetAttackSegmentPosition(size_t tentacle, size_t segment) const;
+    bool ApplyAttackDamageToPlayer(int damage);
+    void SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet);
+    bool IsSegmentAlive(size_t tentacle, size_t segment) const;
+
 private:
     friend class IceJellyfishPoseController;
     friend class IceJellyfishWaitState;
     friend class IceJellyfishEntryState;
     friend class IceJellyfishBattleState;
-    friend class IceJellyfishPulseBarrageAttack;
-    friend class IceJellyfishIceSpearAttack;
-    friend class IceJellyfishIcePillarAttack;
     friend class IceJellyfishDeadState;
     friend bool RunIceJellyfishStateTests();
     static constexpr int32_t kMaxStateUpdatesPerFrame = 3;
@@ -114,7 +122,6 @@ private:
     // 攻撃の姿勢と揺れを反映して、頭や触手の位置・回転・大きさを更新する。
     void UpdatePartTransforms();
     // 指定した触手の節が破壊されずに残っているかを調べる。
-    bool IsSegmentAlive(size_t tentacle, size_t segment) const;
     // すべての触手の破壊状態を確認する。
     bool AreAllTentaclesDestroyed() const;
     // 触手番号と節番号を、当たり判定で共通に使う部位番号へ変換する。

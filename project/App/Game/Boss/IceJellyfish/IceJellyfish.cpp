@@ -227,6 +227,9 @@ void IceJellyfish::Update()
     basePosition_ = bodyPosition_;
     transform_.translate = bodyPosition_;
     UpdatePartTransforms();
+    if (state_ == BossState::Battle) {
+        battleState_.EmitPendingAttacks(*this);
+    }
 }
 
 // 指定した触手の節が破壊されずに残っているかを調べる。
@@ -511,4 +514,26 @@ void IceJellyfish::ConsiderNearestHit(SweepHit& nearest, int32_t& partIndex,
         nearest = hit;
         partIndex = candidatePart;
     }
+}
+
+Vector3 IceJellyfish::GetAttackTargetPosition() const
+{
+    return player_ != nullptr ? player_->GetTranslate() : Vector3{};
+}
+
+Vector3 IceJellyfish::GetAttackSegmentPosition(size_t tentacle, size_t segment) const
+{
+    if (tentacle >= kTentacleCount || segment >= kSegmentsPerTentacle
+        || !tentacles_[tentacle][segment]) return {};
+    return MatrixMath::Transform({}, tentacles_[tentacle][segment]->GetWorldMatrix());
+}
+
+bool IceJellyfish::ApplyAttackDamageToPlayer(int damage)
+{
+    return player_ != nullptr && player_->ApplyDamage(damage);
+}
+
+void IceJellyfish::SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet)
+{
+    AddEnemyBullet(std::move(bullet));
 }

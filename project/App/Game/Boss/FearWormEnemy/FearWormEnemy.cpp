@@ -1,3 +1,6 @@
+#include "Battle/State/FearWormTiming.h"
+#include "App/Game/Enemy/Bullet/Types/TrackingEnemyBullet.h"
+#include "App/Game/Player/Player.h"
 // 頭と胴体が連なるボス。水面からの登場、移動、各種攻撃、部位破壊と死亡演出を扱う。
 #include "FearWormEnemy.h"
 #include "Engine/3D/Object3d.h"
@@ -177,9 +180,8 @@ void FearWormEnemy::ChangeState(BossState state)
 // 敵としての共通状態、連結部位とビームなどの攻撃用リソースを準備する。
 void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
 {
+    ResetForInitialize();
     player_ = player;
-    SetHealth(kHeadHp);
-    moveSpeed_ = kBaseMoveSpeed;
 
     battleState_.Initialize(bulletModel);
 
@@ -187,6 +189,17 @@ void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
     InitializeBeam();
     entryState_.Initialize();
     SetPosition(transform_.translate);
+}
+
+void FearWormEnemy::ResetForInitialize()
+{
+    // 古い状態の終了処理は、部位や攻撃リソースを作り直す前に実行する。
+    ChangeState(BossState::Wait);
+    InitializeHealth(kHeadHp);
+    moveSpeed_ = kBaseMoveSpeed;
+    moveTime_ = 0.0f;
+    vulnerableEffectPlayed_ = false;
+    deadState_ = FearWormDeadState{};
 }
 
 // ボスの配置を更新し、頭や連結部位の基準位置にも反映する。
@@ -687,4 +700,43 @@ float FearWormEnemy::GetBodyHpFraction() const
     }
 
     return currentTotalHp / totalMaxHp;
+}
+
+Vector3 FearWormEnemy::GetAttackTargetPosition() const
+{
+    return player_ != nullptr ? player_->GetTranslate() : Vector3{};
+}
+
+bool FearWormEnemy::IsAttackSegmentAlive(size_t index) const
+{
+    return index < segments_.size() && segments_[index].isAlive;
+}
+
+Vector3 FearWormEnemy::GetAttackSegmentPosition(size_t index) const
+{
+    return index < segments_.size() ? segments_[index].position : Vector3{};
+}
+
+void FearWormEnemy::FollowAttackDepth(float targetZ, float speedRate)
+{
+    if (segments_.empty()) return;
+    const float blend = FearWormTiming::CalculateFollowBlend(moveSpeed_ * speedRate,
+        TimeManager::GetInstance()->GetDeltaTime());
+    segments_[0].position.z += (targetZ - segments_[0].position.z) * blend;
+    transform_.translate = segments_[0].position;
+}
+
+void FearWormEnemy::CheckAttackBeamCollision(FearWormBeam& beam) const
+{
+    beam.CheckCollision(player_);
+}
+
+void FearWormEnemy::SetMissileTarget(TrackingEnemyBullet& bullet) const
+{
+    bullet.SetPlayer(player_);
+}
+
+void FearWormEnemy::SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet)
+{
+    AddEnemyBullet(std::move(bullet));
 }

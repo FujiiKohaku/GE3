@@ -1,4 +1,6 @@
 #include "App/Game/Player/Weapon/PlayerWeaponController.h"
+#include "Tests/PlayerWeaponResetTests.h"
+#include "Tests/PlayerWeaponPolymorphismTests.h"
 #include <cassert>
 #include <cmath>
 
@@ -106,6 +108,8 @@ void TestMinigunSustainedFireCanOverheat()
 
 int main()
 {
+    assert(RunPlayerWeaponResetTests());
+    assert(RunPlayerWeaponPolymorphismTests());
     TestGraceAndCompleteRecovery();
     TestReleaseCancelsGrace();
     TestPausedTimeAndShotHeat();
