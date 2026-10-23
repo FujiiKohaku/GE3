@@ -75,7 +75,7 @@ pool capacity of 80. Run Tests/EffectWarmUpBudgetTests.py after changing reserva
 WarmUpEffect rejects a full pool before recording DispatchInitialize, so excess reservations
 cannot destroy resources referenced by pending GPU commands.
 The engine command-line option --verify-ocean-transition runs title -> loading -> STAGE1,
-renders gameplay, and exits; its OceanSmoke markers are written to runtime/logs/EngineLog_*.txt.
+renders gameplay, and exits; its OceanSmoke markers are written to generated/logs/EngineLog_*.txt.
 CreateBufferResource logs the HRESULT and device removal reason before throwing on allocation
 failure; Camera also checks Map rather than continuing with an invalid mapped pointer.
 

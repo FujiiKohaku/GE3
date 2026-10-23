@@ -36,7 +36,7 @@ DXR再帰とスタックの仕様：[Microsoft DXR Functional Spec](https://micr
 
 `DxrTests.exe --multiple-reflections` は画面に見える鏡から45度の鏡、その先の色付き物体へ反射する検証シーンを使います。OFF、上限1／2、最初の命中率の維持、区間ごとの距離、色付き金属フレネル、非金属フレネル、鏡面強度0、Unlit、切り抜きのミス、黒い命中、環境反射のフォールバック、終端の照明と深さ3の太陽光影、向かい合う鏡の回数制限、粗い面の単位光の上限、履歴と設定変更を確認します。既存RT反射テストも同時に実行します。
 
-引数なしの全DXR GPU検証にも含みます。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。結果はruntime/captures/DxrTests/multiple-reflection-result.txt、PNGも同じディレクトリです。
+引数なしの全DXR GPU検証にも含みます。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。結果はgenerated/Captures/DxrTests/multiple-reflection-result.txt、PNGも同じディレクトリです。
 
 2026-10-09、RTX 4060 Laptop GPUで多重反射と既存反射の単独検証、全DXR GPU検証が終了コード0で成功しました。Developmentビルドも成功しています。2枚の鏡を通した赤の信号は0.999512、最初の命中率は1でした。粗さ0.6の追加反射の中心31×31画素の単位光平均は0.762919で、各画素の非有限値・単位光増幅も検証しています。通常実行時の性能測定ではありません。
 

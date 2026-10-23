@@ -27,7 +27,7 @@ directory. Keep `dxcompiler.dll` and `dxil.dll` beside the executable.
 - **Record GIF** exports at 640×360 with 256 colors; choose 5–30 fps and 1–10 seconds.
 - **One full orbit** produces a complete turntable loop. Disable it to record shader motion from a fixed view.
 - **Stop GIF** saves the frames recorded so far. The panel and mouse cursor are excluded from captures.
-- Output files have unique timestamp names under `project/runtime/captures/ModelPreview`.
+- Output files have unique timestamp names under `project/generated/Captures/ModelPreview`.
 - **Reload shaders** rebuilds material pipelines; existing DXIL cache invalidation recompiles modified sources/includes.
 
 **Game rendering (Stage03)** is enabled by default. It uses the same shared

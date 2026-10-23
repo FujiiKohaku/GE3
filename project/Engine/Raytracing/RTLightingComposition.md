@@ -32,7 +32,7 @@ Rendererでは、有効なRTGIフレームでSSGIを省く既存処理に加え�
 
 `DxrTests.exe --lighting` はRTGIと材質比較を実行します。強度0、黒い命中、一部命中、全ミス、環境鏡面の保持、金属の拡散光抑制、IBLと半球環境光・従来反射の非重複、通常描画とRTの一致を検証します。引数なしは影・反射・スキニング等も含む全DXRテストです。D3D12のERROR/CORRUPTIONを失敗扱いにします。
 
-2026-10-09にRTX 4060 Laptop GPUで全DXRテストが終了コード0で成功しました。Developmentビルドとシェーダーのコンパイルも成功しています。比較用PNGと各テストの結果は `runtime/captures/DxrTests/` に保存します。D3D12のGPU検証を有効にした機能検証で、通常実行時の性能測定ではありません。
+2026-10-09にRTX 4060 Laptop GPUで全DXRテストが終了コード0で成功しました。Developmentビルドとシェーダーのコンパイルも成功しています。比較用PNGと各テストの結果は `generated/Captures/DxrTests/` に保存します。D3D12のGPU検証を有効にした機能検証で、通常実行時の性能測定ではありません。
 
 ## 制限
 

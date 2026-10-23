@@ -23,7 +23,7 @@ void PreviewCapture::Initialize(DirectXCommon* dx)
 
 std::filesystem::path PreviewCapture::NewPath(const char* extension) const
 {
-    std::filesystem::path directory = "runtime/captures/ModelPreview";
+    std::filesystem::path directory = "generated/Captures/ModelPreview";
     std::filesystem::create_directories(directory);
     auto tick = std::chrono::system_clock::now().time_since_epoch();
     auto stamp = std::chrono::duration_cast<std::chrono::microseconds>(tick).count();

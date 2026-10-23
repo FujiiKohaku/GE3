@@ -1237,4 +1237,14 @@
     <ClInclude Include="App\Game\Boss\IceJellyfish\State\IceJellyfishState.h"><Filter>App\Game\Boss\IceJellyfish\State</Filter></ClInclude>
     <ClInclude Include="Tests\IceJellyfishStateTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.h"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClInclude>
+    <ClCompile Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.cpp"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Boss\IceJellyfish\PoseController" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.cpp"><Filter>App\Game\Boss\IceJellyfish</Filter></ClCompile>
+  </ItemGroup>
 </Project>

@@ -831,4 +831,11 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\State\IceJellyfishState.h" />
     <ClInclude Include="$(projectRootPath)Tests\IceJellyfishStateTests.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfishCollision.cpp" />
+  </ItemGroup>
 </Project>

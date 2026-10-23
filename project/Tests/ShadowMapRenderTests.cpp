@@ -206,8 +206,8 @@ void CheckMotionVectors(DirectXCommon* dx, PostEffectManager& post, OffscreenRen
             renderer.SetSettings({true, true});
             dx->PreDraw();
             renderer.DrawDebug();
-            std::filesystem::path file = "runtime/captures/ShadowMapTests/motion-object.png";
-            if (mode == 6) { file = "runtime/captures/ShadowMapTests/motion-pose.png"; }
+            std::filesystem::path file = "generated/Captures/ShadowMapTests/motion-object.png";
+            if (mode == 6) { file = "generated/Captures/ShadowMapTests/motion-pose.png"; }
             ReadFrame(dx, file);
             renderer.SetSettings({true, false});
         }
@@ -419,7 +419,7 @@ private:
 int RunTitleShadowTest()
 {
     Logger::Initialize();
-    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+    const std::filesystem::path directory = "generated/Captures/ShadowMapTests";
     std::filesystem::create_directories(directory);
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -499,7 +499,7 @@ int RunTitleShadowTest()
 int RunGameStageShadowTest(const std::string& stageId)
 {
     Logger::Initialize();
-    std::filesystem::create_directories("runtime/captures/ShadowMapTests");
+    std::filesystem::create_directories("generated/Captures/ShadowMapTests");
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
     Game game;
@@ -540,15 +540,15 @@ int RunGameStageShadowTest(const std::string& stageId)
                 auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(dx->GetCurrentBackBuffer(),
                     D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
                 dx->GetCommandList()->ResourceBarrier(1, &barrier);
-                std::filesystem::path file = "runtime/captures/ShadowMapTests/" + stageId + "-enabled.png";
-                if (mode == 1) { file = "runtime/captures/ShadowMapTests/" + stageId + "-disabled.png"; }
+                std::filesystem::path file = "generated/Captures/ShadowMapTests/" + stageId + "-enabled.png";
+                if (mode == 1) { file = "generated/Captures/ShadowMapTests/" + stageId + "-disabled.png"; }
                 if (view == 1) {
-                    file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-enabled.png";
-                    if (mode == 1) { file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-disabled.png"; }
+                    file = "generated/Captures/ShadowMapTests/" + stageId + "-boss-enabled.png";
+                    if (mode == 1) { file = "generated/Captures/ShadowMapTests/" + stageId + "-boss-disabled.png"; }
                 }
                 if (view == 2) {
-                    file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-motion-enabled.png";
-                    if (mode == 1) { file = "runtime/captures/ShadowMapTests/" + stageId + "-boss-motion-disabled.png"; }
+                    file = "generated/Captures/ShadowMapTests/" + stageId + "-boss-motion-enabled.png";
+                    if (mode == 1) { file = "generated/Captures/ShadowMapTests/" + stageId + "-boss-motion-disabled.png"; }
                 }
                 if (mode == 0) { enabledFrame = ReadFrame(dx, file); }
                 else { disabledFrame = ReadFrame(dx, file); }
@@ -570,11 +570,11 @@ int RunGameStageShadowTest(const std::string& stageId)
             }
         }
         game.Finalize();
-        std::ofstream("runtime/captures/ShadowMapTests/stage-result.txt") << "PASS: actual " << stageId << " game render, shadow ON/OFF, no D3D12 errors\n";
+        std::ofstream("generated/Captures/ShadowMapTests/stage-result.txt") << "PASS: actual " << stageId << " game render, shadow ON/OFF, no D3D12 errors\n";
         Logger::Finalize();
         return 0;
     } catch (const std::exception& error) {
-        std::ofstream("runtime/captures/ShadowMapTests/stage-result.txt") << "FAIL: " << error.what();
+        std::ofstream("generated/Captures/ShadowMapTests/stage-result.txt") << "FAIL: " << error.what();
         Logger::Log(error.what());
         if (initialized) { game.Finalize(); }
         Logger::Finalize();
@@ -603,7 +603,7 @@ public:
 
 int RunFxaaTest()
 {
-    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+    const std::filesystem::path directory = "generated/Captures/ShadowMapTests";
     std::filesystem::create_directories(directory);
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -733,7 +733,7 @@ int RunFxaaTest()
 int RunTemporalIntegrationTest(bool shouldValidateQuality = false, bool shouldValidateFinalQuality = false)
 {
     Logger::Initialize();
-    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+    const std::filesystem::path directory = "generated/Captures/ShadowMapTests";
     std::filesystem::create_directories(directory);
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -1055,7 +1055,7 @@ int RunTemporalIntegrationTest(bool shouldValidateQuality = false, bool shouldVa
 int RunDlssTest()
 {
     Logger::Initialize();
-    const std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+    const std::filesystem::path directory = "generated/Captures/ShadowMapTests";
     std::filesystem::create_directories(directory);
     Microsoft::WRL::ComPtr<ID3D12Debug> debug;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -1265,7 +1265,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     int exitCode = 0;
     bool isVolumetricOnly = std::string(commandLine).find("--volumetric") != std::string::npos;
     try {
-        std::filesystem::path directory = "runtime/captures/ShadowMapTests";
+        std::filesystem::path directory = "generated/Captures/ShadowMapTests";
         std::filesystem::create_directories(directory);
         Logger::Initialize();
         Microsoft::WRL::ComPtr<ID3D12Debug> debug;
@@ -2051,7 +2051,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         WinApp::FinalizeInstance();
         Logger::Finalize();
     } catch (const std::exception& error) {
-        std::ofstream("runtime/captures/ShadowMapTests/result.txt") << "FAIL: " << error.what();
+        std::ofstream("generated/Captures/ShadowMapTests/result.txt") << "FAIL: " << error.what();
         Logger::Log(error.what());
         Logger::Flush();
         ModelManager::Finalize();

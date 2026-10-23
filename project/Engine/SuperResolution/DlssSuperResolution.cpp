@@ -64,7 +64,7 @@ void DlssSuperResolution::SetFailure(const char* operation, NVSDK_NGX_Result res
     isAvailable_ = false;
 }
 void DlssSuperResolution::Initialize() {
-    const auto logDirectory = std::filesystem::absolute("runtime/logs/DLSS");
+    const auto logDirectory = std::filesystem::absolute("generated/logs/DLSS");
     std::filesystem::create_directories(logDirectory);
     // Use the existing project GUID; no NVIDIA-assigned application ID is fabricated.
     auto result = NVSDK_NGX_D3D12_Init_with_ProjectID("363657a6-518d-4d5c-90b2-3d50b381f493",

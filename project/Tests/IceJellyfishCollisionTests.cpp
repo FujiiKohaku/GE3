@@ -52,6 +52,58 @@ int RunIceJellyfishCollisionTests()
     IceJellyfish::BuildBellColliders(identity, 0.0f, bell);
     Check(bell.size() == 208, "bell panels and icicle boxes are present");
 
+    const std::vector<OBB> unanimatedBell = bell;
+    for (float time : { 0.0f, 1.4279967f, 4.283990f }) {
+        const Vector4 animation { time, 1.5f, 0.0f, 0.0f };
+        IceJellyfish::BuildBellColliders(identity, 0.0f, bell, animation);
+        // シェーダー式から独立に求めた、先頭の氷の縁の中心位置。
+        const float phase = time * 1.10f;
+        const float radialScale = 1.0f + 1.5f * 0.020f * std::sin(phase);
+        const float rimWeight = (21.45f * 21.45f) / (22.0f * 22.0f);
+        const float wave = std::sin(phase + 21.45f * 0.16f) * 0.65f +
+            std::sin(phase - 0.45f - 21.45f * 0.11f) * 0.35f;
+        const Vector3 surface { 21.45f * radialScale, -1.55f + 1.5f * rimWeight * wave, 0.0f };
+        const OBB& tooth = bell[192];
+        const Vector3 delta = surface - tooth.center;
+        Check(std::abs(Dot(delta, tooth.orientation[0])) <= tooth.size.x * 0.5f + 0.001f &&
+            std::abs(Dot(delta, tooth.orientation[1])) <= tooth.size.y * 0.5f + 0.001f &&
+            std::abs(Dot(delta, tooth.orientation[2])) <= tooth.size.z * 0.5f + 0.001f,
+            "shader-deformed rim remains inside its collider at different phases");
+        Check(Vector3Length(tooth.center - unanimatedBell[192].center) > 0.1f,
+            "bell collision actually moves with shader animation");
+        bool orthogonal = true;
+        for (const OBB& box : bell) {
+            orthogonal &= std::abs(Dot(box.orientation[0], box.orientation[1])) < 0.0001f &&
+                std::abs(Dot(box.orientation[1], box.orientation[2])) < 0.0001f &&
+                std::abs(Dot(box.orientation[0], box.orientation[2])) < 0.0001f;
+        }
+        Check(orthogonal, "shader deformation preserves orthogonal collision axes");
+    }
+    IceJellyfish::BuildBellColliders(identity, 0.0f, bell);
+
+    const std::vector<OBB> restBell = bell;
+    const Matrix4x4 contractedWorld = MatrixMath::MakeAffineMatrix(
+        { 0.9f, 0.8f, 0.9f }, Vector3 {}, { 3.0f, 4.0f, 5.0f });
+    IceJellyfish::BuildBellColliders(contractedWorld, 0.0f, bell);
+    Check(Vector3Length(bell[0].center - MatrixMath::Transform(restBell[0].center, contractedWorld)) < 0.0001f,
+        "bell collider follows model contraction and lift");
+    for (const OBB& box : bell) {
+        Check(std::abs(Dot(box.orientation[0], box.orientation[1])) < 0.0001f &&
+            std::abs(Dot(box.orientation[1], box.orientation[2])) < 0.0001f &&
+            std::abs(Dot(box.orientation[0], box.orientation[2])) < 0.0001f,
+            "contracted bell keeps orthogonal OBB axes");
+    }
+    const Sphere rimShot { { 24.5f, 2.0f, 5.0f }, 0.1f };
+    bool touchedOldRim = false;
+    bool touchedContractedRim = false;
+    std::vector<OBB> translatedRestBell;
+    IceJellyfish::BuildBellColliders(MatrixMath::MakeAffineMatrix(
+        { 1.0f, 1.0f, 1.0f }, Vector3 {}, { 3.0f, 4.0f, 5.0f }), 0.0f, translatedRestBell);
+    for (const OBB& box : translatedRestBell) touchedOldRim |= CollisionManager::SweepSphere(rimShot, {}, box).isHit;
+    for (const OBB& box : bell) touchedContractedRim |= CollisionManager::SweepSphere(rimShot, {}, box).isHit;
+    Check(touchedOldRim && !touchedContractedRim, "contracted bell no longer blocks shots at the old rim");
+    IceJellyfish::BuildBellColliders(identity, 0.0f, bell);
+
     SweepHit hit = SweepJellyfishCollision(
         Sphere { { 0.0f, -20.0f, 0.0f }, 0.2f }, { 0.0f, 50.0f, 0.0f },
         bell, tentacles, core, hitCore);

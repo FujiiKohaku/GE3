@@ -48,6 +48,6 @@ GPUスキニング → UAVバリア → 頂点描画 → DXR用shader-read状態
 
 実際のGPUスキニングでも、アニメーション中の遮蔽物、CastShadow OFF、Standard/Toonの受け手、太陽光だけの合成、モーション頂点コピーとの同期、ノイズ除去の履歴、透明ブレンドの除外を検証します。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
 
-結果と画像は `runtime/captures/DxrTests/deformed-result.txt`、`skinning-result.txt`、`deformed-*.png`、`skinned-*.png` に出力します。
+結果と画像は `generated/Captures/DxrTests/deformed-result.txt`、`skinning-result.txt`、`deformed-*.png`、`skinned-*.png` に出力します。
 
 RTX 4060 Laptop GPUの小規模検証では、変形モデル2体のBLAS結果＋scratchのバッファ幅合計は7,168bytes、ヒープの丸めを含む実割当は262,144bytes（256KiB）でした。実スキニング検証は1体あたり8頂点・4三角形、別のバッファ検証は6頂点・2三角形です。refit1体とTLASを含む区間は検証実行間で約0.06～0.31msでした。小さい検証シーン・少数フレームでの値で、複雑なキャラクターや実ゲームの負荷を示す値ではありません。

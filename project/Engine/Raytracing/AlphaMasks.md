@@ -44,6 +44,6 @@ RTシャドウはFORCE_OPAQUEを外し、穴を無視した後も探索を続け
 
 DxrTests.exeで通常描画とRTの穴、穴の奥の背景・遮蔽物、UV変換、物体色alpha、しきい値一致・OFF・不正値、不透明と切り抜きの同一モデル、穴のモーション除去、Standard／Toonと影付き材質、シャドウマップ、UV・テクスチャ変更時の影履歴を検証します。スキニングの実機テストでもAnyHitと頂点同期を検証します。
 
-結果は `runtime/captures/DxrTests/alpha-result.txt`、画像は同じディレクトリの `alpha-*.png`、スキニングの切り抜き画像は `skinned-alpha-*.png` です。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
+結果は `generated/Captures/DxrTests/alpha-result.txt`、画像は同じディレクトリの `alpha-*.png`、スキニングの切り抜き画像は `skinned-alpha-*.png` です。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
 
 RTX 4060 Laptop GPU、1280×720、平面の受け手と中央に穴がある四角形の遮蔽物、硬い影1光線の検証では、探索区間は切り抜きONで約1.04ms、OFFで約1.01msでした。少数フレーム・小規模シーンでの検証値です。多数の葉や重なった面での性能を示す値ではありません。

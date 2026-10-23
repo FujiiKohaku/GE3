@@ -13,7 +13,7 @@
 - 動くゲームを描画し、粒子用カラー・深度の表示解像度を維持。
 - D3D12 ERROR/CORRUPTIONがないこと。
 
-`HasUsedHistory` はCPU側で再利用を試みたことを示す。すべての画素の履歴採用や、全場面で残像がないことを証明する値ではない。画素ごとの深度・法線・物体ID・色変化の拒否は下記のGPU画像比較で検証する。画像出力は `runtime/captures/ShadowMapTests/final-native.png` / `final-low.png`、実行結果は `final-quality-result.txt`。
+`HasUsedHistory` はCPU側で再利用を試みたことを示す。すべての画素の履歴採用や、全場面で残像がないことを証明する値ではない。画素ごとの深度・法線・物体ID・色変化の拒否は下記のGPU画像比較で検証する。画像出力は `generated/Captures/ShadowMapTests/final-native.png` / `final-low.png`、実行結果は `final-quality-result.txt`。
 
 ## 修正した不具合
 

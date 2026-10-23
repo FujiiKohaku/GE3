@@ -22,6 +22,165 @@
 #include <numbers>
 
 namespace {
+// Named tuning values; keep literals and their types unchanged.
+constexpr Vector3 kInitializeLaunchBaseAircraftTranslate = { 0.0f, 3.0f, -5.0f };
+constexpr Vector3 kInitializeLaunchBaseAircraftScale = { 1.45f, 1.45f, 1.45f };
+constexpr Vector4 kInitializeStageRoomSetsIceColor = { 0.68f, 0.88f, 1.0f, 1.0f };
+constexpr Vector4 kInitializeStageRoomSetsCoolerColor = { 0.58f, 0.82f, 1.0f, 1.0f };
+constexpr Vector4 kInitializeStageRoomSetsLightColor = { 0.18f, 0.72f, 1.0f, 1.0f };
+constexpr Vector4 kInitializeInterfaceAtmosphereTintColor = { 0.02f, 0.055f, 0.12f, 0.18f };
+constexpr Vector2 kInitializeInterfaceLogoTextPosition = { 84.0f, 92.0f };
+constexpr Vector4 kInitializeInterfaceLogoTextColor = { 0.88f, 0.97f, 1.0f, 1.0f };
+constexpr Vector2 kInitializeInterfaceLogoTextShadowOffset = { 8.0f, 8.0f };
+constexpr Vector2 kInitializeInterfacePushToStartTextPosition = { 88.0f, 550.0f };
+constexpr Vector2 kInitializeInterfaceSettingsShortcutTextPosition = { 90.0f, 602.0f };
+constexpr Vector4 kInitializeInterfaceSettingsShortcutTextColor = { 0.72f, 0.86f, 0.94f, 1.0f };
+constexpr Vector4 kInitializeInterfaceSettingsBackdropColor = { 0.015f, 0.035f, 0.09f, 0.0f };
+constexpr Vector4 kInitializeInterfaceSettingsAccentColor = { 0.10f, 0.86f, 1.0f, 0.0f };
+constexpr Vector4 kInitializeInterfaceSettingsTitleTextColor = { 1.0f, 0.78f, 0.22f, 0.0f };
+constexpr Vector4 kInitializeInterfaceSettingsItemsTextColor = { 0.90f, 0.96f, 1.0f, 0.0f };
+constexpr Vector4 kInitializeInterfaceSettingsBackTextColor = { 0.62f, 0.84f, 0.94f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionStagePanelColor = { 0.008f, 0.026f, 0.055f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionFrozenFogOverlayColor = { 0.72f, 0.90f, 1.0f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionStageHeaderTextColor = { 0.20f, 0.90f, 1.0f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionStageNameTextColor = { 1.0f, 0.78f, 0.22f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionStageDescriptionTextColor = { 0.82f, 0.92f, 1.0f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionStagePageTextColor = { 0.36f, 0.88f, 1.0f, 0.0f };
+constexpr Vector4 kInitializeStageSelectionStageControlsTextColor = { 0.70f, 0.88f, 0.96f, 0.0f };
+constexpr Vector2 kInitializeTutorialAnimationSimulationTextPosition = { 640.0f, 560.0f };
+constexpr Vector3 kInitializeFogPresetParametersColor = { 0.68f, 0.60f, 0.50f };
+constexpr Vector4 kTitleClearColor = { 0.16f, 0.29f, 0.46f, 1.0f };
+constexpr Vector4 kOceanDeepColor = { 0.006f, 0.05f, 0.16f, 1.0f };
+constexpr Vector4 kOceanShallowColor = { 0.05f, 0.36f, 0.55f, 1.0f };
+constexpr Vector3 kInitializeStageRoomSetscrateScale = { 0.78f, 0.78f, 0.78f };
+constexpr Vector3 kHangarFogColor = Vector3 { 0.68f, 0.60f, 0.50f };
+constexpr Vector3 kFrozenFogColor = Vector3 { 0.58f, 0.80f, 0.96f };
+constexpr Vector3 kHangarSunDirection = { -0.55f, -0.70f, 0.45f };
+constexpr float kHangarFirstPathEnd = 0.52f;
+constexpr float kHangarSecondPathEnd = 0.78f;
+constexpr float kHangarFinalControlAY = 8.31f;
+constexpr float kHangarFinalControlAZ = 11.23f;
+constexpr float kHangarFinalControlBY = 7.9f;
+constexpr float kHangarFinalControlBZMagnitude = 8.0f;
+constexpr float kHangarTargetTransitionStart = 0.78f;
+constexpr float kHangarTargetBlendStart = 0.78f;
+constexpr float kHangarTargetBlendDuration = 0.22f;
+constexpr float kInitializeFogPresetParametersNoiseScaleDefault = 0.025f;
+constexpr float kDistanceFogStart = 300.0f;
+constexpr float kDistanceFogEnd = 1100.0f;
+constexpr float kDistanceFogPower = 1.4f;
+constexpr float kOceanWaveAmplitude = 0.55f;
+constexpr float kOceanWaveFrequency = 0.08f;
+constexpr float kCrateBaseYawMagnitude = 0.35f;
+constexpr float kCrateYawStep = 0.42f;
+constexpr float kCrateMotionScale = 1.05f;
+constexpr float kCrateMotionDelayStep = 0.05f;
+constexpr float kIceMotionBaseScale = 0.72f;
+constexpr float kIceMotionScaleStep = 0.20f;
+constexpr float kIceMotionDelayStep = 0.025f;
+constexpr float kLogoOutlineWidth = 2.0f;
+constexpr float kSettingsTitleOutlineWidth = 2.0f;
+constexpr float kStageNameMaxWidth = 640.0f;
+constexpr float kStageDescriptionMaxWidth = 610.0f;
+constexpr float kUpdateStageRoomObjectGroupPositionXMultiplier = 0.75f;
+constexpr float kUpdateStageRoomObjectGroupPositionYMultiplier = 0.42f;
+constexpr float kUpdateStageRoomObjectGroupRotationZMultiplier = 0.055f;
+constexpr float kUpdateTutorialStartPresentationAircraftColorRed = 0.6f;
+constexpr float kUpdateTutorialStartPresentationAircraftColorBlue = 0.5f;
+constexpr float kSimulationScanStartYMagnitude = 10.0f;
+constexpr float kSimulationScanTravelDistance = 740.0f;
+constexpr float kUpdateTutorialStartPresentationSimulationScanColorRed = 0.10f;
+constexpr float kUpdateTutorialStartPresentationSimulationScanColorGreen = 0.85f;
+constexpr float kUpdateTutorialStartPresentationSimulationScanColorAlpha = 0.75f;
+constexpr float kUpdateTutorialStartPresentationSimulationTintColorRed = 0.015f;
+constexpr float kUpdateTutorialStartPresentationSimulationTintColorGreen = 0.02f;
+constexpr float kUpdateTutorialStartPresentationSimulationTintColorBlue = 0.04f;
+constexpr float kSimulationTintFadeStart = 0.30f;
+constexpr float kSimulationTintFadeDuration = 0.70f;
+constexpr float kUpdateTutorialStartPresentationSimulationTextColorRed = 0.35f;
+constexpr float kUpdateTutorialStartPresentationSimulationTextColorGreen = 0.90f;
+constexpr float kUpdateTutorialStartPresentationSimulationTextColorAlpha = 0.25f;
+constexpr float kUpdateInterfaceStageTitleExitDivisor = 0.35f;
+constexpr float kUpdateInterfaceLogoTextPositionX = 84.0f;
+constexpr float kUpdateInterfaceLogoTextPositionY = 92.0f;
+constexpr float kUpdateInterfaceLogoTextColorRed = 0.88f;
+constexpr float kUpdateInterfaceLogoTextColorGreen = 0.97f;
+constexpr float kStartPromptBaseX = 88.0f;
+constexpr float kStartPromptExitOffsetScale = 1.18f;
+constexpr float kStartPromptY = 550.0f;
+constexpr float kUpdateInterfacePushToStartTextColorRed = 0.78f;
+constexpr float kUpdateInterfacePushToStartTextColorGreen = 0.94f;
+constexpr float kSettingsShortcutBaseX = 90.0f;
+constexpr float kSettingsShortcutExitOffsetScale = 1.34f;
+constexpr float kSettingsShortcutY = 602.0f;
+constexpr float kUpdateInterfaceSettingsShortcutTextColorRed = 0.72f;
+constexpr float kUpdateInterfaceSettingsShortcutTextColorGreen = 0.86f;
+constexpr float kUpdateInterfaceSettingsShortcutTextColorBlue = 0.94f;
+constexpr float kUpdateInterfaceSettingsBackdropPositionY = 360.0f;
+constexpr float kUpdateInterfaceSettingsAccentPositionX = 470.0f;
+constexpr float kUpdateInterfaceSettingsAccentPositionY = 360.0f;
+constexpr float kUpdateInterfaceSettingsBackdropColorRed = 0.015f;
+constexpr float kUpdateInterfaceSettingsBackdropColorGreen = 0.035f;
+constexpr float kUpdateInterfaceSettingsBackdropColorBlue = 0.09f;
+constexpr float kUpdateInterfaceSettingsBackdropColorAlpha = 0.94f;
+constexpr float kUpdateInterfaceSettingsAccentColorRed = 0.10f;
+constexpr float kUpdateInterfaceSettingsAccentColorGreen = 0.86f;
+constexpr float kUpdateInterfaceSettingsAccentColorAlpha = 0.95f;
+constexpr float kUpdateInterfaceSettingsTitleTextPositionY = 104.0f;
+constexpr float kUpdateInterfaceSettingsTitleTextColorGreen = 0.78f;
+constexpr float kUpdateInterfaceSettingsTitleTextColorBlue = 0.22f;
+constexpr float kUpdateInterfaceSettingsItemsTextPositionX = 48.0f;
+constexpr float kUpdateInterfaceSettingsItemsTextPositionY = 248.0f;
+constexpr float kUpdateInterfaceSettingsItemsTextColorRed = 0.90f;
+constexpr float kUpdateInterfaceSettingsItemsTextColorGreen = 0.96f;
+constexpr float kUpdateInterfaceSettingsBackTextPositionX = 48.0f;
+constexpr float kUpdateInterfaceSettingsBackTextPositionY = 626.0f;
+constexpr float kUpdateInterfaceSettingsBackTextColorRed = 0.62f;
+constexpr float kUpdateInterfaceSettingsBackTextColorGreen = 0.84f;
+constexpr float kUpdateInterfaceSettingsBackTextColorBlue = 0.94f;
+constexpr float kUpdateInterfaceFrozenFogOverlayColorRed = 0.72f;
+constexpr float kUpdateInterfaceFrozenFogOverlayColorGreen = 0.90f;
+constexpr float kUpdateInterfaceStagePanelPositionX = 640.0f;
+constexpr float kUpdateInterfaceProgressThreshold = 0.46f;
+constexpr float kUpdateInterfaceRoomUiOffsetMultiplier = 260.0f;
+constexpr float kUpdateInterfaceStagePanelRotationMultiplier = 0.025f;
+constexpr float kUpdateInterfaceStagePanelColorRed = 0.008f;
+constexpr float kUpdateInterfaceStagePanelColorGreen = 0.026f;
+constexpr float kUpdateInterfaceStagePanelColorBlue = 0.055f;
+constexpr float kUpdateInterfaceStagePanelColorAlpha = 0.80f;
+constexpr float kUpdateInterfaceStageHeaderTextPositionX = 640.0f;
+constexpr float kUpdateInterfaceStageHeaderTextPositionY = 10.0f;
+constexpr float kUpdateInterfaceStageHeaderTextColorRed = 0.20f;
+constexpr float kUpdateInterfaceStageHeaderTextColorGreen = 0.90f;
+constexpr float kUpdateInterfaceStageNameTextPositionX = 640.0f;
+constexpr float kUpdateInterfaceStageNameTextPositionY = 40.0f;
+constexpr float kUpdateInterfaceStageNameTextColorGreen = 0.78f;
+constexpr float kUpdateInterfaceStageNameTextColorBlue = 0.22f;
+constexpr float kStageDescriptionBaseX = 640.0f;
+constexpr float kStageDescriptionSlideScale = 1.08f;
+constexpr float kStageDescriptionOffsetY = 88.0f;
+constexpr float kUpdateInterfaceStageDescriptionTextColorRed = 0.82f;
+constexpr float kUpdateInterfaceStageDescriptionTextColorGreen = 0.92f;
+constexpr float kStagePageBaseX = 640.0f;
+constexpr float kStagePageSlideScale = 0.84f;
+constexpr float kStagePageOffsetY = 154.0f;
+constexpr float kUpdateInterfaceStagePageTextColorRed = 0.36f;
+constexpr float kUpdateInterfaceStagePageTextColorGreen = 0.88f;
+constexpr float kUpdateInterfaceStageControlsTextPositionX = 640.0f;
+constexpr float kUpdateInterfaceStageControlsTextPositionY = 194.0f;
+constexpr float kUpdateInterfaceStageControlsTextColorRed = 0.70f;
+constexpr float kUpdateInterfaceStageControlsTextColorGreen = 0.88f;
+constexpr float kUpdateInterfaceStageControlsTextColorBlue = 0.96f;
+constexpr float kShadowDistance = 240.0f;
+constexpr float kHangarSunIntensity = 0.95f;
+constexpr float kUpdateSceneLightingLightsSpotLightColorGreen = 0.72f;
+constexpr float kHangarWindowLightGreen = 0.86f;
+constexpr float kFrozenWindowLightGreen = 0.88f;
+constexpr float kHangarWindowLightBlue = 0.65f;
+constexpr int kIceMotionScaleBandCount = 3;
+}
+
+namespace {
 constexpr const char* kWhiteTexture = "resources/Textures/white.png";
 constexpr const char* kDefaultFont =
     "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
@@ -76,7 +235,7 @@ Vector3 CubicBezier(
 Vector3 EvaluateHangarEyePath(float pathTime)
 {
     pathTime = std::clamp(pathTime, 0.0f, 1.0f);
-    if (pathTime < 0.52f) {
+    if (pathTime < kHangarFirstPathEnd) {
         const float localTime = pathTime / 0.52f;
         return CubicBezier(
             kOverviewEye,
@@ -85,7 +244,7 @@ Vector3 EvaluateHangarEyePath(float pathTime)
             kHangarOrbitMidEye,
             localTime);
     }
-    if (pathTime < 0.78f) {
+    if (pathTime < kHangarSecondPathEnd) {
         const float localTime = (pathTime - 0.52f) / 0.26f;
         return CubicBezier(
             kHangarOrbitMidEye,
@@ -98,8 +257,8 @@ Vector3 EvaluateHangarEyePath(float pathTime)
     const float localTime = (pathTime - 0.78f) / 0.22f;
     return CubicBezier(
         kHangarOpeningEye,
-        { 0.0f, 8.31f, 11.23f },
-        { 0.0f, 7.9f, -8.0f },
+        { 0.0f, kHangarFinalControlAY, kHangarFinalControlAZ },
+        { 0.0f, kHangarFinalControlBY, -kHangarFinalControlBZMagnitude },
         kStageEntryEye,
         localTime);
 }
@@ -107,11 +266,11 @@ Vector3 EvaluateHangarEyePath(float pathTime)
 Vector3 EvaluateHangarTargetPath(float pathTime)
 {
     // 外周では格納庫中央を見続け、正面に揃ってから奥へ視線を送る。
-    if (pathTime <= 0.78f) {
+    if (pathTime <= kHangarTargetTransitionStart) {
         return kHangarFocusTarget;
     }
     float localTime = std::clamp(
-        (pathTime - 0.78f) / 0.22f, 0.0f, 1.0f);
+        (pathTime - kHangarTargetBlendStart) / kHangarTargetBlendDuration, 0.0f, 1.0f);
     localTime = localTime * localTime * (3.0f - 2.0f * localTime);
     return Lerp(kHangarFocusTarget, kStageEntryTarget, localTime);
 }
@@ -203,8 +362,8 @@ void TitleScene::Initialize()
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
         FogPreset fogPreset;
         fogPreset.parameters.isEnabled = true;
-        fogPreset.parameters.color = { 0.68f, 0.60f, 0.50f };
-        fogPreset.parameters.noiseScale = 0.025f;
+        fogPreset.parameters.color = kInitializeFogPresetParametersColor;
+        fogPreset.parameters.noiseScale = kInitializeFogPresetParametersNoiseScaleDefault;
         FogVolumeSettings& floorFog = fogPreset.volumes[0];
         floorFog.isEnabled = true;
         floorFog.shape = FogVolumeShape::Box;
@@ -225,8 +384,8 @@ void TitleScene::Initialize()
     UpdateSceneLighting();
 
     SceneManager::GetInstance()->SetSceneClearColor(
-        { 0.16f, 0.29f, 0.46f, 1.0f });
-    SceneManager::GetInstance()->SetSceneDistanceFog({ 300.0f, 1100.0f, 1.0f, 1.4f });
+        kTitleClearColor);
+    SceneManager::GetInstance()->SetSceneDistanceFog({ kDistanceFogStart, kDistanceFogEnd, 1.0f, kDistanceFogPower });
     SceneManager::GetInstance()->SetPostEffectType(PostEffectType::Copy);
 }
 
@@ -309,11 +468,11 @@ void TitleScene::InitializeLaunchBase()
     // OceanSurfaceは既定でZ=0から前方へ伸びるため、タイトルでは
     // 格納庫背後も覆うよう海面をマイナスZ側へ移す。
     oceanSurface_->SetStartZ(-1600.0f);
-    oceanSurface_->SetWaveAmplitude(0.55f);
-    oceanSurface_->SetWaveFrequency(0.08f);
+    oceanSurface_->SetWaveAmplitude(kOceanWaveAmplitude);
+    oceanSurface_->SetWaveFrequency(kOceanWaveFrequency);
     oceanSurface_->SetColors(
-        { 0.006f, 0.05f, 0.16f, 1.0f },
-        { 0.05f, 0.36f, 0.55f, 1.0f });
+        kOceanDeepColor,
+        kOceanShallowColor);
 
     for (int xIndex = -2; xIndex <= 2; ++xIndex) {
         for (int zIndex = -2; zIndex <= 1; ++zIndex) {
@@ -459,8 +618,8 @@ void TitleScene::InitializeLaunchBase()
     aircraft_->Initialize(Object3dManager::GetInstance());
     aircraft_->SetModel(ModelManager::GetInstance()->Load(kAircraftModel));
     aircraft_->SetCamera(camera_.get());
-    aircraft_->SetTranslate({ 0.0f, 3.0f, -5.0f });
-    aircraft_->SetScale({ 1.45f, 1.45f, 1.45f });
+    aircraft_->SetTranslate(kInitializeLaunchBaseAircraftTranslate);
+    aircraft_->SetScale(kInitializeLaunchBaseAircraftScale);
     aircraft_->SetEnableLighting(true);
     aircraft_->SetMaterial("resources/Shaders/Object3D/ShadowToon");
     aircraft_->SetCastShadow(true);
@@ -503,15 +662,15 @@ void TitleScene::InitializeStageRoomSets()
     for (size_t index = 0; index < std::size(cratePositions); ++index) {
         Vector3 crateScale = { 1.0f, 1.0f, 1.0f };
         if (index == 2) {
-            crateScale = { 0.78f, 0.78f, 0.78f };
+            crateScale = kInitializeStageRoomSetscrateScale;
         }
         AddStageRoomObject(
             firstFlightRoomObjects_,
             std::string(kLaunchBase) + "tool_crate.obj",
             cratePositions[index],
             crateScale,
-            { 0.0f, -0.35f + static_cast<float>(index) * 0.42f, 0.0f },
-            1.05f, 0.05f * static_cast<float>(index));
+            { 0.0f, -kCrateBaseYawMagnitude + static_cast<float>(index) * kCrateYawStep, 0.0f },
+            kCrateMotionScale, kCrateMotionDelayStep * static_cast<float>(index));
     }
 
     for (float x : { -23.0f, 23.0f }) {
@@ -586,9 +745,9 @@ void TitleScene::InitializeStageRoomSets()
             iceProps[index].position,
             iceProps[index].scale,
             iceProps[index].rotation,
-            0.72f + static_cast<float>(index % 3) * 0.20f,
-            static_cast<float>(index) * 0.025f);
-        ice->SetColor({ 0.68f, 0.88f, 1.0f, 1.0f });
+            kIceMotionBaseScale + static_cast<float>(index % kIceMotionScaleBandCount) * kIceMotionScaleStep,
+            static_cast<float>(index) * kIceMotionDelayStep);
+        ice->SetColor(kInitializeStageRoomSetsIceColor);
         const std::string modelPath = std::string(kIceEnvironment) + iceProps[index].model;
         ice->SetMaterial(VisualPresetLibrary::GetInstance().GetMaterial(modelPath));
         ice->SetShininess(VisualPresetLibrary::GetInstance().GetShininess("ice"));
@@ -607,7 +766,7 @@ void TitleScene::InitializeStageRoomSets()
             { x, 0.0f, -44.0f },
             { 0.68f, 0.68f, 0.68f },
             { 0.0f, coolerRotationY, 0.0f }, 0.48f, 0.10f);
-        cooler->SetColor({ 0.58f, 0.82f, 1.0f, 1.0f });
+        cooler->SetColor(kInitializeStageRoomSetsCoolerColor);
     }
     for (float z : { -24.0f, -35.0f, -46.0f }) {
         for (float x : { -11.0f, 11.0f }) {
@@ -618,7 +777,7 @@ void TitleScene::InitializeStageRoomSets()
                 { 0.82f, 0.82f, 0.82f }, {}, 1.20f,
                 0.02f * static_cast<float>(frozenPassageRoomObjects_.size()));
             light->SetEnableLighting(false);
-            light->SetColor({ 0.18f, 0.72f, 1.0f, 1.0f });
+            light->SetColor(kInitializeStageRoomSetsLightColor);
         }
     }
 }
@@ -629,22 +788,22 @@ void TitleScene::InitializeInterface()
     atmosphereTint_ = std::make_unique<Sprite>();
     atmosphereTint_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     atmosphereTint_->SetSize({ 1280.0f, 720.0f });
-    atmosphereTint_->SetColor({ 0.02f, 0.055f, 0.12f, 0.18f });
+    atmosphereTint_->SetColor(kInitializeInterfaceAtmosphereTintColor);
 
     logoText_ = std::make_unique<Text>();
     logoText_->Initialize(kDefaultFont);
     logoText_->SetText("KOHAKU ENGINE");
-    logoText_->SetPosition({ 84.0f, 92.0f });
+    logoText_->SetPosition(kInitializeInterfaceLogoTextPosition);
     logoText_->SetFontSize(70.0f);
     logoText_->SetLetterSpacing(2.0f);
-    logoText_->SetColor({ 0.88f, 0.97f, 1.0f, 1.0f });
-    logoText_->SetOutlineWidth(2.0f);
-    logoText_->SetShadowOffset({ 8.0f, 8.0f });
+    logoText_->SetColor(kInitializeInterfaceLogoTextColor);
+    logoText_->SetOutlineWidth(kLogoOutlineWidth);
+    logoText_->SetShadowOffset(kInitializeInterfaceLogoTextShadowOffset);
 
     pushToStartText_ = std::make_unique<Text>();
     pushToStartText_->Initialize(kDefaultFont);
     pushToStartText_->SetText("PRESS SPACE  /  GAME START");
-    pushToStartText_->SetPosition({ 88.0f, 550.0f });
+    pushToStartText_->SetPosition(kInitializeInterfacePushToStartTextPosition);
     pushToStartText_->SetFontSize(26.0f);
     pushToStartText_->SetLetterSpacing(1.0f);
     pushToStartText_->SetOutlineWidth(1.0f);
@@ -652,9 +811,9 @@ void TitleScene::InitializeInterface()
     settingsShortcutText_ = std::make_unique<Text>();
     settingsShortcutText_->Initialize(kDefaultFont);
     settingsShortcutText_->SetText("S  SETTINGS");
-    settingsShortcutText_->SetPosition({ 90.0f, 602.0f });
+    settingsShortcutText_->SetPosition(kInitializeInterfaceSettingsShortcutTextPosition);
     settingsShortcutText_->SetFontSize(20.0f);
-    settingsShortcutText_->SetColor({ 0.72f, 0.86f, 0.94f, 1.0f });
+    settingsShortcutText_->SetColor(kInitializeInterfaceSettingsShortcutTextColor);
     settingsShortcutText_->SetOutlineWidth(1.0f);
 
     settingsBackdrop_ = std::make_unique<Sprite>();
@@ -662,22 +821,22 @@ void TitleScene::InitializeInterface()
     settingsBackdrop_->SetAnchorPoint({ 0.5f, 0.5f });
     settingsBackdrop_->SetSize({ 930.0f, 820.0f });
     settingsBackdrop_->SetRotation(-0.075f);
-    settingsBackdrop_->SetColor({ 0.015f, 0.035f, 0.09f, 0.0f });
+    settingsBackdrop_->SetColor(kInitializeInterfaceSettingsBackdropColor);
 
     settingsAccent_ = std::make_unique<Sprite>();
     settingsAccent_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     settingsAccent_->SetAnchorPoint({ 0.5f, 0.5f });
     settingsAccent_->SetSize({ 84.0f, 900.0f });
     settingsAccent_->SetRotation(-0.18f);
-    settingsAccent_->SetColor({ 0.10f, 0.86f, 1.0f, 0.0f });
+    settingsAccent_->SetColor(kInitializeInterfaceSettingsAccentColor);
 
     settingsTitleText_ = std::make_unique<Text>();
     settingsTitleText_->Initialize(kDefaultFont);
     settingsTitleText_->SetText("SETTINGS");
     settingsTitleText_->SetFontSize(68.0f);
     settingsTitleText_->SetRotation(-0.045f);
-    settingsTitleText_->SetColor({ 1.0f, 0.78f, 0.22f, 0.0f });
-    settingsTitleText_->SetOutlineWidth(2.0f);
+    settingsTitleText_->SetColor(kInitializeInterfaceSettingsTitleTextColor);
+    settingsTitleText_->SetOutlineWidth(kSettingsTitleOutlineWidth);
 
     settingsItemsText_ = std::make_unique<Text>();
     settingsItemsText_->Initialize(kDefaultFont);
@@ -685,13 +844,13 @@ void TitleScene::InitializeInterface()
         "DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
     settingsItemsText_->SetFontSize(29.0f);
     settingsItemsText_->SetLineSpacing(8.0f);
-    settingsItemsText_->SetColor({ 0.90f, 0.96f, 1.0f, 0.0f });
+    settingsItemsText_->SetColor(kInitializeInterfaceSettingsItemsTextColor);
 
     settingsBackText_ = std::make_unique<Text>();
     settingsBackText_->Initialize(kDefaultFont);
     settingsBackText_->SetText("BACKSPACE / S  BACK");
     settingsBackText_->SetFontSize(19.0f);
-    settingsBackText_->SetColor({ 0.62f, 0.84f, 0.94f, 0.0f });
+    settingsBackText_->SetColor(kInitializeInterfaceSettingsBackTextColor);
 
 }
 
@@ -713,13 +872,13 @@ void TitleScene::InitializeStageSelection()
     stagePanel_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     stagePanel_->SetAnchorPoint({ 0.5f, 0.5f });
     stagePanel_->SetSize({ 720.0f, 240.0f });
-    stagePanel_->SetColor({ 0.008f, 0.026f, 0.055f, 0.0f });
+    stagePanel_->SetColor(kInitializeStageSelectionStagePanelColor);
 
     frozenFogOverlay_ = std::make_unique<Sprite>();
     frozenFogOverlay_->Initialize(
         SpriteManager::GetInstance(), kWhiteTexture);
     frozenFogOverlay_->SetSize({ 1280.0f, 720.0f });
-    frozenFogOverlay_->SetColor({ 0.72f, 0.90f, 1.0f, 0.0f });
+    frozenFogOverlay_->SetColor(kInitializeStageSelectionFrozenFogOverlayColor);
 
     stageHeaderText_ = std::make_unique<Text>();
     stageHeaderText_->Initialize(kDefaultFont);
@@ -727,31 +886,31 @@ void TitleScene::InitializeStageSelection()
     stageHeaderText_->SetAnchorPoint({ 0.5f, 0.0f });
     stageHeaderText_->SetFontSize(22.0f);
     stageHeaderText_->SetLetterSpacing(2.0f);
-    stageHeaderText_->SetColor({ 0.20f, 0.90f, 1.0f, 0.0f });
+    stageHeaderText_->SetColor(kInitializeStageSelectionStageHeaderTextColor);
 
     stageNameText_ = std::make_unique<Text>();
     stageNameText_->Initialize(kDefaultFont);
     stageNameText_->SetAnchorPoint({ 0.5f, 0.0f });
     stageNameText_->SetFontSize(36.0f);
-    stageNameText_->SetMaxWidth(640.0f);
+    stageNameText_->SetMaxWidth(kStageNameMaxWidth);
     stageNameText_->SetHorizontalAlignment(TextHorizontalAlignment::Center);
-    stageNameText_->SetColor({ 1.0f, 0.78f, 0.22f, 0.0f });
+    stageNameText_->SetColor(kInitializeStageSelectionStageNameTextColor);
     stageNameText_->SetOutlineWidth(1.0f);
 
     stageDescriptionText_ = std::make_unique<Text>();
     stageDescriptionText_->Initialize(kDefaultFont);
     stageDescriptionText_->SetAnchorPoint({ 0.5f, 0.0f });
     stageDescriptionText_->SetFontSize(16.0f);
-    stageDescriptionText_->SetMaxWidth(610.0f);
+    stageDescriptionText_->SetMaxWidth(kStageDescriptionMaxWidth);
     stageDescriptionText_->SetHorizontalAlignment(TextHorizontalAlignment::Center);
     stageDescriptionText_->SetLineSpacing(4.0f);
-    stageDescriptionText_->SetColor({ 0.82f, 0.92f, 1.0f, 0.0f });
+    stageDescriptionText_->SetColor(kInitializeStageSelectionStageDescriptionTextColor);
 
     stagePageText_ = std::make_unique<Text>();
     stagePageText_->Initialize(kDefaultFont);
     stagePageText_->SetAnchorPoint({ 0.5f, 0.0f });
     stagePageText_->SetFontSize(20.0f);
-    stagePageText_->SetColor({ 0.36f, 0.88f, 1.0f, 0.0f });
+    stagePageText_->SetColor(kInitializeStageSelectionStagePageTextColor);
 
     stageControlsText_ = std::make_unique<Text>();
     stageControlsText_->Initialize(kDefaultFont);
@@ -759,7 +918,7 @@ void TitleScene::InitializeStageSelection()
         "A / D  SELECT     SPACE  DEPLOY     BACKSPACE  OVERVIEW");
     stageControlsText_->SetAnchorPoint({ 0.5f, 0.0f });
     stageControlsText_->SetFontSize(17.0f);
-    stageControlsText_->SetColor({ 0.70f, 0.88f, 0.96f, 0.0f });
+    stageControlsText_->SetColor(kInitializeStageSelectionStageControlsTextColor);
 
     currentStageIndex_ = 0;
     RefreshStageSelectionText();
@@ -854,11 +1013,11 @@ void TitleScene::UpdateStageRoomObjectGroup(
 
         Vector3 position = roomObject.basePosition;
         position.x += offsetX * roomObject.motionScale;
-        position.x += settleDirection * spring * 0.75f * roomObject.motionScale;
-        position.y += std::abs(spring) * 0.42f * roomObject.motionScale;
+        position.x += settleDirection * spring * kUpdateStageRoomObjectGroupPositionXMultiplier * roomObject.motionScale;
+        position.y += std::abs(spring) * kUpdateStageRoomObjectGroupPositionYMultiplier * roomObject.motionScale;
 
         Vector3 rotation = roomObject.baseRotation;
-        rotation.z += settleDirection * spring * 0.055f * roomObject.motionScale;
+        rotation.z += settleDirection * spring * kUpdateStageRoomObjectGroupRotationZMultiplier * roomObject.motionScale;
         roomObject.object->SetTranslate(position);
         roomObject.object->SetRotate(rotation);
         roomObject.object->Update();
@@ -1003,7 +1162,7 @@ void TitleScene::InitializeTutorialAnimation()
     simulationText_->Initialize(kDefaultFont);
     simulationText_->SetText("SIMULATION INITIALIZING");
     simulationText_->SetAnchorPoint({ 0.5f, 0.5f });
-    simulationText_->SetPosition({ 640.0f, 560.0f });
+    simulationText_->SetPosition(kInitializeTutorialAnimationSimulationTextPosition);
     simulationText_->SetFontSize(26.0f);
 }
 
@@ -1017,14 +1176,14 @@ void TitleScene::UpdateTutorialStartPresentation(float progress)
     camera_->SetFovY(0.64f - 0.10f * eased);
     camera_->Update();
     const float scan = SmoothStep(Clamp01((progress - 0.15f) / 0.65f));
-    aircraft_->SetColor({ 1.0f - 0.6f * scan, 1.0f, 1.0f + 0.5f * scan, 1.0f });
-    simulationScan_->SetPosition({ 0.0f, -10.0f + 740.0f * scan });
-    simulationScan_->SetColor({ 0.10f, 0.85f, 1.0f, 0.75f * std::sin(progress * std::numbers::pi_v<float>) });
+    aircraft_->SetColor({ 1.0f - kUpdateTutorialStartPresentationAircraftColorRed * scan, 1.0f, 1.0f + kUpdateTutorialStartPresentationAircraftColorBlue * scan, 1.0f });
+    simulationScan_->SetPosition({ 0.0f, -kSimulationScanStartYMagnitude + kSimulationScanTravelDistance * scan });
+    simulationScan_->SetColor({ kUpdateTutorialStartPresentationSimulationScanColorRed, kUpdateTutorialStartPresentationSimulationScanColorGreen, 1.0f, kUpdateTutorialStartPresentationSimulationScanColorAlpha * std::sin(progress * std::numbers::pi_v<float>) });
     simulationScan_->Update();
-    simulationTint_->SetColor({ 0.015f, 0.02f, 0.04f,
-        SmoothStep(Clamp01((progress - 0.30f) / 0.70f)) });
+    simulationTint_->SetColor({ kUpdateTutorialStartPresentationSimulationTintColorRed, kUpdateTutorialStartPresentationSimulationTintColorGreen, kUpdateTutorialStartPresentationSimulationTintColorBlue,
+        SmoothStep(Clamp01((progress - kSimulationTintFadeStart) / kSimulationTintFadeDuration)) });
     simulationTint_->Update();
-    simulationText_->SetColor({ 0.35f, 0.90f, 1.0f, SmoothStep(Clamp01((progress - 0.25f) / 0.25f)) });
+    simulationText_->SetColor({ kUpdateTutorialStartPresentationSimulationTextColorRed, kUpdateTutorialStartPresentationSimulationTextColorGreen, 1.0f, SmoothStep(Clamp01((progress - kUpdateTutorialStartPresentationSimulationTextColorAlpha) / kUpdateTutorialStartPresentationSimulationTextColorAlpha)) });
     simulationText_->Update();
 }
 
@@ -1175,7 +1334,7 @@ void TitleScene::UpdateInterface(float deltaTime)
     float stageAmount = 0.0f;
     float stageTitleExit = 0.0f;
     if (viewState_ == ViewState::StartingTutorial) {
-        stageTitleExit = SmoothStep(Clamp01(animationTime_ / 0.35f));
+        stageTitleExit = SmoothStep(Clamp01(animationTime_ / kUpdateInterfaceStageTitleExitDivisor));
     }
     if (viewState_ == ViewState::StageSelect) {
         stageAmount = 1.0f;
@@ -1211,47 +1370,47 @@ void TitleScene::UpdateInterface(float deltaTime)
         Clamp01((std::max)(stageTitleExit, settingsAmount));
     const float titleOffset = -520.0f * titleExit;
     const float titleAlpha = 1.0f - Clamp01(titleExit);
-    logoText_->SetPosition({ 84.0f + titleOffset, 92.0f });
+    logoText_->SetPosition({ kUpdateInterfaceLogoTextPositionX + titleOffset, kUpdateInterfaceLogoTextPositionY });
     logoText_->SetRotation(-0.035f * titleExit);
-    logoText_->SetColor({ 0.88f, 0.97f, 1.0f, titleAlpha });
+    logoText_->SetColor({ kUpdateInterfaceLogoTextColorRed, kUpdateInterfaceLogoTextColorGreen, 1.0f, titleAlpha });
 
     const float promptAlpha =
         (0.58f + 0.42f * std::sin(idleTime_ * 3.2f)) * titleAlpha;
-    pushToStartText_->SetPosition({ 88.0f + titleOffset * 1.18f, 550.0f });
-    pushToStartText_->SetColor({ 0.78f, 0.94f, 1.0f, promptAlpha });
+    pushToStartText_->SetPosition({ kStartPromptBaseX + titleOffset * kStartPromptExitOffsetScale, kStartPromptY });
+    pushToStartText_->SetColor({ kUpdateInterfacePushToStartTextColorRed, kUpdateInterfacePushToStartTextColorGreen, 1.0f, promptAlpha });
     settingsShortcutText_->SetPosition(
-        { 90.0f + titleOffset * 1.34f, 602.0f });
+        { kSettingsShortcutBaseX + titleOffset * kSettingsShortcutExitOffsetScale, kSettingsShortcutY });
     settingsShortcutText_->SetColor(
-        { 0.72f, 0.86f, 0.94f, titleAlpha });
+        { kUpdateInterfaceSettingsShortcutTextColorRed, kUpdateInterfaceSettingsShortcutTextColorGreen, kUpdateInterfaceSettingsShortcutTextColorBlue, titleAlpha });
 
     const float panelX = 1480.0f + (790.0f - 1480.0f) * settingsAmount;
-    settingsBackdrop_->SetPosition({ panelX, 360.0f });
-    settingsAccent_->SetPosition({ panelX - 470.0f, 360.0f });
+    settingsBackdrop_->SetPosition({ panelX, kUpdateInterfaceSettingsBackdropPositionY });
+    settingsAccent_->SetPosition({ panelX - kUpdateInterfaceSettingsAccentPositionX, kUpdateInterfaceSettingsAccentPositionY });
     settingsBackdrop_->SetColor(
-        { 0.015f, 0.035f, 0.09f, 0.94f * Clamp01(settingsAmount) });
+        { kUpdateInterfaceSettingsBackdropColorRed, kUpdateInterfaceSettingsBackdropColorGreen, kUpdateInterfaceSettingsBackdropColorBlue, kUpdateInterfaceSettingsBackdropColorAlpha * Clamp01(settingsAmount) });
     settingsAccent_->SetColor(
-        { 0.10f, 0.86f, 1.0f, 0.95f * Clamp01(settingsAmount) });
+        { kUpdateInterfaceSettingsAccentColorRed, kUpdateInterfaceSettingsAccentColorGreen, 1.0f, kUpdateInterfaceSettingsAccentColorAlpha * Clamp01(settingsAmount) });
 
     const float textX = 1420.0f + (560.0f - 1420.0f) * settingsAmount;
-    settingsTitleText_->SetPosition({ textX, 104.0f });
+    settingsTitleText_->SetPosition({ textX, kUpdateInterfaceSettingsTitleTextPositionY });
     settingsTitleText_->SetColor(
-        { 1.0f, 0.78f, 0.22f, Clamp01(settingsAmount) });
-    settingsItemsText_->SetPosition({ textX + 48.0f, 248.0f });
+        { 1.0f, kUpdateInterfaceSettingsTitleTextColorGreen, kUpdateInterfaceSettingsTitleTextColorBlue, Clamp01(settingsAmount) });
+    settingsItemsText_->SetPosition({ textX + kUpdateInterfaceSettingsItemsTextPositionX, kUpdateInterfaceSettingsItemsTextPositionY });
     settingsItemsText_->SetColor(
-        { 0.90f, 0.96f, 1.0f, Clamp01(settingsAmount) });
-    settingsBackText_->SetPosition({ textX + 48.0f, 626.0f });
+        { kUpdateInterfaceSettingsItemsTextColorRed, kUpdateInterfaceSettingsItemsTextColorGreen, 1.0f, Clamp01(settingsAmount) });
+    settingsBackText_->SetPosition({ textX + kUpdateInterfaceSettingsBackTextPositionX, kUpdateInterfaceSettingsBackTextPositionY });
     settingsBackText_->SetColor(
-        { 0.62f, 0.84f, 0.94f, Clamp01(settingsAmount) });
+        { kUpdateInterfaceSettingsBackTextColorRed, kUpdateInterfaceSettingsBackTextColorGreen, kUpdateInterfaceSettingsBackTextColorBlue, Clamp01(settingsAmount) });
 
     // 格納庫内の端末表示。カメラが入口を越えてから起動する。
     const float stageAlpha = Clamp01(stageAmount);
     const float fogPulse = 0.045f + 0.012f * std::sin(idleTime_ * 0.85f);
     frozenFogOverlay_->SetColor({
-        0.72f, 0.90f, 1.0f,
+        kUpdateInterfaceFrozenFogOverlayColorRed, kUpdateInterfaceFrozenFogOverlayColorGreen, 1.0f,
         fogPulse * frozenRoomAmount_ * stageAlpha });
     const float stagePanelY =
         790.0f + (558.0f - 790.0f) * stageAmount;
-    stagePanel_->SetPosition({ 640.0f, stagePanelY });
+    stagePanel_->SetPosition({ kUpdateInterfaceStagePanelPositionX, stagePanelY });
     float roomUiAlpha = 1.0f;
     float roomUiOffset = 0.0f;
     float panelKick = 0.0f;
@@ -1268,42 +1427,42 @@ void TitleScene::UpdateInterface(float deltaTime)
                     std::numbers::pi_v<float>) *
                 (1.0f - impactProgress) * 0.012f;
         }
-        if (progress < 0.46f) {
+        if (progress < kUpdateInterfaceProgressThreshold) {
             const float exit = SmoothStep(progress / 0.46f);
             roomUiAlpha = 1.0f - exit;
-            roomUiOffset = -direction * 260.0f * exit;
+            roomUiOffset = -direction * kUpdateInterfaceRoomUiOffsetMultiplier * exit;
         } else {
             const float enter = Clamp01((progress - 0.46f) / 0.54f);
             const float uiEase = SmoothStep(enter);
             roomUiAlpha = uiEase;
             roomUiOffset =
-                direction * 260.0f * (1.0f - uiEase);
+                direction * kUpdateInterfaceRoomUiOffsetMultiplier * (1.0f - uiEase);
         }
     }
     stagePanel_->SetRotation(
-        (1.0f - stageAlpha) * 0.025f + panelKick);
-    stagePanel_->SetColor({ 0.008f, 0.026f, 0.055f, 0.80f * stageAlpha });
+        (1.0f - stageAlpha) * kUpdateInterfaceStagePanelRotationMultiplier + panelKick);
+    stagePanel_->SetColor({ kUpdateInterfaceStagePanelColorRed, kUpdateInterfaceStagePanelColorGreen, kUpdateInterfaceStagePanelColorBlue, kUpdateInterfaceStagePanelColorAlpha * stageAlpha });
 
     const float stageTextY = stagePanelY - 112.0f;
-    stageHeaderText_->SetPosition({ 640.0f, stageTextY + 10.0f });
+    stageHeaderText_->SetPosition({ kUpdateInterfaceStageHeaderTextPositionX, stageTextY + kUpdateInterfaceStageHeaderTextPositionY });
     stageHeaderText_->SetColor(
-        { 0.20f, 0.90f, 1.0f, stageAlpha });
+        { kUpdateInterfaceStageHeaderTextColorRed, kUpdateInterfaceStageHeaderTextColorGreen, 1.0f, stageAlpha });
     const float changingTextAlpha = stageAlpha * roomUiAlpha;
     stageNameText_->SetPosition(
-        { 640.0f + roomUiOffset, stageTextY + 40.0f });
+        { kUpdateInterfaceStageNameTextPositionX + roomUiOffset, stageTextY + kUpdateInterfaceStageNameTextPositionY });
     stageNameText_->SetColor(
-        { 1.0f, 0.78f, 0.22f, changingTextAlpha });
+        { 1.0f, kUpdateInterfaceStageNameTextColorGreen, kUpdateInterfaceStageNameTextColorBlue, changingTextAlpha });
     stageDescriptionText_->SetPosition(
-        { 640.0f + roomUiOffset * 1.08f, stageTextY + 88.0f });
+        { kStageDescriptionBaseX + roomUiOffset * kStageDescriptionSlideScale, stageTextY + kStageDescriptionOffsetY });
     stageDescriptionText_->SetColor(
-        { 0.82f, 0.92f, 1.0f, changingTextAlpha });
+        { kUpdateInterfaceStageDescriptionTextColorRed, kUpdateInterfaceStageDescriptionTextColorGreen, 1.0f, changingTextAlpha });
     stagePageText_->SetPosition(
-        { 640.0f + roomUiOffset * 0.84f, stageTextY + 154.0f });
+        { kStagePageBaseX + roomUiOffset * kStagePageSlideScale, stageTextY + kStagePageOffsetY });
     stagePageText_->SetColor(
-        { 0.36f, 0.88f, 1.0f, changingTextAlpha });
-    stageControlsText_->SetPosition({ 640.0f, stageTextY + 194.0f });
+        { kUpdateInterfaceStagePageTextColorRed, kUpdateInterfaceStagePageTextColorGreen, 1.0f, changingTextAlpha });
+    stageControlsText_->SetPosition({ kUpdateInterfaceStageControlsTextPositionX, stageTextY + kUpdateInterfaceStageControlsTextPositionY });
     stageControlsText_->SetColor(
-        { 0.70f, 0.88f, 0.96f, stageAlpha });
+        { kUpdateInterfaceStageControlsTextColorRed, kUpdateInterfaceStageControlsTextColorGreen, kUpdateInterfaceStageControlsTextColorBlue, stageAlpha });
 
     atmosphereTint_->Update();
     frozenFogOverlay_->Update();
@@ -1469,7 +1628,7 @@ ShadowSettings TitleScene::GetShadowSettings() const
 {
     ShadowSettings settings;
     settings.enabled = true;
-    settings.distance = 240.0f;
+    settings.distance = kShadowDistance;
     settings.casterMargin = 180.0f;
     settings.strength = 0.70f;
     settings.normalBias = 0.12f;
@@ -1491,8 +1650,8 @@ void TitleScene::UpdateSceneLighting()
     }
     const float frozenAmount = Clamp01(frozenRoomAmount_) * roomAmount;
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
-        volume->SetFogColor(Lerp(Vector3 { 0.68f, 0.60f, 0.50f },
-            Vector3 { 0.58f, 0.80f, 0.96f }, frozenAmount));
+        volume->SetFogColor(Lerp(kHangarFogColor,
+            kFrozenFogColor, frozenAmount));
         FogVolumeSettings floorFog = volume->GetFogVolumes()[0];
         floorFog.density = std::lerp(0.0015f, 0.006f, frozenAmount);
         volume->SetFogVolume(0, floorFog);
@@ -1507,13 +1666,13 @@ void TitleScene::UpdateSceneLighting()
         Vector3 { ice.ambient.x, ice.ambient.y, ice.ambient.z }, frozenAmount);
     LightManager* lights = LightManager::GetInstance();
     lights->SetDirectional({ color.x, color.y, color.z, 1.0f },
-        { -0.55f, -0.70f, 0.45f }, std::lerp(0.95f, ice.intensity, frozenAmount));
+        kHangarSunDirection, std::lerp(kHangarSunIntensity, ice.intensity, frozenAmount));
     lights->SetAmbientColor(ambient);
     lights->SetAmbientIntensity(std::lerp(0.32f, 0.28f, frozenAmount));
     lights->SetSpotLightColor(windowLightHandle_, {
-        std::lerp(1.0f, 0.72f, frozenAmount),
-        std::lerp(0.86f, 0.88f, frozenAmount),
-        std::lerp(0.65f, 1.0f, frozenAmount), 1.0f });
+        std::lerp(1.0f, kUpdateSceneLightingLightsSpotLightColorGreen, frozenAmount),
+        std::lerp(kHangarWindowLightGreen, kFrozenWindowLightGreen, frozenAmount),
+        std::lerp(kHangarWindowLightBlue, 1.0f, frozenAmount), 1.0f });
     const Vector3 fog = Lerp(Vector3 { 0.22f, 0.38f, 0.54f },
         Vector3 { 0.58f, 0.80f, 0.96f }, frozenAmount);
     SceneManager::GetInstance()->SetSceneFogColor({ fog.x, fog.y, fog.z, 1.0f });

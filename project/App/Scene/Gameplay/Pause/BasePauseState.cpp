@@ -1,6 +1,15 @@
 // ポーズ画面の状態ごとに、選択操作と決定・キャンセル時の動作を分ける。
 #include "BasePauseState.h"
 
+namespace {
+// Named tuning values; keep literals and their types unchanged.
+constexpr float kGetDisplayDisplayRowsOffset = 0.5f;
+constexpr float kPauseRowHorizontalCenterFraction = 0.5f;
+constexpr int kPauseRowHalfHeight = 22;
+constexpr int kPauseRowHeight = 44;
+constexpr int kPauseHorizontalCenter = 640;
+}
+
 // 上下入力で選択位置を移動し、決定・キャンセルを現在のポーズ状態へ渡す。
 void BasePauseState::Navigate(PauseStateContext& context, const PauseStateInput& input)
 {
@@ -102,8 +111,8 @@ public:
         display.hint += "\n距離: 18～60 / 縦画角: 20～60度";
         display.hint += input.cameraSaveSucceeded ? "\n自動保存・再開すると比較できます" : "\n保存失敗（今回のプレイには反映済み）";
         display.rows = { "プリセット: " + input.cameraPreset,
-            "距離: " + std::to_string(int(input.cameraDistance + 0.5f)),
-            "縦画角: " + std::to_string(int(input.cameraFovDegrees + 0.5f)) + "度",
+            "距離: " + std::to_string(int(input.cameraDistance + kGetDisplayDisplayRowsOffset)),
+            "縦画角: " + std::to_string(int(input.cameraFovDegrees + kGetDisplayDisplayRowsOffset)) + "度",
             input.gamepad ? "戻る [A / B]" : "戻る [ENTER / ESC]" };
         if (input.selection >= 0 && input.selection < 4) display.rows[input.selection].insert(0, "> ");
         return display;
@@ -157,7 +166,7 @@ const BasePauseState& GetPauseState(PauseViewState state)
 PauseButtonRect GetPauseRowRect(PauseViewState page, int row) {
     constexpr float centers[] = { 290, 360, 430, 570 };
     const float width = row == 2 || (row == 0 && (page == PauseViewState::Camera || page == PauseViewState::Graphics)) ? 300.0f : 220.0f;
-    return {640 - width * 0.5f, centers[row] - 22, width, 44};
+    return {kPauseHorizontalCenter - width * kPauseRowHorizontalCenterFraction, centers[row] - kPauseRowHalfHeight, width, kPauseRowHeight};
 }
 PauseButtonRect GetPauseAdjustmentRect(int row, int direction) {
     const auto button = GetPauseRowRect(PauseViewState::Menu, row);

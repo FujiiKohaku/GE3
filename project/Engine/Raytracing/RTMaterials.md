@@ -43,7 +43,7 @@ Materialは132から144bytesへ拡張します。alphaCutoffのoffset128を維�
 
 ## 検証と制限
 
-`DxrTests.exe --materials` は同じ面を通常描画と完全鏡面経由のRTで描いて色を比較します。Standardの鏡面有効条件、法線の強さ・Y反転・反転UV・退化UV・非一様スケール、線形G/Bチャンネルと設定値の乗算、材質キャプチャ、Toon・ShadowToon、環境照明・従来の環境マップ・Unlit、ポイント・スポット、GPUスキニングを検証します。結果と比較PNGは `runtime/captures/DxrTests/material-result.txt` と同ディレクトリです。引数なしでは全DXRテストも行い、D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
+`DxrTests.exe --materials` は同じ面を通常描画と完全鏡面経由のRTで描いて色を比較します。Standardの鏡面有効条件、法線の強さ・Y反転・反転UV・退化UV・非一様スケール、線形G/Bチャンネルと設定値の乗算、材質キャプチャ、Toon・ShadowToon、環境照明・従来の環境マップ・Unlit、ポイント・スポット、GPUスキニングを検証します。結果と比較PNGは `generated/Captures/DxrTests/material-result.txt` と同ディレクトリです。引数なしでは全DXRテストも行い、D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
 
 2026-10-09にRTX 4060 Laptop GPUで材質単独テストと全DXRテストが終了コード0で成功しました。Developmentのエンジンビルドも成功しています。比較するRGB各成分の許容差は0.02で、Standard・Toon・ShadowToon・環境照明・局所ライト・スキニングの各ケースが通りました。GPU検証を有効にした機能検証であり、通常実行時の性能測定ではありません。
 

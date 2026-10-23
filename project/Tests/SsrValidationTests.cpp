@@ -202,7 +202,7 @@ void FinalizeSsrValidation()
 }
 int RunSsrValidation()
 {
-    const std::filesystem::path directory = "runtime/captures/SsrValidation";
+    const std::filesystem::path directory = "generated/Captures/SsrValidation";
     std::filesystem::create_directories(directory);
     Logger::Initialize();
     try {

@@ -50,9 +50,9 @@ LONG WINAPI Utility::ExportDump(EXCEPTION_POINTERS* exception)
     SYSTEMTIME time;
     GetLocalTime(&time);
     wchar_t filePath[MAX_PATH] = { 0 };
-    CreateDirectory(L"./runtime", nullptr);
-    CreateDirectory(L"./runtime/Dumps", nullptr);
-    StringCchPrintfW(filePath, MAX_PATH, L"./runtime/Dumps/%04d-%02d%02d-%02d%02d.dmp",
+    CreateDirectory(L"./generated", nullptr);
+    CreateDirectory(L"./generated/Dumps", nullptr);
+    StringCchPrintfW(filePath, MAX_PATH, L"./generated/Dumps/%04d-%02d%02d-%02d%02d.dmp",
         time.wYear, time.wMonth, time.wDay, time.wHour,
         time.wMinute);
     HANDLE dumpFileHandle = CreateFile(filePath, GENERIC_READ | GENERIC_WRITE,

@@ -13,6 +13,29 @@ inline bool ReportJellyfishAttackTestFailure(int32_t line)
 
 inline bool RunJellyfishAttackTests()
 {
+    // 破壊後、姿勢の再更新前でも古い判定が後続弾を遮らない。
+    {
+        IceJellyfish collisionBoss;
+        collisionBoss.bell_ = std::make_unique<Object3d>();
+        collisionBoss.tentacleHp_.fill(0.0f);
+        collisionBoss.tentacleHp_[0] = 9.0f;
+        collisionBoss.coreExposed_ = true;
+        collisionBoss.coreCollider_ = { { 0.0f, 0.0f, 10.0f }, 1.0f };
+        collisionBoss.tentacleColliders_.push_back(CollisionManager::MakeOBB(
+            { 0.0f, 0.0f, 0.0f }, { 2.0f, 2.0f, 2.0f }, {}));
+        collisionBoss.tentacleColliderParts_.push_back(collisionBoss.SegmentPartIndex(0, 0));
+        const Sphere shot { { 0.0f, 0.0f, -10.0f }, 0.1f };
+        const Vector3 movement { 0.0f, 0.0f, 30.0f };
+        int32_t part = -1;
+        if (!collisionBoss.SweepBullet(shot, movement, part).isHit || part != collisionBoss.SegmentPartIndex(0, 0))
+            return ReportJellyfishAttackTestFailure(__LINE__);
+        collisionBoss.tentacleHp_[0] = 0.0f;
+        if (!collisionBoss.SweepBullet(shot, movement, part).isHit || part != collisionBoss.kCorePart)
+            return ReportJellyfishAttackTestFailure(__LINE__);
+        std::vector<EnemyCollisionPart> parts;
+        collisionBoss.GetCollisionParts(parts);
+        if (parts.size() != 1) return ReportJellyfishAttackTestFailure(__LINE__);
+    }
     IceJellyfish boss;
     boss.tentacleHp_.fill(6.0f);
     // 浮遊のタイミングで一度だけ開始し、波状弾→氷槍→氷柱の順を保つ。

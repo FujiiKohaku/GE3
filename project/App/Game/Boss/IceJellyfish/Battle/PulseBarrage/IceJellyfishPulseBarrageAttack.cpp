@@ -10,6 +10,20 @@
 #include <random>
 
 namespace {
+// 調整用の設定値。意味が異なる値は、数値が同じでも個別に保持する。
+constexpr Vector3 kMuzzleOffset = { 0.0f, -2.0f, -15.0f };
+constexpr Vector4 kBulletColor = { 1.0f, 0.353f, 0.239f, 1.0f };
+constexpr Vector3 kCenterBulletScale = { 0.46f, 0.46f, 0.95f };
+constexpr Vector3 kRingBulletScale = { 0.42f, 0.42f, 0.90f };
+constexpr int kBulletDamage = 1;
+constexpr float kWaveIntervalSeconds = 0.18f;
+constexpr float kFirstWaveSpread = 0.12f;
+constexpr float kFirstWaveSpeed = 0.65f;
+constexpr float kSecondWaveSpread = 0.22f;
+constexpr float kSecondWaveSpeed = 0.62f;
+constexpr float kFinalWaveSpread = 0.08f;
+constexpr float kFinalWaveSpeed = 0.82f;
+
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 }
 
@@ -23,7 +37,7 @@ void IceJellyfishPulseBarrageAttack::FireRing(IceJellyfish& boss,
     int count, float spread, float speed, float angleOffset, bool includeCenter)
 {
     if (boss.player_ == nullptr || boss.bulletModel_ == nullptr || count <= 0) return;
-    const Vector3 muzzle = boss.bodyPosition_ + Vector3 { 0.0f, -2.0f, -15.0f };
+    const Vector3 muzzle = boss.bodyPosition_ + kMuzzleOffset;
     const Vector3 targetDirection = Normalize(boss.player_->GetTranslate() - muzzle);
     int ringCount = count;
 
@@ -32,9 +46,9 @@ void IceJellyfishPulseBarrageAttack::FireRing(IceJellyfish& boss,
         centerBullet->Initialize(boss.bulletModel_);
         centerBullet->SetTranslate(muzzle);
         centerBullet->SetVelocity(targetDirection * speed);
-        centerBullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-        centerBullet->SetScale({ 0.46f, 0.46f, 0.95f });
-        centerBullet->SetDamage(1);
+        centerBullet->SetColor(kBulletColor);
+        centerBullet->SetScale(kCenterBulletScale);
+        centerBullet->SetDamage(kBulletDamage);
         boss.AddEnemyBullet(std::move(centerBullet));
         --ringCount;
     }
@@ -50,9 +64,9 @@ void IceJellyfishPulseBarrageAttack::FireRing(IceJellyfish& boss,
         bullet->Initialize(boss.bulletModel_);
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * speed);
-        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-        bullet->SetScale({ 0.42f, 0.42f, 0.90f });
-        bullet->SetDamage(1);
+        bullet->SetColor(kBulletColor);
+        bullet->SetScale(kRingBulletScale);
+        bullet->SetDamage(kBulletDamage);
         boss.AddEnemyBullet(std::move(bullet));
     }
 }
@@ -68,23 +82,23 @@ void IceJellyfishPulseBarrageAttack::Update(IceJellyfish& boss, float deltaTimeS
     if (pulseBarrageWave_ >= 0) {
         pulseBarrageTimer_ += deltaTimeSeconds;
         while (pulseBarrageWave_ < 3 &&
-        pulseBarrageTimer_ >= static_cast<float>(pulseBarrageWave_) * 0.18f) {
+        pulseBarrageTimer_ >= static_cast<float>(pulseBarrageWave_) * kWaveIntervalSeconds) {
             int32_t aliveTentacles = 0;
             for (size_t tentacle = 0; tentacle < IceJellyfish::kTentacleCount; ++tentacle) {
                 if (boss.IsSegmentAlive(tentacle, 0)) ++aliveTentacles;
             }
 
             if (pulseBarrageWave_ == 0) {
-                FireRing(boss, aliveTentacles * 2, 0.12f, 0.65f, 0.0f, false);
+                FireRing(boss, aliveTentacles * 2, kFirstWaveSpread, kFirstWaveSpeed, 0.0f, false);
             } else if (pulseBarrageWave_ == 1) {
                 const int count = aliveTentacles * 2;
                 float halfStep = 0.0f;
                 if (count > 0) {
                     halfStep = std::numbers::pi_v<float> / static_cast<float>(count);
                 }
-                FireRing(boss, count, 0.22f, 0.62f, halfStep, false);
+                FireRing(boss, count, kSecondWaveSpread, kSecondWaveSpeed, halfStep, false);
             } else {
-                FireRing(boss, aliveTentacles, 0.08f, 0.82f,
+                FireRing(boss, aliveTentacles, kFinalWaveSpread, kFinalWaveSpeed,
                 std::numbers::pi_v<float> * 0.5f, true);
             }
             ++pulseBarrageWave_;

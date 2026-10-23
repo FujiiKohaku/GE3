@@ -59,7 +59,7 @@ void GifRecordingManager::ToggleRecording() {
     // A joinable worker is joined only after it reports completion in Update.
     if (worker_.joinable()) { Notify("GIF saving..."); return; }
     try {
-        auto directory = std::filesystem::current_path() / "Captures";
+        auto directory = std::filesystem::current_path() / "generated" / "Captures";
         std::filesystem::create_directories(directory);
         auto stamp = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
