@@ -31,6 +31,7 @@ bool StageCatalog::Load(const std::string& catalogPath)
 {
     stages_.clear();
     lastError_.clear();
+    std::vector<StageSettings> loadedStages;
 
     std::ifstream file(catalogPath);
     if (!file) {
@@ -55,13 +56,13 @@ bool StageCatalog::Load(const std::string& catalogPath)
             if (!LoadStageSettings(path, settings)) {
                 return false;
             }
-            for (const StageSettings& existing : stages_) {
+            for (const StageSettings& existing : loadedStages) {
                 if (existing.id == settings.id) {
                     lastError_ = "Duplicate stage id: " + settings.id;
                     return false;
                 }
             }
-            stages_.push_back(std::move(settings));
+            loadedStages.push_back(std::move(settings));
         }
     } catch (const std::exception& exception) {
         lastError_ = "Failed to load stage catalog: ";
@@ -70,10 +71,11 @@ bool StageCatalog::Load(const std::string& catalogPath)
         return false;
     }
 
-    if (stages_.empty()) {
+    if (loadedStages.empty()) {
         lastError_ = "Stage catalog is empty: " + catalogPath;
         return false;
     }
+    stages_ = std::move(loadedStages);
     return true;
 }
 

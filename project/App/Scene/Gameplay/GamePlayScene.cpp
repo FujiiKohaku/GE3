@@ -988,11 +988,11 @@ void GamePlayScene::Update()
     const bool disconnected = input != nullptr && input->WasActiveGamepadDisconnected();
     bool pauseChanged = false;
     if (disconnected) {
-        isPaused_ = true;
+        SetPaused(true);
         pauseChanged = true;
     } else if (input != nullptr && (input->IsKeyTrigger(DIK_TAB) ||
         input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_START))) {
-        isPaused_ = !isPaused_;
+        SetPaused(!isPaused_);
         pauseChanged = true;
         SoundManager::GetInstance()->Play("PauseToggle");
     }
@@ -1063,8 +1063,6 @@ void GamePlayScene::Update()
         if (isPaused_) {
             SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
             SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::GaussianFilter, PostEffectStage::BeforeParticle);
-            SceneManager::GetInstance()->AddPostEffect(PostEffectType::GrayScale, PostEffectStage::BeforeParticle);
         }
         SceneManager::GetInstance()->SetPauseMenuOpen(isPaused_);
         // ポーズ中はゲームオブジェクトの更新を停止する。
@@ -1391,9 +1389,8 @@ void GamePlayScene::Update()
     // -------------------------------------------------
     // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
     // -------------------------------------------------
-    static bool prevBoostingState = false;
     // Ctrlで減速中は発動せず、実際にブーストを開始したときだけ発動する。
-    if (isPlayerBoosting && !prevBoostingState) {
+    if (isPlayerBoosting && !wasBoostingForSonicBoom_) {
         sonicBoomTimer_ = 0.85f;
 
         // プレイヤーの現在位置を中心発生源として画面UV座標(0.0〜1.0)へ変換
@@ -1406,7 +1403,7 @@ void GamePlayScene::Update()
             SceneManager::GetInstance()->SetSonicBoomCenter(playerUV);
         }
     }
-    prevBoostingState = isPlayerBoosting;
+    wasBoostingForSonicBoom_ = isPlayerBoosting;
 
     if (sonicBoomTimer_ > 0.0f) {
         sonicBoomTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
@@ -2679,6 +2676,26 @@ void GamePlayScene::UpdateBossHpHud()
     }
 }
 
+void GamePlayScene::SetPaused(bool isPaused)
+{
+    if (isPaused_ == isPaused) {
+        return;
+    }
+    SceneManager* sceneManager = SceneManager::GetInstance();
+    if (isPaused) {
+        prePausePostEffects_ = sceneManager->GetPostEffects();
+        sceneManager->AddPostEffect(PostEffectType::GaussianFilter, PostEffectStage::BeforeParticle);
+        sceneManager->AddPostEffect(PostEffectType::GrayScale, PostEffectStage::BeforeParticle);
+        sceneManager->SetPostEffectEnabled(PostEffectType::GaussianFilter, true);
+        sceneManager->SetPostEffectEnabled(PostEffectType::GrayScale, true);
+    } else {
+        sceneManager->ApplyPostEffectChain(prePausePostEffects_);
+        prePausePostEffects_.clear();
+    }
+    isPaused_ = isPaused;
+    sceneManager->SetPauseMenuOpen(isPaused_);
+}
+
 // ポーズ画面が参照・変更する値と操作を、一つの情報にまとめて渡す。
 PauseStateContext GamePlayScene::MakePauseContext()
 {
@@ -2686,19 +2703,19 @@ PauseStateContext GamePlayScene::MakePauseContext()
     context.changeState = [this](PauseViewState state, int selection) { ChangePauseState(state, selection); };
     context.menuActions = {
         [this]() {
-            isPaused_ = false;
+            SetPaused(false);
             Input::GetInstance()->BlockPrimaryFireUntilRelease();
             if (player_) player_->ResetHomingLock();
             SoundManager::GetInstance()->Play("PauseToggle");
         },
         [this]() {
-            isPaused_ = false;
+            SetPaused(false);
             ResetGameplayPostEffects();
             SceneManager::GetInstance()->SetNextScene(std::make_unique<GamePlayScene>(stageId_));
         },
         [this]() { ChangePauseState(PauseViewState::Settings); },
         [this]() {
-            isPaused_ = false;
+            SetPaused(false);
             ResetGameplayPostEffects();
             SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
         }
@@ -2938,24 +2955,26 @@ void GamePlayScene::CheckCollision()
     if (gameplayCollisionSystem_ != nullptr) {
         gameplayCollisionSystem_->UpdateStageCollisions(
             *player_,
-            levelObjects_,
-            destructibleLevelObjects_,
-            floorObj_.get());
+            levelObjects_);
     }
 
     if (gameplayCollisionSystem_ != nullptr) {
         const GameplayCollisionEvents events =
-            gameplayCollisionSystem_->UpdateCombatCollisions(
+            gameplayCollisionSystem_->UpdatePlayerBulletCollisions(
                 *player_,
                 enemies_,
                 GetActiveBoss(),
-                enemyBulletManager_.GetBullets());
+                destructibleLevelObjects_,
+                floorObj_.get());
         if (events.scoreAwarded != 0) {
             score_ += events.scoreAwarded;
             scoreHudValueText_->SetText(std::to_string(score_));
             scoreHudValueText_->Update();
         }
-        if (events.paintBulletHitPlayer) {
+        const GameplayCollisionEvents combatEvents =
+            gameplayCollisionSystem_->UpdateCombatCollisions(
+                *player_, enemies_, enemyBulletManager_.GetBullets());
+        if (combatEvents.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
     }
@@ -3630,6 +3649,7 @@ void GamePlayScene::DrawCollisionDebug()
 // プレイ専用の演出や外部登録を終了し、シーンのリソースを片付ける。
 void GamePlayScene::Finalize()
 {
+    SetPaused(false);
     SceneManager::GetInstance()->SetPauseMenuOpen(false);
     RestoreBossCutInTimeScale();
     bossCutInTimerSeconds_ = -1.0f;
@@ -3833,6 +3853,7 @@ void GamePlayScene::ResetGameplayPostEffects()
     boostKickTimer_ = 0.0f;
     boostKickStrength_ = 0.0f;
     wasBoostingForKick_ = false;
+    wasBoostingForSonicBoom_ = false;
     wasPlayerBoosting_ = false;
     wasPlayerBraking_ = false;
     brakeReactionStrength_ = 0.0f;
@@ -4443,10 +4464,15 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 // 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
 void GamePlayScene::HotReloadLevel()
 {
+    if (player_ != nullptr) {
+        player_->ClearHomingTargets();
+    }
     ClearLevelObjects();
     enemies_.clear();
     enemyBulletManager_.Clear();
     nextSwarmWaveIndex_ = 0;
+    tutorialTargetStep_ = -1;
+    tutorialDefeatedTargets_.reset();
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
     Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };

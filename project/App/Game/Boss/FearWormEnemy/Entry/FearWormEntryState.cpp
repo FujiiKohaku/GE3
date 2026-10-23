@@ -1,3 +1,4 @@
+#include <numbers>
 #include "FearWormEntryState.h"
 #include "../FearWormEnemy.h"
 #include "../Battle/Movement/FearWormMovement.h"
@@ -129,7 +130,7 @@ Vector3 FearWormEntryState::CalculateEntryPosition(const Vector3& surfacePositio
     Vector3 start = surfacePosition;
     start.y -= 12.0f;
     float arcHeight = (std::max)(battlePosition.y - surfacePosition.y + 25.0f, 50.0f);
-    float arcEnvelope = std::sin(flightRate * 3.1415926535f);
+    float arcEnvelope = std::sin(flightRate * std::numbers::pi_v<float>);
     float waveEnvelope = arcEnvelope * arcEnvelope;
     float wavePhase = elapsedSeconds * 5.2f - static_cast<float>(segmentIndex) * 0.70f;
     // 頭から尾へ位相をずらし、着地点に近づくほど振幅を落とす。

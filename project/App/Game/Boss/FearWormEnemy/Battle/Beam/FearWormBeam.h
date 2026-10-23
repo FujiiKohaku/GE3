@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numbers>
 #include "Engine/Math/MathStruct.h"
 #include <cstdint>
 #include <memory>
@@ -32,7 +33,7 @@ public:
 private:
     static constexpr float kUvScrollSpeed = -6.5f;
     static constexpr float kRotateSpeedRadiansPerSecond = 45.0f;
-    static constexpr float kPi = 3.1415926535f;
+    static constexpr float kPi = std::numbers::pi_v<float>;
     static constexpr float kMinimumDrawLength = 0.001f;
     static constexpr float kPlayerCollisionRadius = 1.0f;
     static constexpr int32_t kDamage = 1;

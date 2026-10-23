@@ -13,7 +13,10 @@ public:
     static float CalculateFormationBlend(float transitionSeconds);
     static Vector3 CalculateFormationPosition(const Vector3& headPosition, int32_t segmentOrder,
         float segmentSpacing, float movementElapsedSeconds, const Vector3& followPosition, float formationBlend);
-    float UpdateFormationBlend(float deltaTimeSeconds);
+    void UpdateFormation(float deltaTimeSeconds) override;
+    float GetFormationBlend() const override;
+    Vector3 CalculateFormationPosition(const FearWormFormationContext& context,
+        const Vector3& followPosition, float formationBlend) const override;
     void Reset(size_t segmentCount);
     void Enter(FearWormBattleState& battle, FearWormEnemy& boss) override;
     void Update(FearWormBattleState& battle, FearWormEnemy& boss) override;
@@ -21,7 +24,7 @@ public:
 
 private:
     static constexpr float kTargetOffsetX = 20.0f;
-    static constexpr float kTargetOffsetY = 3.0f;
+    static constexpr float kMissileAttackHeight = 20.0f;
     static constexpr float kTargetForwardOffset = 75.0f;
     static constexpr float kFormationDurationSeconds = 1.0f;
     static constexpr float kFormationWaveScaleY = 3.2f;

@@ -273,7 +273,7 @@ void FearWormEnemy::UpdateSegments()
         return;
     }
 
-    const float formationBlend = battleState_.UpdateFormationBlend();
+    const float formationBlend = battleState_.GetFormationBlend();
     Segment* previousSegment = &segments_[0];
     int32_t aliveOrder = 0;
 

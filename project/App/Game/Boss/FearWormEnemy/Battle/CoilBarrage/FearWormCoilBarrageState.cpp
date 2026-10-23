@@ -8,6 +8,13 @@
 #include <cmath>
 #include <algorithm>
 
+Vector3 FearWormCoilBarrageState::CalculateFormationPosition(const FearWormFormationContext& context,
+    const Vector3& followPosition, float) const
+{
+    return CalculateFormationPosition(context.headPosition, context.orbitAngleRadians,
+        context.segmentOrder, context.segmentSpacing, followPosition);
+}
+
 void FearWormCoilBarrageState::Reset()
 {
     isFinished_ = false;

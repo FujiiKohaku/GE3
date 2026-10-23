@@ -2,6 +2,7 @@
 #pragma once
 
 #include "Engine/Math/MathStruct.h"
+#include "Engine/CollisionManager/CollisionManager.h"
 
 #include <memory>
 #include <cstdint>
@@ -39,18 +40,23 @@ struct StageTrigger {
 
 class GameplayCollisionSystem {
 public:
-    // プレイヤーや弾とステージ障害物の当たり判定を取り、接触への対応を行う。
+    // プレイヤーとステージ障害物の接触に対応する。
     void UpdateStageCollisions(
         Player& player,
-        const std::vector<std::unique_ptr<Object3d>>& levelObjects,
+        const std::vector<std::unique_ptr<Object3d>>& levelObjects);
+
+    // 弾ごとに敵・破壊可能物・床の接触時刻を比較し、最初の命中だけを処理する。
+    GameplayCollisionEvents UpdatePlayerBulletCollisions(
+        Player& player,
+        const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
+        BaseEnemy* boss,
         std::vector<DestructibleLevelObject>& destructibles,
         Object3d* floorObject);
 
-    // 敵・ボス・敵味方の弾との当たり判定を取り、得点と被弾演出の通知を集める。
+    // 敵本体と敵弾のプレイヤーへの接触を調べる。
     GameplayCollisionEvents UpdateCombatCollisions(
         Player& player,
         std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        BaseEnemy* boss,
         const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets);
 
     // ステージ内のトリガーとの接触を調べ、ゲーム進行に使うイベントを返す。
@@ -62,4 +68,20 @@ public:
     void SyncRaycastTargets(
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         const BaseEnemy* boss);
+
+private:
+    friend bool RunGameplayCollisionTests();
+
+    struct PlayerBulletHit {
+        SweepHit hit {};
+        BaseEnemy* enemy = nullptr;
+        DestructibleLevelObject* destructible = nullptr;
+        int32_t partIndex = 0;
+    };
+
+    static PlayerBulletHit FindFirstPlayerBulletHit(
+        const Sphere& bullet, const Vector3& movement,
+        const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
+        BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
+        float floorHeight);
 };

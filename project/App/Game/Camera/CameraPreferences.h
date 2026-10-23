@@ -4,7 +4,7 @@
 class CameraPreferences {
 public:
     float distance = 35.0f;
-    float verticalFovDegrees = 25.7831008f;
+    float verticalFovDegrees = 25.783f;
     int preset = 0; // -1 means custom.
     void CyclePreset(int direction);
     void AdjustDistance(float amount);

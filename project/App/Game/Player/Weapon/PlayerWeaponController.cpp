@@ -316,6 +316,12 @@ void PlayerHomingLock::SetTargets(const std::vector<BaseEnemy*>& targets)
     }
 }
 
+void PlayerHomingLock::ClearHomingTargets()
+{
+    targets_->clear();
+    Reset();
+}
+
 // ロック対象と前回の押下状態を消し、次の射撃入力を新しく受け付ける。
 void PlayerHomingLock::Reset()
 {

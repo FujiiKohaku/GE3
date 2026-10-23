@@ -6,37 +6,19 @@
 #include "Engine/Time/TimeManager.h"
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 
-namespace {
-// 次シーンへ所有権を移して初期化する。旧シーンはすぐに破棄せず、後の解放処理へ渡す。
-bool ChangeScene(
-    std::unique_ptr<BaseScene>& scene,
-    std::unique_ptr<BaseScene>& nextScene,
-    std::unique_ptr<BaseScene>& retiredScene)
-{
-    if (!nextScene) {
-        return false;
-    }
-
-    if (scene) {
-        retiredScene = std::move(scene);
-    }
-
-    scene = std::move(nextScene);
-    scene->Initialize();
-    return true;
-}
-}
-
-
 // 予約されたシーンへの切替と、現在のシーンの更新を行う。
 void SceneManager::Update()
 {
     if (retiredScene_) {
-        retiredScene_->Finalize();
         retiredScene_.reset();
     }
 
     if (nextScene_) {
+        if (scene_) {
+            // 共有設定の解除は次シーンの初期化前に済ませ、本体の破棄だけを遅延する。
+            scene_->Finalize();
+            retiredScene_ = std::move(scene_);
+        }
         auto* lights = LightManager::GetInstance();
         if (lights->IsInitialized()) {
             lights->ClearDynamicPointLights();
@@ -55,8 +37,8 @@ void SceneManager::Update()
         sceneClearColor_ = { 0.4f, 0.7f, 1.0f, 1.0f };
         sceneFogColor_ = { 0.58f, 0.80f, 0.96f, 1.0f };
         SetSceneDistanceFog({ 380.0f, 720.0f, 1.0f, 1.2f });
-    }
-    if (ChangeScene(scene_, nextScene_, retiredScene_)) {
+        scene_ = std::move(nextScene_);
+        scene_->Initialize();
         ++sceneRevision_;
         pageReveal_.InitializeIfRequested();
     }
@@ -72,7 +54,6 @@ void SceneManager::Update()
 void SceneManager::Finalize()
 {
     if (retiredScene_) {
-        retiredScene_->Finalize();
         retiredScene_.reset();
     }
 

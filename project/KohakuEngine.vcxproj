@@ -818,7 +818,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Entry\IceJellyfishEntryState.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Entry\IceJellyfishEntryState.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\IceJellyfishBattleState.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\PulseBarrage\IceJellyfishPulseBarrageAttack.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\IceSpear\IceJellyfishIceSpearAttack.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\IcePillar\IceJellyfishIcePillarAttack.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\Common\IceJellyfishAttackMotion.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\IceJellyfishBattleState.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\PulseBarrage\IceJellyfishPulseBarrageAttack.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\IceSpear\IceJellyfishIceSpearAttack.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Battle\IcePillar\IceJellyfishIcePillarAttack.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Dead\IceJellyfishDeadState.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\Dead\IceJellyfishDeadState.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\State\IceJellyfishState.h" />

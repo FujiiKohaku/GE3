@@ -640,7 +640,7 @@ void TestScene1::Update()
             EffectManager::GetInstance()->PlayEffect("OrangeEmberCore", sixSeqCenterPos_);
 
             // ② 6方向到達地点での大爆発（距離11.5m・高度6.5m）
-            const float kPi = 3.14159265f;
+            const float kPi = std::numbers::pi_v<float>;
             const float dist = 11.5f;
             const float height = 6.5f;
 
@@ -670,12 +670,12 @@ void TestScene1::Update()
             EffectManager::GetInstance()->PlayEffect("OrangeEmberCore", centerHigh);
 
             // ② 6方向の外側さらに広い範囲での追っかけ二重破裂（距離16.0m・高度10.5m）
-            const float kPi = 3.14159265f;
+            const float kPi = std::numbers::pi_v<float>;
             const float dist2 = 16.0f;
             const float height2 = 10.5f;
 
             for (int i = 0; i < 6; ++i) {
-                float angle = (float)i * (kPi / 3.0f) + 0.523598f; // 30度オフセットで交差破裂
+                float angle = (float)i * (kPi / 3.0f) + (std::numbers::pi_v<float> / 6.0f); // 30度オフセットで交差破裂
                 Vector3 blastPos2 = {
                     sixSeqCenterPos_.x + cosf(angle) * dist2,
                     sixSeqCenterPos_.y + height2,
@@ -1230,13 +1230,13 @@ void TestScene1::DrawImGui()
     ImGui::Text("Camera Yaw: %.2f, Pitch: %.2f", cameraYaw_, cameraPitch_);
     ImGui::Separator();
     ImGui::SliderFloat("Player Scale", &playerScale_, 0.1f, 50.0f);
-    ImGui::SliderFloat("Player Rot Offset", &playerRotOffset_, -3.1415f, 3.1415f);
+    ImGui::SliderFloat("Player Rot Offset", &playerRotOffset_, -std::numbers::pi_v<float>, std::numbers::pi_v<float>);
     ImGui::SliderFloat("Player Y", &playerPos_.y, -10.0f, 20.0f);
     ImGui::Separator();
     ImGui::Text("Katana Attachment");
     ImGui::SliderFloat("Katana Scale", &katanaScale_, 0.05f, 2.0f);
     ImGui::DragFloat3("Katana Offset", &katanaOffset_.x, 0.01f);
-    ImGui::SliderFloat3("Katana Rotation", &katanaRotation_.x, -3.1415f, 3.1415f);
+    ImGui::SliderFloat3("Katana Rotation", &katanaRotation_.x, -std::numbers::pi_v<float>, std::numbers::pi_v<float>);
     ImGui::SliderFloat("Camera Distance", &cameraDistance_, 1.0f, 100.0f);
     ImGui::SliderFloat("Camera Pitch", &cameraPitch_, -1.5f, 1.5f);
     ImGui::End();
@@ -1264,15 +1264,15 @@ nlohmann::json TestScene1::GetDevelopmentControls() const
         {{"key", "footSoleGroundMargin"}, {"label", "足裏の地面余白"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", 0}, {"maximum", 0.3}, {"step", 0.001}},
         {{"key", "selectedPostEffectIndex"}, {"label", "エフェクト"}, {"group", "Robo テストシーン"}, {"type", "select"}, {"options", nlohmann::json::array({})}},
         {{"key", "playerScale"}, {"label", "プレイヤーの大きさ"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", 0.1}, {"maximum", 50}, {"step", 0.1}},
-        {{"key", "playerRotOffset"}, {"label", "プレイヤー回転補正"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -3.1415}, {"maximum", 3.1415}, {"step", 0.01}},
+        {{"key", "playerRotOffset"}, {"label", "プレイヤー回転補正"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -std::numbers::pi_v<double>}, {"maximum", std::numbers::pi_v<double>}, {"step", 0.01}},
         {{"key", "playerY"}, {"label", "プレイヤー高さ"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -10}, {"maximum", 20}, {"step", 0.1}},
         {{"key", "katanaScale"}, {"label", "刀の大きさ"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", 0.05}, {"maximum", 2}, {"step", 0.01}},
         {{"key", "katanaOffsetX"}, {"label", "刀位置 X"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -100}, {"maximum", 100}, {"step", 0.01}},
         {{"key", "katanaOffsetY"}, {"label", "刀位置 Y"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -100}, {"maximum", 100}, {"step", 0.01}},
         {{"key", "katanaOffsetZ"}, {"label", "刀位置 Z"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -100}, {"maximum", 100}, {"step", 0.01}},
-        {{"key", "katanaRotX"}, {"label", "刀回転 X"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -3.1415}, {"maximum", 3.1415}, {"step", 0.01}},
-        {{"key", "katanaRotY"}, {"label", "刀回転 Y"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -3.1415}, {"maximum", 3.1415}, {"step", 0.01}},
-        {{"key", "katanaRotZ"}, {"label", "刀回転 Z"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -3.1415}, {"maximum", 3.1415}, {"step", 0.01}},
+        {{"key", "katanaRotX"}, {"label", "刀回転 X"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -std::numbers::pi_v<double>}, {"maximum", std::numbers::pi_v<double>}, {"step", 0.01}},
+        {{"key", "katanaRotY"}, {"label", "刀回転 Y"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -std::numbers::pi_v<double>}, {"maximum", std::numbers::pi_v<double>}, {"step", 0.01}},
+        {{"key", "katanaRotZ"}, {"label", "刀回転 Z"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -std::numbers::pi_v<double>}, {"maximum", std::numbers::pi_v<double>}, {"step", 0.01}},
         {{"key", "cameraDistance"}, {"label", "カメラ距離"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", 1}, {"maximum", 100}, {"step", 0.1}},
         {{"key", "cameraPitch"}, {"label", "カメラ上下角"}, {"group", "Robo テストシーン"}, {"type", "number"}, {"minimum", -1.5}, {"maximum", 1.5}, {"step", 0.01}},
     });
@@ -1364,15 +1364,15 @@ bool TestScene1::ApplyDevelopmentAction(const std::string& key, const std::strin
 #define SET_TEST(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); return true; }
     SET_TEST("footSoleGroundMargin", footSoleGroundMargin_, 0.0f, 0.30f)
     SET_TEST("playerScale", playerScale_, 0.1f, 50.0f)
-    SET_TEST("playerRotOffset", playerRotOffset_, -3.1415f, 3.1415f)
+    SET_TEST("playerRotOffset", playerRotOffset_, -std::numbers::pi_v<float>, std::numbers::pi_v<float>)
     SET_TEST("playerY", playerPos_.y, -10.0f, 20.0f)
     SET_TEST("katanaScale", katanaScale_, 0.05f, 2.0f)
     SET_TEST("katanaOffsetX", katanaOffset_.x, -100.0f, 100.0f)
     SET_TEST("katanaOffsetY", katanaOffset_.y, -100.0f, 100.0f)
     SET_TEST("katanaOffsetZ", katanaOffset_.z, -100.0f, 100.0f)
-    SET_TEST("katanaRotX", katanaRotation_.x, -3.1415f, 3.1415f)
-    SET_TEST("katanaRotY", katanaRotation_.y, -3.1415f, 3.1415f)
-    SET_TEST("katanaRotZ", katanaRotation_.z, -3.1415f, 3.1415f)
+    SET_TEST("katanaRotX", katanaRotation_.x, -std::numbers::pi_v<float>, std::numbers::pi_v<float>)
+    SET_TEST("katanaRotY", katanaRotation_.y, -std::numbers::pi_v<float>, std::numbers::pi_v<float>)
+    SET_TEST("katanaRotZ", katanaRotation_.z, -std::numbers::pi_v<float>, std::numbers::pi_v<float>)
     SET_TEST("cameraDistance", cameraDistance_, 1.0f, 100.0f)
     SET_TEST("cameraPitch", cameraPitch_, -1.5f, 1.5f)
 #undef SET_TEST

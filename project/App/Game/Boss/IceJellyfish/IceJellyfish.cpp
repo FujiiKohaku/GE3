@@ -1,7 +1,6 @@
 // 頭・触手・氷柱で構成するボス。攻撃パターン、部位ごとのHPと当たり判定を扱う。
 #include "IceJellyfish.h"
 
-#include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
@@ -20,14 +19,6 @@ constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr float kBodyAlpha = 0.95f;
 constexpr float kBellWaveAmplitude = 1.5f;
 constexpr float kTentacleWaveAmplitude = 0.12f;
-constexpr float kIcePillarAheadDistance = 190.0f;
-constexpr float kIcePillarRevealSeconds = 2.0f;
-constexpr float kIcePillarWaveTimeoutSeconds = 9.0f;
-
-bool Crossed(float previous, float current, float point)
-{
-    return previous < point && current >= point;
-}
 
 void ConfigureJellyfishBodyMaterial(Object3d& object)
 {
@@ -64,21 +55,6 @@ bool IsFartherPart(const TransparentPart& left, const TransparentPart& right)
     return left.viewDepth > right.viewDepth;
 }
 
-float SmoothStep(float value)
-{
-    const float t = std::clamp(value, 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
-}
-
-Vector4 LerpColor(const Vector4& from, const Vector4& to, float t)
-{
-    return {
-        from.x + (to.x - from.x) * t,
-        from.y + (to.y - from.y) * t,
-        from.z + (to.z - from.z) * t,
-        from.w + (to.w - from.w) * t
-    };
-}
 }
 
 IceJellyfish::IceJellyfish()
@@ -154,7 +130,7 @@ std::unique_ptr<Object3d> IceJellyfish::CreatePart(
     return object;
 }
 
-// 頭・触手・結晶と氷柱を用意し、攻撃と部位HPを初期状態にする。
+// 頭・触手と氷柱を用意し、攻撃と部位HPを初期状態にする。
 void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player)
 {
     camera_ = camera;
@@ -166,19 +142,7 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     softPoseTime_ = 0.0f;
     softPoseInitialized_ = false;
     hitFlashTime_ = 0.0f;
-    absoluteZeroUsed_ = false;
-    pulseBarrageWave_ = -1;
-    pulseBarrageTimer_ = 0.0f;
-    iceSpearTentacles_.fill(-1);
-    iceSpearVolley_ = -1;
-    iceSpearTimer_ = 0.0f;
-    iceSpearPoseWeight_ = 0.0f;
-    icePillarWave_ = -1;
-    icePillarTimer_ = 0.0f;
-    icePillarModelTimer_ = 0.0f;
-    icePillarModelSpawnedForWave_ = false;
-    patternIndex_ = 0;
-    phase_ = 1;
+    coreExposed_ = false;
 
     bell_ = CreatePart(camera, "Boss/IceJellyfish/IceJellyfishBell.obj",
         { 0.65f, 0.86f, 1.0f, kBodyAlpha }, true);
@@ -203,11 +167,6 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
         }
     }
 
-    for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        crystals_[crystal] = CreatePart(camera, "Environment/Ice/IceSpike.obj",
-            { 0.35f, 0.82f, 1.0f, 1.0f }, true);
-        crystalHp_[crystal] = 0.0f;
-    }
     for (std::unique_ptr<Object3d>& pillar : icePillarModels_) {
         pillar = CreatePart(camera, "Environment/Ice/IceSpike.obj",
             { 1.1f, 1.65f, 2.6f, 1.0f }, false);
@@ -215,7 +174,6 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
 
     tentacleColliders_.reserve(kTentacleCount * kSegmentsPerTentacle);
     tentacleColliderParts_.reserve(kTentacleCount * kSegmentsPerTentacle);
-    BeginPattern(AttackPattern::FrozenSweep);
     UpdatePartTransforms();
 }
 
@@ -252,221 +210,10 @@ void IceJellyfish::Update()
         ChangeState(BossState::Dead);
     }
     UpdateState();
+    // Stateが決めた位置を、取得用の位置と共通Transformへ反映する。
+    basePosition_ = bodyPosition_;
+    transform_.translate = bodyPosition_;
     UpdatePartTransforms();
-}
-
-// 選ばれた触手から、狙い先に向けて氷槍の弾を発射する。
-void IceJellyfish::FireIceSpearVolley()
-{
-    if (player_ == nullptr || bulletModel_ == nullptr) return;
-    if (iceSpearVolley_ < 0 || iceSpearVolley_ >= 3) return;
-    const int32_t selectedTentacle = iceSpearTentacles_[iceSpearVolley_];
-    if (selectedTentacle < 0) return;
-    const size_t tentacle = static_cast<size_t>(selectedTentacle);
-    Vector3 target = GetIceSpearAimTarget(tentacle);
-    target.z = player_->GetTranslate().z;
-
-    for (size_t remaining = kSegmentsPerTentacle; remaining > 0; --remaining) {
-        const size_t segment = remaining - 1;
-        if (!IsSegmentAlive(tentacle, segment)) continue;
-        const Vector3 muzzle = MatrixMath::Transform(
-            {}, tentacles_[tentacle][segment]->GetWorldMatrix());
-        EffectManager::GetInstance()->PlayEffect("JellyfishSpearFlash", muzzle);
-        const Vector3 targetDirection = Normalize(target - muzzle);
-        const float speed = 0.78f + static_cast<float>(iceSpearVolley_) * 0.06f;
-        constexpr int32_t kSpearCount = 5;
-        for (int32_t spear = 0; spear < kSpearCount; ++spear) {
-            Vector3 direction = targetDirection;
-            if (spear > 0) {
-                const float angle = kTwoPi * static_cast<float>(spear - 1) /
-                    static_cast<float>(kSpearCount - 1);
-                direction = Normalize(targetDirection + Vector3 {
-                    std::cos(angle) * 0.055f,
-                    std::sin(angle) * 0.055f,
-                    0.0f });
-            }
-
-            auto bullet = std::make_unique<NormalEnemyBullet>();
-            bullet->Initialize(bulletModel_);
-            bullet->SetTranslate(muzzle);
-            bullet->SetVelocity(direction * speed);
-            bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-            Vector3 bulletScale { 0.30f, 0.30f, 1.25f };
-            int bulletDamage = 1;
-            if (spear == 0) {
-                bulletScale = { 0.44f, 0.44f, 1.70f };
-                bulletDamage = 2;
-            }
-            bullet->SetScale(bulletScale);
-            bullet->SetDamage(bulletDamage);
-            AddEnemyBullet(std::move(bullet));
-        }
-        break;
-    }
-}
-
-// 氷柱を出す位置を決め、出現前に危険な場所を予告する。
-void IceJellyfish::PrepareIcePillarWarning()
-{
-    if (player_ == nullptr || icePillarWave_ < 0 || icePillarWave_ >= 3) return;
-    icePillarModelSpawnedForWave_ = false;
-    constexpr std::array<float, 3> laneOffsets = { -15.0f, 0.0f, 15.0f };
-    const Vector3 playerPosition = player_->GetTranslate();
-    const float floorY = hoverCenterY_ - 55.0f;
-    size_t hazardIndex = 0;
-    for (int32_t lane = 0; lane < 3; ++lane) {
-        if (lane == icePillarSafeLane_) continue;
-        Vector3 position = {
-            hoverCenterX_ + laneOffsets[static_cast<size_t>(lane)],
-            floorY,
-            playerPosition.z + kIcePillarAheadDistance
-        };
-        icePillarPositions_[hazardIndex++] = position;
-        EffectManager::GetInstance()->PlayEffect("IceGroundPattern", position);
-    }
-}
-
-// 攻撃パターンを切り替え、そのパターンの開始処理を実行する。
-void IceJellyfish::BeginPattern(AttackPattern pattern)
-{
-    ExitPattern();
-    if (static_cast<size_t>(pattern) >= 6) {
-        pattern = AttackPattern::FrozenSweep;
-    }
-    currentPattern_ = pattern;
-    EnterPattern();
-}
-// 次に行う攻撃パターンを選び、戦闘の流れを切り替える。
-void IceJellyfish::SelectNextPattern()
-{
-    if (phase_ == 1) {
-        constexpr std::array<AttackPattern, 3> patterns = {
-            AttackPattern::FrozenSweep,
-            AttackPattern::IcicleBloom,
-            AttackPattern::TentacleThrust
-        };
-        patternIndex_ = (patternIndex_ + 1) % static_cast<int32_t>(patterns.size());
-        BeginPattern(patterns[patternIndex_]);
-        return;
-    }
-
-    constexpr std::array<AttackPattern, 5> patterns = {
-        AttackPattern::FrozenSweep,
-        AttackPattern::BlizzardCurrent,
-        AttackPattern::TentacleThrust,
-        AttackPattern::CrystalPrison,
-        AttackPattern::IcicleBloom
-    };
-    patternIndex_ = (patternIndex_ + 1) % static_cast<int32_t>(patterns.size());
-    BeginPattern(patterns[patternIndex_]);
-}
-
-// 現在の攻撃パターンに対応する動作を呼び出す。
-void IceJellyfish::UpdatePattern(float deltaTime)
-{
-    previousAttackTimer_ = attackTimer_;
-    attackTimer_ += deltaTime;
-    switch (currentPattern_) {
-    case AttackPattern::FrozenSweep: UpdateFrozenSweepPattern(); break;
-    case AttackPattern::IcicleBloom: UpdateIcicleBloomPattern(); break;
-    case AttackPattern::TentacleThrust: UpdateTentacleThrustPattern(); break;
-    case AttackPattern::BlizzardCurrent: UpdateBlizzardCurrentPattern(); break;
-    case AttackPattern::CrystalPrison: UpdateCrystalPrisonPattern(); break;
-    case AttackPattern::AbsoluteZero: UpdateAbsoluteZeroPattern(); break;
-    }
-    if (attackTimer_ >= GetPatternDuration(currentPattern_, phase_)) {
-        SelectNextPattern();
-    }
-}
-// 同じ攻撃枠で連続してダメージを与えないよう、命中済みの記録を確認する。
-void IceJellyfish::DamagePlayerOnce(int slot, int damage)
-{
-    if (player_ == nullptr || slot < 0 || slot >= static_cast<int>(attackHitApplied_.size()) ||
-        attackHitApplied_[slot]) {
-        return;
-    }
-    attackHitApplied_[slot] = true;
-    if (player_->ApplyDamage(damage)) {
-        EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
-    }
-}
-
-// プレイヤーを狙う方向を中心に、幅を持たせて弾を発射する。
-void IceJellyfish::FireAimedBurst(int count, float spread, float speed, int damage)
-{
-    if (player_ == nullptr || bulletModel_ == nullptr || count <= 0) return;
-    const Vector3 muzzle = bodyPosition_ + Vector3 { 0.0f, -2.0f, -15.0f };
-    const Vector3 targetDirection = Normalize(player_->GetTranslate() - muzzle);
-    for (int32_t index = 0; index < count; ++index) {
-        const float centered = static_cast<float>(index) - static_cast<float>(count - 1) * 0.5f;
-        auto bullet = std::make_unique<NormalEnemyBullet>();
-        bullet->Initialize(bulletModel_);
-        bullet->SetTranslate(muzzle);
-        bullet->SetVelocity(Normalize(targetDirection + Vector3 { centered * spread, 0.0f, 0.0f }) * speed);
-        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-        bullet->SetScale({ 0.45f, 0.45f, 0.8f });
-        bullet->SetDamage(damage);
-        AddEnemyBullet(std::move(bullet));
-    }
-}
-
-// 周囲へ等間隔に弾を並べ、放射状の弾幕を作る。
-void IceJellyfish::FireRadialBurst(int count, float speed, int damage, float angleOffset)
-{
-    if (bulletModel_ == nullptr || count <= 0) return;
-    const Vector3 muzzle = bodyPosition_ + Vector3 { 0.0f, -2.0f, -15.0f };
-    for (int32_t index = 0; index < count; ++index) {
-        const float angle = angleOffset + kTwoPi * static_cast<float>(index) / static_cast<float>(count);
-        const Vector3 direction = Normalize(Vector3 {
-            std::cos(angle) * 0.55f, std::sin(angle) * 0.55f, -1.0f });
-        auto bullet = std::make_unique<NormalEnemyBullet>();
-        bullet->Initialize(bulletModel_);
-        bullet->SetTranslate(muzzle);
-        bullet->SetVelocity(direction * speed);
-        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-        bullet->SetScale({ 0.4f, 0.4f, 0.9f });
-        bullet->SetDamage(damage);
-        AddEnemyBullet(std::move(bullet));
-    }
-}
-
-// リング状に弾を配置して発射し、波のように広がる弾幕を作る。
-void IceJellyfish::FirePulseRing(
-    int count, float spread, float speed, float angleOffset, bool includeCenter)
-{
-    if (player_ == nullptr || bulletModel_ == nullptr || count <= 0) return;
-    const Vector3 muzzle = bodyPosition_ + Vector3 { 0.0f, -2.0f, -15.0f };
-    const Vector3 targetDirection = Normalize(player_->GetTranslate() - muzzle);
-    int ringCount = count;
-
-    if (includeCenter) {
-        auto centerBullet = std::make_unique<NormalEnemyBullet>();
-        centerBullet->Initialize(bulletModel_);
-        centerBullet->SetTranslate(muzzle);
-        centerBullet->SetVelocity(targetDirection * speed);
-        centerBullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-        centerBullet->SetScale({ 0.46f, 0.46f, 0.95f });
-        centerBullet->SetDamage(1);
-        AddEnemyBullet(std::move(centerBullet));
-        --ringCount;
-    }
-
-    for (int32_t index = 0; index < ringCount; ++index) {
-        const float angle = angleOffset + kTwoPi * static_cast<float>(index) /
-            static_cast<float>(ringCount);
-        const Vector3 direction = Normalize(targetDirection + Vector3 {
-            std::cos(angle) * spread,
-            std::sin(angle) * spread,
-            0.0f });
-        auto bullet = std::make_unique<NormalEnemyBullet>();
-        bullet->Initialize(bulletModel_);
-        bullet->SetTranslate(muzzle);
-        bullet->SetVelocity(direction * speed);
-        bullet->SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
-        bullet->SetScale({ 0.42f, 0.42f, 0.90f });
-        bullet->SetDamage(1);
-        AddEnemyBullet(std::move(bullet));
-    }
 }
 
 // 指定した触手の節が破壊されずに残っているかを調べる。
@@ -483,42 +230,6 @@ bool IceJellyfish::AreAllTentaclesDestroyed() const
         if (!(hp <= 0.0f)) return false;
     }
     return true;
-}
-
-// 指定した節が、氷槍の発射元になるかを調べる。
-bool IceJellyfish::IsIceSpearEmitter(size_t tentacle, size_t segment) const
-{
-    if (iceSpearVolley_ < 0 || !IsSegmentAlive(tentacle, segment)) return false;
-    if (!IsIceSpearTentacleSelected(tentacle)) return false;
-    return segment + 1 == kSegmentsPerTentacle || !IsSegmentAlive(tentacle, segment + 1);
-}
-
-// 今回の氷槍攻撃で使う触手かを確認する。
-bool IceJellyfish::IsIceSpearTentacleSelected(size_t tentacle) const
-{
-    if (iceSpearVolley_ < 0) return false;
-    for (int32_t selectedTentacle : iceSpearTentacles_) {
-        if (selectedTentacle == static_cast<int32_t>(tentacle)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// 触手ごとの発射方向に使う狙い先を求める。
-Vector3 IceJellyfish::GetIceSpearAimTarget(size_t tentacle) const
-{
-    constexpr std::array<Vector3, 3> targetOffsets = {
-        Vector3 { -14.0f, 0.0f, 0.0f },
-        Vector3 { 14.0f, 0.0f, 0.0f },
-        Vector3 { 0.0f, 0.0f, 0.0f }
-    };
-    for (size_t index = 0; index < iceSpearTentacles_.size(); ++index) {
-        if (iceSpearTentacles_[index] == static_cast<int32_t>(tentacle)) {
-            return lockedTarget_ + targetOffsets[index];
-        }
-    }
-    return lockedTarget_;
 }
 
 // 触手番号と節番号を、当たり判定で共通に使う部位番号へ変換する。
@@ -576,12 +287,6 @@ void IceJellyfish::UpdatePartTransforms()
     for (size_t tentacle = 0; tentacle < kTentacleCount; ++tentacle) {
         const float azimuth = kTwoPi * static_cast<float>(tentacle) /
             static_cast<float>(kTentacleCount) + 0.25f;
-        const bool icePillarTentacle = icePillarWave_ >= 0 &&
-            static_cast<int32_t>(tentacle % 2) == icePillarWave_ % 2;
-        float icePillarCharge = 0.0f;
-        if (icePillarTentacle) {
-            icePillarCharge = std::clamp(icePillarTimer_ / kIcePillarRevealSeconds, 0.0f, 1.0f);
-        }
         const float tentaclePhase =
             floatPhase * (1.0f + (tentacleWaveSpeed_[tentacle] - 1.0f) * 0.15f) + tentacleWavePhase_[tentacle] * 0.35f;
         const float tentacleAmplitude = tentacleWaveAmplitude_[tentacle];
@@ -612,23 +317,10 @@ void IceJellyfish::UpdatePartTransforms()
                 radialZ * std::sin(bend) + radialX * sway
             };
 
-            const bool iceSpearTentacle = IsIceSpearTentacleSelected(tentacle);
-            if (iceSpearTentacle && IsSegmentAlive(tentacle, segment) && player_ != nullptr) {
-                Vector3 aimTarget = GetIceSpearAimTarget(tentacle);
-                aimTarget.z = player_->GetTranslate().z;
-                const Vector3 aimDirection = Normalize((aimTarget - bodyPosition_) - joint);
-                const float aimWeight = (0.15f + tipWeight * 0.67f) * iceSpearPoseWeight_;
-                down = Normalize(down * (1.0f - aimWeight) + aimDirection * aimWeight);
-            }
-            if (icePillarTentacle && IsSegmentAlive(tentacle, segment)) {
-                const Vector3 floorDirection = Normalize(Vector3 {
-                    radialX * 0.08f,
-                    -1.0f,
-                    radialZ * 0.08f });
-                const float pointDownWeight = icePillarCharge * (0.35f + tipWeight * 0.25f);
-                down = Normalize(
-                    down * (1.0f - pointDownWeight) + floorDirection * pointDownWeight);
-            }
+            const IceJellyfishAttackMotionContext attackMotionContext {
+                tentacle, segment, tipWeight, joint, radialX, radialZ
+            };
+            down = battleState_.ApplyAttackTentacleDirection(*this, attackMotionContext, down);
 
             down = Normalize(down);
             if (!softPoseInitialized_) {
@@ -664,23 +356,9 @@ void IceJellyfish::UpdatePartTransforms()
             local.m[3][2] = joint.z;
             Object3d& object = *tentacles_[tentacle][segment];
             object.SetCustomWorldMatrix(MatrixMath::Multiply(local, bodyMatrix));
-            const bool iceSpearEmitter = IsIceSpearEmitter(tentacle, segment);
-            const bool iceSpearChargedSegment = iceSpearEmitter ||
-                (segment + 1 < kSegmentsPerTentacle &&
-                    IsIceSpearEmitter(tentacle, segment + 1));
             const Vector4 baseTentacleColor = { 0.55f, 0.80f, 1.0f, kBodyAlpha };
-            const Vector4 chargedTentacleColor = { 1.65f, 0.45f, 2.80f, kBodyAlpha };
-            const float easedCharge = SmoothStep(iceSpearPoseWeight_);
-            Vector4 tentacleColor = baseTentacleColor;
-            if (iceSpearChargedSegment) {
-                tentacleColor = LerpColor(baseTentacleColor, chargedTentacleColor, easedCharge);
-            } else if (icePillarTentacle) {
-                tentacleColor = {
-                    0.55f + icePillarCharge * 0.65f,
-                    0.80f + icePillarCharge * 1.35f,
-                    1.00f + icePillarCharge * 1.70f,
-                    kBodyAlpha };
-            }
+            const Vector4 tentacleColor = battleState_.ApplyAttackTentacleColor(
+                *this, attackMotionContext, baseTentacleColor);
             object.SetColor(tentacleColor);
             object.SetVertexShaderParameters({ animationTime_, kTentacleWaveAmplitude,
                 tentacleWavePhase_[tentacle] - waveDelay, 1.0f + endRatio });
@@ -696,38 +374,17 @@ void IceJellyfish::UpdatePartTransforms()
         }
     }
     softPoseInitialized_ = true;
-    UpdateCrystalTransforms();
     UpdateIcePillarModelTransforms();
-}
-
-// ボス周辺の結晶を、現在の姿勢と演出状態へ追従させる。
-void IceJellyfish::UpdateCrystalTransforms()
-{
-    constexpr std::array<Vector3, 4> offsets = {
-        Vector3 { -16.0f, -11.0f, 42.0f }, Vector3 { 16.0f, -11.0f, 42.0f },
-        Vector3 { -16.0f, 11.0f, 42.0f }, Vector3 { 16.0f, 11.0f, 42.0f }
-    };
-    for (size_t index = 0; index < crystals_.size(); ++index) {
-        if (crystalHp_[index] <= 0.0f || GetAttackPattern() != AttackPattern::CrystalPrison) continue;
-        const Vector3 position = lockedTarget_ + offsets[index];
-        const Matrix4x4 matrix = MatrixMath::MakeAffineMatrix(
-            Vector3 { 2.2f, 5.0f, 2.2f },
-            Vector3 { 0.0f, animationTime_ * 0.5f, 0.0f }, position);
-        crystals_[index]->SetCustomWorldMatrix(matrix);
-        crystals_[index]->Update();
-        crystalColliders_[index] = { position, 4.0f };
-    }
 }
 
 // 氷柱の出現状態を、表示位置と大きさへ反映する。
 void IceJellyfish::UpdateIcePillarModelTransforms()
 {
-    if (!icePillarModelSpawnedForWave_) return;
+    if (!battleState_.HasIcePillarModels()) return;
 
-    const float scaleWeight = (std::max)(0.12f,
-        std::clamp(icePillarModelTimer_ / 0.18f, 0.0f, 1.0f));
-    for (size_t index = 0; index < icePillarModelPositions_.size(); ++index) {
-        Vector3 position = icePillarModelPositions_[index];
+    const float scaleWeight = battleState_.GetIcePillarModelScaleWeight();
+    for (size_t index = 0; index < battleState_.GetIcePillarModelPositions().size(); ++index) {
+        Vector3 position = battleState_.GetIcePillarModelPositions()[index];
         position.y += 0.35f;
         const float heightVariation = 0.88f + static_cast<float>(index % 3) * 0.08f;
         const Matrix4x4 matrix = MatrixMath::MakeAffineMatrix(
@@ -744,12 +401,7 @@ void IceJellyfish::UpdateIcePillarModelTransforms()
 void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 {
     if (bell_ == nullptr || camera_ == nullptr || (IsDead() && IsDeathSequenceFinished())) { return; }
-    for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
-            crystals_[crystal]->DrawShadow(renderer);
-        }
-    }
-    if (icePillarModelSpawnedForWave_) {
+    if (battleState_.HasIcePillarModels()) {
         for (const auto& pillar : icePillarModels_) { pillar->DrawShadow(renderer); }
     }
     core_->DrawShadow(renderer);
@@ -767,12 +419,7 @@ void IceJellyfish::DrawShadow(ShadowMapRenderer& renderer)
 void IceJellyfish::Draw()
 {
     if (bell_ == nullptr || camera_ == nullptr || (IsDead() && IsDeathSequenceFinished())) return;
-    for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
-            crystals_[crystal]->Draw();
-        }
-    }
-    if (icePillarModelSpawnedForWave_) {
+    if (battleState_.HasIcePillarModels()) {
         for (const std::unique_ptr<Object3d>& pillar : icePillarModels_) pillar->Draw();
     }
     core_->Draw();
@@ -797,12 +444,7 @@ void IceJellyfish::Draw()
 // 描画対象をレイトレーシング用のシーンへ登録する。
 void IceJellyfish::SubmitRaytracing(DxrRenderer& renderer) {
     if (!bell_ || !camera_ || (IsDead() && IsDeathSequenceFinished())) { return; }
-    for (size_t crystalIndex = 0; crystalIndex < crystals_.size(); ++crystalIndex) {
-        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystalIndex] > 0 && crystals_[crystalIndex]) {
-            crystals_[crystalIndex]->SubmitRaytracing(renderer);
-        }
-    }
-    if (icePillarModelSpawnedForWave_) {
+    if (battleState_.HasIcePillarModels()) {
         for (const auto& pillar : icePillarModels_) {
             if (pillar) { pillar->SubmitRaytracing(renderer); }
         }
@@ -835,14 +477,6 @@ SweepHit IceJellyfish::SweepBullet(
         ConsiderNearestHit(nearest, partIndex, CollisionManager::SweepSphere(bullet, movement, tentacleColliders_[index]),
             tentacleColliderParts_[index]);
     }
-    if (GetAttackPattern() == AttackPattern::CrystalPrison) {
-        for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-            if (crystalHp_[crystal] > 0.0f) {
-                ConsiderNearestHit(nearest, partIndex, CollisionManager::SweepSphere(bullet, movement, crystalColliders_[crystal]),
-                    kFirstCrystalPart + static_cast<int32_t>(crystal));
-            }
-        }
-    }
     ConsiderNearestHit(nearest, partIndex, CollisionManager::SweepSphere(bullet, movement, coreCollider_), kCorePart);
     return nearest;
 }
@@ -867,9 +501,6 @@ bool IceJellyfish::IsCollisionPartDamageable(int32_t partIndex) const
         const int32_t flat = partIndex - kFirstSegmentPart;
         return IsSegmentAlive(flat / static_cast<int32_t>(kSegmentsPerTentacle),
             flat % static_cast<int32_t>(kSegmentsPerTentacle));
-    }
-    if (partIndex >= kFirstCrystalPart && partIndex < kFirstCrystalPart + 4) {
-        return crystalHp_[partIndex - kFirstCrystalPart] > 0.0f;
     }
     return false;
 }
@@ -897,13 +528,7 @@ void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
                 EffectManager::GetInstance()->PlayEffect("Explosion", burstPosition);
             }
         }
-        if (GetAttackPattern() == AttackPattern::AbsoluteZero) {
-            absoluteSealDamage_[tentacle] += damage;
-        }
         coreExposed_ = AreAllTentaclesDestroyed();
-    } else if (partIndex >= kFirstCrystalPart && partIndex < kFirstCrystalPart + 4) {
-        const size_t crystal = static_cast<size_t>(partIndex - kFirstCrystalPart);
-        crystalHp_[crystal] = (std::max)(0.0f, crystalHp_[crystal] - damage);
     } else {
         return;
     }
@@ -941,11 +566,6 @@ void IceJellyfish::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
         for (const OBB& box : bellColliders_) manager->RegisterRaycastObbTarget(nextObjectId++, box);
     }
     for (const OBB& box : tentacleColliders_) manager->RegisterRaycastObbTarget(nextObjectId++, box);
-    for (size_t crystal = 0; crystal < crystals_.size(); ++crystal) {
-        if (GetAttackPattern() == AttackPattern::CrystalPrison && crystalHp_[crystal] > 0.0f) {
-            manager->RegisterRaycastSphereTarget(nextObjectId++, crystalColliders_[crystal]);
-        }
-    }
     manager->RegisterRaycastSphereTarget(nextObjectId++, coreCollider_);
 }
 
@@ -964,12 +584,12 @@ void IceJellyfish::DrawCollisionDebug() const
         renderer->AddWireOBB(box.center, box.size, box.orientation[0], box.orientation[1],
             box.orientation[2], { 0.8f, 0.3f, 1.0f, 1.0f });
     }
-    if (icePillarModelSpawnedForWave_) {
+    if (battleState_.HasIcePillarModels()) {
         constexpr Vector3 axisX = { 1.0f, 0.0f, 0.0f };
         constexpr Vector3 axisY = { 0.0f, 1.0f, 0.0f };
         constexpr Vector3 axisZ = { 0.0f, 0.0f, 1.0f };
         constexpr Vector3 collisionSize = { 13.0f, 42.0f, 8.0f };
-        for (const Vector3& position : icePillarPositions_) {
+        for (const Vector3& position : battleState_.GetIcePillarPositions()) {
             const Vector3 collisionCenter = {
                 position.x,
                 position.y + 19.0f,
@@ -995,321 +615,6 @@ float IceJellyfish::GetBodyHpFraction() const
     float remaining = 0.0f;
     for (float tentacle : tentacleHp_) remaining += tentacle;
     return remaining / (kTentacleMaxHp * static_cast<float>(kTentacleCount));
-}
-
-// 現行の3攻撃。各攻撃のタイマーを独立して更新する。
-
-void IceJellyfish::StartPulseBarrageAttack()
-{
-    pulseBarrageWave_ = 0;
-    pulseBarrageTimer_ = 0.0f;
-}
-
-// 発射間隔に合わせてリング弾を放ち、攻撃時間を進める。
-void IceJellyfish::UpdatePulseBarrageAttack(float deltaTime)
-{
-    if (pulseBarrageWave_ >= 0) {
-        pulseBarrageTimer_ += deltaTime;
-        while (pulseBarrageWave_ < 3 &&
-        pulseBarrageTimer_ >= static_cast<float>(pulseBarrageWave_) * 0.18f) {
-            int32_t aliveTentacles = 0;
-            for (size_t tentacle = 0; tentacle < IceJellyfish::kTentacleCount; ++tentacle) {
-                if (IsSegmentAlive(tentacle, 0)) ++aliveTentacles;
-            }
-
-            if (pulseBarrageWave_ == 0) {
-                FirePulseRing(aliveTentacles * 2, 0.12f, 0.65f, 0.0f, false);
-            } else if (pulseBarrageWave_ == 1) {
-                const int count = aliveTentacles * 2;
-                float halfStep = 0.0f;
-                if (count > 0) {
-                    halfStep = std::numbers::pi_v<float> / static_cast<float>(count);
-                }
-                FirePulseRing(count, 0.22f, 0.62f, halfStep, false);
-            } else {
-                FirePulseRing(aliveTentacles, 0.08f, 0.82f,
-                std::numbers::pi_v<float> * 0.5f, true);
-            }
-            ++pulseBarrageWave_;
-        }
-        if (pulseBarrageWave_ >= 3) pulseBarrageWave_ = -1;
-    }
-
-}
-
-// 氷槍を撃つ触手や狙い先を準備する。
-void IceJellyfish::StartIceSpearAttack()
-{
-    iceSpearTentacles_.fill(-1);
-    std::array<int32_t, IceJellyfish::kTentacleCount> candidates {};
-    size_t candidateCount = 0;
-    for (size_t tentacle = 0; tentacle < IceJellyfish::kTentacleCount; ++tentacle) {
-        if (IsSegmentAlive(tentacle, 0)) {
-            candidates[candidateCount++] = static_cast<int32_t>(tentacle);
-        }
-    }
-
-    std::mt19937 randomEngine(std::random_device {}());
-    std::shuffle(candidates.begin(), candidates.begin() + candidateCount, randomEngine);
-    const size_t selectedCount = (std::min)(iceSpearTentacles_.size(), candidateCount);
-    for (size_t index = 0; index < selectedCount; ++index) {
-        iceSpearTentacles_[index] = candidates[index];
-    }
-    if (player_ != nullptr) lockedTarget_ = player_->GetTranslate();
-    iceSpearVolley_ = -1;
-    if (selectedCount > 0) {
-        iceSpearVolley_ = 0;
-    }
-    iceSpearTimer_ = 0.0f;
-    iceSpearPoseWeight_ = 0.0f;
-}
-
-// 氷槍の予備動作と発射タイミングを進める。
-void IceJellyfish::UpdateIceSpearAttack(float deltaTime)
-{
-    if (iceSpearVolley_ >= 0) {
-        iceSpearTimer_ += deltaTime;
-        if (iceSpearVolley_ < 3) {
-            iceSpearPoseWeight_ = (std::min)(1.0f, iceSpearPoseWeight_ + deltaTime * 2.8f);
-            while (iceSpearVolley_ < 3 &&
-            iceSpearTimer_ >= 1.0f + static_cast<float>(iceSpearVolley_) * 0.20f) {
-                FireIceSpearVolley();
-                ++iceSpearVolley_;
-            }
-        }
-        if (iceSpearVolley_ >= 3) {
-            iceSpearPoseWeight_ = (std::max)(0.0f, iceSpearPoseWeight_ - deltaTime * 1.8f);
-            if (iceSpearPoseWeight_ <= 0.0f) {
-                iceSpearVolley_ = -1;
-                iceSpearTentacles_.fill(-1);
-            }
-        }
-    }
-
-}
-
-// 氷柱攻撃のタイマーと予告位置を準備する。
-void IceJellyfish::StartIcePillarAttack()
-{
-    if (player_ == nullptr || icePillarWave_ >= 0) return;
-    std::mt19937 randomEngine(std::random_device {}());
-    std::uniform_int_distribution<int32_t> laneDistribution(0, 2);
-    icePillarSafeLane_ = laneDistribution(randomEngine);
-    icePillarWave_ = 0;
-    icePillarTimer_ = 0.0f;
-    for (int32_t slot = 3; slot < 6; ++slot) attackHitApplied_[slot] = false;
-    PrepareIcePillarWarning();
-}
-
-// 予告から氷柱の出現・命中判定・消失までを進める。
-void IceJellyfish::UpdateIcePillarAttack(float deltaTime)
-{
-    if (icePillarWave_ < 0) return;
-    icePillarTimer_ += deltaTime;
-    if (icePillarModelSpawnedForWave_) {
-        icePillarModelTimer_ += deltaTime;
-    }
-    if (!icePillarModelSpawnedForWave_ &&
-    icePillarTimer_ >= kIcePillarRevealSeconds) {
-        constexpr std::array<float, 3> kSpikeOffsets = { -4.0f, 0.0f, 4.0f };
-        size_t modelIndex = 0;
-        for (const Vector3& laneCenter : icePillarPositions_) {
-            for (size_t spike = 0; spike < kSpikeOffsets.size(); ++spike) {
-                float depthOffset = -1.2f;
-                if (spike == 1) depthOffset = 1.2f;
-                icePillarModelPositions_[modelIndex++] = {
-                    laneCenter.x + kSpikeOffsets[spike],
-                    laneCenter.y,
-                    laneCenter.z + depthOffset
-                };
-            }
-        }
-        icePillarModelTimer_ = 0.0f;
-        icePillarModelSpawnedForWave_ = true;
-    }
-
-    if (player_ != nullptr) {
-        const Vector3 playerPosition = player_->GetTranslate();
-        if (icePillarModelSpawnedForWave_) {
-            for (const Vector3& position : icePillarPositions_) {
-                const bool withinWidth = std::abs(playerPosition.x - position.x) <= 6.5f;
-                const bool withinDepth = std::abs(playerPosition.z - position.z) <= 4.0f;
-                const bool withinHeight = playerPosition.y >= position.y - 2.0f &&
-                playerPosition.y <= position.y + 40.0f;
-                if (withinWidth && withinDepth && withinHeight) {
-                    DamagePlayerOnce(3 + icePillarWave_, 2);
-                    break;
-                }
-            }
-        }
-
-        const bool passedPillars = playerPosition.z > icePillarPositions_[0].z + 10.0f;
-        if (!passedPillars && icePillarTimer_ < kIcePillarWaveTimeoutSeconds) return;
-    } else if (icePillarTimer_ < kIcePillarWaveTimeoutSeconds) {
-        return;
-    }
-
-    icePillarModelSpawnedForWave_ = false;
-    icePillarModelTimer_ = 0.0f;
-    ++icePillarWave_;
-    icePillarTimer_ = 0.0f;
-    if (icePillarWave_ >= 3) {
-        icePillarWave_ = -1;
-        return;
-    }
-    icePillarSafeLane_ = (icePillarSafeLane_ + 1 + icePillarWave_ % 2) % 3;
-    PrepareIcePillarWarning();
-}
-
-// 旧6パターン。通常のUpdateからは呼ばず、整理用に保持する。
-
-void IceJellyfish::EnterPattern()
-{
-    attackTimer_ = 0.0f;
-    previousAttackTimer_ = 0.0f;
-    firedWave_ = 0;
-    coreExposed_ = AreAllTentaclesDestroyed();
-    absoluteInterrupted_ = false;
-    attackHitApplied_.fill(false);
-    absoluteSealDamage_.fill(0.0f);
-    crystalHp_.fill(0.0f);
-    if (player_) lockedTarget_ = player_->GetTranslate();
-    if (currentPattern_ == AttackPattern::CrystalPrison) {
-        crystalHp_.fill(6.0f);
-    }
-}
-
-// パターン終了時に攻撃状態や表示を片付ける。
-void IceJellyfish::ExitPattern()
-{
-    if (currentPattern_ == AttackPattern::CrystalPrison) {
-        crystalHp_.fill(0.0f);
-    }
-}
-
-// 凍結した掃引攻撃の進行に合わせて、射撃や姿勢を更新する。
-void IceJellyfish::UpdateFrozenSweepPattern()
-{
-    if (Crossed(previousAttackTimer_, attackTimer_, 0.8f) && player_ != nullptr) {
-        lockedTarget_ = player_->GetTranslate();
-    }
-    if (Crossed(previousAttackTimer_, attackTimer_, 2.0f) && player_ != nullptr &&
-        std::abs(player_->GetTranslate().y - lockedTarget_.y) < 6.0f) {
-        DamagePlayerOnce(0, 2);
-    }
-    if (phase_ == 3 && Crossed(previousAttackTimer_, attackTimer_, 3.0f) && player_ != nullptr &&
-        std::abs(player_->GetTranslate().x - lockedTarget_.x) < 6.0f) {
-        DamagePlayerOnce(1, 2);
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-// 氷の弾が広がる攻撃パターンを進める。
-void IceJellyfish::UpdateIcicleBloomPattern()
-{
-    int32_t waves = 3;
-    if (phase_ == 1) waves = 2;
-    while (firedWave_ < waves) {
-        const float fireTime = 1.4f + static_cast<float>(firedWave_) * 0.9f;
-        if (!Crossed(previousAttackTimer_, attackTimer_, fireTime)) break;
-        float bulletSpeed = 0.58f;
-        if (phase_ == 3) bulletSpeed = 0.72f;
-        FireRadialBurst(8, bulletSpeed, 1,
-            static_cast<float>(firedWave_) * std::numbers::pi_v<float> / 8.0f);
-        ++firedWave_;
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-// 触手を突き出す攻撃パターンを進める。
-void IceJellyfish::UpdateTentacleThrustPattern()
-{
-    if (Crossed(previousAttackTimer_, attackTimer_, 0.9f) && player_ != nullptr) {
-        lockedTarget_ = player_->GetTranslate();
-    }
-    int32_t thrustCount = 3;
-    if (phase_ == 1) thrustCount = 2;
-    for (int32_t thrust = 0; thrust < thrustCount; ++thrust) {
-        const float hitTime = 1.8f + static_cast<float>(thrust) * 0.85f;
-        if (Crossed(previousAttackTimer_, attackTimer_, hitTime) && player_ != nullptr) {
-            const Vector3 difference = player_->GetTranslate() - lockedTarget_;
-            if (Dot(difference, difference) <= 64.0f) DamagePlayerOnce(thrust, 2);
-            lockedTarget_ = player_->GetTranslate();
-        }
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-// 吹雪のように弾を流す攻撃パターンを進める。
-void IceJellyfish::UpdateBlizzardCurrentPattern()
-{
-    if (player_ != nullptr && attackTimer_ >= 1.0f && attackTimer_ < 5.2f) {
-        float direction = -1.0f;
-        if (patternIndex_ % 2 == 0) direction = 1.0f;
-        float force = 0.09f;
-        if (phase_ == 3) force = 0.13f;
-        player_->ApplyRailAreaForce({ direction * force, 0.0f, 0.0f });
-    }
-    while (firedWave_ < 5) {
-        const float fireTime = 1.3f + static_cast<float>(firedWave_) * 0.75f;
-        if (!Crossed(previousAttackTimer_, attackTimer_, fireTime)) break;
-        FireAimedBurst(3, 0.24f, 0.42f, 1);
-        ++firedWave_;
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-// 結晶で囲む攻撃パターンを進める。
-void IceJellyfish::UpdateCrystalPrisonPattern()
-{
-    UpdateCrystalTransforms();
-    int32_t alive = 0;
-    for (float hp : crystalHp_) {
-        if (hp > 0.0f) ++alive;
-    }
-    if (Crossed(previousAttackTimer_, attackTimer_, 5.2f) && alive > 0 && player_ != nullptr) {
-        const Vector3 offset = player_->GetTranslate() - lockedTarget_;
-        if (std::abs(offset.x) > 10.0f || std::abs(offset.y) > 10.0f) {
-            DamagePlayerOnce(0, 3);
-        }
-    }
-    if (Crossed(previousAttackTimer_, attackTimer_, 5.6f) && alive > 0) {
-        FireAimedBurst(alive, 0.18f, 0.60f, 1);
-    }
-    coreExposed_ = AreAllTentaclesDestroyed();
-}
-
-// 最終段階の複合攻撃パターンを進める。
-void IceJellyfish::UpdateAbsoluteZeroPattern()
-{
-    int32_t released = 0;
-    for (size_t tentacle = 0; tentacle < IceJellyfish::kTentacleCount; ++tentacle) {
-        if (!IsSegmentAlive(tentacle, IceJellyfish::kSegmentsPerTentacle - 1) ||
-            absoluteSealDamage_[tentacle] >= 3.0f) {
-            ++released;
-        }
-    }
-    absoluteInterrupted_ = released == static_cast<int32_t>(IceJellyfish::kTentacleCount);
-    coreExposed_ = AreAllTentaclesDestroyed();
-    if (!absoluteInterrupted_ && Crossed(previousAttackTimer_, attackTimer_, 6.0f)) {
-        DamagePlayerOnce(0, 4);
-        FireRadialBurst(16, 0.78f, 2, 0.0f);
-    }
-}
-
-// 攻撃の種類と段階に応じた継続時間を返す。
-float IceJellyfish::GetPatternDuration(AttackPattern pattern, int phase)
-{
-    switch (pattern) {
-    case AttackPattern::IcicleBloom: return 6.2f;
-    case AttackPattern::TentacleThrust: return 6.5f;
-    case AttackPattern::BlizzardCurrent: return 6.5f;
-    case AttackPattern::CrystalPrison: return 7.5f;
-    case AttackPattern::AbsoluteZero: return 8.0f;
-    default:
-        if (phase == 3) return 5.4f;
-        return 6.0f;
-    }
 }
 
 // 今回の命中が現在の候補より手前なら、命中結果と部位番号を置き換える。

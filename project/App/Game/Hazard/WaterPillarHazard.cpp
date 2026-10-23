@@ -125,7 +125,7 @@ bool WaterPillarHazard::CheckCollision(const Vector3& playerPosition) const
     const float dx = playerPosition.x - position_.x;
     const float dz = playerPosition.z - position_.z;
     const bool insideRadius = dx * dx + dz * dz <= radius_ * radius_;
-    return insideRadius && playerPosition.y >= position_.y && playerPosition.y <= position_.y + height_;
+    return insideRadius && playerPosition.y >= position_.y && playerPosition.y <= position_.y + pillarScale_.y;
 }
 
 bool WaterPillarHazard::IsFinished() const

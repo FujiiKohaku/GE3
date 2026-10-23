@@ -14,7 +14,7 @@ inline bool RunFearWormMovementTests()
     using FearWormMovementContext = FearWormEnemy::FearWormMovementContext;
     FearWormMovementContext context { {10.0f, 20.0f, 30.0f}, 0.0f, 100.0f };
     const std::array<Vector3, 6> expected {{
-        {26, 27, 130}, {17, 50, 130}, {10, 27, 132.5f}, {10, 28, 132}, {30, 23, 205}, {10, 27, 180}
+        {26, 27, 130}, {17, 50, 130}, {10, 27, 132.5f}, {10, 28, 132}, {30, 20, 205}, {10, 27, 180}
     }};
     for (int i = 0; i < 6; ++i) {
         const Vector3 target = FearWormEnemy::CalculateFearWormTarget(static_cast<FearWormMovementType>(i), context);
@@ -24,6 +24,9 @@ inline bool RunFearWormMovementTests()
     if (!IsFearWormValueClose(target.x, 35.0f) || !IsFearWormValueClose(target.y, 27.0f)) return false;
     context.playerPosition.y = -100.0f;
     if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Spiral, context).y != 1.5f) return false;
+    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Line, context).y != 20.0f) return false;
+    context.playerPosition.y = 100.0f;
+    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Line, context).y != 20.0f) return false;
     // 分離前の計算結果を固定値で検証する。角度0だけでは見落とす周波数・位相も対象。
     const FearWormMovementContext angledContext { { 10.0f, 20.0f, 30.0f }, 0.7f, 100.0f };
     const std::array<Vector3, 6> angledExpected {{
@@ -31,7 +34,7 @@ inline bool RunFearWormMovementTests()
         { 9.4810508f, 50.0000000f, 136.9807372f },
         { 20.5364601f, 35.5453705f, 131.4643572f },
         { 13.5156985f, 30.5222894f, 131.8787454f },
-        { 30.0000000f, 23.0000000f, 205.0000000f },
+        { 30.0000000f, 20.0000000f, 205.0000000f },
         { 14.5294719f, 38.6504886f, 180.0000000f }
     }};
     const std::array<float, 6> actionElapsedSeconds { 0.0f, 2.0f, 0.0f, 0.0f, 0.0f, 4.5f };

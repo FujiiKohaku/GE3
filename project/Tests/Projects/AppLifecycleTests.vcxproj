@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>AppLifecycleTests</ProjectName>
+    <TargetName>AppLifecycleTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\AppLifecycleTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>AppLifecycleTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)AppLifecycleTests.exe</TargetPath>
+    <GameObjectConfiguration>$(Configuration)</GameObjectConfiguration>
+    <GameObjectConfiguration Condition="'$(Configuration)' == 'Development'">Develop</GameObjectConfiguration>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>KOHAKU_RENDER_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>$(IntDir)AppLifecycleGameObjects.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <GameBuildSource Include="@(ClCompile)" />
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)Tests\AppLifecycleTests.cpp" />
+    <GameObject Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\main.obj" />
+  </ItemGroup>
+  <!-- 必要な翻訳単位だけをリンクし、無関係なシーンをテストへ持ち込まない。 -->
+  <Target Name="ArchiveGameObjects" BeforeTargets="Link">
+    <WriteLinesToFile File="$(IntDir)AppLifecycleGameObjects.rsp" Lines="@(GameObject->'&quot;%(FullPath)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe&quot; /nologo /OUT:&quot;$(IntDir)AppLifecycleGameObjects.lib&quot; @&quot;$(IntDir)AppLifecycleGameObjects.rsp&quot;" />
+  </Target>
+</Project>

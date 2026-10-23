@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numbers>
 #include "../State/FearWormState.h"
 #include "Movement/FearWormMovement.h"
 #include "OrbitShot/FearWormOrbitShotState.h"
@@ -56,7 +57,7 @@ private:
     static constexpr float kMissileAttackInterval = 18.0f;  // ミサイル攻撃の間隔（秒）
     static constexpr float kAttackRange = 240.0f;
     static constexpr float kHeadMuzzleOffset = 4.2f;
-    static constexpr float kPi = 3.1415926535f;
+    static constexpr float kPi = std::numbers::pi_v<float>;
 
     enum class FearWormMovementType { Orbit, Coil, Weave, Drift, Line, Spiral };
 
@@ -86,7 +87,7 @@ private:
     // 現在のビーム状態に必要な溜め演出や光線を描画する。
     void DrawBeam(FearWormEnemy& boss);
     // 共通の胴体追従へ、攻撃用の隊形を合成する。
-    float UpdateFormationBlend();
+    float GetFormationBlend() const;
     Vector3 CalculateFormationPosition(const FearWormEnemy& boss, int32_t segmentOrder,
         const Vector3& followPosition, float formationBlend) const;
     // 共通の見た目を基準に、攻撃による色・拡縮・照準を反映する。

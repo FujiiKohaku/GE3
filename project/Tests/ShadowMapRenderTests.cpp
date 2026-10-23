@@ -353,7 +353,7 @@ public:
     {
         title.StartStageSelectTransition();
         for (int frame = 0; frame < 220; ++frame) {
-            title.UpdateStageSelectTransition(1.0f / 60.0f);
+            title.currentState_->Update(title, 1.0f / 60.0f);
             if (title.viewState_ == TitleScene::ViewState::StageSelect) { break; }
         }
         Require(title.viewState_ == TitleScene::ViewState::StageSelect, "Title camera did not enter the hangar");
@@ -383,7 +383,7 @@ public:
     {
         title.StartTitleReturn();
         for (int frame = 0; frame < 150; ++frame) {
-            title.UpdateStageSelectTransition(1.0f / 60.0f);
+            title.currentState_->Update(title, 1.0f / 60.0f);
             if (title.viewState_ == TitleScene::ViewState::Title) { break; }
         }
         Require(title.viewState_ == TitleScene::ViewState::Title, "Title camera did not return to overview");

@@ -46,6 +46,8 @@ class PlayerHomingLock {
 public:
     // 現在の候補一覧を共有データへ反映し、弾が対象の生存を確認できるようにする。
     void SetTargets(const std::vector<BaseEnemy*>& targets);
+    // 発射済みミサイルも参照する対象一覧と、入力中のロックを無効化する。
+    void ClearHomingTargets();
     // 押下中のロック更新と、ボタンを離した瞬間の発射要求を判定する。
     bool UpdateFireInput(bool isFireHeld, bool isEnabled, Camera* camera,
         const Vector3& position, const Vector3& forward, const Vector2& aimPosition);
@@ -89,6 +91,7 @@ public:
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const { return bullets_; }
     uint64_t GetShotsFired() const { return shotsFired_; }
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { homingLock_.SetTargets(targets); }
+    void ClearHomingTargets() { homingLock_.ClearHomingTargets(); }
     // 追尾ミサイル選択中だけ、ロック表示に必要な敵の位置を書き出す。
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;
     void ResetHomingLock() { homingLock_.Reset(); }

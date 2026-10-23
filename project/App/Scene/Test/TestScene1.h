@@ -16,6 +16,7 @@
 #include <array>
 #include <cstddef>
 #include <memory>
+#include <numbers>
 #include <vector>
 
 class TestScene1 : public BaseScene {
@@ -160,7 +161,7 @@ private:
     float playerRotOffset_ = 0.0f;
     Vector3 katanaGripPosition_ = { -1.3f, 0.7f, -2.2f };
     Vector3 katanaOffset_ = { 0.0f, 0.0f, 0.0f };
-    Vector3 katanaRotation_ = { 3.14159265f, 0.0f, 0.0f };
+    Vector3 katanaRotation_ = { std::numbers::pi_v<float>, 0.0f, 0.0f };
     float katanaScale_ = 0.65f;
     PlayerAnimState currentAnimState_ = PlayerAnimState::Idle;
     float idleVariationTimer_ = 0.0f;

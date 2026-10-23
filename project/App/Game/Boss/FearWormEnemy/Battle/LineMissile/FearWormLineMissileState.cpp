@@ -100,7 +100,7 @@ Vector3 FearWormLineMissileState::CalculateTarget(const FearWormMovementContext&
 {
     Vector3 result = context.playerPosition;
     result.x += kTargetOffsetX;
-    result.y += kTargetOffsetY;
+    result.y = kMissileAttackHeight;
     result.z += context.forwardOffset + kTargetForwardOffset;
     return result;
 }
@@ -125,9 +125,19 @@ Vector3 FearWormLineMissileState::CalculateFormationPosition(const Vector3& head
     return Lerp(followPosition, posLine, formationBlend);
 }
 
-float FearWormLineMissileState::UpdateFormationBlend(float deltaTimeSeconds)
+void FearWormLineMissileState::UpdateFormation(float deltaTimeSeconds)
 {
-    // 胴体更新から1回だけ呼び、切替直後も従来と同じ時点で整列を進める。
     formationElapsedSeconds_ += deltaTimeSeconds;
+}
+
+float FearWormLineMissileState::GetFormationBlend() const
+{
     return CalculateFormationBlend(formationElapsedSeconds_);
+}
+
+Vector3 FearWormLineMissileState::CalculateFormationPosition(const FearWormFormationContext& context,
+    const Vector3& followPosition, float formationBlend) const
+{
+    return CalculateFormationPosition(context.headPosition, context.segmentOrder,
+        context.segmentSpacing, context.movementElapsedSeconds, followPosition, formationBlend);
 }

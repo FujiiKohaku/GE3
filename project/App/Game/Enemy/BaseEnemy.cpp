@@ -346,16 +346,17 @@ SweepHit BaseEnemy::SweepBullet(const Sphere& bullet, const Vector3& movement, i
     if (IsDead()) { return {}; }
     std::vector<EnemyCollisionPart> parts;
     GetCollisionParts(parts);
+    SweepHit nearest {};
     for (const auto& part : parts) {
         SweepHit hit = CollisionManager::SweepSphere(bullet, movement, Sphere { part.position, part.radius });
-        if (hit.isHit) {
+        if (hit.isHit && (!nearest.isHit || hit.time < nearest.time)) {
             partIndex = part.partIndex;
-            // 通常敵の従来の部位順序とエフェクト位置を維持する。
+            // 命中順は接触時刻で決め、演出は従来どおり部位の中心へ出す。
             hit.position = part.position;
-            return hit;
+            nearest = hit;
         }
     }
-    return {};
+    return nearest;
 }
 // 命中位置と部位番号を受け取り、部位へのダメージ処理へ渡す。
 void BaseEnemy::OnBulletHit(int32_t partIndex, float damage, const Vector3& position)

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>SceneStateTests</ProjectName>
+    <TargetName>SceneStateTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\SceneStateTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>SceneStateTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)SceneStateTests.exe</TargetPath>
+    <GameObjectConfiguration>$(Configuration)</GameObjectConfiguration>
+    <GameObjectConfiguration Condition="'$(Configuration)' == 'Development'">Develop</GameObjectConfiguration>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>$(IntDir)SceneStateGameObjects.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <GameBuildSource Include="@(ClCompile)" />
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)Tests\SceneStateTests.cpp" />
+    <GameObject Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\main.obj" />
+  </ItemGroup>
+  <!-- 必要な翻訳単位だけをリンクし、無関係なシーンをテストへ持ち込まない。 -->
+  <Target Name="ArchiveGameObjects" BeforeTargets="Link">
+    <WriteLinesToFile File="$(IntDir)SceneStateGameObjects.rsp" Lines="@(GameObject->'&quot;%(FullPath)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe&quot; /nologo /OUT:&quot;$(IntDir)SceneStateGameObjects.lib&quot; @&quot;$(IntDir)SceneStateGameObjects.rsp&quot;" />
+  </Target>
+</Project>

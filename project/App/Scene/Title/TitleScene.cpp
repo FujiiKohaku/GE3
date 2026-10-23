@@ -31,11 +31,6 @@ constexpr const char* kIceEnvironment = "Environment/Ice/";
 constexpr const char* kAircraftModel =
     "Characters/Player/AirPlane/AirPlane.obj";
 
-constexpr float kStageTransitionDuration = 3.20f;
-constexpr float kStageReturnDuration = 2.20f;
-constexpr float kStageConfirmDuration = 0.82f;
-constexpr float kTutorialStartDuration = 1.4f;
-constexpr float kSettingsTransitionDuration = 0.46f;
 constexpr float kStageRoomTransitionDuration = 0.72f;
 
 const Vector3 kOverviewEye = { 92.0f, 82.0f, -118.0f };
@@ -1012,11 +1007,9 @@ void TitleScene::InitializeTutorialAnimation()
     simulationText_->SetFontSize(26.0f);
 }
 
-// 訓練への出発演出を進め、演出終了後にシーンを切り替える。
-void TitleScene::UpdateTutorialStart(float deltaTime)
+// Stateが決めた進行度を、訓練への出発演出へ反映する。
+void TitleScene::UpdateTutorialStartPresentation(float progress)
 {
-    animationTime_ += deltaTime;
-    const float progress = Clamp01(animationTime_ / kTutorialStartDuration);
     const float eased = SmoothStep(progress);
     camera_->LookAt(CubicBezier(simulationStartEye_, { 120.0f, 45.0f, 38.0f },
         { 28.0f, 15.0f, 30.0f }, { 10.0f, 8.0f, 14.0f }, eased),
@@ -1033,11 +1026,6 @@ void TitleScene::UpdateTutorialStart(float deltaTime)
     simulationTint_->Update();
     simulationText_->SetColor({ 0.35f, 0.90f, 1.0f, SmoothStep(Clamp01((progress - 0.25f) / 0.25f)) });
     simulationText_->Update();
-    if (progress >= 1.0f && !stageTransitionQueued_) {
-        stageTransitionQueued_ = true;
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(
-            std::make_unique<GamePlayScene>("tutorial"), true));
-    }
 }
 
 // タイトルからステージ選択へ移る演出を開始する。
@@ -1095,22 +1083,8 @@ void TitleScene::UpdateTitleCamera(float deltaTime)
 }
 
 // タイトルとステージ選択の間で、カメラや表示位置を滑らかに切り替える。
-void TitleScene::UpdateStageSelectTransition(float deltaTime)
+void TitleScene::UpdateStageSelectTransitionCamera(float distanceProgress)
 {
-    animationTime_ += deltaTime;
-    const bool entering = viewState_ == ViewState::EnteringStageSelect;
-    float duration = kStageReturnDuration;
-    if (entering) {
-        duration = kStageTransitionDuration;
-    }
-    const float progress = Clamp01(animationTime_ / duration);
-
-    float distanceProgress;
-    if (entering) {
-        distanceProgress = SmoothStep((progress - 0.04f) / 0.96f);
-    } else {
-        distanceProgress = 1.0f - SmoothStep(progress);
-    }
     // ベジェ曲線の時刻ではなく移動距離を基準に進め、速度むらをなくす。
     const float pathTime = FindHangarPathTimeByDistance(distanceProgress);
     const Vector3 eye = EvaluateHangarEyePath(pathTime);
@@ -1119,18 +1093,6 @@ void TitleScene::UpdateStageSelectTransition(float deltaTime)
     // 移動中にズーム感を混ぜず、純粋なカメラ移動として見せる。
     camera_->SetFovY(0.64f);
     camera_->Update();
-
-    if (progress >= 1.0f) {
-        animationTime_ = 0.0f;
-        if (entering) {
-            ChangeState(ViewState::StageSelect);
-        } else {
-            ChangeState(ViewState::Title);
-        }
-        if (!entering) {
-            camera_->SetFovY(0.64f);
-        }
-    }
 }
 
 // ステージ選択中の表示と背景の動きを更新する。
@@ -1172,44 +1134,20 @@ void TitleScene::UpdateStageSelection(float deltaTime)
     camera_->Update();
 }
 
-// 決定後の出発演出を進め、読み込み画面へつなげる。
-void TitleScene::UpdateStageConfirmation(float deltaTime)
+// Stateが決めた進行度を、ステージ出発時のカメラへ反映する。
+void TitleScene::UpdateStageConfirmationCamera(float progress)
 {
-    animationTime_ += deltaTime;
-    const float progress = Clamp01(animationTime_ / kStageConfirmDuration);
     const float eased = SmoothStep(progress);
     camera_->LookAt(
         Lerp(kStageEntryEye, kStageConfirmEye, eased),
         Lerp(kStageEntryTarget, kStageConfirmTarget, eased));
     camera_->SetFovY(0.64f - 0.08f * eased);
     camera_->Update();
-
-    if (progress >= 1.0f && !stageTransitionQueued_) {
-        stageTransitionQueued_ = true;
-        SceneManager::GetInstance()->SetNextSceneWithLoading<
-            LoadingScene, GamePlayScene>(stages_[currentStageIndex_].id);
-    }
 }
 
-// 設定画面の開閉演出を進め、完了後の状態へ移る。
-void TitleScene::UpdateSettingsTransition(float deltaTime)
+// Stateが決めた設定画面の開閉量を、カメラへ反映する。
+void TitleScene::UpdateSettingsTransitionCamera(float settingsAmount, float progress, float whipDirection)
 {
-    animationTime_ += deltaTime;
-    const float progress = Clamp01(animationTime_ / kSettingsTransitionDuration);
-    const bool opening = viewState_ == ViewState::EnteringSettings;
-    float eased;
-    float settingsAmount;
-    float whipDirection;
-    if (opening) {
-        eased = EaseOutBack(progress);
-        settingsAmount = eased;
-        whipDirection = -1.0f;
-    } else {
-        eased = SmoothStep(progress);
-        settingsAmount = 1.0f - eased;
-        whipDirection = 1.0f;
-    }
-
     // 中盤で大きく横へ振ることで、部屋が切り替わるような勢いを出す。
     const float whip = std::sin(progress * std::numbers::pi_v<float>);
     Vector3 eye = Lerp(kOverviewEye, kSettingsEye, settingsAmount);
@@ -1218,18 +1156,6 @@ void TitleScene::UpdateSettingsTransition(float deltaTime)
     target.x += whipDirection * whip * 6.0f;
     camera_->LookAt(eye, target);
     camera_->Update();
-
-    if (progress >= 1.0f) {
-        animationTime_ = 0.0f;
-        if (opening) {
-            ChangeState(ViewState::Settings);
-        } else {
-            ChangeState(ViewState::Title);
-        }
-        if (!opening) {
-            camera_->SetFovY(0.64f);
-        }
-    }
 }
 
 // 現在の状態と遷移の進み具合を、各UIの位置・透明度へ反映する。
@@ -1256,17 +1182,17 @@ void TitleScene::UpdateInterface(float deltaTime)
         stageTitleExit = 1.0f;
     } else if (viewState_ == ViewState::EnteringStageSelect) {
         const float progress =
-            Clamp01(animationTime_ / kStageTransitionDuration);
+            Clamp01(animationTime_ / TitleTransitionSettings::kStageEnterDurationSeconds);
         stageAmount = EaseOutBack((progress - 0.74f) / 0.26f);
         stageTitleExit = SmoothStep(progress / 0.22f);
     } else if (viewState_ == ViewState::LeavingStageSelect) {
         const float progress =
-            Clamp01(animationTime_ / kStageReturnDuration);
+            Clamp01(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
         stageAmount = 1.0f - SmoothStep(progress / 0.35f);
         stageTitleExit = 1.0f - SmoothStep((progress - 0.55f) / 0.45f);
     } else if (viewState_ == ViewState::ConfirmingStage) {
         stageAmount = 1.0f - SmoothStep(
-            Clamp01(animationTime_ / kStageConfirmDuration));
+            Clamp01(animationTime_ / TitleTransitionSettings::kStageConfirmDurationSeconds));
         stageTitleExit = 1.0f;
     }
 
@@ -1275,10 +1201,10 @@ void TitleScene::UpdateInterface(float deltaTime)
         settingsAmount = 1.0f;
     } else if (viewState_ == ViewState::EnteringSettings) {
         settingsAmount = EaseOutBack(
-            Clamp01(animationTime_ / kSettingsTransitionDuration));
+            Clamp01(animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds));
     } else if (viewState_ == ViewState::LeavingSettings) {
         settingsAmount = 1.0f - SmoothStep(
-            Clamp01(animationTime_ / kSettingsTransitionDuration));
+            Clamp01(animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds));
     }
 
     const float titleExit =
@@ -1413,7 +1339,7 @@ float TitleScene::SmoothStep(float value)
 float TitleScene::EaseOutBack(float value)
 {
     const float clamped = Clamp01(value);
-    constexpr float c1 = 1.70158f;
+    constexpr float c1 = 1.702f;
     constexpr float c3 = c1 + 1.0f;
     const float shifted = clamped - 1.0f;
     return 1.0f + c3 * shifted * shifted * shifted +
@@ -1559,9 +1485,9 @@ void TitleScene::UpdateSceneLighting()
         viewState_ == ViewState::EnteringSettings || viewState_ == ViewState::LeavingSettings) {
         roomAmount = 0.0f;
     } else if (viewState_ == ViewState::EnteringStageSelect) {
-        roomAmount = SmoothStep(animationTime_ / kStageTransitionDuration);
+        roomAmount = SmoothStep(animationTime_ / TitleTransitionSettings::kStageEnterDurationSeconds);
     } else if (viewState_ == ViewState::LeavingStageSelect) {
-        roomAmount = 1.0f - SmoothStep(animationTime_ / kStageReturnDuration);
+        roomAmount = 1.0f - SmoothStep(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
     }
     const float frozenAmount = Clamp01(frozenRoomAmount_) * roomAmount;
     if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {

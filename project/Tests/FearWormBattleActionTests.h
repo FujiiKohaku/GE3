@@ -20,6 +20,12 @@ public:
     bool ShouldAimHead(const FearWormEnemy&) const override { return true; }
     Vector4 HeadAttackColor(const Vector4&) const override { return {0.1f, 0.7f, 0.9f, 1.0f}; }
     float ApplyHeadChargePulse(float basePulse) const override { return basePulse + 0.35f; }
+    float GetFormationBlend() const override { return 0.25f; }
+    Vector3 CalculateFormationPosition(const FearWormFormationContext& context,
+        const Vector3& followPosition, float formationBlend) const override
+    {
+        return followPosition + Vector3 { static_cast<float>(context.segmentOrder), formationBlend, 2.0f };
+    }
 };
 
 inline bool RunFearWormBattleActionTests()
@@ -60,8 +66,11 @@ inline bool RunFearWormBattleActionTests()
         const bool hasDelegatedPresentation = battle.ShouldAimHead(boss)
             && probeColor.x == 0.1f && probeColor.y == 0.7f && probeColor.z == 0.9f && probeColor.w == 1.0f
             && std::abs(battle.ApplyHeadChargePulse(1.0f) - 1.35f) < 0.0001f;
+        const Vector3 probeFormation = battle.CalculateFormationPosition(boss, 2,
+            { 10.0f, 20.0f, 30.0f }, battle.GetFormationBlend());
         battle.currentAction_ = previousAction;
-        if (!hasDelegatedPresentation) {
+        if (!hasDelegatedPresentation
+            || Vector3LengthSquared(probeFormation - Vector3 { 12.0f, 20.25f, 32.0f }) > 0.000001f) {
             return false;
         }
         battle.ChangeAction(ActionType::Beam, boss);
@@ -404,9 +413,13 @@ inline bool RunFearWormBattleActionTests()
             }
             fixedClock.SetDelta(1.0f / static_cast<float>(framesPerSecond));
         }
-        // 隊形時計は行動Updateではなく、従来と同じ胴体更新の時点で1回進む。
+        // 戦闘更新で1回進め、胴体更新と問い合わせの繰り返しでは時計を進めない。
+        movementBoss.segments_.resize(2);
         movementBattle.ChangeAction(ActionType::LineMissile, movementBoss);
         for (int32_t stepIndex = 0; stepIndex < framesPerSecond; stepIndex++) {
+            movementBattle.Update(movementBoss);
+            movementBattle.GetFormationBlend();
+            movementBoss.UpdateSegments();
             movementBoss.UpdateSegments();
         }
         if (std::abs(movementBattle.lineMissileState_.formationElapsedSeconds_ - 1.0f) > 0.00001f) {
@@ -414,6 +427,7 @@ inline bool RunFearWormBattleActionTests()
         }
         fixedClock.SetDelta(0.0f);
         const float pausedFormationSeconds = movementBattle.lineMissileState_.formationElapsedSeconds_;
+        movementBattle.Update(movementBoss);
         movementBoss.UpdateSegments();
         if (movementBattle.lineMissileState_.formationElapsedSeconds_ != pausedFormationSeconds) {
             return false;
@@ -423,6 +437,17 @@ inline bool RunFearWormBattleActionTests()
         if (movementBattle.lineMissileState_.formationElapsedSeconds_ != 0.0f) {
             return false;
         }
+        // 同じフレームに行動が切り替わっても、整列は従来通りそのフレームから進む。
+        movementBattle.missileAttackTimer_ = movementBattle.kMissileAttackInterval;
+        movementBattle.orbitShotState_.elapsedSeconds_ = 100.0f;
+        movementBattle.Update(movementBoss);
+        if (movementBattle.actionType_ != ActionType::LineMissile
+            || std::abs(movementBattle.lineMissileState_.formationElapsedSeconds_
+                - TimeManager::GetInstance()->GetDeltaTime()) > 0.000001f) {
+            return false;
+        }
+        movementBattle.ChangeAction(ActionType::OrbitShot, movementBoss);
+        movementBoss.segments_.resize(1);
         movementBoss.segments_[0].position = movementStart;
         movementBattle.movementPattern_ = FearWormBattleState::MovementPattern::Drift;
         const Vector3 movementTarget = FearWormMovement::CalculateDriftTarget(movementBattle.CreateMovementContext(movementBoss, player.GetTranslate()));

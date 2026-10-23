@@ -10,6 +10,7 @@
 #include "Engine/Skeleton/Skeleton.h"
 
 #include "App/Scene/Common/BaseScene.h"
+#include "App/Scene/Common/SceneManager.h"
 #include "Pause/BasePauseState.h"
 #include "App/Game/Camera/CameraPreferences.h"
 #include "Engine/2D/Text/Text.h"
@@ -124,6 +125,7 @@ private:
     bool isBossCutInSlowMotionActive_ = false;
 #if defined(KOHAKU_RENDER_TESTS)
     friend class ShadowTestStage;
+    friend bool RunGameplayLifecycleTests();
 #endif
     // プレイヤーと敵の当たり判定
     static constexpr float kPlayerEnemyCollisionRadius = 2.0f;
@@ -488,9 +490,13 @@ private:
 
     // ブースト加速ソニックブーム衝撃音波タイマー
     float sonicBoomTimer_ = 0.0f;
+    bool wasBoostingForSonicBoom_ = false;
 
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
+    std::vector<PostEffectInfo> prePausePostEffects_;
+    // ポーズ前の画面効果を保存し、再開時に登録順・有効状態も復元する。
+    void SetPaused(bool isPaused);
     int pauseSelection_ = 0;
     const BasePauseState* pauseState_ = &GetPauseState(PauseViewState::Menu);
     // ポーズ画面が参照・変更する値と操作を、一つの情報にまとめて渡す。

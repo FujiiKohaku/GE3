@@ -100,6 +100,8 @@ public:
     uint64_t GetShotsFired() const { return weaponController_.GetShotsFired(); }
     // 使用クラス：GamePlayScene。生存中の敵をロックオン候補として武器側へ渡す。
     void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { weaponController_.SetHomingTargets(targets); }
+    // 敵の破棄前に、発射済みミサイルを含む対象への参照を無効化する。
+    void ClearHomingTargets() { weaponController_.ClearHomingTargets(); }
     // 使用クラス：GamePlayScene。ロック表示用の座標を引数の一覧に書き込む。
     void GetHomingLockPositions(std::vector<Vector3>& positions) const { weaponController_.GetHomingLockPositions(positions); }
     // ホーミングミサイルが選択されているかを返す。

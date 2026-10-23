@@ -7,7 +7,7 @@
 
 namespace {
 constexpr float kDistances[] = {35.0f, 27.0f, 22.0f};
-constexpr float kFovs[] = {25.7831008f, 32.0f, 28.0f};
+constexpr float kFovs[] = {25.783f, 32.0f, 28.0f};
 }
 void CameraPreferences::CyclePreset(int direction) {
     if (preset < 0) preset = direction < 0 ? 2 : 0;

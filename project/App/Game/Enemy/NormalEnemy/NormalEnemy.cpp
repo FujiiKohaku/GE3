@@ -1,4 +1,5 @@
 // 通常敵の射撃と難易度設定を扱う。発射間隔・弾速・HPなどを設定から変更できる。
+#include <numbers>
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
@@ -136,7 +137,7 @@ void NormalEnemy::FireBullet()
     }
 
     constexpr int32_t kRadialBulletCount = 8;
-    constexpr float kPi = 3.14159265358979323846f;
+    constexpr float kPi = std::numbers::pi_v<float>;
     constexpr float kSpreadAngleDegrees = 15.0f;
     constexpr float kParallelAxisThreshold = 0.99f;
     const float spreadAngleRadians = kSpreadAngleDegrees * kPi / 180.0f;

@@ -110,8 +110,8 @@ private:
     void StartGame();
     // チュートリアルへ進むための開始演出に切り替える。
     void StartTutorial();
-    // 訓練への出発演出を進め、演出終了後にシーンを切り替える。
-    void UpdateTutorialStart(float deltaTime);
+    // Stateが決めた進行度を、訓練への出発演出へ反映する。
+    void UpdateTutorialStartPresentation(float progress);
     // ステージ選択からタイトルへ戻る演出を開始する。
     void StartTitleReturn();
     // 選んだステージを確定し、出発の演出へ進める。
@@ -121,13 +121,13 @@ private:
     // タイトル待機中のカメラを更新する。
     void UpdateTitleCamera(float deltaTime);
     // タイトルとステージ選択の間で、カメラや表示位置を滑らかに切り替える。
-    void UpdateStageSelectTransition(float deltaTime);
+    void UpdateStageSelectTransitionCamera(float distanceProgress);
     // ステージ選択中の表示と背景の動きを更新する。
     void UpdateStageSelection(float deltaTime);
-    // 決定後の出発演出を進め、読み込み画面へつなげる。
-    void UpdateStageConfirmation(float deltaTime);
+    // Stateが決めた進行度を、ステージ出発時のカメラへ反映する。
+    void UpdateStageConfirmationCamera(float progress);
     // 設定画面の開閉演出を進め、完了後の状態へ移る。
-    void UpdateSettingsTransition(float deltaTime);
+    void UpdateSettingsTransitionCamera(float settingsAmount, float progress, float whipDirection);
     // 現在の状態と遷移の進み具合を、各UIの位置・透明度へ反映する。
     void UpdateInterface(float deltaTime);
     // 表示中の背景とステージに合わせて、照明や霧を更新する。

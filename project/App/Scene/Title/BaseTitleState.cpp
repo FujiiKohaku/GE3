@@ -3,6 +3,9 @@
 #include "TitleScene.h"
 #include "Engine/Input/Input.h"
 #include "Engine/audio/SoundManager.h"
+#include "App/Scene/Common/SceneManager.h"
+#include "App/Scene/Loading/LoadingScene.h"
+#include "App/Scene/Gameplay/GamePlayScene.h"
 #include <array>
 
 // 状態へ入るたびに、画面遷移用の経過時間をリセットする。
@@ -31,7 +34,17 @@ public:
         BaseTitleState::Enter(scene);
         scene.InitializeTutorialAnimation();
     }
-    void Update(TitleScene& scene, float dt) const override { scene.UpdateTutorialStart(dt); }
+    void Update(TitleScene& scene, float deltaTimeSeconds) const override {
+        scene.animationTime_ += deltaTimeSeconds;
+        const float progress = TitleScene::Clamp01(
+            scene.animationTime_ / TitleTransitionSettings::kTutorialStartDurationSeconds);
+        scene.UpdateTutorialStartPresentation(progress);
+        if (progress >= 1.0f && !scene.stageTransitionQueued_) {
+            scene.stageTransitionQueued_ = true;
+            SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(
+                std::make_unique<GamePlayScene>("tutorial"), true));
+        }
+    }
 };
 
 // ステージ選択中の左右移動・決定・タイトルへ戻る入力を受け付ける。
@@ -61,17 +74,39 @@ public:
 // タイトルとステージ選択の間を行き来する遷移演出を進める。
 class StageSelectTransitionState final : public BaseTitleState {
 public:
-    explicit StageSelectTransitionState(bool entering) : entering_(entering) {}
+    explicit StageSelectTransitionState(bool isEntering) : isEntering_(isEntering) {}
     TitleViewState GetType() const override {
-        return entering_ ? TitleViewState::EnteringStageSelect : TitleViewState::LeavingStageSelect;
+        if (isEntering_) {
+            return TitleViewState::EnteringStageSelect;
+        }
+        return TitleViewState::LeavingStageSelect;
     }
     void Enter(TitleScene& scene) const override {
         BaseTitleState::Enter(scene);
-        if (!entering_) SoundManager::GetInstance()->Play("UiSelect");
+        if (!isEntering_) SoundManager::GetInstance()->Play("UiSelect");
     }
-    void Update(TitleScene& scene, float dt) const override { scene.UpdateStageSelectTransition(dt); }
+    void Update(TitleScene& scene, float deltaTimeSeconds) const override {
+        scene.animationTime_ += deltaTimeSeconds;
+        float durationSeconds = TitleTransitionSettings::kStageReturnDurationSeconds;
+        if (isEntering_) {
+            durationSeconds = TitleTransitionSettings::kStageEnterDurationSeconds;
+        }
+        const float progress = TitleScene::Clamp01(scene.animationTime_ / durationSeconds);
+        float distanceProgress = 1.0f - TitleScene::SmoothStep(progress);
+        if (isEntering_) {
+            distanceProgress = TitleScene::SmoothStep((progress - 0.04f) / 0.96f);
+        }
+        scene.UpdateStageSelectTransitionCamera(distanceProgress);
+        if (progress >= 1.0f) {
+            if (isEntering_) {
+                scene.ChangeState(TitleViewState::StageSelect);
+            } else {
+                scene.ChangeState(TitleViewState::Title);
+            }
+        }
+    }
 private:
-    bool entering_;
+    bool isEntering_;
 };
 
 // 選択決定音を鳴らし、ステージへの出発演出を進める。
@@ -82,7 +117,17 @@ public:
         BaseTitleState::Enter(scene);
         SoundManager::GetInstance()->Play("UiConfirm");
     }
-    void Update(TitleScene& scene, float dt) const override { scene.UpdateStageConfirmation(dt); }
+    void Update(TitleScene& scene, float deltaTimeSeconds) const override {
+        scene.animationTime_ += deltaTimeSeconds;
+        const float progress = TitleScene::Clamp01(
+            scene.animationTime_ / TitleTransitionSettings::kStageConfirmDurationSeconds);
+        scene.UpdateStageConfirmationCamera(progress);
+        if (progress >= 1.0f && !scene.stageTransitionQueued_) {
+            scene.stageTransitionQueued_ = true;
+            SceneManager::GetInstance()->SetNextSceneWithLoading<LoadingScene, GamePlayScene>(
+                scene.stages_[scene.currentStageIndex_].id);
+        }
+    }
 };
 
 // 設定画面の入力を受け付け、上下反転の切替や戻る操作を処理する。
@@ -107,13 +152,35 @@ public:
 // 設定画面を開く・閉じる方向に応じた遷移演出を進める。
 class SettingsTransitionState final : public BaseTitleState {
 public:
-    explicit SettingsTransitionState(bool opening) : opening_(opening) {}
+    explicit SettingsTransitionState(bool isOpening) : isOpening_(isOpening) {}
     TitleViewState GetType() const override {
-        return opening_ ? TitleViewState::EnteringSettings : TitleViewState::LeavingSettings;
+        if (isOpening_) {
+            return TitleViewState::EnteringSettings;
+        }
+        return TitleViewState::LeavingSettings;
     }
-    void Update(TitleScene& scene, float dt) const override { scene.UpdateSettingsTransition(dt); }
+    void Update(TitleScene& scene, float deltaTimeSeconds) const override {
+        scene.animationTime_ += deltaTimeSeconds;
+        const float progress = TitleScene::Clamp01(
+            scene.animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds);
+        float settingsAmount = 1.0f - TitleScene::SmoothStep(progress);
+        float whipDirection = 1.0f;
+        if (isOpening_) {
+            settingsAmount = TitleScene::EaseOutBack(progress);
+            whipDirection = -1.0f;
+        }
+        scene.UpdateSettingsTransitionCamera(settingsAmount, progress, whipDirection);
+        if (progress >= 1.0f) {
+            if (isOpening_) {
+                scene.ChangeState(TitleViewState::Settings);
+            } else {
+                scene.ChangeState(TitleViewState::Title);
+                scene.camera_->SetFovY(0.64f);
+            }
+        }
+    }
 private:
-    bool opening_;
+    bool isOpening_;
 };
 
 // 指定状態に対応する共有の振る舞いを返す。状態オブジェクトを毎回作り直さない。

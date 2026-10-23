@@ -8,7 +8,6 @@
 #include <chrono>
 #ifdef _DEBUG
 #include "Tests/PlayerWeaponPolymorphismTests.h"
-#include "Tests/JellyfishAttackPatternTests.h"
 #include "Tests/TitleStateTests.h"
 #include "Tests/BeamStateTests.h"
 #include "Tests/JellyfishAttackTests.h"
@@ -71,9 +70,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     }
     if (std::strstr(commandLine, "--verify-title-states")) {
         return RunTitleStateTests() ? 0 : 1;
-    }
-    if (std::strstr(commandLine, "--verify-jellyfish-patterns")) {
-        return RunJellyfishAttackPatternTests() ? 0 : 1;
     }
     if (std::strstr(commandLine, "--verify-player-weapons")) {
         return RunPlayerWeaponPolymorphismTests() ? 0 : 1;

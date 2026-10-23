@@ -16,6 +16,8 @@ public:
         int32_t segmentOrder, float segmentSpacing, const Vector3& followPosition, float elapsedSeconds);
     Vector3 CalculateFormationPosition(const Vector3& headPosition, float orbitAngle,
         int32_t segmentOrder, float segmentSpacing, const Vector3& followPosition) const;
+    Vector3 CalculateFormationPosition(const FearWormFormationContext& context,
+        const Vector3& followPosition, float formationBlend) const override;
     void Reset();
     void Enter(FearWormBattleState& battle, FearWormEnemy& boss) override;
     void Update(FearWormBattleState& battle, FearWormEnemy& boss) override;

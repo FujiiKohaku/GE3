@@ -39,6 +39,7 @@ void FearWormBattleState::Update(FearWormEnemy& boss)
     if (currentAction_->IsFinished()) {
         FinishAction(boss);
     }
+    currentAction_->UpdateFormation(deltaTimeSeconds);
 }
 
 // 攻撃側で計算した目標位置へ、速度倍率と経過秒を反映して頭を動かす。
@@ -208,23 +209,24 @@ void FearWormBattleState::StopAttacksForDeath(FearWormEnemy& boss)
     beamActionState_.Stop();
 }
 
-float FearWormBattleState::UpdateFormationBlend()
+float FearWormBattleState::GetFormationBlend() const
 {
-    if (movementPattern_ == MovementPattern::Line) {
-        return lineMissileState_.UpdateFormationBlend(TimeManager::GetInstance()->GetDeltaTime());
+    if (currentAction_ == nullptr) {
+        return 0.0f;
     }
-    return 0.0f;
+    return currentAction_->GetFormationBlend();
 }
 
 Vector3 FearWormBattleState::CalculateFormationPosition(const FearWormEnemy& boss, int32_t segmentOrder,
     const Vector3& followPosition, float formationBlend) const
 {
-    if (movementPattern_ == MovementPattern::Coil) {
-        return coilBarrageState_.CalculateFormationPosition(boss.segments_[0].position,
-            orbitAngle_, segmentOrder, boss.segmentSpacing_, followPosition);
+    if (currentAction_ == nullptr || boss.segments_.empty()) {
+        return followPosition;
     }
-    return FearWormLineMissileState::CalculateFormationPosition(boss.segments_[0].position,
-        segmentOrder, boss.segmentSpacing_, boss.moveTime_, followPosition, formationBlend);
+    const FearWormFormationContext context {
+        boss.segments_[0].position, orbitAngle_, segmentOrder, boss.segmentSpacing_, boss.moveTime_
+    };
+    return currentAction_->CalculateFormationPosition(context, followPosition, formationBlend);
 }
 
 bool FearWormBattleState::ShouldAimHead(const FearWormEnemy& boss) const

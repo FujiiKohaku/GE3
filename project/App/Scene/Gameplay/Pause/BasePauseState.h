@@ -33,7 +33,7 @@ struct PauseDisplayInput {
     int gifRecordingSeconds = 5;
     std::string cameraPreset = "標準";
     float cameraDistance = 35.0f;
-    float cameraFovDegrees = 25.7831f;
+    float cameraFovDegrees = 25.783f;
     bool cameraSaveSucceeded = true;
     std::string antiAliasing = "OFF";
     std::string renderQuality = "カスタム";

@@ -1,4 +1,5 @@
 // チュートリアルのメッセージ・操作ボタン・達成状況をパネルとして描画する。
+#include <numbers>
 #include "TutorialCommPanel.h"
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
@@ -130,8 +131,8 @@ void TutorialCommPanel::Update(float deltaTime)
         operationBackground);
     AddRectangle(24, operationY, 4, 58, accent);
     if (success_) {
-        AddRectangle(46.5f, operationY + 4.5f, 13.0f, 4.0f, accent, 0.785398f);
-        AddRectangle(60.0f, operationY - 0.5f, 26.0f, 4.0f, accent, -0.812418f);
+        AddRectangle(46.5f, operationY + 4.5f, 13.0f, 4.0f, accent, (std::numbers::pi_v<float> / 4.0f));
+        AddRectangle(60.0f, operationY - 0.5f, 26.0f, 4.0f, accent, -0.812f);
     }
     // 小さなUI図形として描画し、解像度に合わせてボタンの輪郭も拡大する。
     for (size_t i = 0; i < buttons_.size(); ++i) {

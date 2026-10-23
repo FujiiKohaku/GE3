@@ -1,5 +1,6 @@
 #pragma once
 
+#include <numbers>
 #include "../State/FearWormEntryPhase.h"
 #include "Engine/Math/MathStruct.h"
 #include <memory>
@@ -22,7 +23,7 @@ private:
     void UpdateSurface(FearWormEntryState& entry, FearWormEnemy& boss);
 
     static constexpr float kSplashHeightOffset = 1.0f;
-    static constexpr float kSurfaceRotationRadians = 1.5707963268f;
+    static constexpr float kSurfaceRotationRadians = std::numbers::pi_v<float> / 2.0f;
     static constexpr Vector3 kSurfaceScale = { 42.0f, 68.0f, 1.0f };
     static constexpr float kSurfaceHeightOffset = 2.5f;
     static constexpr float kSurfaceOffsetZ = -14.0f;

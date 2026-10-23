@@ -9,6 +9,14 @@ enum class TitleViewState {
     ConfirmingStage, EnteringSettings, Settings, LeavingSettings
 };
 
+struct TitleTransitionSettings {
+    static constexpr float kStageEnterDurationSeconds = 3.20f;
+    static constexpr float kStageReturnDurationSeconds = 2.20f;
+    static constexpr float kSettingsDurationSeconds = 0.46f;
+    static constexpr float kStageConfirmDurationSeconds = 0.82f;
+    static constexpr float kTutorialStartDurationSeconds = 1.4f;
+};
+
 class BaseTitleState {
 public:
     virtual ~BaseTitleState() = default;
