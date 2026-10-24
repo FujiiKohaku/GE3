@@ -1237,4 +1237,24 @@
     <ClInclude Include="App\Game\Boss\IceJellyfish\State\IceJellyfishState.h"><Filter>App\Game\Boss\IceJellyfish\State</Filter></ClInclude>
     <ClInclude Include="Tests\IceJellyfishStateTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App\Game\Player\Entry\PlayerEntryState.h">
+      <Filter>Player</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Entry\PlayerEntryState.cpp">
+      <Filter>Player</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Battle\PlayerBattleState.h">
+      <Filter>Player</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Battle\PlayerBattleState.cpp">
+      <Filter>Player</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Dead\PlayerDeadState.h">
+      <Filter>Player</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Dead\PlayerDeadState.cpp">
+      <Filter>Player</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

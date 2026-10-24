@@ -1,17 +1,20 @@
-// プレイヤーの照準・操作・移動・HP・死亡演出を扱う。武器と弾の管理はPlayerWeaponControllerへ任せる。
+// Playerの姿勢と公開APIを保持し、登場・戦闘・死亡の更新を各Stateへ委譲する。
 #pragma once
 #include "Engine/3D/Model.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/debugcamera/DebugCameraController.h"
 #include "Engine/math/MathStruct.h"
 #include "App/Game/Player/Weapon/PlayerWeaponController.h"
+#include "Entry/PlayerEntryState.h"
+#include "Battle/PlayerBattleState.h"
+#include "Dead/PlayerDeadState.h"
 #include <memory>
 
 class Camera;
 class Input;
 struct Ray;
 
-// 自機の照準・操作・移動・HPと描画を管理する。武器管理は専用クラスへ任せる。
+// 自機の状態遷移・共有データ・描画を管理する。
 class Player {
 public:
     enum class ControlMode { KeyboardAndMouse, StarFox };
@@ -120,7 +123,7 @@ public:
     // 使用クラス：GamePlaySceneなど。HPが0以下かを返す。死亡演出の完了とは別の判定。
     bool IsDead() const { return currentHp_ <= 0; }
     // 使用クラス：GamePlayScene。落下演出後の爆発・シーン遷移へ進めるかを返す。
-    bool IsDeathExplosionReady() const { return deathState_ == DeathState::Exploded; }
+    bool IsDeathExplosionReady() const { return state_ == State::Dead && deadState_.IsExplosionReady(); }
     // 使用クラス：GamePlayScene。HPのHUD表示と被弾検出に使う現在値を返す。
     int GetCurrentHp() const { return currentHp_; }
     // 使用クラス：GamePlayScene。HP表示の上限を返す。
@@ -143,6 +146,16 @@ public:
 private:
     friend class PlayerWeaponController;
     friend struct PlayerTestAccess;
+    friend class PlayerEntryState;
+    friend class PlayerBattleState;
+    friend class PlayerDeadState;
+
+    enum class State { Entry, Battle, Dead };
+    void ChangeState(State state);
+    State state_ = State::Entry;
+    PlayerEntryState entryState_;
+    PlayerBattleState battleState_;
+    PlayerDeadState deadState_;
 
     // 照準。
     void InitializeAim();
@@ -218,14 +231,12 @@ private:
     // 機体周辺の点を画面へ投影し、表示範囲の最小・最大座標を更新する。
     void UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const;
 
-    // HP・無敵時間・死亡演出。
+    // HP・無敵時間。
     bool ApplyHealthDamage(int damage);
     // 被弾後の無敵時間を減らし、時間切れで通常の被弾状態へ戻す。
     void UpdateInvincibility(float deltaTimeSeconds);
-    // 死亡後の落下と回転を進め、爆発へ移れる時点を記録する。
-    void UpdateDeathAnimation(EulerTransform& transform, float deltaTimeSeconds);
-    bool IsAlive() const { return deathState_ == DeathState::Alive; }
-    bool IsFalling() const { return deathState_ == DeathState::Falling; }
+    bool IsAlive() const { return state_ != State::Dead; }
+    bool IsFalling() const { return state_ == State::Dead && !deadState_.IsExplosionReady(); }
     // 死亡状態と被弾中の点滅を調べ、今のフレームで機体を描画するかを返す。
     bool ShouldDraw() const;
 
@@ -238,7 +249,6 @@ private:
     bool hasGamepadAimAnchor_ = false;
     float smoothedAimDistance_ = kAimConvergenceDistance;
 
-    enum class DeathState { Alive, Falling, Exploded };
     int maxHp_ = 20;
     int currentHp_ = maxHp_;
     float invincibleRemainingSeconds_ = 0;
@@ -246,10 +256,6 @@ private:
     bool isInvincibleMode_ = false;
 #endif
     static constexpr float kInvincibleDurationSeconds = 1.0f;
-    DeathState deathState_ = DeathState::Alive;
-    float deathTimerSeconds_ = 0.0f;
-    float deathFallVelocity_ = 0.0f;
-    static constexpr float kDeathFallDurationSeconds = 1.2f;
 
     bool isBoosting_ = false;
     ControlMode controlMode_ = ControlMode::StarFox;
@@ -300,8 +306,6 @@ private:
 
     // 使用クラス：本クラス。保持している位置・回転・拡大率を描画オブジェクトへ渡す。
     void ApplyTransform();
-    // 使用クラス：本クラス（Update）。落下演出と残っている弾の更新を行う。
-    void UpdateDeath();
 
     std::unique_ptr<Object3d> object_;
     // カメラ類は外部所有。参照先はPlayerを使用している間、有効である必要がある。
@@ -309,7 +313,7 @@ private:
     DebugCameraController* debugCameraController_ = nullptr;
     // 機体の位置・回転・大きさを保持し、移動処理と描画で共有する。
     EulerTransform transform_;
-    // 発射と弾の管理は、今回の統合対象外として保持する。
+    // 発射と弾を管理し、BattleとDeadの両方から更新する。
     PlayerWeaponController weaponController_{ *this };
     bool isDebugMode_ = false;
 };

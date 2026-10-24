@@ -4,6 +4,9 @@
 
 // 統合前の独立テストから、Player内の対応する処理を検証するための窓口。
 struct PlayerTestAccess {
+    static bool IsEntry(const Player& player) { return player.state_ == Player::State::Entry; }
+    static bool IsBattle(const Player& player) { return player.state_ == Player::State::Battle; }
+    static void UpdateEntry(Player& player) { player.entryState_.Update(player); }
     static EulerTransform& Transform(Player& player) { return player.transform_; }
     static void InitializeAim(Player& player) { player.InitializeAim(); }
     static void InitializeMovement(Player& player) { player.InitializeMovement(); }
@@ -12,7 +15,7 @@ struct PlayerTestAccess {
     static void ClampGamepadAimToPlayer(Player& player, const Vector2& position) { player.ClampGamepadAimToPlayer(position); }
     static Vector2 GetGamepadSteeringScreenPosition(const Player& player) { return player.GetGamepadSteeringScreenPosition(); }
     static void UpdateInvincibility(Player& player, float deltaTimeSeconds = 1.0f / 60.0f) { player.UpdateInvincibility(deltaTimeSeconds); }
-    static void UpdateDeathAnimation(Player& player, EulerTransform& transform, float deltaTimeSeconds) { player.UpdateDeathAnimation(transform, deltaTimeSeconds); }
+    static void UpdateDeathAnimation(Player& player, EulerTransform& transform, float deltaTimeSeconds) { player.deadState_.UpdateAnimation(transform, deltaTimeSeconds); }
     static bool IsAlive(const Player& player) { return player.IsAlive(); }
     static bool IsFalling(const Player& player) { return player.IsFalling(); }
     static bool ShouldDraw(const Player& player) { return player.ShouldDraw(); }

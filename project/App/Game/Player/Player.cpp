@@ -1,4 +1,4 @@
-// プレイヤーの照準・操作・移動・HP・死亡演出を扱う。武器と弾の管理はPlayerWeaponControllerへ任せる。
+// Playerの姿勢と公開APIを保持し、登場・戦闘・死亡の更新を各Stateへ委譲する。
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
 #include "Player.h"
@@ -55,43 +55,19 @@ void Player::Update()
         // 未初期化・時間停止中は、入力や弾を含めて更新を進めない。
         return;
     }
-    if (!IsAlive()) {
-        // 死亡後は通常操作へ進まず、落下演出と残っている弾だけを更新する。
-        UpdateDeath();
-        return;
+    if (state_ == State::Entry) {
+        entryState_.Update(*this);
     }
-    Input* input = Input::GetInstance();
-    if (input == nullptr) {
-        return;
+    switch (state_) {
+    case State::Battle:
+        battleState_.Update(*this);
+        break;
+    case State::Dead:
+        deadState_.Update(*this);
+        break;
+    case State::Entry:
+        break;
     }
-    UpdateInvincibility(TimeManager::GetInstance()->GetDeltaTime());
-    UpdateBoostState();
-    if (!isDebugMode_) {
-        // 照準を先に確定してから操舵し、発射と表示で参照する位置を揃える。
-        // 使用中の入力機器から照準を取得し、操舵とレティクル表示に使う。
-        UpdateAimFromInput(*input, TimeManager::GetInstance()->GetDeltaTime());
-        ClampAimScreenPosition();
-        ConstrainGamepadAimToPlayer();
-        UpdateMovement(input);
-    }
-    ApplyRailPosition();
-    if (!isDebugMode_) {
-        ConstrainGamepadAimToPlayer();
-        if (camera_ != nullptr) {
-            // 移動後の機体との距離を補正した照準で、発射に使う奥行きを確定する。
-            UpdateSmoothedAimDistance(*camera_, TimeManager::GetInstance()->GetDeltaTime());
-        }
-    }
-    ApplyTransform();
-    // 最新の照準と移動後の銃口から発射し、弾はこの後で1回だけ更新する。
-    weaponController_.UpdateInput(input, isDebugMode_);
-    weaponController_.UpdateBullets();
-    // 寿命切れや命中で無効になった弾を一覧から取り除く。
-    weaponController_.RemoveDeadBullets();
-    object_->Update();
-#ifdef _DEBUG
-    weaponController_.DrawAimDebugLines();
-#endif
 }
 
 
@@ -114,19 +90,6 @@ void Player::UpdateBoostState()
         isDebugMode_ = debugCameraController_->GetDebugMode();
     }
     UpdateBoost(input, isDebugMode_);
-}
-
-// 死亡時の落下を進め、飛行中に使っていた操作状態を終了する。
-void Player::UpdateDeath()
-{
-    // 落下中だけ機体姿勢を変える。落下終了後の爆発はシーン側が担当する。
-    if (IsFalling()) {
-        UpdateDeathAnimation(transform_, TimeManager::GetInstance()->GetDeltaTime());
-        ApplyTransform();
-    }
-    weaponController_.UpdateBullets();
-    weaponController_.RemoveDeadBullets();
-    object_->Update();
 }
 
 void Player::SetCamera(Camera* camera)
@@ -187,8 +150,7 @@ bool Player::ApplyDamage(int damage)
     const bool hasAppliedDamage = ApplyHealthDamage(damage);
     if (hasAppliedDamage && IsDead()) {
         // 死亡状態への移行に合わせ、ブースト・ロックオンを解除する。
-        StopMovement();
-        weaponController_.ResetHomingLock();
+        ChangeState(State::Dead);
     }
     return hasAppliedDamage;
 }
@@ -533,7 +495,7 @@ bool Player::ShouldDraw() const
     return IsFalling() || (IsAlive() && isVisible);
 }
 
-// ダメージを受ける。無敵時間を確認し、HPを減らす。死亡時は落下演出へ進める。
+// 無敵時間を確認し、HPを減らす。死亡状態への遷移は呼び出し元で行う。
 bool Player::ApplyHealthDamage(int damage)
 {
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -549,11 +511,6 @@ bool Player::ApplyHealthDamage(int damage)
     SoundManager::GetInstance()->Play("PlayerDamage");
     if (currentHp_ < 0) {
         currentHp_ = 0;
-    }
-    if (currentHp_ == 0) {
-        deathState_ = DeathState::Falling;
-        deathTimerSeconds_ = 0.0f;
-        deathFallVelocity_ = 0.0f;
     }
     invincibleRemainingSeconds_ = kInvincibleDurationSeconds;
     return true;
@@ -573,24 +530,6 @@ bool Player::Heal(int amount)
 
     return true;
 }
-// 死亡時の落下・回転を更新する。落下演出が終わると死亡爆発へ進める。
-void Player::UpdateDeathAnimation(EulerTransform& transform, float deltaTimeSeconds)
-{
-    if (deathState_ != DeathState::Falling) {
-        return;
-    }
-
-    deathTimerSeconds_ += deltaTimeSeconds;
-    deathFallVelocity_ += 18.0f * deltaTimeSeconds;
-    transform.translate.y -= deathFallVelocity_ * deltaTimeSeconds;
-    transform.rotate.x += 1.4f * deltaTimeSeconds;
-    transform.rotate.z += 3.2f * deltaTimeSeconds;
-
-    if (deathTimerSeconds_ >= kDeathFallDurationSeconds) {
-        deathState_ = DeathState::Exploded;
-    }
-}
-
 // 初期位置と姿勢を移動用の内部状態へ揃える。
 void Player::InitializeMovement()
 {
@@ -1126,4 +1065,16 @@ void Player::UpdateScreenBounds(const Vector3& worldPosition, float& minX, float
     maxX = (std::max)(maxX, screenPosition.x);
     minY = (std::min)(minY, screenPosition.y);
     maxY = (std::max)(maxY, screenPosition.y);
+}
+
+// 状態の切替と開始処理を一か所で行う。
+void Player::ChangeState(State state)
+{
+    if (state_ == state) {
+        return;
+    }
+    state_ = state;
+    if (state_ == State::Dead) {
+        deadState_.Enter(*this);
+    }
 }

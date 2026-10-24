@@ -3,6 +3,32 @@
 #include <cassert>
 
 namespace {
+void TestEntryBattleAndDeathTransitions()
+{
+    Player player;
+    assert(PlayerTestAccess::IsEntry(player));
+    assert(PlayerTestAccess::IsAlive(player));
+    PlayerTestAccess::UpdateEntry(player);
+    assert(PlayerTestAccess::IsBattle(player));
+
+    // 戦闘中のロールは死亡開始時に解除される。
+    EulerTransform transform{};
+    PlayerTestAccess::UpdateRoll(player, transform, true, false);
+    PlayerTestAccess::UpdateRoll(player, transform, true, false);
+    assert(player.IsRolling());
+    assert(player.ApplyDamage(100));
+    assert(!PlayerTestAccess::IsBattle(player));
+    assert(!PlayerTestAccess::IsAlive(player));
+    assert(!player.IsRolling());
+    assert(PlayerTestAccess::IsFalling(player));
+
+    PlayerTestAccess::UpdateDeathAnimation(player, transform, 0.6f);
+    // 死亡後の追加被弾で、落下タイマーが最初に戻らない。
+    assert(!player.ApplyDamage(100));
+    PlayerTestAccess::UpdateDeathAnimation(player, transform, 0.6f);
+    assert(player.IsDeathExplosionReady());
+}
+
 void TestDamageAndInvincibility()
 {
     Player health;
@@ -78,6 +104,7 @@ int main()
         PlayerTestAccess::UpdateInvincibility(health, deltaTimeSeconds);
         assert(health.ApplyDamage(1));
     }
+    TestEntryBattleAndDeathTransitions();
     TestDamageAndInvincibility();
     TestHealingAndDeath();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
