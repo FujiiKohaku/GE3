@@ -5,7 +5,7 @@
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "App/Game/Enemy/Bullet/Types/SwarmPulseBullet.h"
-#include "App/Game/Player/Bullet/Types/HomingMissileBullet.h"
+#include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
 #include "FearWormTimingTests.h"
 #include <array>
 #include <cmath>

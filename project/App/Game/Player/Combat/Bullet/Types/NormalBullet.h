@@ -1,6 +1,6 @@
 // プレイヤーの通常弾の描画設定と、敵への命中時のエフェクトを扱う。
 #pragma once
-#include "App/Game/Player/Bullet/Common/PlayerBullet.h"
+#include "App/Game/Player/Combat/Bullet/Common/PlayerBullet.h"
 class NormalBullet : public PlayerBullet {
 public:
     // 通常弾の色・シェーダー・霧や影の設定を適用し、機体から見やすい弾にする。

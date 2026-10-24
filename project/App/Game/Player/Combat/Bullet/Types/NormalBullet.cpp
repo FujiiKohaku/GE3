@@ -1,5 +1,5 @@
 // プレイヤーの通常弾の描画設定と、敵への命中時のエフェクトを扱う。
-#include "App/Game/Player/Bullet/Types/NormalBullet.h"
+#include "App/Game/Player/Combat/Bullet/Types/NormalBullet.h"
 #include "Engine/Effect/EffectManager.h"
 // 通常弾の色・シェーダー・霧や影の設定を適用し、機体から見やすい弾にする。
 void NormalBullet::Initialize(Model* model)

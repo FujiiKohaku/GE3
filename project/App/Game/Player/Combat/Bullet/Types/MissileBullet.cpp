@@ -1,5 +1,5 @@
 // ミサイルの描画・威力と航跡エフェクトを扱う。消滅時には航跡も停止する。
-#include "App/Game/Player/Bullet/Types/MissileBullet.h"
+#include "App/Game/Player/Combat/Bullet/Types/MissileBullet.h"
 
 #include <cmath>
 

@@ -1,8 +1,8 @@
 // 射撃を長押しして敵をロックし、離すとロック対象へミサイルを発射する武器。
-#include "App/Game/Player/Weapon/Types/HomingPlayerWeapon.h"
-#include "App/Game/Player/Bullet/Types/HomingMissileBullet.h"
+#include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
+#include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
 #include "Engine/audio/SoundManager.h"
-#include "App/Game/Player/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 
 // 押している間はロックを更新し、離した際に発射できたらロックを解除する。
 void HomingPlayerWeapon::Update(PlayerWeaponContext& context, bool held, bool, float)

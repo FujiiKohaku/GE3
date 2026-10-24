@@ -2,7 +2,7 @@
 #pragma once
 
 #include "Engine/Effect/EffectManager.h"
-#include "App/Game/Player/Bullet/Common/PlayerBullet.h"
+#include "App/Game/Player/Combat/Bullet/Common/PlayerBullet.h"
 
 #include <memory>
 

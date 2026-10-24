@@ -104,10 +104,10 @@
     <Filter Include="Player">
       <UniqueIdentifier>{0a321359-6667-4f8c-b0dc-d2d513976287}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Player\Weapon">
+    <Filter Include="Player\Combat\Weapon">
       <UniqueIdentifier>{65703d92-c1ef-45d7-aec2-a890830802ec}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Player\Bullet">
+    <Filter Include="Player\Combat\Bullet">
       <UniqueIdentifier>{0d9a3e83-416c-4c37-859a-6c6cb810deac}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -1019,73 +1019,73 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App\Game\Player\Bullet\Common\PlayerBullet.cpp">
-      <Filter>Player\Bullet\Common</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Bullet\Common\PlayerBullet.cpp">
+      <Filter>Player\Combat\Bullet\Common</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Bullet\Common\PlayerBullet.h">
-      <Filter>Player\Bullet\Common</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Bullet\Common\PlayerBullet.h">
+      <Filter>Player\Combat\Bullet\Common</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Bullet\Types\HomingMissileBullet.cpp">
-      <Filter>Player\Bullet\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Bullet\Types\HomingMissileBullet.cpp">
+      <Filter>Player\Combat\Bullet\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Bullet\Types\HomingMissileBullet.h">
-      <Filter>Player\Bullet\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Bullet\Types\HomingMissileBullet.h">
+      <Filter>Player\Combat\Bullet\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Bullet\Types\MissileBullet.cpp">
-      <Filter>Player\Bullet\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Bullet\Types\MissileBullet.cpp">
+      <Filter>Player\Combat\Bullet\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Bullet\Types\MissileBullet.h">
-      <Filter>Player\Bullet\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Bullet\Types\MissileBullet.h">
+      <Filter>Player\Combat\Bullet\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Bullet\Types\NormalBullet.cpp">
-      <Filter>Player\Bullet\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Bullet\Types\NormalBullet.cpp">
+      <Filter>Player\Combat\Bullet\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Bullet\Types\NormalBullet.h">
-      <Filter>Player\Bullet\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Bullet\Types\NormalBullet.h">
+      <Filter>Player\Combat\Bullet\Types</Filter>
     </ClInclude>
-    <ClInclude Include="App\Game\Player\Weapon\Common\BasePlayerWeapon.h">
-      <Filter>Player\Weapon\Common</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Weapon\Common\BasePlayerWeapon.h">
+      <Filter>Player\Combat\Weapon\Common</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\PlayerWeaponController.cpp">
-      <Filter>Player\Weapon</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Weapon\PlayerWeaponController.cpp">
+      <Filter>Player\Combat\Weapon</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\PlayerWeaponController.h">
-      <Filter>Player\Weapon</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Weapon\PlayerWeaponController.h">
+      <Filter>Player\Combat\Weapon</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Types\HomingPlayerWeapon.cpp">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\HomingPlayerWeapon.cpp">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Types\HomingPlayerWeapon.h">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\HomingPlayerWeapon.h">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Types\MinigunPlayerWeapon.cpp">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\MinigunPlayerWeapon.cpp">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Types\MinigunPlayerWeapon.h">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\MinigunPlayerWeapon.h">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Types\MissilePlayerWeapon.cpp">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\MissilePlayerWeapon.cpp">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Types\MissilePlayerWeapon.h">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\MissilePlayerWeapon.h">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Weapon\Types\NormalPlayerWeapon.cpp">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\NormalPlayerWeapon.cpp">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Weapon\Types\NormalPlayerWeapon.h">
-      <Filter>Player\Weapon\Types</Filter>
+    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\NormalPlayerWeapon.h">
+      <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="Player\Weapon\Common"><UniqueIdentifier>{86f03c7c-03a6-4218-9337-e3a13f2d5eda}</UniqueIdentifier></Filter>
-    <Filter Include="Player\Weapon\Types"><UniqueIdentifier>{be2a9dd9-66cc-4a30-9eb1-18ae0887fb70}</UniqueIdentifier></Filter>
-    <Filter Include="Player\Bullet\Common"><UniqueIdentifier>{ceebabf6-faa1-4dfd-a702-b3ecf976ec07}</UniqueIdentifier></Filter>
-    <Filter Include="Player\Bullet\Types"><UniqueIdentifier>{3f5f7dcb-78b9-4efb-b968-8c0e536f56e2}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Combat\Weapon\Common"><UniqueIdentifier>{86f03c7c-03a6-4218-9337-e3a13f2d5eda}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Combat\Weapon\Types"><UniqueIdentifier>{be2a9dd9-66cc-4a30-9eb1-18ae0887fb70}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Combat\Bullet\Common"><UniqueIdentifier>{ceebabf6-faa1-4dfd-a702-b3ecf976ec07}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Combat\Bullet\Types"><UniqueIdentifier>{3f5f7dcb-78b9-4efb-b968-8c0e536f56e2}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="App\Game\Player\Weapon\Common\BasePlayerWeapon.cpp">
-      <Filter>Player\Weapon\Common</Filter>
+    <ClCompile Include="App\Game\Player\Combat\Weapon\Common\BasePlayerWeapon.cpp">
+      <Filter>Player\Combat\Weapon\Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1238,23 +1238,36 @@
     <ClInclude Include="Tests\IceJellyfishStateTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="App\Game\Player\Entry\PlayerEntryState.h">
-      <Filter>Player</Filter>
+    <ClInclude Include="App\Game\Player\States\Entry\PlayerEntryState.h">
+      <Filter>Player\States\Entry</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Entry\PlayerEntryState.cpp">
-      <Filter>Player</Filter>
+    <ClCompile Include="App\Game\Player\States\Entry\PlayerEntryState.cpp">
+      <Filter>Player\States\Entry</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Battle\PlayerBattleState.h">
-      <Filter>Player</Filter>
+    <ClInclude Include="App\Game\Player\States\Battle\PlayerBattleState.h">
+      <Filter>Player\States\Battle</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Battle\PlayerBattleState.cpp">
-      <Filter>Player</Filter>
+    <ClCompile Include="App\Game\Player\States\Battle\PlayerBattleState.cpp">
+      <Filter>Player\States\Battle</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Dead\PlayerDeadState.h">
-      <Filter>Player</Filter>
+    <ClInclude Include="App\Game\Player\States\Dead\PlayerDeadState.h">
+      <Filter>Player\States\Dead</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Dead\PlayerDeadState.cpp">
-      <Filter>Player</Filter>
+    <ClCompile Include="App\Game\Player\States\Dead\PlayerDeadState.cpp">
+      <Filter>Player\States\Dead</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Player\States"><UniqueIdentifier>{0394097b-e075-413d-84cb-490b75685f7e}</UniqueIdentifier></Filter>
+    <Filter Include="Player\Combat"><UniqueIdentifier>{5f902215-4d04-45ae-aa85-2b358c4dbd1b}</UniqueIdentifier></Filter>
+    <Filter Include="Player\States\Entry"><UniqueIdentifier>{3f6a00d6-d7ec-4c36-aa6b-149eb52d5bfd}</UniqueIdentifier></Filter>
+    <Filter Include="Player\States\Battle"><UniqueIdentifier>{ee0c80e0-0453-44bb-8920-943ec93cf036}</UniqueIdentifier></Filter>
+    <Filter Include="Player\States\Dead"><UniqueIdentifier>{166764ab-30c6-49d5-9526-4e75158abe46}</UniqueIdentifier></Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Boss\IceJellyfish\PoseController" />
+    <ClCompile Include="App\Game\Boss\IceJellyfish\IceJellyfishCollision.cpp"><Filter>App\Game\Boss\IceJellyfish</Filter></ClCompile>
+    <ClCompile Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.cpp"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClCompile>
+    <ClInclude Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.h"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClInclude>
   </ItemGroup>
 </Project>

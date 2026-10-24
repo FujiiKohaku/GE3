@@ -1,11 +1,11 @@
 // 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
 #pragma once
-#include "App/Game/Player/Bullet/Common/PlayerBullet.h"
-#include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/NormalPlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/MinigunPlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/MissilePlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/HomingPlayerWeapon.h"
+#include "App/Game/Player/Combat/Bullet/Common/PlayerBullet.h"
+#include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/NormalPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/MinigunPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
 #include <array>
 #include "Engine/math/MathStruct.h"
 #include <memory>

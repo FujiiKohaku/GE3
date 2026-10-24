@@ -1,10 +1,10 @@
 #pragma once
-#include "App/Game/Player/Weapon/PlayerWeaponController.h"
-#include "App/Game/Player/Weapon/Types/HomingPlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/MissilePlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/MinigunPlayerWeapon.h"
-#include "App/Game/Player/Weapon/Types/NormalPlayerWeapon.h"
-#include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/MinigunPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/NormalPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
 
 // 描画を起動せず、基底ポインタ経由の発射タイミングと発射制限を検証する。
 inline bool RunPlayerWeaponPolymorphismTests()

@@ -1,5 +1,5 @@
 // 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
-#include "App/Game/Player/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "App/Game/Player/Player.h"
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/Camera/Camera.h"

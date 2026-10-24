@@ -4,10 +4,10 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/debugcamera/DebugCameraController.h"
 #include "Engine/math/MathStruct.h"
-#include "App/Game/Player/Weapon/PlayerWeaponController.h"
-#include "Entry/PlayerEntryState.h"
-#include "Battle/PlayerBattleState.h"
-#include "Dead/PlayerDeadState.h"
+#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
+#include "States/Entry/PlayerEntryState.h"
+#include "States/Battle/PlayerBattleState.h"
+#include "States/Dead/PlayerDeadState.h"
 #include <memory>
 
 class Camera;

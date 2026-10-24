@@ -1,4 +1,4 @@
-#include "App/Game/Player/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "Tests/PlayerWeaponResetTests.h"
 #include "Tests/PlayerWeaponPolymorphismTests.h"
 #include <cassert>

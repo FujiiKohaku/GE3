@@ -1,7 +1,7 @@
 // 生存しているロック対象へ進行方向を曲げ、目標を通り過ぎた回数も管理するミサイル。
 #pragma once
 
-#include "App/Game/Player/Bullet/Types/MissileBullet.h"
+#include "App/Game/Player/Combat/Bullet/Types/MissileBullet.h"
 #include <memory>
 #include <vector>
 

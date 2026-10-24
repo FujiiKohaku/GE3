@@ -1,6 +1,6 @@
 // 武器が必要とする共有情報と、更新・発射・弾生成の共通インターフェースを定義する。
 #pragma once
-#include "App/Game/Player/Bullet/Common/PlayerBullet.h"
+#include "App/Game/Player/Combat/Bullet/Common/PlayerBullet.h"
 #include <functional>
 
 class PlayerWeaponHeat;

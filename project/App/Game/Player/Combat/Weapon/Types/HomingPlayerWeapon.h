@@ -1,6 +1,6 @@
 // 射撃を長押しして敵をロックし、離すとロック対象へミサイルを発射する武器。
 #pragma once
-#include "App/Game/Player/Weapon/Types/MissilePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
 
 class HomingPlayerWeapon final : public MissilePlayerWeapon {
 public:

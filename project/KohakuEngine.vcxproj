@@ -741,28 +741,28 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Lighting\ScreenSpaceGlobalIllumination.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\Common\PlayerBullet.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\Common\PlayerBullet.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\Types\HomingMissileBullet.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\Types\HomingMissileBullet.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\Types\MissileBullet.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\Types\MissileBullet.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Bullet\Types\NormalBullet.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Bullet\Types\NormalBullet.h" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Common\BasePlayerWeapon.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\PlayerWeaponController.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Types\HomingPlayerWeapon.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Types\HomingPlayerWeapon.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Types\MinigunPlayerWeapon.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Types\MinigunPlayerWeapon.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Types\MissilePlayerWeapon.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Types\MissilePlayerWeapon.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Types\NormalPlayerWeapon.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Weapon\Types\NormalPlayerWeapon.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Common\PlayerBullet.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Common\PlayerBullet.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Types\HomingMissileBullet.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Types\HomingMissileBullet.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Types\MissileBullet.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Types\MissileBullet.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Types\NormalBullet.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Bullet\Types\NormalBullet.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Common\BasePlayerWeapon.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Weapon\PlayerWeaponController.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Weapon\PlayerWeaponController.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\HomingPlayerWeapon.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\HomingPlayerWeapon.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\MinigunPlayerWeapon.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\MinigunPlayerWeapon.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\MissilePlayerWeapon.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\MissilePlayerWeapon.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\NormalPlayerWeapon.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Types\NormalPlayerWeapon.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Weapon\Common\BasePlayerWeapon.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\Combat\Weapon\Common\BasePlayerWeapon.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Entry\State\FearWormEntryPhase.h" />
@@ -832,11 +832,16 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Tests\IceJellyfishStateTests.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Entry\PlayerEntryState.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Entry\PlayerEntryState.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Battle\PlayerBattleState.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Battle\PlayerBattleState.cpp" />
-    <ClInclude Include="$(projectRootPath)App\Game\Player\Dead\PlayerDeadState.h" />
-    <ClCompile Include="$(projectRootPath)App\Game\Player\Dead\PlayerDeadState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\States\Entry\PlayerEntryState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\States\Entry\PlayerEntryState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\States\Battle\PlayerBattleState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\States\Battle\PlayerBattleState.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\States\Dead\PlayerDeadState.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\States\Dead\PlayerDeadState.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\IceJellyfishCollision.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.h" />
   </ItemGroup>
 </Project>

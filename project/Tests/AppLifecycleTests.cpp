@@ -1,6 +1,6 @@
 #include "App/Scene/Gameplay/GamePlayScene.h"
-#include "App/Game/Player/Bullet/Types/HomingMissileBullet.h"
-#include "App/Game/Player/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
+#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "App/Game/Stage/StageCatalog.h"
 #include "Engine/Time/TimeManager.h"
 #include "externals/json.hpp"

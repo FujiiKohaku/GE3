@@ -1,6 +1,6 @@
 // 発射間隔を空けながら、ボタンを押すたびにミサイルを発射する武器。
 #pragma once
-#include "App/Game/Player/Weapon/Common/BasePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
 
 class MissilePlayerWeapon : public BasePlayerWeapon {
 public:

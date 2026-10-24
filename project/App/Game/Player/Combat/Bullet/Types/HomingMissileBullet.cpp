@@ -1,7 +1,7 @@
 // 生存しているロック対象へ進行方向を曲げ、目標を通り過ぎた回数も管理するミサイル。
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
-#include "App/Game/Player/Bullet/Types/HomingMissileBullet.h"
+#include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "Engine/Time/TimeManager.h"
 #include <algorithm>

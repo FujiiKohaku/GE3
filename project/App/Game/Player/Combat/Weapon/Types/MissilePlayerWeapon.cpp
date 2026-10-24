@@ -1,6 +1,6 @@
 // 発射間隔を空けながら、ボタンを押すたびにミサイルを発射する武器。
-#include "App/Game/Player/Weapon/Types/MissilePlayerWeapon.h"
-#include "App/Game/Player/Bullet/Types/MissileBullet.h"
+#include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
+#include "App/Game/Player/Combat/Bullet/Types/MissileBullet.h"
 #include "Engine/audio/SoundManager.h"
 
 // 長押しの継続では追加発射せず、押した瞬間だけ発射を要求する。
