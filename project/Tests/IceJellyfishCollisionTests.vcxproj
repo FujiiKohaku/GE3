@@ -33,6 +33,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="IceJellyfishCollisionTests.cpp" />
+    <ClCompile Include="..\App\Game\Boss\IceJellyfish\IceJellyfishCollision.cpp" />
     <ClCompile Include="..\Engine\Math\MathStruct.cpp" />
     <ClCompile Include="..\Engine\Math\MatrixMath.cpp" />
     <ClCompile Include="..\Engine\Math\Collision.cpp" />

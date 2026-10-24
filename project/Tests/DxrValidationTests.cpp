@@ -151,7 +151,7 @@ Vector3 ReadTextureCenter(DirectXCommon* dxCommon, ID3D12Resource* source, const
         Require(SUCCEEDED(DirectX::Convert(image, DXGI_FORMAT_R8G8B8A8_UNORM, DirectX::TEX_FILTER_DEFAULT, 0, converted)), "Capture conversion failed");
         captureImage = converted.GetImage(0, 0, 0);
     }
-    std::filesystem::path capturePath = std::filesystem::path("runtime/captures/DxrTests") / captureName;
+    std::filesystem::path capturePath = std::filesystem::path("generated/Captures/DxrTests") / captureName;
     Require(SUCCEEDED(DirectX::SaveToWICFile(*captureImage, DirectX::WIC_FLAGS_NONE,
         GUID_ContainerFormatPng, capturePath.c_str())), "Capture save failed");
     D3D12_RANGE written = {0, 0};
@@ -184,7 +184,7 @@ void CheckValidationMessages(ID3D12InfoQueue* infoQueue) {
 void RunValidation(DirectXCommon* dxCommon) {
     DxrRenderer renderer;
     renderer.Initialize();
-    std::ofstream report("runtime/captures/DxrTests/result.txt");
+    std::ofstream report("generated/Captures/DxrTests/result.txt");
     report << renderer.GetStatus() << '\n';
     if (!renderer.IsSupported()) {
         renderer.BeginFrame(); renderer.EndFrame(nullptr);
@@ -377,7 +377,7 @@ void RunDeformedValidation(DirectXCommon* dxCommon) {
     uint64_t initialRevision = scene.GetShadowSceneRevision();
     dxCommon->PreDraw();
     RequireColor(ReadCenter(dxCommon, scene, "deformed-multiple-primitives.png"), {0, 1, 0}, "Deformed vertex offset or material lookup failed");
-    std::ofstream report("runtime/captures/DxrTests/deformed-result.txt");
+    std::ofstream report("generated/Captures/DxrTests/deformed-result.txt");
     report << "initialBuildMs=" << scene.GetBuildGpuTimeMs() << " dynamicBufferBytes=" << initialBufferBytes
         << " dynamicAllocationBytes=" << scene.GetStatistics().dynamicAllocationBytes << '\n';
     for (VertexData& vertex : vertices) { vertex.position.x += 50; }
@@ -558,7 +558,7 @@ void RunShadowValidation(DirectXCommon* dxCommon) {
     source = DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, receiver, occluder, 0, nullptr, nullptr, true, nullptr, false);
     RequireColor(ReadTextureCenter(dxCommon, source, "shadow-undrawn-caster.png"), baseline - sun, "Undrawn caster disappeared from RT shadow scene");
     Require(scene.GetStatistics().instanceCount == 2, "Undrawn sun caster was not registered");
-    std::ofstream report("runtime/captures/DxrTests/shadow-result.txt");
+    std::ofstream report("generated/Captures/DxrTests/shadow-result.txt");
     report << "hard traceMs=" << shadows.GetTraceGpuTimeMs() << " compositeMs=" << shadows.GetCompositeGpuTimeMs()
         << " shadowTextureAllocationBytes=" << shadows.GetTextureAllocationBytes() << '\n';
     report << "directionalCaptureAllocationBytes=" << offscreen.GetDirectionalLightAllocationBytes() << '\n';
@@ -630,7 +630,7 @@ void RunShadowValidation(DirectXCommon* dxCommon) {
     double filteredError = ShadowMeanSquareError(filtered, reference);
     Require(temporalError < rawError * 0.3, "Temporal accumulation did not reduce shadow noise");
     Require(filteredError < temporalError && filteredError < rawError * 0.15, "Spatial filtering did not reduce shadow noise");
-    std::ofstream denoiseReport("runtime/captures/DxrTests/denoise-result.txt");
+    std::ofstream denoiseReport("generated/Captures/DxrTests/denoise-result.txt");
     denoiseReport << "penumbraMse raw1=" << rawError << " temporal32=" << temporalError << " filtered=" << filteredError << '\n';
     denoiseReport << "denoiseGpuMs=" << denoiseGpuTimeMs << " allocationBytes=" << shadows.GetDenoiseAllocationBytes() << '\n';
     settings.sunAngularRadiusRadians = 0.001f; settings.spatialPassCount = 0; shadows.SetSettings(settings);
@@ -849,7 +849,7 @@ void RunAlphaValidation(DirectXCommon* dxCommon) {
     DrawShadowFrame(dxCommon, scene, shadows, offscreen, postEffects, camera, background, foreground, 0, &motionVectors);
     dxCommon->PostDraw(); shadows.ReadCompleted();
     Require(shadows.HasUsedShadowHistory(), "Alpha texture replacement discarded unaffected shadow history globally");
-    std::ofstream report("runtime/captures/DxrTests/alpha-result.txt");
+    std::ofstream report("generated/Captures/DxrTests/alpha-result.txt");
     report << "hardShadowTraceMs masked=" << maskedTraceGpuTimeMs << " opaque=" << opaqueTraceGpuTimeMs << '\n';
     report << "PASS: raster/RT holes, continuation to background/blocker, UV transforms, material alpha, cutoff equality/disabled/invalid, shared masked/opaque model, motion-hole rejection, Standard/Toon variants, shadow map holes, UV/texture history invalidation\n";
     Object3dManager::GetInstance()->SetDefaultCamera(nullptr);
@@ -977,11 +977,11 @@ void RunReflectionValidation(DirectXCommon* dxCommon) {
     Require(reflected.x > baseline.x + 0.8f && std::abs(reflected.y - baseline.y) < 0.02f, "Offscreen red target did not appear in reflection");
     dxCommon->PreDraw(); RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "reflection-mirror-raw.png"), {1, 0, 0}, "Mirror reflected radiance mismatch");
     scene.ReadCompleted(); reflections.ReadCompleted();
-    std::ofstream report("runtime/captures/DxrTests/reflection-result.txt");
+    std::ofstream report("generated/Captures/DxrTests/reflection-result.txt");
     report << "mirrorTraceMs=" << reflections.GetTraceGpuTimeMs() << " compositeMs=" << reflections.GetCompositeGpuTimeMs()
         << " targetsBytes=" << reflections.GetAllocationBytes() << " captureBytes=" << offscreen.GetReflectionAllocationBytes()
         << " directionalSlotBytes=" << offscreen.GetDirectionalLightAllocationBytes() << '\n';
-    std::ofstream sceneReport("runtime/captures/DxrTests/scene-submission-result.txt");
+    std::ofstream sceneReport("generated/Captures/DxrTests/scene-submission-result.txt");
     std::vector<Object3d*> rasterObjects = {&receiver};
     std::vector<Object3d*> raytracingObjects = {&receiver, &target, &target};
     RaytracingTestSceneInputs sceneInputs; sceneInputs.raytracingObjects = &raytracingObjects;
@@ -1204,9 +1204,9 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     LightingPreset lighting; lighting.intensity = 1; lighting.direction = {1, 0, 0};
     lighting.ambient = {1, 1, 1, 0}; lighting.pointIntensity = 0;
     lights->ApplyLightingPreset(lighting); lights->SetEnvironmentLighting(0, 0); lights->SetLightingComponents(1, 1, 1, 0);
-    WriteMipFixture(L"runtime/captures/DxrTests/mip-color.dds", 256, {255, 0, 0, 255}, {0, 255, 0, 255});
-    WriteMipFixture(L"runtime/captures/DxrTests/mip-normal.dds", 128, {255, 128, 128, 255}, {128, 128, 255, 255});
-    WriteMipFixture(L"runtime/captures/DxrTests/mip-mr.dds", 64, {0, 255, 255, 255}, {0, 128, 0, 255});
+    WriteMipFixture(L"generated/Captures/DxrTests/mip-color.dds", 256, {255, 0, 0, 255}, {0, 255, 0, 255});
+    WriteMipFixture(L"generated/Captures/DxrTests/mip-normal.dds", 128, {255, 128, 128, 255}, {128, 128, 255, 255});
+    WriteMipFixture(L"generated/Captures/DxrTests/mip-mr.dds", 64, {0, 255, 255, 255}, {0, 128, 0, 255});
     ModelCommon common; common.Initialize(dxCommon); ModelData data;
     data.rootNode.name = "mipRoot"; data.rootNode.localMatrix = MatrixMath::MakeIdentity4x4();
     data.rootNode.transform = {{1, 1, 1}, {0, 0, 0, 1}, {0, 0, 0}};
@@ -1216,7 +1216,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
         {{1, -1, 0, 1}, {1, 0}, {kDiagonal, 0, -kDiagonal}}, {{1, 1, 0, 1}, {1, 1}, {kDiagonal, 0, -kDiagonal}}};
     plane.indices = {0, 1, 2, 2, 1, 3}; data.primitives = {plane};
     Model receiverModel; receiverModel.Initialize(&common, data);
-    data.materials = {{"runtime/captures/DxrTests/mip-color.dds"}};
+    data.materials = {{"generated/Captures/DxrTests/mip-color.dds"}};
     Model targetModel; targetModel.Initialize(&common, data);
     Object3d receiver; receiver.Initialize(manager); receiver.SetModel(&receiverModel); receiver.SetShadingMode(MaterialShadingMode::Standard);
     receiver.SetSurfaceProperties(0, 1, 1); receiver.SetRoughness(0); receiver.SetShininess(0);
@@ -1226,7 +1226,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     RaytracingTestSceneInputs inputs; inputs.raytracingObjects = &rayObjects;
     OffscreenRenderer offscreen; offscreen.Initialize(); PostEffectManager post; post.Initialize(dxCommon); MotionVectorRenderer motion; motion.Initialize();
     TextureManager::GetInstance()->FlushUploads();
-    std::ofstream report("runtime/captures/DxrTests/texture-mip-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/texture-mip-result.txt"); report.setf(std::ios::unitbuf);
     const float kUvScales[] = {0.01f, 1, 64, -64, 0};
     for (uint32_t index = 0; index < 5; ++index) {
         target.SetUvTransformElement(0, 0, kUvScales[index]); target.SetUvTransformElement(1, 1, kUvScales[index]);
@@ -1283,7 +1283,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "mip-nonuniform.png"), {0, 1, 0}, "World scale broke mip footprint");
     target.SetScale({1, 1, 1}); targetModel.SetTexture("resources/Textures/white.png");
     target.SetShadingMode(MaterialShadingMode::Standard); target.SetSurfaceProperties(1, 0, 1); target.SetShininess(0);
-    target.SetNormalMap("runtime/captures/DxrTests/mip-normal.dds", 1); TextureManager::GetInstance()->FlushUploads();
+    target.SetNormalMap("generated/Captures/DxrTests/mip-normal.dds", 1); TextureManager::GetInstance()->FlushUploads();
     Vector3 normalColors[2];
     for (uint32_t index = 0; index < 2; ++index) {
         settings.shouldUseTextureMipmaps = index == 0; reflections.SetSettings(settings);
@@ -1293,7 +1293,7 @@ void RunTextureMipValidation(DirectXCommon* dxCommon) {
     }
     Require(std::abs(normalColors[0].x - normalColors[1].x) > 0.1f, "Normal map did not use its mip chain");
     target.SetNormalMap(""); target.SetSurfaceProperties(1, 1, 1);
-    target.SetMetallicRoughnessMap("runtime/captures/DxrTests/mip-mr.dds"); TextureManager::GetInstance()->FlushUploads();
+    target.SetMetallicRoughnessMap("generated/Captures/DxrTests/mip-mr.dds"); TextureManager::GetInstance()->FlushUploads();
     Vector3 materialColors[2];
     for (uint32_t index = 0; index < 2; ++index) {
         settings.shouldUseTextureMipmaps = index == 0; reflections.SetSettings(settings);
@@ -1354,8 +1354,8 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     auto* lights = LightManager::GetInstance(); lights->ClearDynamicPointLights(); lights->ClearDynamicSpotLights();
     LightingPreset lighting; lighting.intensity = 1; lighting.direction = {0, 0, 1}; lighting.ambient = {1, 1, 1, 0.15f}; lighting.pointIntensity = 0;
     lights->ApplyLightingPreset(lighting); lights->SetEnvironmentLighting(0, 0); lights->SetLightingComponents(1, 1, 1, 0);
-    WriteMaterialFixture(L"runtime/captures/DxrTests/material-normal.png", {204, 204, 204, 255});
-    WriteMaterialFixture(L"runtime/captures/DxrTests/material-mr.png", {255, 128, 64, 255});
+    WriteMaterialFixture(L"generated/Captures/DxrTests/material-normal.png", {204, 204, 204, 255});
+    WriteMaterialFixture(L"generated/Captures/DxrTests/material-mr.png", {255, 128, 64, 255});
     ModelCommon modelCommon; modelCommon.Initialize(dxCommon); ModelData data;
     data.rootNode.name = "materialRoot"; data.rootNode.localMatrix = MatrixMath::MakeIdentity4x4();
     data.rootNode.transform = {{1, 1, 1}, {0, 0, 0, 1}, {0, 0, 0}};
@@ -1375,7 +1375,7 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     target.SetShininess(0);
     OffscreenRenderer offscreen; offscreen.Initialize(); PostEffectManager postEffects; postEffects.Initialize(dxCommon);
     MotionVectorRenderer motionVectors; motionVectors.Initialize(); TextureManager::GetInstance()->FlushUploads();
-    std::ofstream report("runtime/captures/DxrTests/material-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/material-result.txt"); report.setf(std::ios::unitbuf);
     static_assert(sizeof(Material) == 144); static_assert(offsetof(Material, alphaCutoff) == 128);
     Vector3 baseline = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "standard-specular-off", report);
     target.SetMetallic(1);
@@ -1385,14 +1385,14 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     Vector3 specular = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "standard-specular-on", report);
     Require(specular.x > metalDiffuse.x + 0.1f, "Shininess gate did not control material specular");
     target.SetShininess(0); target.SetMetallic(0);
-    target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1); TextureManager::GetInstance()->FlushUploads();
+    target.SetNormalMap("generated/Captures/DxrTests/material-normal.png", 1); TextureManager::GetInstance()->FlushUploads();
     Vector3 mapped = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "normal-map", report);
     Require(std::abs(mapped.x - baseline.x) > 0.02f, "Normal map did not affect RT hit lighting");
     target.SetNormalMapStrength(0);
     RequireColor(CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "normal-strength-zero", report), baseline, "Zero normal strength changed lighting");
     target.SetNormalMapStrength(1); lights->SetDirection({0, -1, 1});
     Vector3 normalY = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "normal-y", report);
-    target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1, true);
+    target.SetNormalMap("generated/Captures/DxrTests/material-normal.png", 1, true);
     Vector3 flippedY = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "normal-y-flipped", report);
     Require(std::abs(flippedY.x - normalY.x) > 0.1f, "Normal map Y inversion had no effect");
     target.SetUvTransformElement(0, 0, -1); target.SetUvTransformElement(3, 0, 1);
@@ -1403,7 +1403,7 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "nonuniform-scale", report);
     target.SetScale({1, 1, 1}); target.SetNormalMap(""); lights->SetDirection({0, 0, 1});
     target.SetSurfaceProperties(0.6f, 0.8f, 1); target.SetShininess(32);
-    target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); TextureManager::GetInstance()->FlushUploads();
+    target.SetMetallicRoughnessMap("generated/Captures/DxrTests/material-mr.png"); TextureManager::GetInstance()->FlushUploads();
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "metallic-roughness-map", report);
     ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects, "material-mr-capture.png");
     dxCommon->PreDraw(); float roughnessAlpha = 0;
@@ -1417,8 +1417,8 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     target.SetReceiveShadow(true);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "shadow-toon", report);
     target.SetReceiveShadow(false); target.SetShadingMode(MaterialShadingMode::Standard);
-    target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
-    target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); target.SetShininess(0);
+    target.SetNormalMap("generated/Captures/DxrTests/material-normal.png", 1);
+    target.SetMetallicRoughnessMap("generated/Captures/DxrTests/material-mr.png"); target.SetShininess(0);
     lights->SetEnvironmentLighting(0.4f, 0.6f);
     CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera, offscreen, postEffects, motionVectors, "environment-lighting", report);
     Vector3 iblColor = ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects, "lighting-ibl-only.png");
@@ -1440,7 +1440,7 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     lights->SetLightingComponents(0, 1, 1, 0);
     lights->SetDirectional({1, 1, 1, 1}, {0, -1, 0}, 4);
     target.SetNormalMap(""); target.SetMetallicRoughnessMap(""); target.SetSurfaceProperties(0.6f, 0.2f, 1);
-    std::ofstream skyReport("runtime/captures/DxrTests/sky-lighting-result.txt"); skyReport.setf(std::ios::unitbuf);
+    std::ofstream skyReport("generated/Captures/DxrTests/sky-lighting-result.txt"); skyReport.setf(std::ios::unitbuf);
     Vector3 skyDay = CompareMaterialPaths(dxCommon, scene, reflections, receiver, target, camera, surfaceCamera,
         offscreen, postEffects, motionVectors, "sky-day", skyReport);
     lights->SetDirectional({1, 0.5f, 0.2f, 1}, {0, -0.08f, 1}, 2);
@@ -1498,8 +1498,8 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     target.SetEnableEnvironmentMap(kSavedMaterial.enableEnvironmentMap != 0); target.SetEnvironmentMapStrength(kSavedMaterial.environmentCoefficient);
     target.SetShininess(kSavedMaterial.shininess); target.SetUvTransform(kSavedMaterial.uvTransform);
     target.SetRoughness(kSavedMaterial.roughness); target.SetMetallic(kSavedMaterial.metallic); target.SetSpecularStrength(kSavedMaterial.specularStrength);
-    target.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
-    target.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png");
+    target.SetNormalMap("generated/Captures/DxrTests/material-normal.png", 1);
+    target.SetMetallicRoughnessMap("generated/Captures/DxrTests/material-mr.png");
     RequireColor(ReadRasterMaterial(dxCommon, scene, target, surfaceCamera, offscreen, postEffects,
         "sky-cubemap-restored.png"), iblColor, "Sky OFF did not restore cubemap lighting");
     skyReport << "PASS: day/sunset/night raster and RT agreement, zero strength, invalid settings, cubemap restore, visible HDR sky\n";
@@ -1521,8 +1521,8 @@ void RunMaterialValidation(DirectXCommon* dxCommon) {
     Skeleton skeleton = Skeleton::CreateSkeleton(data.rootNode); skeleton.UpdateSkeleton(); PlayAnimation animation; animation.SetSkeleton(&skeleton);
     SkinningObject3d skinned; skinned.SetModel(&model); skinned.SetAnimation(&animation); skinned.Initialize(skinManager);
     skinned.SetTranslate({4, 0, 0}); skinned.SetRotate({0, -1.57079633f, 0}); skinned.SetShadingMode(MaterialShadingMode::Standard);
-    skinned.SetShininess(0); skinned.SetNormalMap("runtime/captures/DxrTests/material-normal.png", 1);
-    skinned.SetMetallicRoughnessMap("runtime/captures/DxrTests/material-mr.png"); TextureManager::GetInstance()->FlushUploads();
+    skinned.SetShininess(0); skinned.SetNormalMap("generated/Captures/DxrTests/material-normal.png", 1);
+    skinned.SetMetallicRoughnessMap("generated/Captures/DxrTests/material-mr.png"); TextureManager::GetInstance()->FlushUploads();
     Vector3 skinRaster = ReadRasterMaterial(dxCommon, scene, skinned, surfaceCamera, offscreen, postEffects, "material-skinned-raster.png", true);
     skinned.SetCamera(&camera); std::vector<Object3d*> skinRasterObjects = {&receiver}; RaytracingTestSceneInputs skinInputs; skinInputs.shouldDrawSkinnedTarget = false;
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, postEffects, motionVectors, camera, skinRasterObjects, 0, &skinned, nullptr, true, &skinInputs);
@@ -1618,7 +1618,7 @@ void RunGlobalIlluminationValidation(DirectXCommon* dxCommon) {
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motionVectors, camera, giRasterObjects, 0, nullptr, nullptr, true, &giSceneInputs);
     RequireColor(ReadTextureCenter(dxCommon, indirect.GetRawTexture(), "rtgi-undrawn-source.png"), {1, 0, 0}, "Undrawn source stopped contributing indirect light");
     scene.ReadCompleted(); indirect.ReadCompleted();
-    std::ofstream report("runtime/captures/DxrTests/rtgi-result.txt");
+    std::ofstream report("generated/Captures/DxrTests/rtgi-result.txt");
     report << "traceMs=" << indirect.GetTraceGpuTimeMs() << " filterMs=" << indirect.GetFilterGpuTimeMs()
         << " compositeMs=" << indirect.GetCompositeGpuTimeMs() << " targetsBytes=" << indirect.GetAllocationBytes() << '\n';
     settings.isDebugVisible = true; indirect.SetSettings(settings);
@@ -1795,7 +1795,7 @@ void RunDiffuseQualityValidation(DirectXCommon* dxCommon) {
     indirect.SetSettings(settings);
     auto* source = DrawReflectionFrame(dxCommon, scene, indirect, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, false, &inputs);
     Vector3 baseline = ReadTextureCenter(dxCommon, source, "diffuse-quality-baseline.png");
-    std::ofstream report("runtime/captures/DxrTests/diffuse-quality-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/diffuse-quality-result.txt"); report.setf(std::ios::unitbuf);
     settings.isEnabled = true;
     const float kDistances[] = {2, 5, 8, 9, 9.9f, 10.01f, 11};
     for (uint32_t index = 0; index < 7; ++index) {
@@ -1896,7 +1896,7 @@ void RunMultipleReflectionValidation(DirectXCommon* dxCommon) {
     RaytracingTestSceneInputs inputs; inputs.raytracingObjects = &rayObjects;
     OffscreenRenderer offscreen; offscreen.Initialize(); PostEffectManager post; post.Initialize(dxCommon); MotionVectorRenderer motion; motion.Initialize();
     reflections.SetSettings(settings); TextureManager::GetInstance()->FlushUploads();
-    std::ofstream report("runtime/captures/DxrTests/multiple-reflection-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/multiple-reflection-result.txt"); report.setf(std::ios::unitbuf);
     DrawReflectionFrame(dxCommon, scene, reflections, offscreen, post, motion, camera, rasterObjects, 0, nullptr, nullptr, true, &inputs);
     RequireColor(ReadTextureCenter(dxCommon, reflections.GetRawTexture(), "multiple-off.png"), {0, 0, 0}, "OFF unexpectedly traced the reflected target");
     settings.shouldTraceMultipleReflections = true; settings.maxReflectionBounces = 1; reflections.SetSettings(settings);
@@ -2097,7 +2097,7 @@ void RunTemporalResolutionValidation(DirectXCommon* dxCommon) {
             filteredError += (color.x - 0.5f) * (color.x - 0.5f) / 32;
         }
     }
-    std::ofstream report("runtime/captures/DxrTests/taa-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/taa-result.txt"); report.setf(std::ios::unitbuf);
     report << "stripe MSE current=" << rawError << " temporal=" << filteredError << '\n';
     Require(filteredError < rawError * 0.75f, "Temporal reconstruction did not reduce subpixel stripe flicker");
     uint32_t phase = 1;
@@ -2165,7 +2165,7 @@ void RunHdrValidation(DirectXCommon* dxCommon) {
     Require(!exposure.SetSettings(invalidSettings), "Inverted exposure range accepted");
     OffscreenRenderer source; source.Initialize(); PostEffectManager post; post.Initialize(dxCommon);
     TextureManager::GetInstance()->FlushUploads();
-    std::ofstream report("runtime/captures/DxrTests/hdr-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/hdr-result.txt"); report.setf(std::ios::unitbuf);
     float neutral = DrawExposureFrame(dxCommon, source, exposure, {0.18f, 0.18f, 0.18f, 1}, 0,
         "exposure-neutral.png").x;
     Require(std::abs(neutral - 1) < 0.08f, "Middle gray exposure was not close to one");
@@ -2362,7 +2362,7 @@ void RunVolumetricQualityValidation(DirectXCommon* dxCommon) {
     volume.SetMaxDistance(10); volume.SetLocalFogEnabled(true); volume.SetHeightFog(1000, 0.01f, 0.1f);
     volume.SetFogColor({0.6f, 0.7f, 0.8f}); volume.SetTemporalEnabled(false); volume.SetScatteringAlbedo(0);
     uint64_t rawAllocationBytes = volume.GetAllocationBytes();
-    std::ofstream report("runtime/captures/DxrTests/volumetric-quality-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/volumetric-quality-result.txt"); report.setf(std::ios::unitbuf);
     auto* source = DrawVolumeFrame(dxCommon, volume, camera, scene, output, outputRtv, post);
     Vector3 absorbed = ReadTextureCenter(dxCommon, source, "volume-absorption.png"); dxCommon->PreDraw();
     float transmission = ReadTextureCenter(dxCommon, volume.GetRawTransmittanceTexture(), "volume-transmittance.png").x;
@@ -2495,7 +2495,7 @@ void RunRoughReflectionValidation(DirectXCommon* dxCommon) {
     DxrReflectionRenderer reflection; reflection.Initialize(); auto settings = reflection.GetSettings();
     settings.isEnabled = true; settings.sampleCount = 16; settings.maxRoughness = 1; settings.maxDistance = 1000;
     settings.shouldUseTemporalHistory = false; settings.shouldTraceSunShadows = false; settings.spatialPassCount = 0; reflection.SetSettings(settings);
-    std::ofstream report("runtime/captures/DxrTests/rough-reflection-result.txt"); report.setf(std::ios::unitbuf);
+    std::ofstream report("generated/Captures/DxrTests/rough-reflection-result.txt"); report.setf(std::ios::unitbuf);
     const float kViewCosines[] = {1, 0.6f, 0.15f}; const float kRoughnessValues[] = {0.35f, 0.6f, 0.9f, 1};
     for (float viewCosine : kViewCosines) {
         ModelData data = receiverData; float viewSine = std::sqrt(1 - viewCosine * viewCosine);
@@ -2571,7 +2571,7 @@ void RunReceiverMotionValidation(DirectXCommon* dxCommon) {
     Require(motion.GetReprojectionAllocationBytes() >= 2ull * WinApp::kClientWidth * WinApp::kClientHeight * 16, "Motion metadata allocation mismatch");
     DxrGlobalIlluminationRenderer indirect; indirect.Initialize(); auto settings = indirect.GetSettings();
     settings.isEnabled = true; settings.maxDistance = 1000; settings.shouldTraceSunShadows = false; settings.spatialPassCount = 0;
-    indirect.SetSettings(settings); std::ofstream report("runtime/captures/DxrTests/receiver-motion-result.txt"); report.setf(std::ios::unitbuf);
+    indirect.SetSettings(settings); std::ofstream report("generated/Captures/DxrTests/receiver-motion-result.txt"); report.setf(std::ios::unitbuf);
     for (uint32_t frame = 0; frame < 3; ++frame) {
         DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, objects);
         Vector3 statistics = ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-stable.png");
@@ -2595,8 +2595,8 @@ void RunReceiverMotionValidation(DirectXCommon* dxCommon) {
     DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, objects);
     statistics = ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-scaled-history.png");
     Require(statistics.z >= 6, "Nonuniform receiver scale discarded compatible history");
-    WriteMaterialFixture(L"runtime/captures/DxrTests/receiver-motion-normal.png", {204, 204, 204, 255});
-    receiver.SetNormalMap("runtime/captures/DxrTests/receiver-motion-normal.png", 1); TextureManager::GetInstance()->FlushUploads(); indirect.ResetHistory();
+    WriteMaterialFixture(L"generated/Captures/DxrTests/receiver-motion-normal.png", {204, 204, 204, 255});
+    receiver.SetNormalMap("generated/Captures/DxrTests/receiver-motion-normal.png", 1); TextureManager::GetInstance()->FlushUploads(); indirect.ResetHistory();
     for (uint32_t frame = 0; frame < 3; ++frame) {
         DrawReflectionFrame(dxCommon, scene, indirect, offscreen, postEffects, motion, camera, objects);
         statistics = ReadTextureCenter(dxCommon, indirect.GetHistoryStatisticsTexture(), "receiver-motion-normal-map-stable.png");
@@ -2718,7 +2718,7 @@ void RunLocalShadowValidation(DirectXCommon* dxCommon) {
     RaytracingTestSceneInputs localSceneInputs; localSceneInputs.raytracingObjects = &objects;
     source = DrawReflectionFrame(dxCommon, scene, shadows, offscreen, postEffects, motion, camera, localRasterObjects, 0, nullptr, &shadows, true, &localSceneInputs);
     RequireColor(ReadTextureCenter(dxCommon, source, "local-shadow-undrawn-caster.png"), baseline - capture, "Undrawn local caster stopped blocking point light");
-    scene.ReadCompleted(); shadows.ReadCompleted(); std::ofstream report("runtime/captures/DxrTests/local-shadow-result.txt");
+    scene.ReadCompleted(); shadows.ReadCompleted(); std::ofstream report("generated/Captures/DxrTests/local-shadow-result.txt");
     report.setf(std::ios::unitbuf);
     report << "traceMs=" << shadows.GetTraceGpuTimeMs() << " compositeMs=" << shadows.GetCompositeGpuTimeMs()
         << " targetsBytes=" << shadows.GetAllocationBytes() << " captureBytes=" << offscreen.GetLocalLightAllocationBytes() << '\n';
@@ -2992,7 +2992,7 @@ void RunSkinningValidation(DirectXCommon* dxCommon) {
     CheckValidationMessages(validationQueue.Get());
     RequireColor(initialMask, {0, 0, 0}, "GPU-skinned caster did not shadow receiver");
     scene.ReadCompleted(); shadows.ReadCompleted();
-    std::ofstream report("runtime/captures/DxrTests/skinning-result.txt");
+    std::ofstream report("generated/Captures/DxrTests/skinning-result.txt");
     report << "initialBuildMs=" << scene.GetBuildGpuTimeMs() << " dynamicBufferBytes=" << dynamicBufferBytes
         << " dynamicAllocationBytes=" << scene.GetStatistics().dynamicAllocationBytes << '\n';
     first.SetOpacity(0.25f);
@@ -3064,9 +3064,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int) {
     int exitCode = 0;
     Logger::Initialize();
     try {
-        std::filesystem::create_directories("runtime/captures/DxrTests");
-        std::filesystem::remove("runtime/captures/DxrTests/failure.txt");
-        std::filesystem::remove("runtime/captures/DxrTests/native-failure.txt");
+        std::filesystem::create_directories("generated/Captures/DxrTests");
+        std::filesystem::remove("generated/Captures/DxrTests/failure.txt");
+        std::filesystem::remove("generated/Captures/DxrTests/native-failure.txt");
         RunSceneBoundsValidation();
         Microsoft::WRL::ComPtr<ID3D12Debug> debug;
         if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); }
@@ -3127,7 +3127,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int) {
         CheckValidationMessages(infoQueue.Get());
     } catch (const std::exception& error) {
         Logger::Error(error.what());
-        std::ofstream report("runtime/captures/DxrTests/failure.txt");
+        std::ofstream report("generated/Captures/DxrTests/failure.txt");
         report << error.what();
         exitCode = 1;
     }

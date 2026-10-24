@@ -368,11 +368,11 @@ bool ScreenshotManager::SavePng(const std::uint8_t* sourcePixels)
 std::filesystem::path ScreenshotManager::CreatePngPath() const
 {
     const std::filesystem::path directory =
-        std::filesystem::current_path() / "Screenshots";
+        std::filesystem::current_path() / "generated" / "Screenshots";
     std::error_code error;
     std::filesystem::create_directories(directory, error);
     if (error) {
-        Logger::Error("Could not create Screenshots directory");
+        Logger::Error("Could not create generated/Screenshots directory");
         return {};
     }
 

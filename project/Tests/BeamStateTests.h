@@ -55,6 +55,29 @@ inline bool RunBeamStateTests()
     boss.player_ = &player;
     boss.segments_.resize(1);
     boss.segments_[0].position = { 0.0f, 0.0f, 10.0f };
+    // 実際に命中させてから非発射フェーズへ移し、命中通知だけが解除されること。
+    auto& hitState = boss.battleState_.beamActionState_;
+    for (const auto nextPhase : { FearWormBeamState::Phase::FadeOut,
+        FearWormBeamState::Phase::Wait, FearWormBeamState::Phase::Charge }) {
+        hitState.ChangePhase(boss.battleState_, boss, FearWormBeamState::Phase::Fire);
+        hitState.beam_.SetDimensions(10.0f, 2.0f);
+        hitState.beam_.SetPose(player.GetTranslate(), { 0.0f, 0.0f, -1.0f });
+        hitState.beam_.CheckCollision(&player);
+        if (!hitState.IsHittingPlayer()) return false;
+        hitState.ChangePhase(boss.battleState_, boss, nextPhase);
+        if (hitState.IsHittingPlayer() || hitState.beam_.GetLength() != 10.0f
+            || hitState.beam_.GetWidth() != 2.0f) return false;
+    }
+    hitState.Reset();
+    hitState.ChangePhase(boss.battleState_, boss, FearWormBeamState::Phase::Fire);
+    hitState.elapsedSeconds_ = 3.0f;
+    hitState.beam_.SetDimensions(400.0f, 3.5f);
+    hitState.beam_.SetPose(player.GetTranslate(), { 0.0f, 0.0f, -1.0f });
+    hitState.beam_.CheckCollision(&player);
+    if (!hitState.IsHittingPlayer()) return false;
+    hitState.Update(boss.battleState_, boss);
+    if (hitState.phase_ != FearWormBeamState::Phase::FadeOut || hitState.IsHittingPlayer()) return false;
+    hitState.Reset();
     boss.battleState_.beamActionState_.ChangePhase(boss.battleState_, boss, FearWormBeamState::Phase::Wait);
     boss.battleState_.beamActionState_.elapsedSeconds_ = 3.99f;
     boss.battleState_.beamActionState_.UpdatePhase(boss.battleState_, boss, 0.01f);

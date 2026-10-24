@@ -20,11 +20,19 @@ public:
     Vector3 GetAimTarget(size_t tentacle) const;
     void Start(IceJellyfish& boss);
     void Update(IceJellyfish& boss, float deltaTimeSeconds);
+    void EmitPendingVolleys(IceJellyfish& boss);
 
 private:
     friend bool RunJellyfishAttackTests();
     friend bool RunIceJellyfishStateTests();
-    void FireVolley(IceJellyfish& boss);
+    struct PendingVolley {
+        int32_t volley;
+        int32_t tentacle;
+        Vector3 target;
+    };
+    void FireVolley(IceJellyfish& boss, const PendingVolley& shot);
+    std::array<PendingVolley, 3> pendingVolleys_ {};
+    size_t pendingVolleyCount_ = 0;
     Vector3 lockedTarget_ {};
     std::array<int32_t, 3> iceSpearTentacles_ { -1, -1, -1 };
     int32_t iceSpearVolley_ = -1;

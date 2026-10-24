@@ -67,7 +67,7 @@ NaN・無限大、ゼロの方向、不正な距離や角度を拒否します�
 | スポットライト、影あり | 0.181ms |
 | ポイント＋スポット、両方影あり | 0.225ms |
 
-これは実ゲームの保証値ではありません。ライトと影の差は影なしを基準に約0.05ms／約0.03msですが、実ゲームでは影を描く物体数に応じて増えます。テスト結果は `runtime/captures/ShadowMapTests/local-light-timing.txt` に出力します。
+これは実ゲームの保証値ではありません。ライトと影の差は影なしを基準に約0.05ms／約0.03msですが、実ゲームでは影を描く物体数に応じて増えます。テスト結果は `generated/Captures/ShadowMapTests/local-light-timing.txt` に出力します。
 
 ## 間接光・大気散乱・Clustered（④〜⑥）
 
@@ -115,7 +115,7 @@ lightManager->SetClusteredLightingEnabled(true);
 
 `ShadowMapTests` でSSAOの効果、静止画像の一致、強度0／法線欠落のフォールバック、大気散乱と環境光の画像差、38灯のClustered ON／OFFを確認します。カメラ3方向でClusteredと全走査の画像が完全一致することを必須にしています。
 
-測定は1280×720、床＋氷モデル、デバッグレイヤー有効、ウォームアップ後20回平均です。GPUの物体描画＋後処理、CPUのクラスタ分類を別々に記録します。実ゲームの性能保証ではありません。結果は `runtime/captures/ShadowMapTests/screen-lighting-report.txt` と `clustered-lighting-report.txt` に出力します。
+測定は1280×720、床＋氷モデル、デバッグレイヤー有効、ウォームアップ後20回平均です。GPUの物体描画＋後処理、CPUのクラスタ分類を別々に記録します。実ゲームの性能保証ではありません。結果は `generated/Captures/ShadowMapTests/screen-lighting-report.txt` と `clustered-lighting-report.txt` に出力します。
 
 今回の測定値（GPUは物体描画＋後処理を含む）：
 

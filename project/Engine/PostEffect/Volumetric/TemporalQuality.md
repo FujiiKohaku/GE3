@@ -48,7 +48,7 @@ volume->SetScatteringAlbedo(0.9f);
 
 `ShadowMapTests.exe --volumetric` は既存の霧・太陽光・スポット影の検証へ進む入口です。前段の材質・HDR・半球色・ブルーム画像比較を省きます。既存の静止画像一致は時間蓄積OFFで行い、球／箱／高さ、カメラ精度、影のON/OFF、欠けた影入力、設定リセット、静止ノイズなどを検証します。通常の全ShadowMap検証では前段も引き続き行います。
 
-結果とPNGはruntime/captures/DxrTests/volumetric-quality-result.txtと同ディレクトリ、影との連動の結果はruntime/captures/ShadowMapTestsです。新規検証はD3D12のERROR/CORRUPTIONを失敗扱い、既存ShadowMap検証は警告も確認します。
+結果とPNGはgenerated/Captures/DxrTests/volumetric-quality-result.txtと同ディレクトリ、影との連動の結果はgenerated/Captures/ShadowMapTestsです。新規検証はD3D12のERROR/CORRUPTIONを失敗扱い、既存ShadowMap検証は警告も確認します。
 
 2026-10-09、RTX 4060 Laptop GPUで新規の霧GPU検証、全DXR GPU検証、ShadowMapTestsの霧選択検証が終了コード0で成功しました。Developmentビルドも成功しています。一様霧の透過率はGPUで0.904785、数式で0.904837でした。8サンプルの薄い球のMSEは0.000647448から0.000028344へ約95.6%減りました。単純な検証シーンの結果です。単独実行時のDebug計測は探索約0.162ms、履歴約0.185ms、合成約0.221msでした。通常ゲームでの追加時間を保証する測定ではありません。
 

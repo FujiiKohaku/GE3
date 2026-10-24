@@ -28,10 +28,10 @@ void FearWormSpiralBarrageState::Update(FearWormBattleState& battle, FearWormEne
 {
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
     elapsedSeconds_ += deltaTimeSeconds;
-    spiralAngle_ += deltaTimeSeconds * 2.5f * boss.MovementSpeedRate();
+    spiralAngle_ += deltaTimeSeconds * 2.5f * boss.GetAttackMovementSpeedRate();
     barrageAngle_ += deltaTimeSeconds * 4.0f;
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
-    battle.UpdateBattleMovement(boss, CalculateTarget(context, elapsedSeconds_, spiralAngle_), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
+    battle.UpdateBattleMovement(boss, CalculateTarget(context, elapsedSeconds_, spiralAngle_), boss.GetAttackMovementSpeedRate());
     if (battle.CanFire(boss)) {
         FireBarrage(battle, boss);
     }
@@ -59,7 +59,7 @@ void FearWormSpiralBarrageState::FireBarrage(FearWormBattleState& battle, FearWo
     }
 
     Vector3 headPos = boss.GetPosition();
-    Vector3 playerPos = boss.player_->GetTranslate();
+    Vector3 playerPos = boss.GetAttackTargetPosition();
 
     // ボスからプレイヤーへの方向ベクトルを基準にする（プレイヤー狙い補正）
     Vector3 toPlayer = NormalizeSafe(playerPos - headPos);

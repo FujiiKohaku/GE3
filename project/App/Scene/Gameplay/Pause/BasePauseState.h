@@ -4,6 +4,13 @@
 #include <functional>
 #include <string>
 
+namespace BasePauseStateTuning {
+// Named tuning values; keep literals and their types unchanged.
+inline constexpr float kDefaultsCameraDistanceDefault = 35.0f;
+inline constexpr int kDefaultGifRecordingSeconds = 5;
+inline constexpr float kDefaultCameraFovDegrees = 25.783f;
+}
+
 enum class PauseViewState { Menu, Settings, Camera, Graphics };
 struct PauseStateInput {
     bool up = false, down = false, left = false, right = false;
@@ -30,10 +37,10 @@ struct PauseDisplayInput {
     bool invertedPitch;
     float padSensitivity;
     float mouseSensitivity;
-    int gifRecordingSeconds = 5;
+    int gifRecordingSeconds = BasePauseStateTuning::kDefaultGifRecordingSeconds;
     std::string cameraPreset = "標準";
-    float cameraDistance = 35.0f;
-    float cameraFovDegrees = 25.783f;
+    float cameraDistance = BasePauseStateTuning::kDefaultsCameraDistanceDefault;
+    float cameraFovDegrees = BasePauseStateTuning::kDefaultCameraFovDegrees;
     bool cameraSaveSucceeded = true;
     std::string antiAliasing = "OFF";
     std::string renderQuality = "カスタム";

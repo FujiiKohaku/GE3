@@ -20,11 +20,37 @@ PlayerWeaponController::PlayerWeaponController(const Player& player)
 {
 }
 
-// 発射回数をリセットし、プレイヤー弾の表示に使うモデルを読み込む。
+// 前回の戦闘状態を破棄し、プレイヤー弾の表示に使うモデルを読み込む。
 void PlayerWeaponController::Initialize()
 {
-    shotsFired_ = 0;
+    ResetCombatState();
     bulletModel_ = ModelManager::GetInstance()->Load("Enemy/Bullet/LowPolySphere/lowPolySphere.obj");
+}
+
+void PlayerWeaponController::ResetCombatState()
+{
+    // ミサイルの航跡など、弾種固有の終了処理を実行してから破棄する。
+    for (const auto& bullet : bullets_) {
+        bullet->SetDead();
+    }
+    bullets_.clear();
+    homingLock_.ClearHomingTargets();
+    weaponHeat_ = PlayerWeaponHeat{};
+    shotsFired_ = 0;
+    currentWeapon_ = kWeaponNormalBullet;
+    missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
+    // 選択されていない武器も作り直し、連射間隔の経過状態を残さない。
+    weapons_ = {
+        std::make_unique<NormalPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
+        std::make_unique<HomingPlayerWeapon>(), std::make_unique<MinigunPlayerWeapon>() };
+#ifdef _DEBUG
+    shouldDrawDebugLines_ = false;
+    debugAimRayOrigin_ = {};
+    debugAimPoint_ = {};
+    debugMuzzlePosition_ = {};
+    debugDrawRayOrigin_ = {};
+    debugDrawAimPoint_ = {};
+#endif
 }
 
 // 新しいカメラを記録し、すでに発射済みの弾にも同じカメラを設定する。

@@ -64,6 +64,23 @@
 #include "App/Game/Boss/IceJellyfish/IceJellyfish.h"
 #include "App/Game/Boss/Common/BaseBoss.h"
 
+namespace GamePlaySceneTuning {
+// Named tuning values; keep literals and their types unchanged.
+inline constexpr Vector4 kGetShadowSettingslightColor = { 0.90f, 0.96f, 1.0f, 1.0f };
+inline constexpr Vector4 kGetShadowSettingsambientColor = { 0.40f, 0.52f, 0.68f, 0.24f };
+inline constexpr float kDefaultsRailSpeedDefault = 0.5f;
+inline constexpr float kDefaultsRailDirectionSampleDistanceDefault = 5.0f;
+inline constexpr float kDefaultsCameraLookAheadDistanceDefault = 30.0f;
+inline constexpr float kDefaultsCameraOffsetY = 5.0f;
+inline constexpr float kDefaultsCameraOffsetZ = 30.0f;
+inline constexpr float kDefaultsCameraBackwardOffsetDefault = 35.0f;
+inline constexpr float kDefaultsCameraHeightFollowFactorDefault = 0.3f;
+inline constexpr float kDefaultsPointRadiusDefault = 10.0f;
+inline constexpr float kDefaultsSpotDistanceDefault = 7.0f;
+inline constexpr float kDefaultsCollisionDrawDistanceDefault = 500.0f;
+inline constexpr float kDefaultsPaintEffectDurationDefault = 5.5f;
+}
+
 struct LevelData;
 
 class GamePlayScene : public BaseScene {
@@ -254,9 +271,9 @@ private:
     std::unique_ptr<EditorManager> editorManager_;
     std::unique_ptr<Rail> rail_;
     float railDistance_ = 0.0f;
-    float railSpeed_ = 0.5f;
-    float railDirectionSampleDistance_ = 5.0f;
-    float cameraLookAheadDistance_ = 30.0f;
+    float railSpeed_ = GamePlaySceneTuning::kDefaultsRailSpeedDefault;
+    float railDirectionSampleDistance_ = GamePlaySceneTuning::kDefaultsRailDirectionSampleDistanceDefault;
+    float cameraLookAheadDistance_ = GamePlaySceneTuning::kDefaultsCameraLookAheadDistanceDefault;
     // ------------------------------
     // カメラ / デバッグカメラコントローラー
     // ------------------------------
@@ -388,8 +405,8 @@ private:
     EffectHandle playerHeatSteamHandle_ = kInvalidEffectHandle;
     Vector3 cameraOffset_ = {
         0.0f,
-        5.0f,
-        -30.0f
+        GamePlaySceneTuning::kDefaultsCameraOffsetY,
+        -GamePlaySceneTuning::kDefaultsCameraOffsetZ
     };
 
     float followX_ = 0.35f;
@@ -408,7 +425,7 @@ private:
     Model* fearWormEnemyModel_ = nullptr;
 
     // カメラオフセット定数
-    float cameraBackwardOffset_ = 35.0f;
+    float cameraBackwardOffset_ = GamePlaySceneTuning::kDefaultsCameraBackwardOffsetDefault;
     CameraPreferences cameraPreferences_;
     bool cameraSaveSucceeded_ = true;
     void ApplyCameraPreferences();
@@ -419,7 +436,7 @@ private:
     static constexpr float kAllRangeCameraUpwardOffset = 2.0f;
 
     // カメラパラメータ (プレイヤー上下移動連動用)
-    float cameraHeightFollowFactor_ = 0.3f;
+    float cameraHeightFollowFactor_ = GamePlaySceneTuning::kDefaultsCameraHeightFollowFactorDefault;
     float cameraLookUpFactor_ = 0.595f;
     float cameraHorizontalFollowFactor_ = 0.2f;
     float cameraLookHorizontalFactor_ = 0.35f;
@@ -428,22 +445,22 @@ private:
     std::unique_ptr<BossEncounterController> bossController_;
     bool showIceJellyfishCollision_ = true;
     bool lightEnabled_ = true;
-    Vector4 lightColor_ = { 0.90f, 0.96f, 1.0f, 1.0f };
+    Vector4 lightColor_ = GamePlaySceneTuning::kGetShadowSettingslightColor;
     float lightIntensity_ = 0.90f;
     Vector3 lightDir_ = { -0.35f, -0.82f, 0.45f };
-    Vector4 ambientColor_ = { 0.40f, 0.52f, 0.68f, 0.24f };
+    Vector4 ambientColor_ = GamePlaySceneTuning::kGetShadowSettingsambientColor;
     bool pointEnabled_ = true;
     Vector4 pointColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
     Vector3 pointPos_ = { 0.0f, 2.0f, 0.0f };
     float pointIntensity_ = 1.0f;
-    float pointRadius_ = 10.0f;
+    float pointRadius_ = GamePlaySceneTuning::kDefaultsPointRadiusDefault;
     float pointDecay_ = 1.0f;
     bool spotEnabled_ = true;
     Vector4 spotColor_ = { 1.0f, 1.0f, 1.0f, 1.0f };
     Vector3 spotPos_ = { 0.0f, 0.0f, 0.0f };
     Vector3 spotDir_ = { -1.0f, 0.0f, 0.0f };
     float spotIntensity_ = 4.0f;
-    float spotDistance_ = 7.0f;
+    float spotDistance_ = GamePlaySceneTuning::kDefaultsSpotDistanceDefault;
     float spotDecay_ = 2.0f;
     float spotAngleDeg_ = 60.0f;
     float spotFalloffStartDeg_ = 30.0f;
@@ -457,7 +474,7 @@ private:
     bool showStageCollision_ = true;
     bool showBulletCollision_ = false;
     bool collisionOverlay_ = true;
-    float collisionDrawDistance_ = 500.0f;
+    float collisionDrawDistance_ = GamePlaySceneTuning::kDefaultsCollisionDrawDistanceDefault;
 #endif
 
     // カメラシェイク演出用
@@ -468,7 +485,7 @@ private:
     // ペイントポストエフェクト用
     bool isPaintEffectActive_ = false;
     float paintEffectTimer_ = 0.0f;
-    float paintEffectDuration_ = 5.5f;
+    float paintEffectDuration_ = GamePlaySceneTuning::kDefaultsPaintEffectDurationDefault;
 
     // 水柱ヒット時の画面水滴用
     float waterDropEffectTimer_ = 0.0f;

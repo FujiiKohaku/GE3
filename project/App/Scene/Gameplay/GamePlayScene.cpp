@@ -46,6 +46,309 @@
 #include <cmath>
 
 namespace {
+// Named tuning values; keep literals and their types unchanged.
+constexpr Vector3 kInitializeCameraTranslate = { 0.0f, 3.0f, -30.0f };
+constexpr Vector3 kInitializeAimCameraTranslate = { 0.0f, 3.0f, -30.0f };
+constexpr Vector4 kInitializeMarkerColor = { 1.0f, 0.15f, 0.05f, 0.95f };
+constexpr Vector4 kInitializePauseMenuPanelSpriteColor = { 0.06f, 0.06f, 0.09f, 0.92f };
+constexpr Vector4 kInitializePauseResumeBtnSpriteColor = { 0.18f, 0.45f, 0.75f, 0.90f };
+constexpr Vector4 kInitializePauseRetryBtnSpriteColor = { 0.18f, 0.45f, 0.75f, 0.90f };
+constexpr Vector4 kInitializePauseTitleBtnSpriteColor = { 0.75f, 0.22f, 0.22f, 0.90f };
+constexpr Vector4 kInitializePauseControlBtnSpriteColor = { 0.25f, 0.55f, 0.45f, 0.90f };
+constexpr Vector4 kInitializePauseTitleTextColor = { 0.35f, 0.85f, 1.0f, 1.0f };
+constexpr Vector4 kInitializePauseSensitivityTextColor = { 0.75f, 0.95f, 1.0f, 1.0f };
+constexpr Vector4 kInitializeSpriteColor = {0.18f, 0.45f, 0.75f, 0.95f};
+constexpr Vector2 kInitializeScoreHudBgSpritePosition = { 22.0f, 22.0f };
+constexpr Vector2 kInitializeScoreHudLabelTextPosition = { 36.0f, 28.0f };
+constexpr Vector2 kInitializeScoreHudValueTextPosition = { 36.0f, 50.0f };
+constexpr Vector4 kInitializeFloorObjColor = { 0.54f, 0.73f, 0.86f, 1.0f };
+constexpr Vector4 kUpdateObjectColor = { 0.6f, 2.0f, 1.3f, 1.0f };
+constexpr Vector3 kInitializeOceanLifeFishScale = { 0.22f, 0.22f, 0.22f };
+constexpr Vector3 kInitializeOceanLifeBirdScale = { 1.8f, 0.12f, 0.45f };
+constexpr Vector4 kInitializeOceanLifeBirdColor = { 0.92f, 0.96f, 1.0f, 1.0f };
+constexpr Vector3 kInitializeRecoveryItemsObjectScale = { 0.75f, 0.75f, 0.75f };
+constexpr Vector4 kInitializeTutorialPresentationTextColor = { 0.35f, 0.90f, 1.0f, 1.0f };
+constexpr Vector4 kInitializeTutorialPresentationTutorialExitOverlayColor = { 0.015f, 0.02f, 0.04f, 0.0f };
+constexpr Vector4 kFrozenObjectColor = { 0.82f, 0.94f, 1.0f, 1.0f };
+constexpr Vector4 kDestructibleObjectColor = { 0.30f, 0.20f, 0.14f, 1.0f };
+constexpr Vector4 kLaserHazardColor = { 1.0f, 0.03f, 0.02f, 1.0f };
+constexpr Vector4 kFieldTriggerColor = { 0.15f, 0.75f, 1.0f, 0.65f };
+constexpr Vector3 kFallbackFirstRecoveryPosition = { -5.0f, 1.5f, 410.0f };
+constexpr Vector3 kFallbackSecondRecoveryPosition = { 5.0f, 1.5f, 1040.0f };
+constexpr Vector3 kFallbackFinalRecoveryPosition = { 0.0f, 5.0f, 1700.0f };
+constexpr Vector3 kInitializetScale = { 100.0f, 100.0f, 100.0f };
+constexpr Vector3 kHangarFogColor = { 0.68f, 0.65f, 0.58f };
+constexpr Vector3 kFrozenFogColor = { 0.68f, 0.82f, 0.94f };
+constexpr Vector3 kFrozenFogNoiseVelocity = { 0.8f, 0.0f, 0.3f };
+constexpr Vector3 kInitializeLightMistCenter = Vector3 { 0.0f, 25.0f, 0.0f };
+constexpr Vector4 kBossSpotLightColor = { 0.72f, 0.86f, 1.0f, 1.0f };
+constexpr Vector3 kBossSpotLightOffset = Vector3 { -55.0f, 100.0f, -45.0f };
+constexpr Vector3 kBossSpotLightDirection = { 0.4f, -0.8f, 0.3f };
+constexpr Vector4 kBossPointLightColor = { 0.48f, 0.32f, 1.0f, 1.0f };
+constexpr Vector3 kBossPointLightOffset = Vector3 { 45.0f, 20.0f, -35.0f };
+constexpr Vector4 kSelectedPauseRowColor = Vector4{0.28f, 0.65f, 0.85f, 0.95f};
+constexpr Vector4 kUnselectedPauseRowColor = Vector4{0.18f, 0.32f, 0.45f, 0.9f};
+constexpr Vector4 kInitializeTutorialPresentationSetSceneClearColor = { 0.005f, 0.012f, 0.035f, 1.0f };
+constexpr Vector3 kTutorialIntroCameraEye = Vector3 { 0.0f, 10.0f, -55.0f };
+constexpr Vector4 kTrainingArchitectureColor = { 0.008f, 0.022f, 0.050f, 1.0f };
+constexpr Vector4 kTrainingEdgesColor = { 0.10f, 1.2f, 1.6f, 1.0f };
+constexpr Vector4 kTrainingRingsColor = { 0.12f, 1.6f, 2.0f, 1.0f };
+constexpr Vector4 kTrainingLaunchGateColor = { 0.04f, 0.12f, 0.18f, 1.0f };
+constexpr float kMoveZOffset = 85.0f;
+constexpr float kTutorialTargetSlotCenterFraction = 0.5f;
+constexpr float kTutorialTargetSpacing = 10.0f;
+constexpr float kTutorialTargetSwayFrequency = 0.65f;
+constexpr float kTutorialTargetSwayAmplitude = 4.0f;
+constexpr float kHudCornerThickness = 6.0f;
+constexpr float kInitializeHudFrameYOffset = 6.0f;
+constexpr float kFallbackFirstSwarmDistance = 260.0f;
+constexpr float kFallbackSecondSwarmDistance = 620.0f;
+constexpr float kFallbackThirdSwarmDistance = 980.0f;
+constexpr float kFallbackFourthSwarmDistance = 1340.0f;
+constexpr float kFallbackFifthSwarmDistance = 1560.0f;
+constexpr float kFallbackFinalSwarmDistance = 1740.0f;
+constexpr int kInitializeCenterMousePositionXDivisor = 2;
+constexpr int kInitializeCenterMousePositionYDivisor = 2;
+constexpr float kInitializeFogPresetParametersNoiseScaleDefault = 0.025f;
+constexpr float kInitializeFogPresetParametersBaseHeightOffset = 6.0f;
+constexpr float kInitializeFogPresetParametersHeightDensityDefault = 0.0015f;
+constexpr float kInitializeFogPresetParametersHeightFalloffDefault = 0.16f;
+constexpr float kInitializeFootFogCenterY = 4.0f;
+constexpr float kBossSpotLightIntensity = 0.65f;
+constexpr float kBossSpotLightDistance = 240.0f;
+constexpr float kBossSpotLightDecay = 2.0f;
+constexpr float kBossSpotLightCosAngle = 0.72f;
+constexpr float kBossPointLightIntensity = 0.45f;
+constexpr float kBossPointLightRadius = 180.0f;
+constexpr float kBossPointLightDecay = 2.0f;
+constexpr float kInitializeAimSpritePositionX = 2.0f;
+constexpr float kInitializeAimSpritePositionY = 2.0f;
+constexpr float kInitializePauseMenuPanelSpritePositionX = 2.0f;
+constexpr float kInitializePauseMenuPanelSpritePositionY = 2.0f;
+constexpr float kPauseResumeHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseResumeVerticalCenterDivisor = 2.0f;
+constexpr float kPauseResumeRowOffset = 70.0f;
+constexpr float kInitializePauseRetryBtnSpritePositionX = 2.0f;
+constexpr float kInitializePauseRetryBtnSpritePositionY = 2.0f;
+constexpr float kPauseTitleHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseTitleVerticalCenterDivisor = 2.0f;
+constexpr float kPauseTitleMenuRowOffset = 70.0f;
+constexpr float kPauseControlHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseControlVerticalCenterDivisor = 2.0f;
+constexpr float kPauseControlRowOffset = 70.0f;
+constexpr float kPauseTitleBottomRowOffset = 210.0f;
+constexpr float kPauseTitleTextHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseTitleTextVerticalCenterDivisor = 2.0f;
+constexpr float kPauseTitleTextRowOffset = 135.0f;
+constexpr float kPauseResumeTextHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseResumeTextVerticalCenterDivisor = 2.0f;
+constexpr float kPauseResumeTextRowOffset = 70.0f;
+constexpr float kInitializePauseRetryTextPositionX = 2.0f;
+constexpr float kInitializePauseRetryTextPositionY = 2.0f;
+constexpr float kPauseTitleBtnTextHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseTitleBtnTextVerticalCenterDivisor = 2.0f;
+constexpr float kPauseTitleTextMenuRowOffset = 70.0f;
+constexpr float kPauseControlTextHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseControlTextVerticalCenterDivisor = 2.0f;
+constexpr float kPauseControlTextRowOffset = 70.0f;
+constexpr float kPauseTitleTextBottomRowOffset = 210.0f;
+constexpr float kPauseSensitivityHorizontalCenterDivisor = 2.0f;
+constexpr float kPauseSensitivityVerticalCenterDivisor = 2.0f;
+constexpr float kPauseSensitivityRowOffset = 140.0f;
+constexpr int kInitializeTextPositionX = 2;
+constexpr int kInitializeTextPositionY = 2;
+constexpr float kHudFrameLeftInset = 20.0f;
+constexpr float kHudFrameBottomInset = 20.0f;
+constexpr float kOverheatFrameWidth = 288.0f;
+constexpr float kOverheatFrameHeight = 84.0f;
+constexpr float kInitializeWeaponHudBgSpritePositionX = 24.0f;
+constexpr float kInitializeWeaponHudBgSpritePositionY = 24.0f;
+constexpr float kInitializeWeaponHudLabelTextPositionX = 40.0f;
+constexpr float kInitializeWeaponHudLabelTextPositionY = 92.0f;
+constexpr float kInitializeWeaponHudNameTextPositionX = 40.0f;
+constexpr float kInitializeWeaponHudNameTextPositionY = 68.0f;
+constexpr float kBossHpFrameRightInset = 18.0f;
+constexpr float kBossHpFrameTopInset = 8.0f;
+constexpr float kBossHpFrameWidth = 268.0f;
+constexpr float kBossHpFrameHeight = 70.0f;
+constexpr float kInitializePlayerHpBgSpritePositionX = 30.0f;
+constexpr float kInitializePlayerHpBgSpritePositionY = 40.0f;
+constexpr float kInitializePlayerHpBarSpritePositionX = 30.0f;
+constexpr float kInitializePlayerHpBarSpritePositionY = 40.0f;
+constexpr float kInitializePlayerHpTextPositionX = 30.0f;
+constexpr float kInitializePlayerHpTextPositionY = 12.0f;
+constexpr float kInitializeBossHeadHpBgSpriteSizeY = 14.0f;
+constexpr float kInitializeBossHeadHpBgSpritePositionY = 65.0f;
+constexpr float kInitializeBossHeadHpBarSpriteSizeY = 14.0f;
+constexpr float kInitializeBossHeadHpBarSpritePositionY = 65.0f;
+constexpr float kInitializeBossBodyHpBgSpriteSizeY = 14.0f;
+constexpr float kInitializeBossBodyHpBgSpritePositionY = 91.0f;
+constexpr float kInitializeBossBodyHpBarSpriteSizeY = 14.0f;
+constexpr float kInitializeBossBodyHpBarSpritePositionY = 91.0f;
+constexpr float kInitializeBossNameTextPositionY = 12.0f;
+constexpr float kInitializeBossHeadHpTextPositionX = 12.0f;
+constexpr float kInitializeBossHeadHpTextPositionY = 60.0f;
+constexpr float kInitializeBossBodyHpTextPositionX = 12.0f;
+constexpr float kInitializeBossBodyHpTextPositionY = 86.0f;
+constexpr float kInitializePlayerRailMinimumHeightOffset = 3.0f;
+constexpr float kInitializeGetFlightForwardMultiplier = 60.0f;
+constexpr float kInitializeSideOffsetOffset = 8.0f;
+constexpr float kInitializeSideOffsetDefault = 8.0f;
+constexpr float kInitializePaintEnemyPositionMultiplier = 2.0f;
+constexpr float kInitializeOceanWidthDefault = 1000.0f;
+constexpr float kInitializeOceanWidthMultiplier = 2.0f;
+constexpr float kInitializeOceanWidthOffset = 2000.0f;
+constexpr float kOceanWaveAmplitude = 0.65f;
+constexpr float kFrozenFloorRoughness = 0.90f;
+constexpr float kFrozenFloorSpecularStrength = 0.10f;
+constexpr float kInitializeFloorObjTranslateZ = 0.5f;
+constexpr float kInitializeFloorObjRotateX = 2.0f;
+constexpr float kInitializeFloorObjScaleX = 1000.0f;
+constexpr float kDefaultFloorRoughness = 0.18f;
+constexpr float kDefaultFloorSpecularStrength = 0.65f;
+constexpr int kUpdateWidthDivisor = 2;
+constexpr int kUpdateHeightDivisor = 2;
+constexpr float kUpdatePlayerDeathCameraLookTargetDefault = 0.15f;
+constexpr float kUpdateCameraShakeTimeDefault = 0.45f;
+constexpr float kUpdateCameraShakeDurationDefault = 0.45f;
+constexpr float kUpdatePlayerDeathAfterExplosionTimerThreshold = 0.8f;
+constexpr float kUpdateFloorObjTranslateZ = 0.5f;
+constexpr float kUpdateFloorObjScaleX = 1000.0f;
+constexpr float kUpdateDissolveProgressDivisor = 2.0f;
+constexpr float kUpdateTutorialGateDistanceOffset = 150.0f;
+constexpr float kUpdateObjectTranslateZ = 3400.0f;
+constexpr float kUpdateForwardMultiplier = 20.0f;
+constexpr float kForwardDebugLineWidth = 3.0f;
+constexpr float kUpdateSonicBoomTimerDefault = 0.85f;
+constexpr float kUpdateBoomProgressDivisor = 0.85f;
+constexpr float kUpdateDisplayedPlayerHpRatioDefault = 0.12f;
+constexpr float kUpdateBarWidthDefault = 220.0f;
+constexpr float kUpdatePlayerHpBarSpriteSizeY = 22.0f;
+constexpr float kUpdateHpRatioThreshold = 0.45f;
+constexpr float kUpdateDistanceThreshold = 40.0f;
+constexpr float kUpdateStrengthThreshold = 0.04f;
+constexpr float kUpdateSprayPositionYOffset = 0.12f;
+constexpr int kBossContactDamage = 2;
+constexpr float kPointRadiusMinimum = 0.1f;
+constexpr float kPointRadiusMaximum = 30.0f;
+constexpr float kSpotDistanceMinimum = 0.1f;
+constexpr float kSpotDistanceMaximum = 30.0f;
+constexpr float kUpdateCameraCurrentFovYOffset = 8.0f;
+constexpr float kUpdateOceanLifePositionYOffset = 0.45f;
+constexpr float kUpdateOceanLifePositionYMultiplier = 2.4f;
+constexpr int kFishDepthBandCount = 3;
+constexpr float kFishDepthBandSpacing = 0.18f;
+constexpr float kUpdateOceanLifePhaseMultiplier = 0.32f;
+constexpr float kFishSchoolCooldownBase = 12.0f;
+constexpr float kFishSchoolCooldownVariationFrequency = 1.73f;
+constexpr float kFishSchoolCooldownVariationRange = 10.0f;
+constexpr float kBirdBaseHeight = 30.0f;
+constexpr int kBirdHeightBandCount = 4;
+constexpr float kBirdHeightBandSpacing = 6.0f;
+constexpr float kBirdBobbingFrequency = 1.7f;
+constexpr float kBirdBobbingAmplitude = 2.0f;
+constexpr float kBirdBankingFrequency = 3.2f;
+constexpr float kBirdBankingAmplitude = 0.18f;
+constexpr float kUpdateRecoveryItemsItemRotationXMultiplier = 0.65f;
+constexpr float kUpdateBossCutInBossCutInPreviousTimeScaleMultiplier = 0.22f;
+constexpr float kTutorialInitializingEndSeconds = 1.5f;
+constexpr float kTutorialStartTitleEndSeconds = 2.3f;
+constexpr float kTutorialControlsEnableSeconds = 1.5f;
+constexpr float kUpdateTutorialPresentationTutorialExitOverlayColorRed = 0.015f;
+constexpr float kUpdateTutorialPresentationTutorialExitOverlayColorGreen = 0.02f;
+constexpr float kUpdateTutorialPresentationTutorialExitOverlayColorBlue = 0.04f;
+constexpr float kUpdateBossHpHudDisplayedBossHeadHpRatioDefault = 0.10f;
+constexpr float kUpdateBossHpHudDisplayedBossBodyHpRatioDefault = 0.10f;
+constexpr float kUpdateBossHpHudBossHeadHpBarSpriteSizeY = 14.0f;
+constexpr float kUpdateBossHpHudBossBodyHpBarSpriteSizeY = 14.0f;
+constexpr float kBossWarningTextRedGreenComponent = 0.2f;
+constexpr float kBossHeadHpGreenComponent = 0.6f;
+constexpr float kBossHeadHpPanelRed = 0.1f;
+constexpr float kBossHeadHpPanelBlue = 0.3f;
+constexpr float kBossHpPanelAlpha = 0.4f;
+constexpr float kBossHpSeparatorThickness = 2.0f;
+constexpr float kCameraFollowEditorStep = 0.01f;
+constexpr float kDrawImGuiRailDistanceOffset = 130.0f;
+constexpr float kDrawImGuiRailDistanceDefault = 1750.0f;
+constexpr float kObjectPositionXLowerLimitMagnitude = 10000.0f;
+constexpr float kObjectPositionXUpperLimit = 10000.0f;
+constexpr float kObjectPositionYLowerLimitMagnitude = 10000.0f;
+constexpr float kObjectPositionYUpperLimit = 10000.0f;
+constexpr float kObjectPositionZLowerLimitMagnitude = 10000.0f;
+constexpr float kObjectPositionZUpperLimit = 10000.0f;
+constexpr float kObjectRotationXLowerLimitMagnitude = 6.28f;
+constexpr float kObjectRotationXUpperLimit = 6.28f;
+constexpr float kObjectRotationYLowerLimitMagnitude = 6.28f;
+constexpr float kObjectRotationYUpperLimit = 6.28f;
+constexpr float kObjectRotationZLowerLimitMagnitude = 6.28f;
+constexpr float kObjectRotationZUpperLimit = 6.28f;
+constexpr float kObjectScaleXMinimum = 0.01f;
+constexpr float kObjectScaleXMaximum = 100.0f;
+constexpr float kObjectScaleYMinimum = 0.01f;
+constexpr float kObjectScaleYMaximum = 100.0f;
+constexpr float kObjectScaleZMinimum = 0.01f;
+constexpr float kObjectScaleZMaximum = 100.0f;
+constexpr float kDirectionalIntensityMaximum = 5.0f;
+constexpr float kPointPositionXLowerLimitMagnitude = 10.0f;
+constexpr float kPointPositionXUpperLimit = 10.0f;
+constexpr float kPointPositionYLowerLimitMagnitude = 10.0f;
+constexpr float kPointPositionYUpperLimit = 10.0f;
+constexpr float kPointPositionZLowerLimitMagnitude = 10.0f;
+constexpr float kPointPositionZUpperLimit = 10.0f;
+constexpr float kPointIntensityMaximum = 5.0f;
+constexpr float kPointRadiusMinimumAction = 0.1f;
+constexpr float kPointRadiusMaximumAction = 30.0f;
+constexpr float kPointDecayMinimum = 0.1f;
+constexpr float kPointDecayMaximum = 5.0f;
+constexpr float kSpotIntensityMaximum = 10.0f;
+constexpr float kSpotDistanceMinimumAction = 0.1f;
+constexpr float kSpotDistanceMaximumAction = 30.0f;
+constexpr float kSpotDecayMinimum = 0.1f;
+constexpr float kSpotDecayMaximum = 5.0f;
+constexpr float kSpotAngleMinimumDegrees = 2.0f;
+constexpr float kSpotAngleMaximumDegrees = 90.0f;
+constexpr float kCameraLookUpMaximum = 2.0f;
+constexpr float kApplyDevelopmentActionNumberThreshold = 0.5f;
+constexpr float kCameraScaleXMinimum = 0.01f;
+constexpr float kCameraScaleXMaximum = 10.0f;
+constexpr float kCameraScaleYMinimum = 0.01f;
+constexpr float kCameraScaleYMaximum = 10.0f;
+constexpr float kCameraScaleZMinimum = 0.01f;
+constexpr float kCameraScaleZMaximum = 10.0f;
+constexpr float kCollisionDebugMinimumDistance = 20.0f;
+constexpr float kCollisionDebugMaximumDistance = 2000.0f;
+constexpr float kApplyDevelopmentActionRailDistanceDefault = 1750.0f;
+constexpr float kApplyDevelopmentActionBossOffset = 130.0f;
+constexpr float kApplyDevelopmentActionRailDistanceOffset = 200.0f;
+constexpr float kBossCollisionDebugMargin = 100.0f;
+constexpr float kDrawCollisionDebugDebugRendererAddWireSphereMultiplier = 0.5f;
+constexpr float kConfigureGameplayPostEffectsBlurWidthDefault = 0.25f;
+constexpr float kConfigureGameplayPostEffectsBlurWidthOffset = 0.28f;
+constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthDefault = 0.45f;
+constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthOffset = 0.25f;
+constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthFrequency = 8.5f;
+constexpr float kSwarmRailHeightOffset = 2.0f;
+constexpr float kSwarmFallbackHeight = 2.0f;
+constexpr float kPopEnemySwayAmplitude = 8.0f;
+constexpr float kPopEnemyMoveSpeed = 2.0f;
+constexpr float kTrainingDefaultRed = 0.08f;
+constexpr float kTrainingDefaultGreen = 0.60f;
+constexpr float kTrainingDefaultBlue = 0.95f;
+constexpr float kRuinsRotorRoughness = 0.90f;
+constexpr float kRuinsRotorSpecularStrength = 0.20f;
+constexpr float kRuinsRotorShininess = 48.0f;
+constexpr float kFrozenObjectRoughness = 0.78f;
+constexpr float kFrozenObjectSpecularStrength = 0.25f;
+constexpr float kFrozenObjectShininess = 24.0f;
+constexpr float kFallbackEnemySwayAmplitude = 8.0f;
+constexpr float kFallbackEnemyMoveSpeed = 2.0f;
+constexpr float kHotReloadLevelPlayerRailMinimumHeightOffset = 3.0f;
+constexpr int kLowHpWarningThreshold = 3;
+constexpr int kHpSeparatorRgb = 10;
+constexpr int kHpSeparatorAlpha = 255;
+}
+
+namespace {
 // 訓練用の敵。機体の前方に留まり、反撃せず、撃破だけを記録する。
 class TutorialTarget final : public BaseEnemy {
 public:
@@ -59,9 +362,9 @@ public:
     }
     void Move() override {
         elapsed_ += TimeManager::GetInstance()->GetDeltaTime();
-        Vector3 position { 0.0f, 0.0f, player_->GetTranslate().z + 85.0f };
-        position.x += (slot_ - (count_ - 1) * 0.5f) * 10.0f;
-        if (moving_) position.x += std::sin(elapsed_ * 0.65f + slot_) * 4.0f;
+        Vector3 position { 0.0f, 0.0f, player_->GetTranslate().z + kMoveZOffset };
+        position.x += (slot_ - (count_ - 1) * kTutorialTargetSlotCenterFraction) * kTutorialTargetSpacing;
+        if (moving_) position.x += std::sin(elapsed_ * kTutorialTargetSwayFrequency + slot_) * kTutorialTargetSwayAmplitude;
         SetPosition(position);
     }
     void Attack() override {}
@@ -120,11 +423,11 @@ void InitializeHudFrame(std::vector<std::unique_ptr<Sprite>>& sprites,
     AddHudFramePart(sprites, { topLeft.x, topLeft.y + size.y - kBorder }, { size.x, kBorder }, kHudIvory);
     AddHudFramePart(sprites, topLeft, { kBorder, size.y }, kHudIvory);
     AddHudFramePart(sprites, { topLeft.x + size.x - kBorder, topLeft.y }, { kBorder, size.y }, kHudIvory);
-    AddHudFramePart(sprites, topLeft, { kCornerLength, 6.0f }, accentColor);
+    AddHudFramePart(sprites, topLeft, { kCornerLength, kHudCornerThickness }, accentColor);
     AddHudFramePart(
         sprites,
-        { topLeft.x + size.x - kCornerLength, topLeft.y + size.y - 6.0f },
-        { kCornerLength, 6.0f },
+        { topLeft.x + size.x - kCornerLength, topLeft.y + size.y - kInitializeHudFrameYOffset },
+        { kCornerLength, kHudCornerThickness },
         accentColor);
 }
 
@@ -198,11 +501,11 @@ void GamePlayScene::Initialize()
         stageSettings_.layoutFile = "resources/Scenes/stage01.json";
         stageSettings_.bossRailAutoExtension = true;
         stageSettings_.swarmWaveDistances = {
-            260.0f, 620.0f, 980.0f, 1340.0f, 1560.0f, 1740.0f };
+            kFallbackFirstSwarmDistance, kFallbackSecondSwarmDistance, kFallbackThirdSwarmDistance, kFallbackFourthSwarmDistance, kFallbackFifthSwarmDistance, kFallbackFinalSwarmDistance };
         stageSettings_.recoveryItemPositions = {
-            { -5.0f, 1.5f, 410.0f },
-            { 5.0f, 1.5f, 1040.0f },
-            { 0.0f, 5.0f, 1700.0f } };
+            kFallbackFirstRecoveryPosition,
+            kFallbackSecondRecoveryPosition,
+            kFallbackFinalRecoveryPosition };
     }
     railSpeed_ = stageSettings_.railSpeed;
 
@@ -234,7 +537,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Starting camera initialization");
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
-    camera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
+    camera_->SetTranslate(kInitializeCameraTranslate);
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     cameraPreferences_.Load();
     cameraBackwardOffset_ = cameraPreferences_.distance;
@@ -246,13 +549,13 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Starting aimCamera initialization");
     aimCamera_ = std::make_unique<Camera>();
     aimCamera_->Initialize();
-    aimCamera_->SetTranslate({ 0.0f, 3.0f, -30.0f });
+    aimCamera_->SetTranslate(kInitializeAimCameraTranslate);
     aimCamera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     Logger::Log("GamePlayScene::Initialize: aimCamera initialized successfully");
 
     POINT centerMousePosition;
-    centerMousePosition.x = WinApp::GetInstance()->kClientWidth / 2;
-    centerMousePosition.y = WinApp::GetInstance()->kClientHeight / 2;
+    centerMousePosition.x = WinApp::GetInstance()->kClientWidth / kInitializeCenterMousePositionXDivisor;
+    centerMousePosition.y = WinApp::GetInstance()->kClientHeight / kInitializeCenterMousePositionYDivisor;
 
     ClientToScreen(WinApp::GetInstance()->GetHwnd(), &centerMousePosition);
     SetCursorPos(centerMousePosition.x, centerMousePosition.y);
@@ -304,7 +607,7 @@ void GamePlayScene::Initialize()
 
     EulerTransform t { };
     t.translate = { 0.0f, 0.0f, 0.0f };
-    t.scale = { 100.0f, 100.0f, 100.0f };
+    t.scale = kInitializetScale;
     Vector3 position { 0.0f, 1.0f, 0.0f };
 
     // =================================================
@@ -324,30 +627,30 @@ void GamePlayScene::Initialize()
         }
         if (stageId_ == "stage01") {
             fogPreset.parameters.isEnabled = true;
-            fogPreset.parameters.color = { 0.68f, 0.65f, 0.58f };
-            fogPreset.parameters.noiseScale = 0.025f;
-            fogPreset.parameters.baseHeight = stageSettings_.floorHeight + 6.0f;
-            fogPreset.parameters.heightDensity = 0.0015f;
-            fogPreset.parameters.heightFalloff = 0.16f;
+            fogPreset.parameters.color = kHangarFogColor;
+            fogPreset.parameters.noiseScale = kInitializeFogPresetParametersNoiseScaleDefault;
+            fogPreset.parameters.baseHeight = stageSettings_.floorHeight + kInitializeFogPresetParametersBaseHeightOffset;
+            fogPreset.parameters.heightDensity = kInitializeFogPresetParametersHeightDensityDefault;
+            fogPreset.parameters.heightFalloff = kInitializeFogPresetParametersHeightFalloffDefault;
         } else if (stageId_ == "stage03") {
             // Keep the ice air clear while retaining a faint cold haze.
             volume->SetFogDensity(0.0006f);
             fogPreset.parameters.isEnabled = true;
-            fogPreset.parameters.color = { 0.68f, 0.82f, 0.94f };
-            fogPreset.parameters.noiseScale = 0.025f;
+            fogPreset.parameters.color = kFrozenFogColor;
+            fogPreset.parameters.noiseScale = kInitializeFogPresetParametersNoiseScaleDefault;
             fogPreset.parameters.noiseStrength = 0.10f;
-            fogPreset.parameters.noiseVelocity = { 0.8f, 0.0f, 0.3f };
+            fogPreset.parameters.noiseVelocity = kFrozenFogNoiseVelocity;
             FogVolumeSettings& footFog = fogPreset.volumes[0];
             footFog.isEnabled = true;
             footFog.shape = FogVolumeShape::Box;
-            footFog.center = { stageSettings_.bossPosition.x, 4.0f, stageSettings_.bossPosition.z };
+            footFog.center = { stageSettings_.bossPosition.x, kInitializeFootFogCenterY, stageSettings_.bossPosition.z };
             footFog.halfExtents = { 75.0f, 5.0f, 75.0f };
             footFog.density = 0.0018f;
             footFog.edgeSoftness = 10.0f;
             FogVolumeSettings& lightMist = fogPreset.volumes[1];
             lightMist.isEnabled = true;
             lightMist.shape = FogVolumeShape::Box;
-            lightMist.center = stageSettings_.bossPosition + Vector3 { 0.0f, 25.0f, 0.0f };
+            lightMist.center = stageSettings_.bossPosition + kInitializeLightMistCenter;
             lightMist.halfExtents = { 45.0f, 35.0f, 45.0f };
             lightMist.density = 0.0012f;
             lightMist.edgeSoftness = 15.0f;
@@ -357,13 +660,13 @@ void GamePlayScene::Initialize()
     if (stageId_ == "stage03") {
         auto* lights = LightManager::GetInstance();
         const Vector3 bossPosition = stageSettings_.bossPosition;
-        bossSpotLightHandle_ = lights->AddSpotLight({ 0.72f, 0.86f, 1.0f, 1.0f },
-            bossPosition + Vector3 { -55.0f, 100.0f, -45.0f }, { 0.4f, -0.8f, 0.3f }, 0.65f, 240.0f, 2.0f, 0.72f);
+        bossSpotLightHandle_ = lights->AddSpotLight(kBossSpotLightColor,
+            bossPosition + kBossSpotLightOffset, kBossSpotLightDirection, kBossSpotLightIntensity, kBossSpotLightDistance, kBossSpotLightDecay, kBossSpotLightCosAngle);
         lights->SetSpotLightCosFalloffStart(bossSpotLightHandle_, 0.90f);
         lights->SetSpotLightShadowEnabled(bossSpotLightHandle_, true);
         lights->SetSpotLightVolumetricEnabled(bossSpotLightHandle_, true);
-        bossPointLightHandle_ = lights->AddPointLight({ 0.48f, 0.32f, 1.0f, 1.0f },
-            bossPosition + Vector3 { 45.0f, 20.0f, -35.0f }, 0.45f, 180.0f, 2.0f);
+        bossPointLightHandle_ = lights->AddPointLight(kBossPointLightColor,
+            bossPosition + kBossPointLightOffset, kBossPointLightIntensity, kBossPointLightRadius, kBossPointLightDecay);
         lights->SetPointLightShadowEnabled(bossPointLightHandle_, true);
     }
 
@@ -385,7 +688,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite anchor");
     aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite position");
-    aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kInitializeAimSpritePositionX, WinApp::GetInstance()->kClientHeight / kInitializeAimSpritePositionY });
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
     overheatGaugeSprite_ = std::make_unique<Sprite>();
@@ -407,7 +710,7 @@ void GamePlayScene::Initialize()
         marker->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
         marker->SetSize({ 84.0f, 84.0f });
         marker->SetAnchorPoint({ 0.5f, 0.5f });
-        marker->SetColor({ 1.0f, 0.15f, 0.05f, 0.95f });
+        marker->SetColor(kInitializeMarkerColor);
         marker->Update();
         homingLockSprites_.push_back(std::move(marker));
     }
@@ -420,8 +723,8 @@ void GamePlayScene::Initialize()
     pauseMenuPanelSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseMenuPanelSprite_->SetSize({ 400.0f, 520.0f });
     pauseMenuPanelSprite_->SetAnchorPoint({ 0.5f, 0.5f });
-    pauseMenuPanelSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
-    pauseMenuPanelSprite_->SetColor({ 0.06f, 0.06f, 0.09f, 0.92f });
+    pauseMenuPanelSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kInitializePauseMenuPanelSpritePositionX, WinApp::GetInstance()->kClientHeight / kInitializePauseMenuPanelSpritePositionY });
+    pauseMenuPanelSprite_->SetColor(kInitializePauseMenuPanelSpriteColor);
     pauseMenuPanelSprite_->Update();
 
     // 「再開」ボタン用枠
@@ -429,8 +732,8 @@ void GamePlayScene::Initialize()
     pauseResumeBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseResumeBtnSprite_->SetSize({ 220.0f, 44.0f });
     pauseResumeBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
-    pauseResumeBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 70.0f });
-    pauseResumeBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
+    pauseResumeBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseResumeHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseResumeVerticalCenterDivisor - kPauseResumeRowOffset });
+    pauseResumeBtnSprite_->SetColor(kInitializePauseResumeBtnSpriteColor);
     pauseResumeBtnSprite_->Update();
 
     // 「リトライ」ボタン用枠
@@ -438,8 +741,8 @@ void GamePlayScene::Initialize()
     pauseRetryBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseRetryBtnSprite_->SetSize({ 220.0f, 44.0f });
     pauseRetryBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
-    pauseRetryBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
-    pauseRetryBtnSprite_->SetColor({ 0.18f, 0.45f, 0.75f, 0.90f });
+    pauseRetryBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kInitializePauseRetryBtnSpritePositionX, WinApp::GetInstance()->kClientHeight / kInitializePauseRetryBtnSpritePositionY });
+    pauseRetryBtnSprite_->SetColor(kInitializePauseRetryBtnSpriteColor);
     pauseRetryBtnSprite_->Update();
 
     // 「タイトルに戻る」ボタン用枠
@@ -447,19 +750,19 @@ void GamePlayScene::Initialize()
     pauseTitleBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseTitleBtnSprite_->SetSize({ 220.0f, 44.0f });
     pauseTitleBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
-    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
-    pauseTitleBtnSprite_->SetColor({ 0.75f, 0.22f, 0.22f, 0.90f });
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseTitleHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseTitleVerticalCenterDivisor + kPauseTitleMenuRowOffset });
+    pauseTitleBtnSprite_->SetColor(kInitializePauseTitleBtnSpriteColor);
     pauseTitleBtnSprite_->Update();
 
     pauseControlBtnSprite_ = std::make_unique<Sprite>();
     pauseControlBtnSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     pauseControlBtnSprite_->SetSize({ 300.0f, 44.0f });
     pauseControlBtnSprite_->SetAnchorPoint({ 0.5f, 0.5f });
-    pauseControlBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
-    pauseControlBtnSprite_->SetColor({ 0.25f, 0.55f, 0.45f, 0.90f });
+    pauseControlBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseControlHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseControlVerticalCenterDivisor + kPauseControlRowOffset });
+    pauseControlBtnSprite_->SetColor(kInitializePauseControlBtnSpriteColor);
     pauseControlBtnSprite_->Update();
 
-    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 210.0f });
+    pauseTitleBtnSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseTitleHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseTitleVerticalCenterDivisor + kPauseTitleBottomRowOffset });
     pauseTitleBtnSprite_->Update();
 
     // -------------------------------------------------
@@ -470,16 +773,16 @@ void GamePlayScene::Initialize()
     pauseTitleText_ = std::make_unique<Text>();
     pauseTitleText_->Initialize(kDefaultFont);
     pauseTitleText_->SetText("PAUSE MENU");
-    pauseTitleText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 135.0f });
+    pauseTitleText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseTitleTextHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseTitleTextVerticalCenterDivisor - kPauseTitleTextRowOffset });
     pauseTitleText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseTitleText_->SetFontSize(34.0f);
-    pauseTitleText_->SetColor({ 0.35f, 0.85f, 1.0f, 1.0f });
+    pauseTitleText_->SetColor(kInitializePauseTitleTextColor);
     pauseTitleText_->Update();
 
     pauseResumeText_ = std::make_unique<Text>();
     pauseResumeText_->Initialize(kDefaultFont);
     pauseResumeText_->SetText("ゲーム再開 [TAB]");
-    pauseResumeText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f - 70.0f });
+    pauseResumeText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseResumeTextHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseResumeTextVerticalCenterDivisor - kPauseResumeTextRowOffset });
     pauseResumeText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseResumeText_->SetFontSize(22.0f);
     pauseResumeText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
@@ -488,7 +791,7 @@ void GamePlayScene::Initialize()
     pauseRetryText_ = std::make_unique<Text>();
     pauseRetryText_->Initialize(kDefaultFont);
     pauseRetryText_->SetText("リトライ [R]");
-    pauseRetryText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f });
+    pauseRetryText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kInitializePauseRetryTextPositionX, WinApp::GetInstance()->kClientHeight / kInitializePauseRetryTextPositionY });
     pauseRetryText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseRetryText_->SetFontSize(22.0f);
     pauseRetryText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
@@ -497,7 +800,7 @@ void GamePlayScene::Initialize()
     pauseTitleBtnText_ = std::make_unique<Text>();
     pauseTitleBtnText_->Initialize(kDefaultFont);
     pauseTitleBtnText_->SetText("タイトルに戻る [T]");
-    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseTitleBtnTextHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseTitleBtnTextVerticalCenterDivisor + kPauseTitleTextMenuRowOffset });
     pauseTitleBtnText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseTitleBtnText_->SetFontSize(22.0f);
     pauseTitleBtnText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
@@ -505,20 +808,20 @@ void GamePlayScene::Initialize()
 
     pauseControlText_ = std::make_unique<Text>();
     pauseControlText_->Initialize(kDefaultFont);
-    pauseControlText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 70.0f });
+    pauseControlText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseControlTextHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseControlTextVerticalCenterDivisor + kPauseControlTextRowOffset });
     pauseControlText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseControlText_->SetFontSize(19.0f);
     pauseControlText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
-    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 210.0f });
+    pauseTitleBtnText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseTitleBtnTextHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseTitleBtnTextVerticalCenterDivisor + kPauseTitleTextBottomRowOffset });
     pauseTitleBtnText_->Update();
 
     pauseSensitivityText_ = std::make_unique<Text>();
     pauseSensitivityText_->Initialize(kDefaultFont);
-    pauseSensitivityText_->SetPosition({ WinApp::GetInstance()->kClientWidth / 2.0f, WinApp::GetInstance()->kClientHeight / 2.0f + 140.0f });
+    pauseSensitivityText_->SetPosition({ WinApp::GetInstance()->kClientWidth / kPauseSensitivityHorizontalCenterDivisor, WinApp::GetInstance()->kClientHeight / kPauseSensitivityVerticalCenterDivisor + kPauseSensitivityRowOffset });
     pauseSensitivityText_->SetAnchorPoint({ 0.5f, 0.5f });
     pauseSensitivityText_->SetFontSize(16.0f);
-    pauseSensitivityText_->SetColor({ 0.75f, 0.95f, 1.0f, 1.0f });
+    pauseSensitivityText_->SetColor(kInitializePauseSensitivityTextColor);
 
     for (int i = 0; i < 8; ++i) {
         const auto rect = GetPauseAdjustmentRect(i / 2, i % 2 == 0 ? -1 : 1);
@@ -527,14 +830,14 @@ void GamePlayScene::Initialize()
         sprite->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
         sprite->SetPosition({rect.x, rect.y});
         sprite->SetSize({rect.width, rect.height});
-        sprite->SetColor({0.18f, 0.45f, 0.75f, 0.95f});
+        sprite->SetColor(kInitializeSpriteColor);
         sprite->Update();
         auto& text = pauseAdjustTexts_[i];
         text = std::make_unique<Text>();
         text->Initialize(kDefaultFont);
         text->SetText(i % 2 == 0 ? "−" : "+");
         text->SetAnchorPoint({0.5f, 0.5f});
-        text->SetPosition({rect.x + rect.width / 2, rect.y + rect.height / 2});
+        text->SetPosition({rect.x + rect.width / kInitializeTextPositionX, rect.y + rect.height / kInitializeTextPositionY});
         text->SetFontSize(24);
         text->SetColor({1, 1, 1, 1});
         text->Update();
@@ -543,22 +846,22 @@ void GamePlayScene::Initialize()
     // 画面左下に表示する現在武器HUD
     InitializeHudFrame(
         weaponHudFrameSprites_,
-        { 20.0f, WinApp::GetInstance()->kClientHeight - 20.0f },
-        { 288.0f, 84.0f },
+        { kHudFrameLeftInset, WinApp::GetInstance()->kClientHeight - kHudFrameBottomInset },
+        { kOverheatFrameWidth, kOverheatFrameHeight },
         { 0.0f, 1.0f },
         kPlayerActionCyan);
     weaponHudBgSprite_ = std::make_unique<Sprite>();
     weaponHudBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     weaponHudBgSprite_->SetSize({ 280.0f, 76.0f });
     weaponHudBgSprite_->SetAnchorPoint({ 0.0f, 1.0f });
-    weaponHudBgSprite_->SetPosition({ 24.0f, WinApp::GetInstance()->kClientHeight - 24.0f });
+    weaponHudBgSprite_->SetPosition({ kInitializeWeaponHudBgSpritePositionX, WinApp::GetInstance()->kClientHeight - kInitializeWeaponHudBgSpritePositionY });
     weaponHudBgSprite_->SetColor(kHudPanel);
     weaponHudBgSprite_->Update();
 
     weaponHudLabelText_ = std::make_unique<Text>();
     weaponHudLabelText_->Initialize(kDefaultFont);
     weaponHudLabelText_->SetText("WEAPON");
-    weaponHudLabelText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 92.0f });
+    weaponHudLabelText_->SetPosition({ kInitializeWeaponHudLabelTextPositionX, WinApp::GetInstance()->kClientHeight - kInitializeWeaponHudLabelTextPositionY });
     weaponHudLabelText_->SetFontSize(16.0f);
     weaponHudLabelText_->SetColor(kPlayerActionCyan);
     weaponHudLabelText_->Update();
@@ -566,7 +869,7 @@ void GamePlayScene::Initialize()
     weaponHudNameText_ = std::make_unique<Text>();
     weaponHudNameText_->Initialize(kDefaultFont);
     weaponHudNameText_->SetText("Normal");
-    weaponHudNameText_->SetPosition({ 40.0f, WinApp::GetInstance()->kClientHeight - 68.0f });
+    weaponHudNameText_->SetPosition({ kInitializeWeaponHudNameTextPositionX, WinApp::GetInstance()->kClientHeight - kInitializeWeaponHudNameTextPositionY });
     weaponHudNameText_->SetFontSize(27.0f);
     weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     weaponHudNameText_->SetOutlineWidth(1.0f);
@@ -578,14 +881,14 @@ void GamePlayScene::Initialize()
     scoreHudBgSprite_ = std::make_unique<Sprite>();
     scoreHudBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     scoreHudBgSprite_->SetSize({ 240.0f, 72.0f });
-    scoreHudBgSprite_->SetPosition({ 22.0f, 22.0f });
+    scoreHudBgSprite_->SetPosition(kInitializeScoreHudBgSpritePosition);
     scoreHudBgSprite_->SetColor(kHudPanel);
     scoreHudBgSprite_->Update();
 
     scoreHudLabelText_ = std::make_unique<Text>();
     scoreHudLabelText_->Initialize(kDefaultFont);
     scoreHudLabelText_->SetText("SCORE");
-    scoreHudLabelText_->SetPosition({ 36.0f, 28.0f });
+    scoreHudLabelText_->SetPosition(kInitializeScoreHudLabelTextPosition);
     scoreHudLabelText_->SetFontSize(16.0f);
     scoreHudLabelText_->SetColor(kPlayerActionCyan);
     scoreHudLabelText_->Update();
@@ -593,7 +896,7 @@ void GamePlayScene::Initialize()
     scoreHudValueText_ = std::make_unique<Text>();
     scoreHudValueText_->Initialize(kDefaultFont);
     scoreHudValueText_->SetText("0");
-    scoreHudValueText_->SetPosition({ 36.0f, 50.0f });
+    scoreHudValueText_->SetPosition(kInitializeScoreHudValueTextPosition);
     scoreHudValueText_->SetFontSize(28.0f);
     scoreHudValueText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     scoreHudValueText_->SetOutlineWidth(1.0f);
@@ -604,15 +907,15 @@ void GamePlayScene::Initialize()
     // -------------------------------------------------
     InitializeHudFrame(
         playerHudFrameSprites_,
-        { WinApp::GetInstance()->kClientWidth - 18.0f, 8.0f },
-        { 268.0f, 70.0f },
+        { WinApp::GetInstance()->kClientWidth - kBossHpFrameRightInset, kBossHpFrameTopInset },
+        { kBossHpFrameWidth, kBossHpFrameHeight },
         { 1.0f, 0.0f },
         kPlayerActionCyan);
     playerHpBgSprite_ = std::make_unique<Sprite>();
     playerHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     playerHpBgSprite_->SetSize({ 220.0f, 22.0f });
     playerHpBgSprite_->SetAnchorPoint({ 1.0f, 0.0f });
-    playerHpBgSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
+    playerHpBgSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - kInitializePlayerHpBgSpritePositionX, kInitializePlayerHpBgSpritePositionY });
     playerHpBgSprite_->SetColor(kHudPanel);
     playerHpBgSprite_->Update();
 
@@ -621,14 +924,14 @@ void GamePlayScene::Initialize()
     playerHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
     playerHpBarSprite_->SetSize({ 220.0f, 22.0f });
     playerHpBarSprite_->SetAnchorPoint({ 1.0f, 0.0f });
-    playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 40.0f });
+    playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - kInitializePlayerHpBarSpritePositionX, kInitializePlayerHpBarSpritePositionY });
     playerHpBarSprite_->SetColor(kPlayerActionCyan);
     playerHpBarSprite_->Update();
 
     playerHpText_ = std::make_unique<Text>();
     playerHpText_->Initialize(kDefaultFont);
     playerHpText_->SetText("HP 20 / 20");
-    playerHpText_->SetPosition({ WinApp::GetInstance()->kClientWidth - 30.0f, 12.0f });
+    playerHpText_->SetPosition({ WinApp::GetInstance()->kClientWidth - kInitializePlayerHpTextPositionX, kInitializePlayerHpTextPositionY });
     playerHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     playerHpText_->SetFontSize(20.0f);
     playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
@@ -647,35 +950,35 @@ void GamePlayScene::Initialize()
 
     bossHeadHpBgSprite_ = std::make_unique<Sprite>();
     bossHeadHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossHeadHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossHeadHpBgSprite_->SetSize({ bossHpBarWidth, kInitializeBossHeadHpBgSpriteSizeY });
     bossHeadHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossHeadHpBgSprite_->SetPosition({ bossHpBarLeft, 65.0f });
+    bossHeadHpBgSprite_->SetPosition({ bossHpBarLeft, kInitializeBossHeadHpBgSpritePositionY });
     bossHeadHpBgSprite_->SetColor(kHudPanel);
     bossHeadHpBgSprite_->Update();
 
     bossHeadHpBarSprite_ = std::make_unique<Sprite>();
     bossHeadHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     bossHeadHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
-    bossHeadHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossHeadHpBarSprite_->SetSize({ bossHpBarWidth, kInitializeBossHeadHpBarSpriteSizeY });
     bossHeadHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossHeadHpBarSprite_->SetPosition({ bossHpBarLeft, 65.0f });
+    bossHeadHpBarSprite_->SetPosition({ bossHpBarLeft, kInitializeBossHeadHpBarSpritePositionY });
     bossHeadHpBarSprite_->SetColor(kHudBrass);
     bossHeadHpBarSprite_->Update();
 
     bossBodyHpBgSprite_ = std::make_unique<Sprite>();
     bossBodyHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossBodyHpBgSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossBodyHpBgSprite_->SetSize({ bossHpBarWidth, kInitializeBossBodyHpBgSpriteSizeY });
     bossBodyHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossBodyHpBgSprite_->SetPosition({ bossHpBarLeft, 91.0f });
+    bossBodyHpBgSprite_->SetPosition({ bossHpBarLeft, kInitializeBossBodyHpBgSpritePositionY });
     bossBodyHpBgSprite_->SetColor(kHudPanel);
     bossBodyHpBgSprite_->Update();
 
     bossBodyHpBarSprite_ = std::make_unique<Sprite>();
     bossBodyHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     bossBodyHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
-    bossBodyHpBarSprite_->SetSize({ bossHpBarWidth, 14.0f });
+    bossBodyHpBarSprite_->SetSize({ bossHpBarWidth, kInitializeBossBodyHpBarSpriteSizeY });
     bossBodyHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossBodyHpBarSprite_->SetPosition({ bossHpBarLeft, 91.0f });
+    bossBodyHpBarSprite_->SetPosition({ bossHpBarLeft, kInitializeBossBodyHpBarSpritePositionY });
     bossBodyHpBarSprite_->SetColor(kDangerVermilion);
     bossBodyHpBarSprite_->Update();
 
@@ -685,7 +988,7 @@ void GamePlayScene::Initialize()
     if (stageSettings_.bossType == "IceJellyfish") {
         bossNameText_->SetText("BOSS: ICE JELLYFISH");
     }
-    bossNameText_->SetPosition({ bossHudCenterX, 12.0f });
+    bossNameText_->SetPosition({ bossHudCenterX, kInitializeBossNameTextPositionY });
     bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
     bossNameText_->SetFontSize(20.0f);
     bossNameText_->SetColor(kDangerVermilion);
@@ -697,7 +1000,7 @@ void GamePlayScene::Initialize()
     if (stageSettings_.bossType == "IceJellyfish") {
         bossHeadHpText_->SetText("CORE HP");
     }
-    bossHeadHpText_->SetPosition({ bossHpBarLeft - 12.0f, 60.0f });
+    bossHeadHpText_->SetPosition({ bossHpBarLeft - kInitializeBossHeadHpTextPositionX, kInitializeBossHeadHpTextPositionY });
     bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossHeadHpText_->SetFontSize(14.0f);
     bossHeadHpText_->SetColor(kHudBrass);
@@ -709,7 +1012,7 @@ void GamePlayScene::Initialize()
     if (stageSettings_.bossType == "IceJellyfish") {
         bossBodyHpText_->SetText("TENTACLE PARTS");
     }
-    bossBodyHpText_->SetPosition({ bossHpBarLeft - 12.0f, 86.0f });
+    bossBodyHpText_->SetPosition({ bossHpBarLeft - kInitializeBossBodyHpTextPositionX, kInitializeBossBodyHpTextPositionY });
     bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
     bossBodyHpText_->SetFontSize(14.0f);
     bossBodyHpText_->SetColor(kDangerVermilion);
@@ -752,7 +1055,7 @@ void GamePlayScene::Initialize()
     }
 
     if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
-        player_->SetRailMinimumHeight(stageSettings_.floorHeight + 3.0f);
+        player_->SetRailMinimumHeight(stageSettings_.floorHeight + kInitializePlayerRailMinimumHeightOffset);
         playerStartPos = rail_->GetPositionByDistance(0.0f);
     }
     player_->SetTranslate(playerStartPos);
@@ -763,7 +1066,7 @@ void GamePlayScene::Initialize()
             stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
         camera_->SetFarClip(4000.0f);
         camera_->LookAt(playerStartPos - player_->GetFlightForward() * cameraBackwardOffset_ +
-            Vector3 { 0.0f, kAllRangeCameraUpwardOffset, 0.0f }, playerStartPos + player_->GetFlightForward() * 60.0f);
+            Vector3 { 0.0f, kAllRangeCameraUpwardOffset, 0.0f }, playerStartPos + player_->GetFlightForward() * kInitializeGetFlightForwardMultiplier);
         camera_->Update();
     }
 
@@ -820,8 +1123,8 @@ void GamePlayScene::Initialize()
         Vector3 right {};
         Vector3 up {};
         CalculateRailBasis(forward, right, up);
-        float sideOffset = (i % 2 == 0) ? -8.0f : 8.0f;
-        paintEnemy->SetPosition(railPosition + right * sideOffset + up * 2.0f);
+        float sideOffset = (i % 2 == 0) ? -kInitializeSideOffsetOffset : kInitializeSideOffsetDefault;
+        paintEnemy->SetPosition(railPosition + right * sideOffset + up * kInitializePaintEnemyPositionMultiplier);
         ConfigureFrozenEnemyAppearance(*paintEnemy);
         enemies_.push_back(std::move(paintEnemy));
     }
@@ -832,10 +1135,10 @@ void GamePlayScene::Initialize()
     if (stageSettings_.floorEnabled &&
         (stageId_ == "stage01" || stageSettings_.allRangeMode)) {
         oceanSurface_ = std::make_unique<OceanSurface>();
-        float oceanWidth = 1000.0f;
+        float oceanWidth = kInitializeOceanWidthDefault;
         float oceanLength = stageSettings_.railLength;
         if (stageSettings_.allRangeMode) {
-            oceanWidth = stageSettings_.flightAreaRadius * 2.0f + 2000.0f;
+            oceanWidth = stageSettings_.flightAreaRadius * kInitializeOceanWidthMultiplier + kInitializeOceanWidthOffset;
             oceanLength = oceanWidth;
         }
         oceanSurface_->Initialize(
@@ -845,7 +1148,7 @@ void GamePlayScene::Initialize()
             stageSettings_.floorHeight);
         if (stageSettings_.allRangeMode) {
             oceanSurface_->SetStartZ(-oceanLength * 0.5f);
-            oceanSurface_->SetWaveAmplitude(0.65f);
+            oceanSurface_->SetWaveAmplitude(kOceanWaveAmplitude);
         }
         if (stageId_ == "stage01") {
             waterPillarRenderer_ = std::make_unique<WaterPillarRenderer>();
@@ -859,23 +1162,23 @@ void GamePlayScene::Initialize()
         floorObj_ = std::make_unique<Object3d>();
         floorObj_->Initialize(Object3dManager::GetInstance());
         floorObj_->SetModel(floorModel);
-        floorObj_->SetSurfaceProperties(0.90f, 0.0f, 0.10f);
+        floorObj_->SetSurfaceProperties(kFrozenFloorRoughness, 0.0f, kFrozenFloorSpecularStrength);
         floorObj_->SetTranslate({
             0.0f,
             stageSettings_.floorHeight,
-            stageSettings_.railLength * 0.5f });
-        floorObj_->SetRotate({ std::numbers::pi_v<float> / 2.0f, 0.0f, 0.0f });
-        floorObj_->SetScale({ 1000.0f, stageSettings_.railLength, 1.0f });
+            stageSettings_.railLength * kInitializeFloorObjTranslateZ });
+        floorObj_->SetRotate({ std::numbers::pi_v<float> / kInitializeFloorObjRotateX, 0.0f, 0.0f });
+        floorObj_->SetScale({ kInitializeFloorObjScaleX, stageSettings_.railLength, 1.0f });
         if (stageSettings_.shadows.enabled) {
             floorObj_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
             floorObj_->SetReceiveShadow(true);
         }
         if (stageId_ == "stage03") {
             // A polished ice floor receives direct specular light and screen-space reflections.
-            floorObj_->SetColor({ 0.54f, 0.73f, 0.86f, 1.0f });
+            floorObj_->SetColor(kInitializeFloorObjColor);
             floorObj_->SetShadingMode(MaterialShadingMode::Ice);
             floorObj_->SetMaterial("resources/Shaders/Object3D/StageIceFloor");
-            floorObj_->SetSurfaceProperties(0.18f, 0.0f, 0.65f);
+            floorObj_->SetSurfaceProperties(kDefaultFloorRoughness, 0.0f, kDefaultFloorSpecularStrength);
             floorObj_->SetShininess(0.0f);
             floorObj_->SetEnableEnvironmentMap(false);
             floorObj_->SetEnvironmentMapStrength(0.0f);
@@ -1042,9 +1345,9 @@ void GamePlayScene::Update()
         for (int row = 0; row < 4; ++row) {
             if (!rowSprites[row]) continue;
             const auto rect = GetPauseRowRect(pauseState_->GetType(), row);
-            rowSprites[row]->SetPosition({rect.x + rect.width / 2, rect.y + rect.height / 2});
+            rowSprites[row]->SetPosition({rect.x + rect.width / kUpdateWidthDivisor, rect.y + rect.height / kUpdateHeightDivisor});
             rowSprites[row]->SetSize({rect.width, rect.height});
-            rowSprites[row]->SetColor(row == pauseSelection_ ? Vector4{0.28f, 0.65f, 0.85f, 0.95f} : Vector4{0.18f, 0.32f, 0.45f, 0.9f});
+            rowSprites[row]->SetColor(row == pauseSelection_ ? kSelectedPauseRowColor : kUnselectedPauseRowColor);
             rowSprites[row]->Update();
         }
         if (pauseTitleText_) pauseTitleText_->SetText(display.title);
@@ -1108,7 +1411,7 @@ void GamePlayScene::Update()
             playerDeathCameraLookTarget_ = Lerp(
                 playerDeathCameraLookTarget_,
                 playerPosition,
-                GameTiming::CalculateFollowBlend(0.15f, TimeManager::GetInstance()->GetDeltaTime()));
+                GameTiming::CalculateFollowBlend(kUpdatePlayerDeathCameraLookTargetDefault, TimeManager::GetInstance()->GetDeltaTime()));
             camera_->LookAt(
                 cameraPosition,
                 playerDeathCameraLookTarget_);
@@ -1121,14 +1424,14 @@ void GamePlayScene::Update()
                 EffectManager::GetInstance()->PlayEffect(
                     "Explosion",
                     player_->GetTranslate());
-                cameraShakeTime_ = 0.45f;
-                cameraShakeDuration_ = 0.45f;
+                cameraShakeTime_ = kUpdateCameraShakeTimeDefault;
+                cameraShakeDuration_ = kUpdateCameraShakeDurationDefault;
                 cameraShakeStrength_ = 0.018f;
             }
 
             playerDeathAfterExplosionTimer_ +=
                 TimeManager::GetInstance()->GetDeltaTime();
-            if (playerDeathAfterExplosionTimer_ >= 0.8f) {
+            if (playerDeathAfterExplosionTimer_ >= kUpdatePlayerDeathAfterExplosionTimerThreshold) {
                 ResetGameplayPostEffects();
                 SceneManager::GetInstance()->SetNextScene(
                     std::make_unique<GameOverScene>(stageId_));
@@ -1196,8 +1499,8 @@ void GamePlayScene::Update()
     }
     if (bossController_->DidExtendRailThisFrame() && floorObj_ != nullptr) {
         const float floorLength = rail_->GetTotalLength();
-        floorObj_->SetTranslate({ 0.0f, stageSettings_.floorHeight, floorLength * 0.5f });
-        floorObj_->SetScale({ 1000.0f, floorLength, 1.0f });
+        floorObj_->SetTranslate({ 0.0f, stageSettings_.floorHeight, floorLength * kUpdateFloorObjTranslateZ });
+        floorObj_->SetScale({ kUpdateFloorObjScaleX, floorLength, 1.0f });
     }
 
     // ボスの更新
@@ -1237,7 +1540,7 @@ void GamePlayScene::Update()
         if (activeBoss->IsDeathSequenceFinished()) {
             StopPlayerEngineEffects();
             bossDeathDissolveTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-            float dissolveProgress = bossDeathDissolveTimer_ / 2.0f;
+            float dissolveProgress = bossDeathDissolveTimer_ / kUpdateDissolveProgressDivisor;
             if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
 
             // 撃破ディゾルブポストエフェクトの適用
@@ -1324,11 +1627,11 @@ void GamePlayScene::Update()
         }
         if (tutorialController_.IsComplete() && tutorialGateDistance_ < 0.0f) {
             // 訓練完了後、機体の少し前へゲートを開き、長い空走を避ける。
-            tutorialGateDistance_ = railDistance_ + 150.0f;
+            tutorialGateDistance_ = railDistance_ + kUpdateTutorialGateDistanceOffset;
             for (auto& object : levelObjects_) {
                 if (object->GetModelFilePath() == "Environment/Tutorial/launch_gate.obj") {
-                    object->SetTranslate({ 0.0f, 0.0f, tutorialGateDistance_ - 3400.0f });
-                    object->SetColor({ 0.6f, 2.0f, 1.3f, 1.0f });
+                    object->SetTranslate({ 0.0f, 0.0f, tutorialGateDistance_ - kUpdateObjectTranslateZ });
+                    object->SetColor(kUpdateObjectColor);
                     object->Update();
                 }
             }
@@ -1347,9 +1650,9 @@ void GamePlayScene::Update()
 #ifdef _DEBUG
     DebugRenderer::GetInstance()->AddLine(
         currentPosition,
-        currentPosition + forward * 20.0f,
+        currentPosition + forward * kUpdateForwardMultiplier,
         { 0.0f, 1.0f, 0.0f, 1.0f },
-        3.0f);
+        kForwardDebugLineWidth);
 #endif
 
     // プレイヤーのブースト状態に応じたエフェクト制御
@@ -1391,7 +1694,7 @@ void GamePlayScene::Update()
     // -------------------------------------------------
     // Ctrlで減速中は発動せず、実際にブーストを開始したときだけ発動する。
     if (isPlayerBoosting && !wasBoostingForSonicBoom_) {
-        sonicBoomTimer_ = 0.85f;
+        sonicBoomTimer_ = kUpdateSonicBoomTimerDefault;
 
         // プレイヤーの現在位置を中心発生源として画面UV座標(0.0〜1.0)へ変換
         if (player_ && camera_) {
@@ -1409,7 +1712,7 @@ void GamePlayScene::Update()
         sonicBoomTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
         if (sonicBoomTimer_ < 0.0f) sonicBoomTimer_ = 0.0f;
 
-        float boomProgress = 1.0f - (sonicBoomTimer_ / 0.85f);
+        float boomProgress = 1.0f - (sonicBoomTimer_ / kUpdateBoomProgressDivisor);
         SceneManager::GetInstance()->SetSonicBoomProgress(boomProgress);
         SceneManager::GetInstance()->AddPostEffect(
             PostEffectType::SonicBoom,
@@ -1463,18 +1766,18 @@ void GamePlayScene::Update()
         displayedPlayerHpRatio_ = std::lerp(
             displayedPlayerHpRatio_,
             hpRatio,
-            GameTiming::CalculateFollowBlend(0.12f, TimeManager::GetInstance()->GetDeltaTime()));
+            GameTiming::CalculateFollowBlend(kUpdateDisplayedPlayerHpRatioDefault, TimeManager::GetInstance()->GetDeltaTime()));
         if (std::abs(displayedPlayerHpRatio_ - hpRatio) < 0.001f) {
             displayedPlayerHpRatio_ = hpRatio;
         }
 
-        float barWidth = 220.0f * displayedPlayerHpRatio_;
-        playerHpBarSprite_->SetSize({ barWidth, 22.0f });
+        float barWidth = kUpdateBarWidthDefault * displayedPlayerHpRatio_;
+        playerHpBarSprite_->SetSize({ barWidth, kUpdatePlayerHpBarSpriteSizeY });
 
         // 回復色の緑はアイテム専用。通常HPはプレイヤー色のシアンで示す。
-        if (currentHp <= 3) {
+        if (currentHp <= kLowHpWarningThreshold) {
             playerHpBarSprite_->SetColor(kDangerVermilion);
-        } else if (hpRatio < 0.45f) {
+        } else if (hpRatio < kUpdateHpRatioThreshold) {
             playerHpBarSprite_->SetColor(kHudBrass);
         } else {
             playerHpBarSprite_->SetColor(kPlayerActionCyan);
@@ -1518,7 +1821,7 @@ void GamePlayScene::Update()
         const Vector3 position = player_->GetTranslate();
         const Vector3 delta = position - previousOceanPlayerPosition_;
         const float distance = std::sqrt(delta.x * delta.x + delta.z * delta.z);
-        if (!player_->IsDead() && hasOceanPlayerPosition_ && dt > 0.0f && distance < 40.0f) {
+        if (!player_->IsDead() && hasOceanPlayerPosition_ && dt > 0.0f && distance < kUpdateDistanceThreshold) {
             if (!hasOceanWakeForward_) {
                 oceanWakeForward_ = OceanInteraction::HorizontalDirection(player_->GetFlightForward());
                 hasOceanWakeForward_ = true;
@@ -1530,10 +1833,10 @@ void GamePlayScene::Update()
             oceanSprayCooldown_ = (std::max)(0.0f, oceanSprayCooldown_ - dt);
             // Temporarily hide white spray so the geometric ocean response is easier to inspect.
             constexpr bool kEnableOceanSpray = false;
-            if (kEnableOceanSpray && strength > 0.04f && oceanSprayCooldown_ <= 0.0f) {
+            if (kEnableOceanSpray && strength > kUpdateStrengthThreshold && oceanSprayCooldown_ <= 0.0f) {
                 // Use the same forward source and displaced height as the visible wake.
                 Vector3 sprayPosition = OceanInteraction::SourcePosition(position, oceanWakeForward_, distance / dt);
-                sprayPosition.y = oceanSurface_->GetHeightAt(sprayPosition.x, sprayPosition.z) + 0.12f;
+                sprayPosition.y = oceanSurface_->GetHeightAt(sprayPosition.x, sprayPosition.z) + kUpdateSprayPositionYOffset;
                 const auto handle = EffectManager::GetInstance()->PlayEffect("OceanSpray", sprayPosition);
                 EffectManager::GetInstance()->SetEffectDirection(handle, oceanWakeForward_);
                 EffectManager::GetInstance()->SetEffectVelocity(handle, {0.0f, strength, 0.0f});
@@ -1567,7 +1870,7 @@ void GamePlayScene::Update()
     for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) {
         pillar->Update(railDistance_, TimeManager::GetInstance()->GetDeltaTime());
         if (pillar->CheckCollision(player_->GetTranslate())) {
-            if (player_->ApplyDamage(2)) {
+            if (player_->ApplyDamage(kBossContactDamage)) {
                 StartWaterDropEffect();
             }
         }
@@ -1662,7 +1965,7 @@ void GamePlayScene::Update()
 
     float& pointRadius = pointRadius_;
     float& pointDecay = pointDecay_;
-    ImGui::SliderFloat("Point Radius", &pointRadius, 0.1f, 30.0f);
+    ImGui::SliderFloat("Point Radius", &pointRadius, kPointRadiusMinimum, kPointRadiusMaximum);
     ImGui::SliderFloat("Point Decay", &pointDecay, 0.1f, 5.0f);
 
     float pI = 0.0f;
@@ -1700,7 +2003,7 @@ void GamePlayScene::Update()
     // 距離・減衰
     float& spotDistance = spotDistance_;
     float& spotDecay = spotDecay_;
-    ImGui::SliderFloat("Spot Distance", &spotDistance, 0.1f, 30.0f);
+    ImGui::SliderFloat("Spot Distance", &spotDistance, kSpotDistanceMinimum, kSpotDistanceMaximum);
     ImGui::SliderFloat("Spot Decay", &spotDecay, 0.1f, 5.0f);
 
     // 角度（度数で操作し、cos に変換）
@@ -1888,7 +2191,7 @@ void GamePlayScene::UpdateCamera(
         if (player_->IsBoosting()) {
             targetFov = boostFovY_;
         }
-        currentFovY_ += (targetFov - currentFovY_) * (1.0f - std::exp(-8.0f * deltaTime));
+        currentFovY_ += (targetFov - currentFovY_) * (1.0f - std::exp(-kUpdateCameraCurrentFovYOffset * deltaTime));
         const float renderFovY = currentFovY_ * (1.0f - kBrakeFovReduction * brakeFovStrength_);
         camera_->SetFovY(renderFovY);
         if (!debugCameraController_->GetDebugMode()) {
@@ -2077,7 +2380,7 @@ void GamePlayScene::InitializeOceanLife()
         auto fish = std::make_unique<Object3d>();
         fish->Initialize(Object3dManager::GetInstance());
         fish->SetModel(fishModel);
-        fish->SetScale({ 0.22f, 0.22f, 0.22f });
+        fish->SetScale(kInitializeOceanLifeFishScale);
         fish->SetEnableLighting(true);
         oceanFish_.push_back(std::move(fish));
     }
@@ -2088,8 +2391,8 @@ void GamePlayScene::InitializeOceanLife()
         auto bird = std::make_unique<Object3d>();
         bird->Initialize(Object3dManager::GetInstance());
         bird->SetModel(birdModel);
-        bird->SetScale({ 1.8f, 0.12f, 0.45f });
-        bird->SetColor({ 0.92f, 0.96f, 1.0f, 1.0f });
+        bird->SetScale(kInitializeOceanLifeBirdScale);
+        bird->SetColor(kInitializeOceanLifeBirdColor);
         bird->SetEnableLighting(false);
         oceanBirds_.push_back(std::move(bird));
     }
@@ -2129,16 +2432,16 @@ void GamePlayScene::UpdateOceanLife(
                 static_cast<float>(index / 6) * 4.0f;
             Vector3 position = railPosition + forward * ahead +
                 railRight * (travel + formationSide);
-            position.y = seaHeight + 0.45f + (std::max)(0.0f, std::sin(phase)) * 2.4f +
-                static_cast<float>(index % 3) * 0.18f;
+            position.y = seaHeight + kUpdateOceanLifePositionYOffset + (std::max)(0.0f, std::sin(phase)) * kUpdateOceanLifePositionYMultiplier +
+                static_cast<float>(index % kFishDepthBandCount) * kFishDepthBandSpacing;
             oceanFish_[index]->SetTranslate(position);
-            oceanFish_[index]->SetRotate({ -std::sin(phase) * 0.32f, crossYaw, 0.0f });
+            oceanFish_[index]->SetRotate({ -std::sin(phase) * kUpdateOceanLifePhaseMultiplier, crossYaw, 0.0f });
         }
 
         if (fishSchoolTimer_ >= kFishSchoolDuration) {
             isFishSchoolActive_ = false;
             fishSchoolFromLeft_ = !fishSchoolFromLeft_;
-            fishSchoolCooldown_ = 12.0f + std::fmod(oceanLifeTime_ * 1.73f, 10.0f);
+            fishSchoolCooldown_ = kFishSchoolCooldownBase + std::fmod(oceanLifeTime_ * kFishSchoolCooldownVariationFrequency, kFishSchoolCooldownVariationRange);
         }
     }
 
@@ -2148,9 +2451,9 @@ void GamePlayScene::UpdateOceanLife(
         const float side = (static_cast<float>(index % 5) - 2.0f) * 24.0f + std::sin(phase) * 12.0f;
         const float ahead = 95.0f + static_cast<float>(index % 5) * 34.0f;
         Vector3 position = railPosition + forward * ahead + railRight * side;
-        position.y = seaHeight + 30.0f + static_cast<float>(index % 4) * 6.0f + std::sin(phase * 1.7f) * 2.0f;
+        position.y = seaHeight + kBirdBaseHeight + static_cast<float>(index % kBirdHeightBandCount) * kBirdHeightBandSpacing + std::sin(phase * kBirdBobbingFrequency) * kBirdBobbingAmplitude;
         oceanBirds_[index]->SetTranslate(position);
-        oceanBirds_[index]->SetRotate({ 0.0f, yaw, std::sin(phase * 3.2f) * 0.18f });
+        oceanBirds_[index]->SetRotate({ 0.0f, yaw, std::sin(phase * kBirdBankingFrequency) * kBirdBankingAmplitude });
     }
 
 }
@@ -2271,7 +2574,7 @@ void GamePlayScene::InitializeRecoveryItems(Model* model)
         recoveryItem.object->Initialize(Object3dManager::GetInstance());
         recoveryItem.object->SetModel(model);
         recoveryItem.object->SetTranslate(position);
-        recoveryItem.object->SetScale({ 0.75f, 0.75f, 0.75f });
+        recoveryItem.object->SetScale(kInitializeRecoveryItemsObjectScale);
         recoveryItem.object->SetColor(kRecoveryMint);
         recoveryItem.object->SetEnableLighting(false);
         recoveryItem.basePosition = position;
@@ -2308,7 +2611,7 @@ void GamePlayScene::UpdateRecoveryItems()
             std::sin(recoveryItem.animationTime) * kRecoveryItemBobHeight;
 
         Vector3 itemRotation = recoveryItem.object->GetRotate();
-        itemRotation.x += kRecoveryItemRotationSpeed * 0.65f
+        itemRotation.x += kRecoveryItemRotationSpeed * kUpdateRecoveryItemsItemRotationXMultiplier
             * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
         itemRotation.y += kRecoveryItemRotationSpeed
             * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime());
@@ -2386,7 +2689,7 @@ void GamePlayScene::UpdateBossCutIn()
         hasPlayedBossCutIn_ = true;
         bossCutInTimerSeconds_ = 0.0f;
         bossCutInPreviousTimeScale_ = TimeManager::GetInstance()->GetTimeScale();
-        TimeManager::GetInstance()->SetTimeScale(bossCutInPreviousTimeScale_ * 0.22f);
+        TimeManager::GetInstance()->SetTimeScale(bossCutInPreviousTimeScale_ * kUpdateBossCutInBossCutInPreviousTimeScaleMultiplier);
         isBossCutInSlowMotionActive_ = true;
         SoundManager::GetInstance()->Play("FearWormCutIn");
     } else if (bossCutInTimerSeconds_ >= 0.0f) {
@@ -2495,14 +2798,14 @@ void GamePlayScene::Draw2D()
 void GamePlayScene::InitializeTutorialPresentation()
 {
     if (stageId_ != "tutorial") return;
-    SceneManager::GetInstance()->SetSceneClearColor({ 0.005f, 0.012f, 0.035f, 1.0f });
+    SceneManager::GetInstance()->SetSceneClearColor(kInitializeTutorialPresentationSetSceneClearColor);
     const auto createText = [](const Vector2& position, float size) {
         auto text = std::make_unique<Text>();
         text->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
         text->SetPosition(position);
         text->SetAnchorPoint({ 0.5f, 0.5f });
         text->SetFontSize(size);
-        text->SetColor({ 0.35f, 0.90f, 1.0f, 1.0f });
+        text->SetColor(kInitializeTutorialPresentationTextColor);
         return text;
     };
     tutorialTitleText_ = createText({ 640.0f, 90.0f }, 24.0f);
@@ -2515,7 +2818,7 @@ void GamePlayScene::InitializeTutorialPresentation()
     tutorialExitOverlay_ = std::make_unique<Sprite>();
     tutorialExitOverlay_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     tutorialExitOverlay_->SetSize({ 1280.0f, 720.0f });
-    tutorialExitOverlay_->SetColor({ 0.015f, 0.02f, 0.04f, 0.0f });
+    tutorialExitOverlay_->SetColor(kInitializeTutorialPresentationTutorialExitOverlayColor);
     tutorialExitOverlay_->Update();
     // 最初の描画からデータ空間を構築中の状態にする。
     for (auto& object : levelObjects_) {
@@ -2535,9 +2838,9 @@ bool GamePlayScene::UpdateTutorialPresentation()
     const bool pad = input->IsUsingGamepad();
     tutorialTitleText_->SetText(tutorialExitTime_ >= 0.0f
         ? "SIMULATION COMPLETE // LAUNCH STAGE 1"
-        : (tutorialIntroTime_ < 1.5f ? "SIMULATION INITIALIZING"
-            : (tutorialIntroTime_ < 2.3f ? "TRAINING START" : tutorialController_.GetTitle())));
-    if (tutorialIntroTime_ >= 1.5f && tutorialExitTime_ < 0.0f && !isPaused_) {
+        : (tutorialIntroTime_ < kTutorialInitializingEndSeconds ? "SIMULATION INITIALIZING"
+            : (tutorialIntroTime_ < kTutorialStartTitleEndSeconds ? "TRAINING START" : tutorialController_.GetTitle())));
+    if (tutorialIntroTime_ >= kTutorialControlsEnableSeconds && tutorialExitTime_ < 0.0f && !isPaused_) {
         tutorialCommPanel_->ShowMessage(tutorialController_.GetInstructionText(*input),
             tutorialController_.GetOperation(*input, *player_), tutorialController_.GetButtonHints(*input));
         tutorialCommPanel_->SetCompact(tutorialController_.IsCompact());
@@ -2577,7 +2880,7 @@ bool GamePlayScene::UpdateTutorialPresentation()
                     }
                 }
             }
-            camera_->LookAt(Lerp(Vector3 { 0.0f, 10.0f, -55.0f },
+            camera_->LookAt(Lerp(kTutorialIntroCameraEye,
                 Vector3 { 0.0f, kCameraUpwardOffset, -cameraBackwardOffset_ }, eased),
                 { 0.0f, 0.0f, cameraLookAheadDistance_ });
             camera_->Update();
@@ -2597,7 +2900,7 @@ bool GamePlayScene::UpdateTutorialPresentation()
     tutorialExitTime_ += TimeManager::GetInstance()->GetUnscaledDeltaTime();
     const float progress = std::clamp(tutorialExitTime_ / 0.45f, 0.0f, 1.0f);
     const float alpha = progress * progress * (3.0f - 2.0f * progress);
-    tutorialExitOverlay_->SetColor({ 0.015f, 0.02f, 0.04f, alpha });
+    tutorialExitOverlay_->SetColor({ kUpdateTutorialPresentationTutorialExitOverlayColorRed, kUpdateTutorialPresentationTutorialExitOverlayColorGreen, kUpdateTutorialPresentationTutorialExitOverlayColorBlue, alpha });
     tutorialExitOverlay_->Update();
     if (progress >= 1.0f && !tutorialExitQueued_) {
         tutorialExitQueued_ = true;
@@ -2633,11 +2936,11 @@ void GamePlayScene::UpdateBossHpHud()
     displayedBossHeadHpRatio_ = std::lerp(
         displayedBossHeadHpRatio_,
         headHpFraction,
-        GameTiming::CalculateFollowBlend(0.10f, TimeManager::GetInstance()->GetDeltaTime()));
+        GameTiming::CalculateFollowBlend(kUpdateBossHpHudDisplayedBossHeadHpRatioDefault, TimeManager::GetInstance()->GetDeltaTime()));
     displayedBossBodyHpRatio_ = std::lerp(
         displayedBossBodyHpRatio_,
         bodyHpFraction,
-        GameTiming::CalculateFollowBlend(0.10f, TimeManager::GetInstance()->GetDeltaTime()));
+        GameTiming::CalculateFollowBlend(kUpdateBossHpHudDisplayedBossBodyHpRatioDefault, TimeManager::GetInstance()->GetDeltaTime()));
 
     if (std::abs(displayedBossHeadHpRatio_ - headHpFraction) < 0.001f) {
         displayedBossHeadHpRatio_ = headHpFraction;
@@ -2650,13 +2953,13 @@ void GamePlayScene::UpdateBossHpHud()
     if (bossHeadHpBarSprite_) {
         bossHeadHpBarSprite_->SetSize({
             kBossHpBarWidth * displayedBossHeadHpRatio_,
-            14.0f });
+            kUpdateBossHpHudBossHeadHpBarSpriteSizeY });
         bossHeadHpBarSprite_->Update();
     }
     if (bossBodyHpBarSprite_) {
         bossBodyHpBarSprite_->SetSize({
             kBossHpBarWidth * displayedBossBodyHpRatio_,
-            14.0f });
+            kUpdateBossHpHudBossBodyHpBarSpriteSizeY });
         bossBodyHpBarSprite_->Update();
     }
     if (bossHeadHpBgSprite_) {
@@ -2844,7 +3147,7 @@ void GamePlayScene::DrawImGui()
 
         if (ImGui::Begin("Boss HP HUD", nullptr, windowFlags)) {
             // ボス名称
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, kBossWarningTextRedGreenComponent, kBossWarningTextRedGreenComponent, 1.0f));
             const char* debugBossName = "FEAR WORM";
             if (stageSettings_.bossType == "IceJellyfish") {
                 debugBossName = "ICE JELLYFISH";
@@ -2856,8 +3159,8 @@ void GamePlayScene::DrawImGui()
             float headFraction = GetActiveBoss()->GetHeadHpFraction();
             ImGui::Text(stageSettings_.bossType == "IceJellyfish" ? "CORE HP  " : "HEAD CORE  ");
             ImGui::SameLine();
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.2f, 0.6f, 1.0f, 1.0f)); // ネオンブルー
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.2f, 0.3f, 0.4f));       // 暗い青背景
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(kBossWarningTextRedGreenComponent, kBossHeadHpGreenComponent, 1.0f, 1.0f)); // ネオンブルー
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(kBossHeadHpPanelRed, kBossWarningTextRedGreenComponent, kBossHeadHpPanelBlue, kBossHpPanelAlpha));       // 暗い青背景
             ImGui::ProgressBar(headFraction, ImVec2(-1, 14.0f), "");
             ImGui::PopStyleColor(2);
 
@@ -2868,8 +3171,8 @@ void GamePlayScene::DrawImGui()
             
             ImVec2 barPosMin = ImGui::GetCursorScreenPos();
             
-            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // ネオンレッド
-            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.3f, 0.1f, 0.1f, 0.4f));       // 暗い赤背景
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, kBossWarningTextRedGreenComponent, kBossWarningTextRedGreenComponent, 1.0f)); // ネオンレッド
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(kBossHeadHpPanelBlue, kBossHeadHpPanelRed, kBossHeadHpPanelRed, kBossHpPanelAlpha));       // 暗い赤背景
             ImGui::ProgressBar(bodyFraction, ImVec2(-1, 14.0f), "");
             ImGui::PopStyleColor(2);
 
@@ -2878,7 +3181,7 @@ void GamePlayScene::DrawImGui()
             float barWidth = barPosMax.x - barPosMin.x;
             const int kSegmentDivisions = stageSettings_.bossType == "IceJellyfish" ? 6 : 9;
             ImDrawList* drawList = ImGui::GetWindowDrawList();
-            ImU32 lineColor = IM_COL32(10, 10, 10, 255); // ほぼ黒のシャープな区切り線
+            ImU32 lineColor = IM_COL32(kHpSeparatorRgb, kHpSeparatorRgb, kHpSeparatorRgb, kHpSeparatorAlpha); // ほぼ黒のシャープな区切り線
 
             for (int i = 1; i < kSegmentDivisions; ++i) {
                 float splitX = barPosMin.x + (barWidth * i / static_cast<float>(kSegmentDivisions));
@@ -2886,7 +3189,7 @@ void GamePlayScene::DrawImGui()
                     ImVec2(splitX, barPosMin.y),
                     ImVec2(splitX, barPosMax.y),
                     lineColor,
-                    2.0f // 2pxの太さでしっかり区切る
+                    kBossHpSeparatorThickness // 2pxの太さでしっかり区切る
                 );
             }
         }
@@ -2920,7 +3223,7 @@ void GamePlayScene::DrawImGui()
     ImGui::End();
 
     ImGui::Begin("Camera Adjuster");
-    ImGui::DragFloat("Height Follow Factor", &cameraHeightFollowFactor_, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Height Follow Factor", &cameraHeightFollowFactor_, kCameraFollowEditorStep, 0.0f, 1.0f);
     ImGui::DragFloat("Look Up Factor", &cameraLookUpFactor_, 0.01f, 0.0f, 2.0f);
     ImGui::End();
 
@@ -2933,7 +3236,7 @@ void GamePlayScene::DrawImGui()
         ImGui::Text("Boss Z: %.2f", GetActiveBoss()->GetPosition().z);
         if (ImGui::Button("Teleport to Boss")) {
             float bossZ = GetActiveBoss()->GetPosition().z;
-            railDistance_ = bossZ - 130.0f;
+            railDistance_ = bossZ - kDrawImGuiRailDistanceOffset;
             if (railDistance_ < 0.0f) {
                 railDistance_ = 0.0f;
             }
@@ -2941,7 +3244,7 @@ void GamePlayScene::DrawImGui()
     } else {
         ImGui::Text("Boss has not spawned yet.");
         if (ImGui::Button("Warp to Boss Area (Trigger Spawn)")) {
-            railDistance_ = 1750.0f;
+            railDistance_ = kDrawImGuiRailDistanceDefault;
         }
     }
     ImGui::End();
@@ -3335,15 +3638,15 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         Vector3 rotate = object->GetRotate();
         Vector3 scale = object->GetScale();
 #define OBJECT_FIELD(name, field, low, high) if (key == name) { field = std::clamp(number, low, high); }
-        OBJECT_FIELD("objectX", translate.x, -10000.0f, 10000.0f)
-        OBJECT_FIELD("objectY", translate.y, -10000.0f, 10000.0f)
-        OBJECT_FIELD("objectZ", translate.z, -10000.0f, 10000.0f)
-        OBJECT_FIELD("objectRotX", rotate.x, -6.28f, 6.28f)
-        OBJECT_FIELD("objectRotY", rotate.y, -6.28f, 6.28f)
-        OBJECT_FIELD("objectRotZ", rotate.z, -6.28f, 6.28f)
-        OBJECT_FIELD("objectScaleX", scale.x, 0.01f, 100.0f)
-        OBJECT_FIELD("objectScaleY", scale.y, 0.01f, 100.0f)
-        OBJECT_FIELD("objectScaleZ", scale.z, 0.01f, 100.0f)
+        OBJECT_FIELD("objectX", translate.x, -kObjectPositionXLowerLimitMagnitude, kObjectPositionXUpperLimit)
+        OBJECT_FIELD("objectY", translate.y, -kObjectPositionYLowerLimitMagnitude, kObjectPositionYUpperLimit)
+        OBJECT_FIELD("objectZ", translate.z, -kObjectPositionZLowerLimitMagnitude, kObjectPositionZUpperLimit)
+        OBJECT_FIELD("objectRotX", rotate.x, -kObjectRotationXLowerLimitMagnitude, kObjectRotationXUpperLimit)
+        OBJECT_FIELD("objectRotY", rotate.y, -kObjectRotationYLowerLimitMagnitude, kObjectRotationYUpperLimit)
+        OBJECT_FIELD("objectRotZ", rotate.z, -kObjectRotationZLowerLimitMagnitude, kObjectRotationZUpperLimit)
+        OBJECT_FIELD("objectScaleX", scale.x, kObjectScaleXMinimum, kObjectScaleXMaximum)
+        OBJECT_FIELD("objectScaleY", scale.y, kObjectScaleYMinimum, kObjectScaleYMaximum)
+        OBJECT_FIELD("objectScaleZ", scale.z, kObjectScaleZMinimum, kObjectScaleZMaximum)
 #undef OBJECT_FIELD
         object->SetTranslate(translate);
         object->SetRotate(rotate);
@@ -3389,7 +3692,7 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         SET_LIGHT("lightColorR", lightColor_.x, 0.0f, 1.0f)
         SET_LIGHT("lightColorG", lightColor_.y, 0.0f, 1.0f)
         SET_LIGHT("lightColorB", lightColor_.z, 0.0f, 1.0f)
-        SET_LIGHT("lightIntensity", lightIntensity_, 0.0f, 5.0f)
+        SET_LIGHT("lightIntensity", lightIntensity_, 0.0f, kDirectionalIntensityMaximum)
         SET_LIGHT("lightDirX", lightDir_.x, -1.0f, 1.0f)
         SET_LIGHT("lightDirY", lightDir_.y, -1.0f, 1.0f)
         SET_LIGHT("lightDirZ", lightDir_.z, -1.0f, 1.0f)
@@ -3400,26 +3703,26 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         SET_LIGHT("pointColorR", pointColor_.x, 0.0f, 1.0f)
         SET_LIGHT("pointColorG", pointColor_.y, 0.0f, 1.0f)
         SET_LIGHT("pointColorB", pointColor_.z, 0.0f, 1.0f)
-        SET_LIGHT("pointPosX", pointPos_.x, -10.0f, 10.0f)
-        SET_LIGHT("pointPosY", pointPos_.y, -10.0f, 10.0f)
-        SET_LIGHT("pointPosZ", pointPos_.z, -10.0f, 10.0f)
-        SET_LIGHT("pointIntensity", pointIntensity_, 0.0f, 5.0f)
-        SET_LIGHT("pointRadius", pointRadius_, 0.1f, 30.0f)
-        SET_LIGHT("pointDecay", pointDecay_, 0.1f, 5.0f)
+        SET_LIGHT("pointPosX", pointPos_.x, -kPointPositionXLowerLimitMagnitude, kPointPositionXUpperLimit)
+        SET_LIGHT("pointPosY", pointPos_.y, -kPointPositionYLowerLimitMagnitude, kPointPositionYUpperLimit)
+        SET_LIGHT("pointPosZ", pointPos_.z, -kPointPositionZLowerLimitMagnitude, kPointPositionZUpperLimit)
+        SET_LIGHT("pointIntensity", pointIntensity_, 0.0f, kPointIntensityMaximum)
+        SET_LIGHT("pointRadius", pointRadius_, kPointRadiusMinimumAction, kPointRadiusMaximumAction)
+        SET_LIGHT("pointDecay", pointDecay_, kPointDecayMinimum, kPointDecayMaximum)
         SET_LIGHT("spotColorR", spotColor_.x, 0.0f, 1.0f)
         SET_LIGHT("spotColorG", spotColor_.y, 0.0f, 1.0f)
         SET_LIGHT("spotColorB", spotColor_.z, 0.0f, 1.0f)
-        SET_LIGHT("spotPosX", spotPos_.x, -10.0f, 10.0f)
-        SET_LIGHT("spotPosY", spotPos_.y, -10.0f, 10.0f)
-        SET_LIGHT("spotPosZ", spotPos_.z, -10.0f, 10.0f)
+        SET_LIGHT("spotPosX", spotPos_.x, -kPointPositionXLowerLimitMagnitude, kPointPositionXUpperLimit)
+        SET_LIGHT("spotPosY", spotPos_.y, -kPointPositionYLowerLimitMagnitude, kPointPositionYUpperLimit)
+        SET_LIGHT("spotPosZ", spotPos_.z, -kPointPositionZLowerLimitMagnitude, kPointPositionZUpperLimit)
         SET_LIGHT("spotDirX", spotDir_.x, -1.0f, 1.0f)
         SET_LIGHT("spotDirY", spotDir_.y, -1.0f, 1.0f)
         SET_LIGHT("spotDirZ", spotDir_.z, -1.0f, 1.0f)
-        SET_LIGHT("spotIntensity", spotIntensity_, 0.0f, 10.0f)
-        SET_LIGHT("spotDistance", spotDistance_, 0.1f, 30.0f)
-        SET_LIGHT("spotDecay", spotDecay_, 0.1f, 5.0f)
+        SET_LIGHT("spotIntensity", spotIntensity_, 0.0f, kSpotIntensityMaximum)
+        SET_LIGHT("spotDistance", spotDistance_, kSpotDistanceMinimumAction, kSpotDistanceMaximumAction)
+        SET_LIGHT("spotDecay", spotDecay_, kSpotDecayMinimum, kSpotDecayMaximum)
         if (key == "spotAngleDeg") {
-            spotAngleDeg_ = std::clamp(number, 2.0f, 90.0f);
+            spotAngleDeg_ = std::clamp(number, kSpotAngleMinimumDegrees, kSpotAngleMaximumDegrees);
             spotFalloffStartDeg_ = (std::min)(spotFalloffStartDeg_, spotAngleDeg_ - 1.0f);
             ApplyDevelopmentLighting();
             return true;
@@ -3430,9 +3733,9 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
             return true;
         }
         SET_VALUE("cameraHeightFollowFactor", cameraHeightFollowFactor_, 0.0f, 1.0f)
-        SET_VALUE("cameraLookUpFactor", cameraLookUpFactor_, 0.0f, 2.0f)
+        SET_VALUE("cameraLookUpFactor", cameraLookUpFactor_, 0.0f, kCameraLookUpMaximum)
         if (key == "controlMode") {
-            if (number >= 0.5f) {
+            if (number >= kApplyDevelopmentActionNumberThreshold) {
                 gControlMode = Player::ControlMode::StarFox;
             } else {
                 gControlMode = Player::ControlMode::KeyboardAndMouse;
@@ -3475,9 +3778,9 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         }
         if (key == "cameraScaleX" || key == "cameraScaleY" || key == "cameraScaleZ") {
             Vector3 scale = camera_->GetScale();
-            if (key == "cameraScaleX") scale.x = std::clamp(number, 0.01f, 10.0f);
-            if (key == "cameraScaleY") scale.y = std::clamp(number, 0.01f, 10.0f);
-            if (key == "cameraScaleZ") scale.z = std::clamp(number, 0.01f, 10.0f);
+            if (key == "cameraScaleX") scale.x = std::clamp(number, kCameraScaleXMinimum, kCameraScaleXMaximum);
+            if (key == "cameraScaleY") scale.y = std::clamp(number, kCameraScaleYMinimum, kCameraScaleYMaximum);
+            if (key == "cameraScaleZ") scale.z = std::clamp(number, kCameraScaleZMinimum, kCameraScaleZMaximum);
             camera_->SetScale(scale);
             return true;
         }
@@ -3510,18 +3813,18 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         char* end = nullptr;
         const float distance = std::strtof(value.c_str(), &end);
         if (end != value.c_str() && *end == '\0' && std::isfinite(distance)) {
-            collisionDrawDistance_ = std::clamp(distance, 20.0f, 2000.0f);
+            collisionDrawDistance_ = std::clamp(distance, kCollisionDebugMinimumDistance, kCollisionDebugMaximumDistance);
         } else { return false; }
     } else if (key == "teleportBossArea") {
-        railDistance_ = 1750.0f;
+        railDistance_ = kApplyDevelopmentActionRailDistanceDefault;
     } else if (key == "teleportBoss") {
         if (const BaseBoss* boss = GetActiveBoss()) {
-            railDistance_ = (std::max)(0.0f, boss->GetPosition().z - 130.0f);
+            railDistance_ = (std::max)(0.0f, boss->GetPosition().z - kApplyDevelopmentActionBossOffset);
         } else { return false; }
     } else if (key == "teleportJellyfish") {
         if (auto view = GetActiveBoss() ? GetActiveBoss()->CreateDebugView() : nullptr;
             view && view->HasBossInspector()) {
-            railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - 200.0f);
+            railDistance_ = (std::max)(0.0f, stageSettings_.bossPosition.z - kApplyDevelopmentActionRailDistanceOffset);
         } else { return false; }
     } else { return false; }
     return true;
@@ -3544,7 +3847,7 @@ void GamePlayScene::DrawCollisionDebug()
         return dx * dx + dy * dy + dz * dz <= range * range;
     };
     if (showEnemyCollision_ && showIceJellyfishCollision_) {
-        if (BaseBoss* boss = GetActiveBoss(); boss && isNearCamera(boss->GetPosition(), 100.0f)) {
+        if (BaseBoss* boss = GetActiveBoss(); boss && isNearCamera(boss->GetPosition(), kBossCollisionDebugMargin)) {
             if (auto view = boss->CreateDebugView(); view && view->HasBossInspector()) {
                 view->DrawCollisionDebug();
             }
@@ -3559,7 +3862,7 @@ void GamePlayScene::DrawCollisionDebug()
 
     if (showPlayerCollision_ && isNearCamera(player_->GetTranslate(), kPlayerEnemyCollisionRadius)) {
         debugRenderer->AddWireSphere(
-            player_->GetTranslate(), kPlayerEnemyCollisionRadius * 0.5f,
+            player_->GetTranslate(), kPlayerEnemyCollisionRadius * kDrawCollisionDebugDebugRendererAddWireSphereMultiplier,
             kPlayerColor, kLineThickness);
     }
 
@@ -3623,7 +3926,7 @@ void GamePlayScene::DrawCollisionDebug()
         if (bullet->IsAlive() && isNearCamera(bullet->GetPosition(), bullet->GetCollisionRadius())) {
             debugRenderer->AddWireSphere(
                 bullet->GetPosition(),
-                bullet->GetCollisionRadius() * 0.5f,
+                bullet->GetCollisionRadius() * kDrawCollisionDebugDebugRendererAddWireSphereMultiplier,
                 kEnemyBulletColor,
                 kLineThickness);
         }
@@ -3686,7 +3989,7 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
         presetId = "boost";
         blur.sampleCount = 48;
         if (boostKickStrength_ > 0.0f) { blur.sampleCount = 64; }
-        blur.width = 0.25f + 0.28f * boostKickStrength_;
+        blur.width = kConfigureGameplayPostEffectsBlurWidthDefault + kConfigureGameplayPostEffectsBlurWidthOffset * boostKickStrength_;
         blur.impulseStrength = boostKickStrength_;
     }
     SceneManager* sceneManager = SceneManager::GetInstance();
@@ -3891,16 +4194,16 @@ void GamePlayScene::UpdatePlayerDamagePostEffects()
             cameraShakeDuration_ = kPlayerDamageShakeDurationSeconds;
             cameraShakeStrength_ = kPlayerDamageShakeStrength;
         }
-        if (currentHp <= 3 && lastPlayerHp_ > 3) {
+        if (currentHp <= kLowHpWarningThreshold && lastPlayerHp_ > 3) {
             SoundManager::GetInstance()->Play("LowHpWarning");
         }
     }
     lastPlayerHp_ = currentHp;
 
     float vignetteStrength = 0.0f;
-    if (currentHp > 0 && currentHp <= 3) {
+    if (currentHp > 0 && currentHp <= kLowHpWarningThreshold) {
         lowHpPulseElapsedSeconds_ += deltaTimeSeconds;
-        vignetteStrength = 0.45f + 0.25f * std::sin(lowHpPulseElapsedSeconds_ * 8.5f);
+        vignetteStrength = kUpdatePlayerDamagePostEffectsVignetteStrengthDefault + kUpdatePlayerDamagePostEffectsVignetteStrengthOffset * std::sin(lowHpPulseElapsedSeconds_ * kUpdatePlayerDamagePostEffectsVignetteStrengthFrequency);
     } else {
         lowHpPulseElapsedSeconds_ = 0.0f;
     }
@@ -4062,7 +4365,7 @@ void GamePlayScene::SpawnSwarmWave(
             formationType,
             slotIndex,
             travelDirection,
-            stageId_ == "stage01" ? rail_->GetPositionByDistance(railDistance_).y + 2.0f : 2.0f);
+            stageId_ == "stage01" ? rail_->GetPositionByDistance(railDistance_).y + kSwarmRailHeightOffset : kSwarmFallbackHeight);
         ConfigureFrozenEnemyAppearance(*swarmEnemy);
         enemies_.push_back(std::move(swarmEnemy));
     }
@@ -4082,8 +4385,8 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
 
             // デフォルトの移動パターンを設定
             enemy->SetMovePattern(MovePattern::LeftRight);
-            enemy->SetAmplitude(8.0f);
-            enemy->SetMoveSpeed(2.0f);
+            enemy->SetAmplitude(kPopEnemySwayAmplitude);
+            enemy->SetMoveSpeed(kPopEnemyMoveSpeed);
 
             ConfigureFrozenEnemyAppearance(*enemy);
             enemies_.push_back(std::move(enemy));
@@ -4288,11 +4591,11 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 levelObject->SetCastShadow(false);
                 levelObject->SetReceiveShadow(false);
                 levelObject->SetRaytracingEnabled(false);
-                Vector4 color { 0.08f, 0.60f, 0.95f, 1.0f };
-                if (objData.name == "data_architecture") color = { 0.008f, 0.022f, 0.050f, 1.0f };
-                if (objData.name == "data_edges") color = { 0.10f, 1.2f, 1.6f, 1.0f };
-                if (objData.name == "training_rings") color = { 0.12f, 1.6f, 2.0f, 1.0f };
-                if (objData.name == "launch_gate") color = { 0.04f, 0.12f, 0.18f, 1.0f };
+                Vector4 color { kTrainingDefaultRed, kTrainingDefaultGreen, kTrainingDefaultBlue, 1.0f };
+                if (objData.name == "data_architecture") color = kTrainingArchitectureColor;
+                if (objData.name == "data_edges") color = kTrainingEdgesColor;
+                if (objData.name == "training_rings") color = kTrainingRingsColor;
+                if (objData.name == "launch_gate") color = kTrainingLaunchGateColor;
                 levelObject->SetColor(color);
             }
 
@@ -4309,8 +4612,8 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 // SetShadingMode selects a default PS; assign the custom PS afterward.
                 levelObject->SetMaterial("resources/Shaders/Object3D/MountainRuins");
                 levelObject->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
-                levelObject->SetSurfaceProperties(0.90f, 0.0f, 0.20f);
-                levelObject->SetShininess(48.0f);
+                levelObject->SetSurfaceProperties(kRuinsRotorRoughness, 0.0f, kRuinsRotorSpecularStrength);
+                levelObject->SetShininess(kRuinsRotorShininess);
                 levelObject->SetEnvironmentMapStrength(0.0f);
                 levelObject->SetNormalMapStrength(0.0f);
             }
@@ -4318,11 +4621,11 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 objData.fileName == "Environment/Ocean/FloatingRuins/floating_slalom_wall_masonry.obj" ||
                 objData.fileName.starts_with("Environment/Ocean/FloatingRuins/floating_gate_")) {
                 levelObject->SetMaterial("resources/Shaders/Object3D/FloatingRuins");
-                levelObject->SetSurfaceProperties(0.78f, 0.0f, 0.25f);
-                levelObject->SetShininess(24.0f);
+                levelObject->SetSurfaceProperties(kFrozenObjectRoughness, 0.0f, kFrozenObjectSpecularStrength);
+                levelObject->SetShininess(kFrozenObjectShininess);
             }
             if (stageId_ == "stage03" && isIceModel) {
-                levelObject->SetColor({ 0.82f, 0.94f, 1.0f, 1.0f });
+                levelObject->SetColor(kFrozenObjectColor);
                 levelObject->SetShadingMode(MaterialShadingMode::Ice);
                 levelObject->SetMaterial(VisualPresetLibrary::GetInstance().GetMaterial(objData.fileName));
                 levelObject->SetShininess(VisualPresetLibrary::GetInstance().GetShininess("ice"));
@@ -4340,7 +4643,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 if (objData.fileName == "Environment/Ocean/FloatingRock/floating_rock.obj") {
                     levelObject->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
                 } else {
-                    levelObject->SetColor({ 0.30f, 0.20f, 0.14f, 1.0f });
+                    levelObject->SetColor(kDestructibleObjectColor);
                 }
                 destructibleLevelObjects_.push_back({
                     levelObject.get(),
@@ -4358,7 +4661,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                         levelObject->SetCastShadow(stageSettings_.shadows.enabled);
                         levelObject->SetReceiveShadow(stageSettings_.shadows.enabled);
                     } else {
-                        levelObject->SetColor({ 1.0f, 0.03f, 0.02f, 1.0f });
+                        levelObject->SetColor(kLaserHazardColor);
                         levelObject->SetEnableLighting(false);
                     }
                 }
@@ -4367,7 +4670,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             if (objData.trigger.exists &&
                 (objData.trigger.type == "WIND" ||
                  objData.trigger.type == "GRAVITY")) {
-                levelObject->SetColor({ 0.15f, 0.75f, 1.0f, 0.65f });
+                levelObject->SetColor(kFieldTriggerColor);
                 levelObject->SetEnableLighting(false);
             }
 
@@ -4417,8 +4720,8 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 enemy->SetRotate(objData.rotation);
 
                 enemy->SetMovePattern(MovePattern::LeftRight);
-                enemy->SetAmplitude(8.0f);
-                enemy->SetMoveSpeed(2.0f);
+                enemy->SetAmplitude(kFallbackEnemySwayAmplitude);
+                enemy->SetMoveSpeed(kFallbackEnemyMoveSpeed);
 
                 if (objData.patrolRoute.exists) {
                     enemy->SetPatrolWaypoints(objData.patrolRoute.waypoints);
@@ -4488,7 +4791,7 @@ void GamePlayScene::HotReloadLevel()
     }
 
     if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
-        player_->SetRailMinimumHeight(stageSettings_.floorHeight + 3.0f);
+        player_->SetRailMinimumHeight(stageSettings_.floorHeight + kHotReloadLevelPlayerRailMinimumHeightOffset);
         playerStartPos = rail_->GetPositionByDistance(0.0f);
     }
     player_->SetTranslate(playerStartPos);

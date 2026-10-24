@@ -45,6 +45,6 @@ TAAはHDRのシーン・反射・霧合成後、粒子・HUD・画面歪み・Bl
 
 縞のMSEは現在フレーム0.0835037→時間再構成0.00652883（約92%低減）。2倍拡大したHDRランプは2.06445、期待値2.06452。これは人工的な縞/ランプのテストで、全場面の画質改善率を示すものではない。
 
-`ShadowMapTests.exe --taa` は実際のタイトル・ステージ03、ネイティブTAA、カメラカット、FXAA併用、DLAAとの排他的選択、OFF、D3D12検証を確認する。結果は `runtime/captures/DxrTests/taa-result.txt` と `runtime/captures/ShadowMapTests/taa-integration-result.txt`。
+`ShadowMapTests.exe --taa` は実際のタイトル・ステージ03、ネイティブTAA、カメラカット、FXAA併用、DLAAとの排他的選択、OFF、D3D12検証を確認する。結果は `generated/Captures/DxrTests/taa-result.txt` と `generated/Captures/ShadowMapTests/taa-integration-result.txt`。
 
 TAA基盤追加時の検証結果：TAA重点検証、タイトル/ステージ03の統合検証、既存NGX DLAAの回帰検証、DXR全件検証、Developmentビルドは成功。実ステージのTAA評価は約1.084 msだった。DXR全件検証の最後に同じネイティブ評価を行うと7.228 msを記録したため、単独値を固定の性能保証には使わない。当時残っていた `ShadowMapTests` 全件の半球光比較失敗は、最終画質検証で環境マップとの置き換えを分離した検証条件に修正して解消した。

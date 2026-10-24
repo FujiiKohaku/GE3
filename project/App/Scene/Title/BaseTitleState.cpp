@@ -8,6 +8,12 @@
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include <array>
 
+namespace {
+// Named tuning values; keep literals and their types unchanged.
+constexpr float kUpdateDistanceProgressOffset = 0.04f;
+constexpr float kUpdateDistanceProgressDivisor = 0.96f;
+}
+
 // 状態へ入るたびに、画面遷移用の経過時間をリセットする。
 void BaseTitleState::Enter(TitleScene& scene) const { scene.animationTime_ = 0.0f; }
 
@@ -94,7 +100,7 @@ public:
         const float progress = TitleScene::Clamp01(scene.animationTime_ / durationSeconds);
         float distanceProgress = 1.0f - TitleScene::SmoothStep(progress);
         if (isEntering_) {
-            distanceProgress = TitleScene::SmoothStep((progress - 0.04f) / 0.96f);
+            distanceProgress = TitleScene::SmoothStep((progress - kUpdateDistanceProgressOffset) / kUpdateDistanceProgressDivisor);
         }
         scene.UpdateStageSelectTransitionCamera(distanceProgress);
         if (progress >= 1.0f) {

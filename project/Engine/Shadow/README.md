@@ -83,7 +83,7 @@ MSBuild project/Tests/Projects/ShadowMapTests.vcxproj /m /p:Configuration=Releas
 
 Run `generated/outputs/Release/ShadowMapTests.exe` with working directory `project`.
 It exports ON/OFF/CastShadow-OFF/ReceiveShadow-OFF PNGs under
-`runtime/captures/ShadowMapTests`, compares actual GPU pixels and checks D3D12 warnings
+`generated/Captures/ShadowMapTests`, compares actual GPU pixels and checks D3D12 warnings
 and errors when the debug layer is available. `--stage` follows the normal
 Title -> Loading -> Stage03 path, renders the actual game scene with shadows
 ON/OFF, exports PNGs and checks D3D12 errors. This is a separate validation binary;

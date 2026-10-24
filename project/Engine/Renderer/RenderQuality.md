@@ -34,7 +34,7 @@ Debugの「Anti-aliasing comparison」に `Quality` / `Balanced` / `Performance`
 
 同じ場面とカメラで時間経過を停止し、各プリセットで64フレームを除外して次の16フレームを平均する。Performanceでは推奨の低解像度も使用するので、RTの品質だけを変えた比較ではなく、推奨構成全体の比較になる。Debugビルドの実行であり、Releaseのベンチマークや性能保証ではない。
 
-出力：`runtime/captures/ShadowMapTests/quality-result.txt`、`quality-gpu-times.csv`、`quality-quality.png`、`quality-balanced.png`、`quality-performance.png`。フレーム時間はRendererの描画区間、RT時間は各照明パスの探索・ノイズ除去・合成の合計。加速構造構築はフレーム時間に含まれるがRT列には含まれない。
+出力：`generated/Captures/ShadowMapTests/quality-result.txt`、`quality-gpu-times.csv`、`quality-quality.png`、`quality-balanced.png`、`quality-performance.png`。フレーム時間はRendererの描画区間、RT時間は各照明パスの探索・ノイズ除去・合成の合計。加速構造構築はフレーム時間に含まれるがRT列には含まれない。
 
 
 最終検証：3プリセットのゲーム統合テストとDevelopmentビルドに成功。霧のGPUタイムスタンプをRendererのフェンス完了後に読み戻す接続も追加した。追加GPU待ちを使わず、当該フレームの霧の時間を表示・比較できる。

@@ -35,6 +35,11 @@ void FearWormBeam::Stop()
 {
     length_ = 0.0f;
     width_ = 0.0f;
+    ClearHitState();
+}
+
+void FearWormBeam::ClearHitState()
+{
     isHittingPlayer_ = false;
     hitEffectElapsedSeconds_ = 0.0f;
 }

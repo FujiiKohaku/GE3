@@ -326,5 +326,5 @@ logs/
 !project/resources/**/*.obj
 
 
-# プロジェクト内の実行時出力・旧ファイルの退避
-/project/runtime/
+# プロジェクト内の実行時出力（キャプチャ・ログ・ローカル設定）
+/project/generated/

@@ -31,8 +31,8 @@ void FearWormCoilBarrageState::Enter(FearWormBattleState& battle, FearWormEnemy&
 void FearWormCoilBarrageState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
     elapsedSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
-    battle.UpdateBattleMovement(boss, CalculateTarget(context, elapsedSeconds_), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
+    battle.UpdateBattleMovement(boss, CalculateTarget(context, elapsedSeconds_), boss.GetAttackMovementSpeedRate());
     FireBarrage(battle, boss);
     isFinished_ = elapsedSeconds_ >= kCoilFormationDurationSeconds
         + kCoilAttackDurationSeconds + kCoilReleaseDurationSeconds;
@@ -71,13 +71,13 @@ void FearWormCoilBarrageState::FireBarrage(FearWormBattleState& battle, FearWorm
     const float radialSpeedRatio = kCoilBarrageSpreadRatio * backwardSpeedRatio;
 
     // 生存している各部位から発射
-    for (size_t segmentIndex = 0; segmentIndex < boss.segments_.size(); segmentIndex++) {
+    for (size_t segmentIndex = 0; segmentIndex < boss.GetAttackSegmentCount(); segmentIndex++) {
 
-        if (!boss.segments_[segmentIndex].isAlive) {
+        if (!boss.IsAttackSegmentAlive(segmentIndex)) {
             continue;
         }
 
-        const Vector3 position = boss.segments_[segmentIndex].position;
+        const Vector3 position = boss.GetAttackSegmentPosition(segmentIndex);
         const float angleOffset = static_cast<float>(segmentIndex) * kCoilBarrageSegmentAngleRadians
             + elapsedSeconds_ * kCoilBarrageAngularSpeedRadiansPerSecond;
 

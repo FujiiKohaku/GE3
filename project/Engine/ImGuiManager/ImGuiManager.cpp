@@ -59,8 +59,8 @@ void ImGuiManager::Initialize([[maybe_unused]] WinApp* winApp, [[maybe_unused]] 
     // ImGuiコンテキスト生成
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    std::filesystem::create_directories("runtime/config");
-    io.IniFilename = "runtime/config/imgui.ini";
+    std::filesystem::create_directories("generated/config");
+    io.IniFilename = "generated/config/imgui.ini";
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     // Win32側の初期化

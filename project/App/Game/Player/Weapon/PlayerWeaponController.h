@@ -74,7 +74,7 @@ class PlayerWeaponController {
 public:
     // 機体の姿勢と状態を参照する。参照先のPlayerは、この管理クラスより長く生存する必要がある。
     explicit PlayerWeaponController(const Player& player);
-    // 発射回数をリセットし、プレイヤー弾の表示に使うモデルを読み込む。
+    // 前回の戦闘状態をリセットし、弾モデルを読み込む。設定済みのカメラは維持する。
     void Initialize();
     // 新しいカメラを記録し、すでに発射済みの弾にも同じカメラを設定する。
     void SetCamera(Camera* camera);
@@ -105,6 +105,8 @@ public:
 #endif
 
 private:
+    friend bool RunPlayerWeaponResetTests();
+    void ResetCombatState();
     enum WeaponType {
         kWeaponNormalBullet = 0,
         kWeaponMissileBullet,

@@ -12,6 +12,6 @@ public:
     float FovRadians() const;
     float BoostFovRadians() const;
     const char* PresetName() const;
-    bool Load(const std::filesystem::path& path = "runtime/settings/camera.json");
-    bool Save(const std::filesystem::path& path = "runtime/settings/camera.json") const;
+    bool Load(const std::filesystem::path& path = "generated/settings/camera.json");
+    bool Save(const std::filesystem::path& path = "generated/settings/camera.json") const;
 };

@@ -17,6 +17,7 @@ public:
     void Initialize();
     void Reset();
     void Stop();
+    void ClearHitState();
     void SetDimensions(float length, float width);
     void SetPose(const Vector3& position, const Vector3& direction);
     const Vector3& GetPosition() const { return position_; }

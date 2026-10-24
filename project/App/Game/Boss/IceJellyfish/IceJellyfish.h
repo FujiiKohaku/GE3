@@ -2,6 +2,7 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "PoseController/IceJellyfishPoseController.h"
 #include "Wait/IceJellyfishWaitState.h"
 #include "Entry/IceJellyfishEntryState.h"
 #include "Battle/IceJellyfishBattleState.h"
@@ -9,8 +10,6 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Math/MatrixMath.h"
 #include <array>
-#include <cmath>
-#include <numbers>
 #include <memory>
 #include <vector>
 
@@ -24,8 +23,8 @@ public:
     IceJellyfish();
     BossState GetBossState() const { return state_; }
     static constexpr float kMaxHp = 120.0f;
-    static constexpr size_t kTentacleCount = IceJellyfishBattleState::kTentacleCount;
-    static constexpr size_t kSegmentsPerTentacle = 7;
+    static constexpr size_t kTentacleCount = IceJellyfishPoseController::kTentacleCount;
+    static constexpr size_t kSegmentsPerTentacle = IceJellyfishPoseController::kSegmentsPerTentacle;
     static constexpr size_t kIcePillarModelCount = IceJellyfishBattleState::kIcePillarModelCount;
 
     struct PresentationPositions {
@@ -72,7 +71,7 @@ public:
     void OnCollisionPartGuarded(int32_t partIndex, const Vector3& position) override;
 
     bool IsDeathSequenceFinished() const override { return deadState_.IsDeathSequenceFinished(); }
-    bool IsMadModeActive() const override { return GetHealth() <= kMaxHp * 0.35f; }
+    bool IsMadModeActive() const override { return GetHealth() <= kMaxHp * kMadModeHealthThreshold; }
     bool IsBeamHittingPlayer() const override { return false; }
     // 頭の残りHPをHUD用の割合として返す。
     float GetHeadHpFraction() const override;
@@ -80,13 +79,22 @@ public:
     float GetBodyHpFraction() const override;
     float GetHp() const { return GetHealth(); }
 
+    // 攻撃用の読み取りと操作。モデル配列やプレイヤー自体は公開しない。
+    bool HasAttackTarget() const { return player_ != nullptr; }
+    Vector3 GetAttackTargetPosition() const;
+    Vector3 GetAttackBodyPosition() const { return bodyPosition_; }
+    Vector3 GetAttackHoverCenter() const { return { hoverCenterX_, hoverCenterY_, 0.0f }; }
+    Model* GetAttackBulletModel() const { return bulletModel_; }
+    Vector3 GetAttackSegmentPosition(size_t tentacle, size_t segment) const;
+    bool ApplyAttackDamageToPlayer(int damage);
+    void SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet);
+    bool IsSegmentAlive(size_t tentacle, size_t segment) const;
+
 private:
+    friend class IceJellyfishPoseController;
     friend class IceJellyfishWaitState;
     friend class IceJellyfishEntryState;
     friend class IceJellyfishBattleState;
-    friend class IceJellyfishPulseBarrageAttack;
-    friend class IceJellyfishIceSpearAttack;
-    friend class IceJellyfishIcePillarAttack;
     friend class IceJellyfishDeadState;
     friend bool RunIceJellyfishStateTests();
     static constexpr int32_t kMaxStateUpdatesPerFrame = 3;
@@ -97,78 +105,9 @@ private:
     friend bool RunJellyfishAttackTests();
     friend int RunIceJellyfishCollisionTests();
 
-    static OBB MakeCollisionBox(const Matrix4x4& world, const Vector3& center, const Vector3& size)
-    {
-        OBB box {};
-        box.center = MatrixMath::Transform(center, world);
-        const Vector3 x = { world.m[0][0], world.m[0][1], world.m[0][2] };
-        const Vector3 y = { world.m[1][0], world.m[1][1], world.m[1][2] };
-        const Vector3 z = { world.m[2][0], world.m[2][1], world.m[2][2] };
-        box.size = { size.x * Vector3Length(x), size.y * Vector3Length(y), size.z * Vector3Length(z) };
-        box.orientation[0] = NormalizeSafe(x);
-        box.orientation[1] = NormalizeSafe(y);
-        box.orientation[2] = NormalizeSafe(z);
-        return box;
-    }
-
-    static void BuildBellColliders(const Matrix4x4& body, float pulse, std::vector<OBB>& boxes)
-    {
-        // Follow the dome's surface with thin panels, never a solid bounding box.
-        constexpr std::array<float, 7> kRadii = { 0.0f, 4.4f, 8.8f, 13.2f, 17.3f, 20.3f, 22.0f };
-        constexpr std::array<float, 7> kHeights = { 12.0f, 11.7f, 10.9f, 9.4f, 7.2f, 4.3f, 0.0f };
-        constexpr int kSlices = 32;
-        const float radialScale = 1.0f + pulse * 0.018f;
-        const float heightScale = 1.0f - pulse * 0.025f;
-        const float halfAngle = std::numbers::pi_v<float> / kSlices;
-        boxes.clear();
-        boxes.reserve((kRadii.size() - 1) * kSlices + 16);
-        for (size_t ring = 0; ring + 1 < kRadii.size(); ++ring) {
-            const float innerRadius = kRadii[ring] * radialScale;
-            const float outerRadius = kRadii[ring + 1] * radialScale;
-            const float upper = kHeights[ring] * heightScale;
-            const float lower = kHeights[ring + 1] * heightScale;
-            const float dr = outerRadius - innerRadius;
-            const float dy = lower - upper;
-            const float length = std::sqrt(dr * dr + dy * dy);
-            for (int slice = 0; slice < kSlices; ++slice) {
-                const float angle = 2.0f * halfAngle * static_cast<float>(slice);
-                const float c = std::cos(angle);
-                const float s = std::sin(angle);
-                const Vector3 tangent = { -s, 0.0f, c };
-                const Vector3 meridian = { c * dr / length, dy / length, s * dr / length };
-                const Vector3 normal = Cross(tangent, meridian);
-                const Vector3 center = {
-                    c * (innerRadius + outerRadius) * 0.5f,
-                    (upper + lower) * 0.5f - 0.5f * heightScale,
-                    s * (innerRadius + outerRadius) * 0.5f
-                };
-                Matrix4x4 local = MatrixMath::MakeIdentity4x4();
-                local.m[0][0] = tangent.x;
-                local.m[0][1] = tangent.y;
-                local.m[0][2] = tangent.z;
-                local.m[1][0] = meridian.x;
-                local.m[1][1] = meridian.y;
-                local.m[1][2] = meridian.z;
-                local.m[2][0] = normal.x;
-                local.m[2][1] = normal.y;
-                local.m[2][2] = normal.z;
-                local.m[3][0] = center.x;
-                local.m[3][1] = center.y;
-                local.m[3][2] = center.z;
-                boxes.push_back(MakeCollisionBox(MatrixMath::Multiply(local, body), {},
-                    { 2.0f * outerRadius * std::tan(halfAngle) + 0.12f, length + 0.3f, 1.65f }));
-            }
-        }
-        for (int tooth = 0; tooth < 16; ++tooth) {
-            const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(tooth) / 16.0f;
-            const Matrix4x4 local = MatrixMath::MakeAffineMatrix(
-                { 1.0f, 1.0f, 1.0f }, Vector3 { 0.0f, -angle, 0.0f },
-                { std::cos(angle) * 21.45f * radialScale, -1.55f * heightScale,
-                  std::sin(angle) * 21.45f * radialScale });
-            boxes.push_back(MakeCollisionBox(MatrixMath::Multiply(local, body), {},
-                { 1.5f * radialScale, 3.1f * heightScale, 4.4f * radialScale }));
-        }
-    }
+    static OBB MakeCollisionBox(const Matrix4x4& world, const Vector3& center, const Vector3& size);
+    static void BuildBellColliders(const Matrix4x4& bellWorld, float pulse, std::vector<OBB>& boxes, const Vector4& animation = {});
+    static constexpr float kMadModeHealthThreshold = 0.35f;
     static constexpr float kHoverDistance = 125.0f;
     static constexpr float kSegmentHp = 9.0f;
     static constexpr float kTentacleMaxHp = kSegmentHp * static_cast<float>(kSegmentsPerTentacle);
@@ -182,10 +121,7 @@ private:
 
     // 攻撃の姿勢と揺れを反映して、頭や触手の位置・回転・大きさを更新する。
     void UpdatePartTransforms();
-    // 氷柱の出現状態を、表示位置と大きさへ反映する。
-    void UpdateIcePillarModelTransforms();
     // 指定した触手の節が破壊されずに残っているかを調べる。
-    bool IsSegmentAlive(size_t tentacle, size_t segment) const;
     // すべての触手の破壊状態を確認する。
     bool AreAllTentaclesDestroyed() const;
     // 触手番号と節番号を、当たり判定で共通に使う部位番号へ変換する。
@@ -200,12 +136,7 @@ private:
         kTentacleCount> tentacles_;
     std::array<std::unique_ptr<Object3d>, kIcePillarModelCount> icePillarModels_;
     std::array<float, kTentacleCount> tentacleHp_ {};
-    std::array<float, kTentacleCount> tentacleWavePhase_ {};
-    std::array<float, kTentacleCount> tentacleWaveSpeed_ {};
-    std::array<float, kTentacleCount> tentacleWaveAmplitude_ {};
-    std::array<std::array<Vector3, kSegmentsPerTentacle>, kTentacleCount> softDirections_ {};
-    float softPoseTime_ = 0.0f;
-    bool softPoseInitialized_ = false;
+    IceJellyfishPoseController poseController_;
 
     Camera* camera_ = nullptr;
     Model* bulletModel_ = nullptr;

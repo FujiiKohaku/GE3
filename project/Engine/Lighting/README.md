@@ -59,7 +59,7 @@ equivalence, metallic receivers, Hi-Z result parity, temporal noise reduction,
 removed objects, camera/scene history resets and D3D12 validation, alongside SSR
 and SSAO regression checks. `--dlss` checks the actual stage, SSGI controls,
 ON/OFF/re-enable, diagnostic views and SSR/DLAA integration. Captures and timing
-reports are under `runtime/captures/SsrValidation` and `ShadowMapTests`.
+reports are under `generated/Captures/SsrValidation` and `ShadowMapTests`.
 
 ## Limits
 

@@ -59,7 +59,7 @@ BLAS構築後、TLAS構築後にUAVバリアを入れます。出力はSRV→UAV
 
 時間方向の画質確認と修正内容は [最終画質検証](../Renderer/FinalQualityValidation.md) を参照してください。
 
-`Tests/Projects/DxrTests.vcxproj` をDebug x64でビルドし、作業ディレクトリを `project` として `generated/outputs/Debug/DxrTests.exe` を実行します。結果と比較用PNGは `runtime/captures/DxrTests` に出力します。
+`Tests/Projects/DxrTests.vcxproj` をDebug x64でビルドし、作業ディレクトリを `project` として `generated/outputs/Debug/DxrTests.exe` を実行します。結果と比較用PNGは `generated/Captures/DxrTests` に出力します。
 
 RTX 4060 Laptop GPU、1280×720、単純な三角形の検証で、初回構築0.166ms、キャッシュ利用時のTLAS構築0.045ms、光線探索0.254～0.256msを記録しました。少数フレームの動作検証値であり、実ゲームの性能保証ではありません。
 

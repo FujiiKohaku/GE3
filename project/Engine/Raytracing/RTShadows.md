@@ -58,7 +58,7 @@ DXR OFF、非対応GPU、空のシーン、入力不足、無効な行列・光�
 - 既定では時間蓄積1パス＋空間フィルター2パスを追加します。必要なモーションベクトルの描画もRendererが有効にします。硬い影・ノイズ除去OFFでは追加フィルターパスを省きます。
 - 計測は光線探索・ノイズ除去・合成を別々に表示します。CPU準備、初回パイプライン作成、太陽光MRTの描画時間、モーション描画、共有BLAS/TLAS構築時間は含みません。
 
-`DxrTests.exe` はDXR基盤の検証に加え、実際のStandard/Toon材質で影のON/OFF、太陽光だけの合成、硬い影・柔らかい影、CastShadow、配置移動、未対応の手前面、入力不足を検証します。結果は `runtime/captures/DxrTests/shadow-result.txt`、PNGは同ディレクトリです。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
+`DxrTests.exe` はDXR基盤の検証に加え、実際のStandard/Toon材質で影のON/OFF、太陽光だけの合成、硬い影・柔らかい影、CastShadow、配置移動、未対応の手前面、入力不足を検証します。結果は `generated/Captures/DxrTests/shadow-result.txt`、PNGは同ディレクトリです。D3D12検証レイヤーのERROR/CORRUPTIONを失敗扱いにします。
 
 RTX 4060 Laptop GPU、1280×720、平面の受け手と遮蔽物を使う検証では、硬い影の探索約0.16ms、16サンプル・角半径0.1ラジアンの探索約1.76ms、合成約0.10msでした。マスクと合成画像の実際の割当は11.25MiB、太陽光MRTは15MiB、合計26.25MiBです。DXR基盤・ドライバー内部メモリは別です。少数フレームの動作検証値であり、実ゲームの性能保証ではありません。
 

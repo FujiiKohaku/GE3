@@ -38,6 +38,6 @@ OFFではdispatchしない。初回ONまで専用GPU資源は作らず、作成�
 
 `DxrTests.exe --hdr` は逆輝度露出、時間による適応、ゼロdelta、分割時間の一致、明るい外れ値の除外、黒・露出範囲・不正設定・OFFを検証する。実際の最終描画から画素を読み、自動露出・色圧縮・sRGB変換と手動への復帰、FXAAとの併用、EV補正も検証する。12種類の中間エフェクトがHDR値を保持すること、BloomのHDRエネルギー、抽出上限、半精度出力の有限性を確認する。D3D12のERROR/CORRUPTIONは失敗扱い。
 
-結果は `runtime/captures/DxrTests/hdr-result.txt` とPNG。露出約0.045の自動描画では最終値0.533333（期待sRGB 0.535052）、手動描画では0.972549。Bloom合成はHDR値7を保持し、非常に強い入力でも最大65504で有限だった。
+結果は `generated/Captures/DxrTests/hdr-result.txt` とPNG。露出約0.045の自動描画では最終値0.533333（期待sRGB 0.535052）、手動描画では0.972549。Bloom合成はHDR値7を保持し、非常に強い入力でも最大65504で有限だった。
 
 検証結果：HDR重点検証、DXR全件検証、`ShadowMapTests --volumetric` による既存の影・大気・霧・ポスト処理の重点検証、Developmentビルドは成功。最後に追加した12種類の中間HDR修正はHDR重点検証とShadowMap重点検証で確認した。既存の `ShadowMapTests` 全件にある半球光の画像比較失敗は別件として未解決。

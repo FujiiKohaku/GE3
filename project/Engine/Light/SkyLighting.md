@@ -32,7 +32,7 @@ lights->SetDirectional({1, 1, 1, 1}, {0, -1, 0}, 4.0f);
 
 ## 検証
 
-`DxrTests.exe --sky-lighting` は昼・夕方・夜の通常描画/RT の色一致、ゼロ倍率、設定の範囲検証、キューブマップ復帰、安定時の RT 履歴再利用と大気設定変更時の履歴破棄、実際の SkyBox の HDR 出力を検証する。結果と画像は `runtime/captures/DxrTests/sky-lighting-result.txt` などに保存する。
+`DxrTests.exe --sky-lighting` は昼・夕方・夜の通常描画/RT の色一致、ゼロ倍率、設定の範囲検証、キューブマップ復帰、安定時の RT 履歴再利用と大気設定変更時の履歴破棄、実際の SkyBox の HDR 出力を検証する。結果と画像は `generated/Captures/DxrTests/sky-lighting-result.txt` などに保存する。
 
 2026-10-10 の単独検証（RTX 4060 Laptop GPU、Debug、1280×720）では、天空表示単体0.0512 ms。これは空を描くパスの全時間で、環境光・RT ヒットの追加演算時間は含めず、既存方式に対する差分でもない。昼の通常描画 RGB は (0.3125, 0.441895, 0.543457)、RT は (0.312012, 0.441162, 0.54248)。太陽強度4の表示空は RGB (1.13184, 1.90137, 2.37695) で HDR が保たれることを確認した。
 

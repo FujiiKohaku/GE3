@@ -32,7 +32,7 @@ MotionVectorHistoryは既存のWVPに加えて前フレームのWorldViewと法�
 
 ## 検証と制限
 
-`DxrTests.exe --receiver-motion` で、3画素を超える移動と深度変化、剛体の回転・非一様スケール、同じ材質の物体への入れ替え、画面外からの再出現、実GPUスキニングの前頂点と法線、カメラカット、動く太陽光の受け手を検証します。蓄積回数、モーション、前深度・法線・IDをGPUから読み戻します。結果とPNGはruntime/captures/DxrTests/receiver-motion-result.txtと同ディレクトリです。引数なしの全DXRテストにも含めます。
+`DxrTests.exe --receiver-motion` で、3画素を超える移動と深度変化、剛体の回転・非一様スケール、同じ材質の物体への入れ替え、画面外からの再出現、実GPUスキニングの前頂点と法線、カメラカット、動く太陽光の受け手を検証します。蓄積回数、モーション、前深度・法線・IDをGPUから読み戻します。結果とPNGはgenerated/Captures/DxrTests/receiver-motion-result.txtと同ディレクトリです。引数なしの全DXRテストにも含めます。
 
 2026-10-09にRTX 4060 Laptop GPUで受け手単独テストと最終版の全DXRテストが終了コード0で成功しました。法線マップを使う静止面の蓄積も検証しています。約98.5画素移動した受け手では前深度4を参照し蓄積数4を維持しました。GPUスキニングの移動・法線変形、太陽光の動く受け手も蓄積を維持し、別物体・再出現・カメラカットは1から再開しました。Developmentビルドも成功しています。D3D12のERROR/CORRUPTIONを失敗扱いにした機能検証で、通常実行時の性能測定ではありません。
 

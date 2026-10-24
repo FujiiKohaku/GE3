@@ -37,7 +37,7 @@ BeginFrameにSuperResolutionHistoryInputsを渡し、GetProjectionJitterNdcを�
 
 透明物・空・アルファカットアウトの正確なモーション、任意ウィンドウサイズは未対応です。霧は物体表面と異なる動きを持つため、動く霧の時間方向の画質は引き続き確認が必要です。粒子とHUDはDLAA後に描きます。Frame GenerationとDLSS 5は含みません。
 
-ShadowMapTests.exe --dlssは対応GPUで実際のNGX評価、ON/OFF・再有効化、タイトル・ステージ03・クラゲ表示、D3D12検証を行います。結果と画像はruntime/captures/ShadowMapTestsへ出力します。
+ShadowMapTests.exe --dlssは対応GPUで実際のNGX評価、ON/OFF・再有効化、タイトル・ステージ03・クラゲ表示、D3D12検証を行います。結果と画像はgenerated/Captures/ShadowMapTestsへ出力します。
 
 ## Debug / Developmentの比較と計測
 

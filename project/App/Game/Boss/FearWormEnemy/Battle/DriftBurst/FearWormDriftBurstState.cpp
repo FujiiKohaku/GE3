@@ -28,22 +28,22 @@ void FearWormDriftBurstState::Enter(FearWormBattleState& battle, FearWormEnemy&)
 
 void FearWormDriftBurstState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
 {
-    const float actionDeltaSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.MovementSpeedRate();
+    const float actionDeltaSeconds = TimeManager::GetInstance()->GetDeltaTime() * boss.GetAttackMovementSpeedRate();
     elapsedSeconds_ += actionDeltaSeconds;
-    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.player_->GetTranslate());
-    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateDriftTarget(context), boss.MovementSpeedRate());
+    const FearWormMovementContext context = battle.CreateMovementContext(boss, boss.GetAttackTargetPosition());
+    battle.UpdateBattleMovement(boss, FearWormMovement::CalculateDriftTarget(context), boss.GetAttackMovementSpeedRate());
     if (!battle.CanFire(boss)) {
         shotsRemaining_ = 0;
         shotTimerSeconds_ = 0.0f;
     } else if (shotsRemaining_ > 0) {
-        if (segmentIndex_ < 0 || static_cast<size_t>(segmentIndex_) >= boss.segments_.size()
-            || !boss.segments_[segmentIndex_].isAlive) {
+        if (segmentIndex_ < 0 || static_cast<size_t>(segmentIndex_) >= boss.GetAttackSegmentCount()
+            || !boss.IsAttackSegmentAlive(segmentIndex_)) {
             shotsRemaining_ = 0;
         } else {
             const int32_t shotCount = FearWormTiming::AdvanceInterval(shotTimerSeconds_,
                 kNormalBurstShotIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), shotsRemaining_);
             for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
-                battle.FireDirectionalBullet(boss, boss.segments_[segmentIndex_].position, direction_);
+                battle.FireDirectionalBullet(boss, boss.GetAttackSegmentPosition(segmentIndex_), direction_);
                 shotsRemaining_--;
             }
             if (shotsRemaining_ == 0) {
@@ -60,8 +60,8 @@ void FearWormDriftBurstState::Update(FearWormBattleState& battle, FearWormEnemy&
         const int32_t segmentIndex = battle.SelectFiringSegment(boss);
         if (segmentIndex >= 0) {
             segmentIndex_ = segmentIndex;
-            const Vector3 position = boss.segments_[segmentIndex_].position;
-            direction_ = NormalizeSafe(boss.player_->GetTranslate() - position);
+            const Vector3 position = boss.GetAttackSegmentPosition(segmentIndex_);
+            direction_ = NormalizeSafe(boss.GetAttackTargetPosition() - position);
             shotsRemaining_ = kNormalBurstShotCount - 1;
             shotTimerSeconds_ = fireElapsedSeconds_;
             fireElapsedSeconds_ = 0.0f;

@@ -45,6 +45,10 @@ void BossEncounterController::Initialize(
     waterHeight_ = waterHeight;
     activeBoss_.reset();
     isSpawned_ = false;
+    didSpawnThisFrame_ = false;
+    didEnterMadModeThisFrame_ = false;
+    isBeamHittingPlayer_ = false;
+    didExtendRailThisFrame_ = false;
 }
 
 // 生存・死亡を問わずボスを1回更新し、状態変化とレール延長を管理する。

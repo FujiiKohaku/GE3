@@ -39,7 +39,7 @@
 
 `ShadowMapTests.exe --taa` でタイトル/ステージ03、ネイティブ/960×540/640×360、TAAの独立切り替え、履歴破棄、ネイティブ粒子カラー/深度、反復切り替えの記述子数、D3D12 ERROR/CORRUPTIONを確認する。対応GPUではRT太陽影、ノイズ除去、反射、GI、霧の寸法も確認する。
 
-実測結果は `runtime/captures/ShadowMapTests/taa-integration-result.txt`。Debugの短い実行の最終フレーム値であり、平均ベンチマークや性能保証ではない。画像は `resolution-75-taa.png` / `resolution-50-taa.png`。
+実測結果は `generated/Captures/ShadowMapTests/taa-integration-result.txt`。Debugの短い実行の最終フレーム値であり、平均ベンチマークや性能保証ではない。画像は `resolution-75-taa.png` / `resolution-50-taa.png`。
 
 ## 品質の一括選択
 

@@ -4,6 +4,17 @@
 #include "Engine/Time/TimeManager.h"
 #include <cmath>
 
+namespace {
+// 調整用の設定値。意味が異なる値は、数値が同じでも個別に保持する。
+constexpr float kHoverHorizontalFrequency = 0.48f;
+constexpr float kHoverHorizontalAmplitude = 8.0f;
+constexpr float kHoverVerticalFrequency = 1.10f;
+constexpr float kHoverVerticalAmplitude = 5.0f;
+constexpr float kAttackArmThreshold = -0.72f;
+constexpr float kAttackStartThreshold = -0.05f;
+}
+
+
 void IceJellyfishBattleState::Reset()
 {
     nextAttackIndex_ = 0;
@@ -23,8 +34,8 @@ void IceJellyfishBattleState::Update(IceJellyfish& boss)
     if (boss.player_ != nullptr) {
         const Vector3 playerPosition = boss.player_->GetTranslate();
         boss.bodyPosition_ = {
-            boss.hoverCenterX_ + std::sin(boss.animationTime_ * 0.48f) * 8.0f,
-            boss.hoverCenterY_ + std::sin(boss.animationTime_ * 1.10f) * 5.0f,
+            boss.hoverCenterX_ + std::sin(boss.animationTime_ * kHoverHorizontalFrequency) * kHoverHorizontalAmplitude,
+            boss.hoverCenterY_ + std::sin(boss.animationTime_ * kHoverVerticalFrequency) * kHoverVerticalAmplitude,
             playerPosition.z + boss.kHoverDistance
         };
     } else {
@@ -32,7 +43,7 @@ void IceJellyfishBattleState::Update(IceJellyfish& boss)
     }
 
     boss.coreExposed_ = boss.AreAllTentaclesDestroyed();
-    UpdateAttackSequence(boss, boss.animationTime_ * 1.10f, TimeManager::GetInstance()->GetDeltaTime());
+    UpdateAttackSequence(boss, boss.animationTime_ * kHoverVerticalFrequency, TimeManager::GetInstance()->GetDeltaTime());
     boss.coreExposed_ = boss.AreAllTentaclesDestroyed();
 }
 
@@ -43,10 +54,10 @@ void IceJellyfishBattleState::UpdateAttackSequence(IceJellyfish& boss, float flo
     iceSpearAttack_.Update(boss, deltaTimeSeconds);
     icePillarAttack_.Update(boss, deltaTimeSeconds);
     const float pulse = std::sin(floatPhase);
-    if (pulse <= -0.72f) {
+    if (pulse <= kAttackArmThreshold) {
         isPulseAttackArmed_ = true;
     }
-    if (!isPulseAttackArmed_ || pulse < -0.05f) {
+    if (!isPulseAttackArmed_ || pulse < kAttackStartThreshold) {
         return;
     }
 

@@ -28,7 +28,7 @@ RT画素ごとに隣接位置の逆投影を2回行い、命中時に3頂点の�
 
 `DxrTests.exe --texture-mips` はMip0を赤、それ以降を緑にしたBC1 DDSを用意します。縮小／拡大、カメラ距離、小数Mipの独立した中心画素計算、粗い反射・RT GI、反転／退化UV、非一様スケール、OFF、各種マップのMipを確認します。法線128²・粗さ／金属度64²・基本色256²の異なる画像を使います。既存の材質テストも実行します。引数なしの全DXRテストにも含まれます。
 
-結果は `runtime/captures/DxrTests/texture-mip-result.txt`、比較画像も同じディレクトリです。D3D12検証レイヤーのERROR/CORRUPTIONは失敗扱いです。
+結果は `generated/Captures/DxrTests/texture-mip-result.txt`、比較画像も同じディレクトリです。D3D12検証レイヤーのERROR/CORRUPTIONは失敗扱いです。
 
 2026-10-09、RTX 4060 Laptop GPUで単独のMip／材質検証と全DXR GPU検証が終了コード0で成功しました。Developmentビルドも成功しています。独立計算の小数Mipは0.325781、GPUの緑成分は0.320068でした。粗い反射・RT GI、マップON/OFF、既存の切り抜き・影・スキニング・履歴の回帰検証が通っています。通常実行時の性能差を計測した結果ではありません。
 
