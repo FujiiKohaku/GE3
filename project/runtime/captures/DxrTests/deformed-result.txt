@@ -1,0 +1,3 @@
+initialBuildMs=0.177216 dynamicBufferBytes=7168 dynamicAllocationBytes=262144
+refitAndTlasMs=0.063872
+PASS: independent poses, rigid coexistence, indexed/nonindexed primitive offsets/materials, refit bounds, frozen reuse, removal, buffer replacement, invalid input, DXR OFF

@@ -1,0 +1,13 @@
+roughness=0.35 viewCosine=1 gpuMean=0.985345 quadrature=0.981545
+roughness=0.6 viewCosine=1 gpuMean=0.823876 quadrature=0.824522
+roughness=0.9 viewCosine=1 gpuMean=0.41906 quadrature=0.419966
+roughness=1 viewCosine=1 gpuMean=0.304807 quadrature=0.306853
+roughness=0.35 viewCosine=0.6 gpuMean=0.968257 quadrature=0.964453
+roughness=0.6 viewCosine=0.6 gpuMean=0.783038 quadrature=0.783328
+roughness=0.9 viewCosine=0.6 gpuMean=0.480065 quadrature=0.482575
+roughness=1 viewCosine=0.6 gpuMean=0.379474 quadrature=0.383858
+roughness=0.35 viewCosine=0.15 gpuMean=0.873468 quadrature=0.871012
+roughness=0.6 viewCosine=0.15 gpuMean=0.808484 quadrature=0.808609
+roughness=0.9 viewCosine=0.15 gpuMean=0.614434 quadrature=0.616761
+roughness=1 viewCosine=0.15 gpuMean=0.530874 quadrature=0.534356
+PASS: unit-radiance furnace at 12 roughness/view combinations, independent hemisphere BRDF quadrature, bounded finite weights, metal/dielectric mirror limits

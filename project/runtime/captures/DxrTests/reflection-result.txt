@@ -1,0 +1,5 @@
+mirrorTraceMs=0.56832 compositeMs=2.72589 targetsBytes=43253760 captureBytes=23592960 directionalSlotBytes=15728640
+unrelatedObjectHistoryCount=5
+movingHitHistoryCount=1
+roughTraceMs=0.421888 filterMs=1.75923 mseRaw=0.0921243 mseFiltered=0.0122324
+PASS: offscreen target, mirror/roughness, environment replacement, miss fallback, lit hit/sun shadows, alpha AnyHit, temporal/spatial noise reduction, camera/jitter/cut, geometry/material/light/scene history reset, skinned ClosestHit/refit/alpha, foreground rejection, invalid/missing inputs, OFF

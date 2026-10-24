@@ -1,0 +1,1 @@
+PASS: three presets, manual Custom detection, independent resolution/features, recommended resolution, history reset, actual RT/fog rendering, GPU averages, D3D12 validation

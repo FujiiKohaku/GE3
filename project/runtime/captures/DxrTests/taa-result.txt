@@ -1,0 +1,4 @@
+stripe MSE current=0.0835037 temporal=0.00652883
+32x18 -> 64x36 center=2.06445 expected=2.06452
+native GPU ms=7.23558 images bytes=31457280
+PASS: HDR/stable history, stripe flicker reduction, ID/depth/disocclusion/outside motion, reactive changes, camera/scene/light reset, sky, missing/OFF, native and 2x bicubic upscale

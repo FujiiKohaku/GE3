@@ -1,0 +1,12 @@
+View 0 mode 0 GPU ms: 4.2536; CPU classify ms: 0.00593
+View 0 mode 1 GPU ms: 2.40405; CPU classify ms: 0.12723
+View 0 mode 2 GPU ms: 3.60031; CPU classify ms: 0.00358
+Changed pixels: 0
+View 1 mode 0 GPU ms: 3.37094; CPU classify ms: 0.003395
+View 1 mode 1 GPU ms: 2.40544; CPU classify ms: 0.172295
+View 1 mode 2 GPU ms: 3.37488; CPU classify ms: 0.003755
+Changed pixels: 0
+View 2 mode 0 GPU ms: 5.42334; CPU classify ms: 0.00285
+View 2 mode 1 GPU ms: 3.73852; CPU classify ms: 0.275535
+View 2 mode 2 GPU ms: 4.91504; CPU classify ms: 0.00284
+Changed pixels: 0

@@ -1,0 +1,4 @@
+DXR supported (disabled)
+initial buildMs=0.190464 traceMs=0.254976 bufferBytes=9984 outputAllocationBytes=7864320
+cached buildMs=0.0448 traceMs=0.252928
+PASS: hits, misses, material, shared BLAS, movement, removal, nonindexed, mirrored scale, multi-geometry/material shader records, instance ID, empty scene, invalid transform, disable/reenable

@@ -1,0 +1,1 @@
+PASS: stage colored indirect light, default ON, controls, OFF/re-enable, debug view; groundPixels=10155; gpuMs=1.93536

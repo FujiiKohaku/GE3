@@ -1,0 +1,1 @@
+PASS: shadows, lighting, HDR highlights, material reflection, hemisphere colors, bloom halo, stage fog presets, normal mapping, stable outline normals, volumetric lighting, local sphere/box/height fog, stable noise, shadow fallbacks, point/spot lights and shadows, generation handles, SSAO, atmospheric perspective, environment illumination, clustered image parity, D3D12 validation

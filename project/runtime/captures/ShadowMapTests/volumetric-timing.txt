@@ -1,0 +1,6 @@
+1280x720, half-resolution 32 samples, debug layer enabled, 20 samples
+OFF ms: 0.300646
+Light only ms: 3.20097
+Local 2 volumes ms: 3.1529
+Local 8 + noise ms: 5.70854
+Added light ms: 2.90033

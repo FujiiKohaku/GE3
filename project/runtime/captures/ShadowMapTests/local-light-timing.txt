@@ -1,0 +1,7 @@
+1280x720, 512 shadow faces, debug layer enabled, 20 samples; shadow passes + geometry + post processing
+Mode 0 ms: 0.617242
+Mode 1 ms: 0.653869
+Mode 2 ms: 1.13728
+Mode 3 ms: 1.67895
+Mode 4 ms: 2.30253
+Mode 5 ms: 3.2539

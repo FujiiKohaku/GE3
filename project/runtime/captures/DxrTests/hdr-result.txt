@@ -1,0 +1,5 @@
+neutral=0.993531 bright=0.0634662 dark=15.5532 adapting=3.73734 whole/split=0.216602/0.216602 GPU ms=0.662528 allocationBytes=262144
+final automatic=0.533333 expected sRGB=0.535052 manual=0.972549
+tone legacy=0.973145,0.914551,0.803711 hue=0.942383,0.471191,0.235596
+Bloom HDR=7 limited=4.0625 maximum=65504
+PASS: inverse luminance, adaptation/time invariance, black/min/max/OFF/invalid, final sRGB/FXAA/EV/manual restore, hue-preserving HDR highlights, 12 intermediate HDR effects, Bloom HDR/limit/finite output

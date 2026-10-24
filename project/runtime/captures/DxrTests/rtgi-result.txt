@@ -1,0 +1,3 @@
+traceMs=0.484352 filterMs=0 compositeMs=2.71053 targetsBytes=43253760
+mseRaw=0.0784056 mseFiltered=0.0055825
+PASS: behind-camera source, diffuse/specular independence, receiver albedo/metallic, strength/debug, distance/miss, alpha, lit hit, radiance clamp, history/jitter/cut/material/light/scene, noise reduction, actual GPU skinning/refit, foreground rejection, missing inputs, OFF

@@ -1,0 +1,2 @@
+hardShadowTraceMs masked=1.05574 opaque=1.03526
+PASS: raster/RT holes, continuation to background/blocker, UV transforms, material alpha, cutoff equality/disabled/invalid, shared masked/opaque model, motion-hole rejection, Standard/Toon variants, shadow map holes, UV/texture history invalidation

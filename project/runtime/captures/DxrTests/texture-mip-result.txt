@@ -1,0 +1,9 @@
+uvScale=0.01 color=0.999512,0,0
+uvScale=1 color=0,0.999512,0
+uvScale=64 color=0,0.999512,0
+uvScale=-64 color=0,0.999512,0
+uvScale=0 color=0.999512,0,0
+fractional mip=0.325781 color=0.679199,0.320068
+rough=0,0.844238 indirect=0,0.625
+normal on/off=0.681152/0 material on/off=0.706543/0
+PASS: camera/hit footprint, fractional mip, camera distance, rough/diffuse cones, magnification, mirrored/degenerate UV, nonuniform scale, mip OFF, normal/MR mips

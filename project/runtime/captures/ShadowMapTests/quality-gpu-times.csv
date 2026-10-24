@@ -1,0 +1,4 @@
+preset,width,height,samples,frame_mean_ms,rt_mean_ms,fog_mean_ms
+quality,1280,720,16,11.4955,2.17984,2.12845
+balanced,1280,720,16,10.3209,1.83443,1.29613
+performance,960,540,16,8.02711,1.1433,0.521344

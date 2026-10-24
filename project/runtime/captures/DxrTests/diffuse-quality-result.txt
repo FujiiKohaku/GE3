@@ -1,0 +1,13 @@
+distance=2 mean=0.950574 integral=0.951238 coverage=0.998535
+distance=5 mean=0.690237 integral=0.691534 coverage=0.71875
+distance=8 mean=0.206869 integral=0.207947 coverage=0.235596
+distance=9 mean=0.0398386 integral=0.0403593 coverage=0.0552063
+distance=9.9 mean=8.08715e-05 integral=8.40577e-05 coverage=0.000467777
+distance=10.01 mean=5.90464e-08 integral=4.98902e-08 coverage=0
+distance=11 mean=0 integral=0 coverage=0
+mseSobol=0.000362052 mseRandom=0.011873
+samples=1 mean=0.778356 noFadeIntegral=0.751996
+samples=3 mean=0.755344 noFadeIntegral=0.751996
+samples=5 mean=0.757307 noFadeIntegral=0.751996
+samples=16 mean=0.751691 noFadeIntegral=0.751996
+PASS: independent distance integral, environment replacement, black/miss fallback, Sobol/random equal-budget MSE, 1/3/5/16 samples, full/zero fade, invalid settings, history reset

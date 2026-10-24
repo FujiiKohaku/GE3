@@ -1,0 +1,4 @@
+Beer transmission=0.904785 expected=0.904837 mseRaw8=0.000647448 mseFiltered8=2.8344e-05
+raw allocation bytes=2490368 with history=7471104
+raymarchMs=0.881664 temporalMs=0.95232 compositeMs=1.20934
+PASS: Beer transmission, scattering/absorption, quality presets, bounded filtered signal/noise reduction, depth rejection, camera cut/motion, scene/config resets, missing inputs, OFF, GPU timers

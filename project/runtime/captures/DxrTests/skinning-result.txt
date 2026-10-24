@@ -1,0 +1,3 @@
+initialBuildMs=0.178176 dynamicBufferBytes=7168 dynamicAllocationBytes=262144
+refitAndTlasMs=0.060416
+PASS: actual GPU skinning, multi-primitive poses, alpha AnyHit/material alpha, caster/refit, frozen reuse, CastShadow OFF, Standard/Toon receiver, sunlight-only composition, motion-copy barriers, denoising history, blended exclusion

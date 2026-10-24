@@ -1,0 +1,4 @@
+translationHistory=4 previousDepth=4 motionPixels=98.5156
+skinnedHistory=4 previousDepth=4
+shadowHistory=4 metadataBytes=31457280
+PASS: previous depth/normal, translation over 3 pixels, rotation, nonuniform scale, identity/replacement, disocclusion, actual GPU skinning previous vertices, camera cut, sunlight receiver history

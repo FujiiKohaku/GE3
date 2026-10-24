@@ -1,0 +1,3 @@
+penumbraMse raw1=0.158957 temporal32=0.00989463 filtered=0.00401945
+denoiseGpuMs=1.13971 allocationBytes=39321600
+PASS: low-sample error reduction, motion/jitter reprojection, camera-cut/caster/sun/scene reset, temporal OFF, denoise OFF

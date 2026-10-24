@@ -1,0 +1,3 @@
+mirror inside mirror=0.999512,0,0 first coverage=1
+rough unit-plane mean=0.762919 tinted Fresnel=0.501078,0.251617,0.750539
+PASS: mirror inside mirror, OFF/one/two bounce limit, per-segment distance, Fresnel/metal/specular/unlit, alpha/black/miss fallback, last-hit sun shadow recursion, opposing mirrors, rough bounded light, history reset

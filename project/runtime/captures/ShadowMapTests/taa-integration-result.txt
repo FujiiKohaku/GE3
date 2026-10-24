@@ -1,0 +1,7 @@
+native GPU ms=1.08646 images bytes=31457280
+960x540 + TAA frame GPU ms=8.6769 resolve ms=0.779264
+640x360 + TAA frame GPU ms=6.91046 resolve ms=0.777216
+native + TAA frame GPU ms=10.4882 resolve ms=0.787456
+PASS: RT scene/sun/denoiser/reflections/GI and fog resize at 75/50/native
+PASS: true low inputs, native particle color/depth, independent low/TAA ON/OFF, size history reset, repeated switching
+PASS: title/stage03 renderer integration, native HDR TAA, camera cut, TAA+FXAA, exclusive DLAA, OFF, D3D12 validation

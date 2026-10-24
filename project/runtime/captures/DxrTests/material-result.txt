@@ -1,0 +1,19 @@
+standard-specular-off raster=0.850586,0.850586,0.850586 rt=0.850586,0.850586,0.850586
+metal-no-specular raster=0,0,0 rt=0,0,0
+standard-specular-on raster=0.676758,0.676758,0.676758 rt=0.675781,0.675781,0.675781
+normal-map raster=0.894043,0.894043,0.894043 rt=0.895508,0.895508,0.895508
+normal-strength-zero raster=0.850586,0.850586,0.850586 rt=0.850586,0.850586,0.850586
+normal-y raster=0.948242,0.948242,0.948242 rt=0.949707,0.949707,0.949707
+normal-y-flipped raster=0.316162,0.316162,0.316162 rt=0.316406,0.316406,0.316406
+mirrored-uv raster=0.143921,0.143921,0.143921 rt=0.143921,0.143921,0.143921
+degenerate-uv raster=0.643555,0.643555,0.643555 rt=0.643555,0.643555,0.643555
+nonuniform-scale raster=0.424805,0.424805,0.424805 rt=0.425049,0.425049,0.425049
+metallic-roughness-map raster=3.23438,3.23438,3.23438 rt=3.22852,3.22852,3.22852
+toon raster=0.975586,0.995117,1.00098 rt=0.975098,0.995117,1
+shadow-toon raster=0.912598,0.912598,0.912598 rt=0.912109,0.912109,0.912109
+environment-lighting raster=0.871582,0.878418,1.11816 rt=0.871094,0.87793,1.11816
+legacy-environment raster=0.871582,0.878418,1.11816 rt=0.871094,0.87793,1.11816
+unlit-environment raster=1.01465,1.01855,1.18164 rt=1.01465,1.01855,1.18066
+point-light raster=0.203979,0.203979,0.203979 rt=0.204346,0.204346,0.204346
+spot-light raster=0.071228,0.071228,0.185059 rt=0.0718384,0.0718384,0.185425
+PASS: Standard/specular gate, normal/strength/Y flip/mirrored and degenerate UV/nonuniform scale, linear packed G/B/factors/capture, Toon/ShadowToon, GPU skinned material, 144-byte Material and 96-byte records

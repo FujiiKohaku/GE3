@@ -1,0 +1,5 @@
+hard traceMs=0 compositeMs=0 shadowTextureAllocationBytes=11796480
+directionalCaptureAllocationBytes=15728640
+soft16 traceMs=1.7664 compositeMs=0.096256
+fractionalVisibilityPixels=31728
+PASS: Standard/Toon material capture, sunlight-only composition, hard/soft shadows, CastShadow, movement, nonreceiver foreground, invalid settings, missing inputs, empty scene

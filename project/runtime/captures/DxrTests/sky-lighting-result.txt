@@ -1,0 +1,7 @@
+sky-day raster=0.3125,0.441895,0.543457 rt=0.312012,0.441162,0.54248
+sky-sunset raster=0.215454,0.175293,0.124207 rt=0.214844,0.174927,0.124146
+sky-night raster=0.00198174,0.00396347,0.00991058 rt=0.00197792,0.00395584,0.00989532
+sky-zero raster=0,0,0 rt=0,0,0
+visible strength=1 rgb=0.290039,0.489258,0.629395 GPU ms=0.3072
+visible strength=4 rgb=1.13184,1.90137,2.37695 GPU ms=0.3072
+PASS: day/sunset/night raster and RT agreement, zero strength, invalid settings, cubemap restore, visible HDR sky

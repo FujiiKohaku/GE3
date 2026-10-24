@@ -1,0 +1,4 @@
+PASS: size 1280 camera movement/cut, gradual/abrupt light, quality recovery
+PASS: size 960 camera movement/cut, gradual/abrupt light, quality recovery
+PASS: manual exposure display change, preserved HDR history, auto exposure GPU integration
+PASS: moving game, native particle composition, D3D12 validation
