@@ -350,10 +350,14 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
     OutputDebugStringA(cwd);
     OutputDebugStringA("\n");
 
-    const aiScene* scene = importer.ReadFile(
-        filePath.c_str(),
-        aiProcess_Triangulate | aiProcess_GenSmoothNormals |
-            aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
+    const aiScene* scene = nullptr;
+    {
+        StartupTimingScope assimpScope("Model.AssimpReadFile");
+        scene = importer.ReadFile(
+            filePath.c_str(),
+            aiProcess_Triangulate | aiProcess_GenSmoothNormals |
+                aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
+    }
 
     assert(scene);
     assert(scene->HasMeshes());

@@ -339,16 +339,23 @@ void FontManager::UploadAtlas(FontEntry& entry)
 {
     StartupTimingScope startupScope("Resource.FontAtlasUpload");
     std::vector<uint8_t> bgra;
-    bgra.resize(
-        static_cast<size_t>(kAtlasWidth) * static_cast<size_t>(kAtlasHeight) * 4);
-    for (size_t pixelIndex = 0; pixelIndex < entry.atlasAlpha.size(); ++pixelIndex) {
-        const size_t colorIndex = pixelIndex * 4;
-        bgra[colorIndex + 0] = 255;
-        bgra[colorIndex + 1] = 255;
-        bgra[colorIndex + 2] = 255;
-        bgra[colorIndex + 3] = entry.atlasAlpha[pixelIndex];
+    {
+        StartupTimingScope allocationScope("Font.AtlasAllocation");
+        bgra.resize(
+            static_cast<size_t>(kAtlasWidth) * static_cast<size_t>(kAtlasHeight) * 4);
+    }
+    {
+        StartupTimingScope conversionScope("Font.AtlasBgraConversion");
+        for (size_t pixelIndex = 0; pixelIndex < entry.atlasAlpha.size(); ++pixelIndex) {
+            const size_t colorIndex = pixelIndex * 4;
+            bgra[colorIndex + 0] = 255;
+            bgra[colorIndex + 1] = 255;
+            bgra[colorIndex + 2] = 255;
+            bgra[colorIndex + 3] = entry.atlasAlpha[pixelIndex];
+        }
     }
 
+    StartupTimingScope textureScope("Font.AtlasTextureSetup");
     if (entry.textureRegistered) {
         TextureManager::GetInstance()->UpdateTextureFromBGRA(
             entry.textureKey,

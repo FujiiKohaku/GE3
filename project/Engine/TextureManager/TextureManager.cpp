@@ -145,6 +145,7 @@ void TextureManager::LoadTextureFromBGRA(
     size_t width,
     size_t height)
 {
+    StartupTimingScope startupScope("Resource.BgraTextureLoad");
     if (textureKey.empty() || data == nullptr || width == 0 || height == 0) {
         return;
     }
@@ -259,6 +260,11 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
         mipImages = std::move(image);
     } else {
         StartupTimingScope mipScope("Resource.TextureMipmaps");
+        const char* detailedMipName = "Resource.OtherTextureMipmaps";
+        if (textureKey.starts_with("__font_atlas__/")) {
+            detailedMipName = "Font.AtlasMipmaps";
+        }
+        StartupTimingScope detailedMipScope(detailedMipName);
         DirectX::TEX_FILTER_FLAGS filter = DirectX::TEX_FILTER_DEFAULT;
         if (DirectX::IsSRGB(image.GetMetadata().format)) { filter = DirectX::TEX_FILTER_SRGB; }
         HRESULT hr = DirectX::GenerateMipMaps(
@@ -277,10 +283,13 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
 
     TextureData& textureData = textureDatas[textureKey];
     textureData.metadata = mipImages.GetMetadata();
-    textureData.resource = dxCommon_->CreateTextureResource(dxCommon_->GetDevice(), textureData.metadata);
-    Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource =
-        dxCommon_->UploadTextureData(textureData.resource, mipImages);
-    pendingUploadResources_.push_back(std::move(intermediateResource));
+    {
+        StartupTimingScope resourceScope("Resource.TextureCreateAndUpload");
+        textureData.resource = dxCommon_->CreateTextureResource(dxCommon_->GetDevice(), textureData.metadata);
+        Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource =
+            dxCommon_->UploadTextureData(textureData.resource, mipImages);
+        pendingUploadResources_.push_back(std::move(intermediateResource));
+    }
 
     textureData.srvIndex = srvManager_->Allocate();
     textureData.srvHandleCPU = srvManager_->GetCPUDescriptorHandle(textureData.srvIndex);

@@ -71,10 +71,6 @@ void Renderer::Initialize()
     postEffectManager_->SetIndirectTextureHandle(offscreenRenderer_->GetIndirectSrvHandleGPU());
     temporalSuperResolution_ = std::make_unique<TemporalSuperResolution>();
     dlssSuperResolution_ = std::make_unique<DlssSuperResolution>();
-    {
-        StartupTimingScope startupScope("Renderer.DLSS");
-        dlssSuperResolution_->Initialize();
-    }
     screenSpaceReflection_ = std::make_unique<ScreenSpaceReflection>();
     {
         StartupTimingScope startupScope("Renderer.SSR");
@@ -117,6 +113,18 @@ void Renderer::Initialize()
         &Renderer::GetDevelopmentState, &Renderer::GetDevelopmentControls, &Renderer::SetDevelopmentBool,
         nullptr, &Renderer::ExecuteDevelopmentCommand);
 #endif
+}
+
+void Renderer::PrepareDlaaForGameplay()
+{
+    if (!hasAttemptedDlaaInitialization_) {
+        hasAttemptedDlaaInitialization_ = true;
+        StartupTimingScope startupScope("Renderer.DLSS");
+        dlssSuperResolution_->Initialize();
+    }
+    if (dlssSuperResolution_->IsAvailable()) {
+        SetAntiAliasing(true, false);
+    }
 }
 
 void Renderer::Update()

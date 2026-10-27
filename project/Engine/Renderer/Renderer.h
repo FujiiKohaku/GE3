@@ -32,6 +32,7 @@ public:
     ~Renderer();
 
     void Initialize();
+    void PrepareDlaaForGameplay();
     void Update();
     void DrawImGui();
     void Draw(SceneManager* sceneManager);
@@ -77,6 +78,7 @@ private:
     uint64_t temporalRadianceRevision_ = 0;
     bool hasTemporalRadiance_ = false;
     bool isLowResolutionRenderingEnabled_ = false;
+    bool hasAttemptedDlaaInitialization_ = false;
     uint32_t lowResolutionWidth_ = 960;
     uint32_t lowResolutionHeight_ = 540;
     uint32_t sceneRenderWidth_ = 1280;

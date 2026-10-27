@@ -462,6 +462,10 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 // ステージ設定を読み、機体・敵・ボス・背景・UIと演出をプレイ開始状態へ揃える。
 void GamePlayScene::Initialize()
 {
+    Renderer* renderer = SceneManager::GetInstance()->GetRenderer();
+    if (renderer != nullptr) {
+        renderer->PrepareDlaaForGameplay();
+    }
     Input::GetInstance()->BlockPrimaryFireUntilRelease();
     SoundManager::GetInstance()->RegisterSounds({
         { "NormalShot", "resources/Audio/GameSfx/player_normal_shot.wav", 0.20f, 0.04f },

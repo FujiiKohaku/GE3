@@ -98,6 +98,11 @@ void Game::Initialize()
     }
     GetBootProfilerForGame()->End("Window");
 
+    {
+        StartupTimingScope startupScope("Game.ShowWindow");
+        WinApp::GetInstance()->Show();
+    }
+
     LockCursorToWindow();
 
     CheckInitializeTime("WinApp", prevTime);
@@ -106,10 +111,6 @@ void Game::Initialize()
     {
         StartupTimingScope startupScope("Game.DirectX");
         DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
-    }
-    {
-        StartupTimingScope startupScope("Game.ShowWindow");
-        WinApp::GetInstance()->Show();
     }
     GetBootProfilerForGame()->End("DirectX");
     CheckInitializeTime("DirectXCommon", prevTime);

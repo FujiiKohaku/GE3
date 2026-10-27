@@ -4,6 +4,7 @@
 
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
+#include "Engine/Renderer/Renderer.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Input/Input.h"
@@ -324,6 +325,10 @@ bool TitleScene::hasStartedTutorial_ = false;
 void TitleScene::Initialize()
 {
     StartupTimingScope startupScope("Title.Total");
+    Renderer* renderer = SceneManager::GetInstance()->GetRenderer();
+    if (renderer != nullptr) {
+        renderer->SetTemporalAntiAliasing(true, false);
+    }
     {
         StartupTimingScope audioScope("Title.AudioRegistration");
         SoundManager::GetInstance()->RegisterSounds({
@@ -404,6 +409,13 @@ Object3d* TitleScene::AddBaseObject(
     const Vector3& scale,
     const Vector3& rotation)
 {
+    const char* categoryName = "Title.OtherBaseObjects";
+    if (modelPath.starts_with(kLaunchBase)) {
+        categoryName = "Title.LaunchBaseObjects";
+    } else if (modelPath.starts_with(kOceanEnvironment)) {
+        categoryName = "Title.OceanBackgroundObjects";
+    }
+    StartupTimingScope startupScope(categoryName);
     auto object = std::make_unique<Object3d>();
     object->Initialize(Object3dManager::GetInstance());
     object->SetModel(ModelManager::GetInstance()->Load(modelPath));
@@ -432,6 +444,7 @@ Object3d* TitleScene::AddStageRoomObject(
     float motionScale,
     float delay)
 {
+    StartupTimingScope startupScope("Title.StageRoomObjects");
     constexpr float kRoomObjectScale = 0.82f;
     constexpr float kRoomPositionSpread = 0.86f;
     constexpr float kRoomCenterZ = -35.0f;
@@ -473,7 +486,10 @@ void TitleScene::InitializeLaunchBase()
 {
     StartupTimingScope startupScope("Title.LaunchBase");
     oceanSurface_ = std::make_unique<OceanSurface>();
-    oceanSurface_->Initialize(camera_.get(), 3200.0f, 3200.0f, -8.0f);
+    {
+        StartupTimingScope oceanScope("Title.OceanSurface");
+        oceanSurface_->Initialize(camera_.get(), 3200.0f, 3200.0f, -8.0f);
+    }
     // OceanSurfaceは既定でZ=0から前方へ伸びるため、タイトルでは
     // 格納庫背後も覆うよう海面をマイナスZ側へ移す。
     oceanSurface_->SetStartZ(-1600.0f);
@@ -623,17 +639,20 @@ void TitleScene::InitializeLaunchBase()
         { 1.5f, 1.5f, 1.5f },
         { 0.0f, 0.44f, 0.0f });
 
-    aircraft_ = std::make_unique<Object3d>();
-    aircraft_->Initialize(Object3dManager::GetInstance());
-    aircraft_->SetModel(ModelManager::GetInstance()->Load(kAircraftModel));
-    aircraft_->SetCamera(camera_.get());
-    aircraft_->SetTranslate(kInitializeLaunchBaseAircraftTranslate);
-    aircraft_->SetScale(kInitializeLaunchBaseAircraftScale);
-    aircraft_->SetEnableLighting(true);
-    aircraft_->SetMaterial("resources/Shaders/Object3D/ShadowToon");
-    aircraft_->SetCastShadow(true);
-    aircraft_->SetReceiveShadow(true);
-    aircraft_->Update();
+    {
+        StartupTimingScope aircraftScope("Title.Aircraft");
+        aircraft_ = std::make_unique<Object3d>();
+        aircraft_->Initialize(Object3dManager::GetInstance());
+        aircraft_->SetModel(ModelManager::GetInstance()->Load(kAircraftModel));
+        aircraft_->SetCamera(camera_.get());
+        aircraft_->SetTranslate(kInitializeLaunchBaseAircraftTranslate);
+        aircraft_->SetScale(kInitializeLaunchBaseAircraftScale);
+        aircraft_->SetEnableLighting(true);
+        aircraft_->SetMaterial("resources/Shaders/Object3D/ShadowToon");
+        aircraft_->SetCastShadow(true);
+        aircraft_->SetReceiveShadow(true);
+        aircraft_->Update();
+    }
 
     InitializeStageRoomSets();
 }
