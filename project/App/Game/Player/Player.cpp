@@ -221,22 +221,22 @@ void Player::InitializeAim()
 // 照準画像がはみ出さないよう、画面端から半分のサイズだけ内側に制限する。
 void Player::ClampAimScreenPosition()
 {
-    constexpr float kHalfAimSizePixels = 64.0f;
+    const Vector2 halfAimSizePixels = WinApp::GetInstance()->UiToClient({64.0f, 64.0f});
 
-    if (aimScreenPosition_.x < kHalfAimSizePixels) {
-        aimScreenPosition_.x = kHalfAimSizePixels;
+    if (aimScreenPosition_.x < halfAimSizePixels.x) {
+        aimScreenPosition_.x = halfAimSizePixels.x;
     }
 
-    if (aimScreenPosition_.x > static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - kHalfAimSizePixels) {
-        aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - kHalfAimSizePixels;
+    if (aimScreenPosition_.x > static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - halfAimSizePixels.x) {
+        aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - halfAimSizePixels.x;
     }
 
-    if (aimScreenPosition_.y < kHalfAimSizePixels) {
-        aimScreenPosition_.y = kHalfAimSizePixels;
+    if (aimScreenPosition_.y < halfAimSizePixels.y) {
+        aimScreenPosition_.y = halfAimSizePixels.y;
     }
 
-    if (aimScreenPosition_.y > static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - kHalfAimSizePixels) {
-        aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - kHalfAimSizePixels;
+    if (aimScreenPosition_.y > static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - halfAimSizePixels.y) {
+        aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - halfAimSizePixels.y;
     }
 }
 
@@ -246,15 +246,15 @@ void Player::ClampGamepadAimToPlayer(const Vector2& playerScreenPosition)
     hasGamepadAimAnchor_ = false;
     const float width = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
     const float height = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
-    constexpr float kHalfAimSizePixels = 64.0f;
-    if (width <= kHalfAimSizePixels * 2.0f || height <= kHalfAimSizePixels * 2.0f ||
+    const Vector2 halfAimSizePixels = WinApp::GetInstance()->UiToClient({64.0f, 64.0f});
+    if (width <= halfAimSizePixels.x * 2.0f || height <= halfAimSizePixels.y * 2.0f ||
         !std::isfinite(playerScreenPosition.x) || !std::isfinite(playerScreenPosition.y)) {
         return;
     }
     // 画面外への投影時にも、照準画像が収まる領域を基準にする。
     const Vector2 anchor = {
-        std::clamp(playerScreenPosition.x, kHalfAimSizePixels, width - kHalfAimSizePixels),
-        std::clamp(playerScreenPosition.y, kHalfAimSizePixels, height - kHalfAimSizePixels)
+        std::clamp(playerScreenPosition.x, halfAimSizePixels.x, width - halfAimSizePixels.x),
+        std::clamp(playerScreenPosition.y, halfAimSizePixels.y, height - halfAimSizePixels.y)
     };
     gamepadAimAnchor_ = anchor;
     hasGamepadAimAnchor_ = true;
@@ -327,9 +327,9 @@ void Player::UpdateGamepadAim(float stickX, float stickY, bool isPitchInverted, 
         gamepadAimOffset_.x *= remaining;
         gamepadAimOffset_.y *= remaining;
     }
-    constexpr float kHalfAimSizePixels = 64.0f;
-    const float limitX = (std::max)(halfWidth - kHalfAimSizePixels, 0.0f) / (std::max)(halfWidth, 1.0f);
-    const float limitY = (std::max)(halfHeight - kHalfAimSizePixels, 0.0f) / (std::max)(halfHeight, 1.0f);
+    const Vector2 halfAimSizePixels = WinApp::GetInstance()->UiToClient({64.0f, 64.0f});
+    const float limitX = (std::max)(halfWidth - halfAimSizePixels.x, 0.0f) / (std::max)(halfWidth, 1.0f);
+    const float limitY = (std::max)(halfHeight - halfAimSizePixels.y, 0.0f) / (std::max)(halfHeight, 1.0f);
     // 照準画像が収まる位置まで動かせるよう、円形ではなく画面の矩形で制限する。
     gamepadAimOffset_.x = std::clamp(gamepadAimOffset_.x, -limitX, limitX);
     gamepadAimOffset_.y = std::clamp(gamepadAimOffset_.y, -limitY, limitY);

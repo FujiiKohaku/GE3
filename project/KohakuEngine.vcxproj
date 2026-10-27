@@ -850,6 +850,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Player\Input\PlayerInput.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Input\PlayerInput.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Stage\RailBranchRoute.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Stage\RailHeightRange.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(projectRootPath)Engine\Debug\Profiler\StartupTiming.h" />

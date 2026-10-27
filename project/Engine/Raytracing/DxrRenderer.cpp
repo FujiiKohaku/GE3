@@ -197,21 +197,25 @@ bool DxrRenderer::CreateOutput() {
     D3D12_HEAP_PROPERTIES heap = {};
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT,
-        WinApp::kClientWidth, WinApp::kClientHeight, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+        WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight(), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     RequireResult(device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&output_)), "DXR output creation failed");
     statistics_.outputAllocationBytes = device_->GetResourceAllocationInfo(0, 1, &description).SizeInBytes;
-    outputUavIndex_ = srvManager->Allocate();
-    outputSrvIndex_ = srvManager->Allocate();
+    if (outputUavIndex_ == UINT_MAX) {
+        outputUavIndex_ = srvManager->Allocate();
+        outputSrvIndex_ = srvManager->Allocate();
+    }
     D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {};
     uav.Format = description.Format;
     uav.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
     device_->CreateUnorderedAccessView(output_.Get(), nullptr, &uav, srvManager->GetCPUDescriptorHandle(outputUavIndex_));
     srvManager->CreateSRVforTexture2D(outputSrvIndex_, output_.Get(), description.Format, 1);
-    cameraBuffer_ = CreateBuffer(sizeof(CameraParameters), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, false);
-    debugCopy_ = std::make_unique<CopyImageRenderer>();
-    debugCopy_->Initialize(DirectXCommon::GetInstance());
-    debugCopy_->SetPostEffectType(PostEffectType::Copy);
+    if (!cameraBuffer_) {
+        cameraBuffer_ = CreateBuffer(sizeof(CameraParameters), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, false);
+        debugCopy_ = std::make_unique<CopyImageRenderer>();
+        debugCopy_->Initialize(DirectXCommon::GetInstance());
+        debugCopy_->SetPostEffectType(PostEffectType::Copy);
+    }
     return true;
 }
 void DxrRenderer::BeginFrame() {
@@ -250,6 +254,10 @@ void DxrRenderer::BeginFrame() {
             if (!pipeline_) { CreatePipeline(); }
             if (!output_) { CreateOutput(); }
             isReady_ = true;
+        }
+        if (output_ && (output_->GetDesc().Width != WinApp::GetInstance()->GetRenderWidth() ||
+            output_->GetDesc().Height != WinApp::GetInstance()->GetRenderHeight())) {
+            CreateOutput();
         }
         active_ = this;
     } catch (const std::exception& error) { SetFailure(error.what()); }
@@ -639,8 +647,8 @@ bool DxrRenderer::CreateShaderTables() {
     dispatch_.RayGenerationShaderRecord = {address, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES};
     dispatch_.MissShaderTable = {address + kTableAlignmentBytes, kTableAlignmentBytes, kTableAlignmentBytes};
     dispatch_.HitGroupTable = {address + kHitOffsetBytes, recordCount * kShaderRecordStrideBytes, kShaderRecordStrideBytes};
-    dispatch_.Width = WinApp::kClientWidth;
-    dispatch_.Height = WinApp::kClientHeight;
+    dispatch_.Width = WinApp::GetInstance()->GetRenderWidth();
+    dispatch_.Height = WinApp::GetInstance()->GetRenderHeight();
     dispatch_.Depth = 1;
     return true;
 }

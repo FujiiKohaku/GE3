@@ -339,14 +339,8 @@ void Text::CreateOrResizeGeometryBuffers(size_t vertexCount, size_t indexCount)
 
 void Text::UpdateTransform()
 {
-    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
-    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
-    if (clientWidth <= 0.0f) {
-        clientWidth = static_cast<float>(WinApp::kClientWidth);
-    }
-    if (clientHeight <= 0.0f) {
-        clientHeight = static_cast<float>(WinApp::kClientHeight);
-    }
+    const float clientWidth = static_cast<float>(WinApp::kClientWidth);
+    const float clientHeight = static_cast<float>(WinApp::kClientHeight);
 
     const Vector3 localScale = { 1.0f, 1.0f, 1.0f };
     const Vector3 localRotation = { 0.0f, 0.0f, 0.0f };

@@ -62,6 +62,7 @@ public:
     // 使用クラス：GamePlayScene。レール基準位置からの左右・上下の移動量を返す。
     const Vector3& GetRailOffset() const { return movement_.GetRailOffset(); }
     void SetRailMinimumHeight(float height) { movement_.SetRailMinimumHeight(height); }
+    void SetRailHeightRange(const RailHeightRange& range) { movement_.SetRailHeightRange(range); }
     // 敵の照準などに使う前進速度を返す。死亡時は0、レール飛行では通常速度を使う。
     Vector3 GetAutomaticWorldVelocity() const;
     // 使用クラス：GamePlaySceneなど。カメラ配置やエフェクトに使う飛行方向を返す。

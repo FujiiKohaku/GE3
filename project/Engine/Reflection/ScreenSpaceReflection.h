@@ -80,6 +80,8 @@ private:
     void BuildDepthPyramid(const ScreenSpaceReflectionInputs& inputs);
     static constexpr uint32_t kTargetCount = 9;
     static constexpr uint32_t kDepthMipCount = 12;
+    uint32_t depthPyramidWidth_ = 2048;
+    uint32_t depthPyramidHeight_ = 1024;
     Microsoft::WRL::ComPtr<ID3D12Resource> depthPyramid_;
     std::array<Microsoft::WRL::ComPtr<ID3D12PipelineState>, 2> depthPipelineStates_;
     std::array<uint32_t, kDepthMipCount> depthMipSrvIndices_ = {};

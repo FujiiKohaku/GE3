@@ -27,6 +27,7 @@ class DlssSuperResolution {
 public:
     ~DlssSuperResolution();
     void Initialize();
+    void ResizeDisplayTargets();
     void SetEnabled(bool isEnabled) { isEnabled_ = isEnabled; }
     bool IsEnabled() const { return isEnabled_; }
     bool IsAvailable() const { return isAvailable_; }

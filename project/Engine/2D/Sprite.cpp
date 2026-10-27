@@ -164,14 +164,8 @@ void Sprite::AdjustTextureSize()
 
 void Sprite::UpdateTransform()
 {
-    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
-    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
-    if (clientWidth <= 0.0f) {
-        clientWidth = static_cast<float>(WinApp::kClientWidth);
-    }
-    if (clientHeight <= 0.0f) {
-        clientHeight = static_cast<float>(WinApp::kClientHeight);
-    }
+    const float clientWidth = static_cast<float>(WinApp::kClientWidth);
+    const float clientHeight = static_cast<float>(WinApp::kClientHeight);
 
     Vector3 localScale = { 1.0f, 1.0f, 1.0f };
     Vector3 localTranslate = { -anchorPoint_.x, -anchorPoint_.y, 0.0f };

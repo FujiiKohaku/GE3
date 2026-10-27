@@ -28,7 +28,8 @@ GifRecordingManager::~GifRecordingManager() {
 void GifRecordingManager::Initialize(DirectXCommon* dx, WinApp* window) {
     dx_ = dx;
     notification_.Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
-    notification_.SetPosition({static_cast<float>(window->GetClientWidth()) - 24.0f, 58.0f});
+    (void)window;
+    notification_.SetPosition({static_cast<float>(WinApp::kClientWidth) - 24.0f, 58.0f});
     notification_.SetAnchorPoint({1.0f, 0.0f});
     notification_.SetFontSize(24.0f);
     notification_.SetColor({0.475f, 0.902f, 0.702f, 1.0f});

@@ -420,6 +420,26 @@ void TestMovementRailMinimumHeight()
     assert(IsNear(transform.translate.y, 5.0f));
 }
 
+// 設定した上下限は従来の上下15を越えても有効で、外力にも適用される。
+void TestMovementRailHeightRange()
+{
+    PlayerMovement movement;
+    EulerTransform transform {};
+    transform.translate = { 0.0f, -85.0f, 0.0f };
+    movement.InitializeMovement(transform);
+    movement.SetRailHeightRange({ -110.0f, -55.0f });
+    movement.ApplyRailAreaForce({ 0.0f, -100.0f, 0.0f }, 1.0f / 60.0f);
+    movement.ApplyRailPosition(transform);
+    assert(IsNear(transform.translate.y, -110.0f));
+    movement.ApplyRailAreaForce({ 0.0f, 200.0f, 0.0f }, 1.0f / 60.0f);
+    movement.ApplyRailPosition(transform);
+    assert(IsNear(transform.translate.y, -55.0f));
+    movement.SetRailHeightRange({ -92.0f, -70.0f });
+    movement.ApplyRailAreaForce({}, 1.0f / 60.0f);
+    movement.ApplyRailPosition(transform);
+    assert(IsNear(transform.translate.y, -70.0f));
+}
+
 void TestPlayerInputOperations()
 {
     Input& input = *Input::GetInstance();
@@ -490,6 +510,7 @@ int main()
     TestScreenConstraintWithCamera();
     TestIndependentAllRangeMovement();
     TestMovementRailMinimumHeight();
+    TestMovementRailHeightRange();
     TestPlayerInputOperations();
 }
 

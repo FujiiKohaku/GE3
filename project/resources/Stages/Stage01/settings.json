@@ -15,10 +15,22 @@
   "layout": "resources/Scenes/stage01.json",
   "rail": {
     "length": 7200.0, "point_interval": 50.0, "speed": 0.8,
+    "height_range": {
+      "minimum_offset_y": -15.0,
+      "maximum_offset_y": 15.0,
+      "use_floor_minimum": true,
+      "floor_clearance": 3.0
+    },
+    "lower_height_range": {
+      "minimum_offset_y": -15.0,
+      "maximum_offset_y": 15.0,
+      "use_floor_minimum": false
+    },
+    "height_zones": [],
     "lower_branch": {
       "enabled": true,
       "start_distance": 900.0,
-      "end_distance": 2100.0,
+      "end_distance": 4500.0,
       "preview_distance": 260.0,
       "selection_offset_y": 0.0,
       "offset": [0.0, -65.0, 0.0]

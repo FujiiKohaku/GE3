@@ -23,6 +23,7 @@ public:
     };
 
     void Initialize(DirectXCommon* dxCommon);
+    void ResizeDisplayTargets();
     void Update();
     void DrawImGui();
     void Generate(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle);
@@ -58,7 +59,7 @@ private:
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle_ {};
         D3D12_CPU_DESCRIPTOR_HANDLE srvHandleCPU_ {};
         D3D12_GPU_DESCRIPTOR_HANDLE srvHandleGPU_ {};
-        uint32_t srvIndex_ = 0;
+        uint32_t srvIndex_ = UINT_MAX;
         uint32_t width_ = 1;
         uint32_t height_ = 1;
         D3D12_RESOURCE_STATES currentState_ = D3D12_RESOURCE_STATE_RENDER_TARGET;

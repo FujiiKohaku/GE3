@@ -19,12 +19,17 @@ void BloomRenderer::Initialize(DirectXCommon* dxCommon)
     CreateConstantBuffer();
     SetDefaultParameter();
 
-    uint32_t bloomWidth = WinApp::kClientWidth / kBloomDownSample;
+    ResizeDisplayTargets();
+}
+
+void BloomRenderer::ResizeDisplayTargets()
+{
+    uint32_t bloomWidth = WinApp::GetInstance()->GetRenderWidth() / kBloomDownSample;
     if (bloomWidth == 0) {
         bloomWidth = 1;
     }
 
-    uint32_t bloomHeight = WinApp::kClientHeight / kBloomDownSample;
+    uint32_t bloomHeight = WinApp::GetInstance()->GetRenderHeight() / kBloomDownSample;
     if (bloomHeight == 0) {
         bloomHeight = 1;
     }
@@ -38,8 +43,8 @@ void BloomRenderer::Initialize(DirectXCommon* dxCommon)
             format_);
     }
 
-    fullScreenViewport_.Width = static_cast<float>(WinApp::kClientWidth);
-    fullScreenViewport_.Height = static_cast<float>(WinApp::kClientHeight);
+    fullScreenViewport_.Width = static_cast<float>(WinApp::GetInstance()->GetRenderWidth());
+    fullScreenViewport_.Height = static_cast<float>(WinApp::GetInstance()->GetRenderHeight());
     fullScreenViewport_.TopLeftX = 0.0f;
     fullScreenViewport_.TopLeftY = 0.0f;
     fullScreenViewport_.MinDepth = 0.0f;
@@ -47,8 +52,8 @@ void BloomRenderer::Initialize(DirectXCommon* dxCommon)
 
     fullScreenScissorRect_.left = 0;
     fullScreenScissorRect_.top = 0;
-    fullScreenScissorRect_.right = WinApp::kClientWidth;
-    fullScreenScissorRect_.bottom = WinApp::kClientHeight;
+    fullScreenScissorRect_.right = WinApp::GetInstance()->GetRenderWidth();
+    fullScreenScissorRect_.bottom = WinApp::GetInstance()->GetRenderHeight();
 }
 
 void BloomRenderer::Update()
@@ -483,7 +488,9 @@ void BloomRenderer::RenderTarget::CreateViews(uint32_t rtvIndex)
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     srvDesc.Texture2D.MipLevels = 1;
 
-    srvIndex_ = SrvManager::GetInstance()->Allocate();
+    if (srvIndex_ == UINT_MAX) {
+        srvIndex_ = SrvManager::GetInstance()->Allocate();
+    }
     srvHandleCPU_ = SrvManager::GetInstance()->GetCPUDescriptorHandle(srvIndex_);
     srvHandleGPU_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
 

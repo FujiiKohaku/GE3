@@ -350,8 +350,8 @@ void DirectXCommon::InitializeSwapChain()
 
     // スワップチェーンを生成する
 
-    swapChainDesc.Width = WinApp::kClientWidth; // 画面の幅。ウィンドウのクライアント領域を同じものんにしておく
-    swapChainDesc.Height = WinApp::kClientHeight; // 画面の高さ。ウィンドウのクライアント領域を同じものにしておく
+    swapChainDesc.Width = WinApp::GetInstance()->GetRenderWidth(); // 画面の幅。ウィンドウのクライアント領域を同じものんにしておく
+    swapChainDesc.Height = WinApp::GetInstance()->GetRenderHeight(); // 画面の高さ。ウィンドウのクライアント領域を同じものにしておく
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // 色の形式
     swapChainDesc.SampleDesc.Count = 1; // マルチサンプルしない
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT; // 描画のターゲットとしてりようする
@@ -360,6 +360,7 @@ void DirectXCommon::InitializeSwapChain()
     // コマンドキュー,ウィンドウバンドル、設定を渡して生成する
     hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue.Get(), winApp_->GetHwnd(), &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(swapChain.GetAddressOf())); // com.Get,OF
     assert(SUCCEEDED(hr));
+    dxgiFactory->MakeWindowAssociation(winApp_->GetHwnd(), DXGI_MWA_NO_ALT_ENTER);
 }
 #pragma endregion
 #pragma region
@@ -369,8 +370,8 @@ void DirectXCommon::InitializeDepthBuffer()
 
     // === 生成するResourceの設定 ===
     D3D12_RESOURCE_DESC resourceDesc {};
-    resourceDesc.Width = WinApp::kClientWidth;
-    resourceDesc.Height = WinApp::kClientHeight;
+    resourceDesc.Width = WinApp::GetInstance()->GetRenderWidth();
+    resourceDesc.Height = WinApp::GetInstance()->GetRenderHeight();
     resourceDesc.MipLevels = 1;
     resourceDesc.DepthOrArraySize = 1;
     resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -514,8 +515,8 @@ void DirectXCommon::InitializeFence()
 void DirectXCommon::InitializeViewport()
 {
     // クライアント領域のサイズと一緒にして画面全体に表示する
-    viewport.Width = WinApp::kClientWidth;
-    viewport.Height = WinApp::kClientHeight;
+    viewport.Width = static_cast<float>(WinApp::GetInstance()->GetRenderWidth());
+    viewport.Height = static_cast<float>(WinApp::GetInstance()->GetRenderHeight());
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     viewport.MinDepth = 0.0f;
@@ -527,9 +528,9 @@ void DirectXCommon::InitializeScissorRect()
 {
     // 基本的にビューポートと同じ矩形が構成されるようにする
     scissorRect.left = 0;
-    scissorRect.right = WinApp::kClientWidth;
+    scissorRect.right = WinApp::GetInstance()->GetRenderWidth();
     scissorRect.top = 0;
-    scissorRect.bottom = WinApp::kClientHeight;
+    scissorRect.bottom = WinApp::GetInstance()->GetRenderHeight();
 }
 #pragma endregion
 #pragma region
@@ -965,6 +966,35 @@ void DirectXCommon::WaitForGPU()
         fence->SetEventOnCompletion(fenceValue, fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
     }
+}
+bool DirectXCommon::ResizeDisplayTargets()
+{
+    const UINT renderWidth = static_cast<UINT>(winApp_->GetRenderWidth());
+    const UINT renderHeight = static_cast<UINT>(winApp_->GetRenderHeight());
+    if (swapChainDesc.Width == renderWidth && swapChainDesc.Height == renderHeight) {
+        return true;
+    }
+    // Called before scene update, with no commands referencing the old targets.
+    WaitForGPU();
+    for (auto& backBuffer : swapChainResources) {
+        backBuffer.Reset();
+    }
+    const HRESULT result = swapChain->ResizeBuffers(kSwapChainBufferCount, renderWidth, renderHeight,
+        swapChainDesc.Format, swapChainDesc.Flags);
+    if (FAILED(result)) {
+        InitializeRenderTargetView();
+        Logger::Log("Display resize failed; keeping the previous resolution");
+        return false;
+    }
+    swapChainDesc.Width = renderWidth;
+    swapChainDesc.Height = renderHeight;
+    InitializeRenderTargetView();
+    depthStencilResource.Reset();
+    InitializeDepthBuffer();
+    InitializeDepthStencilView();
+    InitializeViewport();
+    InitializeScissorRect();
+    return true;
 }
 D3D12_CPU_DESCRIPTOR_HANDLE DirectXCommon::GetRTVHandle(uint32_t index) const
 {

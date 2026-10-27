@@ -51,6 +51,7 @@ public:
 #endif
 
     void ResizeSceneTargets();
+    void ResizeDisplayTargets();
     void ResolveSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv);
     void SetParticleDepthJitter(Vector2 jitterUv) { particleDepthJitterUv_ = jitterUv; }
     void PreDrawDepth();

@@ -81,8 +81,8 @@ void TutorialCommPanel::Update(float deltaTime)
     if (compact_) targetHeight = 72.0f;
     alpha_ += (targetAlpha - alpha_) * follow;
     height_ += (targetHeight - height_) * follow;
-    const float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
-    const float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+    const float screenWidth = static_cast<float>(WinApp::kClientWidth);
+    const float screenHeight = static_cast<float>(WinApp::kClientHeight);
     const float scale = (std::max)(0.1f, (std::min)(screenWidth / 1280.0f, screenHeight / 720.0f));
     constexpr float width = 720.0f;
     panelPosition_ = { (screenWidth - width * scale) * 0.5f,

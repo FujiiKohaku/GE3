@@ -2425,7 +2425,7 @@ void TestScene1::UpdateBoneNames()
             Vector2 screenPos = camera_->WorldToScreen(worldPos);
             
             // テキストの位置を設定して更新
-            jointNameTexts_[i]->SetPosition(screenPos);
+            jointNameTexts_[i]->SetPosition(WinApp::GetInstance()->ClientToUi(screenPos));
             jointNameTexts_[i]->Update();
         }
     }

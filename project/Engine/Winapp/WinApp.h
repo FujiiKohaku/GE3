@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <cstdint>
 #include <memory>
+#include "Engine/Math/MathStruct.h"
 
 class WinApp {
 public:
@@ -31,6 +32,14 @@ public:
     static const int32_t kClientHeight = 720;
     int32_t GetClientWidth() const;
     int32_t GetClientHeight() const;
+    static constexpr int32_t kFullscreenWidth = 1920;
+    static constexpr int32_t kFullscreenHeight = 1080;
+    int32_t GetRenderWidth() const;
+    int32_t GetRenderHeight() const;
+    bool IsBorderlessFullscreen() const { return isBorderlessFullscreen_; }
+    bool SetBorderlessFullscreen(bool isEnabled);
+    Vector2 ClientToUi(const Vector2& clientPosition) const;
+    Vector2 UiToClient(const Vector2& uiPosition) const;
 
     static LRESULT CALLBACK WindowProc(
         HWND hwnd,
@@ -49,4 +58,6 @@ private:
 private:
     HWND hwnd_ = nullptr;
     WNDCLASS wc_ {};
+    bool isBorderlessFullscreen_ = false;
+    WINDOWPLACEMENT windowPlacement_ { sizeof(WINDOWPLACEMENT) };
 };

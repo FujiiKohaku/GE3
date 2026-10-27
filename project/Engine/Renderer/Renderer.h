@@ -32,6 +32,7 @@ public:
     ~Renderer();
 
     void Initialize();
+    bool ToggleFullscreen();
     void PrepareDlaaForGameplay();
     void Update();
     void DrawImGui();
@@ -83,6 +84,8 @@ private:
     uint32_t lowResolutionHeight_ = 540;
     uint32_t sceneRenderWidth_ = 1280;
     uint32_t sceneRenderHeight_ = 720;
+    uint32_t displayRenderWidth_ = 1280;
+    uint32_t displayRenderHeight_ = 720;
     struct AntiAliasingSample {
         uint32_t sampleCount = 0;
         double frameTotalMs = 0;

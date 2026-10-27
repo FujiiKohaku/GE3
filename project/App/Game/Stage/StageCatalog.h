@@ -6,6 +6,7 @@
 #include <vector>
 #include "Engine/Shadow/ShadowSettings.h"
 #include "RailBranchRoute.h"
+#include "RailHeightRange.h"
 
 struct StageSettings {
     ShadowSettings shadows;
@@ -28,6 +29,9 @@ struct StageSettings {
     float flightMaxHeight = 180.0f;
     std::vector<Vector3> railControlPoints;
     RailBranchSettings railBranch;
+    RailHeightRangeSettings railHeightRange;
+    RailHeightRangeSettings railLowerHeightRange;
+    std::vector<RailHeightZoneSettings> railHeightZones;
     std::string bossType = "FearWorm";
     float bossSpawnDistance = 1850.0f;
     Vector3 bossPosition = { 0.0f, 2.0f, 1850.0f };

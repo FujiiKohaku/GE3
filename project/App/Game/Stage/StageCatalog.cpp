@@ -6,6 +6,15 @@
 #include <fstream>
 
 namespace {
+RailHeightRangeSettings ReadHeightRange(const nlohmann::json& value, RailHeightRangeSettings fallback)
+{
+    fallback.minimumOffsetY = value.value("minimum_offset_y", fallback.minimumOffsetY);
+    fallback.maximumOffsetY = value.value("maximum_offset_y", fallback.maximumOffsetY);
+    fallback.shouldUseFloorMinimum = value.value("use_floor_minimum", fallback.shouldUseFloorMinimum);
+    fallback.floorClearance = value.value("floor_clearance", fallback.floorClearance);
+    return fallback;
+}
+
 Vector3 ReadVector3(const nlohmann::json& value, const Vector3& fallback)
 {
     if (!value.is_array() || value.size() < 3) {
@@ -159,6 +168,25 @@ bool StageCatalog::LoadStageSettings(
                 settings.railBranch.offset = ReadVector3(branch["offset"], settings.railBranch.offset);
             }
         }
+        if (rail.contains("height_range")) {
+            settings.railHeightRange = ReadHeightRange(rail["height_range"], settings.railHeightRange);
+        }
+        settings.railLowerHeightRange = settings.railHeightRange;
+        if (rail.contains("lower_height_range")) {
+            settings.railLowerHeightRange = ReadHeightRange(rail["lower_height_range"], settings.railLowerHeightRange);
+        }
+        if (rail.contains("height_zones")) {
+            for (const nlohmann::json& zoneJson : rail["height_zones"]) {
+                RailHeightZoneSettings zone;
+                zone.startDistance = zoneJson.at("start_distance").get<float>();
+                zone.endDistance = zoneJson.at("end_distance").get<float>();
+                zone.isLowerRoute = zoneJson.value("is_lower_route", false);
+                zone.range = settings.railHeightRange;
+                if (zone.isLowerRoute) { zone.range = settings.railLowerHeightRange; }
+                zone.range = ReadHeightRange(zoneJson, zone.range);
+                settings.railHeightZones.push_back(zone);
+            }
+        }
         if (rail.contains("control_points") &&
             rail["control_points"].is_array()) {
             for (const nlohmann::json& point : rail["control_points"]) {
@@ -227,6 +255,18 @@ bool StageCatalog::LoadStageSettings(
         (settings.allRangeMode || !settings.railBranch.IsValid(settings.railLength))) {
         lastError_ = "Invalid lower rail branch: " + settings.id;
         return false;
+    }
+    if (!settings.railHeightRange.IsValid() || !settings.railLowerHeightRange.IsValid()) {
+        lastError_ = "Invalid rail height range: " + settings.id;
+        return false;
+    }
+    for (const RailHeightZoneSettings& zone : settings.railHeightZones) {
+        if (!std::isfinite(zone.startDistance) || !std::isfinite(zone.endDistance) ||
+            zone.startDistance < 0.0f || zone.endDistance <= zone.startDistance ||
+            zone.endDistance > settings.railLength || !zone.range.IsValid()) {
+            lastError_ = "Invalid rail height zone: " + settings.id;
+            return false;
+        }
     }
     if (settings.bossSpawnDistance > settings.railLength) {
         lastError_ = "Boss distance exceeds rail length: " + settings.id;

@@ -17,8 +17,8 @@ void FogRenderer::Initialize(DirectXCommon* dxCommon)
     CreateDepthSRV();
     CreateObjectFogMask();
 
-    viewport_.Width = static_cast<float>(WinApp::kClientWidth);
-    viewport_.Height = static_cast<float>(WinApp::kClientHeight);
+    viewport_.Width = static_cast<float>(WinApp::GetInstance()->GetRenderWidth());
+    viewport_.Height = static_cast<float>(WinApp::GetInstance()->GetRenderHeight());
     viewport_.TopLeftX = 0.0f;
     viewport_.TopLeftY = 0.0f;
     viewport_.MinDepth = 0.0f;
@@ -26,8 +26,8 @@ void FogRenderer::Initialize(DirectXCommon* dxCommon)
 
     scissorRect_.left = 0;
     scissorRect_.top = 0;
-    scissorRect_.right = WinApp::kClientWidth;
-    scissorRect_.bottom = WinApp::kClientHeight;
+    scissorRect_.right = WinApp::GetInstance()->GetRenderWidth();
+    scissorRect_.bottom = WinApp::GetInstance()->GetRenderHeight();
 }
 
 void FogRenderer::PreDrawDepth()
@@ -74,8 +74,8 @@ void FogRenderer::Apply(
 
     auto viewport = viewport_; auto scissor = scissorRect_;
     if (shouldUseParticleDepth_) {
-        viewport.Width = float(WinApp::kClientWidth); viewport.Height = float(WinApp::kClientHeight);
-        scissor.right = WinApp::kClientWidth; scissor.bottom = WinApp::kClientHeight;
+        viewport.Width = float(WinApp::GetInstance()->GetRenderWidth()); viewport.Height = float(WinApp::GetInstance()->GetRenderHeight());
+        scissor.right = WinApp::GetInstance()->GetRenderWidth(); scissor.bottom = WinApp::GetInstance()->GetRenderHeight();
     }
     commandList->RSSetViewports(1, &viewport);
     commandList->RSSetScissorRects(1, &scissor);
@@ -312,6 +312,12 @@ FogRenderer::~FogRenderer() {
     if (particleDepthSrvIndex_ != UINT_MAX) { SrvManager::GetInstance()->Free(particleDepthSrvIndex_); }
 }
 void FogRenderer::ResizeSceneTargets() {
+    // A resolved depth texture belongs to the output size, independent of the 3D size.
+    if (particleDepth_ && (particleDepth_->GetDesc().Width != WinApp::GetInstance()->GetRenderWidth() ||
+        particleDepth_->GetDesc().Height != WinApp::GetInstance()->GetRenderHeight())) {
+        particleDepth_.Reset();
+        particleDepthState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    }
     if (sceneWidth_ == SceneRenderResolution::GetWidth() && sceneHeight_ == SceneRenderResolution::GetHeight()) { return; }
     sceneWidth_ = SceneRenderResolution::GetWidth(); sceneHeight_ = SceneRenderResolution::GetHeight();
     CreateDepthResource(); depthResourceState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;
@@ -334,12 +340,12 @@ ID3D12Resource* FogRenderer::GetParticleDepthTexture() const {
 }
 void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
     shouldUseParticleDepth_ = true;
-    useResolvedParticleDepth_ = sceneWidth_ != WinApp::kClientWidth || sceneHeight_ != WinApp::kClientHeight ||
+    useResolvedParticleDepth_ = sceneWidth_ != WinApp::GetInstance()->GetRenderWidth() || sceneHeight_ != WinApp::GetInstance()->GetRenderHeight() ||
         std::abs(jitterUv.x) > 0.000001f || std::abs(jitterUv.y) > 0.000001f;
     if (!useResolvedParticleDepth_) { PrepareDepthForParticleDraw(); return; }
     auto* device = dxCommon_->GetDevice(); auto* command = dxCommon_->GetCommandList();
     if (!particleDepth_) {
-        auto description = depthResource_->GetDesc(); description.Width = WinApp::kClientWidth; description.Height = WinApp::kClientHeight;
+        auto description = depthResource_->GetDesc(); description.Width = WinApp::GetInstance()->GetRenderWidth(); description.Height = WinApp::GetInstance()->GetRenderHeight();
         D3D12_HEAP_PROPERTIES heap = {}; heap.Type = D3D12_HEAP_TYPE_DEFAULT;
         D3D12_CLEAR_VALUE clear = {}; clear.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; clear.DepthStencil.Depth = 1;
         HRESULT result = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
@@ -347,7 +353,9 @@ void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
         particleDepthHeap_ = dxCommon_->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
         D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {}; dsv.Format = clear.Format; dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
         device->CreateDepthStencilView(particleDepth_.Get(), &dsv, particleDepthHeap_->GetCPUDescriptorHandleForHeapStart());
-        particleDepthSrvIndex_ = SrvManager::GetInstance()->Allocate();
+        if (particleDepthSrvIndex_ == UINT_MAX) {
+            particleDepthSrvIndex_ = SrvManager::GetInstance()->Allocate();
+        }
         SrvManager::GetInstance()->CreateSRVforTexture2D(particleDepthSrvIndex_, particleDepth_.Get(), DXGI_FORMAT_R24_UNORM_X8_TYPELESS, 1);
         depthResolveConstants_ = dxCommon_->CreateBufferResource(256);
         auto vertex = dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
@@ -368,8 +376,8 @@ void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
     Vector4* constants = nullptr; depthResolveConstants_->Map(0, nullptr, reinterpret_cast<void**>(&constants));
     *constants = {jitterUv.x, jitterUv.y, 0, 0}; depthResolveConstants_->Unmap(0, nullptr);
     auto dsv = GetParticleDepthDsv(); command->OMSetRenderTargets(0, nullptr, false, &dsv);
-    D3D12_VIEWPORT viewport = {0, 0, float(WinApp::kClientWidth), float(WinApp::kClientHeight), 0, 1};
-    D3D12_RECT scissor = {0, 0, WinApp::kClientWidth, WinApp::kClientHeight};
+    D3D12_VIEWPORT viewport = {0, 0, float(WinApp::GetInstance()->GetRenderWidth()), float(WinApp::GetInstance()->GetRenderHeight()), 0, 1};
+    D3D12_RECT scissor = {0, 0, WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight()};
     command->RSSetViewports(1, &viewport); command->RSSetScissorRects(1, &scissor);
     command->SetGraphicsRootSignature(rootSignature_.Get()); command->SetPipelineState(depthResolvePipeline_.Get());
     command->SetGraphicsRootDescriptorTable(0, depthSRVHandleGPU_); command->SetGraphicsRootDescriptorTable(1, depthSRVHandleGPU_);

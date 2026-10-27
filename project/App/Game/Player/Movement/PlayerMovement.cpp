@@ -351,11 +351,12 @@ Vector2 PlayerMovement::CalculateScreenCorrection(const Vector3& railOffset) con
     UpdateScreenBounds(playerPosition - rightExtent - upExtent, minX, maxX, minY, maxY);
 
     // 画面端の余白を除いた範囲を、機体を収める領域とする。
-    float leftLimit = playerClampMarginX_;
-    float rightLimit = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - playerClampMarginX_;
+    const Vector2 clampMarginPixels = WinApp::GetInstance()->UiToClient({playerClampMarginX_, playerClampMarginY_});
+    float leftLimit = clampMarginPixels.x;
+    float rightLimit = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) - clampMarginPixels.x;
 
-    float topLimit = playerClampMarginY_;
-    float bottomLimit = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - playerClampMarginY_;
+    float topLimit = clampMarginPixels.y;
+    float bottomLimit = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) - clampMarginPixels.y;
 
     // はみ出した側を画面内へ戻す量を求める。まだワールド座標の移動量には変換しない。
     if (minX < leftLimit) {
@@ -385,11 +386,12 @@ Vector3 PlayerMovement::ClampRailOffsetToScreen(const Vector3& railOffset) const
     // 先にレール上の移動範囲へ制限する。前後方向のオフセットは使わない。
     correctedRailOffset.x = std::clamp(
         correctedRailOffset.x, -railMoveLimitX_, railMoveLimitX_);
-    correctedRailOffset.y = std::clamp(
-        correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
+    if (!hasRailHeightRange_) {
+        correctedRailOffset.y = std::clamp(correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
+    }
     correctedRailOffset.z = 0.0f;
-    // Keep the configured ocean clearance after both input and screen-space correction.
-    EnforceMinimumHeight(correctedRailOffset);
+    // 入力と画面内補正の両方で、その地点の高度範囲を守る。
+    EnforceHeightRange(correctedRailOffset);
 
 
     if (camera_ == nullptr) {
@@ -448,9 +450,11 @@ Vector3 PlayerMovement::ClampRailOffsetToScreen(const Vector3& railOffset) const
 
         // 画面内補正でレールの移動範囲を超えないよう、もう一度制限する。
         correctedRailOffset.x = std::clamp(correctedRailOffset.x, -railMoveLimitX_, railMoveLimitX_);
-        correctedRailOffset.y = std::clamp(correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
+        if (!hasRailHeightRange_) {
+            correctedRailOffset.y = std::clamp(correctedRailOffset.y, -railMoveLimitY_, railMoveLimitY_);
+        }
         correctedRailOffset.z = 0.0f;
-        EnforceMinimumHeight(correctedRailOffset);
+        EnforceHeightRange(correctedRailOffset);
     }
 
     return correctedRailOffset;
@@ -488,9 +492,14 @@ void PlayerMovement::UpdateMovement(EulerTransform& transform, const Vector2& st
     UpdateRoll(transform, isLeftTriggered, isRightTriggered, deltaTimeSeconds);
 }
 
-// 入力後と画面内補正後に、設定された最低高度を維持する。
-void PlayerMovement::EnforceMinimumHeight(Vector3& offset) const
+// 入力後と画面内補正後に、設定された最低・最高高度を維持する。
+void PlayerMovement::EnforceHeightRange(Vector3& offset) const
 {
+    if (hasRailHeightRange_) {
+        const float baseHeight = railBasePosition_.y + railRight_.y * offset.x;
+        offset.y = railHeightRange_.ClampOffset(offset.y, baseHeight, railUp_.y);
+        return;
+    }
     if (hasRailMinimumHeight_ && railUp_.y > 0.0001f) {
         const float minimumOffset = (railMinimumHeight_ - railBasePosition_.y - railRight_.y * offset.x) / railUp_.y;
         offset.y = (std::max)(offset.y, (std::min)(minimumOffset, railMoveLimitY_));

@@ -624,7 +624,8 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
     for (uint32_t index = 0; index < kPingPongRenderTargetCount; ++index) {
         {
             StartupTimingScope startupScope("PostFX.RenderTargets");
-            pingPongRenderTargets_[index].Initialize(dxCommon_, kFirstPingPongRTVIndex + index);
+            pingPongRenderTargets_[index].Initialize(dxCommon_, kFirstPingPongRTVIndex + index,
+                WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight());
         }
     }
 }
@@ -853,7 +854,7 @@ void PostEffectManager::DrawImGui()
 void PostEffectManager::PreDrawDepth()
 {
     sceneDepthReady_ = false;
-    isNativeComposition_ = SceneRenderResolution::GetWidth() == WinApp::kClientWidth;
+    isNativeComposition_ = SceneRenderResolution::GetWidth() == WinApp::GetInstance()->GetRenderWidth();
     fogRenderer_->PreDrawDepth();
 }
 
@@ -958,7 +959,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     SceneManager* sceneManager,
     D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle)
 {
-    isNativeComposition_ = SceneRenderResolution::GetWidth() == WinApp::kClientWidth;
+    isNativeComposition_ = SceneRenderResolution::GetWidth() == WinApp::GetInstance()->GetRenderWidth();
     UpdatePostEffectParameters(sceneManager);
 
     particleCompositionTargetIndex_ = 0;
@@ -1355,12 +1356,24 @@ const std::array<PostEffectManager::RenderTarget, PostEffectManager::kPingPongRe
 }
 void PostEffectManager::ResizeSceneTargets() {
     fogRenderer_->ResizeSceneTargets(); volumetricLightRenderer_->ResizeSceneTargets();
-    if (SceneRenderResolution::GetWidth() == WinApp::kClientWidth) { return; }
+    if (SceneRenderResolution::GetWidth() == WinApp::GetInstance()->GetRenderWidth()) { return; }
     for (auto& target : sceneRenderTargets_) {
         if (target.GetTexture() && target.GetTexture()->GetDesc().Width == SceneRenderResolution::GetWidth()
             && target.GetTexture()->GetDesc().Height == SceneRenderResolution::GetHeight()) { continue; }
         target.Initialize(dxCommon_, 0, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight());
     }
+}
+void PostEffectManager::ResizeDisplayTargets()
+{
+    for (uint32_t index = 0; index < kPingPongRenderTargetCount; ++index) {
+        pingPongRenderTargets_[index].Initialize(dxCommon_, kFirstPingPongRTVIndex + index,
+            WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight());
+    }
+    bloomRenderer_->ResizeDisplayTargets();
+    sceneDepthReady_ = false;
+    isNativeComposition_ = true;
+    particleCompositionTargetIndex_ = 0;
+    autoExposureRenderer_->ResetHistory();
 }
 void PostEffectManager::ResolveSceneColor(D3D12_GPU_DESCRIPTOR_HANDLE colorSrv) {
     if (isNativeComposition_) { ReplaceSceneColor(colorSrv); return; }

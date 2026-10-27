@@ -91,9 +91,59 @@ void TestStageConfiguration()
     const StageSettings* stage = catalog->Find("stage01");
     assert(stage != nullptr && stage->railBranch.isEnabled);
     assert(stage->railBranch.endDistance < stage->bossSpawnDistance);
+    assert(stage->railHeightRange.shouldUseFloorMinimum);
+    assert(!stage->railLowerHeightRange.shouldUseFloorMinimum);
     assert(stage->railControlPoints.front().y == -20.0f);
     assert(stage->railControlPoints.back().z == 7200.0f);
     assert(!catalog->Find("stage02")->railBranch.isEnabled);
+}
+
+void TestHeightRangeSelection()
+{
+    RailHeightRangeSettings mainSettings;
+    mainSettings.shouldUseFloorMinimum = true;
+    RailHeightRangeSettings lowerSettings;
+    RailHeightRange range = CalculateRailHeightRange(mainSettings, lowerSettings, {}, false,
+        100.0f, -20.0f, -30.0f, 0.0f);
+    assert(range.minimumHeight == -27.0f && range.maximumHeight == -5.0f);
+    range = CalculateRailHeightRange(mainSettings, lowerSettings, {}, true,
+        2000.0f, -85.0f, -30.0f, -65.0f);
+    assert(range.minimumHeight == -100.0f && range.maximumHeight == -70.0f);
+
+    RailHeightZoneSettings zone;
+    zone.startDistance = 200.0f;
+    zone.endDistance = 400.0f;
+    zone.range.minimumOffsetY = -25.0f;
+    zone.range.maximumOffsetY = 30.0f;
+    const std::vector<RailHeightZoneSettings> zones { zone };
+    const float distances[] = { 199.0f, 200.0f, 399.0f, 400.0f };
+    const float expectedMaximums[] = { -5.0f, 10.0f, 10.0f, -5.0f };
+    for (int distanceIndex = 0; distanceIndex < 4; ++distanceIndex) {
+        range = CalculateRailHeightRange(mainSettings, lowerSettings, zones, false,
+            distances[distanceIndex], -20.0f, -30.0f, 0.0f);
+        assert(range.maximumHeight == expectedMaximums[distanceIndex]);
+    }
+    range = CalculateRailHeightRange(mainSettings, lowerSettings, zones, true,
+        300.0f, -85.0f, -30.0f, -65.0f);
+    assert(range.minimumHeight == -100.0f && range.maximumHeight == -70.0f);
+    assert(!StageCatalog::GetInstance()->Find("stage02")->railHeightRange.shouldUseFloorMinimum);
+}
+
+void TestHeightRangeClampAndValidation()
+{
+    RailHeightRange range { -100.0f, -70.0f };
+    assert(range.ClampOffset(-30.0f, -85.0f, 1.0f) == -15.0f);
+    assert(range.ClampOffset(30.0f, -85.0f, 1.0f) == 15.0f);
+    assert(range.ClampOffset(2.0f, -85.0f, 1.0f) == 2.0f);
+    assert(range.ClampOffset(40.0f, -85.0f, -0.5f) == 30.0f);
+    assert(range.ClampOffset(2.0f, -85.0f, 0.0f) == 2.0f);
+    RailHeightRangeSettings settings;
+    assert(settings.IsValid());
+    settings.minimumOffsetY = settings.maximumOffsetY;
+    assert(!settings.IsValid());
+    settings = {};
+    settings.maximumOffsetY = std::numeric_limits<float>::infinity();
+    assert(!settings.IsValid());
 }
 }
 
@@ -103,4 +153,6 @@ int main()
     TestLowerRouteAndMerge();
     TestFrameRatesAndSkippedBranch();
     TestStageConfiguration();
+    TestHeightRangeSelection();
+    TestHeightRangeClampAndValidation();
 }

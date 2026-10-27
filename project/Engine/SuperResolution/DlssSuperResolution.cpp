@@ -28,8 +28,8 @@ Microsoft::WRL::ComPtr<ID3D12Resource> CreateSuperResolutionTexture(DXGI_FORMAT 
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC description = {};
     description.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    description.Width = WinApp::kClientWidth;
-    description.Height = WinApp::kClientHeight;
+    description.Width = WinApp::GetInstance()->GetRenderWidth();
+    description.Height = WinApp::GetInstance()->GetRenderHeight();
     description.DepthOrArraySize = 1;
     description.MipLevels = 1;
     description.Format = format;
@@ -78,34 +78,69 @@ void DlssSuperResolution::Initialize() {
     if (isSupported == 0) { status_ = "DLSS Super Resolution unavailable on this GPU/driver"; Logger::Log(status_); return; }
     unsigned int maxWidth = 0, maxHeight = 0, minWidth = 0, minHeight = 0;
     float sharpness = 0;
-    result = NGX_DLSS_GET_OPTIMAL_SETTINGS(parameters_, WinApp::kClientWidth, WinApp::kClientHeight,
+    result = NGX_DLSS_GET_OPTIMAL_SETTINGS(parameters_, WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight(),
         NVSDK_NGX_PerfQuality_Value_DLAA, &renderWidth_, &renderHeight_, &maxWidth, &maxHeight, &minWidth, &minHeight, &sharpness);
     if (NVSDK_NGX_FAILED(result)) { SetFailure("DLAA resolution query", result); return; }
-    if (renderWidth_ == 0 || renderHeight_ == 0 || renderWidth_ > WinApp::kClientWidth || renderHeight_ > WinApp::kClientHeight) {
+    if (renderWidth_ == 0 || renderHeight_ == 0 || renderWidth_ > static_cast<uint32_t>(WinApp::GetInstance()->GetRenderWidth()) || renderHeight_ > static_cast<uint32_t>(WinApp::GetInstance()->GetRenderHeight())) {
         status_ = "Invalid recommended render resolution"; return;
     }
-    if (renderWidth_ != WinApp::kClientWidth || renderHeight_ != WinApp::kClientHeight) {
+    if (renderWidth_ != WinApp::GetInstance()->GetRenderWidth() || renderHeight_ != WinApp::GetInstance()->GetRenderHeight()) {
         status_ = "DLAA native resolution unavailable"; return;
     }
     CreateResources();
     isAvailable_ = true;
     status_ = "Available: DLAA " + std::to_string(renderWidth_) + "x" + std::to_string(renderHeight_) + " -> "
-        + std::to_string(WinApp::kClientWidth) + "x" + std::to_string(WinApp::kClientHeight);
+        + std::to_string(WinApp::GetInstance()->GetRenderWidth()) + "x" + std::to_string(WinApp::GetInstance()->GetRenderHeight());
     Logger::Log("DLSS: " + status_);
 }
 
+void DlssSuperResolution::ResizeDisplayTargets()
+{
+    ResetHistory();
+    isActive_ = false;
+    jitterFrame_ = 0;
+    if (!isAvailable_ || parameters_ == nullptr) {
+        return;
+    }
+    if (feature_ != nullptr) {
+        NVSDK_NGX_D3D12_ReleaseFeature(feature_);
+        feature_ = nullptr;
+    }
+    unsigned int maxWidth = 0;
+    unsigned int maxHeight = 0;
+    unsigned int minWidth = 0;
+    unsigned int minHeight = 0;
+    float sharpness = 0;
+    const auto result = NGX_DLSS_GET_OPTIMAL_SETTINGS(parameters_,
+        WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight(),
+        NVSDK_NGX_PerfQuality_Value_DLAA, &renderWidth_, &renderHeight_,
+        &maxWidth, &maxHeight, &minWidth, &minHeight, &sharpness);
+    if (NVSDK_NGX_FAILED(result)) {
+        SetFailure("DLAA resize query", result);
+        return;
+    }
+    if (renderWidth_ != WinApp::GetInstance()->GetRenderWidth() || renderHeight_ != WinApp::GetInstance()->GetRenderHeight()) {
+        isAvailable_ = false;
+        status_ = "DLAA native resolution unavailable after resize";
+        return;
+    }
+    CreateResources();
+    status_ = "Available: DLAA " + std::to_string(renderWidth_) + "x" + std::to_string(renderHeight_);
+}
 void DlssSuperResolution::CreateResources() {
     output_ = CreateSuperResolutionTexture(DXGI_FORMAT_R16G16B16A16_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     output_->SetName(L"DLAA::Output");
     auto* srvManager = SrvManager::GetInstance();
-    outputSrvIndex_ = srvManager->Allocate();
+    if (outputSrvIndex_ == UINT_MAX) {
+        outputSrvIndex_ = srvManager->Allocate();
+    }
     srvManager->CreateSRVforTexture2D(outputSrvIndex_, output_.Get(), DXGI_FORMAT_R16G16B16A16_FLOAT, 1);
 }
 bool DlssSuperResolution::EnsureFeature() {
     if (feature_ != nullptr) { return true; }
     NVSDK_NGX_DLSS_Create_Params create = {};
     create.Feature.InWidth = renderWidth_; create.Feature.InHeight = renderHeight_;
-    create.Feature.InTargetWidth = WinApp::kClientWidth; create.Feature.InTargetHeight = WinApp::kClientHeight;
+    create.Feature.InTargetWidth = WinApp::GetInstance()->GetRenderWidth(); create.Feature.InTargetHeight = WinApp::GetInstance()->GetRenderHeight();
     create.Feature.InPerfQualityValue = NVSDK_NGX_PerfQuality_Value_DLAA;
     create.InFeatureCreateFlags = NVSDK_NGX_DLSS_Feature_Flags_IsHDR | NVSDK_NGX_DLSS_Feature_Flags_MVLowRes | NVSDK_NGX_DLSS_Feature_Flags_AutoExposure;
     auto result = NGX_D3D12_CREATE_DLSS_EXT(DirectXCommon::GetInstance()->GetCommandList(), 1, 1, &feature_, parameters_, &create);

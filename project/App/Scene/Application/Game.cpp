@@ -254,6 +254,15 @@ void Game::Update()
 
     Input::GetInstance()->Update();
 
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
+        if (!renderer_->ToggleFullscreen()) {
+            Logger::Log("F11 display switch failed");
+        }
+        if (!isSystemCursorVisible_) {
+            LockCursorToWindow();
+        }
+    }
+
     ScreenshotManager::GetInstance()->Update();
     GifRecordingManager::GetInstance()->Update();
     const bool gifShiftHeld = Input::GetInstance()->IsKeyPressed(DIK_LSHIFT) ||

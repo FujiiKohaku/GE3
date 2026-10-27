@@ -190,7 +190,6 @@ constexpr float kInitializeBossHeadHpTextPositionX = 12.0f;
 constexpr float kInitializeBossHeadHpTextPositionY = 60.0f;
 constexpr float kInitializeBossBodyHpTextPositionX = 12.0f;
 constexpr float kInitializeBossBodyHpTextPositionY = 86.0f;
-constexpr float kInitializePlayerRailMinimumHeightOffset = 3.0f;
 constexpr float kInitializeGetFlightForwardMultiplier = 60.0f;
 constexpr float kInitializeSideOffsetOffset = 8.0f;
 constexpr float kInitializeSideOffsetDefault = 8.0f;
@@ -342,7 +341,6 @@ constexpr float kFrozenObjectSpecularStrength = 0.25f;
 constexpr float kFrozenObjectShininess = 24.0f;
 constexpr float kFallbackEnemySwayAmplitude = 8.0f;
 constexpr float kFallbackEnemyMoveSpeed = 2.0f;
-constexpr float kHotReloadLevelPlayerRailMinimumHeightOffset = 3.0f;
 constexpr int kLowHpWarningThreshold = 3;
 constexpr int kHpSeparatorRgb = 10;
 constexpr int kHpSeparatorAlpha = 255;
@@ -560,8 +558,8 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: aimCamera initialized successfully");
 
     POINT centerMousePosition;
-    centerMousePosition.x = WinApp::GetInstance()->kClientWidth / kInitializeCenterMousePositionXDivisor;
-    centerMousePosition.y = WinApp::GetInstance()->kClientHeight / kInitializeCenterMousePositionYDivisor;
+    centerMousePosition.x = WinApp::GetInstance()->GetClientWidth() / kInitializeCenterMousePositionXDivisor;
+    centerMousePosition.y = WinApp::GetInstance()->GetClientHeight() / kInitializeCenterMousePositionYDivisor;
 
     ClientToScreen(WinApp::GetInstance()->GetHwnd(), &centerMousePosition);
     SetCursorPos(centerMousePosition.x, centerMousePosition.y);
@@ -1081,12 +1079,12 @@ void GamePlayScene::Initialize()
     }
 
     if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
-        player_->SetRailMinimumHeight(stageSettings_.floorHeight + kInitializePlayerRailMinimumHeightOffset);
         playerStartPos = GetRailPosition(0.0f);
     }
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+    UpdatePlayerRailHeightRange(0.0f);
     if (stageSettings_.allRangeMode) {
         player_->EnableAllRangeMode(stageSettings_.flightAreaRadius,
             stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
@@ -1825,9 +1823,10 @@ void GamePlayScene::Update()
     }
 
     // レティクル（AimSprite）のスクリーン位置更新
-    aimSprite_->SetPosition(player_->GetAimScreenPosition());
+    const Vector2 aimUiPosition = WinApp::GetInstance()->ClientToUi(player_->GetAimScreenPosition());
+    aimSprite_->SetPosition(aimUiPosition);
     aimSprite_->Update();
-    overheatGaugeSprite_->SetPosition(player_->GetAimScreenPosition());
+    overheatGaugeSprite_->SetPosition(aimUiPosition);
     overheatGaugeSprite_->SetEffectThreshold(player_->GetHeatRatio());
     float overheatStrength = 0.0f;
     if (player_->IsOverheated()) {
@@ -1841,7 +1840,7 @@ void GamePlayScene::Update()
         (std::min)(homingLockPositions.size(), homingLockSprites_.size());
     for (size_t index = 0; index < markerCount; ++index) {
         homingLockSprites_[index]->SetPosition(
-            camera_->WorldToScreen(homingLockPositions[index]));
+            WinApp::GetInstance()->ClientToUi(camera_->WorldToScreen(homingLockPositions[index])));
         homingLockSprites_[index]->Update();
     }
 
@@ -2121,11 +2120,7 @@ void GamePlayScene::UpdateRailMovement(
         outNextDistance >= stageSettings_.railBranch.endDistance) {
         Logger::Log("[RailBranch] Rejoined surface route");
     }
-    if (stageId_ == "stage01" && stageSettings_.railBranch.isEnabled) {
-        const float branchHeightOffset = railBranch_.GetOffset(outNextDistance).y;
-        player_->SetRailMinimumHeight(stageSettings_.floorHeight +
-            kInitializePlayerRailMinimumHeightOffset + branchHeightOffset);
-    }
+    UpdatePlayerRailHeightRange(outNextDistance);
 
     // レール上での次の座標と前方向（Forward）ベクトルを算出
     outPosition = GetRailPosition(outNextDistance);
@@ -2133,6 +2128,27 @@ void GamePlayScene::UpdateRailMovement(
 
     // 前方向ベクトルを基準に、レールの右方向（Right）と上方向（Up）の軸を計算
     CalculateRailBasis(outForward, outRight, outUp);
+}
+
+// 高度制限の選択を一か所にまとめ、分岐の下降・合流中は上下限も滑らかに切り替える。
+void GamePlayScene::UpdatePlayerRailHeightRange(float distance)
+{
+    if (player_ == nullptr || stageSettings_.allRangeMode) { return; }
+    const bool isLowerRoute = railBranch_.IsLowerRouteActive(distance);
+    const float railHeight = GetRailPosition(distance).y;
+    const float branchHeightOffset = railBranch_.GetOffset(distance).y;
+    RailHeightRange range = CalculateRailHeightRange(
+        stageSettings_.railHeightRange, stageSettings_.railLowerHeightRange, stageSettings_.railHeightZones,
+        isLowerRoute, distance, railHeight, stageSettings_.floorHeight, branchHeightOffset);
+    if (isLowerRoute) {
+        const RailHeightRange mainRange = CalculateRailHeightRange(
+            stageSettings_.railHeightRange, stageSettings_.railLowerHeightRange, stageSettings_.railHeightZones,
+            false, distance, railHeight, stageSettings_.floorHeight, branchHeightOffset);
+        const float lowerRouteBlend = std::clamp(branchHeightOffset / stageSettings_.railBranch.offset.y, 0.0f, 1.0f);
+        range.minimumHeight = mainRange.minimumHeight + (range.minimumHeight - mainRange.minimumHeight) * lowerRouteBlend;
+        range.maximumHeight = mainRange.maximumHeight + (range.maximumHeight - mainRange.maximumHeight) * lowerRouteBlend;
+    }
+    player_->SetRailHeightRange(range);
 }
 
 // レール上の基準姿勢とプレイヤー操作を合わせて機体の位置・向きを更新する。
@@ -4864,12 +4880,12 @@ void GamePlayScene::HotReloadLevel()
     }
 
     if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
-        player_->SetRailMinimumHeight(stageSettings_.floorHeight + kHotReloadLevelPlayerRailMinimumHeightOffset);
         playerStartPos = GetRailPosition(0.0f);
     }
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
     player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+    UpdatePlayerRailHeightRange(0.0f);
 
     CreateLevelObjects(newLevelData);
     if (stageSettings_.allRangeMode) {
@@ -4926,8 +4942,8 @@ void GamePlayScene::ConfigureFrozenEnemyAppearance(BaseEnemy& enemy)
 void GamePlayScene::UpdateRailBranchPresentation(float distance)
 {
     if (!stageSettings_.railBranch.isEnabled || camera_ == nullptr || player_ == nullptr) { return; }
-    const float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
-    const float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+    const float screenWidth = static_cast<float>(WinApp::kClientWidth);
+    const float screenHeight = static_cast<float>(WinApp::kClientHeight);
     if (railBranchStatusText_) {
         static const std::string kEmptyStatus;
         static const std::string kSelectionStatus = "機体を上下に動かしてルートを選択";

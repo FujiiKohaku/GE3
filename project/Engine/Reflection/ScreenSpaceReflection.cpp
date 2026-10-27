@@ -201,6 +201,14 @@ void ScreenSpaceReflection::PrepareDepthPyramid(const ScreenSpaceReflectionInput
 }
 
 void ScreenSpaceReflection::CreateDepthPyramid() {
+    depthPyramidWidth_ = 2048;
+    depthPyramidHeight_ = 1024;
+    while (depthPyramidWidth_ < static_cast<uint32_t>(SceneRenderResolution::GetWidth())) {
+        depthPyramidWidth_ *= 2;
+    }
+    while (depthPyramidHeight_ < static_cast<uint32_t>(SceneRenderResolution::GetHeight())) {
+        depthPyramidHeight_ *= 2;
+    }
     auto* dxCommon = DirectXCommon::GetInstance();
     auto* device = dxCommon->GetDevice();
     auto* srvManager = SrvManager::GetInstance();
@@ -208,7 +216,7 @@ void ScreenSpaceReflection::CreateDepthPyramid() {
     heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     D3D12_RESOURCE_DESC description = {};
     description.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    description.Width = 2048; description.Height = 1024;
+    description.Width = depthPyramidWidth_; description.Height = depthPyramidHeight_;
     description.DepthOrArraySize = 1; description.MipLevels = kDepthMipCount;
     description.Format = DXGI_FORMAT_R32G32_FLOAT;
     description.SampleDesc.Count = 1;
@@ -216,10 +224,15 @@ void ScreenSpaceReflection::CreateDepthPyramid() {
     HRESULT result = device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &description,
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&depthPyramid_));
     assert(SUCCEEDED(result));
-    depthSrvIndex_ = srvManager->Allocate();
+    const bool shouldAllocateDescriptors = depthSrvIndex_ == UINT_MAX;
+    if (shouldAllocateDescriptors) {
+        depthSrvIndex_ = srvManager->Allocate();
+    }
     srvManager->CreateSRVforTexture2D(depthSrvIndex_, depthPyramid_.Get(), description.Format, kDepthMipCount);
     for (uint32_t mipIndex = 0; mipIndex < kDepthMipCount; ++mipIndex) {
-        depthMipSrvIndices_[mipIndex] = srvManager->Allocate();
+        if (shouldAllocateDescriptors) {
+            depthMipSrvIndices_[mipIndex] = srvManager->Allocate();
+        }
         D3D12_SHADER_RESOURCE_VIEW_DESC srv = {};
         srv.Format = description.Format; srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -274,8 +287,9 @@ void ScreenSpaceReflection::BuildDepthPyramid(const ScreenSpaceReflectionInputs&
         }
         list->SetGraphicsRootDescriptorTable(4, srvManager->GetGPUDescriptorHandle(sourceIndex));
         list->SetPipelineState(depthPipelineStates_[pipelineIndex].Get());
-        uint32_t width = 2048 >> mipIndex;
-        uint32_t height = 1024 >> mipIndex;
+        uint32_t width = depthPyramidWidth_ >> mipIndex;
+        uint32_t height = depthPyramidHeight_ >> mipIndex;
+        if (width == 0) { width = 1; }
         if (height == 0) { height = 1; }
         D3D12_VIEWPORT viewport = {0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1};
         D3D12_RECT scissor = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
@@ -314,6 +328,11 @@ void ScreenSpaceReflection::DrawImGui() {
 void ScreenSpaceReflection::ResizeSceneTargets() {
     if (textures_[1]->GetDesc().Width == SceneRenderResolution::GetWidth() && textures_[1]->GetDesc().Height == SceneRenderResolution::GetHeight()) { return; }
     ResetHistory();
+    // Keep padding large enough for all source pixels, including 1080p's bottom rows.
+    if (depthPyramidWidth_ < static_cast<uint32_t>(SceneRenderResolution::GetWidth()) ||
+        depthPyramidHeight_ < static_cast<uint32_t>(SceneRenderResolution::GetHeight())) {
+        CreateDepthPyramid();
+    }
     for (uint32_t index = 0; index < kTargetCount; ++index) {
         uint32_t width = SceneRenderResolution::GetWidth() / 2;
         uint32_t height = SceneRenderResolution::GetHeight() / 2;

@@ -65,6 +65,7 @@ public:
     static D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& descriptorHeap, uint32_t descriptorSize, uint32_t index);
 
     void WaitForGPU();
+    bool ResizeDisplayTargets();
     D3D12_CPU_DESCRIPTOR_HANDLE GetRTVHandle(uint32_t index) const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle() const;
     D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle(uint32_t index) const;

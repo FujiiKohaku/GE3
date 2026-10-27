@@ -304,6 +304,19 @@ void CheckMotionVectors(DirectXCommon* dx, PostEffectManager& post, OffscreenRen
 class ShadowTestStage : public GamePlayScene {
 public:
     explicit ShadowTestStage(const std::string& stageId) : GamePlayScene(stageId) {}
+    void Update() override
+    {
+        GamePlayScene::Update();
+        hasUpdated_ = true;
+    }
+    bool HasUpdated() const { return hasUpdated_; }
+    void SetPausedForTest(bool isPaused) { SetPaused(isPaused); }
+    bool HasAlignedAimHud() const
+    {
+        const Vector2 expectedPosition = WinApp::GetInstance()->ClientToUi(player_->GetAimScreenPosition());
+        const Vector2 actualPosition = aimSprite_->GetPosition();
+        return std::abs(expectedPosition.x - actualPosition.x) < 0.01f && std::abs(expectedPosition.y - actualPosition.y) < 0.01f;
+    }
     void SetShadowEnabled(bool enabled) { enabled_ = enabled; }
     void PrepareBossCapture()
     {
@@ -345,6 +358,7 @@ public:
     }
 private:
     bool enabled_ = true;
+    bool hasUpdated_ = false;
 };
 
 class TitleSceneRenderTest {
@@ -1249,8 +1263,11 @@ int RunDlssTest()
 
 int RunSsrValidation();
 
+#include "FullscreenValidationTests.h"
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
+    if (std::string(commandLine).find("--fullscreen") != std::string::npos) { return RunFullscreenIntegrationTest(); }
     if (std::string(commandLine).find("--ssr") != std::string::npos) { return RunSsrValidation(); }
     if (std::string(commandLine).find("--final-quality") != std::string::npos) { return RunTemporalIntegrationTest(false, true); }
     if (std::string(commandLine).find("--quality") != std::string::npos) { return RunTemporalIntegrationTest(true); }

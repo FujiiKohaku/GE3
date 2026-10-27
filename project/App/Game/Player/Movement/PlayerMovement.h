@@ -1,5 +1,6 @@
 #pragma once
 #include "Engine/math/MathStruct.h"
+#include "App/Game/Stage/RailHeightRange.h"
 
 class Camera;
 
@@ -18,7 +19,8 @@ public:
     float GetMouseSensitivity() const { return mouseSensitivity_; }
     const Vector2& GetSteeringInput() const { return steeringInput_; }
     Vector3 GetWorldVelocity() const { return railForward_ * velocity_.z; }
-    void SetRailMinimumHeight(float height) { railMinimumHeight_ = height; hasRailMinimumHeight_ = true; }
+    void SetRailMinimumHeight(float height) { railMinimumHeight_ = height; hasRailMinimumHeight_ = true; hasRailHeightRange_ = false; }
+    void SetRailHeightRange(const RailHeightRange& range) { railHeightRange_ = range; hasRailHeightRange_ = true; }
     void ResetSteering() { steeringInput_ = {}; }
     void StopRoll() { isRolling_ = false; }
     void UpdateMovement(EulerTransform& transform, const Vector2& steering, float railResponse,
@@ -51,7 +53,7 @@ private:
     void UpdateFlightBank(EulerTransform& transform, const Vector2& steering, float deltaTimeSeconds);
     Vector2 CalculateScreenCorrection(const Vector3& railOffset) const;
     void UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const;
-    void EnforceMinimumHeight(Vector3& offset) const;
+    void EnforceHeightRange(Vector3& offset) const;
     // カメラは外部所有。Playerから設定された参照を利用する。
     const Camera* camera_ = nullptr;
 
@@ -94,9 +96,11 @@ private:
     float railMoveLimitY_ = 15.0f;
     float railMinimumHeight_ = 0.0f;
     bool hasRailMinimumHeight_ = false;
+    RailHeightRange railHeightRange_;
+    bool hasRailHeightRange_ = false;
     // 画面端に残す余白。単位はピクセル。
-    float playerClampMarginX_ = 100.0f;
-    float playerClampMarginY_ = 100.0f;
+    float playerClampMarginX_ = 10.0f;
+    float playerClampMarginY_ = 10.0f;
     // 補正判定に使う機体の半幅・半高さ。単位はワールド座標。
     float playerBoundsHalfWidth_ = 1.5f;
     float playerBoundsHalfHeight_ = 1.0f;

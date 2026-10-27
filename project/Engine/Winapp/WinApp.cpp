@@ -103,6 +103,81 @@ int32_t WinApp::GetClientHeight() const
     return clientRect.bottom - clientRect.top;
 }
 
+int32_t WinApp::GetRenderWidth() const
+{
+    if (isBorderlessFullscreen_) {
+        return kFullscreenWidth;
+    }
+    return kClientWidth;
+}
+
+int32_t WinApp::GetRenderHeight() const
+{
+    if (isBorderlessFullscreen_) {
+        return kFullscreenHeight;
+    }
+    return kClientHeight;
+}
+
+Vector2 WinApp::ClientToUi(const Vector2& clientPosition) const
+{
+    const int32_t clientWidth = GetClientWidth();
+    const int32_t clientHeight = GetClientHeight();
+    if (clientWidth <= 0 || clientHeight <= 0) {
+        return {};
+    }
+    return { clientPosition.x * kClientWidth / clientWidth, clientPosition.y * kClientHeight / clientHeight };
+}
+
+Vector2 WinApp::UiToClient(const Vector2& uiPosition) const
+{
+    return { uiPosition.x * GetClientWidth() / kClientWidth, uiPosition.y * GetClientHeight() / kClientHeight };
+}
+
+bool WinApp::SetBorderlessFullscreen(bool isEnabled)
+{
+    if (hwnd_ == nullptr) {
+        return false;
+    }
+    if (isEnabled == isBorderlessFullscreen_) {
+        return true;
+    }
+    POINT cursorPosition {};
+    GetCursorPos(&cursorPosition);
+    ScreenToClient(hwnd_, &cursorPosition);
+    const Vector2 uiCursorPosition = ClientToUi({ static_cast<float>(cursorPosition.x), static_cast<float>(cursorPosition.y) });
+    const bool hasFocus = GetForegroundWindow() == hwnd_;
+    ClipCursor(nullptr);
+    if (isEnabled) {
+        MONITORINFO monitorInfo { sizeof(MONITORINFO) };
+        if (!GetWindowPlacement(hwnd_, &windowPlacement_) ||
+            !GetMonitorInfo(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST), &monitorInfo)) {
+            return false;
+        }
+        SetWindowLongPtr(hwnd_, GWL_STYLE, WS_POPUP | WS_VISIBLE);
+        if (!SetWindowPos(hwnd_, HWND_TOP, monitorInfo.rcMonitor.left, monitorInfo.rcMonitor.top,
+            monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left,
+            monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top, SWP_FRAMECHANGED | SWP_NOOWNERZORDER)) {
+            SetWindowLongPtr(hwnd_, GWL_STYLE, kWindowStyle | WS_VISIBLE);
+            SetWindowPlacement(hwnd_, &windowPlacement_);
+            return false;
+        }
+    } else {
+        SetWindowLongPtr(hwnd_, GWL_STYLE, kWindowStyle | WS_VISIBLE);
+        SetWindowPlacement(hwnd_, &windowPlacement_);
+        SetWindowPos(hwnd_, nullptr, 0, 0, 0, 0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
+    }
+    isBorderlessFullscreen_ = isEnabled;
+    if (hasFocus) {
+        const Vector2 clientCursorPosition = UiToClient(uiCursorPosition);
+        cursorPosition = { static_cast<LONG>(clientCursorPosition.x), static_cast<LONG>(clientCursorPosition.y) };
+        ClientToScreen(hwnd_, &cursorPosition);
+        SetCursorPos(cursorPosition.x, cursorPosition.y);
+    }
+    return true;
+}
+
 //==================================================================
 //  初期化処理
 //  ウィンドウクラス登録・生成・表示

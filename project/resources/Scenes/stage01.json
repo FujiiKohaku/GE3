@@ -1,5 +1,8 @@
 {
   "scene": [
+    {"name": "LowerRoute_SandFloor01", "type": "MESH", "file_name": "Environment/Ocean/Seafloor/sand_floor_01.obj", "transform": {"translation": [0.0, 900.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [4.0, 1.0, 1.0]}},
+    {"name": "LowerRoute_SandFloor02", "type": "MESH", "file_name": "Environment/Ocean/Seafloor/sand_floor_02.obj", "transform": {"translation": [0.0, 2100.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [4.0, 1.0, 1.0]}},
+    {"name": "LowerRoute_SandFloor03", "type": "MESH", "file_name": "Environment/Ocean/Seafloor/sand_floor_03.obj", "transform": {"translation": [0.0, 3300.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [4.0, 1.0, 1.0]}},
     {"name": "ParallaxReef_Left01", "type": "MESH", "file_name": "Environment/Ocean/reef_cluster.obj", "transform": {"translation": [-16.0, 65.0, -31.5], "rotation": [0.0, 0.0, 0.2], "scale": [0.36, 0.43, 0.42]}},
     {"name": "ParallaxReef_Right01", "type": "MESH", "file_name": "Environment/Ocean/reef_cluster.obj", "transform": {"translation": [18.0, 145.0, -31.5], "rotation": [0.0, 0.0, -0.45], "scale": [0.43, 0.36, 0.39]}},
     {"name": "ParallaxReef_Left02", "type": "MESH", "file_name": "Environment/Ocean/reef_cluster.obj", "transform": {"translation": [-19.0, 260.0, -31.5], "rotation": [0.0, 0.0, 0.6], "scale": [0.45, 0.38, 0.46]}},

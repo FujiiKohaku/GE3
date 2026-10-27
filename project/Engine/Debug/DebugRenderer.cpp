@@ -75,8 +75,8 @@ void DebugRenderer::Initialize()
     screenResource_->SetName(L"DebugRenderer::ScreenCB");
     screenResource_->Map(0, nullptr, reinterpret_cast<void**>(&screenData_));
     screenData_->screenSize = {
-        static_cast<float>(WinApp::kClientWidth),
-        static_cast<float>(WinApp::kClientHeight)
+        static_cast<float>(WinApp::GetInstance()->GetRenderWidth()),
+        static_cast<float>(WinApp::GetInstance()->GetRenderHeight())
     };
     screenData_->padding = { 0.0f, 0.0f };
 
@@ -322,8 +322,8 @@ void DebugRenderer::Draw()
 
     viewProjectionData_->viewProjection = camera->GetViewProjectionMatrix();
     screenData_->screenSize = {
-        static_cast<float>(WinApp::kClientWidth),
-        static_cast<float>(WinApp::kClientHeight)
+        static_cast<float>(WinApp::GetInstance()->GetRenderWidth()),
+        static_cast<float>(WinApp::GetInstance()->GetRenderHeight())
     };
 
     const std::size_t depthVertexCount = lines_.size() * 2;

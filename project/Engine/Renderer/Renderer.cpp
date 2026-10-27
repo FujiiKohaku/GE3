@@ -47,7 +47,7 @@ Renderer::~Renderer()
 
 void Renderer::Initialize()
 {
-    SceneRenderResolution::SetSize(WinApp::kClientWidth, WinApp::kClientHeight);
+    SceneRenderResolution::SetSize(WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight());
     // Offscreen renderer setup
     offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
     {
@@ -127,6 +127,27 @@ void Renderer::PrepareDlaaForGameplay()
     }
 }
 
+bool Renderer::ToggleFullscreen()
+{
+    auto* window = WinApp::GetInstance();
+    const bool wasFullscreen = window->IsBorderlessFullscreen();
+    if (!window->SetBorderlessFullscreen(!wasFullscreen)) {
+        return false;
+    }
+    if (!DirectXCommon::GetInstance()->ResizeDisplayTargets()) {
+        window->SetBorderlessFullscreen(wasFullscreen);
+        return false;
+    }
+    // F11 always selects native rendering, even after a low-resolution preset.
+    isLowResolutionRenderingEnabled_ = false;
+    postEffectManager_->ResizeDisplayTargets();
+    dlssSuperResolution_->ResizeDisplayTargets();
+    ApplySceneRenderResolution();
+    Logger::Log("Display: " + std::to_string(window->GetRenderWidth()) + "x" +
+        std::to_string(window->GetRenderHeight()));
+    return true;
+}
+
 void Renderer::Update()
 {
     Camera* defaultCamera = Object3dManager::GetInstance()->GetDefaultCamera();
@@ -180,7 +201,8 @@ void Renderer::DrawImGui()
         if (ImGui::Button("Render 960 x 540")) { SetLowResolutionRendering(true, 960, 540); }
         ImGui::SameLine();
         if (ImGui::Button("Render 640 x 360")) { SetLowResolutionRendering(true, 640, 360); }
-        ImGui::Text("Scene %u x %u -> display 1280 x 720", sceneRenderWidth_, sceneRenderHeight_);
+        ImGui::Text("Scene %u x %u -> display %d x %d (F11)", sceneRenderWidth_, sceneRenderHeight_,
+            WinApp::GetInstance()->GetRenderWidth(), WinApp::GetInstance()->GetRenderHeight());
         if (isLowResolutionRenderingEnabled_ && !temporalSuperResolution_->GetSettings().isEnabled) { ImGui::TextUnformatted("Spatial upscale (TAA OFF)"); }
         if (ImGui::Button("TAA")) { SetTemporalAntiAliasing(true, false); }
         ImGui::SameLine();
@@ -713,22 +735,32 @@ bool Renderer::ExecuteDevelopmentCommand(const std::string& key)
 #endif
 
 bool Renderer::SetLowResolutionRendering(bool isEnabled, uint32_t width, uint32_t height) {
-    if (width < 320 || height < 180 || width > WinApp::kClientWidth || height > WinApp::kClientHeight
-        || width % 2 != 0 || height % 2 != 0 || uint64_t(width) * WinApp::kClientHeight != uint64_t(height) * WinApp::kClientWidth) { return false; }
+    if (width < 320 || height < 180 || width > static_cast<uint32_t>(WinApp::GetInstance()->GetRenderWidth()) || height > static_cast<uint32_t>(WinApp::GetInstance()->GetRenderHeight())
+        || width % 2 != 0 || height % 2 != 0 || uint64_t(width) * WinApp::GetInstance()->GetRenderHeight() != uint64_t(height) * WinApp::GetInstance()->GetRenderWidth()) { return false; }
     isLowResolutionRenderingEnabled_ = isEnabled; lowResolutionWidth_ = width; lowResolutionHeight_ = height;
     return true;
 }
 void Renderer::ApplySceneRenderResolution() {
-    uint32_t width = WinApp::kClientWidth; uint32_t height = WinApp::kClientHeight;
+    uint32_t width = WinApp::GetInstance()->GetRenderWidth(); uint32_t height = WinApp::GetInstance()->GetRenderHeight();
     if (isLowResolutionRenderingEnabled_) { width = lowResolutionWidth_; height = lowResolutionHeight_; }
-    if (width == sceneRenderWidth_ && height == sceneRenderHeight_) { return; }
+    if (width == sceneRenderWidth_ && height == sceneRenderHeight_ &&
+        displayRenderWidth_ == WinApp::GetInstance()->GetRenderWidth() &&
+        displayRenderHeight_ == WinApp::GetInstance()->GetRenderHeight()) { return; }
+    displayRenderWidth_ = WinApp::GetInstance()->GetRenderWidth();
+    displayRenderHeight_ = WinApp::GetInstance()->GetRenderHeight();
     // Previous Draw's PostDraw waited for the fence. No commands reference these targets yet.
     sceneRenderWidth_ = width; sceneRenderHeight_ = height;
     SceneRenderResolution::SetSize(width, height);
     offscreenRenderer_->ResizeSceneTargets(); motionVectorRenderer_->ResizeSceneTargets();
     screenSpaceReflection_->ResizeSceneTargets(); screenSpaceGlobalIllumination_->ResizeSceneTargets();
     postEffectManager_->ResizeSceneTargets();
+    motionVectorRenderer_->ResetHistory();
+    screenSpaceReflection_->ResetHistory();
+    screenSpaceGlobalIllumination_->ResetHistory();
+    postEffectManager_->GetVolumetricLightRenderer()->ResetHistory();
     auto settings = temporalSuperResolution_->GetSettings(); settings.inputWidth = width; settings.inputHeight = height;
+    settings.outputWidth = WinApp::GetInstance()->GetRenderWidth();
+    settings.outputHeight = WinApp::GetInstance()->GetRenderHeight();
     temporalSuperResolution_->SetSettings(settings); dlssSuperResolution_->ResetHistory();
     dxrShadowRenderer_->ResetHistory(); dxrReflectionRenderer_->ResetHistory(); dxrGlobalIlluminationRenderer_->ResetHistory(); dxrLocalShadowRenderer_->ResetHistory();
     postEffectManager_->GetAutoExposureRenderer()->ResetHistory();

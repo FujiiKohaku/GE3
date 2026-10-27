@@ -48,7 +48,7 @@ void ScreenshotManager::Initialize(DirectXCommon* dxCommon, WinApp* winApp)
         "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
     notificationText_.SetText("Screenshot copied");
     notificationText_.SetPosition({
-        static_cast<float>(winApp_->GetClientWidth()) - 24.0f,
+        static_cast<float>(WinApp::kClientWidth) - 24.0f,
         24.0f
     });
     notificationText_.SetAnchorPoint({ 1.0f, 0.0f });

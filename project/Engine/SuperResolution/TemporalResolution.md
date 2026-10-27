@@ -29,7 +29,7 @@ TAAはHDRのシーン・反射・霧合成後、粒子・HUD・画面歪み・Bl
 
 全入力をPIXEL_SHADER_RESOURCEとして渡し、同じ状態で返す。`BeginFrame`→ジッター適用→入力描画→`Evaluate`の順。サイズ変更/資源作成・解放・アップロード再使用は既存エンジンのフレーム完了待ちを前提とする。
 
-通常ゲームにも低解像度入力を接続した。`Renderer::SetLowResolutionRendering` とTAAの設定は独立し、低解像度OFFでもネイティブTAA、TAA OFFでも空間拡大を使える。表示は1280×720のまま。詳細は [RenderResolution.md](../Renderer/RenderResolution.md)。DLSS/FSRの品質や性能と同等であるとは評価していない。
+通常ゲームにも低解像度入力を接続した。`Renderer::SetLowResolutionRendering` とTAAの設定は独立し、低解像度OFFでもネイティブTAA、TAA OFFでも空間拡大を使える。表示は通常1280×720、F11のボーダレス全画面では1920×1080。詳細は [RenderResolution.md](../Renderer/RenderResolution.md)。DLSS/FSRの品質や性能と同等であるとは評価していない。
 
 ## コスト
 
