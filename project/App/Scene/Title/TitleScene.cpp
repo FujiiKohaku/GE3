@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 // タイトルの基地背景・ステージ選択・設定画面と、各画面をつなぐカメラ演出を扱う。
 #include "App/Scene/Title/TitleScene.h"
 
@@ -322,16 +323,23 @@ bool TitleScene::hasStartedTutorial_ = false;
 // タイトルの背景・UI・ステージ情報を準備し、入場時の表示状態を選ぶ。
 void TitleScene::Initialize()
 {
-    SoundManager::GetInstance()->RegisterSounds({
-        { "UiSelect", "resources/Audio/GameSfx/ui_select.wav", 0.22f, 0.08f },
-        { "UiConfirm", "resources/Audio/GameSfx/ui_confirm.wav", 0.32f, 0.20f },
-    });
+    StartupTimingScope startupScope("Title.Total");
+    {
+        StartupTimingScope audioScope("Title.AudioRegistration");
+        SoundManager::GetInstance()->RegisterSounds({
+            { "UiSelect", "resources/Audio/GameSfx/ui_select.wav", 0.22f, 0.08f },
+            { "UiConfirm", "resources/Audio/GameSfx/ui_confirm.wav", 0.32f, 0.20f },
+        });
+    }
     ShowCursor(TRUE);
     ClipCursor(nullptr);
 
     DirectXCommon* dxCommon = DirectXCommon::GetInstance();
     Object3dManager::GetInstance()->Initialize(dxCommon);
-    LightManager::GetInstance()->Initialize(dxCommon);
+    {
+        StartupTimingScope lightScope("Title.Lighting");
+        LightManager::GetInstance()->Initialize(dxCommon);
+    }
 
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
@@ -463,6 +471,7 @@ Object3d* TitleScene::AddStageRoomObject(
 // タイトル背景の基地を構成する建物や小物を配置する。
 void TitleScene::InitializeLaunchBase()
 {
+    StartupTimingScope startupScope("Title.LaunchBase");
     oceanSurface_ = std::make_unique<OceanSurface>();
     oceanSurface_->Initialize(camera_.get(), 3200.0f, 3200.0f, -8.0f);
     // OceanSurfaceは既定でZ=0から前方へ伸びるため、タイトルでは
@@ -632,6 +641,7 @@ void TitleScene::InitializeLaunchBase()
 // 各ステージを紹介する部屋ごとに、背景モデルの組み合わせを作る。
 void TitleScene::InitializeStageRoomSets()
 {
+    StartupTimingScope startupScope("Title.StageRoomSets");
     firstFlightRoomObjects_.clear();
     frozenPassageRoomObjects_.clear();
 
@@ -785,6 +795,7 @@ void TitleScene::InitializeStageRoomSets()
 // タイトル・設定画面の文字やパネルなどを準備する。
 void TitleScene::InitializeInterface()
 {
+    StartupTimingScope startupScope("Title.Interface");
     atmosphereTint_ = std::make_unique<Sprite>();
     atmosphereTint_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
     atmosphereTint_->SetSize({ 1280.0f, 720.0f });
@@ -857,6 +868,7 @@ void TitleScene::InitializeInterface()
 // ステージ一覧から選択画面に必要なカードと表示情報を準備する。
 void TitleScene::InitializeStageSelection()
 {
+    StartupTimingScope startupScope("Title.StageSelection");
     stages_.clear();
     StageCatalog* catalog = StageCatalog::GetInstance();
     if (catalog->Load()) {
@@ -1146,6 +1158,7 @@ void TitleScene::StartTutorial()
 // 訓練開始前のカメラと機体アニメーションの初期状態を作る。
 void TitleScene::InitializeTutorialAnimation()
 {
+    StartupTimingScope startupScope("Title.TutorialAnimation");
     SoundManager::GetInstance()->Play("UiConfirm");
     Input::GetInstance()->BlockPrimaryFireUntilRelease();
     simulationStartEye_ = camera_->GetTranslate();

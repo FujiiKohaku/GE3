@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 // エンジン機能とシーンを起動し、毎フレームの入力・更新・描画と終了時の解放を統括する。
 #include "App/Scene/Application/Game.h"
 #include "Engine/Debug/Profiler/Profiler.h"
@@ -76,11 +77,25 @@ void Game::Initialize()
     SetUnhandledExceptionFilter(Utility::ExportDump);
 
     // Profilerの初期化とBoot計測開始
-    Profiler::GetInstance()->Initialize();
+    {
+        StartupTimingScope startupScope("Game.Profiler");
+        Profiler::GetInstance()->Initialize();
+    }
     GetBootProfilerForGame()->Begin("Engine Initialize");
 
+    // 音声の準備を先に開始し、ウィンドウや描画機能の初期化と並行させる。
+    GetBootProfilerForGame()->Begin("Audio");
+    {
+        StartupTimingScope startupScope("Game.Audio");
+        SoundManager::GetInstance()->Initialize();
+    }
+    GetBootProfilerForGame()->End("Audio");
+
     GetBootProfilerForGame()->Begin("Window");
-    WinApp::GetInstance()->initialize();
+    {
+        StartupTimingScope startupScope("Game.Window");
+        WinApp::GetInstance()->initialize();
+    }
     GetBootProfilerForGame()->End("Window");
 
     LockCursorToWindow();
@@ -88,16 +103,28 @@ void Game::Initialize()
     CheckInitializeTime("WinApp", prevTime);
 
     GetBootProfilerForGame()->Begin("DirectX");
-    DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
-    WinApp::GetInstance()->Show();
+    {
+        StartupTimingScope startupScope("Game.DirectX");
+        DirectXCommon::GetInstance()->Initialize(WinApp::GetInstance());
+    }
+    {
+        StartupTimingScope startupScope("Game.ShowWindow");
+        WinApp::GetInstance()->Show();
+    }
     GetBootProfilerForGame()->End("DirectX");
     CheckInitializeTime("DirectXCommon", prevTime);
 
-    SrvManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.SrvManager");
+        SrvManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    }
     CheckInitializeTime("SrvManager", prevTime);
 
     GetBootProfilerForGame()->Begin("Texture");
-    TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.TextureManager");
+        TextureManager::GetInstance()->Initialize(DirectXCommon::GetInstance(), SrvManager::GetInstance());
+    }
     GetBootProfilerForGame()->End("Texture");
     CheckInitializeTime("TextureManager", prevTime);
 
@@ -111,35 +138,59 @@ void Game::Initialize()
     CheckInitializeTime("ImGuiManager", prevTime);
 #endif
 
-    SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.SpriteManager");
+        SpriteManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    }
     CheckInitializeTime("SpriteManager", prevTime);
 
-    TextRenderer::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.TextRenderer");
+        TextRenderer::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    }
     CheckInitializeTime("TextRenderer", prevTime);
 
     GetBootProfilerForGame()->Begin("Model");
-    ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.ModelManager");
+        ModelManager::GetInstance()->Initialize(DirectXCommon::GetInstance());
+    }
     GetBootProfilerForGame()->End("Model");
     CheckInitializeTime("ModelManager", prevTime);
 
     // Shader初期化ダミー計測 (DirectXCommon等に含まれるが要件定義のため)
     GetBootProfilerForGame()->Begin("Shader");
-    modelCommon_.Initialize(DirectXCommon::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.ModelCommon");
+        modelCommon_.Initialize(DirectXCommon::GetInstance());
+    }
     GetBootProfilerForGame()->End("Shader");
 
-    Input::GetInstance()->Initialize(WinApp::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.Input");
+        Input::GetInstance()->Initialize(WinApp::GetInstance());
+    }
 
     Logger::Log("Load Default Textures");
-    TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
+    {
+        StartupTimingScope startupScope("Game.DefaultTexture");
+        TextureManager::GetInstance()->LoadTexture("resources/Textures/white.png");
+    }
 
     // エフェクトのシェーダーとパイプラインはゲーム起動時に一度だけ作成する。
     // 使用するカメラは各シーンのInitializeで設定する。
     GetBootProfilerForGame()->Begin("Scene");
-    SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+    {
+        StartupTimingScope startupScope("Game.ScheduleTitle");
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+    }
     GetBootProfilerForGame()->End("Scene");
 
     renderer_ = std::make_unique<Renderer>();
-    renderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Game.Renderer");
+        renderer_->Initialize();
+    }
     SceneManager::GetInstance()->SetRenderer(renderer_.get());
     SceneManager::GetInstance()->SetVolumetricLightRenderer(renderer_->GetPostEffectManager()->GetVolumetricLightRenderer());
 #if defined(_DEBUG)
@@ -148,19 +199,21 @@ void Game::Initialize()
         showDebugUI_ = false;
     }
 #endif
-    ScreenshotManager::GetInstance()->Initialize(
-        DirectXCommon::GetInstance(),
-        WinApp::GetInstance());
-    GifRecordingManager::GetInstance()->Initialize(
-        DirectXCommon::GetInstance(),
-        WinApp::GetInstance());
+    {
+        StartupTimingScope startupScope("Game.Screenshot");
+        ScreenshotManager::GetInstance()->Initialize(
+            DirectXCommon::GetInstance(),
+            WinApp::GetInstance());
+    }
+    {
+        StartupTimingScope startupScope("Game.GifRecorder");
+        GifRecordingManager::GetInstance()->Initialize(
+            DirectXCommon::GetInstance(),
+            WinApp::GetInstance());
+    }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     renderer_->GetPostEffectManager()->RegisterDevelopmentPanel();
 #endif
-
-    GetBootProfilerForGame()->Begin("Audio");
-    SoundManager::GetInstance()->Initialize();
-    GetBootProfilerForGame()->End("Audio");
 
     // Boot計測完了
     GetBootProfilerForGame()->End("Engine Initialize");
@@ -170,7 +223,10 @@ void Game::Initialize()
     InitializePerformanceLog();
 #endif
 
-    TimeManager::GetInstance()->Initialize();
+    {
+        StartupTimingScope startupScope("Game.TimeManager");
+        TimeManager::GetInstance()->Initialize();
+    }
 
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     if (!DevelopmentWebPanel::GetInstance().Start()) {

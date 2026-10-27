@@ -37,7 +37,7 @@ inline bool RunPlayerControlTests()
     steering = PlayerTestAccess::GetControlSteering(player, input, screen, true, 0.016f);
     if (steering.x != 1.0f || steering.y != 1.0f) { return false; }
     InputTestAccess::Setup(input, false, false, false, 0);
-    player.SetControlMode(Player::ControlMode::StarFox);
+    player.SetControlMode(Player::ControlMode::Controller);
     PlayerTestAccess::UpdateGamepadAim(player, 1.0f, 0.0f, false, 0.1f);
     Player expected;
     PlayerTestAccess::UpdateSteering(expected, player.GetAimScreenPosition(), screen, false, 0.016f);
@@ -58,7 +58,7 @@ inline bool RunPlayerControlTests()
     if (!PlayerTestAccess::IsGamepadControl(player, input)) { return false; }
     InputTestAccess::Setup(input, false, false, false, 0);
     if (!PlayerTestAccess::IsKeyboardControl(player, input)) { return false; }
-    player.SetControlMode(Player::ControlMode::StarFox);
+    player.SetControlMode(Player::ControlMode::Controller);
     if (!PlayerTestAccess::IsMouseControl(player, input)) { return false; }
     const Vector2 before = player.GetAimScreenPosition();
     player.ConstrainGamepadAimToPlayer();

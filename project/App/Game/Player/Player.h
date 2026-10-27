@@ -5,6 +5,8 @@
 #include "Engine/debugcamera/DebugCameraController.h"
 #include "Engine/math/MathStruct.h"
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
+#include "Movement/PlayerMovement.h"
+#include "Input/PlayerInput.h"
 #include "States/Entry/PlayerEntryState.h"
 #include "States/Battle/PlayerBattleState.h"
 #include "States/Dead/PlayerDeadState.h"
@@ -17,7 +19,7 @@ struct Ray;
 // 自機の状態遷移・共有データ・描画を管理する。
 class Player {
 public:
-    enum class ControlMode { KeyboardAndMouse, StarFox };
+    enum class ControlMode { KeyboardAndMouse, Controller };
     Player() = default;
     // 武器管理がPlayerを参照するため、コピー・ムーブを禁止する。
     Player(const Player&) = delete;
@@ -58,12 +60,12 @@ public:
     // ステージの外力をレール上の移動量へ反映する。
     void ApplyRailAreaForce(const Vector3& force);
     // 使用クラス：GamePlayScene。レール基準位置からの左右・上下の移動量を返す。
-    const Vector3& GetRailOffset() const { return railOffset_; }
-    void SetRailMinimumHeight(float height) { railMinimumHeight_ = height; hasRailMinimumHeight_ = true; }
+    const Vector3& GetRailOffset() const { return movement_.GetRailOffset(); }
+    void SetRailMinimumHeight(float height) { movement_.SetRailMinimumHeight(height); }
     // 敵の照準などに使う前進速度を返す。死亡時は0、レール飛行では通常速度を使う。
     Vector3 GetAutomaticWorldVelocity() const;
     // 使用クラス：GamePlaySceneなど。カメラ配置やエフェクトに使う飛行方向を返す。
-    const Vector3& GetFlightForward() const { return railForward_; }
+    const Vector3& GetFlightForward() const { return movement_.GetFlightForward(); }
     // 使用クラス：GamePlayScene。噴射エフェクトを置く機体後方のワールド位置を返す。
     Vector3 GetEngineExhaustPosition() const;
     // 使用クラス：GamePlayScene。機体の回転に合わせた噴射方向を返す。
@@ -72,15 +74,15 @@ public:
     // 使用クラス：GamePlayScene。指定した飛行範囲で全方向飛行へ切り替える。
     void EnableAllRangeMode(float areaRadius, float minHeight, float maxHeight);
     // レール飛行と全方向飛行を区別するための状態を返す。
-    bool IsAllRangeMode() const { return isAllRangeMode_; }
+    bool IsAllRangeMode() const { return movement_.IsAllRangeMode(); }
     // 使用クラス：GamePlayScene。飛行範囲の内側への自動復帰中かを返す。
-    bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
+    bool IsReturningToFlightArea() const { return movement_.IsReturningToFlightArea(); }
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
-    bool IsBoosting() const { return isBoosting_; }
-    float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
-    bool IsRolling() const { return isRolling_; }
+    bool IsBoosting() const { return movement_.IsBoosting(); }
+    float GetForwardSpeedMultiplier() const { return movement_.GetForwardSpeedMultiplier(); }
+    bool IsRolling() const { return movement_.IsRolling(); }
     void ResetHomingLock() { weaponController_.ResetHomingLock(); }
-    float GetManualBank() const { return manualBank_; }
+    float GetManualBank() const { return movement_.GetManualBank(); }
     // 使用クラス：GamePlayScene。キーボード移動とマウス操舵を切り替える。
     void SetControlMode(ControlMode mode);
     // 現在の操作方式を返す。
@@ -88,9 +90,9 @@ public:
     // 使用クラス：GamePlayScene。マウス操舵の感度を移動側へ設定する。
     void SetMouseSensitivity(float sensitivity);
     // 現在のマウス操舵の感度を返す。
-    float GetMouseSensitivity() const { return mouseSensitivity_; }
+    float GetMouseSensitivity() const { return movement_.GetMouseSensitivity(); }
     // 使用クラス：GamePlayScene。機首や傾きの演出に使う操舵入力を返す。
-    const Vector2& GetStarFoxSteeringInput() const { return steeringInput_; }
+    const Vector2& GetStarFoxSteeringInput() const { return movement_.GetSteeringInput(); }
 
     // GamePlaySceneのレティクルとオーバーヒートゲージの配置に使う照準位置を返す。
     const Vector2& GetAimScreenPosition() const { return aimScreenPosition_; }
@@ -173,7 +175,7 @@ private:
     Vector3 ResolveAimPoint(const Ray& aimRay) const;
 
     // 入力方式はパッドを優先し、その他は設定された操作方式を使う。
-    enum class ControlInputType { Keyboard, Mouse, Gamepad };
+    using ControlInputType = PlayerInput::ControlInputType;
     struct ControlInput {
         Vector2 steering;
         float railResponse;
@@ -202,34 +204,18 @@ private:
     // 死亡や操作停止時に、速度とロールなどの移動状態を解除する。
     void StopMovement();
     Vector3 GetAutomaticMovementVelocity() const;
-    Vector3 GetWorldVelocity() const { return railForward_ * velocity_.z; }
-    // 機首方向・飛行範囲への復帰・高度・位置と傾きを順に更新する。
-    void UpdateAllRangeMove(Input* input);
-    // 操舵入力で機首の上下角と左右角を変化させ、進行方向を求める。
-    void UpdateFlightOrientation(const Vector2& steering, float deltaTimeSeconds);
-    // 飛行可能な範囲を超えた場合、範囲内へ戻るための操舵を加える。
-    void UpdateFlightAreaReturn(Vector2& steering, float deltaTimeSeconds);
-    // 上下の飛行限界を考慮して高度を補正する。
-    void UpdateFlightHeight(float deltaTimeSeconds);
-    // 進行方向と速度から次の位置を求め、飛行範囲の制限を反映する。
-    void UpdateFlightPosition(float deltaTimeSeconds);
-    // 旋回入力と手動バンクに合わせて機体を傾ける。
-    void UpdateFlightBank(const Vector2& steering, float deltaTimeSeconds);
+    Vector3 GetWorldVelocity() const { return movement_.GetWorldVelocity(); }
     // 照準の中心からのずれにデッドゾーンと感度を反映し、操舵入力を滑らかにする。
     void UpdateSteering(const Vector2& aimPosition, const Vector2& screenSizePixels,
         bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad = false);
-    void ResetSteering() { steeringInput_ = {}; }
+    void ResetSteering() { movement_.ResetSteering(); }
     // 左右のロール開始と進行を処理し、一回転後に通常姿勢へ戻す。
     void UpdateRoll(EulerTransform& transform, bool isLeftTriggered, bool isRightTriggered, float deltaTimeSeconds);
-    void StopRoll() { isRolling_ = false; }
+    void StopRoll() { movement_.StopRoll(); }
     // 機体の大きさとカメラ投影を考慮し、画面からはみ出ないレール上のずれへ補正する。
     Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
     // レールの基準位置に左右・上下のずれを加え、ワールド位置へ変換する。
     Vector3 CalculateRailWorldPosition(const Vector3& railOffset) const;
-    // 機体の表示範囲が画面端を越えた量を求める。
-    Vector2 CalculateScreenCorrection(const Vector3& railOffset) const;
-    // 機体周辺の点を画面へ投影し、表示範囲の最小・最大座標を更新する。
-    void UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const;
 
     // HP・無敵時間。
     bool ApplyHealthDamage(int damage);
@@ -257,52 +243,8 @@ private:
 #endif
     static constexpr float kInvincibleDurationSeconds = 1.0f;
 
-    bool isBoosting_ = false;
-    ControlMode controlMode_ = ControlMode::StarFox;
-    bool isAllRangeMode_ = false;
-    bool isReturningToFlightArea_ = false;
-    float flightAreaRadius_ = 600.0f;
-    float flightMinHeight_ = 5.0f;
-    float flightMaxHeight_ = 180.0f;
-    float flightYaw_ = 0.0f;
-    float flightPitch_ = 0.0f;
-    float normalMaxSpeed_ = 0.5f;
-    float boostMaxSpeed_ = 1.0f;
-    float normalAcceleration_ = 0.2f;
-    float boostAcceleration_ = 0.35f;
-    float moveSpeed_ = normalAcceleration_;
-    Vector3 velocity_ = { 0.0f, 0.0f, 0.5f };
-    Vector3 railBasePosition_ = { 0.0f, 0.0f, 0.0f };
-    Vector3 railRight_ = { 1.0f, 0.0f, 0.0f };
-    Vector3 railUp_ = { 0.0f, 1.0f, 0.0f };
-    Vector3 railForward_ = { 0.0f, 0.0f, 1.0f };
-    Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
-    float manualBank_ = 0.0f;
-
-    float mouseSensitivity_ = 1.0f; // 中央からの照準のずれに掛ける倍率。
-    Vector2 steeringInput_ = {}; // 補間済みの入力。Xは右向き、Yは上向きが正で、中央は0。
-
-    bool isRolling_ = false;
-    float rollTimerSeconds_ = 0; // ロール開始からの経過秒数。
-    float rollCooldownSeconds_ = 0;
-    float rollDirection_ = 0.0f; // 左入力は+1、右入力は-1で、回転方向を切り替える。
-    float leftKeyTapTimerSeconds_ = 0;
-    float rightKeyTapTimerSeconds_ = 0;
-    // 60FPSでの従来の長さを、経過秒数で管理する。
-    static constexpr float kMaxTapIntervalSeconds = 0.25f;
-    static constexpr float kRollDurationSeconds = 0.5f;
-    static constexpr float kRollCooldownDurationSeconds = 1.0f;
-
-    float railMoveLimitX_ = 20.0f;
-    float railMoveLimitY_ = 15.0f;
-    float railMinimumHeight_ = 0.0f;
-    bool hasRailMinimumHeight_ = false;
-    // 画面端に残す余白。単位はピクセル。
-    float playerClampMarginX_ = 100.0f;
-    float playerClampMarginY_ = 100.0f;
-    // 補正判定に使う機体の半幅・半高さ。単位はワールド座標。
-    float playerBoundsHalfWidth_ = 1.5f;
-    float playerBoundsHalfHeight_ = 1.0f;
+    ControlMode controlMode_ = ControlMode::Controller;
+    PlayerMovement movement_;
 
     // 使用クラス：本クラス。保持している位置・回転・拡大率を描画オブジェクトへ渡す。
     void ApplyTransform();

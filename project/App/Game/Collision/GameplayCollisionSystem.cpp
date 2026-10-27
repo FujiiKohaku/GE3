@@ -93,7 +93,7 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
     const Sphere& bullet, const Vector3& movement,
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
-    float floorHeight)
+    float floorHeight, bool shouldCollideWithFloor)
 {
     PlayerBulletHit nearest {};
     for (DestructibleLevelObject& destructible : destructibles) {
@@ -114,10 +114,10 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
 
     // 床は従来どおり弾の中心で判定し、到達した時刻と位置を求める。
     SweepHit floorHit {};
-    if (bullet.center.y <= floorHeight) {
+    if (shouldCollideWithFloor && bullet.center.y <= floorHeight) {
         floorHit.isHit = true;
         floorHit.time = 0.0f;
-    } else if (movement.y < 0.0f && bullet.center.y + movement.y <= floorHeight) {
+    } else if (shouldCollideWithFloor && movement.y < 0.0f && bullet.center.y + movement.y <= floorHeight) {
         floorHit.isHit = true;
         floorHit.time = (floorHeight - bullet.center.y) / movement.y;
     }
@@ -157,7 +157,7 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
 GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
     Player& player, const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
-    Object3d* floorObject)
+    Object3d* floorObject, bool shouldCollideWithFloor)
 {
     GameplayCollisionEvents events {};
     float floorHeight = -30.0f;
@@ -171,7 +171,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
         const Sphere sphere { bullet->GetPreviousPosition(), bullet->GetCollisionRadius() };
         const Vector3 movement = bullet->GetPosition() - bullet->GetPreviousPosition();
         const PlayerBulletHit nearest = FindFirstPlayerBulletHit(
-            sphere, movement, enemies, boss, destructibles, floorHeight);
+            sphere, movement, enemies, boss, destructibles, floorHeight, shouldCollideWithFloor);
         if (!nearest.hit.isHit) {
             continue;
         }

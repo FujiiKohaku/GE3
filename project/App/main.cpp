@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 // アプリの入口。終了要求を受けるまでゲームの更新と描画を繰り返す。
 #include "Engine/ImGuiManager/ImGuiManager.h"
 #include "Engine/Logger/Logger.h"
@@ -78,6 +79,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     const std::chrono::steady_clock::time_point startupBeginTime =
         std::chrono::steady_clock::now();
 
+    StartupTiming::Begin(startupBeginTime);
     Logger::Initialize();
     Logger::Log("Application Start");
 
@@ -86,7 +88,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     Game game;
 
     Logger::Log("Game Initialize");
-    game.Initialize();
+    {
+        StartupTimingScope startupScope("Main.GameInitialize");
+        game.Initialize();
+    }
 
     bool hasLoggedStartupTime = false;
     const bool verifyOceanTransition = std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
@@ -108,8 +113,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 
         // 状態を更新してから描画することで、そのフレームの操作結果を画面へ反映する。
         try {
-            game.Update();
-            game.Draw();
+            if (!hasLoggedStartupTime) {
+                {
+                    StartupTimingScope startupScope("Main.FirstUpdate");
+                    game.Update();
+                }
+                {
+                    StartupTimingScope startupScope("Main.FirstDraw");
+                    game.Draw();
+                }
+            } else {
+                game.Update();
+                game.Draw();
+            }
         } catch (const std::exception& error) {
             if (!verifyOceanTransition) throw;
             Logger::Error(std::string("[OceanSmoke] FAIL: ") + error.what());
@@ -139,6 +155,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 "[StartupTime] Application start to first frame presented: " +
                 std::to_string(startupMilliseconds) + " ms");
             hasLoggedStartupTime = true;
+            StartupTiming::Finish();
+            if (StartupTiming::ShouldExitAfterStartup()) {
+                break;
+            }
         }
     }
 

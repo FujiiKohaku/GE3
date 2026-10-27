@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "Object3dManager.h"
 #include "Object3dRootParameter.h"
 #include "Engine/Light/LightManager.h"
@@ -137,6 +138,7 @@ void Object3dManager::DrawTransparent(D3D12_GPU_VIRTUAL_ADDRESS fogConstants, bo
 #pragma region
 void Object3dManager::Initialize(DirectXCommon* dxCommon)
 {
+    StartupTimingScope startupScope("Title.ObjectManager");
     if (dxCommon_ != nullptr) {
         return;
     }
@@ -449,6 +451,7 @@ void Object3dManager::CreateRootSignature()
 #pragma region
 void Object3dManager::CreateGraphicsPipeline()
 {
+    StartupTimingScope startupScope("Pipeline.ObjectBase");
 
 
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
@@ -538,6 +541,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     const std::string& pixelShaderPath, BlendMode blendMode, bool transparent,
     bool transparentDepthWrite, const std::string& vertexShaderPath)
 {
+    StartupTimingScope startupScope("Pipeline.ObjectMaterial");
     D3D12_INPUT_ELEMENT_DESC inputElementDescs[3] = {};
     inputElementDescs[0].SemanticName = "POSITION";
     inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;

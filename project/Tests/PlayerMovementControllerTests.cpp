@@ -13,6 +13,22 @@
 
 // 実機なしでも、同時押し・切断・接続直後の状態を再現する。
 struct InputTestAccess {
+    static void SetKeyPressed(Input& input, BYTE keyCode, bool isPressed)
+    {
+        input.keys_[keyCode] = 0;
+        if (isPressed) {
+            input.keys_[keyCode] = 0x80;
+        }
+    }
+
+    static void SetMousePressed(Input& input, int button, bool isPressed)
+    {
+        input.mouseState_.rgbButtons[button] = 0;
+        if (isPressed) {
+            input.mouseState_.rgbButtons[button] = 0x80;
+        }
+    }
+
     static void Set(Input& input, XINPUT_GAMEPAD current, XINPUT_GAMEPAD previous = {},
         bool connected = true, bool ready = true, bool keyboardFire = false) {
         input.gamepadState_.Gamepad = current;
@@ -364,6 +380,95 @@ void TestScreenConstraintWithCamera()
 }
 }
 
+// PlayerやStateを介さず、渡した経過時間だけで飛行を進められる。
+void TestIndependentAllRangeMovement()
+{
+    const int frameRates[] = { 30, 60, 120 };
+    for (int framesPerSecond : frameRates) {
+        PlayerMovement movement;
+        EulerTransform transform{};
+        transform.translate = { 0.0f, 50.0f, 0.0f };
+        movement.InitializeMovement(transform);
+        movement.EnableAllRangeMode(transform, 600.0f, 5.0f, 180.0f);
+        const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
+        for (int frameIndex = 0; frameIndex < framesPerSecond; ++frameIndex) {
+            movement.UpdateMovement(transform, {}, 1.0f, 0.0f, false, false, deltaTimeSeconds);
+        }
+        assert(IsNear(transform.translate.z, 30.0f));
+        assert(IsNear(transform.translate.y, 50.0f));
+
+        assert(movement.UpdateBoost(false, true));
+        movement.UpdateMovement(transform, {}, 1.0f, 0.0f, false, false, 1.0f);
+        assert(IsNear(transform.translate.z, 90.0f));
+        assert(!movement.UpdateBoost(true, true));
+        assert(!movement.IsBoosting());
+        movement.UpdateMovement(transform, {}, 1.0f, 0.0f, false, false, 1.0f);
+        assert(IsNear(transform.translate.z, 105.0f));
+    }
+}
+
+// 外力による下降でも、レール上の最低高度を維持する。
+void TestMovementRailMinimumHeight()
+{
+    PlayerMovement movement;
+    EulerTransform transform{};
+    transform.translate = { 0.0f, 2.0f, 0.0f };
+    movement.InitializeMovement(transform);
+    movement.SetRailMinimumHeight(5.0f);
+    movement.ApplyRailAreaForce({ 0.0f, -100.0f, 0.0f }, 1.0f / 60.0f);
+    movement.ApplyRailPosition(transform);
+    assert(IsNear(transform.translate.y, 5.0f));
+}
+
+void TestPlayerInputOperations()
+{
+    Input& input = *Input::GetInstance();
+    InputTestAccess::Set(input, {}, {}, false);
+    InputTestAccess::SetKeyPressed(input, DIK_W, true);
+    InputTestAccess::SetKeyPressed(input, DIK_D, true);
+    Vector2 steering = PlayerInput::ReadKeyboardSteering(input);
+    assert(steering.x == 1.0f && steering.y == 1.0f);
+    InputTestAccess::SetKeyPressed(input, DIK_A, true);
+    steering = PlayerInput::ReadKeyboardSteering(input);
+    assert(steering.x == 0.0f);
+    InputTestAccess::SetKeyPressed(input, DIK_W, false);
+    InputTestAccess::SetKeyPressed(input, DIK_D, false);
+    InputTestAccess::SetKeyPressed(input, DIK_A, false);
+
+    InputTestAccess::SetKeyPressed(input, DIK_LSHIFT, true);
+    assert(PlayerInput::ReadBoost(input, true).shouldBoost);
+    InputTestAccess::SetKeyPressed(input, DIK_LSHIFT, false);
+    InputTestAccess::SetMousePressed(input, 1, true);
+    assert(PlayerInput::ReadBoost(input, true).shouldBoost);
+    InputTestAccess::SetMousePressed(input, 1, false);
+
+    XINPUT_GAMEPAD pad{};
+    pad.wButtons = XINPUT_GAMEPAD_LEFT_SHOULDER | XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y;
+    InputTestAccess::Set(input, pad);
+    PlayerInput::MovementInput movementInput = PlayerInput::ReadMovement(input);
+    assert(IsNear(movementInput.manualBank, 0.9f));
+    assert(movementInput.isLeftRollTriggered && !movementInput.isRightRollTriggered);
+    const PlayerInput::BoostInput boostInput = PlayerInput::ReadBoost(input, true);
+    assert(boostInput.isBraking && boostInput.shouldBoost);
+    PlayerMovement movement;
+    movement.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost);
+    assert(!movement.IsBoosting());
+    assert(IsNear(movement.GetForwardSpeedMultiplier(), 0.5f));
+    const PlayerInput::BoostInput disabledBoost = PlayerInput::ReadBoost(input, false);
+    assert(!disabledBoost.isBraking && !disabledBoost.shouldBoost);
+
+    InputTestAccess::Set(input, pad, pad);
+    assert(!PlayerInput::ReadMovement(input).isLeftRollTriggered);
+    pad.wButtons |= XINPUT_GAMEPAD_RIGHT_SHOULDER;
+    InputTestAccess::Set(input, pad);
+    movementInput = PlayerInput::ReadMovement(input);
+    assert(movementInput.manualBank == 0.0f);
+    InputTestAccess::Set(input, {}, {}, false);
+    movementInput = PlayerInput::ReadMovement(input);
+    assert(movementInput.manualBank == 0.0f);
+    assert(!movementInput.isLeftRollTriggered && !movementInput.isRightRollTriggered);
+}
+
 int main()
 {
     _set_error_mode(_OUT_TO_STDERR);
@@ -383,6 +488,9 @@ int main()
     TestRailFrameAndAreaForce();
     TestAllRangeAndControls();
     TestScreenConstraintWithCamera();
+    TestIndependentAllRangeMovement();
+    TestMovementRailMinimumHeight();
+    TestPlayerInputOperations();
 }
 
 

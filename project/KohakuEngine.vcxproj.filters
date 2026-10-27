@@ -1270,4 +1270,37 @@
     <ClCompile Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.cpp"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClCompile>
     <ClInclude Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.h"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Player\Movement">
+      <UniqueIdentifier>{3b242db2-760f-49b1-a1f3-68c611a827e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Player\Input">
+      <UniqueIdentifier>{26b9cf3b-f8ed-4df8-9814-b6db76ce7408}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="App\Game\Player\Input\PlayerInput.h">
+      <Filter>Player\Input</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Input\PlayerInput.cpp">
+      <Filter>Player\Input</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Player\Movement\PlayerMovement.h">
+      <Filter>Player\Movement</Filter>
+    </ClInclude>
+    <ClCompile Include="App\Game\Player\Movement\PlayerMovement.cpp">
+      <Filter>Player\Movement</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App\Game\Stage\RailBranchRoute.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Engine\Debug\Profiler\StartupTiming.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClCompile Include="Engine\Debug\Profiler\StartupTiming.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+  </ItemGroup>
 </Project>

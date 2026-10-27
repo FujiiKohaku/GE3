@@ -148,6 +148,17 @@ bool StageCatalog::LoadStageSettings(
         settings.railPointInterval =
             rail.value("point_interval", settings.railPointInterval);
         settings.railSpeed = rail.value("speed", settings.railSpeed);
+        if (rail.contains("lower_branch")) {
+            const nlohmann::json& branch = rail["lower_branch"];
+            settings.railBranch.isEnabled = branch.value("enabled", false);
+            settings.railBranch.startDistance = branch.value("start_distance", settings.railBranch.startDistance);
+            settings.railBranch.endDistance = branch.value("end_distance", settings.railBranch.endDistance);
+            settings.railBranch.previewDistance = branch.value("preview_distance", settings.railBranch.previewDistance);
+            settings.railBranch.selectionOffsetY = branch.value("selection_offset_y", settings.railBranch.selectionOffsetY);
+            if (branch.contains("offset")) {
+                settings.railBranch.offset = ReadVector3(branch["offset"], settings.railBranch.offset);
+            }
+        }
         if (rail.contains("control_points") &&
             rail["control_points"].is_array()) {
             for (const nlohmann::json& point : rail["control_points"]) {
@@ -210,6 +221,11 @@ bool StageCatalog::LoadStageSettings(
     if (!settings.railControlPoints.empty() &&
         settings.railControlPoints.size() < 4) {
         lastError_ = "Rail requires at least four control points: " + settings.id;
+        return false;
+    }
+    if (settings.railBranch.isEnabled &&
+        (settings.allRangeMode || !settings.railBranch.IsValid(settings.railLength))) {
+        lastError_ = "Invalid lower rail branch: " + settings.id;
         return false;
     }
     if (settings.bossSpawnDistance > settings.railLength) {

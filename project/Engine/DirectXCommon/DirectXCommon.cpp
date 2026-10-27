@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "DirectXCommon.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_dx12.h"
@@ -129,30 +130,66 @@ void DirectXCommon::Initialize(WinApp* winApp)
     // NULLチェック
     assert(winApp);
     winApp_ = winApp;
-    RefreshShaderIncludeWriteTime();
+    {
+        StartupTimingScope startupScope("DX.ShaderIncludeScan");
+        RefreshShaderIncludeWriteTime();
+    }
     // ここに初期化処理を書いていく
     // デバイス初期化
-    InitializeDevice();
+    {
+        StartupTimingScope startupScope("DX.Device");
+        InitializeDevice();
+    }
     // コマンド初期化
-    InitializeCommand();
+    {
+        StartupTimingScope startupScope("DX.Command");
+        InitializeCommand();
+    }
     // スワップチェーン初期化
-    InitializeSwapChain();
+    {
+        StartupTimingScope startupScope("DX.SwapChain");
+        InitializeSwapChain();
+    }
     // 深度バッファ初期化
-    InitializeDepthBuffer();
+    {
+        StartupTimingScope startupScope("DX.DepthBuffer");
+        InitializeDepthBuffer();
+    }
     // ディスクリプタヒープ初期化
-    InitializeDescriptorHeaps();
+    {
+        StartupTimingScope startupScope("DX.DescriptorHeaps");
+        InitializeDescriptorHeaps();
+    }
     // RTVの初期化
-    InitializeRenderTargetView();
+    {
+        StartupTimingScope startupScope("DX.RTV");
+        InitializeRenderTargetView();
+    }
     // DSVの初期化
-    InitializeDepthStencilView();
+    {
+        StartupTimingScope startupScope("DX.DSV");
+        InitializeDepthStencilView();
+    }
     // フェンスの初期化
-    InitializeFence();
+    {
+        StartupTimingScope startupScope("DX.Fence");
+        InitializeFence();
+    }
     // ビューポート矩形初期化
-    InitializeViewport();
+    {
+        StartupTimingScope startupScope("DX.Viewport");
+        InitializeViewport();
+    }
     // シザーの初期化
-    InitializeScissorRect();
+    {
+        StartupTimingScope startupScope("DX.Scissor");
+        InitializeScissorRect();
+    }
     // DXCコンパイラの生成
-    InitializeDxcCompiler();
+    {
+        StartupTimingScope startupScope("DX.DxcCompiler");
+        InitializeDxcCompiler();
+    }
     // IMGUI初期化
     /* InitializeImGui();*/
 }
@@ -189,9 +226,15 @@ void DirectXCommon::InitializeDevice()
    
 
     #ifdef _DEBUG
-    hr = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+    {
+        StartupTimingScope startupScope("DX.Device.Factory");
+        hr = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+    }
 #else
-    hr = CreateDXGIFactory2(0, IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+    {
+        StartupTimingScope startupScope("DX.Device.Factory");
+        hr = CreateDXGIFactory2(0, IID_PPV_ARGS(dxgiFactory.GetAddressOf()));
+    }
 #endif
     // 初期化の根本的な部分でエラーが出た場合はプログラムが間違っているか、どうにもできない場合が多いのでassertにしておく
     assert(SUCCEEDED(hr));
@@ -226,7 +269,10 @@ void DirectXCommon::InitializeDevice()
     // 高い順に生成できるか試していく
     for (size_t i = 0; i < _countof(featureLevels); ++i) {
         // 採用したアダプターでデバイスを生成
-        hr = D3D12CreateDevice(useAdapter.Get(), featureLevels[i], IID_PPV_ARGS(&device));
+        {
+            StartupTimingScope startupScope("DX.Device.Create");
+            hr = D3D12CreateDevice(useAdapter.Get(), featureLevels[i], IID_PPV_ARGS(&device));
+        }
         // 指定した昨日レベルでデバイスは生成できたか確認
         if (SUCCEEDED(hr)) {
             // 生成できたのでログ出力を行ってループを抜ける
@@ -536,6 +582,7 @@ void DirectXCommon::PreDraw()
 // 描画後処理
 void DirectXCommon::PostDraw()
  {
+    StartupTimingScope startupScope("Frame.PresentAndWait");
 
     // これから書き込むバックバッファの番号を取得
     UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -600,6 +647,7 @@ ID3D12Resource* DirectXCommon::GetCurrentBackBuffer() const
 #pragma region
 Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath)
 {
+    StartupTimingScope startupScope("Resource.ShaderLoad");
     const std::filesystem::path sourcePath(hlslPath);
     const std::filesystem::path compiledPath = MakeCompiledShaderPath(sourcePath);
 
@@ -656,6 +704,7 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShaderAndSaveCache(
     const std::filesystem::path& sourcePath,
     const std::filesystem::path& compiledPath)
 {
+    StartupTimingScope startupScope("Resource.ShaderCompile");
     const std::wstring shaderProfile = GetShaderProfile(sourcePath);
     if (shaderProfile.empty()) {
         const std::string message =
@@ -906,6 +955,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsof
 
 void DirectXCommon::WaitForGPU()
 {
+    StartupTimingScope startupScope("DX.WaitForGPU");
     // フェンス値を更新してシグナル送信
     fenceValue++;
     commandQueue->Signal(fence.Get(), fenceValue);

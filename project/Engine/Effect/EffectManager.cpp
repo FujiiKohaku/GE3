@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "EffectManager.h"
 
 #include "Engine/Logger/Logger.h"
@@ -202,6 +203,7 @@ EffectManager* EffectManager::GetInstance()
 
 void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
 {
+    StartupTimingScope startupScope("Resource.EffectInitialize");
     if (isInitialized_) {
         return;
     }

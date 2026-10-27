@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "TextureManager.h"
 #include <chrono>
 #include <cstring>
@@ -52,6 +53,7 @@ void TextureManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager)
 //=================================================================
 void TextureManager::LoadTexture(const std::string& filePath)
 {
+    StartupTimingScope startupScope("Resource.TextureLoad");
 
     if (filePath.empty()) {
         return;
@@ -88,6 +90,7 @@ void TextureManager::LoadTexture(const std::string& filePath)
 // Normal maps contain vectors: neither decoding nor mip filtering applies sRGB gamma.
 std::string TextureManager::LoadLinearTexture(const std::string& filePath)
 {
+    StartupTimingScope startupScope("Resource.LinearTextureLoad");
     if (filePath.empty()) { return {}; }
     const std::string key = filePath + "#linear";
     if (textureDatas.contains(key)) { return key; }
@@ -247,6 +250,7 @@ void TextureManager::UpdateTextureFromBGRA(
 
 void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::ScratchImage& image)
 {
+    StartupTimingScope startupScope("Resource.TextureRegister");
     assert(srvManager_ != nullptr);
     assert(srvManager_->CanAllocate());
 
@@ -254,6 +258,7 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
     if (DirectX::IsCompressed(image.GetMetadata().format)) {
         mipImages = std::move(image);
     } else {
+        StartupTimingScope mipScope("Resource.TextureMipmaps");
         DirectX::TEX_FILTER_FLAGS filter = DirectX::TEX_FILTER_DEFAULT;
         if (DirectX::IsSRGB(image.GetMetadata().format)) { filter = DirectX::TEX_FILTER_SRGB; }
         HRESULT hr = DirectX::GenerateMipMaps(
@@ -302,6 +307,7 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
 
 void TextureManager::FlushUploads()
 {
+    StartupTimingScope startupScope("Resource.TextureFlush");
     if (pendingUploadResources_.empty()) {
         return;
     }

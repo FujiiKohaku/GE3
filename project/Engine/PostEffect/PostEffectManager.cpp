@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "Engine/Renderer/SceneRenderResolution.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
@@ -575,7 +576,10 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
     dxCommon_ = dxCommon;
 
     copyImageRenderer_ = std::make_unique<CopyImageRenderer>();
-    copyImageRenderer_->Initialize(dxCommon_);
+    {
+        StartupTimingScope startupScope("PostFX.Copy");
+        copyImageRenderer_->Initialize(dxCommon_);
+    }
     std::ifstream presetFile("resources/Graphics/visual-presets.json");
     if (!presetFile) { throw std::runtime_error("Cannot open post effect preset data"); }
     const auto presetData = nlohmann::json::parse(presetFile);
@@ -595,18 +599,33 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
 
     autoExposureRenderer_ = std::make_unique<AutoExposureRenderer>();
     bloomRenderer_ = std::make_unique<BloomRenderer>();
-    bloomRenderer_->Initialize(dxCommon_);
+    {
+        StartupTimingScope startupScope("PostFX.Bloom");
+        bloomRenderer_->Initialize(dxCommon_);
+    }
     volumetricLightRenderer_ = std::make_unique<VolumetricLightRenderer>();
-    volumetricLightRenderer_->Initialize(dxCommon_);
+    {
+        StartupTimingScope startupScope("PostFX.VolumetricLight");
+        volumetricLightRenderer_->Initialize(dxCommon_);
+    }
 
     fogManager_ = std::make_unique<FogManager>();
-    fogManager_->Initialize(dxCommon_);
+    {
+        StartupTimingScope startupScope("PostFX.FogManager");
+        fogManager_->Initialize(dxCommon_);
+    }
 
     fogRenderer_ = std::make_unique<FogRenderer>();
-    fogRenderer_->Initialize(dxCommon_);
+    {
+        StartupTimingScope startupScope("PostFX.FogRenderer");
+        fogRenderer_->Initialize(dxCommon_);
+    }
 
     for (uint32_t index = 0; index < kPingPongRenderTargetCount; ++index) {
-        pingPongRenderTargets_[index].Initialize(dxCommon_, kFirstPingPongRTVIndex + index);
+        {
+            StartupTimingScope startupScope("PostFX.RenderTargets");
+            pingPongRenderTargets_[index].Initialize(dxCommon_, kFirstPingPongRTVIndex + index);
+        }
     }
 }
 

@@ -98,6 +98,17 @@ bool RunGameplayCollisionTests()
     hit = CollisionSystem::FindFirstPlayerBulletHit(
         fallingBullet, fallingMovement, enemies, nullptr, destructibles, -10.0f);
     if (hit.enemy != enemies[0].get()) { return false; }
+    // 海中ルートでは水面による弾の消滅を止め、敵との判定は維持する。
+    hit = CollisionSystem::FindFirstPlayerBulletHit(
+        fallingBullet, fallingMovement, enemies, nullptr, destructibles, 5.0f, false);
+    if (hit.enemy != enemies[0].get()) { return false; }
+    const Sphere submergedBullet { { 0.0f, -45.0f, 0.0f }, 0.25f };
+    hit = CollisionSystem::FindFirstPlayerBulletHit(
+        submergedBullet, movement, enemies, nullptr, destructibles, -30.0f, false);
+    if (hit.hit.isHit) { return false; }
+    hit = CollisionSystem::FindFirstPlayerBulletHit(
+        submergedBullet, movement, enemies, nullptr, destructibles, -30.0f);
+    if (!hit.hit.isHit || hit.hit.time != 0.0f) { return false; }
     enemies[0]->SetDead(true);
     hit = CollisionSystem::FindFirstPlayerBulletHit(
         bullet, movement, enemies, nullptr, destructibles, -30.0f);

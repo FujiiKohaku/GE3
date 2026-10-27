@@ -1,4 +1,5 @@
-﻿#include "ModelManager.h"
+#include "Engine/Debug/Profiler/StartupTiming.h"
+#include "ModelManager.h"
 #include "Engine/Animation/Event/AnimationEventLoader.h"
 #include "Engine/math/MatrixMath.h"
 #include <cmath>
@@ -175,6 +176,7 @@ void ModelManager::Finalize()
 
 Model* ModelManager::Load(const std::string& filepath)
 {
+    StartupTimingScope startupScope("Resource.ModelLoad");
     auto it = models_.find(filepath);
     if (it != models_.end()) {
         return it->second.get();

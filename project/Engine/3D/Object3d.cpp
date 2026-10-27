@@ -1,4 +1,5 @@
 #include "Object3d.h"
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include <algorithm>
 #include "Engine/math/MatrixMath.h"
 #include "Model.h"
@@ -328,6 +329,7 @@ void Object3d::SetShadingMode(MaterialShadingMode mode)
 ModelData Object3d::LoadModeFile(const std::string& directoryPath,
     const std::string filename)
 {
+    StartupTimingScope startupScope("Resource.ModelParse");
     ModelData modelData;
 
     Assimp::Importer importer;

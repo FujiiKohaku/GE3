@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "SceneRenderResolution.h"
 #include "Engine/Reflection/ScreenSpaceReflection.h"
 #include "Engine/Raytracing/DxrRenderer.h"
@@ -49,32 +50,66 @@ void Renderer::Initialize()
     SceneRenderResolution::SetSize(WinApp::kClientWidth, WinApp::kClientHeight);
     // Offscreen renderer setup
     offscreenRenderer_ = std::make_unique<OffscreenRenderer>();
-    offscreenRenderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.Offscreen");
+        offscreenRenderer_->Initialize();
+    }
     motionVectorRenderer_ = std::make_unique<MotionVectorRenderer>();
-    motionVectorRenderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.MotionVectors");
+        motionVectorRenderer_->Initialize();
+    }
 
     // Post effect chain setup
     postEffectManager_ = std::make_unique<PostEffectManager>();
-    postEffectManager_->Initialize(DirectXCommon::GetInstance());
+    {
+        StartupTimingScope startupScope("Renderer.PostEffects");
+        postEffectManager_->Initialize(DirectXCommon::GetInstance());
+    }
     postEffectManager_->SetNormalTextureHandle(
         offscreenRenderer_->GetNormalSrvHandleGPU());
     postEffectManager_->SetIndirectTextureHandle(offscreenRenderer_->GetIndirectSrvHandleGPU());
     temporalSuperResolution_ = std::make_unique<TemporalSuperResolution>();
     dlssSuperResolution_ = std::make_unique<DlssSuperResolution>();
-    dlssSuperResolution_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.DLSS");
+        dlssSuperResolution_->Initialize();
+    }
     screenSpaceReflection_ = std::make_unique<ScreenSpaceReflection>();
-    screenSpaceReflection_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.SSR");
+        screenSpaceReflection_->Initialize();
+    }
     screenSpaceGlobalIllumination_ = std::make_unique<ScreenSpaceGlobalIllumination>();
-    screenSpaceGlobalIllumination_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.SSGI");
+        screenSpaceGlobalIllumination_->Initialize();
+    }
     dxrRenderer_ = std::make_unique<DxrRenderer>();
-    dxrRenderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.DXRBase");
+        dxrRenderer_->Initialize();
+    }
     dxrShadowRenderer_ = std::make_unique<DxrShadowRenderer>();
-    dxrShadowRenderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.DXRShadow");
+        dxrShadowRenderer_->Initialize();
+    }
     dxrReflectionRenderer_ = std::make_unique<DxrReflectionRenderer>();
-    dxrReflectionRenderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.DXRReflection");
+        dxrReflectionRenderer_->Initialize();
+    }
     dxrGlobalIlluminationRenderer_ = std::make_unique<DxrGlobalIlluminationRenderer>();
-    dxrGlobalIlluminationRenderer_->Initialize();
-    dxrLocalShadowRenderer_ = std::make_unique<DxrLocalShadowRenderer>(); dxrLocalShadowRenderer_->Initialize();
+    {
+        StartupTimingScope startupScope("Renderer.DXRGlobalIllumination");
+        dxrGlobalIlluminationRenderer_->Initialize();
+    }
+    dxrLocalShadowRenderer_ = std::make_unique<DxrLocalShadowRenderer>();
+    {
+        StartupTimingScope startupScope("Renderer.DXRLocalShadow");
+        dxrLocalShadowRenderer_->Initialize();
+    }
     frameTimer_.Initialize();
     dlaaTimer_.Initialize();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -176,6 +211,7 @@ void Renderer::DrawImGui()
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    StartupTimingScope startupScope("Frame.Renderer");
     Object3dManager::GetInstance()->BeginTransparentCollection();
     ApplySceneRenderResolution();
     if (comparisonSceneRevision_ != sceneManager->GetSceneRevision()) {

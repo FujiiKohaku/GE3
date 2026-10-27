@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "FontManager.h"
 
 #include "Engine/Logger/Logger.h"
@@ -61,6 +62,7 @@ FontManager::~FontManager() = default;
 
 FontHandle FontManager::LoadFont(const std::string& fontPath)
 {
+    StartupTimingScope startupScope("Resource.FontLoad");
     const std::string cacheKey = NormalizePath(fontPath);
     std::unordered_map<std::string, FontHandle>::const_iterator cached =
         pathCache_.find(cacheKey);
@@ -151,6 +153,7 @@ void FontManager::EnsureGlyphs(FontHandle handle, const std::string& text)
 
 void FontManager::FlushAtlasUpdates()
 {
+    StartupTimingScope startupScope("Resource.FontAtlasFlush");
     for (std::pair<const FontHandle, std::unique_ptr<FontEntry>>& font : fonts_) {
         if (!font.second->atlasDirty) {
             continue;
@@ -229,6 +232,7 @@ const FontManager::FontEntry& FontManager::GetEntry(FontHandle handle) const
 
 bool FontManager::AddGlyph(FontEntry& entry, uint32_t codepoint)
 {
+    StartupTimingScope startupScope("Resource.FontGlyph");
     if (entry.glyphs.contains(codepoint)) {
         return false;
     }
@@ -333,6 +337,7 @@ bool FontManager::AddGlyph(FontEntry& entry, uint32_t codepoint)
 
 void FontManager::UploadAtlas(FontEntry& entry)
 {
+    StartupTimingScope startupScope("Resource.FontAtlasUpload");
     std::vector<uint8_t> bgra;
     bgra.resize(
         static_cast<size_t>(kAtlasWidth) * static_cast<size_t>(kAtlasHeight) * 4);

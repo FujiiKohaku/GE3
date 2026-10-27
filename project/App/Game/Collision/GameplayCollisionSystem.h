@@ -51,7 +51,7 @@ public:
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss,
         std::vector<DestructibleLevelObject>& destructibles,
-        Object3d* floorObject);
+        Object3d* floorObject, bool shouldCollideWithFloor = true);
 
     // 敵本体と敵弾のプレイヤーへの接触を調べる。
     GameplayCollisionEvents UpdateCombatCollisions(
@@ -83,5 +83,5 @@ private:
         const Sphere& bullet, const Vector3& movement,
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
-        float floorHeight);
+        float floorHeight, bool shouldCollideWithFloor = true);
 };

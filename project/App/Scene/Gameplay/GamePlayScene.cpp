@@ -377,7 +377,7 @@ private:
     bool moving_;
     float elapsed_ = 0.0f;
 };
-Player::ControlMode gControlMode = Player::ControlMode::StarFox;
+Player::ControlMode gControlMode = Player::ControlMode::Controller;
 float gMouseSensitivity = 1.0f;
 
 // 機能色。ゲーム内エフェクトとHUDで同じ意味に同じ色を使う。
@@ -508,6 +508,8 @@ void GamePlayScene::Initialize()
             kFallbackFinalRecoveryPosition };
     }
     railSpeed_ = stageSettings_.railSpeed;
+    railBranch_.Initialize(stageSettings_.railBranch);
+    hasBranchSurfaceFog_ = false;
 
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
@@ -874,6 +876,26 @@ void GamePlayScene::Initialize()
     weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     weaponHudNameText_->SetOutlineWidth(1.0f);
     weaponHudNameText_->Update();
+    if (stageSettings_.railBranch.isEnabled) {
+        railBranchUpperText_ = std::make_unique<Text>();
+        railBranchUpperText_->Initialize(kDefaultFont);
+        railBranchUpperText_->SetText("↑ 海上ルート");
+        railBranchUpperText_->SetFontSize(28.0f);
+        railBranchUpperText_->SetAnchorPoint({ 0.5f, 0.5f });
+        railBranchUpperText_->SetOutlineWidth(2.0f);
+        railBranchLowerText_ = std::make_unique<Text>();
+        railBranchLowerText_->Initialize(kDefaultFont);
+        railBranchLowerText_->SetText("↓ 海中ルート");
+        railBranchLowerText_->SetFontSize(28.0f);
+        railBranchLowerText_->SetAnchorPoint({ 0.5f, 0.5f });
+        railBranchLowerText_->SetOutlineWidth(2.0f);
+        railBranchStatusText_ = std::make_unique<Text>();
+        railBranchStatusText_->Initialize(kDefaultFont);
+        railBranchStatusText_->SetFontSize(23.0f);
+        railBranchStatusText_->SetAnchorPoint({ 0.5f, 0.5f });
+        railBranchStatusText_->SetColor({ 0.7f, 0.95f, 1.0f, 1.0f });
+        railBranchStatusText_->SetOutlineWidth(2.0f);
+    }
 
     score_ = 0;
     InitializeHudFrame(
@@ -1056,7 +1078,7 @@ void GamePlayScene::Initialize()
 
     if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
         player_->SetRailMinimumHeight(stageSettings_.floorHeight + kInitializePlayerRailMinimumHeightOffset);
-        playerStartPos = rail_->GetPositionByDistance(0.0f);
+        playerStartPos = GetRailPosition(0.0f);
     }
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
@@ -1091,7 +1113,7 @@ void GamePlayScene::Initialize()
         stageSettings_.recoveryItemPositions.clear();
         for (float distance : stageSettings_.recoveryItemDistances) {
             stageSettings_.recoveryItemPositions.push_back(
-                rail_->GetPositionByDistance(distance));
+                GetRailPosition(distance));
         }
     }
     InitializeRecoveryItems(recoveryItemModel);
@@ -1118,7 +1140,7 @@ void GamePlayScene::Initialize()
         std::unique_ptr<PaintShooterEnemy> paintEnemy = std::make_unique<PaintShooterEnemy>();
         paintEnemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
         float distance = stageSettings_.paintEnemyDistances[i];
-        Vector3 railPosition = rail_->GetPositionByDistance(distance);
+        Vector3 railPosition = GetRailPosition(distance);
         Vector3 forward = CalculateRailForward(distance, railPosition);
         Vector3 right {};
         Vector3 up {};
@@ -1193,6 +1215,12 @@ void GamePlayScene::Initialize()
 #endif
 }
 
+// 既存レールの位置に、選択済みの下ルートの変位だけを加える。
+Vector3 GamePlayScene::GetRailPosition(float distance) const
+{
+    return rail_->GetPositionByDistance(distance) + railBranch_.GetOffset(distance);
+}
+
 // 少し先のレール位置から進行方向を求め、向きが求められない場合の代替方向も用意する。
 Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railPosition) const
 {
@@ -1211,8 +1239,8 @@ Vector3 GamePlayScene::CalculateRailForward(float distance, const Vector3& railP
         nextDistance = totalLength;
     }
 
-    Vector3 previousPosition = rail_->GetPositionByDistance(previousDistance);
-    Vector3 nextPosition = rail_->GetPositionByDistance(nextDistance);
+    Vector3 previousPosition = GetRailPosition(previousDistance);
+    Vector3 nextPosition = GetRailPosition(nextDistance);
     Vector3 forward = Normalize(nextPosition - previousPosition);
 
     if (IsNearlyZero(forward)) {
@@ -1448,7 +1476,7 @@ void GamePlayScene::Update()
     if (stageSettings_.bossType != "None" && Input::GetInstance()->IsKeyTrigger(DIK_V)) {
         railDistance_ = (std::max)(0.0f, stageSettings_.bossSpawnDistance);
         if (player_) {
-            player_->SetTranslate(rail_->GetPositionByDistance(railDistance_));
+            player_->SetTranslate(GetRailPosition(railDistance_));
         }
     }
     // レール自体の更新
@@ -1464,7 +1492,7 @@ void GamePlayScene::Update()
         return enemy->IsDead();
     });
     const Vector3 currentRailPosition =
-        rail_->GetPositionByDistance(railDistance_);
+        GetRailPosition(railDistance_);
     Vector3 currentRailForward =
         CalculateRailForward(railDistance_, currentRailPosition);
     if (stageSettings_.allRangeMode) {
@@ -1609,6 +1637,7 @@ void GamePlayScene::Update()
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
     // カメラの追従・FOV変更後も、表示される機体と照準の距離を制限する。
     player_->ConstrainGamepadAimToPlayer();
+    UpdateRailBranchPresentation(nextRailDistance);
     if (stageId_ == "tutorial" && !debugCameraController_->GetDebugMode()) {
         tutorialController_.SetDefeatedTargets(tutorialDefeatedTargets_ &&
             tutorialTargetStep_ == tutorialController_.GetCompletedCount() ? *tutorialDefeatedTargets_ : 0);
@@ -1821,7 +1850,8 @@ void GamePlayScene::Update()
         const Vector3 position = player_->GetTranslate();
         const Vector3 delta = position - previousOceanPlayerPosition_;
         const float distance = std::sqrt(delta.x * delta.x + delta.z * delta.z);
-        if (!player_->IsDead() && hasOceanPlayerPosition_ && dt > 0.0f && distance < kUpdateDistanceThreshold) {
+        if (!player_->IsDead() && position.y >= stageSettings_.floorHeight - 2.0f &&
+            hasOceanPlayerPosition_ && dt > 0.0f && distance < kUpdateDistanceThreshold) {
             if (!hasOceanWakeForward_) {
                 oceanWakeForward_ = OceanInteraction::HorizontalDirection(player_->GetFlightForward());
                 hasOceanWakeForward_ = true;
@@ -2073,8 +2103,28 @@ void GamePlayScene::UpdateRailMovement(
         outNextDistance = rail_->GetTotalLength();
     }
 
+    railBranch_.Update(railDistance_, outNextDistance, player_->GetRailOffset().y,
+        player_->GetCurrentHp() > 0 && !debugCameraController_->GetDebugMode());
+    if (stageSettings_.railBranch.isEnabled && railDistance_ < stageSettings_.railBranch.startDistance &&
+        outNextDistance >= stageSettings_.railBranch.startDistance && outNextDistance < stageSettings_.railBranch.endDistance) {
+        if (railBranch_.IsLowerRouteSelected()) {
+            Logger::Log("[RailBranch] Lower route selected");
+        } else {
+            Logger::Log("[RailBranch] Surface route selected");
+        }
+    }
+    if (railBranch_.IsLowerRouteSelected() && railDistance_ < stageSettings_.railBranch.endDistance &&
+        outNextDistance >= stageSettings_.railBranch.endDistance) {
+        Logger::Log("[RailBranch] Rejoined surface route");
+    }
+    if (stageId_ == "stage01" && stageSettings_.railBranch.isEnabled) {
+        const float branchHeightOffset = railBranch_.GetOffset(outNextDistance).y;
+        player_->SetRailMinimumHeight(stageSettings_.floorHeight +
+            kInitializePlayerRailMinimumHeightOffset + branchHeightOffset);
+    }
+
     // レール上での次の座標と前方向（Forward）ベクトルを算出
-    outPosition = rail_->GetPositionByDistance(outNextDistance);
+    outPosition = GetRailPosition(outNextDistance);
     outForward = CalculateRailForward(outNextDistance, outPosition);
 
     // 前方向ベクトルを基準に、レールの右方向（Right）と上方向（Up）の軸を計算
@@ -2124,7 +2174,7 @@ void GamePlayScene::UpdatePlayerTransform(
         playerRotate.y = -std::atan2(forward.x, forward.z);
         playerRotate.z = 0.0f;
 
-        if (player_->GetControlMode() == Player::ControlMode::StarFox || Input::GetInstance()->IsUsingGamepad()) {
+        if (player_->GetControlMode() == Player::ControlMode::Controller || Input::GetInstance()->IsUsingGamepad()) {
             const float screenWidth = static_cast<float>(
                 WinApp::GetInstance()->GetClientWidth());
             const float screenHeight = static_cast<float>(
@@ -2301,7 +2351,7 @@ void GamePlayScene::UpdateCamera(
             (playerRailOffset.x * cameraHorizontalFollowFactor_);
 
         // 描画用カメラのターゲット注視点（Lerp前）
-        Vector3 targetLookAheadPositionDraw = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+        Vector3 targetLookAheadPositionDraw = GetRailPosition(nextRailDistance + cameraLookAheadDistance_);
         targetLookAheadPositionDraw += railUp * (playerRailOffset.y * cameraLookUpFactor_);
         targetLookAheadPositionDraw += railRight *
             (playerRailOffset.x * cameraLookHorizontalFactor_);
@@ -2330,7 +2380,7 @@ void GamePlayScene::UpdateCamera(
     // エイム用仮想カメラ（aimCamera_）の更新 (遅延なしの最新情報でLookAt)
     Vector3 targetCameraPosition = currentPosition - forward * cameraBackwardOffset;
     targetCameraPosition.y += kCameraUpwardOffset;
-    Vector3 targetLookAheadPosition = rail_->GetPositionByDistance(nextRailDistance + cameraLookAheadDistance_);
+    Vector3 targetLookAheadPosition = GetRailPosition(nextRailDistance + cameraLookAheadDistance_);
     
     aimCamera_->LookAt(targetCameraPosition, targetLookAheadPosition);
     aimCamera_->SetFovY(renderFovY);
@@ -2345,7 +2395,7 @@ void GamePlayScene::InitializeWaterPillars()
 {
     auto addPillar = [this](float triggerDistance, float sideOffset, float delay) {
         const float pillarDistance = triggerDistance + 200.0f + delay * railSpeed_ * 60.0f;
-        const Vector3 railPosition = rail_->GetPositionByDistance(pillarDistance);
+        const Vector3 railPosition = GetRailPosition(pillarDistance);
         const Vector3 forward = CalculateRailForward(pillarDistance, railPosition);
         Vector3 right {};
         Vector3 up {};
@@ -2770,6 +2820,11 @@ void GamePlayScene::Draw2D()
         TextRenderer::GetInstance()->PreDraw();
         if (weaponHudLabelText_) weaponHudLabelText_->Draw();
         if (weaponHudNameText_) weaponHudNameText_->Draw();
+        if (railBranch_.IsPreviewVisible(railDistance_) && player_->GetCurrentHp() > 0) {
+            if (railBranchUpperText_) railBranchUpperText_->Draw();
+            if (railBranchLowerText_) railBranchLowerText_->Draw();
+        }
+        if (railBranchStatusText_ && player_->GetCurrentHp() > 0) railBranchStatusText_->Draw();
         if (scoreHudLabelText_) scoreHudLabelText_->Draw();
         if (scoreHudValueText_) scoreHudValueText_->Draw();
         if (playerHpText_) playerHpText_->Draw();
@@ -3034,7 +3089,7 @@ PauseStateContext GamePlayScene::MakePauseContext()
     context.togglePitch = []() { Input::GetInstance()->ToggleGamepadPitchInverted(); };
     context.toggleControl = [this]() {
         gControlMode = gControlMode == Player::ControlMode::KeyboardAndMouse ?
-            Player::ControlMode::StarFox : Player::ControlMode::KeyboardAndMouse;
+            Player::ControlMode::Controller : Player::ControlMode::KeyboardAndMouse;
         if (player_) player_->SetControlMode(gControlMode);
     };
     context.cycleAntiAliasing = [](int direction) {
@@ -3268,7 +3323,7 @@ void GamePlayScene::CheckCollision()
                 enemies_,
                 GetActiveBoss(),
                 destructibleLevelObjects_,
-                floorObj_.get());
+                floorObj_.get(), !railBranch_.IsLowerRouteActive(railDistance_));
         if (events.scoreAwarded != 0) {
             score_ += events.scoreAwarded;
             scoreHudValueText_->SetText(std::to_string(score_));
@@ -3378,7 +3433,7 @@ void GamePlayScene::RegisterDevelopmentPanel()
 nlohmann::json GamePlayScene::GetDevelopmentControls() const
 {
     static const nlohmann::json kControls = nlohmann::json::array({
-        {{"key", "controlMode"}, {"label", "操作モード"}, {"group", "操作・カメラ"}, {"type", "select"}, {"options", nlohmann::json::array({{{"value", 0.0}, {"label", "WASD＋マウス"}}, {{"value", 1.0}, {"label", "StarFox"}}})}},
+        {{"key", "controlMode"}, {"label", "操作モード"}, {"group", "操作・カメラ"}, {"type", "select"}, {"options", nlohmann::json::array({{{"value", 0.0}, {"label", "WASD＋マウス"}}, {{"value", 1.0}, {"label", "Controller"}}})}},
         {{"key", "mouseSensitivity"}, {"label", "マウス感度"}, {"group", "操作・カメラ"}, {"type", "number"}, {"minimum", 0.5}, {"maximum", 2}, {"step", 0.1}},
         {{"key", "cameraHeightFollowFactor"}, {"label", "高さ追従率"}, {"group", "操作・カメラ"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
         {{"key", "cameraLookUpFactor"}, {"label", "見上げ率"}, {"group", "操作・カメラ"}, {"type", "number"}, {"minimum", 0}, {"maximum", 2}, {"step", 0.01}},
@@ -3736,7 +3791,7 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
         SET_VALUE("cameraLookUpFactor", cameraLookUpFactor_, 0.0f, kCameraLookUpMaximum)
         if (key == "controlMode") {
             if (number >= kApplyDevelopmentActionNumberThreshold) {
-                gControlMode = Player::ControlMode::StarFox;
+                gControlMode = Player::ControlMode::Controller;
             } else {
                 gControlMode = Player::ControlMode::KeyboardAndMouse;
             }
@@ -4135,6 +4190,15 @@ void GamePlayScene::ApplyStageVisualPreset()
 // プレイ専用の画面効果を解除し、次の画面へ設定を残さないようにする。
 void GamePlayScene::ResetGameplayPostEffects()
 {
+    if (hasBranchSurfaceFog_) {
+        if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+            volume->SetFogColor(branchSurfaceFogParameters_.color);
+            volume->SetFogDensity(branchSurfaceFogDensity_);
+            volume->SetHeightFog(branchSurfaceFogParameters_.baseHeight,
+                branchSurfaceFogParameters_.heightDensity, branchSurfaceFogParameters_.heightFalloff);
+        }
+        hasBranchSurfaceFog_ = false;
+    }
     if (playerHeatSteamHandle_ != kInvalidEffectHandle) {
         EffectManager::GetInstance()->StopEffect(playerHeatSteamHandle_);
         playerHeatSteamHandle_ = kInvalidEffectHandle;
@@ -4357,6 +4421,10 @@ void GamePlayScene::SpawnSwarmWave(
          slotIndex += 1) {
         std::unique_ptr<SwarmEnemy> swarmEnemy =
             std::make_unique<SwarmEnemy>();
+        float swarmHeight = kSwarmFallbackHeight;
+        if (stageId_ == "stage01") {
+            swarmHeight = GetRailPosition(railDistance_).y + kSwarmRailHeightOffset;
+        }
         swarmEnemy->Initialize(
             enemyModel_,
             enemyBulletModel_,
@@ -4365,7 +4433,7 @@ void GamePlayScene::SpawnSwarmWave(
             formationType,
             slotIndex,
             travelDirection,
-            stageId_ == "stage01" ? rail_->GetPositionByDistance(railDistance_).y + kSwarmRailHeightOffset : kSwarmFallbackHeight);
+            swarmHeight);
         ConfigureFrozenEnemyAppearance(*swarmEnemy);
         enemies_.push_back(std::move(swarmEnemy));
     }
@@ -4527,7 +4595,7 @@ Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) co
         vanishPointDistance = totalLength;
     }
 
-    Vector3 vanishPointPosition = rail_->GetPositionByDistance(vanishPointDistance);
+    Vector3 vanishPointPosition = GetRailPosition(vanishPointDistance);
     if (stageSettings_.allRangeMode) {
         vanishPointPosition = player_->GetTranslate() +
             player_->GetFlightForward() * kBoostPostEffectVanishPointDistance;
@@ -4767,6 +4835,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
 // 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
 void GamePlayScene::HotReloadLevel()
 {
+    railBranch_.Initialize(stageSettings_.railBranch);
     if (player_ != nullptr) {
         player_->ClearHomingTargets();
     }
@@ -4792,7 +4861,7 @@ void GamePlayScene::HotReloadLevel()
 
     if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
         player_->SetRailMinimumHeight(stageSettings_.floorHeight + kHotReloadLevelPlayerRailMinimumHeightOffset);
-        playerStartPos = rail_->GetPositionByDistance(0.0f);
+        playerStartPos = GetRailPosition(0.0f);
     }
     player_->SetTranslate(playerStartPos);
     player_->SetRotate(playerStartRot);
@@ -4845,5 +4914,70 @@ void GamePlayScene::ConfigureFrozenEnemyAppearance(BaseEnemy& enemy)
             }
         }
         enemy.SetAppearanceTarget(player_->GetTranslate());
+    }
+}
+
+
+// 分岐候補と現在のルートを案内し、水面下のカメラには水中の霧を適用する。
+void GamePlayScene::UpdateRailBranchPresentation(float distance)
+{
+    if (!stageSettings_.railBranch.isEnabled || camera_ == nullptr || player_ == nullptr) { return; }
+    const float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
+    const float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
+    if (railBranchStatusText_) {
+        static const std::string kEmptyStatus;
+        static const std::string kSelectionStatus = "機体を上下に動かしてルートを選択";
+        static const std::string kUnderwaterStatus = "海中ルート ― この先で海上ルートに合流";
+        static const std::string kMergeStatus = "海上ルートに合流しました";
+        const std::string* status = &kEmptyStatus;
+        if (railBranch_.IsPreviewVisible(distance)) {
+            status = &kSelectionStatus;
+        } else if (railBranch_.IsLowerRouteActive(distance)) {
+            status = &kUnderwaterStatus;
+        } else if (railBranch_.IsLowerRouteSelected() &&
+            distance < stageSettings_.railBranch.endDistance + 140.0f) {
+            status = &kMergeStatus;
+        }
+        railBranchStatusText_->SetText(*status);
+        railBranchStatusText_->SetPosition({ screenWidth * 0.5f, screenHeight * 0.17f });
+        railBranchStatusText_->Update();
+    }
+    if (railBranch_.IsPreviewVisible(distance) && railBranchUpperText_ && railBranchLowerText_) {
+        const bool shouldSelectLower = player_->GetRailOffset().y < stageSettings_.railBranch.selectionOffsetY;
+        Vector4 upperColor { 1.0f, 0.9f, 0.5f, 1.0f };
+        Vector4 lowerColor { 0.55f, 0.7f, 0.75f, 0.7f };
+        if (shouldSelectLower) {
+            upperColor = { 0.7f, 0.7f, 0.65f, 0.7f };
+            lowerColor = { 0.3f, 1.0f, 1.0f, 1.0f };
+        }
+        railBranchUpperText_->SetPosition({ screenWidth * 0.5f, screenHeight * 0.3f });
+        railBranchLowerText_->SetPosition({ screenWidth * 0.5f, screenHeight * 0.72f });
+        railBranchUpperText_->SetColor(upperColor);
+        railBranchLowerText_->SetColor(lowerColor);
+        railBranchUpperText_->Update();
+        railBranchLowerText_->Update();
+    }
+    VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer();
+    if (stageId_ != "stage01" || volume == nullptr) { return; }
+    const float cameraHeight = camera_->GetTranslate().y;
+    const float underwaterBlend = std::clamp((stageSettings_.floorHeight - cameraHeight) / 6.0f, 0.0f, 1.0f);
+    if (underwaterBlend > 0.0f && !hasBranchSurfaceFog_) {
+        branchSurfaceFogParameters_ = volume->GetLocalFogParameters();
+        branchSurfaceFogDensity_ = volume->GetParameters().fogDensity;
+        hasBranchSurfaceFog_ = true;
+        Logger::Log("[RailBranch] Underwater camera entered");
+    }
+    if (!hasBranchSurfaceFog_) { return; }
+    const Vector3 underwaterColor { 0.015f, 0.18f, 0.28f };
+    volume->SetFogColor(Lerp(branchSurfaceFogParameters_.color, underwaterColor, underwaterBlend));
+    volume->SetFogDensity(branchSurfaceFogDensity_ + (0.018f - branchSurfaceFogDensity_) * underwaterBlend);
+    const float baseHeight = branchSurfaceFogParameters_.baseHeight +
+        (cameraHeight - branchSurfaceFogParameters_.baseHeight) * underwaterBlend;
+    const float density = branchSurfaceFogParameters_.heightDensity +
+        (0.002f - branchSurfaceFogParameters_.heightDensity) * underwaterBlend;
+    volume->SetHeightFog(baseHeight, density, branchSurfaceFogParameters_.heightFalloff);
+    if (underwaterBlend <= 0.0f) {
+        hasBranchSurfaceFog_ = false;
+        Logger::Log("[RailBranch] Underwater camera exited");
     }
 }

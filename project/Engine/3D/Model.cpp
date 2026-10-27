@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "Model.h"
 #include "ModelCommon.h"
 #include "Object3dRootParameter.h"
@@ -12,6 +13,7 @@
 // ===============================================
 void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath,const std::string& filename)
 {
+    StartupTimingScope startupScope("Resource.ModelInitialize");
     modelCommon_ = modelCommon;
     modelData_ = Object3d::LoadModeFile(directorypath, filename);
     CreateMeshResources();
@@ -19,6 +21,7 @@ void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath
 
 void Model::Initialize(ModelCommon* modelCommon, const ModelData& modelData)
 {
+    StartupTimingScope startupScope("Resource.ModelInitialize");
     modelCommon_ = modelCommon;
     modelData_ = modelData;
     CreateMeshResources();
@@ -26,6 +29,7 @@ void Model::Initialize(ModelCommon* modelCommon, const ModelData& modelData)
 
 void Model::CreateMeshResources()
 {
+    StartupTimingScope startupScope("Resource.ModelMeshUpload");
     Vector3 minimum { FLT_MAX, FLT_MAX, FLT_MAX };
     Vector3 maximum { -FLT_MAX, -FLT_MAX, -FLT_MAX };
     for (const auto& primitive : modelData_.primitives) {

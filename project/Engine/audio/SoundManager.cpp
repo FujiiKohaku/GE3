@@ -1,3 +1,4 @@
+#include "Engine/Debug/Profiler/StartupTiming.h"
 #include "SoundManager.h"
 #include "Engine/Logger/Logger.h"
 #include <algorithm>
@@ -53,7 +54,10 @@ void SoundManager::InitializeAudio()
 bool SoundManager::EnsureInitialized()
 {
     if (isInitialized_) { return true; }
-    if (initFuture_.valid()) { initFuture_.wait(); }
+    {
+        StartupTimingScope audioWaitScope("Audio.InitializationWait");
+        if (initFuture_.valid()) { initFuture_.wait(); }
+    }
     return isInitialized_;
 }
 
@@ -89,6 +93,7 @@ struct FormatChunk {
 
 SoundData SoundManager::SoundLoadFile(const std::string& filename)
 {
+    StartupTimingScope audioDecodeScope("Audio.FileDecode");
     if (!EnsureInitialized()) { return SoundData {}; }
     HRESULT result;
     SoundData soundData {};

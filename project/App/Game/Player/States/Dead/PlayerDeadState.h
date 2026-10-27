@@ -10,6 +10,8 @@ public:
     void Update(Player& player);
     void UpdateAnimation(EulerTransform& transform, float deltaTimeSeconds);
     bool IsExplosionReady() const { return isExplosionReady_; }
+    // 落下中は機体を表示し、爆発へ進める状態になったら非表示にする。
+    bool ShouldDraw() const { return !isExplosionReady_; }
 
 private:
     float deathTimerSeconds_ = 0.0f;

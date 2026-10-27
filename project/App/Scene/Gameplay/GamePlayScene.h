@@ -39,6 +39,7 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Stage/StageCatalog.h"
+#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include "App/Game/Stage/NormalEnemyLevelTable.h"
 #include "App/Game/Tutorial/TutorialCommPanel.h"
 #include "App/Game/Tutorial/TutorialController.h"
@@ -207,7 +208,9 @@ private:
     void DrawCollisionDebug();
 #endif
     // 少し先のレール位置から進行方向を求め、向きが求められない場合の代替方向も用意する。
+    Vector3 GetRailPosition(float distance) const;
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
+    void UpdateRailBranchPresentation(float distance);
     // 進行方向をもとに、レール上の左右・上下を表す直交方向を作る。
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
     // エンカウンターが所有しているボスを参照する。シーン自身はボスを所有しない。
@@ -270,6 +273,13 @@ private:
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
     std::unique_ptr<Rail> rail_;
+    RailBranchRoute railBranch_;
+    std::unique_ptr<Text> railBranchUpperText_;
+    std::unique_ptr<Text> railBranchLowerText_;
+    std::unique_ptr<Text> railBranchStatusText_;
+    LocalFogParameters branchSurfaceFogParameters_;
+    float branchSurfaceFogDensity_ = 0.003f;
+    bool hasBranchSurfaceFog_ = false;
     float railDistance_ = 0.0f;
     float railSpeed_ = GamePlaySceneTuning::kDefaultsRailSpeedDefault;
     float railDirectionSampleDistance_ = GamePlaySceneTuning::kDefaultsRailDirectionSampleDistanceDefault;
