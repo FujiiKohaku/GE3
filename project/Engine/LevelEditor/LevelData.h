@@ -5,6 +5,13 @@
 
 struct LevelData {
 
+    struct LoopEnemySpawnData {
+        int count = 1;
+        bool isEnteringFromLeft = false;
+        float spawnIntervalSeconds = 0.6f;
+        float activationDistance = 120.0f;
+    };
+
     struct ObjectData {
 
         std::string name;
@@ -17,6 +24,7 @@ struct LevelData {
 
         bool disabled = false;
         int enemyLevel = 2;
+        LoopEnemySpawnData loopEnemy;
         
         struct ScoreItemData {
             bool exists = false;
@@ -96,6 +104,7 @@ struct LevelData {
     struct EnemySpawnData {
         std::string fileName;
         int enemyLevel = 2;
+        LoopEnemySpawnData loopEnemy;
         Vector3 translation;
         Vector3 rotation;
     };

@@ -7,6 +7,7 @@
 #include "Engine/3D/OceanInteraction.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
+#include "App/Game/Enemy/LoopEnemy/LoopEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
 #include "App/Game/Enemy/Bullet/Types/PaintBullet.h"
@@ -4502,13 +4503,31 @@ void GamePlayScene::SpawnSwarmWave(
     }
 }
 
+// 一つの配置点から、同じ軌道を時間差で飛ぶ編隊を生成する。
+void GamePlayScene::SpawnLoopEnemies(const Vector3& position, const Vector3& rotation,
+    const LevelData::LoopEnemySpawnData& settings)
+{
+    Model* boxModel = ModelManager::GetInstance()->CreateCube("resources/Textures/white.png");
+    for (int enemyIndex = 0; enemyIndex < settings.count; ++enemyIndex) {
+        std::unique_ptr<LoopEnemy> enemy = std::make_unique<LoopEnemy>();
+        enemy->Initialize(boxModel, enemyBulletModel_, player_.get());
+        enemy->SetPosition(position);
+        enemy->SetRotate(rotation);
+        enemy->ConfigureFlight(settings.isEnteringFromLeft,
+            settings.spawnIntervalSeconds * static_cast<float>(enemyIndex), settings.activationDistance);
+        enemies_.push_back(std::move(enemy));
+    }
+}
+
 // ステージの配置情報を、敵や編隊の出現条件へ変換する。
 void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
 {
     normalEnemyLevels_.Load();
     // レベルデータから敵を生成、配置
     for (const auto& enemyData : levelData.enemies) {
-        if (enemyData.fileName == "MoveEnemy") {
+        if (enemyData.fileName == "LoopEnemy") {
+            SpawnLoopEnemies(enemyData.translation, enemyData.rotation, enemyData.loopEnemy);
+        } else if (enemyData.fileName == "MoveEnemy") {
             std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
             enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
             enemy->SetPosition(enemyData.translation);
@@ -4844,7 +4863,9 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
             levelObjects_.push_back(std::move(levelObject));
         }
         else if (objData.type == "EnemySpawn") {
-            if (objData.fileName == "MoveEnemy") {
+            if (objData.fileName == "LoopEnemy") {
+                SpawnLoopEnemies(objData.translation, objData.rotation, objData.loopEnemy);
+            } else if (objData.fileName == "MoveEnemy") {
                 std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
                 enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
                 enemy->SetPosition(objData.translation);

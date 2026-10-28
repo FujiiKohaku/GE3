@@ -1,5 +1,6 @@
 {
   "scene": [
+    {"name": "Enemy_Loop_Trial", "type": "EnemySpawn", "file_name": "LoopEnemy", "loopEnemy": {"count": 3, "entrySide": "right", "spawnIntervalSeconds": 0.6, "activationDistance": 120.0}, "transform": {"translation": [0.0, 180.0, -22.0], "rotation": [0.0, 0.0, 0.0]}},
     {"name": "LowerRoute_Distant_Temple", "type": "MESH", "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_temple.obj", "transform": {"translation": [0, 2580, -117.60759], "rotation": [0.0, 0.0, 3.141593], "scale": [1.1, 0.75, 0.53]}},
     {"name": "LowerRoute_Distant_Cliff_Left01", "type": "MESH", "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj", "transform": {"translation": [-210, 1800, -111.66662], "rotation": [0.0, 0.0, 0.0], "scale": [1.3, 2.65, 0.4]}},
     {"name": "LowerRoute_Distant_Cliff_Left02", "type": "MESH", "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj", "transform": {"translation": [-210, 2600, -112.16697], "rotation": [0.0, 0.0, 0.0], "scale": [1.3, 2.65, 0.4]}},

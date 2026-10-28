@@ -99,7 +99,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos;
     const bool isVerifyingFullscreen =
         std::wstring(GetCommandLineW()).find(L"--verify-fullscreen") != std::wstring::npos;
-    const bool verifyOceanTransition = isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen ||
+    const bool isVerifyingLoopEnemy =
+        std::wstring(GetCommandLineW()).find(L"--verify-loop-enemy") != std::wstring::npos;
+    int verificationFrameLimit = 300;
+    if (isVerifyingLoopEnemy) { verificationFrameLimit = 900; }
+    const bool verifyOceanTransition = isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
         std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
     int oceanVerificationFrame = 0;
 
@@ -161,7 +165,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 ScreenshotManager::GetInstance()->RequestCapture(true, false);
                 Logger::Log("[UnderwaterSmoke] Capture underwater lighting");
             }
-            if (oceanVerificationFrame == 300) {
+            if (isVerifyingLoopEnemy && (oceanVerificationFrame == 320 || oceanVerificationFrame == 440 || oceanVerificationFrame == 560)) {
+                ScreenshotManager::GetInstance()->RequestCapture(true, false);
+            }
+            if (oceanVerificationFrame == verificationFrameLimit) {
                 Logger::Log("[OceanSmoke] PASS: title -> stage01 initialization after loading and rendered gameplay");
                 break;
             }

@@ -192,6 +192,7 @@ private:
 
     // 配置データの種類に応じてモデル・障害物・トリガーなどを生成する。
     void CreateLevelObjects(const LevelData& levelData);
+    void SpawnLoopEnemies(const Vector3& position, const Vector3& rotation, const LevelData::LoopEnemySpawnData& settings);
     // レベルから生成したオブジェクトと、それに付随する判定情報を破棄する。
     void ClearLevelObjects();
     // 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。

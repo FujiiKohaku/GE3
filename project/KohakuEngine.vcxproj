@@ -318,6 +318,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\ArmoredEnemy\ArmoredEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Wait\FearWormWaitState.cpp" />
@@ -487,6 +488,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\ArmoredEnemy\ArmoredEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemyPath.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
     <ClInclude Include="$(projectRootPath)Tests\FearWormStateTests.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\State\FearWormState.h" />

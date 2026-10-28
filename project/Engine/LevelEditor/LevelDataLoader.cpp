@@ -2,9 +2,50 @@
 
 #include <cassert>
 #include <fstream>
+#include <cmath>
 #include "Engine/Logger/Logger.h"
 
 namespace {
+LevelData::LoopEnemySpawnData ReadLoopEnemySettings(const nlohmann::json& objectJson)
+{
+    LevelData::LoopEnemySpawnData settings;
+    if (!objectJson.contains("loopEnemy")) { return settings; }
+    const nlohmann::json& settingsJson = objectJson["loopEnemy"];
+    if (!settingsJson.is_object()) {
+        Logger::Warning("Invalid loopEnemy settings; using defaults");
+        return settings;
+    }
+    if (settingsJson.contains("count")) {
+        const nlohmann::json& countJson = settingsJson["count"];
+        if (countJson.is_number_integer() && countJson.get<double>() >= 1.0 && countJson.get<double>() <= 16.0) {
+            settings.count = countJson.get<int>();
+        } else { Logger::Warning("Invalid LoopEnemy count; expected integer 1..16, using 1"); }
+    }
+    if (settingsJson.contains("entrySide")) {
+        const nlohmann::json& sideJson = settingsJson["entrySide"];
+        if (sideJson.is_string() && sideJson.get<std::string>() == "left") {
+            settings.isEnteringFromLeft = true;
+        } else if (!sideJson.is_string() || sideJson.get<std::string>() != "right") {
+            Logger::Warning("Invalid LoopEnemy entrySide; expected left or right, using right");
+        }
+    }
+    if (settingsJson.contains("spawnIntervalSeconds")) {
+        const nlohmann::json& intervalJson = settingsJson["spawnIntervalSeconds"];
+        if (intervalJson.is_number() && std::isfinite(intervalJson.get<double>()) &&
+            intervalJson.get<double>() >= 0.0 && intervalJson.get<double>() <= 10.0) {
+            settings.spawnIntervalSeconds = intervalJson.get<float>();
+        } else { Logger::Warning("Invalid LoopEnemy spawnIntervalSeconds; expected 0..10, using 0.6"); }
+    }
+    if (settingsJson.contains("activationDistance")) {
+        const nlohmann::json& distanceJson = settingsJson["activationDistance"];
+        if (distanceJson.is_number() && std::isfinite(distanceJson.get<double>()) &&
+            distanceJson.get<double>() >= 40.0 && distanceJson.get<double>() <= 150.0) {
+            settings.activationDistance = distanceJson.get<float>();
+        } else { Logger::Warning("Invalid LoopEnemy activationDistance; expected 40..150, using 120"); }
+    }
+    return settings;
+}
+
 int ReadEnemyLevel(const nlohmann::json& objectJson)
 {
     constexpr int kDefaultEnemyLevel = 2;
@@ -63,8 +104,12 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
 
     std::string typeStr = objectJson["type"].get<std::string>();
     int enemyLevel = 2;
+    LevelData::LoopEnemySpawnData loopEnemySettings;
     if (typeStr == "EnemySpawn") {
         enemyLevel = ReadEnemyLevel(objectJson);
+        if (objectJson.value("file_name", std::string()) == "LoopEnemy") {
+            loopEnemySettings = ReadLoopEnemySettings(objectJson);
+        }
     }
     if (typeStr == "PlayerSpawn") {
         LevelData::PlayerSpawnData spawnData {};
@@ -92,6 +137,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     else if (typeStr == "EnemySpawn") {
         LevelData::EnemySpawnData spawnData {};
         spawnData.enemyLevel = enemyLevel;
+        spawnData.loopEnemy = loopEnemySettings;
 
         if (objectJson.contains("file_name")) {
             spawnData.fileName = objectJson["file_name"].get<std::string>();
@@ -119,6 +165,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
 
     LevelData::ObjectData objectData;
     objectData.enemyLevel = enemyLevel;
+    objectData.loopEnemy = loopEnemySettings;
 
     objectData.type = objectJson["type"].get<std::string>();
 

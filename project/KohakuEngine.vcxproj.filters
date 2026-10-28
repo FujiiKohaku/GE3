@@ -1303,4 +1303,16 @@
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Enemy\LoopEnemy" />
+    <ClCompile Include="App\Game\Enemy\LoopEnemy\LoopEnemy.cpp">
+      <Filter>App\Game\Enemy\LoopEnemy</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Enemy\LoopEnemy\LoopEnemy.h">
+      <Filter>App\Game\Enemy\LoopEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\LoopEnemy\LoopEnemyPath.h">
+      <Filter>App\Game\Enemy\LoopEnemy</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
