@@ -233,6 +233,10 @@ bool VolumetricLightRenderer::SetFogColor(const Vector3& color) {
     localFog_.color = color;
     return true;
 }
+void VolumetricLightRenderer::SetUnderwaterAppearance(float surfaceHeight, float blend, float elapsedSeconds) {
+    if (!std::isfinite(surfaceHeight) || !std::isfinite(blend) || !std::isfinite(elapsedSeconds)) { return; }
+    underwaterSettings_ = { surfaceHeight, std::clamp(blend, 0.0f, 1.0f), elapsedSeconds, 0.0f };
+}
 void VolumetricLightRenderer::SetLightDirection(const Vector3& direction) {
     float length = direction.x * direction.x + direction.y * direction.y + direction.z * direction.z;
     if (!std::isfinite(length) || length < 0.000001f) { return; }
@@ -349,6 +353,7 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
     frameConstants_.inverseViewProjection = MatrixMath::Multiply(inverseProjection, relativeWorld);
     if (!FiniteMatrix(frameConstants_.inverseViewProjection)) { ResetHistory(); return; }
     frameConstants_.cameraAndDistance = { world.m[3][0], world.m[3][1], world.m[3][2], parameters_.maxDistance };
+    frameConstants_.underwaterSettings = underwaterSettings_;
     frameConstants_.lightDirectionAndDensity = { direction.x, direction.y, direction.z, parameters_.fogDensity };
     frameConstants_.fogColorAndEnabled = { localFog_.color.x, localFog_.color.y, localFog_.color.z, 0.0f };
     if (localFog_.isEnabled) { frameConstants_.fogColorAndEnabled.w = 1.0f; }
@@ -398,8 +403,10 @@ void VolumetricLightRenderer::CreateResources() {
     allocationBytes_ += device->GetResourceAllocationInfo(0, 1, &desc).SizeInBytes;
     volumeTexture_->SetName(L"VolumetricLight::HalfResolutionScattering");
     device->CreateRenderTargetView(volumeTexture_.Get(), nullptr, rtvHeap_->GetCPUDescriptorHandleForHeapStart());
-    if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Volumetric light SRV heap full"); }
-    if (srvIndex_ == UINT_MAX) { srvIndex_ = SrvManager::GetInstance()->Allocate(); }
+    if (srvIndex_ == UINT_MAX) {
+        if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Volumetric light SRV heap full"); }
+        srvIndex_ = SrvManager::GetInstance()->Allocate();
+    }
     SrvManager::GetInstance()->CreateSRVforTexture2D(srvIndex_, volumeTexture_.Get(), desc.Format, 1);
     volumeSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(srvIndex_);
     desc.Format = DXGI_FORMAT_R16_FLOAT;
@@ -411,12 +418,16 @@ void VolumetricLightRenderer::CreateResources() {
     auto transmittanceRtv = rtvHeap_->GetCPUDescriptorHandleForHeapStart();
     transmittanceRtv.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
     device->CreateRenderTargetView(transmittanceTexture_.Get(), nullptr, transmittanceRtv);
-    if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Fog transmittance SRV heap full"); }
-    if (transmittanceSrvIndex_ == UINT_MAX) { transmittanceSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
+    if (transmittanceSrvIndex_ == UINT_MAX) {
+        if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Fog transmittance SRV heap full"); }
+        transmittanceSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    }
     SrvManager::GetInstance()->CreateSRVforTexture2D(transmittanceSrvIndex_, transmittanceTexture_.Get(), desc.Format, 1);
     transmittanceSrv_ = SrvManager::GetInstance()->GetGPUDescriptorHandle(transmittanceSrvIndex_);
-    if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Local fog shadow SRV heap full"); }
-    if (localShadowFallbackSrvIndex_ == UINT_MAX) { localShadowFallbackSrvIndex_ = SrvManager::GetInstance()->Allocate(); }
+    if (localShadowFallbackSrvIndex_ == UINT_MAX) {
+        if (!SrvManager::GetInstance()->CanAllocate()) { throw std::runtime_error("Local fog shadow SRV heap full"); }
+        localShadowFallbackSrvIndex_ = SrvManager::GetInstance()->Allocate();
+    }
     D3D12_SHADER_RESOURCE_VIEW_DESC nullShadowDesc {};
     nullShadowDesc.Format = DXGI_FORMAT_R32_FLOAT;
     nullShadowDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
@@ -487,7 +498,14 @@ void VolumetricLightRenderer::CreatePipelines() {
 void VolumetricLightRenderer::CreateHistoryResources() {
     if (historyTextures_[0]) { return; }
     auto* device = dxCommon_->GetDevice(); auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    if (!SrvManager::GetInstance()->CanAllocate(4)) { throw std::runtime_error("Volumetric history descriptors exhausted"); }
+    uint32_t requiredDescriptorCount = 0;
+    for (uint32_t index = 0; index < 2; ++index) {
+        if (historySrvIndices_[index] == UINT_MAX) { ++requiredDescriptorCount; }
+        if (historyTransmittanceSrvIndices_[index] == UINT_MAX) { ++requiredDescriptorCount; }
+    }
+    if (requiredDescriptorCount > 0 && !SrvManager::GetInstance()->CanAllocate(requiredDescriptorCount)) {
+        throw std::runtime_error("Volumetric history descriptors exhausted");
+    }
     for (uint32_t index = 0; index < 2; ++index) {
         auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, SceneRenderResolution::GetWidth() / 2,
             SceneRenderResolution::GetHeight() / 2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
@@ -580,7 +598,8 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     uint64_t lightingHash = 14695981039346656037ull;
     const Vector4 kValues[] = {frameConstants_.lightDirectionAndDensity, frameConstants_.lightColorAndIntensity,
         frameConstants_.settings, frameConstants_.fogColorAndEnabled, frameConstants_.heightAndVolumeCount, frameConstants_.spotCountAndBias,
-        {localFog_.noiseScale, localFog_.noiseStrength, parameters_.scatteringAlbedo, parameters_.maxDistance}};
+        {localFog_.noiseScale, localFog_.noiseStrength, parameters_.scatteringAlbedo, parameters_.maxDistance},
+        {underwaterSettings_.x, underwaterSettings_.y, 0.0f, 0.0f}};
     lightingHash = HashVolumeBytes(lightingHash, kValues, sizeof(kValues));
     lightingHash = HashVolumeBytes(lightingHash, &frameConstants_.lightViewProjection, sizeof(Matrix4x4));
     for (const auto& volume : fogVolumes_) {

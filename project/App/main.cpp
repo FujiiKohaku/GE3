@@ -5,6 +5,7 @@
 #include "App/Scene/Application/Game.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Scene/Loading/LoadingScene.h"
+#include "Engine/Screenshot/ScreenshotManager.h"
 
 #include <chrono>
 #ifdef _DEBUG
@@ -94,7 +95,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     }
 
     bool hasLoggedStartupTime = false;
-    const bool verifyOceanTransition = std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
+    const bool isVerifyingUnderwaterAtmosphere =
+        std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos;
+    const bool isVerifyingFullscreen =
+        std::wstring(GetCommandLineW()).find(L"--verify-fullscreen") != std::wstring::npos;
+    const bool verifyOceanTransition = isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen ||
+        std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
     int oceanVerificationFrame = 0;
 
     // ウィンドウの終了・ゲームからの終了要求のどちらでもループを抜ける。
@@ -126,10 +132,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 game.Update();
                 game.Draw();
             }
+            if (isVerifyingFullscreen && (oceanVerificationFrame == 220 || oceanVerificationFrame == 245)) {
+                const uint32_t descriptorCount = SrvManager::GetInstance()->GetAllocatedCount();
+                Logger::Log("[FullscreenSmoke] Toggle display size");
+                Logger::Flush();
+                if (!SceneManager::GetInstance()->GetRenderer()->ToggleFullscreen()) {
+                    throw std::runtime_error("Fullscreen verification display switch failed");
+                }
+                if (SrvManager::GetInstance()->GetAllocatedCount() != descriptorCount) {
+                    throw std::runtime_error("Fullscreen verification changed descriptor allocation count");
+                }
+                Logger::Log("[FullscreenSmoke] PASS: descriptor count unchanged at " + std::to_string(descriptorCount));
+            }
         } catch (const std::exception& error) {
-            if (!verifyOceanTransition) throw;
-            Logger::Error(std::string("[OceanSmoke] FAIL: ") + error.what());
+            Logger::Error(std::string("Frame failed: ") + error.what());
             Logger::Flush();
+            if (!verifyOceanTransition) throw;
             return 1;
         }
         if (verifyOceanTransition) {
@@ -138,6 +156,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             if (oceanVerificationFrame == 60) {
                 Logger::Log("[OceanSmoke] Request title -> stage01 transition");
                 SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::make_unique<GamePlayScene>("stage01")));
+            }
+            if (isVerifyingUnderwaterAtmosphere && oceanVerificationFrame == 270) {
+                ScreenshotManager::GetInstance()->RequestCapture(true, false);
+                Logger::Log("[UnderwaterSmoke] Capture underwater lighting");
             }
             if (oceanVerificationFrame == 300) {
                 Logger::Log("[OceanSmoke] PASS: title -> stage01 initialization after loading and rendered gameplay");

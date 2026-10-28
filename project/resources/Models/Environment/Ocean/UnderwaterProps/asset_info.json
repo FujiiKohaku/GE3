@@ -1,0 +1,82 @@
+[
+  {
+    "id": "01_broken_arch",
+    "label": "崩れた石のアーチ",
+    "triangles": 1868,
+    "dimensionsBlender": [
+      9.774053573608398,
+      7.633885383605957,
+      7.863276481628418
+    ]
+  },
+  {
+    "id": "02_crystal_cluster",
+    "label": "発光する結晶群",
+    "triangles": 910,
+    "dimensionsBlender": [
+      8.502299308776855,
+      8.158066749572754,
+      7.424161911010742
+    ]
+  },
+  {
+    "id": "03_buried_colossus",
+    "label": "半分埋まった巨像",
+    "triangles": 1584,
+    "dimensionsBlender": [
+      10.267999649047852,
+      9.950878143310547,
+      10.187216758728027
+    ]
+  },
+  {
+    "id": "04_sunken_rotor",
+    "label": "沈んだ遺跡の回転装置",
+    "triangles": 1980,
+    "dimensionsBlender": [
+      7.5420684814453125,
+      7.697052478790283,
+      7.160733222961426
+    ]
+  },
+  {
+    "id": "05_giant_ribcage",
+    "label": "巨大な肋骨・骨格",
+    "triangles": 2916,
+    "dimensionsBlender": [
+      8.942697525024414,
+      10.256819725036621,
+      5.855307102203369
+    ]
+  },
+  {
+    "id": "06_hydrothermal_vents",
+    "label": "熱水噴出口",
+    "triangles": 1220,
+    "dimensionsBlender": [
+      7.254778861999512,
+      6.1254072189331055,
+      9.487201690673828
+    ]
+  },
+  {
+    "id": "07_tall_kelp",
+    "label": "背の高い海藻群",
+    "triangles": 1020,
+    "dimensionsBlender": [
+      6.945501804351807,
+      3.856809139251709,
+      6.520649433135986
+    ]
+  },
+  {
+    "id": "08_collapsed_pillars",
+    "label": "崩落した石柱群",
+    "triangles": 1556,
+    "dimensionsBlender": [
+      8.406091690063477,
+      7.816145896911621,
+      7.814028739929199
+    ]
+  }
+]

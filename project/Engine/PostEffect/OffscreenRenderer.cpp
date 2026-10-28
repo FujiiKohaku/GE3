@@ -230,7 +230,9 @@ void OffscreenRenderer::PostDraw()
 }
 void OffscreenRenderer::CreateLocalLightTarget() {
     auto* device = DirectXCommon::GetInstance()->GetDevice(); auto* srvManager = SrvManager::GetInstance();
-    if (!srvManager->CanAllocate()) { throw std::runtime_error("RT local capture descriptors exhausted"); }
+    if (localLightSrvIndex_ == UINT_MAX && !srvManager->CanAllocate()) {
+        throw std::runtime_error("RT local capture descriptors exhausted");
+    }
     auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     auto description = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight(),
         1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
@@ -251,7 +253,13 @@ void OffscreenRenderer::CreateReflectionTargets() {
     reflectionAllocationBytes_ = 0;
     auto* device = DirectXCommon::GetInstance()->GetDevice();
     auto* srvManager = SrvManager::GetInstance();
-    if (!srvManager->CanAllocate(2)) { throw std::runtime_error("Reflection capture descriptors exhausted"); }
+    uint32_t requiredDescriptorCount = 0;
+    for (uint32_t index = 0; index < 2; ++index) {
+        if (reflectionSrvIndices_[index] == UINT_MAX) { ++requiredDescriptorCount; }
+    }
+    if (requiredDescriptorCount > 0 && !srvManager->CanAllocate(requiredDescriptorCount)) {
+        throw std::runtime_error("Reflection capture descriptors exhausted");
+    }
     auto heap = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     const DXGI_FORMAT kFormats[] = {DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT};
     auto rtvHeap = DirectXCommon::GetInstance()->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
@@ -282,7 +290,9 @@ D3D12_GPU_DESCRIPTOR_HANDLE OffscreenRenderer::GetReflectionEnvironmentSrv() con
 void OffscreenRenderer::CreateDirectionalLightTarget() {
     auto* device = DirectXCommon::GetInstance()->GetDevice();
     auto* srvManager = SrvManager::GetInstance();
-    if (!srvManager->CanAllocate()) { throw std::runtime_error("RT directional capture descriptors exhausted"); }
+    if (directionalLightSrvIndex_ == UINT_MAX && !srvManager->CanAllocate()) {
+        throw std::runtime_error("RT directional capture descriptors exhausted");
+    }
     D3D12_DESCRIPTOR_HEAP_DESC heapDescription = {};
     heapDescription.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     heapDescription.NumDescriptors = 1;

@@ -89,6 +89,9 @@ public:
     explicit GamePlayScene(const std::string& stageId = "stage01")
         : stageId_(stageId) {}
 
+    // 分岐案内の文字をロード画面で準備する。シーン初期化前に呼び出せる。
+    void PrepareLoadingFont() const;
+
     // ステージ設定を読み、機体・敵・ボス・背景・UIと演出をプレイ開始状態へ揃える。
     void Initialize() override;
 
@@ -211,6 +214,7 @@ private:
     Vector3 GetRailPosition(float distance) const;
     Vector3 CalculateRailForward(float distance, const Vector3& railPosition) const;
     void UpdateRailBranchPresentation(float distance);
+    void ApplyUnderwaterLighting();
     // 進行方向をもとに、レール上の左右・上下を表す直交方向を作る。
     void CalculateRailBasis(const Vector3& forward, Vector3& right, Vector3& up) const;
     // エンカウンターが所有しているボスを参照する。シーン自身はボスを所有しない。
@@ -280,7 +284,11 @@ private:
     std::unique_ptr<Text> railBranchLowerText_;
     std::unique_ptr<Text> railBranchStatusText_;
     LocalFogParameters branchSurfaceFogParameters_;
+    Vector4 branchSurfaceSceneFogColor_ {};
     float branchSurfaceFogDensity_ = 0.003f;
+    VolumetricLightParameters branchSurfaceVolumeParameters_;
+    float underwaterBlend_ = 0.0f;
+    float underwaterElapsedSeconds_ = 0.0f;
     bool hasBranchSurfaceFog_ = false;
     float railDistance_ = 0.0f;
     float railSpeed_ = GamePlaySceneTuning::kDefaultsRailSpeedDefault;

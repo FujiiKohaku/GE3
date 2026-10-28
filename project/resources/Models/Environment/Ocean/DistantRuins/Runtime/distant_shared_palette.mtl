@@ -1,0 +1,8 @@
+newmtl DistantSharedPalette
+Kd 1 1 1
+Ka 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd ../../UnderwaterProps/Runtime/underwater_palette.png

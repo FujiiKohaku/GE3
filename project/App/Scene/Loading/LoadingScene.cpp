@@ -72,13 +72,19 @@ void LoadingScene::Update()
 {
     if (!hasDrawnFirstFrame_) {
         hasDrawnFirstFrame_ = true;
-    } else if (simulationBoot_ && !hasPreparedTutorialFont_) {
-        FontManager* fontManager = FontManager::GetInstance();
-        const FontHandle fontHandle = fontManager->LoadFont(
-            "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
-        fontManager->EnsureGlyphs(fontHandle, TutorialController::GetGlyphText());
+    } else if (!hasPreparedSceneFont_) {
+        if (simulationBoot_) {
+            FontManager* fontManager = FontManager::GetInstance();
+            const FontHandle fontHandle = fontManager->LoadFont(
+                "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+            fontManager->EnsureGlyphs(fontHandle, TutorialController::GetGlyphText());
+        }
+        const GamePlayScene* gamePlayScene = dynamic_cast<const GamePlayScene*>(nextScene_.get());
+        if (gamePlayScene != nullptr) {
+            gamePlayScene->PrepareLoadingFont();
+        }
         // このフレームの描画前にアトラス更新・転送を終えてから、次の準備へ進む。
-        hasPreparedTutorialFont_ = true;
+        hasPreparedSceneFont_ = true;
     } else if (!gameResourcesInitialized_) {
         EffectManager* effectManager = EffectManager::GetInstance();
         if (!effectManager->IsInitialized()) {

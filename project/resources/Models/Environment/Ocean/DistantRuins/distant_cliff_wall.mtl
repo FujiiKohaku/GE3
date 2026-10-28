@@ -1,0 +1,32 @@
+# Blender 4.4.1 MTL File: 'underwater_distant_ruins.blend'
+# www.blender.org
+
+newmtl AncientTealSignal
+Ns 16.900000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.140000 2.240000 1.820000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd ../../../../../../../../AncientTealSignal.png
+
+newmtl DistantBasalt
+Ns 16.900000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd ../../../../../../../../DistantBasalt.png
+
+newmtl DistantCliffStone
+Ns 16.900000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd ../../../../../../../../DistantCliffStone.png

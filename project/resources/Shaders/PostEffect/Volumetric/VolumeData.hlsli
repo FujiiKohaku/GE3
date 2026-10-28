@@ -32,6 +32,7 @@ cbuffer VolumeConstants : register(VOLUME_CONSTANT_REGISTER) {
     row_major float4x4 previousRelativeViewProjection;
     float4 previousCameraDelta;
     float4 temporalControls;
+    float4 underwaterSettings;
 };
 
 #endif

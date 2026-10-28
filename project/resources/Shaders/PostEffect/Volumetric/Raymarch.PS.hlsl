@@ -38,7 +38,9 @@ RaymarchOutput main(VertexShaderOutput input) {
         if (density <= 0.0f) { continue; }
         float segmentTransmittance = exp(-density * stepLength);
         if (settings.w != 0.0f && lightColorAndIntensity.w > 0.0f) {
-            scattering += ShadowVisibility(cameraAndDistance.xyz + relativePosition) * transmittance * (1.0f - segmentTransmittance);
+            float3 worldPosition = cameraAndDistance.xyz + relativePosition;
+            scattering += ShadowVisibility(worldPosition) * UnderwaterLightTransmission(worldPosition) *
+                transmittance * (1.0f - segmentTransmittance);
         }
         if (spotCountAndBias.x > 0.0f) {
             spotScattering += SpotScattering(relativePosition, ray, g) * transmittance * (1.0f - segmentTransmittance);

@@ -93,6 +93,7 @@ public:
     bool SetHeightFog(float baseHeight, float density, float heightFalloff);
     bool SetNoiseParameters(float scale, float strength, const Vector3& velocity);
     bool SetFogColor(const Vector3& color);
+    void SetUnderwaterAppearance(float surfaceHeight, float blend, float elapsedSeconds);
     // Must be supplied after shadow rendering, for every frame.
     void SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows,
         const LocalShadowRenderer* localShadows = nullptr, uint64_t sceneRevision = 0);
@@ -136,6 +137,7 @@ private:
         Matrix4x4 previousRelativeViewProjection {};
         Vector4 previousCameraDelta {};
         Vector4 temporalControls {}; // history valid, history weight, jitter frame, scattering albedo
+        Vector4 underwaterSettings {}; // surface height, blend, elapsed seconds, reserved
     };
     void CreateResources();
     void CreatePipelines();
@@ -147,6 +149,7 @@ private:
     DirectXCommon* dxCommon_ = nullptr;
     VolumetricLightParameters parameters_;
     LocalFogParameters localFog_;
+    Vector4 underwaterSettings_ {};
     std::array<FogVolumeSettings, kMaxFogVolumes> fogVolumes_ {};
     Vector3 noiseOffset_ {};
     Constants frameConstants_ {};

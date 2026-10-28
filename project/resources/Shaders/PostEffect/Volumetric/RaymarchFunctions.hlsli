@@ -40,6 +40,18 @@ float3 SpotScattering(float3 relativePosition, float3 ray, float anisotropy) {
     }
     return radiance;
 }
+// Broad moving windows at the water surface create shafts aligned with the sun.
+float UnderwaterLightTransmission(float3 worldPosition) {
+    if (underwaterSettings.y <= 0.0f) { return 1.0f; }
+    float waterDepth = max(underwaterSettings.x - worldPosition.y, 0.0f);
+    float2 surfacePosition = worldPosition.xz - lightDirectionAndDensity.xz *
+        waterDepth / max(-lightDirectionAndDensity.y, 0.2f);
+    float elapsedSeconds = underwaterSettings.z;
+    float window = sin(surfacePosition.x * 0.055f + surfacePosition.y * 0.031f + elapsedSeconds * 0.08f);
+    window += sin(surfacePosition.y * 0.064f - surfacePosition.x * 0.023f - elapsedSeconds * 0.06f) * 0.55f;
+    float shafts = 0.18f + smoothstep(-0.25f, 0.95f, window) * 1.25f;
+    return lerp(1.0f, shafts, underwaterSettings.y);
+}
 float ShadowVisibility(float3 worldPosition) {
     float4 clip = mul(float4(worldPosition, 1.0f), lightViewProjection);
     if (clip.w <= 0.000001f) { return 0.0f; }

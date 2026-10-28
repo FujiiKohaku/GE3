@@ -1,0 +1,16 @@
+{
+  "checkedProps": 53,
+  "sampleCount": 9015,
+  "checkedHorizontalRange": [
+    -15,
+    15
+  ],
+  "checkedVerticalRangeRelativeRail": [
+    -12,
+    12
+  ],
+  "requiredSurfaceClearance": 2.0,
+  "blockedSamples": [],
+  "previewUsesStageJsonAndRuntimeObj": true,
+  "note": "Blender preview lighting; not an in-game capture. Sparse surface sampling is not full collision verification."
+}

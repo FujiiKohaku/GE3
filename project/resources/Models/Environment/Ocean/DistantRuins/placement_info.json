@@ -1,0 +1,285 @@
+{
+  "sceneObjects": 11,
+  "trianglesAllPlacements": 27520,
+  "newTextureDescriptors": 0,
+  "sharedPalette": "resources\\Models\\Environment\\Ocean\\UnderwaterProps\\Runtime\\underwater_palette.png",
+  "models": {
+    "distant_temple": {
+      "triangles": 5680,
+      "removedWallTriangles": 176,
+      "sharedPaletteIndices": {
+        "DistantBasalt": 1,
+        "DistantBlueStone": 0,
+        "PatinatedBands": 0,
+        "AncientTealSignal": 5,
+        "UnlitRecess": 10
+      }
+    },
+    "distant_cliff_wall": {
+      "triangles": 1204,
+      "removedWallTriangles": 0,
+      "sharedPaletteIndices": {
+        "DistantCliffStone": 1,
+        "DistantBasalt": 1,
+        "AncientTealSignal": 5
+      }
+    },
+    "distant_tower_cluster": {
+      "triangles": 3654,
+      "removedWallTriangles": 0,
+      "sharedPaletteIndices": {
+        "DistantBasalt": 1,
+        "DistantBlueStone": 0,
+        "PatinatedBands": 0,
+        "UnlitRecess": 10,
+        "AncientTealSignal": 5
+      }
+    }
+  },
+  "objects": [
+    {
+      "name": "LowerRoute_Distant_Temple",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_temple.obj",
+      "transform": {
+        "translation": [
+          0,
+          2580,
+          -117.60759
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          1.1,
+          0.75,
+          0.53
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Cliff_Left01",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj",
+      "transform": {
+        "translation": [
+          -210,
+          1800,
+          -111.66662
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.3,
+          2.65,
+          0.4
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Cliff_Left02",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj",
+      "transform": {
+        "translation": [
+          -210,
+          2600,
+          -112.16697
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.3,
+          2.65,
+          0.4
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Cliff_Left03",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj",
+      "transform": {
+        "translation": [
+          -210,
+          3400,
+          -114.85207
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.3,
+          2.65,
+          0.4
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Towers_Left01",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_tower_cluster.obj",
+      "transform": {
+        "translation": [
+          -110.0,
+          2380,
+          -115.53088
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          0.5,
+          0.8,
+          0.38
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Towers_Left02",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_tower_cluster.obj",
+      "transform": {
+        "translation": [
+          -110.0,
+          3140,
+          -114.07779
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          0.5,
+          0.8,
+          0.38
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Cliff_Right01",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj",
+      "transform": {
+        "translation": [
+          210,
+          1800,
+          -110.52636
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          1.3,
+          2.65,
+          0.4
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Cliff_Right02",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj",
+      "transform": {
+        "translation": [
+          210,
+          2600,
+          -113.09784
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          1.3,
+          2.65,
+          0.4
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Cliff_Right03",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_cliff_wall.obj",
+      "transform": {
+        "translation": [
+          210,
+          3400,
+          -114.98571
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          1.3,
+          2.65,
+          0.4
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Towers_Right01",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_tower_cluster.obj",
+      "transform": {
+        "translation": [
+          110.0,
+          2380,
+          -116.03655
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          0.5,
+          0.8,
+          0.38
+        ]
+      }
+    },
+    {
+      "name": "LowerRoute_Distant_Towers_Right02",
+      "type": "MESH",
+      "file_name": "Environment/Ocean/DistantRuins/Runtime/distant_tower_cluster.obj",
+      "transform": {
+        "translation": [
+          110.0,
+          3140,
+          -116.78146
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          3.141593
+        ],
+        "scale": [
+          0.5,
+          0.8,
+          0.38
+        ]
+      }
+    }
+  ],
+  "collidersAdded": 0,
+  "templePassage": "Runtime sanctuary wall and rear door trim removed; preview source retained"
+}

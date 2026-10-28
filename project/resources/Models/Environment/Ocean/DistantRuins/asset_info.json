@@ -1,0 +1,57 @@
+{
+  "assets": [
+    {
+      "id": "distant_temple",
+      "label": "巨大な海底神殿",
+      "triangles": 5856,
+      "materials": 5,
+      "dimensionsBlender": [
+        229.54244995117188,
+        180.5,
+        142.66810607910156
+      ]
+    },
+    {
+      "id": "distant_cliff_wall",
+      "label": "海底の断崖",
+      "triangles": 1204,
+      "materials": 3,
+      "dimensionsBlender": [
+        128.7288818359375,
+        313.4232482910156,
+        167.99156188964844
+      ]
+    },
+    {
+      "id": "distant_tower_cluster",
+      "label": "沈んだ塔群",
+      "triangles": 3654,
+      "materials": 5,
+      "dimensionsBlender": [
+        173.24993896484375,
+        67.0,
+        153.5339813232422
+      ]
+    }
+  ],
+  "gamePlacementChanged": false,
+  "previewCameraBlender": [
+    8,
+    -260,
+    36
+  ],
+  "previewTempleBaseBlender": [
+    0,
+    400,
+    -2
+  ],
+  "previewFogDensity": 0.0014,
+  "previewLighting": "Blender Cycles; not an in-game capture",
+  "previewOnlyObjects": [
+    "Existing foreground arch",
+    "Sand plane",
+    "Lights and fog"
+  ],
+  "exportAxes": "OBJ Y up, forward -Z; engine importer mirrors X",
+  "emissionNote": "Blender/GLB emission; game OBJ emission requires material setup"
+}

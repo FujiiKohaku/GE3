@@ -1,0 +1,62 @@
+# Blender 4.4.1 MTL File: 'None'
+# www.blender.org
+
+newmtl AbyssStone
+Ns 57.600006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/AbyssStone.png
+
+newmtl CoralTips
+Ns 57.600006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/CoralTips.png
+
+newmtl CrystalGlow
+Ns 57.600006
+Ka 0.150000 0.150000 0.150000
+Ks 0.500000 0.500000 0.500000
+Ke 0.400000 1.840000 1.520000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/CrystalGlow.png
+
+newmtl PaleSand
+Ns 57.600006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/PaleSand.png
+
+newmtl PurpleCoral
+Ns 57.600006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/PurpleCoral.png
+
+newmtl WeatheredStone
+Ns 57.600006
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/WeatheredStone.png

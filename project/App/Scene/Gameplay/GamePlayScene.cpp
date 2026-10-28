@@ -46,6 +46,12 @@
 #include <cmath>
 
 namespace {
+const std::string kRailBranchUpperText = "↑ 海上ルート";
+const std::string kRailBranchLowerText = "↓ 海中ルート";
+const std::string kRailBranchSelectionStatus = "機体を上下に動かしてルートを選択";
+const std::string kRailBranchUnderwaterStatus = "海中ルート ― この先で海上ルートに合流";
+const std::string kRailBranchMergeStatus = "海上ルートに合流しました";
+
 // Named tuning values; keep literals and their types unchanged.
 constexpr Vector3 kInitializeCameraTranslate = { 0.0f, 3.0f, -30.0f };
 constexpr Vector3 kInitializeAimCameraTranslate = { 0.0f, 3.0f, -30.0f };
@@ -457,6 +463,20 @@ Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float cl
 
 }
 
+// 分岐・合流の案内に使う文字を、プレイ開始前にまとめて作成する。
+void GamePlayScene::PrepareLoadingFont() const
+{
+    if (stageId_ != "stage01") { return; }
+    FontManager* fontManager = FontManager::GetInstance();
+    const FontHandle fontHandle = fontManager->LoadFont(
+        "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+    fontManager->EnsureGlyphs(fontHandle, kRailBranchUpperText);
+    fontManager->EnsureGlyphs(fontHandle, kRailBranchLowerText);
+    fontManager->EnsureGlyphs(fontHandle, kRailBranchSelectionStatus);
+    fontManager->EnsureGlyphs(fontHandle, kRailBranchUnderwaterStatus);
+    fontManager->EnsureGlyphs(fontHandle, kRailBranchMergeStatus);
+}
+
 // ステージ設定を読み、機体・敵・ボス・背景・UIと演出をプレイ開始状態へ揃える。
 void GamePlayScene::Initialize()
 {
@@ -512,6 +532,9 @@ void GamePlayScene::Initialize()
     railSpeed_ = stageSettings_.railSpeed;
     railBranch_.Initialize(stageSettings_.railBranch);
     hasBranchSurfaceFog_ = false;
+
+    underwaterBlend_ = 0.0f;
+    underwaterElapsedSeconds_ = 0.0f;
 
     editorManager_ = std::make_unique<EditorManager>();
     editorManager_->Initialize();
@@ -881,13 +904,13 @@ void GamePlayScene::Initialize()
     if (stageSettings_.railBranch.isEnabled) {
         railBranchUpperText_ = std::make_unique<Text>();
         railBranchUpperText_->Initialize(kDefaultFont);
-        railBranchUpperText_->SetText("↑ 海上ルート");
+        railBranchUpperText_->SetText(kRailBranchUpperText);
         railBranchUpperText_->SetFontSize(28.0f);
         railBranchUpperText_->SetAnchorPoint({ 0.5f, 0.5f });
         railBranchUpperText_->SetOutlineWidth(2.0f);
         railBranchLowerText_ = std::make_unique<Text>();
         railBranchLowerText_->Initialize(kDefaultFont);
-        railBranchLowerText_->SetText("↓ 海中ルート");
+        railBranchLowerText_->SetText(kRailBranchLowerText);
         railBranchLowerText_->SetFontSize(28.0f);
         railBranchLowerText_->SetAnchorPoint({ 0.5f, 0.5f });
         railBranchLowerText_->SetOutlineWidth(2.0f);
@@ -1211,6 +1234,13 @@ void GamePlayScene::Initialize()
     }
 
     InitializeTutorialPresentation();
+    if (stageId_ == "stage01" &&
+        std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos) {
+        debugCameraController_->SetDebugMode(true);
+        camera_->LookAt({ 12.0f, -77.0f, 2020.0f }, { 0.0f, -83.0f, 2180.0f });
+        camera_->Update();
+        Logger::Log("[UnderwaterSmoke] Fixed underwater verification camera");
+    }
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     RegisterDevelopmentPanel();
@@ -2073,6 +2103,8 @@ void GamePlayScene::Update()
 #else
     ApplyStageVisualPreset();
 #endif // USE_IMGUI
+
+    ApplyUnderwaterLighting();
 
     // terrain_->SetTranslate(terrainPos);
     // terrain_->SetRotate(terrainRotate);
@@ -4210,12 +4242,23 @@ void GamePlayScene::ApplyStageVisualPreset()
 // プレイ専用の画面効果を解除し、次の画面へ設定を残さないようにする。
 void GamePlayScene::ResetGameplayPostEffects()
 {
+    underwaterBlend_ = 0.0f;
+    ApplyUnderwaterLighting();
+    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+        volume->SetUnderwaterAppearance(stageSettings_.floorHeight, 0.0f, 0.0f);
+    }
     if (hasBranchSurfaceFog_) {
+        SceneManager::GetInstance()->SetSceneFogColor(branchSurfaceSceneFogColor_);
         if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
             volume->SetFogColor(branchSurfaceFogParameters_.color);
             volume->SetFogDensity(branchSurfaceFogDensity_);
             volume->SetHeightFog(branchSurfaceFogParameters_.baseHeight,
                 branchSurfaceFogParameters_.heightDensity, branchSurfaceFogParameters_.heightFalloff);
+            volume->SetNoiseParameters(branchSurfaceFogParameters_.noiseScale,
+                branchSurfaceFogParameters_.noiseStrength, branchSurfaceFogParameters_.noiseVelocity);
+            volume->SetLightIntensity(branchSurfaceVolumeParameters_.lightIntensity);
+            volume->SetMaxDistance(branchSurfaceVolumeParameters_.maxDistance);
+            volume->SetAnisotropy(branchSurfaceVolumeParameters_.anisotropy);
         }
         hasBranchSurfaceFog_ = false;
     }
@@ -4946,17 +4989,14 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
     const float screenHeight = static_cast<float>(WinApp::kClientHeight);
     if (railBranchStatusText_) {
         static const std::string kEmptyStatus;
-        static const std::string kSelectionStatus = "機体を上下に動かしてルートを選択";
-        static const std::string kUnderwaterStatus = "海中ルート ― この先で海上ルートに合流";
-        static const std::string kMergeStatus = "海上ルートに合流しました";
         const std::string* status = &kEmptyStatus;
         if (railBranch_.IsPreviewVisible(distance)) {
-            status = &kSelectionStatus;
+            status = &kRailBranchSelectionStatus;
         } else if (railBranch_.IsLowerRouteActive(distance)) {
-            status = &kUnderwaterStatus;
+            status = &kRailBranchUnderwaterStatus;
         } else if (railBranch_.IsLowerRouteSelected() &&
             distance < stageSettings_.railBranch.endDistance + 140.0f) {
-            status = &kMergeStatus;
+            status = &kRailBranchMergeStatus;
         }
         railBranchStatusText_->SetText(*status);
         railBranchStatusText_->SetPosition({ screenWidth * 0.5f, screenHeight * 0.17f });
@@ -4980,24 +5020,66 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
     VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer();
     if (stageId_ != "stage01" || volume == nullptr) { return; }
     const float cameraHeight = camera_->GetTranslate().y;
-    const float underwaterBlend = std::clamp((stageSettings_.floorHeight - cameraHeight) / 6.0f, 0.0f, 1.0f);
+    float underwaterBlend = std::clamp((stageSettings_.floorHeight - cameraHeight) / 12.0f, 0.0f, 1.0f);
+    underwaterBlend = underwaterBlend * underwaterBlend * (3.0f - 2.0f * underwaterBlend);
+    underwaterBlend_ = underwaterBlend;
+    underwaterElapsedSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
+    volume->SetUnderwaterAppearance(stageSettings_.floorHeight, underwaterBlend, underwaterElapsedSeconds_);
     if (underwaterBlend > 0.0f && !hasBranchSurfaceFog_) {
+        branchSurfaceSceneFogColor_ = SceneManager::GetInstance()->GetSceneFogColor();
         branchSurfaceFogParameters_ = volume->GetLocalFogParameters();
         branchSurfaceFogDensity_ = volume->GetParameters().fogDensity;
+        branchSurfaceVolumeParameters_ = volume->GetParameters();
         hasBranchSurfaceFog_ = true;
         Logger::Log("[RailBranch] Underwater camera entered");
     }
     if (!hasBranchSurfaceFog_) { return; }
-    const Vector3 underwaterColor { 0.015f, 0.18f, 0.28f };
+    const Vector3 underwaterColor { 0.012f, 0.105f, 0.145f };
+    const Vector3 sceneFogColor = Lerp(
+        { branchSurfaceSceneFogColor_.x, branchSurfaceSceneFogColor_.y, branchSurfaceSceneFogColor_.z },
+        underwaterColor, underwaterBlend);
+    SceneManager::GetInstance()->SetSceneFogColor(
+        { sceneFogColor.x, sceneFogColor.y, sceneFogColor.z, branchSurfaceSceneFogColor_.w });
     volume->SetFogColor(Lerp(branchSurfaceFogParameters_.color, underwaterColor, underwaterBlend));
-    volume->SetFogDensity(branchSurfaceFogDensity_ + (0.018f - branchSurfaceFogDensity_) * underwaterBlend);
+    volume->SetFogDensity(branchSurfaceFogDensity_ + (0.0065f - branchSurfaceFogDensity_) * underwaterBlend);
     const float baseHeight = branchSurfaceFogParameters_.baseHeight +
-        (cameraHeight - branchSurfaceFogParameters_.baseHeight) * underwaterBlend;
+        (stageSettings_.floorHeight - branchSurfaceFogParameters_.baseHeight) * underwaterBlend;
     const float density = branchSurfaceFogParameters_.heightDensity +
-        (0.002f - branchSurfaceFogParameters_.heightDensity) * underwaterBlend;
-    volume->SetHeightFog(baseHeight, density, branchSurfaceFogParameters_.heightFalloff);
+        (0.0065f - branchSurfaceFogParameters_.heightDensity) * underwaterBlend;
+    const float heightFalloff = branchSurfaceFogParameters_.heightFalloff +
+        (0.018f - branchSurfaceFogParameters_.heightFalloff) * underwaterBlend;
+    volume->SetHeightFog(baseHeight, density, heightFalloff);
+    volume->SetNoiseParameters(branchSurfaceFogParameters_.noiseScale +
+        (0.018f - branchSurfaceFogParameters_.noiseScale) * underwaterBlend,
+        branchSurfaceFogParameters_.noiseStrength * (1.0f - underwaterBlend),
+        Lerp(branchSurfaceFogParameters_.noiseVelocity, { 0.10f, 0.0f, 0.04f }, underwaterBlend));
+    volume->SetLightIntensity(branchSurfaceVolumeParameters_.lightIntensity +
+        (0.55f - branchSurfaceVolumeParameters_.lightIntensity) * underwaterBlend);
+    volume->SetMaxDistance(branchSurfaceVolumeParameters_.maxDistance +
+        (380.0f - branchSurfaceVolumeParameters_.maxDistance) * underwaterBlend);
+    volume->SetAnisotropy(branchSurfaceVolumeParameters_.anisotropy +
+        (0.48f - branchSurfaceVolumeParameters_.anisotropy) * underwaterBlend);
     if (underwaterBlend <= 0.0f) {
         hasBranchSurfaceFog_ = false;
         Logger::Log("[RailBranch] Underwater camera exited");
     }
+}
+
+// 画面上の照明設定を確定した後で、水中の冷たい斜光と環境光を重ねる。
+void GamePlayScene::ApplyUnderwaterLighting()
+{
+    if (stageId_ != "stage01") { return; }
+    LightManager* lights = LightManager::GetInstance();
+    const Vector3 color = Lerp({ lightColor_.x, lightColor_.y, lightColor_.z },
+        { 0.52f, 0.86f, 0.92f }, underwaterBlend_);
+    const Vector3 direction = Normalize(Lerp(lightDir_, { 0.38f, -0.82f, 0.43f }, underwaterBlend_));
+    float intensity = lightIntensity_ + (0.82f - lightIntensity_) * underwaterBlend_;
+    if (!lightEnabled_) { intensity = 0.0f; }
+    lights->SetDirectional({ color.x, color.y, color.z, 1.0f }, direction, intensity);
+    lights->SetAmbientColor(Lerp({ ambientColor_.x, ambientColor_.y, ambientColor_.z },
+        { 0.12f, 0.27f, 0.34f }, underwaterBlend_));
+    lights->SetAmbientIntensity(ambientColor_.w + (0.22f - ambientColor_.w) * underwaterBlend_);
+    const LightingPreset surface = VisualPresetLibrary::GetInstance().GetLighting(stageId_);
+    lights->SetHemisphereColors(Lerp(surface.skyColor, { 0.22f, 0.48f, 0.58f }, underwaterBlend_),
+        Lerp(surface.groundColor, { 0.035f, 0.10f, 0.14f }, underwaterBlend_));
 }

@@ -31,6 +31,6 @@ private:
     bool hasDrawnFirstFrame_ = false;
     bool gameResourcesInitialized_ = false;
     bool simulationBoot_ = false;
-    bool hasPreparedTutorialFont_ = false;
+    bool hasPreparedSceneFont_ = false;
     std::unique_ptr<Text> simulationText_;
 };
