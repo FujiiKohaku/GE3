@@ -1,12 +1,15 @@
 #include "Input.h"
+#include "Engine/Logger/Logger.h"
 #include <cassert>
 #pragma comment(lib, "dinput8.lib")
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "xinput.lib")
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
+#include <sstream>
 std::unique_ptr<Input> Input::instance_ = nullptr;
 
 
@@ -100,9 +103,12 @@ void Input::Update()
 
     XINPUT_STATE nextGamepadState = {};
     DWORD nextGamepadIndex = XUSER_MAX_COUNT;
+    std::array<DWORD, XUSER_MAX_COUNT> gamepadPollResults;
+    gamepadPollResults.fill(ERROR_NOT_READY);
 
     for (DWORD index = 0; index < XUSER_MAX_COUNT; ++index) {
-        if (XInputGetState(index, &nextGamepadState) == ERROR_SUCCESS) {
+        gamepadPollResults[index] = XInputGetState(index, &nextGamepadState);
+        if (gamepadPollResults[index] == ERROR_SUCCESS) {
             nextGamepadIndex = index;
             break;
         }
@@ -133,25 +139,39 @@ void Input::Update()
         gamepadButtonsReady_ = true;
     }
 
-    if (GetForegroundWindow() != winApp_->GetHwnd()) {
+    const bool isForeground = GetForegroundWindow() == winApp_->GetHwnd();
+    if (!isForeground) {
         std::memset(keys_, 0, sizeof(keys_));
         mouseState_ = {};
         gamepadState_ = {};
         gamepadButtonsReady_ = false;
         blockPrimaryFire_ = true;
+        LogGamepadDiagnostics(nextGamepadState, gamepadPollResults.data(), isForeground);
         return;
     }
 
-    bool keyboardActivity = false;
-    for (int key = 0; key < 256; ++key) {
-        keyboardActivity |= (keys_[key] & 0x80) != 0;
+    // IMEなどのキー状態でパッド操作を解除しないよう、ゲームの操作キーだけを調べる。
+    constexpr BYTE kControlKeys[] = {
+        DIK_W, DIK_A, DIK_S, DIK_D,
+        DIK_SPACE, DIK_LSHIFT, DIK_LCONTROL, DIK_RCONTROL,
+        DIK_1, DIK_2, DIK_3, DIK_4,
+        DIK_UP, DIK_DOWN, DIK_LEFT, DIK_RIGHT,
+        DIK_TAB, DIK_RETURN, DIK_ESCAPE, DIK_BACK,
+        DIK_LBRACKET, DIK_RBRACKET, DIK_R, DIK_T, DIK_C
+    };
+    bool hasKeyboardActivity = false;
+    for (const BYTE keyCode : kControlKeys) {
+        if (IsKeyPressed(keyCode)) {
+            hasKeyboardActivity = true;
+            break;
+        }
     }
     const bool gamepadActivity = gamepadButtonsReady_ &&
         (gamepadState_.Gamepad.wButtons != 0 || IsGamepadRightTriggerPressed() ||
          GetGamepadLeftStickX() != 0.0f || GetGamepadLeftStickY() != 0.0f);
     const bool mouseActivity = mouseState_.lX != 0 || mouseState_.lY != 0 ||
         mouseState_.lZ != 0 || IsMousePressed(0) || IsMousePressed(1);
-    if (keyboardActivity) {
+    if (hasKeyboardActivity) {
         isUsingGamepad_ = false;
     } else if (gamepadActivity) {
         isUsingGamepad_ = true;
@@ -162,6 +182,61 @@ void Input::Update()
         !IsGamepadButtonPressed(XINPUT_GAMEPAD_A) && !IsGamepadRightTriggerPressed()) {
         blockPrimaryFire_ = false;
     }
+    LogGamepadDiagnostics(nextGamepadState, gamepadPollResults.data(), isForeground);
+}
+
+// 入力を変更せず、取得値と操作方式の判定を約1秒ごとに記録する。
+void Input::LogGamepadDiagnostics(const XINPUT_STATE& polledState, const DWORD* pollResults, bool isForeground)
+{
+    constexpr ULONGLONG kLogIntervalMs = 1000;
+    if (isGamepadConnected_) {
+        gamepadDiagnosticsPeakLeftX_ = (std::max)(gamepadDiagnosticsPeakLeftX_,
+            std::abs(static_cast<int>(polledState.Gamepad.sThumbLX)));
+        gamepadDiagnosticsPeakLeftY_ = (std::max)(gamepadDiagnosticsPeakLeftY_,
+            std::abs(static_cast<int>(polledState.Gamepad.sThumbLY)));
+    } else {
+        ++gamepadDiagnosticsDisconnectedFrames_;
+    }
+    const ULONGLONG currentTimeMs = GetTickCount64();
+    if (lastGamepadDiagnosticsTimeMs_ != 0 && currentTimeMs - lastGamepadDiagnosticsTimeMs_ < kLogIntervalMs) {
+        return;
+    }
+    lastGamepadDiagnosticsTimeMs_ = currentTimeMs;
+
+    std::ostringstream message;
+    message << std::boolalpha << "[GamepadDiagnostics] connected=" << isGamepadConnected_
+        << " slot=" << gamepadIndex_ << " foreground=" << isForeground
+        << " usingGamepad=" << isUsingGamepad_ << " buttonsReady=" << gamepadButtonsReady_
+        << " disconnectedFrames=" << gamepadDiagnosticsDisconnectedFrames_ << " pollResults=[";
+    for (DWORD index = 0; index < XUSER_MAX_COUNT; ++index) {
+        if (index != 0) { message << ','; }
+        if (index > gamepadIndex_) {
+            message << "notPolled";
+        } else {
+            message << pollResults[index];
+        }
+    }
+    message << "] packet=" << polledState.dwPacketNumber
+        << " rawLeft=(" << polledState.Gamepad.sThumbLX << ',' << polledState.Gamepad.sThumbLY << ')'
+        << " peakAbsLeft=(" << gamepadDiagnosticsPeakLeftX_ << ',' << gamepadDiagnosticsPeakLeftY_ << ')'
+        << " normalizedLeft=(" << GetGamepadLeftStickX() << ',' << GetGamepadLeftStickY() << ')'
+        << " rawRight=(" << polledState.Gamepad.sThumbRX << ',' << polledState.Gamepad.sThumbRY << ')'
+        << " buttons=" << polledState.Gamepad.wButtons
+        << " triggers=(" << static_cast<int>(polledState.Gamepad.bLeftTrigger)
+        << ',' << static_cast<int>(polledState.Gamepad.bRightTrigger) << ") keyboardScanCodes=[";
+    bool hasPressedKey = false;
+    for (int keyIndex = 0; keyIndex < 256; ++keyIndex) {
+        if ((keys_[keyIndex] & 0x80) == 0) { continue; }
+        if (hasPressedKey) { message << ','; }
+        message << keyIndex;
+        hasPressedKey = true;
+    }
+    message << "] mouseDelta=(" << mouseState_.lX << ',' << mouseState_.lY << ')';
+    Logger::Log(message.str());
+    Logger::Flush();
+    gamepadDiagnosticsPeakLeftX_ = 0;
+    gamepadDiagnosticsPeakLeftY_ = 0;
+    gamepadDiagnosticsDisconnectedFrames_ = 0;
 }
 
 bool Input::IsKeyPressed(BYTE keyCode) const

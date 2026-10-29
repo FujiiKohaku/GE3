@@ -55,6 +55,7 @@ private:
     friend struct InputTestAccess;
     Input(const Input&) = delete;
     Input& operator=(const Input&) = delete;
+    void LogGamepadDiagnostics(const XINPUT_STATE& polledState, const DWORD* pollResults, bool isForeground);
 
 private:
     static std::unique_ptr<Input> instance_;
@@ -81,4 +82,8 @@ private:
     bool blockPrimaryFire_ = false;
     bool gamepadPitchInverted_ = false;
     float gamepadAimSensitivity_ = 1.0f;
+    ULONGLONG lastGamepadDiagnosticsTimeMs_ = 0;
+    int gamepadDiagnosticsPeakLeftX_ = 0;
+    int gamepadDiagnosticsPeakLeftY_ = 0;
+    unsigned int gamepadDiagnosticsDisconnectedFrames_ = 0;
 };
