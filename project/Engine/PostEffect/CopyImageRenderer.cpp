@@ -3,6 +3,7 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/TextureManager/TextureManager.h"
 #include <cassert>
+#include <stdexcept>
 
 void CopyImageRenderer::Initialize(DirectXCommon* dxCommon)
 {
@@ -219,7 +220,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> CopyImageRenderer::CreateGraphicsPip
 
     HRESULT hr = device->CreateGraphicsPipelineState(&pipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr)) { throw std::runtime_error("Post effect pipeline is incompatible with the current shader bindings. HRESULT:" + std::to_string(static_cast<unsigned long>(hr))); }
 
     return graphicsPipelineState;
 }

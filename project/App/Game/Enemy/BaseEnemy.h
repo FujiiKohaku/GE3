@@ -93,7 +93,7 @@ protected:
     virtual void UpdateAnimation();
     // 被弾時の追加反応を派生クラスで定義するための窓口。標準では何も行わない。
     virtual void OnDamage(float damage);
-    // 撃破時の追加演出を派生クラスで定義するための窓口。標準では何も行わない。
+    // 標準では撃破時に爆発を再生し、専用の演出は派生クラスで上書きする。
     virtual void OnDeath();
 
     std::unique_ptr<Object3d> object_;

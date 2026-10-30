@@ -9,6 +9,7 @@
 #include "Engine/blend/BlendUtil.h"
 #include "Engine/math/EngineStruct.h"
 #include "externals/json.hpp"
+#include "EffectParticleLimits.h"
 
 #include <d3d12.h>
 #include <array>
@@ -51,6 +52,10 @@ struct ActiveEffect {
     float lightBaseIntensity = 0.0f;
     float lightFadeStartAge = 0.0f;
     float lightFadeDuration = 0.0f;
+    float requestedDurationSeconds = -1.0f;
+    bool isLoopRequested = false;
+    bool shouldUseDefaultLoop = true;
+    bool hasVelocityOverride = false;
     bool isLoop = false;
     bool isEmitting = true;
     bool isLightFading = false;
@@ -58,6 +63,7 @@ struct ActiveEffect {
 };
 
 class EffectManager {
+    friend class EffectCapacityTestAccess;
 public:
     static EffectManager* GetInstance();
     static void Finalize();
@@ -74,7 +80,7 @@ public:
     EffectManager(const EffectManager&) = delete;
     EffectManager& operator=(const EffectManager&) = delete;
 
-    void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera);
+    void Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera, bool shouldRegisterDefaultEffects = true);
     bool IsInitialized() const { return isInitialized_; }
 
     void BeginWarmUp();
@@ -83,7 +89,20 @@ public:
     float GetWarmUpProgress() const;
 
     void RegisterEffect(const EffectData& effectData);
+    // Full Effect.json documents, including unknown fields. No disk writes.
+    bool GetEffectConfig(const std::string& effectName, nlohmann::json& config, std::string& error) const;
+    // Explicit save to the registered JSON path. Always writes Render.Type.
+    bool SaveEffectConfig(const std::string& effectName, std::string& error) const;
+    // Call after DirectXCommon::PostDraw(), before recording any commands for the next frame.
+    // Restarts all live instances of this name, preserving handles, positions and attachments.
+    bool ApplyEffectConfigAndRestart(const std::string& effectName, const nlohmann::json& config, std::string& error);
+    bool RestartEffect(EffectHandle handle, std::string& error);
+    // Uses the current in-memory config; does not silently reload JSON from disk.
+    bool ReloadEffectShaders(const std::string& effectName, std::string& error);
+    std::vector<std::filesystem::path> GetEffectShaderPaths(const std::string& effectName) const;
     EffectHandle PlayEffect(const std::string& effectName, const Vector3& position);
+    // Explicit one-shot playback, regardless of Render.Loop. Trails emit for durationSeconds.
+    EffectHandle PlayOnceEffect(const std::string& effectName, const Vector3& position, float durationSeconds = 1.0f);
     EffectHandle PlayLoopEffect(const std::string& effectName, const Vector3& position, float duration = -1.0f);
     EffectHandle AttachEffect(
         const std::string& effectName,
@@ -122,6 +141,8 @@ public:
     bool IsEffectAlive(EffectHandle handle) const;
 
     void Update();
+    // Initializes newly applied resources without advancing time or emitting particles.
+    void InitializePendingEffects();
     void PreDraw();
     void Draw();
     void DrawFieldDebug() const;
@@ -252,6 +273,8 @@ private:
     };
 
     struct EffectRuntime {
+        nlohmann::json config;
+        EffectData sourceData;
         EffectData data;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> emitPipelineState;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> updatePipelineState;
@@ -317,26 +340,29 @@ private:
         float age = 0.0f;
         uint32_t maxParticles = 0;
         bool hasEmitted = false;
+        bool isInitializationPending = false;
     };
 
 private:
     void RegisterDefaultEffects();
     bool WarmUpEffect(const std::string& effectName);
-    EffectRuntime CreateEffectRuntime(const EffectData& effectData);
+    EffectRuntime CreateEffectRuntime(const EffectData& effectData, const nlohmann::json* config = nullptr, bool shouldReloadShaders = false);
     void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime);
+    void ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime, const nlohmann::json& config);
+    bool ReplaceEffectRuntime(const std::string& effectName, const nlohmann::json& config, bool shouldReloadShaders, EffectHandle restartHandle, std::string& error);
     void ApplyRenderParameterConfig(const nlohmann::json& config, ParticleRenderParameter& renderParameter);
     Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateComputePipeline(
         const std::string& effectName,
         const std::string& shaderStage,
         ID3D12RootSignature* rootSignature,
-        const std::string& shaderPath);
+        const std::string& shaderPath, bool shouldRecompile = false);
 
     EffectHandle StartEffect(
         const std::string& effectName,
         const Vector3& position,
         bool isLoop,
         float duration,
-        EffectPositionProvider positionProvider);
+        EffectPositionProvider positionProvider, bool shouldUseDefaultLoop = true);
     ActiveEffectResource CreateActiveEffectResource(const EffectRuntime& runtime, const Vector3& position);
     bool TryAcquirePooledResource(
         const EffectRuntime& runtime,
@@ -484,7 +510,7 @@ private:
     std::unordered_map<std::string, uint32_t> performanceStartedEffectCounts_;
 #endif
 
-    static constexpr uint32_t kMaxGPUParticleCapacity = 4096;
+    static constexpr uint32_t kMaxGPUParticleCapacity = EffectParticleLimits::kMaxParticleCapacity;
     static constexpr uint32_t kMaxTrailPoints = 64;
     static constexpr size_t kMaxPooledResources = 80;
 };

@@ -87,6 +87,7 @@ public:
         float intensity,
         float radius,
         float decay);
+    bool TryGetPointLight(PointLightHandle handle, PointLight& light) const;
     bool SetPointLightPosition(PointLightHandle handle, const Vector3& position);
     bool SetPointLightIntensity(PointLightHandle handle, float intensity);
     bool SetPointLightColor(PointLightHandle handle, const Vector4& color);

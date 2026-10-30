@@ -14,6 +14,7 @@ struct AutoExposureSettings {
     float darkenSpeedPerSecond = 3.0f;
 };
 class AutoExposureRenderer {
+    friend class PostEffectManager;
 public:
     ~AutoExposureRenderer();
     bool SetSettings(const AutoExposureSettings& settings);
@@ -27,6 +28,7 @@ public:
     void ReadCompleted() { timer_.ReadCompleted(); }
 private:
     void Initialize();
+    void CreatePipelines();
     struct Constants {
         Vector4 luminanceRange;
         Vector4 exposureRange;

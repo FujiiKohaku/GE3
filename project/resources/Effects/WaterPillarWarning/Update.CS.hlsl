@@ -7,13 +7,12 @@ ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b1);
 ConstantBuffer<EmitterSphere> gEmitter : register(b2);
 
-static const uint32_t kMaxGPUParticle = 1024;
 
 [numthreads(256, 1, 1)]
 void main(uint32_t3 id : SV_DispatchThreadID)
 {
     const uint32_t particleIndex = id.x;
-    if (particleIndex >= kMaxGPUParticle || gParticles[particleIndex].color.a == 0.0f) return;
+    if (particleIndex >= gEmitter.maxParticles || gParticles[particleIndex].color.a == 0.0f) return;
 
     gParticles[particleIndex].velocity.y += 0.32f * gPerFrame.deltaTime;
     gParticles[particleIndex].velocity.xz += float2(
@@ -33,7 +32,7 @@ void main(uint32_t3 id : SV_DispatchThreadID)
         gParticles[particleIndex].color.a = 0.0f;
         int32_t freeListIndex;
         InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
-        if ((freeListIndex + 1) < kMaxGPUParticle) {
+        if ((freeListIndex + 1) < gEmitter.maxParticles) {
             gFreeList[freeListIndex + 1] = particleIndex;
         } else {
             InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);

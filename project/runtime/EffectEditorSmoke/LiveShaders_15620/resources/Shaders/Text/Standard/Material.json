@@ -1,0 +1,17 @@
+{
+  "Name": "Standard Text",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Text": {
+    "DefaultFontSize": 32.0,
+    "OutlineWidth": 0.0,
+    "ShadowOffset": [
+      0.0,
+      0.0
+    ]
+  }
+}

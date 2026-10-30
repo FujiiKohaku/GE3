@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstring>
 #include <format>
+#include <stdexcept>
 
 std::unique_ptr<TextureManager> TextureManager::instance = nullptr;
 
@@ -65,7 +66,7 @@ void TextureManager::LoadTexture(const std::string& filePath)
     }
 
 
-    assert(srvManager_->CanAllocate());
+    if (!srvManager_->CanAllocate()) { throw std::runtime_error("Texture descriptor capacity exceeded"); }
 
 
     DirectX::ScratchImage image {};
@@ -80,8 +81,7 @@ void TextureManager::LoadTexture(const std::string& filePath)
     }
     if (FAILED(hr)) {
         Logger::Error(std::format("Texture load failed: {}, HRESULT:{}", filePath, static_cast<unsigned long>(hr)));
-        assert(false);
-        return;
+        throw std::runtime_error("Texture load failed: " + filePath);
     }
 
     RegisterTexture(filePath, image);
@@ -252,8 +252,7 @@ void TextureManager::UpdateTextureFromBGRA(
 void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::ScratchImage& image)
 {
     StartupTimingScope startupScope("Resource.TextureRegister");
-    assert(srvManager_ != nullptr);
-    assert(srvManager_->CanAllocate());
+    if (srvManager_ == nullptr || !srvManager_->CanAllocate()) { throw std::runtime_error("Texture descriptor capacity exceeded"); }
 
     DirectX::ScratchImage mipImages {};
     if (DirectX::IsCompressed(image.GetMetadata().format)) {
@@ -276,8 +275,7 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
             mipImages);
         if (FAILED(hr)) {
             Logger::Error(std::format("Texture mipmap generation failed: {}, HRESULT:{}", textureKey, static_cast<unsigned long>(hr)));
-            assert(false);
-            return;
+            throw std::runtime_error("Texture mipmap generation failed: " + textureKey);
         }
     }
 

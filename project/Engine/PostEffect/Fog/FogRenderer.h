@@ -6,6 +6,7 @@
 #include <wrl.h>
 
 class FogRenderer {
+    friend class PostEffectManager;
 public:
     void Initialize(DirectXCommon* dxCommon);
 
@@ -33,6 +34,7 @@ public:
 private:
     void CreateRootSignature();
     void CreatePipelineState();
+    void CreateDepthResolvePipeline();
     void CreateDepthResource();
     void CreateDepthDSV();
     void CreateDepthSRV();

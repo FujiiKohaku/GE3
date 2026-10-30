@@ -1,4 +1,5 @@
 #include "ParticleRenderManager.h"
+#include <stdexcept>
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/StringUtility/StringUtility.h"
@@ -122,7 +123,7 @@ void ParticleRenderManager::CreateRootSignature()
         signatureBlob->GetBufferSize(),
         IID_PPV_ARGS(&rootSignature_));
 
-    assert(SUCCEEDED(result));
+    if (FAILED(result)) { throw std::runtime_error("Particle root signature creation failed"); }
 }
 #pragma endregion
 #pragma region
@@ -143,12 +144,12 @@ void ParticleRenderManager::CreateDefaultGraphicsPipelines()
 }
 
 Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphicsPipeline(
-    const GraphicsPipelineDesc& desc)
+    const GraphicsPipelineDesc& desc, bool shouldReloadShaders)
 {
     const std::string cacheKey = MakePipelineCacheKey(desc);
     std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>>::iterator pipelineIterator =
         pipelineStateCache_.find(cacheKey);
-    if (pipelineIterator != pipelineStateCache_.end()) {
+    if (!shouldReloadShaders && pipelineIterator != pipelineStateCache_.end()) {
         return pipelineIterator->second;
     }
 
@@ -197,12 +198,12 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = LoadCompiledShaderWithLog(
         desc.effectName,
         "VS",
-        desc.vertexShaderPath);
+        desc.vertexShaderPath, shouldReloadShaders);
     Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = LoadCompiledShaderWithLog(
         desc.effectName,
         "PS",
-        desc.pixelShaderPath);
-    assert(vertexShaderBlob && pixelShaderBlob);
+        desc.pixelShaderPath, shouldReloadShaders);
+    if (!vertexShaderBlob || !pixelShaderBlob) { throw std::runtime_error("Particle render shader load failed: " + desc.effectName); }
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC pipelineStateDesc {};
     pipelineStateDesc.pRootSignature = rootSignature_.Get();
@@ -223,7 +224,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
     HRESULT result = dxCommon_->GetDevice()->CreateGraphicsPipelineState(
         &pipelineStateDesc,
         IID_PPV_ARGS(&pipelineState));
-    assert(SUCCEEDED(result));
+    if (FAILED(result)) { throw std::runtime_error("Particle graphics PSO creation failed: " + desc.effectName + " HRESULT:" + std::to_string(static_cast<unsigned long>(result))); }
 
 #ifdef _DEBUG
     Logger::Log(std::format(
@@ -240,7 +241,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> ParticleRenderManager::CreateGraphic
 Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::LoadCompiledShaderWithLog(
     const std::string& effectName,
     const std::string& shaderStage,
-    const std::string& shaderPath)
+    const std::string& shaderPath, bool shouldRecompile)
 {
     const std::filesystem::path shaderFilePath(shaderPath);
     const std::filesystem::path fullShaderPath = std::filesystem::absolute(shaderFilePath);
@@ -250,8 +251,7 @@ Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::LoadCompiledShaderWithLo
             "Particle render shader file is missing. Effect:" + effectName +
             " Stage:" + shaderStage +
             " Path:" + fullShaderPath.generic_string());
-        assert(false);
-        return nullptr;
+        throw std::runtime_error("Particle render shader file is missing: " + fullShaderPath.generic_string());
     }
 
 #ifdef _DEBUG
@@ -262,7 +262,7 @@ Microsoft::WRL::ComPtr<IDxcBlob> ParticleRenderManager::LoadCompiledShaderWithLo
 #endif
 
     Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob =
-        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));
+        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath), shouldRecompile);
 
     if (!shaderBlob) {
         Logger::Error(

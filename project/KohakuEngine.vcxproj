@@ -202,6 +202,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)Engine\Screenshot\ScreenshotManager.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\CopyImageRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\PostEffectManager.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\PostEffect\PostEffectPreset.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\PostEffect\PostEffectShaderReload.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\3D\Model.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\3D\SkinningObject3d.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\3D\SkyBox\SkyBox.cpp" />

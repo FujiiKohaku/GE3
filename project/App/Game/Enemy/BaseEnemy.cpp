@@ -4,6 +4,7 @@
 
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/Model.h"
+#include "Engine/Effect/EffectManager.h"
 #include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include <cmath>
@@ -319,9 +320,18 @@ void BaseEnemy::OnDamage(float)
 {
 }
 
-// 撃破時の追加演出を派生クラスで定義するための窓口。標準では何も行わない。
+// HPが尽きて撃破された場合に爆発を再生し、退場による削除では再生しない。
 void BaseEnemy::OnDeath()
 {
+    if (hp_ > 0.0f) {
+        return;
+    }
+    EffectManager* effectManager = EffectManager::GetInstance();
+    // 半透明の煙を先に描き、炎・火花・閃光を手前に重ねる。
+    effectManager->PlayEffect("ExplosionSmoke", transform_.translate);
+    effectManager->PlayEffect("ExplosionFlame", transform_.translate);
+    effectManager->PlayEffect("ExplosionSparks", transform_.translate);
+    effectManager->PlayEffect("ExplosionFlash", transform_.translate);
 }
 
 // 敵の最大HPと現在HPを設定する。

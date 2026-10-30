@@ -1,5 +1,6 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
 #include "EffectManager.h"
+#include "EffectConfigValidation.h"
 
 #include "Engine/Logger/Logger.h"
 #include "Engine/Light/LightManager.h"
@@ -18,6 +19,7 @@
 #include <filesystem>
 #include <fstream>
 #include <format>
+#include <stdexcept>
 
 std::unique_ptr<EffectManager> EffectManager::instance_ = nullptr;
 
@@ -201,7 +203,7 @@ EffectManager* EffectManager::GetInstance()
     return instance_.get();
 }
 
-void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera)
+void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, Camera* camera, bool shouldRegisterDefaultEffects)
 {
     StartupTimingScope startupScope("Resource.EffectInitialize");
     if (isInitialized_) {
@@ -262,7 +264,7 @@ void EffectManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager, 
     phaseBeginTime = std::chrono::steady_clock::now();
 #endif
 
-    RegisterDefaultEffects();
+    if (shouldRegisterDefaultEffects) { RegisterDefaultEffects(); }
     isInitialized_ = true;
 
 #ifdef _DEBUG
@@ -319,6 +321,239 @@ void EffectManager::RegisterEffect(const EffectData& effectData)
 {
     assert(!effectData.effectName.empty());
     effects_[effectData.effectName] = CreateEffectRuntime(effectData);
+}
+
+bool EffectManager::GetEffectConfig(const std::string& effectName, nlohmann::json& config, std::string& error) const
+{
+    error.clear();
+    const auto runtime = effects_.find(effectName);
+    if (runtime == effects_.end()) {
+        error = "Effect is not registered: " + effectName;
+        return false;
+    }
+    config = runtime->second.config;
+    return true;
+}
+
+bool EffectManager::SaveEffectConfig(const std::string& effectName, std::string& error) const
+{
+    error.clear();
+    HANDLE fileHandle = INVALID_HANDLE_VALUE;
+    std::filesystem::path temporaryPath;
+    bool hasTemporaryFile = false;
+    try {
+        const auto runtime = effects_.find(effectName);
+        if (runtime == effects_.end()) { throw std::runtime_error("Effect is not registered: " + effectName); }
+        const std::filesystem::path jsonPath(runtime->second.sourceData.jsonPath);
+        if (jsonPath.empty()) { throw std::runtime_error("Effect has no JSON save path: " + effectName); }
+        nlohmann::json config = runtime->second.config;
+        EffectConfigValidation::NormalizeRenderType(config);
+        const std::string serialized = config.dump(2) + "\n";
+        if (serialized.size() > MAXDWORD) { throw std::runtime_error("Effect JSON is too large to save"); }
+        temporaryPath = jsonPath;
+        temporaryPath += L".tmp";
+        // CREATE_NEW prevents overwriting an existing temporary file.
+        fileHandle = CreateFileW(temporaryPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (fileHandle == INVALID_HANDLE_VALUE) {
+            throw std::runtime_error("Could not create temporary JSON file. Win32:" + std::to_string(GetLastError()));
+        }
+        hasTemporaryFile = true;
+        DWORD writtenBytes = 0;
+        if (!WriteFile(fileHandle, serialized.data(), static_cast<DWORD>(serialized.size()), &writtenBytes, nullptr) ||
+            writtenBytes != serialized.size() || !FlushFileBuffers(fileHandle)) {
+            throw std::runtime_error("Could not write effect JSON. Win32:" + std::to_string(GetLastError()));
+        }
+        CloseHandle(fileHandle);
+        fileHandle = INVALID_HANDLE_VALUE;
+        if (!MoveFileExW(temporaryPath.c_str(), jsonPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+            throw std::runtime_error("Could not replace effect JSON. Win32:" + std::to_string(GetLastError()));
+        }
+        hasTemporaryFile = false;
+        return true;
+    } catch (const std::exception& exception) {
+        if (fileHandle != INVALID_HANDLE_VALUE) { CloseHandle(fileHandle); }
+        if (hasTemporaryFile) { DeleteFileW(temporaryPath.c_str()); }
+        error = "Effect save failed [" + effectName + "]: " + exception.what();
+        return false;
+    }
+}
+
+bool EffectManager::ApplyEffectConfigAndRestart(const std::string& effectName, const nlohmann::json& config, std::string& error)
+{
+    return ReplaceEffectRuntime(effectName, config, false, kInvalidEffectHandle, error);
+}
+
+bool EffectManager::ReloadEffectShaders(const std::string& effectName, std::string& error)
+{
+    nlohmann::json config;
+    if (!GetEffectConfig(effectName, config, error)) { return false; }
+    return ReplaceEffectRuntime(effectName, config, true, kInvalidEffectHandle, error);
+}
+
+std::vector<std::filesystem::path> EffectManager::GetEffectShaderPaths(const std::string& effectName) const
+{
+    const auto found = effects_.find(effectName);
+    if (found == effects_.end()) { return {}; }
+    const auto& runtime = found->second;
+    std::vector<std::filesystem::path> paths { runtime.data.updateShaderPath, runtime.vertexShaderPath, runtime.pixelShaderPath,
+        "resources/Shaders/Effects/Common/InitializeParticle.CS.hlsl", "resources/Shaders/Effects/Common/InitializeTrail.CS.hlsl",
+        "resources/Shaders/Effects/Common/ApplyParticleFields.CS.hlsl", "resources/Shaders/Effects/Common/ApplyTrailFields.CS.hlsl" };
+    if (runtime.renderType == ParticleRenderType::Mesh) { paths.emplace_back(runtime.data.emitShaderPath); }
+    return paths;
+}
+
+bool EffectManager::RestartEffect(EffectHandle handle, std::string& error)
+{
+    error.clear();
+    const size_t index = FindActiveEffectIndex(handle);
+    if (index == static_cast<size_t>(-1)) {
+        error = "Effect handle is not alive";
+        return false;
+    }
+    nlohmann::json config;
+    const std::string effectName = activeEffects_[index].effectName;
+    if (!GetEffectConfig(effectName, config, error)) { return false; }
+    return ReplaceEffectRuntime(effectName, config, false, handle, error);
+}
+
+bool EffectManager::ReplaceEffectRuntime(const std::string& effectName, const nlohmann::json& config,
+    bool shouldReloadShaders, EffectHandle restartHandle, std::string& error)
+{
+    error.clear();
+    std::vector<size_t> indices;
+    std::vector<ActiveEffectResource> replacements;
+    std::vector<ActiveEffect> restartedEffects;
+    struct LightReplacement {
+        PointLight previousLight {};
+        bool isReused = false;
+        bool isUpdated = false;
+    };
+    std::vector<LightReplacement> lightReplacements;
+    try {
+        if (!isInitialized_ || !dxCommon_->IsCommandListPristine()) {
+            throw std::runtime_error("Apply effects immediately after PostDraw, before recording commands for the next frame");
+        }
+        const auto previous = effects_.find(effectName);
+        if (previous == effects_.end()) { throw std::runtime_error("Effect is not registered: " + effectName); }
+        EffectConfigValidation::Validate(config);
+        // Validate and prepare before touching the running definition or its resources.
+        if (shouldReloadShaders) { dxCommon_->RefreshShaderIncludeWriteTime(); }
+        for (size_t index = 0; index < activeEffects_.size(); ++index) {
+            const auto& activeEffect = activeEffects_[index];
+            if (activeEffect.isAlive && activeEffect.effectName == effectName &&
+                (restartHandle == kInvalidEffectHandle || activeEffect.handle == restartHandle)) {
+                indices.push_back(index);
+            }
+        }
+        if (!srvManager_->CanAllocate(static_cast<uint32_t>(indices.size() * 4 + 1))) {
+            throw std::runtime_error("Not enough descriptors to prepare the replacement while keeping the current effect");
+        }
+        EffectRuntime candidate = CreateEffectRuntime(previous->second.sourceData, &config, shouldReloadShaders);
+        auto initializePipeline = initializePipelineState_;
+        auto trailInitializePipeline = trailInitializePipelineState_;
+        auto particleFieldPipeline = particleFieldPipelineState_;
+        auto trailFieldPipeline = trailFieldPipelineState_;
+        if (shouldReloadShaders) {
+            initializePipeline = CreateComputePipeline("InitializeParticle", "Initialize", initializeRootSignature_.Get(),
+                "resources/Shaders/Effects/Common/InitializeParticle.CS.hlsl", true);
+            trailInitializePipeline = CreateComputePipeline("InitializeTrail", "Initialize", initializeRootSignature_.Get(),
+                "resources/Shaders/Effects/Common/InitializeTrail.CS.hlsl", true);
+            particleFieldPipeline = CreateComputePipeline("ParticleField", "Update", fieldRootSignature_.Get(),
+                "resources/Shaders/Effects/Common/ApplyParticleFields.CS.hlsl", true);
+            trailFieldPipeline = CreateComputePipeline("TrailField", "Update", fieldRootSignature_.Get(),
+                "resources/Shaders/Effects/Common/ApplyTrailFields.CS.hlsl", true);
+        }
+        replacements.reserve(indices.size());
+        restartedEffects.reserve(indices.size());
+        lightReplacements.reserve(indices.size());
+        for (size_t index : indices) {
+            replacements.push_back(CreateActiveEffectResource(candidate, activeEffects_[index].position));
+            // These are per-instance inputs, rather than particle simulation state.
+            const ActiveEffectResource& previousResource = activeResources_[index];
+            ActiveEffectResource& replacementResource = replacements.back();
+            replacementResource.emitterData->direction = previousResource.emitterData->direction;
+            *replacementResource.skeletonPoseData = *previousResource.skeletonPoseData;
+            if (activeEffects_[index].hasVelocityOverride) {
+                replacementResource.effectSettingsData->velocity = previousResource.effectSettingsData->velocity;
+            }
+            restartedEffects.push_back(activeEffects_[index]);
+            ActiveEffect& restartedEffect = restartedEffects.back();
+            restartedEffect.pointLightHandle = 0xffffffffu;
+            lightReplacements.emplace_back();
+            LightReplacement& lightReplacement = lightReplacements.back();
+            restartedEffect.prevPosition = restartedEffect.position;
+            restartedEffect.isEmitting = true;
+            restartedEffect.isLightFading = false;
+            restartedEffect.isLoop = restartedEffect.isLoopRequested || (restartedEffect.shouldUseDefaultLoop && candidate.defaultLoop);
+            restartedEffect.duration = restartedEffect.requestedDurationSeconds;
+            if (!restartedEffect.isLoopRequested && restartedEffect.duration < 0.0f) {
+                restartedEffect.duration = candidate.duration;
+            }
+            if (candidate.lightSettings.enabled != 0) {
+                const PointLightHandle previousHandle = activeEffects_[index].pointLightHandle;
+                if (LightManager::GetInstance()->TryGetPointLight(previousHandle, lightReplacement.previousLight)) {
+                    restartedEffect.pointLightHandle = previousHandle;
+                    lightReplacement.isReused = true;
+                } else {
+                    CreateEffectLight(candidate, restartedEffect);
+                    if (restartedEffect.pointLightHandle == kInvalidPointLightHandle) {
+                        throw std::runtime_error("Could not allocate a new effect light; original effects are unchanged");
+                    }
+                }
+                restartedEffect.lightBaseIntensity = candidate.lightSettings.intensity;
+                restartedEffect.lightFadeDuration = candidate.lightSettings.fadeDuration;
+                restartedEffect.lightFadeStartAge = 0.0f;
+            }
+            UpdateEffectFields(candidate, restartedEffect, replacements.back());
+        }
+        dxCommon_->WaitForGPU();
+        // Borrowed lights still belong to the old instances until every update succeeds.
+        for (size_t replacementIndex = 0; replacementIndex < restartedEffects.size(); ++replacementIndex) {
+            LightReplacement& lightReplacement = lightReplacements[replacementIndex];
+            if (!lightReplacement.isReused) { continue; }
+            const ActiveEffect& restartedEffect = restartedEffects[replacementIndex];
+            const Vector3 position = restartedEffect.position + candidate.lightSettings.offset;
+            if (!LightManager::GetInstance()->UpdatePointLight(restartedEffect.pointLightHandle,
+                candidate.lightSettings.color, position, candidate.lightSettings.intensity,
+                candidate.lightSettings.radius, candidate.lightSettings.decay)) {
+                throw std::runtime_error("Could not update the existing effect light; original effects are unchanged");
+            }
+            lightReplacement.isUpdated = true;
+        }
+        // All fallible allocations are complete. Initialization commands are recorded on the next Update.
+        initializePipelineState_.Swap(initializePipeline);
+        trailInitializePipelineState_.Swap(trailInitializePipeline);
+        particleFieldPipelineState_.Swap(particleFieldPipeline);
+        trailFieldPipelineState_.Swap(trailFieldPipeline);
+        std::swap(previous->second, candidate);
+        for (size_t replacementIndex = 0; replacementIndex < indices.size(); ++replacementIndex) {
+            const size_t index = indices[replacementIndex];
+            ActiveEffect& activeEffect = activeEffects_[index];
+            if (!lightReplacements[replacementIndex].isReused) { ReleaseEffectLight(activeEffect); }
+            ReleaseActiveEffectResource(activeResources_[index]);
+            activeResources_[index] = std::move(replacements[replacementIndex]);
+            replacements[replacementIndex] = {};
+            activeResources_[index].isInitializationPending = true;
+            activeEffect = std::move(restartedEffects[replacementIndex]);
+            restartedEffects[replacementIndex].pointLightHandle = 0xffffffffu;
+        }
+        return true;
+    } catch (const std::exception& exception) {
+        for (auto& resource : replacements) { ReleaseActiveEffectResource(resource); }
+        for (size_t index = 0; index < restartedEffects.size(); ++index) {
+            if (index < lightReplacements.size() && lightReplacements[index].isReused) {
+                if (lightReplacements[index].isUpdated) {
+                    const PointLight& light = lightReplacements[index].previousLight;
+                    LightManager::GetInstance()->UpdatePointLight(restartedEffects[index].pointLightHandle,
+                        light.color, light.position, light.intensity, light.radius, light.decay);
+                }
+            } else {
+                ReleaseEffectLight(restartedEffects[index]);
+            }
+        }
+        error = "Effect edit failed [" + effectName + "]: " + exception.what();
+        return false;
+    }
 }
 
 void EffectManager::BeginWarmUp()
@@ -406,10 +641,11 @@ bool EffectManager::WarmUpEffect(const std::string& effectName)
     return true;
 }
 
-EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData& effectData)
+EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData& effectData, const nlohmann::json* config, bool shouldReloadShaders)
 {
     EffectRuntime runtime {};
     runtime.data = effectData;
+    runtime.sourceData = effectData;
     if (!runtime.data.vertexShaderPath.empty()) {
         runtime.vertexShaderPath = runtime.data.vertexShaderPath;
     }
@@ -417,19 +653,36 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
         runtime.pixelShaderPath = runtime.data.pixelShaderPath;
     }
 
-    ApplyEffectConfig(effectData, runtime);
-    if (runtime.renderType == ParticleRenderType::Mesh) {
+    if (config != nullptr) {
+        ApplyEffectConfig(effectData, runtime, *config);
+    } else {
+        ApplyEffectConfig(effectData, runtime);
+    }
+    const auto previous = effects_.find(effectData.effectName);
+    if (previous != effects_.end() && previous->second.renderType != runtime.renderType) {
+        throw std::runtime_error("Effect type cannot be changed between Mesh and Trail. Create a separate effect: " + effectData.effectName);
+    }
+    if (!shouldReloadShaders && previous != effects_.end() &&
+        previous->second.data.emitShaderPath == runtime.data.emitShaderPath &&
+        previous->second.renderType == runtime.renderType) {
+        runtime.emitPipelineState = previous->second.emitPipelineState;
+    } else if (runtime.renderType == ParticleRenderType::Mesh) {
         runtime.emitPipelineState = CreateComputePipeline(
             runtime.data.effectName,
             "Emit",
             emitRootSignature_.Get(),
-            runtime.data.emitShaderPath);
+            runtime.data.emitShaderPath, shouldReloadShaders);
     }
-    runtime.updatePipelineState = CreateComputePipeline(
-        runtime.data.effectName,
-        "Update",
-        updateRootSignature_.Get(),
-        runtime.data.updateShaderPath);
+    if (!shouldReloadShaders && previous != effects_.end() &&
+        previous->second.data.updateShaderPath == runtime.data.updateShaderPath) {
+        runtime.updatePipelineState = previous->second.updatePipelineState;
+    } else {
+        runtime.updatePipelineState = CreateComputePipeline(
+            runtime.data.effectName,
+            "Update",
+            updateRootSignature_.Get(),
+            runtime.data.updateShaderPath, shouldReloadShaders);
+    }
 
     ParticleRenderManager::GraphicsPipelineDesc graphicsPipelineDesc {};
     graphicsPipelineDesc.effectName = runtime.data.effectName;
@@ -442,7 +695,7 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
     if (runtime.renderType == ParticleRenderType::Trail) {
         graphicsPipelineDesc.usesVertexInput = false;
     }
-    runtime.graphicsPipelineState = particleRenderManager_->CreateGraphicsPipeline(graphicsPipelineDesc);
+    runtime.graphicsPipelineState = particleRenderManager_->CreateGraphicsPipeline(graphicsPipelineDesc, shouldReloadShaders);
 
     TextureManager::GetInstance()->LoadTexture(runtime.texturePath);
     return runtime;
@@ -451,18 +704,25 @@ EffectManager::EffectRuntime EffectManager::CreateEffectRuntime(const EffectData
 void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime)
 {
     if (effectData.jsonPath.empty()) {
+        ApplyEffectConfig(effectData, runtime, nlohmann::json::object());
         return;
     }
 
     std::ifstream file(effectData.jsonPath);
     if (!file.is_open()) {
-        assert(false);
-        return;
+        throw std::runtime_error("Could not open effect config: " + effectData.jsonPath);
     }
 
     nlohmann::json config;
     file >> config;
+    ApplyEffectConfig(effectData, runtime, config);
+}
 
+void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntime& runtime, const nlohmann::json& sourceConfig)
+{
+    runtime.config = sourceConfig;
+    EffectConfigValidation::NormalizeRenderType(runtime.config);
+    const nlohmann::json& config = runtime.config;
     const std::filesystem::path effectDirectory(effectData.effectDirectory);
 
     const nlohmann::json& emitter = SelectJsonSection(config, "Emitter");
@@ -514,6 +774,8 @@ void EffectManager::ApplyEffectConfig(const EffectData& effectData, EffectRuntim
         runtime.settings.emitterShape = ParseEmitterShape(emitter.at("Shape").get<std::string>());
     }
 
+    if (emitter.contains("Count")) { EffectConfigValidation::ValidateEmitCount(emitter.at("Count")); }
+    if (emitter.contains("EmitCount")) { EffectConfigValidation::ValidateEmitCount(emitter.at("EmitCount")); }
     runtime.emitCount = emitter.value("Count", emitter.value("EmitCount", runtime.emitCount));
     runtime.emitRadius = emitter.value("Radius", emitter.value("EmitRadius", runtime.emitRadius));
     runtime.emitFrequency = emitter.value("Frequency", emitter.value("EmitFrequency", runtime.emitFrequency));
@@ -835,7 +1097,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
     const std::string& effectName,
     const std::string& shaderStage,
     ID3D12RootSignature* rootSignature,
-    const std::string& shaderPath)
+    const std::string& shaderPath, bool shouldRecompile)
 {
 #ifdef _DEBUG
     const std::chrono::steady_clock::time_point beginTime =
@@ -849,8 +1111,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
             "Effect compute shader file is missing. Effect:" + effectName +
             " Stage:" + shaderStage +
             " Path:" + fullShaderPath.generic_string());
-        assert(false);
-        return nullptr;
+        throw std::runtime_error("Effect compute shader is missing: " + fullShaderPath.generic_string());
     }
 
 #ifdef _DEBUG
@@ -861,9 +1122,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
 #endif
 
     Microsoft::WRL::ComPtr<IDxcBlob> computeShaderBlob =
-        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath));
+        dxCommon_->LoadCompiledShader(StringUtility::ConvertString(shaderPath), shouldRecompile);
 
-    assert(computeShaderBlob);
+    if (!computeShaderBlob) { throw std::runtime_error("Effect compute shader load failed: " + shaderPath); }
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC pipelineStateDesc {};
     pipelineStateDesc.pRootSignature = rootSignature;
@@ -874,7 +1135,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> EffectManager::CreateComputePipeline
     HRESULT hr = dxCommon_->GetDevice()->CreateComputePipelineState(
         &pipelineStateDesc,
         IID_PPV_ARGS(&pipelineState));
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr)) { throw std::runtime_error("Effect compute PSO creation failed: " + effectName + " HRESULT:" + std::to_string(static_cast<unsigned long>(hr))); }
 
 #ifdef _DEBUG
     Logger::Log(std::format(
@@ -898,6 +1159,12 @@ EffectHandle EffectManager::PlayLoopEffect(const std::string& effectName, const 
     return StartEffect(effectName, position, true, duration, nullptr);
 }
 
+EffectHandle EffectManager::PlayOnceEffect(const std::string& effectName, const Vector3& position, float durationSeconds)
+{
+    if (!std::isfinite(durationSeconds) || durationSeconds <= 0.0f) { return kInvalidEffectHandle; }
+    return StartEffect(effectName, position, false, durationSeconds, nullptr, false);
+}
+
 EffectHandle EffectManager::AttachEffect(
     const std::string& effectName,
     EffectPositionProvider positionProvider,
@@ -916,7 +1183,7 @@ EffectHandle EffectManager::StartEffect(
     const Vector3& position,
     bool isLoop,
     float duration,
-    EffectPositionProvider positionProvider)
+    EffectPositionProvider positionProvider, bool shouldUseDefaultLoop)
 {
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
     const std::chrono::steady_clock::time_point startEffectBeginTime =
@@ -941,11 +1208,14 @@ EffectHandle EffectManager::StartEffect(
     activeEffect.position = position;
     activeEffect.prevPosition = position;
     activeEffect.positionProvider = std::move(positionProvider);
+    activeEffect.requestedDurationSeconds = duration;
+    activeEffect.isLoopRequested = isLoop;
+    activeEffect.shouldUseDefaultLoop = shouldUseDefaultLoop;
     activeEffect.duration = duration;
     if (!isLoop && activeEffect.duration < 0.0f) {
         activeEffect.duration = runtime.duration;
     }
-    activeEffect.isLoop = isLoop || runtime.defaultLoop;
+    activeEffect.isLoop = isLoop || (shouldUseDefaultLoop && runtime.defaultLoop);
     activeEffect.isAlive = true;
 
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
@@ -1058,6 +1328,7 @@ bool EffectManager::SetEffectVelocity(EffectHandle handle, const Vector3& veloci
     }
 
     settings->velocity = velocity;
+    activeEffects_[index].hasVelocityOverride = true;
     return true;
 }
 
@@ -1306,6 +1577,7 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     ActiveEffectResource resource {};
     resource.renderType = runtime.renderType;
     resource.maxParticles = runtime.maxParticles;
+    try {
 
     uint32_t particleCount = runtime.maxParticles;
     uint32_t particleStride = sizeof(ParticleCS);
@@ -1347,30 +1619,30 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
 
     resource.emitterResource = dxCommon_->CreateBufferResource(sizeof(EmitterSphere));
     resource.emitterResource->SetName(L"EffectManager::EmitterSphere");
-    resource.emitterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.emitterData));
+    if (FAILED(resource.emitterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.emitterData)))) { throw std::runtime_error("Effect buffer mapping failed"); }
 
     resource.perFrameResource = dxCommon_->CreateBufferResource(sizeof(PerFrame));
     resource.perFrameResource->SetName(L"EffectManager::PerFrame");
-    resource.perFrameResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.perFrameData));
+    if (FAILED(resource.perFrameResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.perFrameData)))) { throw std::runtime_error("Effect buffer mapping failed"); }
     resource.effectSettingsResource = dxCommon_->CreateBufferResource(sizeof(EffectSettings));
     resource.effectSettingsResource->SetName(L"EffectManager::EffectSettings");
-    resource.effectSettingsResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.effectSettingsData));
+    if (FAILED(resource.effectSettingsResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.effectSettingsData)))) { throw std::runtime_error("Effect buffer mapping failed"); }
     resource.renderParameterResource = dxCommon_->CreateBufferResource(sizeof(ParticleRenderParameter));
     resource.renderParameterResource->SetName(L"EffectManager::ParticleRenderParameter");
-    resource.renderParameterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.renderParameterData));
+    if (FAILED(resource.renderParameterResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.renderParameterData)))) { throw std::runtime_error("Effect buffer mapping failed"); }
     resource.fieldResource = dxCommon_->CreateBufferResource(sizeof(ParticleFieldCollection));
     resource.fieldResource->SetName(L"EffectManager::ParticleFieldCollection");
-    resource.fieldResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.fieldData));
+    if (FAILED(resource.fieldResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.fieldData)))) { throw std::runtime_error("Effect buffer mapping failed"); }
     resource.skeletonPoseResource =
         dxCommon_->CreateBufferResource(sizeof(EffectSkeletonPose));
     resource.skeletonPoseResource->SetName(
         L"EffectManager::EffectSkeletonPose");
-    resource.skeletonPoseResource->Map(
-        0,
-        nullptr,
-        reinterpret_cast<void**>(&resource.skeletonPoseData));
+    if (FAILED(resource.skeletonPoseResource->Map(0, nullptr, reinterpret_cast<void**>(&resource.skeletonPoseData)))) { throw std::runtime_error("Effect skeleton buffer mapping failed"); }
     ResetActiveEffectResource(resource, runtime, position);
-
+    } catch (...) {
+        ReleaseActiveEffectResource(resource);
+        throw;
+    }
     return resource;
 }
 
@@ -1405,6 +1677,7 @@ void EffectManager::ResetActiveEffectResource(
     resource.maxParticles = runtime.maxParticles;
     resource.age = 0.0f;
     resource.hasEmitted = false;
+    resource.isInitializationPending = false;
 
     resource.emitterData->translate = position;
     resource.emitterData->radius = runtime.emitRadius;
@@ -1482,7 +1755,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> EffectManager::CreateUavBufferResource(
         D3D12_RESOURCE_STATE_COMMON,
         nullptr,
         IID_PPV_ARGS(&resource));
-    assert(SUCCEEDED(hr));
+    if (FAILED(hr)) { throw std::runtime_error("Effect GPU buffer allocation failed"); }
 
     resource->SetName(name);
     return resource;
@@ -1802,7 +2075,7 @@ void EffectManager::CreateFieldRootSignature()
     particleUavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     particleUavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-    D3D12_ROOT_PARAMETER rootParameters[3] {};
+    D3D12_ROOT_PARAMETER rootParameters[4] {};
     rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[0].DescriptorTable.pDescriptorRanges = &particleUavRange;
@@ -1815,6 +2088,11 @@ void EffectManager::CreateFieldRootSignature()
     rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     rootParameters[2].Descriptor.ShaderRegister = 1;
+
+    rootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    rootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    rootParameters[3].Constants.ShaderRegister = 2;
+    rootParameters[3].Constants.Num32BitValues = 1;
 
     D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
     rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -1888,6 +2166,18 @@ void EffectManager::DispatchInitialize(ActiveEffectResource& resource)
 
 void EffectManager::DispatchEmit(const EffectRuntime& runtime, ActiveEffectResource& resource)
 {
+    const uint32_t emitCount = resource.emitterData->count;
+    if (!EffectParticleLimits::IsValidEmitCount(emitCount)) {
+        Logger::Error("Particle emission rejected: Count exceeds " +
+            std::to_string(EffectParticleLimits::kMaxEmitCount) + " Effect:" + runtime.data.effectName);
+        return;
+    }
+    if (emitCount == 0) { return; }
+    const uint32_t dispatchCount = (emitCount - 1) / EffectParticleLimits::kEmitThreadsPerGroup + 1;
+    if (dispatchCount > D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION) {
+        Logger::Error("Particle emission rejected: dispatch group limit exceeded");
+        return;
+    }
     ID3D12GraphicsCommandList* commandList = dxCommon_->GetCommandList();
     ID3D12DescriptorHeap* descriptorHeaps[] = { srvManager_->GetDescriptorHeap() };
     commandList->SetDescriptorHeaps(1, descriptorHeaps);
@@ -1901,7 +2191,6 @@ void EffectManager::DispatchEmit(const EffectRuntime& runtime, ActiveEffectResou
     commandList->SetComputeRootConstantBufferView(4, resource.perFrameResource->GetGPUVirtualAddress());
     commandList->SetComputeRootConstantBufferView(5, resource.effectSettingsResource->GetGPUVirtualAddress());
 
-    const uint32_t dispatchCount = (resource.emitterData->count + 255) / 256;
     commandList->Dispatch(dispatchCount, 1, 1);
 }
 
@@ -1952,11 +2241,21 @@ void EffectManager::DispatchFields(const EffectRuntime& runtime, ActiveEffectRes
     commandList->SetComputeRootDescriptorTable(0, resource.particleUavHandleGPU);
     commandList->SetComputeRootConstantBufferView(1, resource.fieldResource->GetGPUVirtualAddress());
     commandList->SetComputeRootConstantBufferView(2, resource.perFrameResource->GetGPUVirtualAddress());
+    commandList->SetComputeRoot32BitConstant(3, resource.maxParticles, 0);
 
     if (runtime.renderType == ParticleRenderType::Trail) {
         commandList->Dispatch(1, 1, 1);
     } else {
         commandList->Dispatch((resource.maxParticles + 255) / 256, 1, 1);
+    }
+}
+
+void EffectManager::InitializePendingEffects()
+{
+    for (auto& resource : activeResources_) {
+        if (!resource.isInitializationPending) { continue; }
+        DispatchInitialize(resource);
+        resource.isInitializationPending = false;
     }
 }
 
@@ -2050,6 +2349,11 @@ void EffectManager::UpdateActiveEffect(size_t index)
     }
 
     const EffectRuntime& runtime = runtimeIterator->second;
+
+    if (resource.isInitializationPending) {
+        DispatchInitialize(resource);
+        resource.isInitializationPending = false;
+    }
 
     activeEffect.prevPosition = activeEffect.position;
 

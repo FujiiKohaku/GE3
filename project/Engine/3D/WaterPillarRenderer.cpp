@@ -179,7 +179,7 @@ void WaterPillarRenderer::CreatePipelineState()
 
     D3D12_RASTERIZER_DESC rasterizer {};
     rasterizer.FillMode = D3D12_FILL_MODE_SOLID;
-    rasterizer.CullMode = D3D12_CULL_MODE_NONE;
+    rasterizer.CullMode = D3D12_CULL_MODE_BACK;
     rasterizer.DepthClipEnable = TRUE;
 
     D3D12_BLEND_DESC blend {};

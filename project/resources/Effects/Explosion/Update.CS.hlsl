@@ -7,14 +7,13 @@ ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b1);
 ConstantBuffer<EmitterSphere> gEmitter : register(b2);
 
-static const uint32_t kMaxGPUParticle = 1024;
 
 [numthreads(256, 1, 1)]
 void main(uint32_t3 DTid : SV_DispatchThreadID)
 {
     uint32_t particleIndex = DTid.x;
 
-    if (particleIndex >= kMaxGPUParticle)
+    if (particleIndex >= gEmitter.maxParticles)
     {
         return;
     }
@@ -58,9 +57,14 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
 
     lifeRate = saturate(lifeRate);
 
-    float scale = lerp(gEffectSettings.startScale, gEffectSettings.endScale, lifeRate);
+    // 初動は素早く膨らみ、後半は形の分裂を読めるように減速する。
+    float remainingGrowth = 1.0f - lifeRate;
+    float growthRatio = 1.0f - remainingGrowth * remainingGrowth * remainingGrowth;
+    float scale = lerp(gEffectSettings.startScale, gEffectSettings.endScale, growthRatio);
     gParticles[particleIndex].scale = float32_t3(scale, scale, scale);
     gParticles[particleIndex].color = lerp(gEffectSettings.startColor, gEffectSettings.endColor, lifeRate);
+    float fadeRatio = smoothstep(0.65f, 1.0f, lifeRate);
+    gParticles[particleIndex].color.a = lerp(gEffectSettings.startColor.a, gEffectSettings.endColor.a, fadeRatio);
 
     if (gParticles[particleIndex].currentTime >= gParticles[particleIndex].lifeTime ||
         gParticles[particleIndex].color.a <= 0.0f)
@@ -70,7 +74,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         int32_t freeListIndex;
         InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
 
-        if ((freeListIndex + 1) < kMaxGPUParticle)
+        if ((freeListIndex + 1) < gEmitter.maxParticles)
         {
             gFreeList[freeListIndex + 1] = particleIndex;
         }

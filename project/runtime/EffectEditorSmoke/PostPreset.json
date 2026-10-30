@@ -1,0 +1,98 @@
+{
+  "atmosphere": {
+    "distanceFog": [
+      10.0,
+      60.0,
+      0.30000001192092896,
+      1.0
+    ],
+    "exposure": 1.0,
+    "fogColor": [
+      0.15000000596046448,
+      0.18000000715255737,
+      0.23000000417232513,
+      1.0
+    ]
+  },
+  "bloom": {
+    "blurRadius": 5,
+    "blurSigma": 2.0,
+    "intensity": 1.2000000476837158,
+    "maxRadiance": 16.0,
+    "softKnee": 0.5,
+    "threshold": 0.800000011920929
+  },
+  "effectParameters": {
+    "Bloom": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "ColorAdjust": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "Fog": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "effects": [
+    {
+      "enabled": false,
+      "stage": "BeforeParticle",
+      "type": "Fog"
+    },
+    {
+      "enabled": true,
+      "stage": "AfterParticle",
+      "type": "Bloom"
+    },
+    {
+      "enabled": true,
+      "stage": "AfterParticle",
+      "type": "ColorAdjust"
+    }
+  ],
+  "finalPass": {
+    "compensationEv": 0.0,
+    "fxaa": true,
+    "toneMapping": 0
+  },
+  "formatVersion": 1,
+  "name": "標準",
+  "parameters": {
+    "bokehRadius": 10.0,
+    "cameraShakeStrength": 0.00800000037997961,
+    "chromaticAberrationStrength": 0.00800000037997961,
+    "colorBrightness": 0.0,
+    "colorContrast": 1.0,
+    "colorSaturation": 0.25,
+    "depthOfFieldRadius": 8.0,
+    "dissolveEdgeStrength": 2.0,
+    "dissolveEdgeWidth": 0.05000000074505806,
+    "dissolveThreshold": 0.5,
+    "filmGrainStrength": 0.07999999821186066,
+    "fisheyeStrength": 1.2000000476837158,
+    "focusDepth": 0.9900000095367432,
+    "focusRange": 0.009999999776482582,
+    "grayScaleStrength": 1.0,
+    "lensDirtStrength": 1.0,
+    "lensDistortionStrength": 0.20000000298023224,
+    "lightAngle": 0.0,
+    "lightRadius": 0.20000000298023224,
+    "lightStrength": 1.0,
+    "lightThreshold": 0.6499999761581421,
+    "motionBlurStrength": 0.02500000037252903,
+    "outlineNormalStrength": 0.6000000238418579,
+    "outlineScale": 1000.0,
+    "outlineSoftness": 0.01600000075995922,
+    "outlineThreshold": 0.012000000104308128,
+    "pixelSize": 8.0,
+    "radialBlurSampleCount": 32,
+    "radialBlurWidth": 0.07999999821186066,
+    "vignetteStrength": 1.0
+  }
+}

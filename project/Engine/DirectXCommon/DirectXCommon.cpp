@@ -550,6 +550,7 @@ void DirectXCommon::InitializeDxcCompiler()
 // 描画前処理
 void DirectXCommon::PreDraw()
 {
+    isCommandListPristine_ = false;
     // これから書き込むバックバッファの番号を取得
     UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
     // リソースバリアで書き込み可能に変更
@@ -624,10 +625,12 @@ void DirectXCommon::PostDraw()
     // コマンドリストのリセット
     hr = commandList->Reset(commandAllocator.Get(), nullptr);
     assert(SUCCEEDED(hr));
+    isCommandListPristine_ = SUCCEEDED(hr);
 }
 
 void DirectXCommon::SetBackBufferRenderTarget(D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle)
 {
+    isCommandListPristine_ = false;
     UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
     commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
@@ -646,7 +649,7 @@ ID3D12Resource* DirectXCommon::GetCurrentBackBuffer() const
 }
 #pragma endregion
 #pragma region
-Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath)
+Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath, bool shouldRecompile)
 {
     StartupTimingScope startupScope("Resource.ShaderLoad");
     const std::filesystem::path sourcePath(hlslPath);
@@ -668,7 +671,7 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::ws
         throw std::runtime_error(message);
     }
 
-    if (IsShaderCacheOutdated(sourcePath, compiledPath)) {
+    if (shouldRecompile || IsShaderCacheOutdated(sourcePath, compiledPath)) {
         return CompileShaderAndSaveCache(sourcePath, compiledPath);
     }
 
@@ -912,6 +915,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(Micr
 [[nodiscard]]
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const DirectX::ScratchImage& mipImages)
 {
+    isCommandListPristine_ = false;
     std::vector<D3D12_SUBRESOURCE_DATA> subresources;
     DirectX::PrepareUpload(device.Get(), mipImages.GetImages(), mipImages.GetImageCount(), mipImages.GetMetadata(), subresources);
 

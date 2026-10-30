@@ -7,7 +7,6 @@ RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
-static const int32_t kMaxGPUParticle = 1024;
 
 class RandomGenerator
 {
@@ -43,7 +42,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
     int32_t freeListIndex;
     InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
 
-    if (freeListIndex < 0 || freeListIndex >= kMaxGPUParticle)
+    if (freeListIndex < 0 || freeListIndex >= int32_t(gEmitter.maxParticles))
     {
         InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
         return;
@@ -67,7 +66,8 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         randomDirection = randomDirection / length;
     }
 
-    float speed = 5.0f + generator.Generate1d() * 8.0f;
+    // 爆発の中心を撃破位置に保ち、膨張は描画サイズで表現する。
+    float speed = 0.0f;
 
     gParticles[particleIndex].translate =
         gEmitter.translate + MakeEmitterOffset(gEffectSettings.emitterShape, random, gEmitter.radius);

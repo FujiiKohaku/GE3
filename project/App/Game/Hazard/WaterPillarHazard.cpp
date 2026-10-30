@@ -7,8 +7,9 @@
 
 namespace {
 constexpr float kWarningDuration = 3.0f;
-constexpr float kRisingDuration = 0.7f;
-constexpr float kActiveDuration = 3.0f;
+constexpr float kWarningLeadDistance = 120.0f;
+constexpr float kRisingDuration = 0.35f;
+constexpr float kActiveDuration = 5.5f;
 constexpr float kFadingDuration = 0.75f;
 constexpr float kPreviewHeightRatio = 0.16f;
 
@@ -39,7 +40,7 @@ void WaterPillarHazard::Initialize(
     float delay)
 {
     position_ = position;
-    triggerDistance_ = triggerDistance;
+    triggerDistance_ = (std::max)(0.0f, triggerDistance - kWarningLeadDistance);
     activationDelay_ = delay;
     renderer_ = renderer;
 

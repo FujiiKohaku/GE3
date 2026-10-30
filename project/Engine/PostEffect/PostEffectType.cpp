@@ -17,6 +17,11 @@ bool IsTemporalResolveInputEffect(PostEffectType type) {
 const char* GetPostEffectTypeName(PostEffectType type)
 {
     switch (type) {
+    case PostEffectType::Shockwave: return "Shockwave";
+    case PostEffectType::HeatHaze: return "HeatHaze";
+    case PostEffectType::SonicBoom: return "SonicBoom";
+    case PostEffectType::CyberScanline: return "CyberScanline";
+    case PostEffectType::HexShield: return "HexShield";
     case PostEffectType::BoostSparks:
         return "BoostSparks";
     case PostEffectType::ScreenLighting:

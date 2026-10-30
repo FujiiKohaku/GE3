@@ -7,16 +7,16 @@
   },
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 12,
-    "Radius": 0.2,
+    "Count": 1,
+    "Radius": 0.0,
     "Frequency": 0.05
   },
   "Particle": {
-    "LifeTime": 0.75,
+    "LifeTime": 0.72,
     "StartScale": 0.34,
     "EndScale": 5.1,
     "StartRotation": 0.0,
-    "RotationSpeed": 5.0,
+    "RotationSpeed": 0.0,
     "Velocity": [
       0.0,
       0.0,
@@ -48,11 +48,11 @@
   "Render": {
     "Texture": "explosion.png",
     "MeshType": "Board",
-    "BlendMode": "Add",
+    "BlendMode": "Normal",
     "DepthTest": true,
     "DepthWrite": false,
     "CullMode": "None",
     "Loop": false,
-    "Duration": 1.4
+    "Duration": 0.9
   }
 }

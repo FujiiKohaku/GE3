@@ -24,7 +24,7 @@ private:
     static constexpr int32_t kHeadChargeShotMax = 3;
     static constexpr int32_t kChargedBulletDamage = 3;
     static constexpr float kHeadAimFollowRate = 0.18f;
-    static constexpr Vector4 kChargedBulletColor = { 1.0f, 0.353f, 0.239f, 1.0f };
+    static constexpr Vector4 kChargedBulletColor = { 1.0f, 0.0f, 0.0f, 1.0f };
     static constexpr float kChargedBulletLifeTimeSeconds = 20.0f;
     static constexpr Vector4 kChargingHeadColor = { 1.0f, 0.48f, 0.08f, 1.0f };
     static constexpr Vector4 kFiringHeadColor = { 1.0f, 0.08f, 0.02f, 1.0f };

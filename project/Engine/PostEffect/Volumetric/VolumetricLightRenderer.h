@@ -55,6 +55,7 @@ struct FogPreset {
 
 // One directional light. The scene owns its direction and its matching shadow map.
 class VolumetricLightRenderer {
+    friend class PostEffectManager;
 public:
     static constexpr uint32_t kMaxFogVolumes = 8;
     static constexpr uint32_t kMaxVolumetricSpotLights = 2;

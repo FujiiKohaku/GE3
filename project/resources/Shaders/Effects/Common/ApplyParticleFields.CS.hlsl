@@ -5,13 +5,16 @@ RWStructuredBuffer<ParticleCS> gParticles : register(u0);
 ConstantBuffer<ParticleFieldCollection> gFieldCollection : register(b0);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 
-static const uint32_t kMaxParticles = 1024;
+cbuffer ParticleCapacity : register(b2)
+{
+    uint32_t gMaxParticles;
+}
 
 [numthreads(256, 1, 1)]
 void main(uint32_t3 dispatchThreadId : SV_DispatchThreadID)
 {
     uint32_t particleIndex = dispatchThreadId.x;
-    if (particleIndex >= kMaxParticles)
+    if (particleIndex >= gMaxParticles)
     {
         return;
     }

@@ -40,7 +40,8 @@ public:
     static void Finalize();
     // Getter達
     ID3D12Device* GetDevice() const { return device.Get(); }
-    ID3D12GraphicsCommandList* GetCommandList() const { return commandList.Get(); }
+    ID3D12GraphicsCommandList* GetCommandList() const { isCommandListPristine_ = false; return commandList.Get(); }
+    bool IsCommandListPristine() const { return isCommandListPristine_; }
     ID3D12CommandAllocator* GetCommandAllocator() const { return commandAllocator.Get(); }
     ID3D12CommandQueue* GetCommandQueue() const { return commandQueue.Get(); }
     ID3D12Resource* GetCurrentBackBuffer() const;
@@ -51,7 +52,7 @@ public:
     }
 
     // HLSLのパスから対応するコンパイル済みDXILを読み込む。
-    Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShader(const std::wstring& hlslPath);
+    Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShader(const std::wstring& hlslPath, bool shouldRecompile = false);
     // 初期化時とシェーダー再読み込み時に、共通ファイルの最新更新日時を取得する。
     void RefreshShaderIncludeWriteTime();
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t sizeInBytes);
@@ -102,6 +103,7 @@ private:
         const std::filesystem::path& compiledPath);
 
 private:
+    mutable bool isCommandListPristine_ = false;
     Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Device> device = nullptr;
     Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue = nullptr;

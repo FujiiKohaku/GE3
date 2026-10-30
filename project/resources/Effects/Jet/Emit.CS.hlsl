@@ -8,7 +8,6 @@ RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
 
-static const int32_t kMaxGPUParticle = 1024;
 
 class RandomGenerator
 {
@@ -49,7 +48,7 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
         freeListIndex);
 
     if (freeListIndex < 0 ||
-        freeListIndex >= kMaxGPUParticle)
+        freeListIndex >= int32_t(gEmitter.maxParticles))
     {
         InterlockedAdd(
             gFreeListIndex[0],

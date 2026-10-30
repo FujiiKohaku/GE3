@@ -6,7 +6,6 @@ RWStructuredBuffer<int32_t> gFreeListIndex : register(u1);
 RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b1);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b2);
-static const int32_t kMaxGPUParticle = 1024;
 
 float Hash(float value, float seed)
 {
@@ -26,7 +25,7 @@ void main(uint3 id : SV_DispatchThreadID)
 
     int32_t freeIndex;
     InterlockedAdd(gFreeListIndex[0], -1, freeIndex);
-    if (freeIndex < 0 || freeIndex >= kMaxGPUParticle)
+    if (freeIndex < 0 || freeIndex >= int32_t(gEmitter.maxParticles))
     {
         InterlockedAdd(gFreeListIndex[0], 1, freeIndex);
         return;

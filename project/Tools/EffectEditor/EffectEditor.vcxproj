@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup><SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir></PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{267CEC41-53CF-4FDB-A78F-121227DC79BC}</ProjectGuid>
+    <ProjectName>EffectEditor</ProjectName><TargetName>EffectEditor</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\EffectEditor\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>EffectEditor.exe</TargetFileName><TargetPath>$(OutDir)EffectEditor.exe</TargetPath>
+    <LocalDebuggerWorkingDirectory>$(projectRootPath)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><PreprocessorDefinitions>USE_IMGUI;KOHAKU_EFFECT_EDITOR;%(PreprocessorDefinitions)</PreprocessorDefinitions></ClCompile>
+    <Link><AdditionalDependencies>ole32.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="$(projectRootPath)App\**\*.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Scene\Common\SceneManager.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditor.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditorApp.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditorData.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditorUi.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EditorProperties.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\PreviewTarget.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EditorSmokeTest.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EditorLiveReload.cpp" />
+    <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EditorLiveReloadTests.cpp" />
+    <ClInclude Include="$(projectRootPath)Tools\EffectEditor\EffectEditorApp.h" />
+    <ClInclude Include="$(projectRootPath)Tools\EffectEditor\EditorLabels.h" />
+    <ClInclude Include="$(projectRootPath)Tools\EffectEditor\PreviewTarget.h" />
+    <ClInclude Include="$(projectRootPath)Tools\EffectEditor\EditorSourceWatch.h" />
+  </ItemGroup>
+</Project>

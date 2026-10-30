@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "name": "標準",
+  "effects": [
+    { "type": "Fog", "stage": "BeforeParticle", "enabled": false },
+    { "type": "Bloom", "stage": "AfterParticle", "enabled": true },
+    { "type": "ColorAdjust", "stage": "AfterParticle", "enabled": true }
+  ],
+  "parameters": { "colorBrightness": 0.0, "colorContrast": 1.0, "colorSaturation": 1.0 },
+  "bloom": { "threshold": 0.8, "intensity": 0.8, "blurRadius": 5, "blurSigma": 2.0, "softKnee": 0.5, "maxRadiance": 16.0 },
+  "atmosphere": { "exposure": 1.0, "fogColor": [0.15, 0.18, 0.23, 1.0], "distanceFog": [10.0, 60.0, 0.3, 1.0] },
+  "finalPass": { "fxaa": true, "toneMapping": 0, "compensationEv": 0.0 }
+}

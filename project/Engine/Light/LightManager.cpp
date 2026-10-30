@@ -306,6 +306,13 @@ bool LightManager::UpdatePointLight(
     return true;
 }
 
+bool LightManager::TryGetPointLight(PointLightHandle handle, PointLight& light) const
+{
+    if (!IsInitialized() || !IsValidDynamicPointLightHandle(handle)) { return false; }
+    light = pointLightData_->lights[handle & kLightIndexMask];
+    return true;
+}
+
 bool LightManager::SetPointLightPosition(PointLightHandle handle, const Vector3& position)
 {
     if (!(IsInitialized() && IsFiniteLightVector(position))) { return false; }

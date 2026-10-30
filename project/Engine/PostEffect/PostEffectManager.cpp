@@ -1187,7 +1187,31 @@ void PostEffectManager::ApplyPostEffectToCurrentTarget(PostEffectType type, D3D1
 
 void PostEffectManager::SetBackBufferRenderTarget()
 {
+    if (outputRtv_.ptr != 0) {
+        auto* commands = dxCommon_->GetCommandList();
+        commands->OMSetRenderTargets(1, &outputRtv_, false, nullptr);
+        D3D12_VIEWPORT viewport { 0, 0, static_cast<float>(outputWidth_), static_cast<float>(outputHeight_), 0, 1 };
+        D3D12_RECT scissor { 0, 0, static_cast<LONG>(outputWidth_), static_cast<LONG>(outputHeight_) };
+        commands->RSSetViewports(1, &viewport);
+        commands->RSSetScissorRects(1, &scissor);
+        return;
+    }
     dxCommon_->SetBackBufferRenderTarget(dxCommon_->GetDSVHandle());
+}
+
+void PostEffectManager::SetOutputTarget(D3D12_CPU_DESCRIPTOR_HANDLE rtv, uint32_t width, uint32_t height)
+{
+    if (width == 0 || height == 0) { ClearOutputTarget(); return; }
+    outputRtv_ = rtv;
+    outputWidth_ = width;
+    outputHeight_ = height;
+}
+
+void PostEffectManager::ClearOutputTarget()
+{
+    outputRtv_ = {};
+    outputWidth_ = 0;
+    outputHeight_ = 0;
 }
 
 uint32_t PostEffectManager::GetNextPingPongIndex(uint32_t currentIndex) const

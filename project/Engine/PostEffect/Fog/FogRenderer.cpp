@@ -5,6 +5,7 @@
 #include "Engine/Winapp/WinApp.h"
 #include <cassert>
 #include <cmath>
+#include <stdexcept>
 
 void FogRenderer::Initialize(DirectXCommon* dxCommon)
 {
@@ -216,7 +217,7 @@ void FogRenderer::CreatePipelineState()
     HRESULT result = device->CreateGraphicsPipelineState(
         &pipelineStateDesc,
         IID_PPV_ARGS(&pipelineState_));
-    assert(SUCCEEDED(result));
+    if (FAILED(result)) { throw std::runtime_error("Fog pipeline creation failed. HRESULT:" + std::to_string(static_cast<unsigned long>(result))); }
 }
 
 void FogRenderer::CreateDepthResource()
@@ -338,6 +339,26 @@ ID3D12Resource* FogRenderer::GetParticleDepthTexture() const {
     if (!useResolvedParticleDepth_) { return depthResource_.Get(); }
     return particleDepth_.Get();
 }
+void FogRenderer::CreateDepthResolvePipeline()
+{
+    auto vertex = dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
+    auto pixel = dxCommon_->LoadCompiledShader(L"resources/Shaders/SuperResolution/DepthResolve.PS.hlsl");
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline {};
+    pipeline.pRootSignature = rootSignature_.Get();
+    pipeline.VS = { vertex->GetBufferPointer(), vertex->GetBufferSize() };
+    pipeline.PS = { pixel->GetBufferPointer(), pixel->GetBufferSize() };
+    pipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    pipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+    pipeline.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    pipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+    pipeline.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+    pipeline.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    pipeline.SampleDesc.Count = 1; pipeline.SampleMask = UINT_MAX;
+    pipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    const HRESULT result = dxCommon_->GetDevice()->CreateGraphicsPipelineState(&pipeline, IID_PPV_ARGS(&depthResolvePipeline_));
+    if (FAILED(result)) { throw std::runtime_error("Particle depth resolve pipeline creation failed"); }
+}
+
 void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
     shouldUseParticleDepth_ = true;
     useResolvedParticleDepth_ = sceneWidth_ != WinApp::GetInstance()->GetRenderWidth() || sceneHeight_ != WinApp::GetInstance()->GetRenderHeight() ||
@@ -358,17 +379,8 @@ void FogRenderer::ResolveParticleDepth(Vector2 jitterUv) {
         }
         SrvManager::GetInstance()->CreateSRVforTexture2D(particleDepthSrvIndex_, particleDepth_.Get(), DXGI_FORMAT_R24_UNORM_X8_TYPELESS, 1);
         depthResolveConstants_ = dxCommon_->CreateBufferResource(256);
-        auto vertex = dxCommon_->LoadCompiledShader(L"resources/Shaders/PostEffect/Fullscreen.VS.hlsl");
-        auto pixel = dxCommon_->LoadCompiledShader(L"resources/Shaders/SuperResolution/DepthResolve.PS.hlsl");
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline = {}; pipeline.pRootSignature = rootSignature_.Get();
-        pipeline.VS = {vertex->GetBufferPointer(), vertex->GetBufferSize()}; pipeline.PS = {pixel->GetBufferPointer(), pixel->GetBufferSize()};
-        pipeline.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT); pipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-        pipeline.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-        pipeline.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT); pipeline.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-        pipeline.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT; pipeline.SampleDesc.Count = 1; pipeline.SampleMask = UINT_MAX;
-        pipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        result = device->CreateGraphicsPipelineState(&pipeline, IID_PPV_ARGS(&depthResolvePipeline_)); assert(SUCCEEDED(result));
     }
+    if (!depthResolvePipeline_) { CreateDepthResolvePipeline(); }
     if (particleDepthState_ != D3D12_RESOURCE_STATE_DEPTH_WRITE) {
         auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(particleDepth_.Get(), particleDepthState_, D3D12_RESOURCE_STATE_DEPTH_WRITE);
         command->ResourceBarrier(1, &barrier); particleDepthState_ = D3D12_RESOURCE_STATE_DEPTH_WRITE;

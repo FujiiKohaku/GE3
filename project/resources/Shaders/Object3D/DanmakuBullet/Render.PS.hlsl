@@ -53,11 +53,26 @@ PixelShaderOutput main(VertexShaderOutput input)
     finalRgb = lerp(finalRgb, kPlayerOutlineColor, outlineMask);
     alpha = saturate(materialParameters.color.a);
 #else
-    float3 finalRgb = lerp(bulletColor, float3(1.0f, 1.0f, 1.0f), core);
+    const float3 kEnemyOutlineColor = float3(0.0f, 0.0f, 0.0f);
+    const float3 kEnemyBodyTint = float3(1.0f, 0.16f, 0.07f);
+    const float3 kEnemyCoreColor = float3(1.0f, 0.55f, 0.60f);
+    const float kEnemyBodyOpacity = 0.70f;
+    const float kEnemyOutlineOpacity = 1.0f;
+    const float kEnemyCoreOpacity = 0.88f;
 
-    // 5. 発光・ブルーム強調
-    // 全体的に自発光させつつ、コアは強いHDR輝度にしてBloomを誘発
-    finalRgb *= (1.4f + core * 2.6f);
+    // 黒い外周で形を保ち、朱色の胴体は海面が少し透けるようにする。
+    // 球の投影半径に対する外周幅を、従来の境界値から1.3倍へ広げる。
+    float enemyOutlineMask = 1.0f - smoothstep(0.284353f, 0.563915f, NdotV);
+    float enemyEdgeFade = smoothstep(0.02f, 0.25f, NdotV);
+    float enemyCore = pow(NdotV, 24.0f);
+    const float kEnemyBodyColorDepth = 1.2f;
+    float3 enemyBodyColor = lerp(bulletColor, kEnemyBodyTint, 0.35f) / kEnemyBodyColorDepth;
+    float3 finalRgb = lerp(enemyBodyColor, kEnemyOutlineColor, enemyOutlineMask);
+    // 小さな淡いピンクのコアだけを控えめに発光させる。
+    finalRgb = lerp(finalRgb, kEnemyCoreColor * 1.15f, enemyCore);
+    float enemyOpacity = lerp(kEnemyBodyOpacity, kEnemyOutlineOpacity, enemyOutlineMask);
+    enemyOpacity = lerp(enemyOpacity, kEnemyCoreOpacity, enemyCore);
+    alpha = enemyEdgeFade * enemyOpacity * saturate(materialParameters.color.a);
 #endif
 
     output.color = float32_t4(finalRgb, alpha);

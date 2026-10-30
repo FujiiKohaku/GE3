@@ -27,7 +27,7 @@ public:
     void Initialize(DirectXCommon* dxCommon);
     void PreDraw(int blendMode);
     void PreDraw();
-    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(const GraphicsPipelineDesc& desc);
+    Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateGraphicsPipeline(const GraphicsPipelineDesc& desc, bool shouldReloadShaders = false);
 
     ID3D12RootSignature* GetRootSignature() const { return rootSignature_.Get(); }
 
@@ -39,7 +39,7 @@ private:
     Microsoft::WRL::ComPtr<IDxcBlob> LoadCompiledShaderWithLog(
         const std::string& effectName,
         const std::string& shaderStage,
-        const std::string& shaderPath);
+        const std::string& shaderPath, bool shouldRecompile = false);
     std::string MakePipelineCacheKey(const GraphicsPipelineDesc& desc) const;
 
 

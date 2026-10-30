@@ -12,7 +12,7 @@
 namespace {
 // 調整用の設定値。意味が異なる値は、数値が同じでも個別に保持する。
 constexpr Vector3 kMuzzleOffset = { 0.0f, -2.0f, -15.0f };
-constexpr Vector4 kBulletColor = { 1.0f, 0.353f, 0.239f, 1.0f };
+constexpr Vector4 kBulletColor = { 1.0f, 0.0f, 0.0f, 1.0f };
 constexpr Vector3 kCenterBulletScale = { 0.46f, 0.46f, 0.95f };
 constexpr Vector3 kRingBulletScale = { 0.42f, 0.42f, 0.90f };
 constexpr int kBulletDamage = 1;

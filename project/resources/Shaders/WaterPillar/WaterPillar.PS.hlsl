@@ -52,6 +52,11 @@ float4 main(WaterPillarVertexOutput input) : SV_TARGET
     float fineFlow = Fbm(fineUv + float2(time * 0.45f, -time * 1.6f));
     float stream = smoothstep(0.48f, 0.78f, broadFlow * 0.65f + fineFlow * 0.55f);
     float foam = smoothstep(0.68f, 0.88f, fineFlow + broadFlow * 0.32f);
+    // 高さ方向に引き伸ばした模様で、泡を上昇する細い筋へ絞る。
+    float foamFlow = normalizedHeight * 0.65f - time * 0.30f;
+    float foamStreak = smoothstep(0.62f, 0.80f,
+        Noise(horizontalPosition * 7.0f + float2(foamFlow, foamFlow * 0.73f)));
+    foam *= foamStreak;
 
     float3 viewDirection = normalize(gPillar.cameraPositionAndTime.xyz - input.worldPosition);
     float fresnel = pow(1.0f - saturate(abs(dot(normalize(input.normal), viewDirection))), 2.2f);
@@ -63,8 +68,14 @@ float4 main(WaterPillarVertexOutput input) : SV_TARGET
     float3 waterColor = lerp(deepWater, clearWater, broadFlow * 0.72f + fresnel * 0.28f);
     waterColor *= verticalShade;
     waterColor += stream * float3(0.08f, 0.28f, 0.34f);
-    waterColor = lerp(waterColor, float3(0.82f, 0.97f, 1.0f), foam * 0.72f + fresnel * 0.22f);
+    waterColor = lerp(waterColor, float3(0.82f, 0.97f, 1.0f), foam * 0.72f);
+    // 明るい海面や霧の前でも、外周を濃い青として読めるようにする。
+    const float3 kPillarOutlineColor = float3(0.005f, 0.045f, 0.14f);
+    waterColor = lerp(waterColor, kPillarOutlineColor, fresnel * 0.85f);
 
-    float alpha = gPillar.color.a * saturate(0.76f + broadFlow * 0.14f + foam * 0.16f + fresnel * 0.12f);
+    // 出現・消失のフェードを保ちながら、中央の背景透過を少し抑える。
+    float opacity = saturate(0.90f + broadFlow * 0.08f + foam * 0.08f);
+    opacity = lerp(opacity, 1.0f, fresnel);
+    float alpha = gPillar.color.a * opacity;
     return float4(waterColor, alpha);
 }

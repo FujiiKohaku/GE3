@@ -1,7 +1,5 @@
 #pragma once
-#if defined(ENABLE_DEVELOPMENT_TOOLS)
 #include "externals/json.hpp"
-#endif
 
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/PostEffect/CopyImageRenderer.h"
@@ -28,6 +26,18 @@ public:
     ~PostEffectManager();
 
     void Initialize(DirectXCommon* dxCommon);
+    // Shared by standalone editors and the game. Applying never writes a file.
+    nlohmann::json GetPresetConfig() const;
+    bool ApplyPresetConfig(const nlohmann::json& config, std::string& error);
+    bool LoadPreset(const std::string& path, std::string& error);
+    bool SavePreset(const std::string& path, std::string& error) const;
+    // Call at a pristine frame boundary. Shader errors leave every current pipeline intact.
+    bool ReloadShaders(std::string& error);
+    uint64_t GetShaderRevision() const { return shaderRevision_; }
+    std::vector<std::filesystem::path> GetShaderSourcePaths(const nlohmann::json* preset = nullptr) const;
+    // Optional LDR output for an embedded preview. Caller manages resource transitions.
+    void SetOutputTarget(D3D12_CPU_DESCRIPTOR_HANDLE rtv, uint32_t width, uint32_t height);
+    void ClearOutputTarget();
     void Update(Camera* camera);
     void UpdateCameraInputs(Camera* camera);
     bool SetSsao(bool isEnabled, float strength, float radius, float bias);
@@ -87,6 +97,12 @@ public:
     VolumetricLightRenderer* GetVolumetricLightRenderer() const { return volumetricLightRenderer_.get(); }
 
 private:
+    void EnsurePresetPipelines(const std::vector<PostEffectType>& types);
+    nlohmann::json presetConfig_;
+    uint64_t shaderRevision_ = 0;
+    D3D12_CPU_DESCRIPTOR_HANDLE outputRtv_ {};
+    uint32_t outputWidth_ = 0;
+    uint32_t outputHeight_ = 0;
     class RenderTarget {
     public:
         ~RenderTarget();

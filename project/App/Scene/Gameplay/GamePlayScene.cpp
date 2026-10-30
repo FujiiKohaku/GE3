@@ -84,7 +84,7 @@ constexpr Vector3 kFallbackFirstRecoveryPosition = { -5.0f, 1.5f, 410.0f };
 constexpr Vector3 kFallbackSecondRecoveryPosition = { 5.0f, 1.5f, 1040.0f };
 constexpr Vector3 kFallbackFinalRecoveryPosition = { 0.0f, 5.0f, 1700.0f };
 constexpr Vector3 kInitializetScale = { 100.0f, 100.0f, 100.0f };
-constexpr Vector3 kHangarFogColor = { 0.68f, 0.65f, 0.58f };
+constexpr Vector3 kStage01SurfaceFogColor = { 0.40f, 0.55f, 0.65f };
 constexpr Vector3 kFrozenFogColor = { 0.68f, 0.82f, 0.94f };
 constexpr Vector3 kFrozenFogNoiseVelocity = { 0.8f, 0.0f, 0.3f };
 constexpr Vector3 kInitializeLightMistCenter = Vector3 { 0.0f, 25.0f, 0.0f };
@@ -655,7 +655,7 @@ void GamePlayScene::Initialize()
         }
         if (stageId_ == "stage01") {
             fogPreset.parameters.isEnabled = true;
-            fogPreset.parameters.color = kHangarFogColor;
+            fogPreset.parameters.color = kStage01SurfaceFogColor;
             fogPreset.parameters.noiseScale = kInitializeFogPresetParametersNoiseScaleDefault;
             fogPreset.parameters.baseHeight = stageSettings_.floorHeight + kInitializeFogPresetParametersBaseHeightOffset;
             fogPreset.parameters.heightDensity = kInitializeFogPresetParametersHeightDensityDefault;

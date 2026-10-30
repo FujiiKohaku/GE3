@@ -10,6 +10,7 @@
 #include <wrl.h>
 
 class CopyImageRenderer {
+    friend class PostEffectManager;
 public:
     struct PostEffectParameter {
         float grayScaleStrength;

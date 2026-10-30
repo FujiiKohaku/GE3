@@ -1,0 +1,13 @@
+{
+  "formatVersion": 1,
+  "name": "氷の空気感",
+  "effects": [
+    { "type": "Fog", "stage": "BeforeParticle", "enabled": true },
+    { "type": "Bloom", "stage": "AfterParticle", "enabled": true },
+    { "type": "ColorAdjust", "stage": "AfterParticle", "enabled": true }
+  ],
+  "parameters": { "colorBrightness": 0.02, "colorContrast": 1.1, "colorSaturation": 0.65 },
+  "bloom": { "threshold": 0.9, "intensity": 0.5, "blurRadius": 5, "blurSigma": 2.0, "softKnee": 0.5, "maxRadiance": 16.0 },
+  "atmosphere": { "exposure": 0.95, "fogColor": [0.4, 0.52, 0.65, 1.0], "distanceFog": [5.0, 45.0, 0.4, 1.0] },
+  "finalPass": { "fxaa": true, "toneMapping": 0, "compensationEv": 0.0 }
+}

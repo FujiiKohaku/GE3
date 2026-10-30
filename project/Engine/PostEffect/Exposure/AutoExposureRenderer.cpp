@@ -47,14 +47,7 @@ void AutoExposureRenderer::Initialize() {
     Microsoft::WRL::ComPtr<ID3DBlob> signature; Microsoft::WRL::ComPtr<ID3DBlob> errors;
     RequireExposure(D3D12SerializeRootSignature(&description, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &errors));
     RequireExposure(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature_)));
-    const wchar_t* kShaderPaths[] = {L"resources/Shaders/PostEffect/Exposure/Clear.CS.hlsl",
-        L"resources/Shaders/PostEffect/Exposure/Histogram.CS.hlsl", L"resources/Shaders/PostEffect/Exposure/Adapt.CS.hlsl"};
-    for (uint32_t index = 0; index < 3; ++index) {
-        auto shader = dx->LoadCompiledShader(kShaderPaths[index]);
-        D3D12_COMPUTE_PIPELINE_STATE_DESC pipeline = {}; pipeline.pRootSignature = rootSignature_.Get();
-        pipeline.CS = {shader->GetBufferPointer(), shader->GetBufferSize()};
-        RequireExposure(device->CreateComputePipelineState(&pipeline, IID_PPV_ARGS(&pipelines_[index])));
-    }
+    CreatePipelines();
     D3D12_HEAP_PROPERTIES heap = {}; heap.Type = D3D12_HEAP_TYPE_DEFAULT;
     auto buffer = CD3DX12_RESOURCE_DESC::Buffer(256 * sizeof(uint32_t), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     RequireExposure(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &buffer,
@@ -77,6 +70,20 @@ void AutoExposureRenderer::Initialize() {
     allocationBytes_ += device->GetResourceAllocationInfo(0, 1, &uploadDescription).SizeInBytes;
     timer_.Initialize(); isReady_ = true;
 }
+void AutoExposureRenderer::CreatePipelines()
+{
+    auto* dx = DirectXCommon::GetInstance();
+    const wchar_t* kShaderPaths[] = { L"resources/Shaders/PostEffect/Exposure/Clear.CS.hlsl",
+        L"resources/Shaders/PostEffect/Exposure/Histogram.CS.hlsl", L"resources/Shaders/PostEffect/Exposure/Adapt.CS.hlsl" };
+    for (uint32_t index = 0; index < 3; ++index) {
+        auto shader = dx->LoadCompiledShader(kShaderPaths[index]);
+        D3D12_COMPUTE_PIPELINE_STATE_DESC pipeline {};
+        pipeline.pRootSignature = rootSignature_.Get();
+        pipeline.CS = { shader->GetBufferPointer(), shader->GetBufferSize() };
+        RequireExposure(dx->GetDevice()->CreateComputePipelineState(&pipeline, IID_PPV_ARGS(&pipelines_[index])));
+    }
+}
+
 void AutoExposureRenderer::Generate(ID3D12Resource* sceneTexture, D3D12_GPU_DESCRIPTOR_HANDLE sceneSrv, float deltaSeconds) {
     if (!settings_.isEnabled || sceneTexture == nullptr || sceneSrv.ptr == 0) { ResetHistory(); return; }
     if (!isReady_) { Initialize(); }

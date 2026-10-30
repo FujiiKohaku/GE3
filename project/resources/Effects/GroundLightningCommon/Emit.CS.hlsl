@@ -13,7 +13,7 @@ void main(uint32_t3 id : SV_DispatchThreadID)
     if (gEmitter.emit == 0 || id.x >= gEmitter.count) return;
     int32_t freeIndex;
     InterlockedAdd(gFreeListIndex[0], -1, freeIndex);
-    if (freeIndex < 0 || freeIndex >= 1024) {
+    if (freeIndex < 0 || freeIndex >= int32_t(gEmitter.maxParticles)) {
         InterlockedAdd(gFreeListIndex[0], 1, freeIndex);
         return;
     }

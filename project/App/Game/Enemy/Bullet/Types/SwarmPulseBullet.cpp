@@ -22,7 +22,7 @@ void SwarmPulseBullet::Initialize(Model* model)
     SetTransparent(true);
     SetTransparentDepthWrite(false);
     SetCastShadow(false);
-    SetColor({ 1.0f, 0.353f, 0.239f, 1.0f });
+    SetColor({ 1.0f, 0.0f, 0.0f, 1.0f });
 }
 
 // 発射位置を設定し、波状軌道の基準位置も揃える。

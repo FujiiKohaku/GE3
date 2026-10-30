@@ -9,6 +9,7 @@
 #include <wrl.h>
 
 class BloomRenderer {
+    friend class PostEffectManager;
 public:
     struct BloomParameter {
         int32_t isEnabled;

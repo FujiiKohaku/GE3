@@ -1,0 +1,25 @@
+{
+  "Name": "Scanline PS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 1,
+    "DivisionY": 1
+  },
+  "Effect": {
+    "Amplitude": 0,
+    "Frequency": 180,
+    "Speed": 5,
+    "Phase": 0,
+    "Direction": [
+      1,
+      0
+    ],
+    "Strength": 0.45,
+    "Threshold": 0.5
+  }
+}

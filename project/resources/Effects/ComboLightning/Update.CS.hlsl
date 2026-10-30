@@ -6,13 +6,12 @@ RWStructuredBuffer<uint32_t> gFreeList : register(u2);
 ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b1);
 ConstantBuffer<EmitterSphere> gEmitter : register(b2);
-static const uint kMaxGPUParticle = 1024;
 
 [numthreads(256, 1, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
     uint particleIndex = id.x;
-    if (particleIndex >= kMaxGPUParticle ||
+    if (particleIndex >= gEmitter.maxParticles ||
         gParticles[particleIndex].color.a == 0.0f) return;
 
     ParticleCS particle = gParticles[particleIndex];
@@ -47,7 +46,7 @@ void main(uint3 id : SV_DispatchThreadID)
         gParticles[particleIndex].scale = 0.0f;
         int32_t freeIndex;
         InterlockedAdd(gFreeListIndex[0], 1, freeIndex);
-        if ((freeIndex + 1) < kMaxGPUParticle)
+        if ((freeIndex + 1) < gEmitter.maxParticles)
         {
             gFreeList[freeIndex + 1] = particleIndex;
         }

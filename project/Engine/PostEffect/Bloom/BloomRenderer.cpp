@@ -4,6 +4,7 @@
 #include "Engine/SrvManager/SrvManager.h"
 #include "Engine/Winapp/WinApp.h"
 #include <cassert>
+#include <stdexcept>
 
 #ifdef USE_IMGUI
 #include "externals/imgui/imgui.h"
@@ -282,7 +283,7 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> BloomRenderer::CreatePipelineState(c
     HRESULT result = device->CreateGraphicsPipelineState(
         &pipelineStateDesc,
         IID_PPV_ARGS(&pipelineState));
-    assert(SUCCEEDED(result));
+    if (FAILED(result)) { throw std::runtime_error("Bloom pipeline creation failed. HRESULT:" + std::to_string(static_cast<unsigned long>(result))); }
 
     return pipelineState;
 }

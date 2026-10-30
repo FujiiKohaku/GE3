@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\Tools\ModelPreview\ModelPreview.vcxproj" />
+  <PropertyGroup>
+    <ProjectGuid>{EFA0779A-A81D-48D9-9A81-7EDB2E7DB021}</ProjectGuid>
+    <ProjectName>EffectEditingTests</ProjectName>
+    <TargetName>EffectEditingTests</TargetName>
+    <TargetFileName>EffectEditingTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)EffectEditingTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Remove="$(projectRootPath)App\**\*.cpp;$(projectRootPath)Tools\ModelPreview\ModelPreview.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Stage\StageCatalog.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Scene\Common\SceneManager.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\EffectEditingTests.cpp" />
+  </ItemGroup>
+  <!-- Runtime shader loading/recompilation is exercised by the tests themselves. -->
+  <Target Name="CompileProjectShaders" />
+</Project>

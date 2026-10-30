@@ -202,7 +202,7 @@ void SwarmEnemy::OnDeath()
     groupState_->RecordRemoval(escaped_);
     if (escaped_) { return; }
 
-    EffectManager::GetInstance()->PlayEffect("HitEffect", transform_.translate);
+    BaseEnemy::OnDeath();
 }
 
 // 群れの進行方向などをもとに、揺れながら飛ぶ弾を発射する。
