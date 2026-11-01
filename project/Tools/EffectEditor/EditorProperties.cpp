@@ -54,6 +54,13 @@ void EffectEditorApp::EditProperties(nlohmann::json& value, const std::string& p
         ImGui::PushID(key.c_str());
         const char* label = EditorLabel(key);
         if (label == nullptr) { label = key.c_str(); }
+        std::string customLabel;
+        std::string description;
+        if (workspace_ == 0) {
+            customLabel = editorSchema_.GetText(particleDraft_, parent, key, "Label");
+            description = editorSchema_.GetText(particleDraft_, parent, key, "Description");
+            if (!customLabel.empty()) { label = customLabel.c_str(); }
+        }
         if (property.is_object()) {
             if (ImGui::CollapsingHeader(label)) { EditProperties(property, key); }
         } else if (property.is_array() && !property.empty() && property.front().is_object()) {
@@ -72,6 +79,7 @@ void EffectEditorApp::EditProperties(nlohmann::json& value, const std::string& p
             ImGui::TableSetupColumn("値", ImGuiTableColumnFlags_WidthStretch, 0.54f);
             ImGui::TableNextRow(); ImGui::TableSetColumnIndex(0);
             ImGui::TextWrapped("%s", label);
+            if (!description.empty() && ImGui::IsItemHovered()) { ImGui::SetTooltip("%s", description.c_str()); }
             ImGui::TableSetColumnIndex(1);
             ImGui::SetNextItemWidth(-1);
             if (property.is_boolean()) {
@@ -125,6 +133,26 @@ void EffectEditorApp::EditProperties(nlohmann::json& value, const std::string& p
             ImGui::EndTable();
         }
         ImGui::PopID();
+    }
+}
+
+void EffectEditorApp::EditParticleSection(const std::string& section)
+{
+    auto values = particleDraft_.at(section);
+    const bool hasImplicitCapacity = section == "Particle" && !values.contains("MaxParticles");
+    constexpr int kDefaultParticleCapacity = 1024;
+    if (hasImplicitCapacity) { values["MaxParticles"] = kDefaultParticleCapacity; }
+    auto visible = editorSchema_.Filter(particleDraft_, section, values);
+    if (visible.empty()) { ImGui::TextWrapped("このエフェクトで調整できる項目はありません。"); }
+    EditProperties(visible, section);
+    // Merge only exposed values; fixed or unknown settings survive apply/save/undo.
+    for (const auto& item : visible.items()) {
+        if (hasImplicitCapacity && item.key() == "MaxParticles" && item.value() == kDefaultParticleCapacity) { continue; }
+        particleDraft_[section][item.key()] = item.value();
+    }
+    const size_t hiddenCount = values.size() - visible.size();
+    if (hiddenCount != 0) {
+        ImGui::TextDisabled("シェーダー固定・対応未確認：%zu項目を非表示", hiddenCount);
     }
 }
 
@@ -197,6 +225,9 @@ void EffectEditorApp::DrawInspector()
     if (isTrail) { ImGui::TextColored({ 0.45f, 0.8f, 1, 1 }, "トレイル · Trail"); }
     else { ImGui::TextColored({ 0.45f, 0.8f, 1, 1 }, "通常粒子 · Mesh"); }
     ImGui::TextDisabled("種類は作成後に固定");
+    ImGui::TextWrapped("対応している設定項目だけ表示します。変更後は「適用して再開始」を押してください。");
+    const auto schemaWarning = editorSchema_.GetWarning(particleDraft_);
+    if (!schemaWarning.empty()) { ImGui::TextWrapped("%s", schemaWarning.c_str()); }
     ImGui::Separator();
     const char* tabs[] = { "基本", "描画", "フィールド", "ライト" };
     for (int index = 0; index < 4; ++index) {
@@ -212,22 +243,19 @@ void EffectEditorApp::DrawInspector()
         for (const char* section : { "Emitter", "Particle", "Simulation", "Trail" }) {
             if (!particleDraft_.contains(section)) { continue; }
             if (ImGui::CollapsingHeader(EditorLabel(section), ImGuiTreeNodeFlags_DefaultOpen)) {
-                if (std::strcmp(section, "Particle") == 0 && !particleDraft_[section].contains("MaxParticles")) {
-                    // Legacy Effect.json files omit this engine default. Materialize it only after an edit.
-                    constexpr int kDefaultParticleCapacity = 1024;
-                    auto properties = particleDraft_[section]; properties["MaxParticles"] = kDefaultParticleCapacity;
-                    EditProperties(properties, section);
-                    if (properties["MaxParticles"] == kDefaultParticleCapacity) { properties.erase("MaxParticles"); }
-                    particleDraft_[section] = properties;
-                } else { EditProperties(particleDraft_[section], section); }
+                EditParticleSection(section);
             }
         }
     }
     if (inspectorTab_ == 1) {
-        EditProperties(particleDraft_["Render"], "Render");
+        EditParticleSection("Render");
         if (ImGui::CollapsingHeader("シェーダー（詳細）")) { EditProperties(particleDraft_["Shaders"], "Shaders"); }
     }
     if (inspectorTab_ == 2) {
+        if (isTrail) {
+            ImGui::TextWrapped("トレイルは発生源の移動から軌跡を作ります。通常粒子用のフィールド設定は使用しません。");
+            return;
+        }
         if (ImGui::Button("フィールドを追加")) {
             if (!particleDraft_.contains("Fields")) { particleDraft_["Fields"] = nlohmann::json::array(); }
             if (particleDraft_["Fields"].size() < 16) {

@@ -34,7 +34,7 @@ public:
         BaseEnemy* target, float& speed) const = 0;
 };
 
-// 通常弾とミニガンに共通する連射動作。発熱量・威力・間隔は派生側が指定する。
+// アサルトの連射動作。威力・間隔は派生側が指定する。
 class AutomaticPlayerWeapon : public BasePlayerWeapon {
 public:
     bool UsesHeat() const override { return true; }
@@ -46,12 +46,11 @@ public:
     std::unique_ptr<PlayerBullet> CreateBullet(Model* model, PlayerWeaponContext& context,
         BaseEnemy* target, float& speed) const override;
 protected:
-    AutomaticPlayerWeapon(float interval, int damage, bool minigun, const char* sound)
-        : interval_(interval), damage_(damage), minigun_(minigun), sound_(sound) {}
+    AutomaticPlayerWeapon(float intervalSeconds, int damage, const char* sound)
+        : interval_(intervalSeconds), damage_(damage), sound_(sound) {}
 private:
     float interval_;
     int damage_;
-    bool minigun_;
     const char* sound_;
     float cooldown_ = 0.0f;
 };

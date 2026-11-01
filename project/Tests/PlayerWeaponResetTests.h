@@ -2,6 +2,7 @@
 
 #include "App/Game/Player/Player.h"
 #include "Engine/Camera/Camera.h"
+#include "Tests/PlayerWeaponPolymorphismTests.h"
 #include <cassert>
 
 class PlayerWeaponResetBulletProbe final : public PlayerBullet {
@@ -24,38 +25,40 @@ inline bool RunPlayerWeaponResetTests()
     bool stopped = false;
     bool destroyed = false;
     controller.bullets_.push_back(std::make_unique<PlayerWeaponResetBulletProbe>(stopped, destroyed));
-    controller.currentWeapon_ = controller.kWeaponMinigun;
+    controller.currentWeapon_ = controller.kWeaponHomingMissile;
     controller.shotsFired_ = 100;
     controller.missileFireCooldownSeconds_ = 0.0f;
-    for (int index = 0; index < 40; ++index) controller.weaponHeat_.AddShotHeat(false);
+    for (int index = 0; index < 41; ++index) { controller.weaponHeat_.AddShotHeat(); }
     controller.weaponHeat_.Update(1.0f, true);
     assert(controller.IsOverheated());
     controller.homingLock_.SetTargets({ nullptr });
     const auto sharedTargets = controller.homingLock_.GetTargets();
     controller.homingLock_.UpdateFireInput(true, true, nullptr, {}, {}, {});
 
-    // 通常弾と非選択のミニガンの両方に、連射間隔の途中の状態を作る。
+    // 非選択のアサルトに、連射間隔の途中の状態を作る。
     int shots = 0;
     auto context = controller.MakeWeaponContext();
     context.canFire = true;
-    context.fire = [&shots]() { ++shots; return true; };
-    controller.weapons_[controller.kWeaponNormalBullet]->Update(context, true, false, 0.10f);
-    controller.weapons_[controller.kWeaponMinigun]->Update(context, true, false, 0.04f);
+    context.fire = std::bind(PlayerWeaponTest::CountShot, std::ref(shots));
+    controller.weapons_[controller.kWeaponAssault]->Update(context, true, false, 0.04f);
     assert(shots == 0);
 
     // 描画初期化なしで、Initializeと同じ戦闘状態リセットを検証する。
     controller.ResetCombatState();
     assert(stopped && destroyed && controller.GetBullets().empty());
-    assert(controller.currentWeapon_ == controller.kWeaponNormalBullet && controller.GetShotsFired() == 0);
+    assert(controller.currentWeapon_ == controller.kWeaponAssault && controller.GetShotsFired() == 0);
+    assert(controller.weapons_.size() == 3);
+    assert(std::strcmp(controller.GetCurrentWeaponName(), "アサルト") == 0);
+    assert(std::strcmp(controller.weapons_[1]->GetName(), "Missile") == 0);
+    assert(std::strcmp(controller.weapons_[2]->GetName(), "Homing Missile") == 0);
     assert(controller.GetHeatRatio() == 0.0f && !controller.IsOverheated());
     assert(controller.missileFireCooldownSeconds_ == controller.kMissileFireIntervalSeconds);
     assert(controller.camera_ == &camera && sharedTargets->empty());
     assert(!controller.homingLock_.UpdateFireInput(false, true, &camera, {}, {}, {}));
     auto resetContext = controller.MakeWeaponContext();
     resetContext.canFire = true;
-    resetContext.fire = [&shots]() { ++shots; return true; };
-    controller.weapons_[controller.kWeaponNormalBullet]->Update(resetContext, true, false, 0.08f);
-    controller.weapons_[controller.kWeaponMinigun]->Update(resetContext, true, false, 0.02f);
+    resetContext.fire = std::bind(PlayerWeaponTest::CountShot, std::ref(shots));
+    controller.weapons_[controller.kWeaponAssault]->Update(resetContext, true, false, 0.02f);
     assert(shots == 0);
     controller.ResetCombatState(); // 繰り返しても安全。
     return true;

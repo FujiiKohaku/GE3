@@ -7,83 +7,26 @@ ConstantBuffer<PerFrame> gPerFrame : register(b0);
 ConstantBuffer<EffectSettings> gEffectSettings : register(b1);
 ConstantBuffer<EmitterSphere> gEmitter : register(b2);
 
-
-void ReleaseParticle(uint32_t particleIndex)
-{
-    gParticles[particleIndex].scale = float32_t3(0.0f, 0.0f, 0.0f);
-    gParticles[particleIndex].color.a = 0.0f;
-
-    int32_t freeListIndex;
-    InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
-
-    if ((freeListIndex + 1) < gEmitter.maxParticles)
-    {
-        gFreeList[freeListIndex + 1] = particleIndex;
-    }
-    else
-    {
-        InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
-    }
-}
-
 [numthreads(256, 1, 1)]
-void main(uint32_t3 DTid : SV_DispatchThreadID)
+void main(uint32_t3 dispatchThreadId : SV_DispatchThreadID)
 {
-    uint32_t particleIndex = DTid.x;
-
-    if (particleIndex >= gEmitter.maxParticles ||
-        gParticles[particleIndex].color.a <= 0.0f)
-    {
-        return;
-    }
-
-    if (gEffectSettings.enableDrag != 0)
-    {
-        gParticles[particleIndex].velocity *=
-            pow(max(gEffectSettings.drag, 0.0f), gPerFrame.deltaTime * 60.0f);
-    }
-
-    gParticles[particleIndex].translate +=
-        gParticles[particleIndex].velocity * gPerFrame.deltaTime;
-    gParticles[particleIndex].currentTime +=
-        gPerFrame.deltaTime;
-
-    float lifeRate = saturate(
-        gParticles[particleIndex].currentTime /
-        gParticles[particleIndex].lifeTime);
-    float expandRate = 1.0f - pow(1.0f - lifeRate, 3.0f);
-    float pressureFade = 1.0f - lifeRate;
-
-    float speedFactor = saturate(length(gParticles[particleIndex].velocity) / 24.0f);
-    float scaleFactor = lerp(0.8f, 1.25f, speedFactor);
-    float scale = lerp(gEffectSettings.startScale, gEffectSettings.endScale, expandRate) * scaleFactor;
-    gParticles[particleIndex].scale = float32_t3(scale, scale, scale);
-
-    float4 whiteCore = float4(1.0f, 0.98f, 0.78f, 1.0f);
-    float4 yellowCore = float4(1.0f, 0.72f, 0.14f, 1.0f);
-    float4 orangeFire = float4(1.0f, 0.28f, 0.02f, 0.82f);
-    float4 emberSmoke = float4(0.22f, 0.06f, 0.01f, 0.0f);
-    float4 color;
-
-    if (lifeRate < 0.18f)
-    {
-        color = lerp(whiteCore, yellowCore, lifeRate / 0.18f);
-    }
-    else if (lifeRate < 0.62f)
-    {
-        color = lerp(yellowCore, orangeFire, (lifeRate - 0.18f) / 0.44f);
-    }
-    else
-    {
-        color = lerp(orangeFire, emberSmoke, (lifeRate - 0.62f) / 0.38f);
-    }
-
-    color.a *= pressureFade * pressureFade;
-    gParticles[particleIndex].color = color;
-
-    if (gParticles[particleIndex].currentTime >= gParticles[particleIndex].lifeTime ||
-        gParticles[particleIndex].color.a <= 0.0f)
-    {
-        ReleaseParticle(particleIndex);
+    uint32_t particleIndex = dispatchThreadId.x;
+    if (particleIndex >= gEmitter.maxParticles || gParticles[particleIndex].color.a <= 0.0f) { return; }
+    gParticles[particleIndex].currentTime += gPerFrame.deltaTime;
+    float lifeRate = saturate(gParticles[particleIndex].currentTime / gParticles[particleIndex].lifeTime);
+    // The full damage volume flashes immediately. Only its color and opacity change.
+    float radius = gEffectSettings.endScale;
+    gParticles[particleIndex].scale = float32_t3(radius, radius, radius);
+    gParticles[particleIndex].color = lerp(gEffectSettings.startColor, gEffectSettings.endColor, lifeRate);
+    if (lifeRate >= 1.0f || gParticles[particleIndex].color.a <= 0.0f) {
+        gParticles[particleIndex].scale = 0.0f;
+        gParticles[particleIndex].color.a = 0.0f;
+        int32_t freeListIndex;
+        InterlockedAdd(gFreeListIndex[0], 1, freeListIndex);
+        if (freeListIndex + 1 < int32_t(gEmitter.maxParticles)) {
+            gFreeList[freeListIndex + 1] = particleIndex;
+        } else {
+            InterlockedAdd(gFreeListIndex[0], -1, freeListIndex);
+        }
     }
 }

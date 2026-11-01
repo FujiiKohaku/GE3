@@ -30,5 +30,6 @@
     <ClInclude Include="$(projectRootPath)Tools\EffectEditor\EditorLabels.h" />
     <ClInclude Include="$(projectRootPath)Tools\EffectEditor\PreviewTarget.h" />
     <ClInclude Include="$(projectRootPath)Tools\EffectEditor\EditorSourceWatch.h" />
+    <ClInclude Include="$(projectRootPath)Tools\EffectEditor\EditorEffectSchema.h" />
   </ItemGroup>
 </Project>

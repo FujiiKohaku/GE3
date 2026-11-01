@@ -113,7 +113,7 @@ void VerifyTutorialProgression()
     assert(tutorial.GetTitle().find("HEAT") != std::string::npos);
     assert(tutorial.LimitRailDistance(1000.0f) == 0.0f);
 
-    TutorialTestAccess::SelectStep(tutorial, 13, player);
+    TutorialTestAccess::SelectStep(tutorial, 12, player);
     assert(tutorial.HasMovingTargets());
     tutorial.SetDefeatedTargets(5);
     tutorial.Update(input, player, 6.0f);
@@ -162,7 +162,7 @@ int main()
     }
     assert(steps[0]->IsAchieved());
 
-    for (int index : {1, 3, 13}) {
+    for (int index : {1, 3, 12}) {
         input.defeatedTargets = steps[index]->GetData().requiredKills - 1;
         steps[index]->Update(input, 0.1f);
         assert(!steps[index]->IsAchieved());
@@ -170,8 +170,8 @@ int main()
         steps[index]->Update(input, 0.1f);
         assert(steps[index]->IsAchieved());
     }
-    assert(steps[13]->GetData().requiredKills == 5);
-    assert(steps[3]->GetData().hasMovingTargets && steps[13]->GetData().hasMovingTargets);
+    assert(steps[12]->GetData().requiredKills == 5);
+    assert(steps[3]->GetData().hasMovingTargets && steps[12]->GetData().hasMovingTargets);
 
     input.heat = 0.0f;
     steps[2]->Update(input, 0.1f);
@@ -212,7 +212,10 @@ int main()
         assert(steps[index]->IsAchieved());
     }
 
-    for (int index = 8; index <= 11; ++index) {
+    assert(steps[8]->GetData().practiceWeapon == "アサルト");
+    assert(steps[9]->GetData().practiceWeapon == "Missile");
+    assert(steps[10]->GetData().practiceWeapon == "Homing Missile");
+    for (int index = 8; index <= 10; ++index) {
         input.weapon = "WrongWeapon"; input.defeatedTargets = 3;
         steps[index]->Update(input, 0.1f);
         assert(!steps[index]->IsAchieved());
@@ -222,10 +225,10 @@ int main()
         steps[index]->Enter(input);
         assert(!steps[index]->IsAchieved());
     }
-    steps[12]->Update(input, 0.1f); assert(!steps[12]->IsAchieved());
-    steps[12]->NotifyManualPauseOpened(); steps[12]->Update(input, 0.1f);
-    assert(steps[12]->IsAchieved());
-    steps[12]->Enter(input); steps[12]->Update(input, 0.1f);
-    assert(!steps[12]->IsAchieved());
-    std::cout << "TutorialController tests passed (14 steps)\n";
+    steps[11]->Update(input, 0.1f); assert(!steps[11]->IsAchieved());
+    steps[11]->NotifyManualPauseOpened(); steps[11]->Update(input, 0.1f);
+    assert(steps[11]->IsAchieved());
+    steps[11]->Enter(input); steps[11]->Update(input, 0.1f);
+    assert(!steps[11]->IsAchieved());
+    std::cout << "TutorialController tests passed (13 steps)\n";
 }

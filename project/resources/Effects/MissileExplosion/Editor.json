@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "RenderType": "Mesh",
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+  "Properties": {
+    "Particle.EndScale": {
+      "Label": "爆発半径",
+      "Description": "球のワールド半径。ゲーム側の爆風判定も、この値を使います。着弾直後から全範囲を表示します。"
+    },
+    "Particle.LifeTime": { "Label": "爆発の表示時間（秒）" },
+    "Particle.StartColor": { "Label": "爆発の開始色" },
+    "Particle.EndColor": { "Label": "爆発の終了色" }
+  }
+}

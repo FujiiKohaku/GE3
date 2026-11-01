@@ -2,9 +2,18 @@
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
 #include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
-#include "App/Game/Player/Combat/Weapon/Types/MinigunPlayerWeapon.h"
-#include "App/Game/Player/Combat/Weapon/Types/NormalPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/AssaultPlayerWeapon.h"
 #include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
+#include <cstring>
+
+namespace PlayerWeaponTest {
+inline bool CountShot(int& shots)
+{
+    ++shots;
+    return true;
+}
+inline void IgnoreTarget(BaseEnemy*) {}
+}
 
 // 描画を起動せず、基底ポインタ経由の発射タイミングと発射制限を検証する。
 inline bool RunPlayerWeaponPolymorphismTests()
@@ -14,22 +23,21 @@ inline bool RunPlayerWeaponPolymorphismTests()
     float missileCooldown = 0.5f;
     int shots = 0;
     PlayerWeaponContext context { heat, lock, missileCooldown, nullptr, {}, {}, {}, true,
-        [&shots]() { ++shots; return true; }, [](BaseEnemy*) {} };
-    NormalPlayerWeapon normal;
-    BasePlayerWeapon* weapon = &normal;
+        std::bind(PlayerWeaponTest::CountShot, std::ref(shots)), PlayerWeaponTest::IgnoreTarget };
+    AssaultPlayerWeapon assault;
+    BasePlayerWeapon* weapon = &assault;
+    if (std::strcmp(weapon->GetName(), "アサルト") != 0 || !weapon->UsesHeat()) { return false; }
     weapon->Update(context, true, true, 0.0f);
     weapon->Update(context, true, false, 0.5f);
-    if (shots != 4) return false; // 初弾1発＋0.5秒で3発。
+    if (shots != 11) return false; // 初弾1発＋0.5秒で10発。
     weapon->Update(context, false, false, 1.0f);
-    if (shots != 4) return false;
+    if (shots != 11) return false;
     context.canFire = false;
     weapon->Update(context, true, true, 1.0f);
-    if (shots != 4 || weapon->Fire(context)) return false;
+    if (shots != 11 || weapon->Fire(context)) return false;
 
     context.canFire = true;
     shots = 0;
-    MinigunPlayerWeapon minigun;
-    weapon = &minigun;
     weapon->Update(context, true, true, 0.1f);
     if (shots != 3) return false; // 初弾1発＋0.1秒で2発。
 
@@ -48,7 +56,7 @@ inline bool RunPlayerWeaponPolymorphismTests()
     if (shots != 1) return false;
 
     context.canFire = true;
-    for (int i = 0; i < 20; ++i) heat.AddShotHeat(false);
+    for (int shotIndex = 0; shotIndex < 41; ++shotIndex) { heat.AddShotHeat(); }
     heat.Update(0.5f, true); // 熱100%到達後の猶予時間を過ぎると過熱する。
-    return heat.IsOverheated() && !normal.Fire(context) && !minigun.Fire(context);
+    return heat.IsOverheated() && !assault.Fire(context);
 }

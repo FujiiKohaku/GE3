@@ -1,0 +1,25 @@
+{
+  "Name": "Kaleidoscope PS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 1,
+    "DivisionY": 1
+  },
+  "Effect": {
+    "Amplitude": 6,
+    "Frequency": 1,
+    "Speed": 0.8,
+    "Phase": 0,
+    "Direction": [
+      1,
+      0
+    ],
+    "Strength": 1,
+    "Threshold": 0.5
+  }
+}

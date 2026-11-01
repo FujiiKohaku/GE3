@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "RenderType": "Mesh",
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "../MissileExplosionParticles/Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "SoftRing.PS.hlsl"
+  },
+  "Properties": {
+    "Emitter.Count": { "Label": "リングの数" },
+    "Particle.LifeTime": { "Label": "リングの表示時間（秒）" },
+    "Particle.StartScale": { "Label": "開始半径" },
+    "Particle.EndScale": { "Label": "終了半径" },
+    "Particle.StartColor": { "Label": "開始色" },
+    "Particle.EndColor": { "Label": "終了色" },
+    "Render.Texture": { "Label": "テクスチャ" }
+  }
+}

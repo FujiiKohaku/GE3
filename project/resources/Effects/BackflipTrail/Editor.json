@@ -1,0 +1,24 @@
+{
+  "Version": 1,
+  "RenderType": "Trail",
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "UpdateTrail.CS.hlsl",
+    "Vertex": "Trail.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+  "Properties": {
+    "Trail.MaxPoints": {},
+    "Trail.LifeTime": {},
+    "Trail.MinVertexDistance": {},
+    "Trail.BreakDistance": {},
+    "Trail.StartWidth": {},
+    "Trail.EndWidth": {},
+    "Trail.StartColor": {},
+    "Trail.EndColor": {},
+    "Trail.RootExtension": {},
+    "Trail.FaceCamera": {},
+    "Render.Texture": {},
+    "Render.EmissionStrength": {}
+  }
+}

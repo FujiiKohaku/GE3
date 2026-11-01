@@ -37,12 +37,12 @@ void PlayerWeaponController::ResetCombatState()
     homingLock_.ClearHomingTargets();
     weaponHeat_ = PlayerWeaponHeat{};
     shotsFired_ = 0;
-    currentWeapon_ = kWeaponNormalBullet;
+    currentWeapon_ = kWeaponAssault;
     missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
     // 選択されていない武器も作り直し、連射間隔の経過状態を残さない。
     weapons_ = {
-        std::make_unique<NormalPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
-        std::make_unique<HomingPlayerWeapon>(), std::make_unique<MinigunPlayerWeapon>() };
+        std::make_unique<AssaultPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
+        std::make_unique<HomingPlayerWeapon>() };
 #ifdef _DEBUG
     shouldDrawDebugLines_ = false;
     debugAimRayOrigin_ = {};
@@ -211,10 +211,9 @@ void PlayerWeaponController::UpdateWeaponSwitch(Input* input)
         currentWeapon_ = (currentWeapon_ + kWeaponCount - 1) % kWeaponCount;
     }
 
-    if (input->IsKeyTrigger(DIK_1)) currentWeapon_ = kWeaponNormalBullet;
+    if (input->IsKeyTrigger(DIK_1)) currentWeapon_ = kWeaponAssault;
     if (input->IsKeyTrigger(DIK_2)) currentWeapon_ = kWeaponMissileBullet;
     if (input->IsKeyTrigger(DIK_3)) currentWeapon_ = kWeaponHomingMissile;
-    if (input->IsKeyTrigger(DIK_4)) currentWeapon_ = kWeaponMinigun;
 }
 
 const char* PlayerWeaponController::GetCurrentWeaponName() const
@@ -300,17 +299,13 @@ void PlayerWeaponHeat::Update(float deltaTimeSeconds, bool isFireHeld)
     }
 }
 
-// 発射した武器に応じた熱量を加え、満タンになったときの猶予を準備する。
-void PlayerWeaponHeat::AddShotHeat(bool isMinigun)
+// アサルト一発分の熱量を加え、満タンになったときの猶予を準備する。
+void PlayerWeaponHeat::AddShotHeat()
 {
     if (isOverheated_) {
         return;
     }
-    float shotHeat = kNormalShotHeat;
-    if (isMinigun) {
-        shotHeat = kMinigunShotHeat;
-    }
-    heatRatio_ = (std::min)(1.0f, heatRatio_ + shotHeat);
+    heatRatio_ = (std::min)(1.0f, heatRatio_ + kAssaultShotHeat);
     if (heatRatio_ >= 1.0f && graceRemainingSeconds_ <= 0.0f) {
         graceRemainingSeconds_ = kGraceDurationSeconds;
     }

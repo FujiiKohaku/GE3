@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "RenderType": "Mesh",
+  "Shaders": {
+    "Emit": "../MissileExplosionRing/Emit.CS.hlsl",
+    "Update": "../MissileExplosionParticles/Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "../MissileExplosionParticles/Render.PS.hlsl"
+  },
+  "Properties": {
+    "Emitter.Count": { "Label": "閃光の数" },
+    "Particle.LifeTime": { "Label": "閃光の表示時間（秒）" },
+    "Particle.StartScale": { "Label": "開始サイズ" },
+    "Particle.EndScale": { "Label": "終了サイズ" },
+    "Particle.StartColor": { "Label": "開始色" },
+    "Particle.EndColor": { "Label": "終了色" },
+    "Render.Texture": { "Label": "テクスチャ" }
+  }
+}

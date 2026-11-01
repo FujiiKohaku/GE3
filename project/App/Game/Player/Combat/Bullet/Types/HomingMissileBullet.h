@@ -9,6 +9,9 @@ class BaseEnemy;
 
 class HomingMissileBullet : public MissileBullet {
 public:
+    // 追尾弾は直撃だけ。親のミサイル用爆発演出と範囲ダメージを使わない。
+    void OnHitEnemy(const Vector3& position) override;
+    PlayerBulletExplosionSettings GetExplosionSettings() const override { return {}; }
     // ロック対象と候補一覧を記録する。候補一覧は弱参照で保持し、寿命を引き延ばさない。
     void SetTarget(BaseEnemy* target, const std::shared_ptr<const std::vector<BaseEnemy*>>& activeTargets);
 

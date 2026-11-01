@@ -1,0 +1,20 @@
+{
+  "Version": 1,
+  "RenderType": "Mesh",
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "Render.VS.hlsl",
+    "Pixel": "Render.PS.hlsl"
+  },
+  "Properties": {
+    "Emitter.Count": { "Label": "光粒子の数" },
+    "Emitter.Radius": { "Label": "光粒子の発生半径", "Description": "球状爆発の半径に合わせて設定します。" },
+    "Particle.LifeTime": { "Label": "光粒子の表示時間（秒）" },
+    "Particle.StartScale": { "Label": "開始サイズ" },
+    "Particle.EndScale": { "Label": "終了サイズ" },
+    "Particle.Velocity": { "Label": "放射移動に加える速度" },
+    "Particle.StartColor": { "Label": "開始色" },
+    "Particle.EndColor": { "Label": "終了色" }
+  }
+}

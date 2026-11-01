@@ -7,6 +7,11 @@
 #include <algorithm>
 #include <cmath>
 
+void HomingMissileBullet::OnHitEnemy(const Vector3& position)
+{
+    EffectManager::GetInstance()->PlayEffect("NormalBulletImpactFlash", position);
+}
+
 // ロック対象と候補一覧を記録する。候補一覧は弱参照で保持し、寿命を引き延ばさない。
 void HomingMissileBullet::SetTarget(BaseEnemy* target, const std::shared_ptr<const std::vector<BaseEnemy*>>& activeTargets)
 {

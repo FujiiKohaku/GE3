@@ -487,9 +487,8 @@ void GamePlayScene::Initialize()
     }
     Input::GetInstance()->BlockPrimaryFireUntilRelease();
     SoundManager::GetInstance()->RegisterSounds({
-        { "NormalShot", "resources/Audio/GameSfx/player_normal_shot.wav", 0.20f, 0.04f },
         { "MissileShot", "resources/Audio/GameSfx/player_missile_shot.wav", 0.30f, 0.12f },
-        { "MinigunShot", "resources/Audio/GameSfx/player_minigun_shot.wav", 0.13f, 0.10f },
+        { "AssaultShot", "resources/Audio/GameSfx/player_minigun_shot.wav", 0.13f, 0.10f },
         { "EnemyHit", "resources/Audio/GameSfx/enemy_hit.wav", 0.16f, 0.08f },
         { "ArmorDeflect", "resources/Audio/GameSfx/armor_deflect.wav", 0.24f, 0.10f },
         { "PlayerDamage", "resources/Audio/GameSfx/player_damage.wav", 0.38f, 0.15f },
@@ -896,7 +895,7 @@ void GamePlayScene::Initialize()
 
     weaponHudNameText_ = std::make_unique<Text>();
     weaponHudNameText_->Initialize(kDefaultFont);
-    weaponHudNameText_->SetText("Normal");
+    weaponHudNameText_->SetText("アサルト");
     weaponHudNameText_->SetPosition({ kInitializeWeaponHudNameTextPositionX, WinApp::GetInstance()->kClientHeight - kInitializeWeaponHudNameTextPositionY });
     weaponHudNameText_->SetFontSize(27.0f);
     weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
@@ -984,6 +983,18 @@ void GamePlayScene::Initialize()
     playerHpText_->SetFontSize(20.0f);
     playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     playerHpText_->Update();
+
+    playerHpArcSprite_ = std::make_unique<Sprite>();
+    playerHpArcSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    playerHpArcSprite_->SetShaderPaths(
+        "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+        "resources/Shaders/Sprite/PlayerHpArc/PlayerHpArc.PS.hlsl");
+    playerHpArcSprite_->SetSize({ 144.0f, 144.0f });
+    playerHpArcSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    playerHpArcSprite_->SetColor(kPlayerActionCyan);
+    playerHpArcSprite_->SetEffectThreshold(1.0f);
+    playerHpArcSprite_->Update();
+    isPlayerHpArcVisible_ = false;
 
     const float bossHudCenterX = WinApp::GetInstance()->kClientWidth / 2.0f;
     const float bossHpBarLeft = bossHudCenterX - 170.0f;
@@ -1852,6 +1863,8 @@ void GamePlayScene::Update()
         playerHpText_->SetText("HP " + std::to_string(currentHp) + " / " + std::to_string(maxHp));
         playerHpText_->Update();
     }
+
+    UpdatePlayerHpArc();
 
     // レティクル（AimSprite）のスクリーン位置更新
     const Vector2 aimUiPosition = WinApp::GetInstance()->ClientToUi(player_->GetAimScreenPosition());
@@ -2810,6 +2823,35 @@ void GamePlayScene::UpdateBossCutIn()
     bossCutInSprite_->Update();
 }
 
+void GamePlayScene::UpdatePlayerHpArc()
+{
+    isPlayerHpArcVisible_ = false;
+    if (!player_ || !camera_ || !playerHpArcSprite_ || player_->IsDead()) { return; }
+
+    const Vector3 playerPosition = player_->GetTranslate();
+    const Vector3 viewPosition = MatrixMath::Transform(playerPosition, camera_->GetViewMatrix());
+    if (viewPosition.z <= camera_->GetNearClip() || viewPosition.z >= camera_->GetFarClip()) { return; }
+
+    const Vector2 uiPosition = WinApp::GetInstance()->ClientToUi(camera_->WorldToScreen(playerPosition));
+    float hpRatio = 0.0f;
+    const int maxHp = player_->GetMaxHp();
+    if (maxHp > 0) {
+        hpRatio = std::clamp(static_cast<float>(player_->GetCurrentHp()) / static_cast<float>(maxHp), 0.0f, 1.0f);
+    }
+
+    Vector4 hpColor = kPlayerActionCyan;
+    if (player_->GetCurrentHp() <= kLowHpWarningThreshold) {
+        hpColor = kDangerVermilion;
+    } else if (hpRatio < kUpdateHpRatioThreshold) {
+        hpColor = kHudBrass;
+    }
+    playerHpArcSprite_->SetPosition(uiPosition);
+    playerHpArcSprite_->SetColor(hpColor);
+    playerHpArcSprite_->SetEffectThreshold(hpRatio);
+    playerHpArcSprite_->Update();
+    isPlayerHpArcVisible_ = true;
+}
+
 // 照準・HP・得点・通信パネルなど、画面に重ねる情報を描画する。
 void GamePlayScene::Draw2D()
 {
@@ -2837,6 +2879,9 @@ void GamePlayScene::Draw2D()
     DrawHudFrame(playerHudFrameSprites_);
     if (playerHpBgSprite_) playerHpBgSprite_->Draw();
     if (playerHpBarSprite_) playerHpBarSprite_->Draw();
+    if (isPlayerHpArcVisible_ && playerHpArcSprite_) {
+        playerHpArcSprite_->Draw();
+    }
 
     if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
         DrawHudFrame(bossHudFrameSprites_);

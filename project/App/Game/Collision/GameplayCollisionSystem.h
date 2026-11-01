@@ -13,6 +13,7 @@ class Object3d;
 class Player;
 class BaseEnemy;
 class EnemyBullet;
+struct PlayerBulletExplosionSettings;
 
 struct DestructibleLevelObject {
     Object3d* object = nullptr;
@@ -84,4 +85,9 @@ private:
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
         float floorHeight, bool shouldCollideWithFloor = true);
+    // 直撃対象を除き、各敵の有効な部位へ最大一回だけ爆風ダメージを与える。
+    static bool ApplyExplosionToEnemy(BaseEnemy& enemy, const Sphere& explosion, float damage,
+        const BaseEnemy* directEnemy);
+    static uint32_t ApplyExplosionDamage(const Vector3& position, const PlayerBulletExplosionSettings& settings,
+        const std::vector<std::unique_ptr<BaseEnemy>>& enemies, BaseEnemy* boss, const BaseEnemy* directEnemy);
 };

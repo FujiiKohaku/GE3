@@ -2,8 +2,7 @@
 #pragma once
 #include "App/Game/Player/Combat/Bullet/Common/PlayerBullet.h"
 #include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
-#include "App/Game/Player/Combat/Weapon/Types/NormalPlayerWeapon.h"
-#include "App/Game/Player/Combat/Weapon/Types/MinigunPlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/AssaultPlayerWeapon.h"
 #include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
 #include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
 #include <array>
@@ -18,13 +17,13 @@ class Input;
 class Player;
 
 // 武器管理の補助状態。発熱とロックオンもこのファイルにまとめ、武器全体の状態を追いやすくする。
-// 通常弾とミニガンで共有する熱量・冷却・過熱状態を保持する。
+// アサルトの熱量・冷却・過熱状態を保持する。
 class PlayerWeaponHeat {
 public:
     // 連射中の過熱猶予と、射撃停止中・過熱中の冷却を進める。
     void Update(float deltaTimeSeconds, bool isFireHeld);
-    // 発射した武器に応じた熱量を加え、満タンになったときの猶予を準備する。
-    void AddShotHeat(bool isMinigun);
+    // アサルト一発分の熱量を加え、満タンになったときの猶予を準備する。
+    void AddShotHeat();
     float GetHeatRatio() const { return heatRatio_; }
     bool IsOverheated() const { return isOverheated_; }
     // 熱量が高いほど威力を増やす。発射時点の熱量でその弾の威力を決める。
@@ -35,8 +34,7 @@ private:
     bool isOverheated_ = false;
     float graceRemainingSeconds_ = 0.0f;
     static constexpr float kGraceDurationSeconds = 30.0f / 60.0f;
-    static constexpr float kNormalShotHeat = 0.08f;
-    static constexpr float kMinigunShotHeat = 0.025f;
+    static constexpr float kAssaultShotHeat = 0.025f;
     static constexpr float kCoolingPerSecond = 0.20f;
     static constexpr float kOverheatCoolingPerSecond = 0.25f;
 };
@@ -108,10 +106,9 @@ private:
     friend bool RunPlayerWeaponResetTests();
     void ResetCombatState();
     enum WeaponType {
-        kWeaponNormalBullet = 0,
+        kWeaponAssault = 0,
         kWeaponMissileBullet,
         kWeaponHomingMissile,
-        kWeaponMinigun,
         kWeaponCount
     };
     // ホイール・方向キー・数字キーの入力を武器の選択番号へ反映する。
@@ -139,10 +136,10 @@ private:
     float bulletSpawnOffsetY_ = 0.3f;
     float bulletSpawnOffsetZ_ = 4.0f;
     float bulletSpeed_ = 5.8f;
-    int currentWeapon_ = kWeaponNormalBullet;
+    int currentWeapon_ = kWeaponAssault;
     std::array<std::unique_ptr<BasePlayerWeapon>, kWeaponCount> weapons_ {
-        std::make_unique<NormalPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
-        std::make_unique<HomingPlayerWeapon>(), std::make_unique<MinigunPlayerWeapon>() };
+        std::make_unique<AssaultPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
+        std::make_unique<HomingPlayerWeapon>() };
     static constexpr float kMissileFireIntervalSeconds = 2.0f;
     float missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
 #ifdef _DEBUG

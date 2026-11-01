@@ -1,0 +1,31 @@
+{
+  "Version": 1,
+  "RenderType": "Mesh",
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Properties": {
+    "Emitter.Count": {},
+    "Emitter.Radius": {},
+    "Particle.LifeTime": {},
+    "Particle.StartScale": {},
+    "Particle.EndScale": {},
+    "Particle.Velocity": {},
+    "Particle.RotationSpeed": {},
+    "Simulation.EnableDrag": {},
+    "Simulation.Drag": {},
+    "Simulation.EnableNoise": {},
+    "Simulation.NoiseStrength": {},
+    "Particle.StartColor": {
+      "Description": "粒子が生まれたときの色。寿命に沿って終了色へ変化します。"
+    },
+    "Particle.EndColor": {
+      "Description": "寿命の終わりの色。透明度も補間されます。"
+    },
+    "Render.Texture": {},
+    "Render.EmissionStrength": {}
+  }
+}

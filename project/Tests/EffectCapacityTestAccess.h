@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/Effect/EffectManager.h"
 #include <stdexcept>
+#include <cmath>
 
 // Read back actual GPU particles and the free-list counter after the frame fence.
 class EffectCapacityTestAccess {
@@ -99,6 +100,28 @@ public:
         }
         if (hasWindFailure) { throw std::runtime_error("Wind did not reach all emitted GPU particles"); }
         return liveCount;
+    }
+
+    void VerifySphere(float radius, const Vector3& center)
+    {
+        Verify(1);
+        D3D12_RANGE readRange { 0, sizeof(ParticleCS) * maxParticles_ };
+        void* mappedData = nullptr;
+        if (FAILED(readback_->Map(0, &readRange, &mappedData))) { throw std::runtime_error("Sphere readback mapping failed"); }
+        const auto* particles = static_cast<const ParticleCS*>(mappedData);
+        bool hasMismatch = false;
+        for (uint32_t index = 0; index < maxParticles_; ++index) {
+            const auto& particle = particles[index];
+            if (particle.color.w <= 0.0f) { continue; }
+            if (std::abs(particle.scale.x - radius) > 0.0001f || std::abs(particle.scale.y - radius) > 0.0001f ||
+                std::abs(particle.scale.z - radius) > 0.0001f || std::abs(particle.translate.x - center.x) > 0.0001f ||
+                std::abs(particle.translate.y - center.y) > 0.0001f || std::abs(particle.translate.z - center.z) > 0.0001f) {
+                hasMismatch = true;
+            }
+        }
+        D3D12_RANGE writtenRange { 0, 0 };
+        readback_->Unmap(0, &writtenRange);
+        if (hasMismatch) { throw std::runtime_error("Sphere GPU radius/center differs from the explosion settings"); }
     }
 
 private:

@@ -99,6 +99,7 @@ void EffectEditorApp::SelectEffect(const std::string& id)
     if (!effects->GetEffectConfig(id, particleDraft_, error)) { throw std::runtime_error(error); }
     selectedId_ = id; selectedName_ = selected->name;
     particlePath_ = selectedPath; particleConfigWatch_ = std::move(configWatch);
+    RefreshEditorSchema();
     particleSaved_ = particleDraft_; particleApplied_ = particleDraft_;
     particleDiskConfig_ = disk; hasParticleConflict_ = false;
     hasPendingParticleFile_ = false;
@@ -232,6 +233,7 @@ void EffectEditorApp::ProcessPending()
         if (shouldReload_ && dx_->IsCommandListPristine()) {
             shouldReload_ = false;
             if (!effects->ReloadEffectShaders(selectedId_, error)) { throw std::runtime_error(error); }
+            RefreshEditorSchema();
             RefreshParticleWatch(); reloadError_.clear();
             SetStatus("シェーダーを再読み込みしました");
         }

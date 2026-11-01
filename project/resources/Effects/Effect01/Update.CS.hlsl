@@ -77,31 +77,12 @@ void main(uint32_t3 DTid : SV_DispatchThreadID)
             scale,
             scale);
 
-    // 炎の温度によるグラデーション変化
-    float4 currentColor;
-    float4 coreColor  = { 0.35f, 0.65f, 1.0f, 1.0f }; // 中心の明るい青
-    float4 flameColor = { 0.0f, 0.15f, 1.0f, 1.0f }; // 鮮やかな青
-    float4 smokeColor = { 0.0f, 0.02f, 0.35f, 0.0f }; // 濃い青から透明へ
-
-    if (lifeRate < 0.25f)
-    {
-        currentColor =
-            lerp(
-                coreColor,
-                flameColor,
-                lifeRate / 0.25f);
-    }
-    else
-    {
-        currentColor =
-            lerp(
-                flameColor,
-                smokeColor,
-                (lifeRate - 0.25f) / 0.75f);
-    }
-
+    // エディターで指定した開始色から終了色へ変化させる
     gParticles[particleIndex].color =
-        currentColor;
+        lerp(
+            gEffectSettings.startColor,
+            gEffectSettings.endColor,
+            lifeRate);
 
     if (gParticles[particleIndex].currentTime >=
             gParticles[particleIndex].lifeTime ||

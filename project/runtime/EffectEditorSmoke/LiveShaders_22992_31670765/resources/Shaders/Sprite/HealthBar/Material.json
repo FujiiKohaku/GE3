@@ -1,0 +1,25 @@
+{
+  "Name": "Health Bar",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 32,
+    "DivisionY": 2
+  },
+  "Effect": {
+    "Amplitude": 1.4,
+    "Frequency": 1.8,
+    "Speed": 2.2,
+    "Phase": 0,
+    "Direction": [
+      0,
+      1
+    ],
+    "Strength": 0.7,
+    "Threshold": 0.5
+  }
+}

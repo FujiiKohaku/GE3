@@ -1,11 +1,16 @@
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "App/Game/Hazard/WaterPillarHazard.h"
+#include "App/Game/Player/Combat/Bullet/Types/MissileBullet.h"
+#include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
+#include "Engine/Serialization/JsonFile.h"
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <utility>
+#include <limits>
 
 // 描画資源を使わず、実際のBaseEnemy::SweepBulletで部位判定を行う。
 class CollisionTestEnemy final : public BaseEnemy {
@@ -22,6 +27,41 @@ public:
     bool IsCollisionPartDamageable(int32_t) const override { return false; }
 private:
     std::vector<EnemyCollisionPart> parts_;
+};
+
+class ExplosionTestEnemy final : public BaseEnemy {
+public:
+    ExplosionTestEnemy(float positionZ, float health, bool isGuarded = false)
+    {
+        SetHealth(health);
+        parts_.push_back({ { 0.0f, 0.0f, positionZ }, 1.0f, 0 });
+        if (isGuarded) { guardedPartIndex_ = 0; }
+    }
+    void GetCollisionParts(std::vector<EnemyCollisionPart>& parts) const override
+    {
+        parts.insert(parts.end(), parts_.begin(), parts_.end());
+    }
+    void AddPart(float positionZ, int32_t partIndex)
+    {
+        parts_.push_back({ { 0.0f, 0.0f, positionZ }, 1.0f, partIndex });
+    }
+    bool IsCollisionPartDamageable(int32_t partIndex) const override { return partIndex != guardedPartIndex_; }
+    void OnBulletHit(int32_t partIndex, float damage, const Vector3& position) override
+    {
+        ++hitCount_;
+        lastPartIndex_ = partIndex;
+        BaseEnemy::OnBulletHit(partIndex, damage, position);
+    }
+    float GetRemainingHealth() const { return GetHealth(); }
+    int GetHitCount() const { return hitCount_; }
+    int32_t GetLastPartIndex() const { return lastPartIndex_; }
+protected:
+    void OnDeath() override {}
+private:
+    std::vector<EnemyCollisionPart> parts_;
+    int32_t guardedPartIndex_ = -1;
+    int32_t lastPartIndex_ = -1;
+    int hitCount_ = 0;
 };
 
 bool RunGameplayCollisionTests()
@@ -113,6 +153,58 @@ bool RunGameplayCollisionTests()
     hit = CollisionSystem::FindFirstPlayerBulletHit(
         bullet, movement, enemies, nullptr, destructibles, -30.0f);
     if (hit.hit.isHit) { return false; }
+
+    // 実際の弾種の設定で、範囲・直撃除外・防御・部位重複・得点を検証する。
+    MissileBullet missile;
+    HomingMissileBullet homing;
+    const PlayerBullet& missileBase = missile;
+    const PlayerBullet& homingBase = homing;
+    std::filesystem::path explosionPath = "resources/Effects/MissileExplosion/Effect.json";
+    if (!std::filesystem::exists(explosionPath)) { explosionPath = std::filesystem::path("project") / explosionPath; }
+    auto explosionConfig = JsonFile::Load(explosionPath);
+    const auto explosionSettings = MissileBullet::GetExplosionSettingsFromConfig(explosionConfig);
+    if (explosionSettings.radius != 8.0f || explosionSettings.damage != 5.0f ||
+        homingBase.GetExplosionSettings().radius != 0.0f || homingBase.GetExplosionSettings().damage != 0.0f) { return false; }
+    if (missileBase.GetExplosionSettings().radius != 0.0f) { return false; } // 未登録の演出では見えない爆風を作らない。
+    explosionConfig["Particle"]["EndScale"] = 12.0f;
+    if (MissileBullet::GetExplosionSettingsFromConfig(explosionConfig).radius != 12.0f) { return false; }
+    explosionConfig["Render"]["MeshType"] = "Board";
+    if (MissileBullet::GetExplosionSettingsFromConfig(explosionConfig).radius != 0.0f) { return false; }
+    enemies.clear();
+    auto direct = std::make_unique<ExplosionTestEnemy>(0.0f, 20.0f);
+    auto* directEnemy = direct.get(); enemies.push_back(std::move(direct));
+    auto nearby = std::make_unique<ExplosionTestEnemy>(3.0f, 5.0f);
+    auto* nearbyEnemy = nearby.get(); enemies.push_back(std::move(nearby));
+    auto edge = std::make_unique<ExplosionTestEnemy>(9.0f, 20.0f);
+    auto* edgeEnemy = edge.get(); enemies.push_back(std::move(edge));
+    auto outside = std::make_unique<ExplosionTestEnemy>(9.01f, 20.0f);
+    auto* outsideEnemy = outside.get(); enemies.push_back(std::move(outside));
+    auto guarded = std::make_unique<ExplosionTestEnemy>(1.0f, 20.0f, true);
+    auto* guardedEnemy = guarded.get(); enemies.push_back(std::move(guarded));
+    auto multipart = std::make_unique<ExplosionTestEnemy>(1.0f, 20.0f);
+    multipart->AddPart(2.0f, 7);
+    auto* multipartTarget = multipart.get(); enemies.push_back(std::move(multipart));
+    auto weakPoint = std::make_unique<ExplosionTestEnemy>(1.0f, 20.0f, true);
+    weakPoint->AddPart(2.0f, 7);
+    auto* weakPointEnemy = weakPoint.get(); enemies.push_back(std::move(weakPoint));
+    auto defeated = std::make_unique<ExplosionTestEnemy>(1.0f, 20.0f);
+    defeated->SetDead(true);
+    auto* defeatedEnemy = defeated.get(); enemies.push_back(std::move(defeated));
+    auto explosionBoss = std::make_unique<ExplosionTestEnemy>(1.0f, 5.0f);
+    auto* bossTarget = explosionBoss.get(); enemies.push_back(std::move(explosionBoss));
+    // ボスが敵一覧にも入っていても二重に判定しない。
+    const uint32_t blastScore = CollisionSystem::ApplyExplosionDamage({}, explosionSettings, enemies, bossTarget, directEnemy);
+    if (blastScore != 1100u || directEnemy->GetHitCount() != 0 || directEnemy->GetRemainingHealth() != 20.0f ||
+        !nearbyEnemy->IsDead() || nearbyEnemy->GetHitCount() != 1 || !bossTarget->IsDead() || bossTarget->GetHitCount() != 1 ||
+        edgeEnemy->GetRemainingHealth() != 15.0f || outsideEnemy->GetHitCount() != 0 || guardedEnemy->GetHitCount() != 0 ||
+        multipartTarget->GetRemainingHealth() != 15.0f || multipartTarget->GetHitCount() != 1 ||
+        weakPointEnemy->GetHitCount() != 1 || weakPointEnemy->GetLastPartIndex() != 7 || defeatedEnemy->GetHitCount() != 0) { return false; }
+    // ホーミングや不正な設定では、周囲の敵もボスも追加ダメージを受けない。
+    if (CollisionSystem::ApplyExplosionDamage({}, homingBase.GetExplosionSettings(), enemies, bossTarget, nullptr) != 0 ||
+        edgeEnemy->GetRemainingHealth() != 15.0f) { return false; }
+    const PlayerBulletExplosionSettings invalidExplosion { (std::numeric_limits<float>::quiet_NaN)(), 5.0f };
+    if (CollisionSystem::ApplyExplosionDamage({}, invalidExplosion, enemies, bossTarget, nullptr) != 0 ||
+        edgeEnemy->GetRemainingHealth() != 15.0f) { return false; }
     return true;
 }
 
@@ -138,13 +230,14 @@ bool RunWaterPillarHeightTests()
     return true;
 }
 
-int main()
+int main(int argumentCount, char** arguments)
 {
     if (!RunGameplayCollisionTests()) {
         std::puts("FAILED: gameplay collision ordering");
         return 1;
     }
-    std::puts("PASS: reversed enemy order, boss priority, guarded parts, obstacles and floor contact order");
+    std::puts("PASS: player bullet ordering, missile sphere radius, blast damage, guards, score and homing exclusion");
+    if (argumentCount == 2 && std::strcmp(arguments[1], "--player-bullets-only") == 0) { return 0; }
     if (!RunWaterPillarHeightTests()) {
         std::puts("FAILED: water pillar collision height");
         return 1;

@@ -12,6 +12,8 @@
 #include "Engine/Effect/EffectManager.h"
 
 #include <cmath>
+#include <algorithm>
+#include <limits>
 
 namespace {
 constexpr float kPlayerObstacleRadius = 1.0f;
@@ -154,6 +156,55 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
     return nearest;
 }
 
+bool GameplayCollisionSystem::ApplyExplosionToEnemy(BaseEnemy& enemy, const Sphere& explosion,
+    float damage, const BaseEnemy* directEnemy)
+{
+    if (&enemy == directEnemy || enemy.IsDead()) { return false; }
+    std::vector<EnemyCollisionPart> parts;
+    enemy.GetCollisionParts(parts);
+    bool hasHitPart = false;
+    int32_t nearestPartIndex = 0;
+    float nearestDistance = (std::numeric_limits<float>::max)();
+    for (const auto& part : parts) {
+        if (!enemy.IsCollisionPartDamageable(part.partIndex)) { continue; }
+        const Vector3 offset = part.position - explosion.center;
+        const float distanceSquared = Dot(offset, offset);
+        const float combinedRadius = explosion.radius + part.radius;
+        if (distanceSquared > combinedRadius * combinedRadius) { continue; }
+        const float surfaceDistance = (std::max)(0.0f, std::sqrt(distanceSquared) - part.radius);
+        if (!hasHitPart || surfaceDistance < nearestDistance) {
+            hasHitPart = true;
+            nearestPartIndex = part.partIndex;
+            nearestDistance = surfaceDistance;
+        }
+    }
+    if (!hasHitPart) { return false; }
+    enemy.OnBulletHit(nearestPartIndex, damage, explosion.center);
+    return enemy.IsDead();
+}
+
+uint32_t GameplayCollisionSystem::ApplyExplosionDamage(const Vector3& position,
+    const PlayerBulletExplosionSettings& settings, const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
+    BaseEnemy* boss, const BaseEnemy* directEnemy)
+{
+    if (!std::isfinite(settings.radius) || !std::isfinite(settings.damage) ||
+        settings.radius <= 0.0f || settings.damage <= 0.0f) { return 0; }
+    const Sphere explosion { position, settings.radius };
+    uint32_t scoreAwarded = 0;
+    for (const auto& enemy : enemies) {
+        if (enemy.get() == boss) { continue; }
+        if (ApplyExplosionToEnemy(*enemy, explosion, settings.damage, directEnemy)) {
+            scoreAwarded += 100u;
+            SoundManager::GetInstance()->Play("EnemyDestroyed");
+        }
+    }
+    if (boss != nullptr && ApplyExplosionToEnemy(*boss, explosion, settings.damage, directEnemy)) {
+        scoreAwarded += 1000u;
+        SoundManager::GetInstance()->Play("BossDestroyed");
+    }
+    return scoreAwarded;
+}
+
 GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
     Player& player, const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
@@ -175,10 +226,13 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
         if (!nearest.hit.isHit) {
             continue;
         }
+        const auto explosionSettings = bullet->GetExplosionSettings();
+        const bool hasExplosion = explosionSettings.radius > 0.0f;
+        if (hasExplosion) { bullet->OnHitEnemy(nearest.hit.position); }
         if (nearest.enemy != nullptr) {
             BaseEnemy& enemy = *nearest.enemy;
             if (enemy.IsCollisionPartDamageable(nearest.partIndex)) {
-                bullet->OnHitEnemy(nearest.hit.position);
+                if (!hasExplosion) { bullet->OnHitEnemy(nearest.hit.position); }
                 SoundManager::GetInstance()->Play("EnemyHit");
             } else {
                 SoundManager::GetInstance()->Play("ArmorDeflect");
@@ -194,7 +248,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
                 }
             }
         } else {
-            EffectManager::GetInstance()->PlayEffect("HitEffect", nearest.hit.position);
+            if (!hasExplosion) { EffectManager::GetInstance()->PlayEffect("HitEffect", nearest.hit.position); }
             if (nearest.destructible != nullptr) {
                 DestructibleLevelObject& destructible = *nearest.destructible;
                 destructible.hp -= static_cast<float>(bullet->GetDamage());
@@ -210,6 +264,9 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
                     destructible.object->Update();
                 }
             }
+        }
+        if (hasExplosion) {
+            events.scoreAwarded += ApplyExplosionDamage(nearest.hit.position, explosionSettings, enemies, boss, nearest.enemy);
         }
         bullet->SetDead();
     }

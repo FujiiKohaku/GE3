@@ -1,0 +1,33 @@
+{
+  "Version": 1,
+  "RenderType": "Mesh",
+  "Shaders": {
+    "Emit": "Emit.CS.hlsl",
+    "Update": "Update.CS.hlsl",
+    "Vertex": "../../Shaders/Effects/Common/Particle.VS.hlsl",
+    "Pixel": "../../Shaders/Effects/Common/Particle.PS.hlsl"
+  },
+  "Properties": {
+    "Emitter.Count": {},
+    "Emitter.Radius": {},
+    "Particle.LifeTime": {},
+    "Particle.StartScale": {},
+    "Particle.EndScale": {},
+    "Particle.Velocity": {},
+    "Particle.RotationSpeed": {},
+    "Simulation.EnableDrag": {},
+    "Simulation.Drag": {},
+    "Simulation.EnableNoise": {},
+    "Simulation.NoiseStrength": {},
+    "Particle.StartRotation": {},
+    "Simulation.EnableGravity": {
+      "Label": "上向きの加速を使用"
+    },
+    "Simulation.Gravity": {
+      "Label": "上向きの加速度",
+      "Description": "この炎では正の値で上方向に加速します。"
+    },
+    "Render.Texture": {},
+    "Render.EmissionStrength": {}
+  }
+}

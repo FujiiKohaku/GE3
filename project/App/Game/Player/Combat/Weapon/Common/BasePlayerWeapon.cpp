@@ -1,4 +1,4 @@
-// 通常弾とミニガンに共通する連射間隔・発熱・弾生成の処理をまとめる。
+// アサルトの連射間隔・発熱・弾生成の処理をまとめる。
 #include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
 #include "App/Game/Player/Combat/Bullet/Types/NormalBullet.h"
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
@@ -28,7 +28,7 @@ bool AutomaticPlayerWeapon::Fire(PlayerWeaponContext& context)
     if (!context.canFire || context.heat.IsOverheated()) return false;
     SoundManager::GetInstance()->Play(sound_);
     context.emit(nullptr);
-    context.heat.AddShotHeat(minigun_);
+    context.heat.AddShotHeat();
     return true;
 }
 

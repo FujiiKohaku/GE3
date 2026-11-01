@@ -3,6 +3,13 @@
 #include "Engine/Serialization/JsonFile.h"
 #include "Engine/Logger/Logger.h"
 
+void EffectEditorApp::RefreshEditorSchema()
+{
+    const auto path = particlePath_.parent_path() / "Editor.json";
+    editorSchemaWatch_.SetRoots({ path }, true);
+    editorSchema_.Load(path);
+}
+
 void EffectEditorApp::RefreshParticleWatch(bool shouldAcknowledgeConfig, bool shouldAcknowledgeShaders)
 {
     particleConfigWatch_.SetRoots({ particlePath_ }, shouldAcknowledgeConfig);
@@ -104,6 +111,7 @@ void EffectEditorApp::ProcessLiveChanges(uint64_t nowMs)
     if (!isLiveReloadEnabled_ || !dx_->IsCommandListPristine() || nowMs < nextLivePollMs_) { return; }
     constexpr uint64_t kPollIntervalMs = 200;
     nextLivePollMs_ = nowMs + kPollIntervalMs;
+    if (editorSchemaWatch_.Poll(nowMs)) { RefreshEditorSchema(); }
     bool hasPostConfigChange = postConfigWatch_.Poll(nowMs);
     const bool hasPostShaderChange = postShaderWatch_.Poll(nowMs);
     const bool hasParticleShaderChange = particleShaderWatch_.Poll(nowMs);

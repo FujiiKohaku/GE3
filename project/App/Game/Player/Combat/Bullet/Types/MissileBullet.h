@@ -23,6 +23,9 @@ public:
     }
     // 命中位置にミサイル用の演出を出す。
     void OnHitEnemy(const Vector3& position) override;
+    PlayerBulletExplosionSettings GetExplosionSettings() const override;
+    // 球状エフェクトのEndScaleを、描画と共通のワールド半径として読む。
+    static PlayerBulletExplosionSettings GetExplosionSettingsFromConfig(const nlohmann::json& config);
 
 private:
     // ミサイルの位置を追いかけるループエフェクトを生成する。
@@ -33,6 +36,7 @@ private:
     void StopTrailEffect();
 
 private:
+    static constexpr float kExplosionDamage = 5.0f;
     float speed_ = 180.0f;
     float scale_ = 2.0f;
 

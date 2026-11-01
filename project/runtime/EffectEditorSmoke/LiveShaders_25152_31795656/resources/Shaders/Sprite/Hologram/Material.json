@@ -1,0 +1,25 @@
+{
+  "Name": "Hologram PS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 1,
+    "DivisionY": 1
+  },
+  "Effect": {
+    "Amplitude": 0.014,
+    "Frequency": 180,
+    "Speed": 6,
+    "Phase": 0,
+    "Direction": [
+      1,
+      0
+    ],
+    "Strength": 0.65,
+    "Threshold": 0.5
+  }
+}

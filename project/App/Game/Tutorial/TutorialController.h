@@ -24,7 +24,7 @@ public:
     bool IsCompact() const { return false; }
     // 成功表示中の項目も完了数に含め、全項目数を超えない値を返す。
     int GetCompletedCount() const;
-    static constexpr int kStepCount = 14;
+    static constexpr int kStepCount = 13;
     // 標的練習中はレール進行を止め、それ以外でも次のチェックポイントを越えないようにする。
     float LimitRailDistance(float distance) const;
     std::string GetTitle() const;

@@ -13,14 +13,14 @@
   },
   "Particle": {
     "MaxParticles": 64,
-    "LifeTime": 0.85,
-    "StartScale": 0.354,
-    "EndScale": 0.649,
+    "LifeTime": 1.1,
+    "StartScale": 0.708,
+    "EndScale": 1.298,
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
     "Velocity": [
       0.0,
-      3.0,
+      3.5,
       0.0
     ],
     "StartColor": [
@@ -54,6 +54,6 @@
     "DepthWrite": false,
     "CullMode": "None",
     "Loop": false,
-    "Duration": 0.72
+    "Duration": 1.1
   }
 }

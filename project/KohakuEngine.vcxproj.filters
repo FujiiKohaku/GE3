@@ -1058,22 +1058,16 @@
     <ClInclude Include="App\Game\Player\Combat\Weapon\Types\HomingPlayerWeapon.h">
       <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
-    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\MinigunPlayerWeapon.cpp">
+    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\AssaultPlayerWeapon.cpp">
       <Filter>Player\Combat\Weapon\Types</Filter>
     </ClCompile>
-    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\MinigunPlayerWeapon.h">
+    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\AssaultPlayerWeapon.h">
       <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
     <ClCompile Include="App\Game\Player\Combat\Weapon\Types\MissilePlayerWeapon.cpp">
       <Filter>Player\Combat\Weapon\Types</Filter>
     </ClCompile>
     <ClInclude Include="App\Game\Player\Combat\Weapon\Types\MissilePlayerWeapon.h">
-      <Filter>Player\Combat\Weapon\Types</Filter>
-    </ClInclude>
-    <ClCompile Include="App\Game\Player\Combat\Weapon\Types\NormalPlayerWeapon.cpp">
-      <Filter>Player\Combat\Weapon\Types</Filter>
-    </ClCompile>
-    <ClInclude Include="App\Game\Player\Combat\Weapon\Types\NormalPlayerWeapon.h">
       <Filter>Player\Combat\Weapon\Types</Filter>
     </ClInclude>
   </ItemGroup>

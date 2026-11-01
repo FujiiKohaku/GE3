@@ -59,14 +59,38 @@ void MissileBullet::OnHitEnemy(const Vector3& position)
     EffectManager::GetInstance()->PlayEffect(
         "MissileExplosion",
         position);
-
+    EffectManager::GetInstance()->PlayEffect(
+        "MissileExplosionParticles",
+        position);
     EffectManager::GetInstance()->PlayEffect(
         "MissileExplosionRing",
         position);
-
     EffectManager::GetInstance()->PlayEffect(
-        "MissileExplosionFlame",
+        "MissileExplosionFlash",
         position);
+}
+
+PlayerBulletExplosionSettings MissileBullet::GetExplosionSettingsFromConfig(const nlohmann::json& config)
+{
+    if (!config.is_object() || !config.contains("Particle") || !config.at("Particle").is_object() ||
+        !config.contains("Render") || !config.at("Render").is_object()) { return {}; }
+    const auto& render = config.at("Render");
+    if (!render.contains("MeshType") || render.at("MeshType") != "Sphere") { return {}; }
+    if (render.contains("Type") && render.at("Type") != "Mesh") { return {}; }
+    const auto& particle = config.at("Particle");
+    if (!particle.contains("EndScale") || !particle.at("EndScale").is_number()) { return {}; }
+    const float radius = particle.at("EndScale").get<float>();
+    if (!std::isfinite(radius) || radius <= 0.0f) { return {}; }
+    return { radius, kExplosionDamage };
+}
+
+PlayerBulletExplosionSettings MissileBullet::GetExplosionSettings() const
+{
+    nlohmann::json config;
+    std::string error;
+    // 読み込まれていない演出の半径を推測して、見えない爆風を発生させない。
+    if (!EffectManager::GetInstance()->GetEffectConfig("MissileExplosion", config, error)) { return {}; }
+    return GetExplosionSettingsFromConfig(config);
 }
 
 // ミサイルの位置を追いかけるループエフェクトを生成する。

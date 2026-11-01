@@ -7,38 +7,39 @@
   },
   "Emitter": {
     "Shape": "Sphere",
-    "Count": 12,
-    "Radius": 0.55,
-    "Frequency": 0.001
+    "Count": 1,
+    "Radius": 0.0,
+    "Frequency": 1.0
   },
   "Particle": {
-    "LifeTime": 0.42,
-    "StartScale": 1.74,
-    "EndScale": 6.09,
+    "LifeTime": 0.5,
+    "StartScale": 8.0,
+    "EndScale": 8.0,
     "StartRotation": 0.0,
-    "RotationSpeed": 18.0,
+    "RotationSpeed": 0.0,
     "Velocity": [
       0.0,
       0.0,
       0.0
     ],
     "StartColor": [
-      0.92,
       1.0,
-      1.0,
+      0.88,
+      0.35,
       1.0
     ],
     "EndColor": [
-      0.05,
-      0.42,
-      1.0,
+      0.9,
+      0.1,
+      0.005,
       0.0
-    ]
+    ],
+    "MaxParticles": 1
   },
   "Simulation": {
     "EnableGravity": false,
     "Gravity": 0.0,
-    "EnableDrag": true,
+    "EnableDrag": false,
     "Drag": 0.88,
     "EnableNoise": false,
     "NoiseStrength": 0.0,
@@ -46,8 +47,8 @@
     "AttractionStrength": 0.0
   },
   "Render": {
-    "Texture": "resources/Effects/MissileExplosion/missileExplosion.png",
-    "MeshType": "Board",
+    "Texture": "../../Textures/white.png",
+    "MeshType": "Sphere",
     "BlendMode": "Add",
     "DepthTest": true,
     "DepthWrite": false,
@@ -75,5 +76,6 @@
     "FollowEmitter": false,
     "FadeOut": true,
     "FadeDuration": 0.25
-  }
+  },
+  "DisplayName": "ミサイルの球状爆発"
 }

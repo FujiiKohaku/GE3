@@ -270,14 +270,14 @@ std::string TutorialController::GetStepOperation(const StepInput& input) const
         return operation + std::to_string(input.defeatedTargets) + "/" + std::to_string(step->requiredKills);
     }
     case StepType::WeaponPractice: {
-        std::string operation = "ホイール / 1〜4：";
+        std::string operation = "ホイール / 1〜3：";
         if (input.isGamepadConnected) { operation = "左右で "; }
         return operation + step->practiceWeapon + "  撃破 " + std::to_string(input.defeatedTargets) + "/" + std::to_string(step->requiredKills);
     }
     case StepType::Heat:
         if (hasHeatRaised_) { return "射撃を離してゲージを冷ます"; }
-        if (input.isGamepadConnected) { return "通常弾を選んで射撃を長押し"; }
-        return "1でNormal → 左クリックを長押し";
+        if (input.isGamepadConnected) { return "アサルトを選んで射撃を長押し"; }
+        return "1でアサルト → 左クリックを長押し";
     case StepType::Bank: {
         if (!input.isGamepadConnected) { return "SPACE：次の練習へ"; }
         int count = 0;
@@ -345,16 +345,15 @@ const std::array<TutorialController::StepData, TutorialController::kStepCount>& 
     static const std::array<StepData, kStepCount> steps = {{
         StepData { StepType::Move, "MOVE", "マウスで照準を操作します。\n左右・上下の4方向へ動かしてください。", "左スティックで機体と照準を操作します。\n左右・上下の4方向へ動かしてください。", "", "", { "LS" }, 0, false, "", 180.0f, false },
         StepData { StepType::DefeatTargets, "FIRE", "マウスで照準を敵に合わせ、左クリックで撃ちます。\n反撃しない敵を3体倒しましょう。長押しでも撃てます。", "照準を敵に合わせ、AまたはRTで撃ちます。\n反撃しない敵を3体倒しましょう。長押しでも撃てます。", "", "", { "A", "RT" }, 3, false, "", 450.0f, false },
-        StepData { StepType::Heat, "HEAT", "照準の周りの熱ゲージが高いほど、威力も上がります。\n通常弾・ミニガンは熱を共有し、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nNormalを少し連射し、射撃を離して冷ましましょう。", "照準の周りの熱ゲージが高いほど、威力も上がります。\n通常弾・ミニガンは熱を共有し、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nNormalを少し連射し、射撃を離して冷ましましょう。", "", "", { "DPAD", "A", "RT" }, 0, false, "", 450.0f, true },
+        StepData { StepType::Heat, "HEAT", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "", "", { "DPAD", "A", "RT" }, 0, false, "", 450.0f, true },
         StepData { StepType::DefeatTargets, "MOVING TARGET", "今度は、ゆっくり動く敵を3体倒しましょう。\n照準で敵を追いかけて撃ちます。時間制限はありません。", "今度は、ゆっくり動く敵を3体倒しましょう。\n照準で敵を追いかけて撃ちます。時間制限はありません。", "", "", { "A", "RT" }, 3, true, "", 600.0f, false },
         StepData { StepType::Boost, "BOOST", "SHIFTまたは右クリックを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "Xを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "SHIFT / 右クリック 長押し", "長押しで加速", { "X" }, 0, false, "", 750.0f, false },
         StepData { StepType::Brake, "BRAKE", "CTRLを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "Yを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "CTRL 長押し", "長押しで減速", { "Y" }, 0, false, "", 1050.0f, false },
         StepData { StepType::Bank, "BANK", "機体を傾ける操作は、パッドのLB・RBを使います。\nキーボードでは練習を省略できます。SPACEで次へ進みます。", "LBで左、RBで右へ機体を傾けます。\n片方ずつ少し長押しし、機体の動きを確かめましょう。", "", "", { "LB", "RB" }, 0, false, "", 1350.0f, false },
         StepData { StepType::Roll, "ROLL", "回転する操作は、パッドのLB・RBの2回押しです。\nキーボードでは練習を省略できます。SPACEで次へ進みます。", "同じLBまたはRBを素早く2回押すと機体が回転します。\nまずボタンを離してから、トントンと2回押しましょう。", "SPACE：次の練習へ", "どちらかを素早く2回押す", { "LB", "RB" }, 0, false, "", 1710.0f, false },
-        StepData { StepType::WeaponPractice, "NORMAL", "Normal（通常弾）は、狙った方向へ飛ぶ基本の弾です。\n長押しで連射し、熱が高くなるほど威力が上がります。\nNormalを選び、敵を3体倒してください。", "Normal（通常弾）は、狙った方向へ飛ぶ基本の弾です。\n長押しで連射し、熱が高くなるほど威力が上がります。\nNormalを選び、敵を3体倒してください。", "", "", { "DPAD" }, 3, false, "Normal", 2070.0f, true },
-        StepData { StepType::WeaponPractice, "MISSILE", "Missileは、通常弾より一発の威力が高い武器です。\n押すたびに発射し、次の一発まで2秒待ちます。\n熱はたまりません。Missileで敵を3体倒しましょう。", "Missileは、通常弾より一発の威力が高い武器です。\n押すたびに発射し、次の一発まで2秒待ちます。\n熱はたまりません。Missileで敵を3体倒しましょう。", "", "", { "DPAD" }, 3, false, "Missile", 2070.0f, true },
-        StepData { StepType::WeaponPractice, "HOMING MISSILE", "Homing Missileは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n熱はたまらず、発射間隔は2秒。敵を3体倒しましょう。", "Homing Missileは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n熱はたまらず、発射間隔は2秒。敵を3体倒しましょう。", "", "", { "DPAD" }, 3, false, "Homing Missile", 2070.0f, true },
-        StepData { StepType::WeaponPractice, "MINIGUN", "Minigunは、一発は弱くても高速連射できる武器です。\n熱が高いと威力も上がりますが、撃ち続けると過熱します。\n敵を3体倒しましょう。通常弾と熱ゲージを共有します。", "Minigunは、一発は弱くても高速連射できる武器です。\n熱が高いと威力も上がりますが、撃ち続けると過熱します。\n敵を3体倒しましょう。通常弾と熱ゲージを共有します。", "", "", { "DPAD" }, 3, false, "Minigun", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "アサルト", "アサルトは、狙った方向へ高速連射する武器です。\n長押しで連射し、熱が高くなるほど威力が上がります。\nアサルトを選び、敵を3体倒してください。", "アサルトは、狙った方向へ高速連射する武器です。\n長押しで連射し、熱が高くなるほど威力が上がります。\nアサルトを選び、敵を3体倒してください。", "", "", { "DPAD" }, 3, false, "アサルト", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "MISSILE", "Missileは、アサルトより一発の威力が高い武器です。\n着弾時に爆発し、周囲の敵も巻き込みます。\n押すたびに発射し、次の一発まで2秒待ちます。\n熱はたまりません。Missileで敵を3体倒しましょう。", "Missileは、アサルトより一発の威力が高い武器です。\n着弾時に爆発し、周囲の敵も巻き込みます。\n押すたびに発射し、次の一発まで2秒待ちます。\n熱はたまりません。Missileで敵を3体倒しましょう。", "", "", { "DPAD" }, 3, false, "Missile", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "HOMING MISSILE", "Homing Missileは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n爆発せず、直撃した敵だけにダメージを与えます。\n熱はたまらず、発射間隔は2秒。敵を3体倒しましょう。", "Homing Missileは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n爆発せず、直撃した敵だけにダメージを与えます。\n熱はたまらず、発射間隔は2秒。敵を3体倒しましょう。", "", "", { "DPAD" }, 3, false, "Homing Missile", 2070.0f, true },
         StepData { StepType::Pause, "PAUSE", "TABでポーズし、設定を確認できます。\nTABまたはESCで訓練へ戻ってください。", "STARTでポーズし、設定を確認できます。\nSTARTまたはBで訓練へ戻れます。", "TAB → 設定 / ESCで戻る", "メニューでポーズ・もう一度押して戻る", { "MENU" }, 0, false, "", 2400.0f, false },
         StepData { StepType::DefeatTargets, "PRACTICE", "最後は、動く敵を5体倒す練習です。\n移動と射撃を組み合わせましょう。敵は反撃しません。", "最後は、動く敵を5体倒す練習です。\n移動と射撃を組み合わせましょう。敵は反撃しません。", "", "", { "A", "RT" }, 5, true, "", 2600.0f, false }
     }};

@@ -154,6 +154,10 @@ void EffectEditorApp::DrawLibrary()
             }
         }
         ImGui::EndChild();
+        if (!editorSchema_.IsSupported(particleDraft_, "Render", "Texture")) {
+            ImGui::TextWrapped("テクスチャ変更は対応未確認のため非表示です。");
+            return;
+        }
         ImGui::SeparatorText("テクスチャ");
         const size_t count = (std::min)(texturePaths_.size(), size_t(4));
         for (size_t index = 0; index < count; ++index) {

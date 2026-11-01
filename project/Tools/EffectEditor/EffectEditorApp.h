@@ -8,6 +8,7 @@
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "PreviewTarget.h"
 #include "EditorSourceWatch.h"
+#include "EditorEffectSchema.h"
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -69,6 +70,8 @@ private:
     void EditPostProperties(const std::string& type, bool isCompact = false);
     void DrawPopups();
     void EditProperties(nlohmann::json& value, const std::string& parent = "");
+    void EditParticleSection(const std::string& section);
+    void RefreshEditorSchema();
     void RequestSave();
     void RequestSelect(const std::string& id);
     void LoadPost(const std::filesystem::path& path);
@@ -159,6 +162,8 @@ private:
     std::filesystem::path pendingModel_;
     ID3D12Resource* lastBackBuffer_ = nullptr;
     EditorSourceWatch particleConfigWatch_;
+    EditorSourceWatch editorSchemaWatch_;
+    EditorEffectSchema editorSchema_;
     EditorSourceWatch particleShaderWatch_;
     EditorSourceWatch postConfigWatch_;
     EditorSourceWatch postShaderWatch_;

@@ -257,6 +257,7 @@ private:
     void StopPlayerEngineEffects();
     // ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
     void UpdateBossHpHud();
+    void UpdatePlayerHpArc();
     // レールの進行距離を確認し、未出現の群れ編隊を必要なタイミングで出す。
     void UpdateSwarmWaveSpawning();
     // 編隊設定から各個体の担当位置を決め、群れの敵を生成する。
@@ -582,6 +583,9 @@ private:
     std::unique_ptr<Sprite> playerHpBarSprite_;
     std::unique_ptr<Text> playerHpText_;
     float displayedPlayerHpRatio_ = 1.0f;
+    // 機体の下側に重ねる、画面上でサイズが一定の円弧HPゲージ。
+    std::unique_ptr<Sprite> playerHpArcSprite_;
+    bool isPlayerHpArcVisible_ = false;
 
     // Release構成でも表示するボスHP HUD
     std::unique_ptr<Sprite> bossHeadHpBgSprite_;

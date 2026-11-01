@@ -1,0 +1,25 @@
+{
+  "Name": "Rainbow Wave PS",
+  "Pipeline": {
+    "BlendMode": "Normal",
+    "DepthTest": false,
+    "DepthWrite": false,
+    "CullMode": "None"
+  },
+  "Mesh": {
+    "DivisionX": 1,
+    "DivisionY": 1
+  },
+  "Effect": {
+    "Amplitude": 0,
+    "Frequency": 8,
+    "Speed": 2,
+    "Phase": 0,
+    "Direction": [
+      1,
+      0
+    ],
+    "Strength": 0.55,
+    "Threshold": 0.5
+  }
+}
