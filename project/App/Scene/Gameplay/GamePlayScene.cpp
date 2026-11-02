@@ -47,6 +47,10 @@
 #include <cmath>
 
 namespace {
+constexpr const char* kDefaultFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
+constexpr const char* kWeaponFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
+constexpr const char* kBossFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
+constexpr const char* kGuidanceFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 const std::string kRailBranchUpperText = "↑ 海上ルート";
 const std::string kRailBranchLowerText = "↓ 海中ルート";
 const std::string kRailBranchSelectionStatus = "機体を上下に動かしてルートを選択";
@@ -170,9 +174,9 @@ constexpr float kOverheatFrameWidth = 288.0f;
 constexpr float kOverheatFrameHeight = 84.0f;
 constexpr float kInitializeWeaponHudBgSpritePositionX = 24.0f;
 constexpr float kInitializeWeaponHudBgSpritePositionY = 24.0f;
-constexpr float kInitializeWeaponHudLabelTextPositionX = 40.0f;
+constexpr float kInitializeWeaponHudLabelTextPositionX = 98.0f;
 constexpr float kInitializeWeaponHudLabelTextPositionY = 92.0f;
-constexpr float kInitializeWeaponHudNameTextPositionX = 40.0f;
+constexpr float kInitializeWeaponHudNameTextPositionX = 98.0f;
 constexpr float kInitializeWeaponHudNameTextPositionY = 68.0f;
 constexpr float kBossHpFrameRightInset = 18.0f;
 constexpr float kBossHpFrameTopInset = 8.0f;
@@ -470,7 +474,7 @@ void GamePlayScene::PrepareLoadingFont() const
     if (stageId_ != "stage01") { return; }
     FontManager* fontManager = FontManager::GetInstance();
     const FontHandle fontHandle = fontManager->LoadFont(
-        "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
     fontManager->EnsureGlyphs(fontHandle, kRailBranchUpperText);
     fontManager->EnsureGlyphs(fontHandle, kRailBranchLowerText);
     fontManager->EnsureGlyphs(fontHandle, kRailBranchSelectionStatus);
@@ -708,8 +712,13 @@ void GamePlayScene::Initialize()
 
     Logger::Log("GamePlayScene::Initialize: Allocating aimSprite");
     aimSprite_ = std::make_unique<Sprite>();
+    previousMissileReloadRatio_ = 1.0f;
+    missileReadyFlashRemainingSeconds_ = 0.0f;
     Logger::Log("GamePlayScene::Initialize: Initializing aimSprite");
     aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+    aimSprite_->SetShaderPaths(
+        "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+        "resources/Shaders/Sprite/WeaponReticle/Sprite.PS.hlsl");
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite size");
     aimSprite_->SetSize({ 128.0f, 128.0f });
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite anchor");
@@ -719,6 +728,8 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
     overheatGaugeSprite_ = std::make_unique<Sprite>();
+    wasReticleOverheated_ = false;
+    overheatReadyFlashRemainingSeconds_ = 0.0f;
     overheatGaugeSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
     overheatGaugeSprite_->SetShaderPaths(
         "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
@@ -735,6 +746,10 @@ void GamePlayScene::Initialize()
     for (size_t index = 0; index < kHomingMarkerCount; ++index) {
         auto marker = std::make_unique<Sprite>();
         marker->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+        marker->SetShaderPaths(
+            "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+            "resources/Shaders/Sprite/WeaponReticle/Sprite.PS.hlsl");
+        marker->SetEffectStrength(2.0f);
         marker->SetSize({ 84.0f, 84.0f });
         marker->SetAnchorPoint({ 0.5f, 0.5f });
         marker->SetColor(kInitializeMarkerColor);
@@ -795,7 +810,6 @@ void GamePlayScene::Initialize()
     // -------------------------------------------------
     // ポーズ用日本語テキストUI（Release構成対応 Text描画システム）
     // -------------------------------------------------
-    constexpr const char* kDefaultFont = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
 
     pauseTitleText_ = std::make_unique<Text>();
     pauseTitleText_->Initialize(kDefaultFont);
@@ -894,10 +908,11 @@ void GamePlayScene::Initialize()
     weaponHudLabelText_->Update();
 
     weaponHudNameText_ = std::make_unique<Text>();
-    weaponHudNameText_->Initialize(kDefaultFont);
+    weaponHudNameText_->Initialize(kWeaponFont);
     weaponHudNameText_->SetText("アサルト");
     weaponHudNameText_->SetPosition({ kInitializeWeaponHudNameTextPositionX, WinApp::GetInstance()->kClientHeight - kInitializeWeaponHudNameTextPositionY });
-    weaponHudNameText_->SetFontSize(27.0f);
+    weaponHudNameText_->SetFontSize(22.0f);
+    weaponHudNameText_->SetMaxWidth(198.0f);
     weaponHudNameText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
     weaponHudNameText_->SetOutlineWidth(1.0f);
     weaponHudNameText_->Update();
@@ -1042,7 +1057,7 @@ void GamePlayScene::Initialize()
     bossBodyHpBarSprite_->Update();
 
     bossNameText_ = std::make_unique<Text>();
-    bossNameText_->Initialize(kDefaultFont);
+    bossNameText_->Initialize(kBossFont);
     bossNameText_->SetText("BOSS: FEAR WORM");
     if (stageSettings_.bossType == "IceJellyfish") {
         bossNameText_->SetText("BOSS: ICE JELLYFISH");
@@ -1097,6 +1112,7 @@ void GamePlayScene::Initialize()
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetControlMode(gControlMode);
     player_->SetMouseSensitivity(gMouseSensitivity);
+    InitializeWeaponIcons();
     lastPlayerHp_ = player_->GetCurrentHp();
     damageFlashRemainingSeconds_ = 0.0f;
     lowHpPulseElapsedSeconds_ = 0.0f;
@@ -1246,6 +1262,7 @@ void GamePlayScene::Initialize()
     }
 
     InitializeTutorialPresentation();
+    InitializeStageObjectiveBanner();
     if (stageId_ == "stage01" &&
         std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos) {
         debugCameraController_->SetDebugMode(true);
@@ -1523,6 +1540,7 @@ void GamePlayScene::Update()
             player_->SetTranslate(GetRailPosition(railDistance_));
         }
     }
+    UpdateStageObjectiveBanner();
     // レール自体の更新
     rail_->Update();
 
@@ -1865,15 +1883,45 @@ void GamePlayScene::Update()
     }
 
     UpdatePlayerHpArc();
+    UpdateWeaponIcons();
 
     // レティクル（AimSprite）のスクリーン位置更新
     const Vector2 aimUiPosition = WinApp::GetInstance()->ClientToUi(player_->GetAimScreenPosition());
+    float reticleMode = 0.0f;
+    if (player_->IsHomingMissileSelected()) {
+        reticleMode = 1.0f;
+    }
+    aimSprite_->SetEffectStrength(reticleMode);
+    constexpr float kMissileReadyFlashDurationSeconds = 0.22f;
+    const float missileReloadRatio = player_->GetMissileReloadRatio();
+    missileReadyFlashRemainingSeconds_ = (std::max)(0.0f,
+        missileReadyFlashRemainingSeconds_ - TimeManager::GetInstance()->GetDeltaTime());
+    if (missileReloadRatio < 1.0f) {
+        missileReadyFlashRemainingSeconds_ = 0.0f;
+    } else if (previousMissileReloadRatio_ < 1.0f) {
+        missileReadyFlashRemainingSeconds_ = kMissileReadyFlashDurationSeconds;
+    }
+    previousMissileReloadRatio_ = missileReloadRatio;
+    aimSprite_->SetEffectThreshold(missileReloadRatio);
+    aimSprite_->SetEffectPhase(missileReadyFlashRemainingSeconds_ / kMissileReadyFlashDurationSeconds);
     aimSprite_->SetPosition(aimUiPosition);
     aimSprite_->Update();
     overheatGaugeSprite_->SetPosition(aimUiPosition);
     overheatGaugeSprite_->SetEffectThreshold(player_->GetHeatRatio());
+    constexpr float kOverheatReadyFlashDurationSeconds = 0.22f;
+    const bool isWeaponOverheated = player_->IsOverheated();
+    overheatReadyFlashRemainingSeconds_ = (std::max)(0.0f,
+        overheatReadyFlashRemainingSeconds_ - TimeManager::GetInstance()->GetDeltaTime());
+    if (isWeaponOverheated) {
+        overheatReadyFlashRemainingSeconds_ = 0.0f;
+    } else if (wasReticleOverheated_) {
+        overheatReadyFlashRemainingSeconds_ = kOverheatReadyFlashDurationSeconds;
+    }
+    wasReticleOverheated_ = isWeaponOverheated;
+    overheatGaugeSprite_->SetEffectPhase(
+        overheatReadyFlashRemainingSeconds_ / kOverheatReadyFlashDurationSeconds);
     float overheatStrength = 0.0f;
-    if (player_->IsOverheated()) {
+    if (isWeaponOverheated) {
         overheatStrength = 1.0f;
     }
     overheatGaugeSprite_->SetEffectStrength(overheatStrength);
@@ -2823,6 +2871,200 @@ void GamePlayScene::UpdateBossCutIn()
     bossCutInSprite_->Update();
 }
 
+void GamePlayScene::InitializeStageObjectiveBanner()
+{
+    stageObjectiveElapsedSeconds_ = 0.0f;
+    isStageObjectiveVisible_ = false;
+    stageObjectivePanelSprite_.reset();
+    stageObjectiveAccentSprite_.reset();
+    stageObjectiveLabelText_.reset();
+    stageObjectiveText_.reset();
+    if (stageId_ == "tutorial") { return; }
+
+    stageObjectivePanelSprite_ = std::make_unique<Sprite>();
+    stageObjectivePanelSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    stageObjectivePanelSprite_->SetSize({ 700.0f, 112.0f });
+    stageObjectivePanelSprite_->SetColor({ 0.025f, 0.055f, 0.085f, 0.94f });
+    stageObjectivePanelSprite_->SetPosition({ 0.0f, -128.0f });
+    stageObjectivePanelSprite_->Update();
+    stageObjectiveAccentSprite_ = std::make_unique<Sprite>();
+    stageObjectiveAccentSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    stageObjectiveAccentSprite_->SetSize({ 700.0f, 3.0f });
+    stageObjectiveAccentSprite_->SetColor(kPlayerActionCyan);
+    stageObjectiveAccentSprite_->SetPosition({ 0.0f, -128.0f });
+    stageObjectiveAccentSprite_->Update();
+
+    std::string stageName = stageSettings_.name;
+    if (stageName.empty()) { stageName = stageId_; }
+    stageObjectiveLabelText_ = std::make_unique<Text>();
+    stageObjectiveLabelText_->Initialize(kWeaponFont);
+    stageObjectiveLabelText_->SetText("MISSION OBJECTIVE  /  " + stageName);
+    stageObjectiveLabelText_->SetFontSize(16.0f);
+    stageObjectiveLabelText_->SetMaxWidth(652.0f);
+    stageObjectiveLabelText_->SetColor(kPlayerActionCyan);
+    stageObjectiveLabelText_->Update();
+
+    std::string objective = stageSettings_.objective;
+    if (objective.empty()) {
+        if (stageSettings_.allRangeMode) {
+            objective = "周囲を警戒し、エリアを探索せよ";
+        } else if (stageSettings_.bossType != "None") {
+            objective = "敵の攻撃を突破し、ボスを撃破せよ";
+        } else {
+            objective = "障害物と敵の攻撃を避け、終点へ到達せよ";
+        }
+    }
+    stageObjectiveText_ = std::make_unique<Text>();
+    stageObjectiveText_->Initialize(kGuidanceFont);
+    stageObjectiveText_->SetText(objective);
+    stageObjectiveText_->SetFontSize(24.0f);
+    stageObjectiveText_->SetMaxWidth(652.0f);
+    stageObjectiveText_->SetColor({ 0.95f, 0.97f, 1.0f, 1.0f });
+    stageObjectiveText_->SetOutlineWidth(1.0f);
+    stageObjectiveText_->Update();
+}
+
+void GamePlayScene::UpdateStageObjectiveBanner()
+{
+    isStageObjectiveVisible_ = false;
+    if (!stageObjectivePanelSprite_ || !stageObjectiveAccentSprite_ ||
+        !stageObjectiveLabelText_ || !stageObjectiveText_) { return; }
+    constexpr float kDelaySeconds = 0.4f;
+    constexpr float kSlideInSeconds = 0.35f;
+    constexpr float kHoldSeconds = 4.0f;
+    constexpr float kSlideOutSeconds = 0.3f;
+    constexpr float kTotalSeconds = kDelaySeconds + kSlideInSeconds + kHoldSeconds + kSlideOutSeconds;
+    if (stageObjectiveElapsedSeconds_ >= kTotalSeconds) { return; }
+    stageObjectiveElapsedSeconds_ += TimeManager::GetInstance()->GetDeltaTime();
+    if (stageObjectiveElapsedSeconds_ < kDelaySeconds ||
+        stageObjectiveElapsedSeconds_ >= kTotalSeconds) { return; }
+    float visibility = 1.0f;
+    const float animationSeconds = stageObjectiveElapsedSeconds_ - kDelaySeconds;
+    if (animationSeconds < kSlideInSeconds) {
+        const float progress = std::clamp(animationSeconds / kSlideInSeconds, 0.0f, 1.0f);
+        visibility = 1.0f - std::pow(1.0f - progress, 3.0f);
+    } else if (animationSeconds > kSlideInSeconds + kHoldSeconds) {
+        const float progress = std::clamp(
+            (animationSeconds - kSlideInSeconds - kHoldSeconds) / kSlideOutSeconds, 0.0f, 1.0f);
+        visibility = 1.0f - progress * progress * (3.0f - 2.0f * progress);
+    }
+    const float panelX = (static_cast<float>(WinApp::kClientWidth) - 700.0f) * 0.5f;
+    const float panelY = -128.0f + 162.0f * visibility;
+    stageObjectivePanelSprite_->SetPosition({ panelX, panelY });
+    stageObjectivePanelSprite_->Update();
+    stageObjectiveAccentSprite_->SetPosition({ panelX, panelY });
+    stageObjectiveAccentSprite_->Update();
+    stageObjectiveLabelText_->SetPosition({ panelX + 24.0f, panelY + 14.0f });
+    stageObjectiveLabelText_->Update();
+    stageObjectiveText_->SetPosition({ panelX + 24.0f, panelY + 40.0f });
+    stageObjectiveText_->Update();
+    isStageObjectiveVisible_ = true;
+}
+
+void GamePlayScene::InitializeWeaponIcons()
+{
+    previousWeaponIconIndex_ = 0;
+    weaponSwitchRemainingSeconds_ = 0.0f;
+    weaponSwitchHorizontalOffsetPixels_ = 0.0f;
+    isWeaponSwitchPlacementPending_ = false;
+    isWeaponSwitchVisible_ = false;
+    weaponHudIconSprite_ = std::make_unique<Sprite>();
+    weaponSwitchIconSprite_ = std::make_unique<Sprite>();
+    Sprite* iconSprites[] = { weaponHudIconSprite_.get(), weaponSwitchIconSprite_.get() };
+    for (Sprite* iconSprite : iconSprites) {
+        iconSprite->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+        iconSprite->SetShaderPaths(
+            "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+            "resources/Shaders/Sprite/WeaponIcon/Sprite.PS.hlsl");
+        iconSprite->SetAnchorPoint({ 0.5f, 0.5f });
+        iconSprite->SetSize({ 64.0f, 64.0f });
+        iconSprite->SetEffectThreshold(0.0f);
+        iconSprite->Update();
+    }
+    weaponHudIconSprite_->SetSize({ 52.0f, 52.0f });
+    weaponHudIconSprite_->SetPosition({ 60.0f, WinApp::GetInstance()->kClientHeight - 62.0f });
+    weaponHudIconSprite_->Update();
+    weaponSwitchNameText_ = std::make_unique<Text>();
+    weaponSwitchNameText_->Initialize(kWeaponFont);
+    weaponSwitchNameText_->SetText(player_->GetCurrentWeaponDisplayName());
+    weaponSwitchNameText_->SetFontSize(18.0f);
+    weaponSwitchNameText_->SetAnchorPoint({ 0.5f, 0.0f });
+    weaponSwitchNameText_->SetOutlineWidth(2.0f);
+    weaponSwitchNameText_->Update();
+}
+
+void GamePlayScene::UpdateWeaponIcons()
+{
+    isWeaponSwitchVisible_ = false;
+    if (!player_ || !camera_ || !weaponHudIconSprite_ || !weaponSwitchIconSprite_ ||
+        !weaponSwitchNameText_) { return; }
+
+    constexpr float kDisplayDurationSeconds = 0.8f;
+    constexpr float kFadeDurationSeconds = 0.2f;
+    constexpr float kPopDurationSeconds = 0.12f;
+    int weaponIconIndex = 0;
+    if (player_->IsMissileSelected()) {
+        weaponIconIndex = 1;
+    } else if (player_->IsHomingMissileSelected()) {
+        weaponIconIndex = 2;
+    }
+    weaponHudIconSprite_->SetEffectThreshold(static_cast<float>(weaponIconIndex));
+    weaponHudIconSprite_->Update();
+    weaponSwitchRemainingSeconds_ = (std::max)(0.0f,
+        weaponSwitchRemainingSeconds_ - TimeManager::GetInstance()->GetDeltaTime());
+    if (weaponIconIndex != previousWeaponIconIndex_) {
+        previousWeaponIconIndex_ = weaponIconIndex;
+        weaponSwitchRemainingSeconds_ = kDisplayDurationSeconds;
+        weaponSwitchHorizontalOffsetPixels_ = 0.0f;
+        isWeaponSwitchPlacementPending_ = true;
+        weaponSwitchNameText_->SetText(player_->GetCurrentWeaponDisplayName());
+    }
+    if (player_->IsDead() || (GetActiveBoss() && GetActiveBoss()->IsDead())) {
+        weaponSwitchRemainingSeconds_ = 0.0f;
+        return;
+    }
+    if (weaponSwitchRemainingSeconds_ <= 0.0f) { return; }
+
+    const Vector3 playerPosition = player_->GetTranslate();
+    const Vector3 viewPosition = MatrixMath::Transform(playerPosition, camera_->GetViewMatrix());
+    if (viewPosition.z <= camera_->GetNearClip() || viewPosition.z >= camera_->GetFarClip()) { return; }
+    const Vector2 playerUiPosition = WinApp::GetInstance()->ClientToUi(camera_->WorldToScreen(playerPosition));
+    const float uiWidth = static_cast<float>(WinApp::kClientWidth);
+    const float uiHeight = static_cast<float>(WinApp::kClientHeight);
+    Vector2 iconPosition{ playerUiPosition.x + weaponSwitchHorizontalOffsetPixels_, playerUiPosition.y - 126.0f };
+    iconPosition.x = std::clamp(iconPosition.x, 100.0f, uiWidth - 100.0f);
+    iconPosition.y = std::clamp(iconPosition.y, 48.0f, uiHeight - 70.0f);
+    if (isWeaponSwitchPlacementPending_) {
+        const Vector2 aimPosition = WinApp::GetInstance()->ClientToUi(player_->GetAimScreenPosition());
+        if (std::abs(iconPosition.x - aimPosition.x) < 100.0f &&
+            std::abs(iconPosition.y - aimPosition.y) < 90.0f) {
+            if (aimPosition.x < uiWidth * 0.5f) {
+                iconPosition.x = aimPosition.x + 108.0f;
+            } else {
+                iconPosition.x = aimPosition.x - 108.0f;
+            }
+            iconPosition.x = std::clamp(iconPosition.x, 100.0f, uiWidth - 100.0f);
+        }
+        weaponSwitchHorizontalOffsetPixels_ = iconPosition.x - playerUiPosition.x;
+        isWeaponSwitchPlacementPending_ = false;
+    }
+    const float alpha = std::clamp(weaponSwitchRemainingSeconds_ / kFadeDurationSeconds, 0.0f, 1.0f);
+    const float popRatio = std::clamp(
+        (kDisplayDurationSeconds - weaponSwitchRemainingSeconds_) / kPopDurationSeconds, 0.0f, 1.0f);
+    const float iconSizePixels = 64.0f * (1.0f + 0.14f * (1.0f - popRatio));
+    weaponSwitchIconSprite_->SetEffectThreshold(static_cast<float>(weaponIconIndex));
+    weaponSwitchIconSprite_->SetPosition(iconPosition);
+    weaponSwitchIconSprite_->SetSize({ iconSizePixels, iconSizePixels });
+    weaponSwitchIconSprite_->SetColor({ 1.0f, 1.0f, 1.0f, alpha });
+    weaponSwitchIconSprite_->Update();
+    weaponSwitchNameText_->SetPosition({ iconPosition.x, iconPosition.y + 40.0f });
+    weaponSwitchNameText_->SetColor({ 0.95f, 0.97f, 1.0f, alpha });
+    weaponSwitchNameText_->SetOutlineColor({ 0.0f, 0.0f, 0.0f, alpha });
+    weaponSwitchNameText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, 0.6f * alpha });
+    weaponSwitchNameText_->Update();
+    isWeaponSwitchVisible_ = true;
+}
+
 void GamePlayScene::UpdatePlayerHpArc()
 {
     isPlayerHpArcVisible_ = false;
@@ -2861,7 +3103,11 @@ void GamePlayScene::Draw2D()
     }
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
-        overheatGaugeSprite_->Draw();
+        if (player_->IsMissileSelected() || player_->IsHomingMissileSelected()) {
+            aimSprite_->Draw();
+        } else {
+            overheatGaugeSprite_->Draw();
+        }
         std::vector<Vector3> homingLockPositions;
         player_->GetHomingLockPositions(homingLockPositions);
         const size_t markerCount =
@@ -2876,11 +3122,21 @@ void GamePlayScene::Draw2D()
     if (scoreHudBgSprite_) scoreHudBgSprite_->Draw();
     DrawHudFrame(weaponHudFrameSprites_);
     if (weaponHudBgSprite_) weaponHudBgSprite_->Draw();
+    if (!isPaused_ && weaponHudIconSprite_) weaponHudIconSprite_->Draw();
     DrawHudFrame(playerHudFrameSprites_);
     if (playerHpBgSprite_) playerHpBgSprite_->Draw();
     if (playerHpBarSprite_) playerHpBarSprite_->Draw();
     if (isPlayerHpArcVisible_ && playerHpArcSprite_) {
         playerHpArcSprite_->Draw();
+    }
+    if (!isPaused_ && isWeaponSwitchVisible_) {
+        weaponSwitchIconSprite_->Draw();
+    }
+    const bool shouldDrawStageObjective = !isPaused_ && isStageObjectiveVisible_ &&
+        player_ && !player_->IsDead() && bossCutInTimerSeconds_ < 0.0f;
+    if (shouldDrawStageObjective) {
+        stageObjectivePanelSprite_->Draw();
+        stageObjectiveAccentSprite_->Draw();
     }
 
     if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
@@ -2916,8 +3172,13 @@ void GamePlayScene::Draw2D()
     } else {
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
+        if (shouldDrawStageObjective) {
+            stageObjectiveLabelText_->Draw();
+            stageObjectiveText_->Draw();
+        }
         if (weaponHudLabelText_) weaponHudLabelText_->Draw();
         if (weaponHudNameText_) weaponHudNameText_->Draw();
+        if (isWeaponSwitchVisible_) weaponSwitchNameText_->Draw();
         if (railBranch_.IsPreviewVisible(railDistance_) && player_->GetCurrentHp() > 0) {
             if (railBranchUpperText_) railBranchUpperText_->Draw();
             if (railBranchLowerText_) railBranchLowerText_->Draw();
@@ -2954,7 +3215,7 @@ void GamePlayScene::InitializeTutorialPresentation()
     SceneManager::GetInstance()->SetSceneClearColor(kInitializeTutorialPresentationSetSceneClearColor);
     const auto createText = [](const Vector2& position, float size) {
         auto text = std::make_unique<Text>();
-        text->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        text->Initialize("resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
         text->SetPosition(position);
         text->SetAnchorPoint({ 0.5f, 0.5f });
         text->SetFontSize(size);

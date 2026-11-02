@@ -27,7 +27,7 @@ GifRecordingManager::~GifRecordingManager() {
 }
 void GifRecordingManager::Initialize(DirectXCommon* dx, WinApp* window) {
     dx_ = dx;
-    notification_.Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+    notification_.Initialize("resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
     (void)window;
     notification_.SetPosition({static_cast<float>(WinApp::kClientWidth) - 24.0f, 58.0f});
     notification_.SetAnchorPoint({1.0f, 0.0f});

@@ -128,7 +128,7 @@ void EffectEditorApp::ConfigureStyle()
     auto& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     const char* fontPath = "C:/Windows/Fonts/meiryo.ttc";
-    if (!std::filesystem::is_regular_file(fontPath)) { fontPath = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf"; }
+    if (!std::filesystem::is_regular_file(fontPath)) { fontPath = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf"; }
     io.FontDefault = io.Fonts->AddFontFromFileTTF(fontPath, 18.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
     ImGui::StyleColorsDark();
     auto& style = ImGui::GetStyle();

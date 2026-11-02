@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 kProjectDirectory = Path(__file__).resolve().parents[2]
 kAssetDirectory = kProjectDirectory / 'resources/Models/Environment/Ocean/DistantRuins'
 kPreviewDirectory = kAssetDirectory / 'previews'
-kFontPath = str(kProjectDirectory / 'resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf')
+kFontPath = str(kProjectDirectory / 'resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf')
 
 
 def Font(size):

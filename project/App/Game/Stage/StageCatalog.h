@@ -13,6 +13,7 @@ struct StageSettings {
     std::string id;
     std::string name;
     std::string description;
+    std::string objective;
     std::string settingsFile;
     std::string layoutFile;
     std::string skybox = "resources/Textures/skybox.dds";

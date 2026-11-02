@@ -4,10 +4,11 @@
 #include "Engine/audio/SoundManager.h"
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 
-// 押している間はロックを更新し、離した際に発射できたらロックを解除する。
+// 再発射可能な間だけロックを更新し、離した際に発射できたらロックを解除する。
 void HomingPlayerWeapon::Update(PlayerWeaponContext& context, bool held, bool, float)
 {
-    if (context.lock.UpdateFireInput(held, context.canFire, context.camera,
+    const bool isLockEnabled = context.canFire && context.missileCooldown + 0.000001f >= 2.0f;
+    if (context.lock.UpdateFireInput(held, isLockEnabled, context.camera,
         context.position, context.forward, context.aim)) {
         if (context.fire()) context.lock.ClearTargets();
     }

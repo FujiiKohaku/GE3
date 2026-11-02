@@ -82,7 +82,7 @@ public:
         opaqueHidden_ = MakeObject(cube_, { 0, -14, 60 }, { 4, 4, 4 }, { 1, 0, 0, 1 });
         opaqueHidden_->SetFogEnabled(false);
         label_ = std::make_unique<Text>();
-        label_->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        label_->Initialize("resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
         label_->SetPosition({ 30, 35 }); label_->SetFontSize(22);
         label_->SetText("LEFT: FOG ON | RIGHT: FOG OFF | GREEN: OPAQUE | CENTER: ALPHA ORDER / OCCLUSION");
         label_->Update();

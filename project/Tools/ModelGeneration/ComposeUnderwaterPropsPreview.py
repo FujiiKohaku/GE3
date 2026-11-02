@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 kProjectDirectory = Path(__file__).resolve().parents[2]
 kAssetDirectory = kProjectDirectory / 'resources/Models/Environment/Ocean/UnderwaterProps'
-kFontPath = str(kProjectDirectory / 'resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf')
+kFontPath = str(kProjectDirectory / 'resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf')
 kTileWidth = 600
 kTileHeight = 610
 kHeaderHeight = 152

@@ -11,6 +11,7 @@
     "pcf_radius": 1.0
   },
   "name": "BLOCK CANYON",
+  "objective": "障害物と敵の攻撃を避け、峡谷の終点へ到達せよ",
   "description": "The first real challenge: follow a winding canyon rail.",
   "layout": "resources/Stages/Stage02/layout.json",
   "rail": {

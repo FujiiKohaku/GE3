@@ -9,7 +9,7 @@
 
 namespace {
 constexpr Vector4 kCyan { 0.18f, 0.86f, 1.0f, 1.0f };
-constexpr const char* kFont = "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
+constexpr const char* kFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 }
 
 // パネルの文字と図形を準備し、表示を開始できる状態にする。

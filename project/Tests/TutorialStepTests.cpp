@@ -213,8 +213,8 @@ int main()
     }
 
     assert(steps[8]->GetData().practiceWeapon == "アサルト");
-    assert(steps[9]->GetData().practiceWeapon == "Missile");
-    assert(steps[10]->GetData().practiceWeapon == "Homing Missile");
+    assert(steps[9]->GetData().practiceWeapon == "ミサイル");
+    assert(steps[10]->GetData().practiceWeapon == "ホーミングミサイル");
     for (int index = 8; index <= 10; ++index) {
         input.weapon = "WrongWeapon"; input.defeatedTargets = 3;
         steps[index]->Update(input, 0.1f);

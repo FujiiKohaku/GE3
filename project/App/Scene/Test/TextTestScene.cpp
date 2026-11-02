@@ -14,7 +14,7 @@
 namespace {
 constexpr const char* kWhiteTexture = "resources/Textures/white.png";
 constexpr const char* kDefaultFont =
-    "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
+    "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 constexpr Vector4 kBackgroundColor = { 0.012f, 0.018f, 0.038f, 1.0f };
 }
 

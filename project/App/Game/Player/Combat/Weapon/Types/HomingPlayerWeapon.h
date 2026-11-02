@@ -4,7 +4,7 @@
 
 class HomingPlayerWeapon final : public MissilePlayerWeapon {
 public:
-    const char* GetName() const override { return "Homing Missile"; }
+    const char* GetName() const override { return "ホーミングミサイル"; }
     bool IsHoming() const override { return true; }
     // 押している間はロックを更新し、離した際に発射できたらロックを解除する。
     void Update(PlayerWeaponContext& context, bool held, bool triggered, float dt) override;

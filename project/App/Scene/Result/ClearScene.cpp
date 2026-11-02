@@ -11,7 +11,7 @@
 void ClearScene::Initialize()
 {
     returnGuideText_ = std::make_unique<Text>();
-    returnGuideText_->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+    returnGuideText_->Initialize("resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
     returnGuideText_->SetPosition({ 640.0f, 650.0f });
     returnGuideText_->SetAnchorPoint({ 0.5f, 0.5f });
     returnGuideText_->SetFontSize(26.0f);

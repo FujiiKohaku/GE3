@@ -49,8 +49,8 @@ inline bool RunPlayerWeaponResetTests()
     assert(controller.currentWeapon_ == controller.kWeaponAssault && controller.GetShotsFired() == 0);
     assert(controller.weapons_.size() == 3);
     assert(std::strcmp(controller.GetCurrentWeaponName(), "アサルト") == 0);
-    assert(std::strcmp(controller.weapons_[1]->GetName(), "Missile") == 0);
-    assert(std::strcmp(controller.weapons_[2]->GetName(), "Homing Missile") == 0);
+    assert(std::strcmp(controller.weapons_[1]->GetName(), "ミサイル") == 0);
+    assert(std::strcmp(controller.weapons_[2]->GetName(), "ホーミングミサイル") == 0);
     assert(controller.GetHeatRatio() == 0.0f && !controller.IsOverheated());
     assert(controller.missileFireCooldownSeconds_ == controller.kMissileFireIntervalSeconds);
     assert(controller.camera_ == &camera && sharedTargets->empty());

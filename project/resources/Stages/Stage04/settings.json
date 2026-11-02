@@ -11,6 +11,7 @@
     "pcf_radius": 1.0
   },
   "name": "OPEN OCEAN",
+  "objective": "周囲を警戒し、海域を自由に探索せよ",
   "description": "All-range flight. Explore the islands, reefs and shipwrecks. Mouse to steer; right click to boost.",
   "layout": "resources/Scenes/stage04.json",
   "flight": {

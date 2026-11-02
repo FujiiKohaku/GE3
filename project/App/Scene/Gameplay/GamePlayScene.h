@@ -258,6 +258,10 @@ private:
     // ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
     void UpdateBossHpHud();
     void UpdatePlayerHpArc();
+    void InitializeWeaponIcons();
+    void UpdateWeaponIcons();
+    void InitializeStageObjectiveBanner();
+    void UpdateStageObjectiveBanner();
     // レールの進行距離を確認し、未出現の群れ編隊を必要なタイミングで出す。
     void UpdateSwarmWaveSpawning();
     // 編隊設定から各個体の担当位置を決め、群れの敵を生成する。
@@ -347,9 +351,27 @@ private:
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
+    float previousMissileReloadRatio_ = 1.0f;
+    float missileReadyFlashRemainingSeconds_ = 0.0f;
     std::unique_ptr<Sprite> overheatGaugeSprite_;
+    bool wasReticleOverheated_ = false;
+    float overheatReadyFlashRemainingSeconds_ = 0.0f;
     std::vector<std::unique_ptr<Sprite>> homingLockSprites_;
     std::unique_ptr<Sprite> weaponHudBgSprite_;
+    std::unique_ptr<Sprite> weaponHudIconSprite_;
+    std::unique_ptr<Sprite> weaponSwitchIconSprite_;
+    std::unique_ptr<Text> weaponSwitchNameText_;
+    int previousWeaponIconIndex_ = 0;
+    float weaponSwitchRemainingSeconds_ = 0.0f;
+    float weaponSwitchHorizontalOffsetPixels_ = 0.0f;
+    bool isWeaponSwitchPlacementPending_ = false;
+    bool isWeaponSwitchVisible_ = false;
+    std::unique_ptr<Sprite> stageObjectivePanelSprite_;
+    std::unique_ptr<Sprite> stageObjectiveAccentSprite_;
+    std::unique_ptr<Text> stageObjectiveLabelText_;
+    std::unique_ptr<Text> stageObjectiveText_;
+    float stageObjectiveElapsedSeconds_ = 0.0f;
+    bool isStageObjectiveVisible_ = false;
     std::vector<std::unique_ptr<Sprite>> weaponHudFrameSprites_;
     std::vector<std::unique_ptr<Sprite>> playerHudFrameSprites_;
     std::vector<std::unique_ptr<Sprite>> bossHudFrameSprites_;

@@ -94,6 +94,8 @@ public:
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;
     void ResetHomingLock() { homingLock_.Reset(); }
     bool IsHomingMissileSelected() const { return GetCurrentWeapon().IsHoming(); }
+    bool IsMissileSelected() const { return currentWeapon_ == kWeaponMissileBullet; }
+    float GetMissileReloadRatio() const { return missileFireCooldownSeconds_ / kMissileFireIntervalSeconds; }
     const char* GetCurrentWeaponName() const;
     float GetHeatRatio() const { return weaponHeat_.GetHeatRatio(); }
     bool IsOverheated() const { return weaponHeat_.IsOverheated(); }

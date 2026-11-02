@@ -1,6 +1,7 @@
 {
   "id": "gimmick_test",
   "name": "GIMMICK TEST",
+  "objective": "移動する障害物やレーザーを避け、コースを突破せよ",
   "description": "Test moving blocks, rotating lasers, breakable rocks, wind and gravity.",
   "layout": "resources/Stages/GimmickTest/layout.json",
   "rail": { "length": 3400.0, "point_interval": 50.0, "speed": 0.45 },

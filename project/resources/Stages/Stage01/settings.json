@@ -11,6 +11,7 @@
     "pcf_radius": 1.0
   },
   "name": "FIRST FLIGHT",
+  "objective": "敵の攻撃を突破し、フィアワームを撃破せよ",
   "description": "Fly through the block gates and defeat Fear Worm.",
   "layout": "resources/Scenes/stage01.json",
   "rail": {

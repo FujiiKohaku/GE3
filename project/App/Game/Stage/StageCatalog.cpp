@@ -116,6 +116,7 @@ bool StageCatalog::LoadStageSettings(
     settings.id = json.value("id", "");
     settings.name = json.value("name", settings.id);
     settings.description = json.value("description", "");
+    settings.objective = json.value("objective", "");
     settings.layoutFile = json.value("layout", "");
 
     if (json.contains("shadows")) {

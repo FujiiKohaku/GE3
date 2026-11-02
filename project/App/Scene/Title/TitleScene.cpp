@@ -185,7 +185,7 @@ constexpr int kIceMotionScaleBandCount = 3;
 namespace {
 constexpr const char* kWhiteTexture = "resources/Textures/white.png";
 constexpr const char* kDefaultFont =
-    "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
+    "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 constexpr const char* kLaunchBase = "Environment/LaunchBase/";
 constexpr const char* kOceanEnvironment = "Environment/Ocean/";
 constexpr const char* kIceEnvironment = "Environment/Ice/";

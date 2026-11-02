@@ -53,7 +53,7 @@ void LoadingScene::Initialize()
     progressSprite_->SetColor({ 0.25f, 0.75f, 1.0f, 1.0f });
     if (simulationBoot_) {
         simulationText_ = std::make_unique<Text>();
-        simulationText_->Initialize("resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        simulationText_->Initialize("resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
         simulationText_->SetText("SIMULATION INITIALIZING");
         simulationText_->SetAnchorPoint({ 0.5f, 0.5f });
         simulationText_->SetPosition({ 640.0f, 560.0f });
@@ -76,7 +76,7 @@ void LoadingScene::Update()
         if (simulationBoot_) {
             FontManager* fontManager = FontManager::GetInstance();
             const FontHandle fontHandle = fontManager->LoadFont(
-                "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+                "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
             fontManager->EnsureGlyphs(fontHandle, TutorialController::GetGlyphText());
         }
         const GamePlayScene* gamePlayScene = dynamic_cast<const GamePlayScene*>(nextScene_.get());

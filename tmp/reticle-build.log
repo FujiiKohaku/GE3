@@ -1,0 +1,53 @@
+2026/11/02 12:34:36 にビルドを開始しました。
+ログの詳細度は次のように設定されています: Normal。
+     1>ノード 1 上のプロジェクト "C:\Projects\KohakuEngine\project\KohakuEngine.sln" (KohakuEngine ターゲット)。
+     1>ValidateSolutionConfiguration:
+         ソリューション構成 "Develop|x64" をビルドしています。
+     1>プロジェクト "C:\Projects\KohakuEngine\project\KohakuEngine.sln" (1) は、ノード 1 上に "C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj" (2) をビルドしています (既定のターゲット)。
+     2>プロジェクト "C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj" (2) は、ノード 1 上に "C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj" (3) をビルドしています (既定のターゲット)。
+     3>PrepareForBuild:
+         構造化出力が有効になっています。コンパイラ診断の書式設定にはエラー階層が反映されます。詳細については、https://aka.ms/cpp/structured-output を参照してください。
+       InitializeBuildStatus:
+         "AlwaysCreate" が指定されたため "C:\Projects\KohakuEngine\project\..\generated\obj\imgui\x64\Release\imgui.tlog\unsuccessfulbuild" を作成しています。
+         "C:\Projects\KohakuEngine\project\..\generated\obj\imgui\x64\Release\imgui.tlog\unsuccessfulbuild" のタッチ タスクを実行しています。
+       ClCompile:
+         C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.51.36231\bin\HostX86\x64\CL.exe /c /Zi /nologo /W3 /WX- /diagnostics:column /sdl /MP /O2 /Oi /GL /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MT /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /permissive- /Fo"C:\Projects\KohakuEngine\project\..\generated\obj\imgui\x64\Release\\" /Fd"C:\Projects\KohakuEngine\project\..\generated\outputs\Release\imgui.pdb" /external:W3 /Gd /TP /FC /errorReport:queue imgui.cpp imgui_demo.cpp imgui_draw.cpp imgui_impl_dx12.cpp imgui_impl_win32.cpp ImGuizmo.cpp imgui_tables.cpp imgui_widgets.cpp
+         imgui.cpp
+         imgui_demo.cpp
+         imgui_draw.cpp
+         imgui_impl_dx12.cpp
+         imgui_impl_win32.cpp
+         ImGuizmo.cpp
+         imgui_tables.cpp
+         imgui_widgets.cpp
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui_demo.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_dx12.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_win32.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\ImGuizmo.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui_widgets.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui_tables.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>C:\Projects\KohakuEngine\project\externals\imgui\imgui_draw.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+     3>プロジェクト "C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj" (既定のターゲット) のビルドが終了しました -- 失敗。
+     2>プロジェクト "C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj" (既定のターゲット) のビルドが終了しました -- 失敗。
+     1>プロジェクト "C:\Projects\KohakuEngine\project\KohakuEngine.sln" (KohakuEngine ターゲット) のビルドが終了しました -- 失敗。
+
+ビルドに失敗しました。
+
+       "C:\Projects\KohakuEngine\project\KohakuEngine.sln" (KohakuEngine ターゲット) (1) ->
+       "C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj" (既定のターゲット) (2) ->
+       "C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj" (既定のターゲット) (3) ->
+       (ClCompile ターゲット) -> 
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui_demo.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_dx12.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_win32.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\ImGuizmo.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui_widgets.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui_tables.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+         C:\Projects\KohakuEngine\project\externals\imgui\imgui_draw.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+
+    0 個の警告
+    8 エラー
+
+経過時間 00:01:03.47

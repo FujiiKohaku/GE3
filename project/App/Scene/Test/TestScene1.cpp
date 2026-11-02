@@ -29,7 +29,7 @@
 namespace {
 constexpr float kFootAnkleToSoleDistance = 0.16f;
 constexpr const char* kDefaultFont =
-    "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf";
+    "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 
 Vector3 CrossVector(const Vector3& first, const Vector3& second)
 {

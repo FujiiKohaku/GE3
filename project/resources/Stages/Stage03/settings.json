@@ -11,6 +11,7 @@
     "pcf_radius": 1.0
   },
   "name": "FROZEN PASSAGE",
+  "objective": "氷原を突破し、アイスジェリーフィッシュを撃破せよ",
   "description": "A scenic flight above a freezing glacier field, now guarded by hostile remnants.",
   "layout": "resources/Stages/Stage03/layout.json",
   "rail": {

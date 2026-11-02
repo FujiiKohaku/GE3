@@ -43,7 +43,7 @@ void GameOverScene::Initialize()
 
     retryGuideText_ = std::make_unique<Text>();
     retryGuideText_->Initialize(
-        "resources/Fonts/NotoSansJP/NotoSansJP-Variable.ttf");
+        "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf");
     retryGuideText_->SetText("リトライ [R]     タイトルに戻る [T]");
     retryGuideText_->SetPosition({ 640.0f, 620.0f });
     retryGuideText_->SetAnchorPoint({ 0.5f, 0.5f });

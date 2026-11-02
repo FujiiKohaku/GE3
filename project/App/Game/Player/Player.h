@@ -112,6 +112,8 @@ public:
     void GetHomingLockPositions(std::vector<Vector3>& positions) const { weaponController_.GetHomingLockPositions(positions); }
     // ホーミングミサイルが選択されているかを返す。
     bool IsHomingMissileSelected() const { return weaponController_.IsHomingMissileSelected(); }
+    bool IsMissileSelected() const { return weaponController_.IsMissileSelected(); }
+    float GetMissileReloadRatio() const { return weaponController_.GetMissileReloadRatio(); }
     // 使用クラス：GamePlayScene。武器HUDに表示する名前を返す。
     const char* GetCurrentWeaponDisplayName() const { return weaponController_.GetCurrentWeaponName(); }
     // 使用クラス：GamePlayScene。ゲージ用の熱量を0～1で返す。
