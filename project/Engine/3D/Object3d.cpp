@@ -85,14 +85,7 @@ void Object3d::Update()
         }
     }
 
-    if (collider_ != nullptr) {
-        collider_->SetCenter(transform.translate + colliderOffset_);
-        collider_->SetRotation(transform.rotate);
-    }
-    for (const ColliderAttachment& attachment : additionalColliders_) {
-        attachment.collider->SetCenter(transform.translate + attachment.offset);
-        attachment.collider->SetRotation(transform.rotate);
-    }
+    UpdateColliders();
 
     Matrix4x4 localMatrix = MatrixMath::MakeIdentity4x4();
 
@@ -131,6 +124,25 @@ void Object3d::Update()
 }
 #pragma endregion
 #pragma region
+void Object3d::UpdateColliders()
+{
+    if (collider_ == nullptr) { return; }
+    const Matrix4x4 rotation = MatrixMath::MakeAffineMatrix(
+        { 1.0f, 1.0f, 1.0f }, transform.rotate, {});
+    if (collider_ != nullptr) {
+        const Vector3 offset = rotateColliderOffset_ ?
+            MatrixMath::Transform(colliderOffset_, rotation) : colliderOffset_;
+        collider_->SetCenter(transform.translate + offset);
+        collider_->SetRotation(transform.rotate);
+    }
+    for (const ColliderAttachment& attachment : additionalColliders_) {
+        const Vector3 offset = attachment.rotateOffset ?
+            MatrixMath::Transform(attachment.offset, rotation) : attachment.offset;
+        attachment.collider->SetCenter(transform.translate + offset);
+        attachment.collider->SetRotation(transform.rotate);
+    }
+}
+
 void Object3d::Draw()
 {
     if (shouldUseFrustumCulling_ && camera_ && !IsVisible(*camera_)) { return; }

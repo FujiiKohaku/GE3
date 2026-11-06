@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "thresholdFps": 50.0,
+  "sampleSeconds": 0.5,
+  "lowFpsSeconds": 1.0,
+  "cooldownSeconds": 5.0,
+  "warmupSeconds": 3.0,
+  "spikeMilliseconds": 100.0,
+  "recoveryMarginFps": 5.0,
+  "topSections": 6
+}

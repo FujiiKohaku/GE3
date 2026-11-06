@@ -149,10 +149,7 @@ bool CollisionManager::Raycast(
             continue;
         }
         float distance = 0.0f;
-        const OBB box = MakeOBB(
-            collider->GetCenter(),
-            collider->GetSize(),
-            collider->GetRotation());
+        const OBB& box = collider->GetOBB();
         if (!RayObbIntersect(normalizedRay, box, distance)) {
             continue;
         }

@@ -330,6 +330,14 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaceEnemy\PaceEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\TurretEnemy\TurretEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\AnemoneEnemy\AnemoneEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\DashEnemy\DashEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\Debug\Profiler\FpsMonitor.cpp" />
+    <ClInclude Include="$(projectRootPath)Engine\Debug\Profiler\FpsMonitor.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\DashEnemy\DashEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\DashEnemy\DashEnemyMotion.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\AnemoneEnemy\AnemoneEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\AnemoneEnemy\AnemoneShotPattern.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\StrafeEnemy\StrafeEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />

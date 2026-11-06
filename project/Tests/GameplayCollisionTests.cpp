@@ -1,5 +1,7 @@
 #include "App/Game/Collision/GameplayCollisionSystem.h"
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Enemy/AnemoneEnemy/AnemoneEnemy.h"
+#include "App/Game/Enemy/AnemoneEnemy/AnemoneShotPattern.h"
 #include "App/Game/Enemy/PaceEnemy/PaceEnemy.h"
 #include "App/Game/Enemy/StrafeEnemy/StrafeEnemy.h"
 #include "App/Game/Enemy/TurretEnemy/TurretEnemyAim.h"
@@ -13,17 +15,195 @@
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/Serialization/JsonFile.h"
+#include "Engine/LevelEditor/LevelDataLoader.h"
+#include "Engine/math/MatrixMath.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <utility>
 #include <limits>
 
+bool RunDashEnemyTests();
+bool RunBoxColliderTests();
+
 class TestTurretEnemyBullet : public TurretEnemyBullet {
 public:
     Vector3 GetLaunchVelocity() const { return velocity_; }
     Vector3 GetDisplayScale() const { return transform_.scale; }
 };
+
+struct AnemoneEnemyTestAccess {
+    static void Configure(AnemoneEnemy& enemy, Player& player) {
+        enemy.player_ = &player;
+        enemy.transform_.translate = { -25, -116, 2280 };
+        enemy.transform_.scale = { 3.5f, 3.5f, 3.5f };
+        enemy.transform_.rotate = { 0, 3.14159265f, 0 };
+    }
+    static bool Advance(AnemoneEnemy& enemy, float delta) { return enemy.AdvanceShotCycle(delta); }
+};
+
+bool RunAnemoneAttackTests()
+{
+    using namespace AnemoneShotPattern;
+    const Vector3 muzzle { 0, -100, 100 }, target { 0, -85, 0 }, velocity { 0, 0, 0.8f };
+    const auto fan = CalculateDirections(muzzle, target, velocity);
+    for (const auto& direction : fan) {
+        if (std::abs(Vector3Length(direction) - 1.0f) > 0.0001f) { return false; }
+    }
+    if (std::abs(fan[0].x + fan[4].x) > 0.0001f || std::abs(fan[1].x + fan[3].x) > 0.0001f ||
+        std::abs(fan[2].x) > 0.0001f || fan[2].y <= 0 || fan[2].z >= 0) { return false; }
+    const float frames = (target.z - muzzle.z) / (fan[2].z * kBulletSpeed - velocity.z);
+    if (frames <= 0 || Vector3Length(muzzle + fan[2] * (frames * kBulletSpeed) -
+        (target + velocity * frames)) > 0.001f) { return false; }
+    const auto verticalFan = CalculateDirections({}, { 0, 10, 0 }, {});
+    for (const auto& direction : verticalFan) {
+        if (!std::isfinite(direction.x) || std::abs(Vector3Length(direction) - 1.0f) > 0.0001f) { return false; }
+    }
+    if (!IsTargetInRange(muzzle, target, { 0, 0, 1 }, -30.0f) ||
+        IsTargetInRange(muzzle, { 0, -20, 0 }, { 0, 0, 1 }, -30.0f) ||
+        IsTargetInRange(muzzle, { 0, -85, 101 }, { 0, 0, 1 }, -30.0f) ||
+        IsTargetInRange(muzzle, { 0, -85, -200 }, { 0, 0, 1 }, -30.0f)) { return false; }
+    for (int fps : { 30, 60, 120 }) {
+        Player player;
+        PlayerTestAccess::Transform(player).translate = { 0, -85, 2150 };
+        AnemoneEnemy enemy;
+        AnemoneEnemyTestAccess::Configure(enemy, player);
+        int volleys = 0;
+        for (int frame = 0; frame < fps * 6; ++frame) {
+            if (AnemoneEnemyTestAccess::Advance(enemy, 1.0f / fps)) { ++volleys; }
+        }
+        if (volleys != 3 || AnemoneEnemyTestAccess::Advance(enemy, 0) ||
+            AnemoneEnemyTestAccess::Advance(enemy, std::numeric_limits<float>::quiet_NaN())) { return false; }
+        PlayerTestAccess::Transform(player).translate.y = -20;
+        if (AnemoneEnemyTestAccess::Advance(enemy, 10.0f)) { return false; }
+    }
+    LevelDataLoader loader;
+    std::string path = "resources/Scenes/stage01.json";
+    if (!std::filesystem::exists(path)) { path = "project/" + path; }
+    const auto level = loader.Load(path);
+    int count = 0;
+    for (const auto& enemy : level.enemies) {
+        if (enemy.fileName == "AnemoneEnemy") {
+            if (enemy.translation.y > -100 || enemy.translation.z < 2200 || enemy.translation.z > 3500) { return false; }
+            ++count;
+        }
+    }
+    return count == 3;
+}
+
+class ObstacleTestEnemyBullet : public EnemyBullet {
+public:
+    void SetMovement(const Vector3& start, const Vector3& end) {
+        previousPosition_ = start;
+        transform_.translate = end;
+    }
+    EnemyBulletHitEffect OnHitPlayer(const Vector3&) override {
+        return EnemyBulletHitEffect::Paint;
+    }
+};
+
+bool RunEnemyBulletObstacleTests()
+{
+    GameplayCollisionSystem system;
+    std::vector<std::unique_ptr<BaseEnemy>> enemies;
+    std::vector<std::unique_ptr<Object3d>> obstacles;
+    BoxCollider collider;
+    collider.SetSize({ 4.0f, 4.0f, 1.0f });
+    auto obstacle = std::make_unique<Object3d>();
+    obstacle->SetCollider(&collider);
+    obstacles.push_back(std::move(obstacle));
+    // 1フレームで壁とプレイヤーの両方を通過する弾を使う。
+    for (float wallZ : { 5.0f, 15.0f, 30.0f }) {
+        Player player;
+        PlayerTestAccess::Transform(player).translate = { 0.0f, 0.0f, 10.0f };
+        const int initialHp = player.GetCurrentHp();
+        collider.SetCenter({ 0.0f, 0.0f, wallZ });
+        std::vector<std::unique_ptr<EnemyBullet>> bullets;
+        auto bullet = std::make_unique<ObstacleTestEnemyBullet>();
+        bullet->SetMovement({}, { 0.0f, 0.0f, 20.0f });
+        bullets.push_back(std::move(bullet));
+        const auto events = system.UpdateCombatCollisions(player, enemies, bullets, obstacles);
+        const bool blocked = wallZ == 5.0f;
+        if (bullets[0]->IsAlive() || events.paintBulletHitPlayer == blocked ||
+            player.GetCurrentHp() != initialHp - (blocked ? 0 : 1)) { return false; }
+    }
+    // プレイヤーに当たらない弾も障害物だけで消える。
+    Player player;
+    PlayerTestAccess::Transform(player).translate = { 20.0f, 0.0f, 10.0f };
+    collider.SetCenter({ 0.0f, 0.0f, 5.0f });
+    std::vector<std::unique_ptr<EnemyBullet>> bullets;
+    auto bullet = std::make_unique<ObstacleTestEnemyBullet>();
+    bullet->SetMovement({}, { 0.0f, 0.0f, 20.0f });
+    bullets.push_back(std::move(bullet));
+    const auto events = system.UpdateCombatCollisions(player, enemies, bullets, obstacles);
+    return !bullets[0]->IsAlive() && !events.paintBulletHitPlayer;
+}
+
+bool RunUnderwaterColliderTests()
+{
+    // 回転する複合コライダーは中心も追従し、従来の固定オフセットは維持する。
+    Object3d object;
+    object.SetTranslate({ 10.0f, 0.0f, 20.0f });
+    BoxCollider rotating, fixed;
+    rotating.SetCenter({ 12.0f, 0.0f, 20.0f });
+    fixed.SetCenter({ 10.0f, 0.0f, 23.0f });
+    object.SetCollider(&rotating, true);
+    object.AddCollider(&fixed);
+    object.SetRotate({ 0.0f, 1.57079632679f, 0.0f });
+    object.UpdateColliders();
+    if (Vector3Length(rotating.GetCenter() - Vector3 { 10.0f, 0.0f, 22.0f }) > 0.0001f ||
+        Vector3Length(fixed.GetCenter() - Vector3 { 10.0f, 0.0f, 23.0f }) > 0.0001f) { return false; }
+    LevelDataLoader loader;
+    std::string path = "resources/Scenes/stage01.json";
+    if (!std::filesystem::exists(path)) { path = "project/" + path; }
+    const LevelData level = loader.Load(path);
+    int underwaterCount = 0;
+    int openingCount = 0;
+    for (const auto& data : level.objects) {
+        if (!data.fileName.starts_with("Environment/Ocean/UnderwaterProps/Runtime/")) { continue; }
+        ++underwaterCount;
+        if (data.colliders.empty()) { return false; }
+        Object3d prop;
+        prop.SetTranslate(data.translation);
+        prop.SetRotate(data.rotation);
+        std::vector<BoxCollider> boxes(data.colliders.size());
+        for (size_t i = 0; i < boxes.size(); ++i) {
+            const auto& box = data.colliders[i];
+            if (!box.rotateOffset || box.size.x <= 0 || box.size.y <= 0 || box.size.z <= 0) { return false; }
+            boxes[i].SetCenter(data.translation + box.center);
+            boxes[i].SetSize(box.size);
+            prop.AddCollider(&boxes[i], box.rotateOffset);
+        }
+        prop.UpdateColliders();
+        const bool arch = data.fileName.ends_with("01_broken_arch.obj");
+        const bool ribs = data.fileName.ends_with("05_giant_ribcage.obj");
+        const bool ring = data.fileName.ends_with("04_sunken_rotor_ring.obj");
+        if (!arch && !ribs && !ring) { continue; }
+        ++openingCount;
+        const float height = ring ? 0.0f : 2.5f * data.scale.y;
+        // 石輪を回転させても穴を通れること、複数コライダーの中心が追従することを検証。
+        for (float angle : { 0.0f, 0.7f, 1.9f }) {
+            const Vector3 rotation = data.rotation + Vector3 { 0.0f, ring ? angle : 0.0f, 0.0f };
+            prop.SetRotate(rotation);
+            prop.UpdateColliders();
+            const Matrix4x4 matrix = MatrixMath::MakeAffineMatrix({ 1, 1, 1 }, rotation, data.translation);
+            const Vector3 start = MatrixMath::Transform({ 0.0f, height, -15.0f * data.scale.z }, matrix);
+            const Vector3 end = MatrixMath::Transform({ 0.0f, height, 15.0f * data.scale.z }, matrix);
+            const float solidX = (ring ? 2.5f : 3.4f) * data.scale.x;
+            const float solidY = ribs ? 0.4f * data.scale.y : height;
+            const Vector3 solidStart = MatrixMath::Transform({ solidX, solidY, -15.0f * data.scale.z }, matrix);
+            const Vector3 solidEnd = MatrixMath::Transform({ solidX, solidY, 15.0f * data.scale.z }, matrix);
+            bool hitSolid = false;
+            for (const auto& box : boxes) {
+                const OBB obb = CollisionManager::MakeOBB(box.GetCenter(), box.GetSize(), box.GetRotation());
+                if (CollisionManager::SweepSphere(Sphere { start, 1.0f }, end - start, obb).isHit) { return false; }
+                hitSolid |= CollisionManager::SweepSphere(Sphere { solidStart, 0.25f }, solidEnd - solidStart, obb).isHit;
+            }
+            if (!hitSolid) { return false; }
+        }
+    }
+    return underwaterCount == 42 && openingCount == 5;
+}
 
 bool RunTurretEnemyBulletTests()
 {
@@ -317,6 +497,14 @@ bool RunElectricGateCollisionTests()
 
 bool RunGameplayCollisionTests()
 {
+    if (!RunBoxColliderTests()) { std::puts("FAILED: cached collider bounds or raycast updates"); return false; }
+    std::puts("PASS: shared OBB/AABB bounds, unchanged setters, moved/rotated colliders and raycasts");
+    if (!RunDashEnemyTests()) { std::puts("FAILED: DASHENEMY motion or collision"); return false; }
+    std::puts("PASS: DASHENEMY locked path, frame timing, moving target hits and obstacle stops");
+    if (!RunAnemoneAttackTests()) { std::puts("FAILED: anemone placement, underwater gate, intercept or fan timing"); return false; }
+    std::puts("PASS: 3 anemone spawns, five-shot fan, predictive aim and 30/60/120 FPS timing");
+    if (!RunUnderwaterColliderTests()) { std::puts("FAILED: underwater collider coverage, openings or rotating offsets"); return false; }
+    std::puts("PASS: 42 underwater props, open arch/rib/rotor passages, solid parts and rotating offsets");
     if (!RunStrafeEnemyCollisionTests()) { std::puts("FAILED: StrafeEnemy inactive state or box bounds"); return false; }
     if (!RunTurretShotFeedbackTests()) { std::puts("FAILED: turret first shot, cooldown, recoil or trail transform"); return false; }
     if (!RunTurretEnemyBulletTests()) { std::puts("FAILED: TurretEnemyBullet launch, size or swept collision"); return false; }
@@ -331,6 +519,7 @@ bool RunGameplayCollisionTests()
         if (PaceEnemyTestAccess::GetHealth(enemy) != 9.0f) { return false; }
     }
     using CollisionSystem = GameplayCollisionSystem;
+    if (!RunEnemyBulletObstacleTests()) { std::puts("FAILED: enemy bullets blocked by obstacles"); return false; }
     const Sphere bullet { { 0.0f, 0.0f, 0.0f }, 0.25f };
     const Vector3 movement { 0.0f, 0.0f, 100.0f };
     std::vector<std::unique_ptr<BaseEnemy>> enemies;
@@ -341,6 +530,29 @@ bool RunGameplayCollisionTests()
     auto hit = CollisionSystem::FindFirstPlayerBulletHit(
         bullet, movement, enemies, nullptr, destructibles, -30.0f);
     if (hit.enemy != nearEnemy || !hit.hit.isHit) { return false; }
+    {
+        BoxCollider wall;
+        wall.SetCenter({ 0.0f, 0.0f, 5.0f });
+        wall.SetSize({ 4.0f, 4.0f, 1.0f });
+        std::vector<std::unique_ptr<Object3d>> obstacles;
+        auto object = std::make_unique<Object3d>();
+        object->SetCollider(&wall);
+        obstacles.push_back(std::move(object));
+        auto blocked = CollisionSystem::FindFirstPlayerBulletHit(
+            bullet, movement, enemies, nullptr, destructibles, -30.0f, true, obstacles);
+        if (!blocked.hit.isHit || blocked.enemy || blocked.destructible || blocked.hit.time >= hit.hit.time) { return false; }
+        wall.SetCenter({ 0.0f, 0.0f, 40.0f });
+        auto unblocked = CollisionSystem::FindFirstPlayerBulletHit(
+            bullet, movement, enemies, nullptr, destructibles, -30.0f, true, obstacles);
+        if (unblocked.enemy != nearEnemy) { return false; }
+        // 破壊可能物と障害物一覧に同じコライダーがある場合も壊せる。
+        wall.SetCenter({ 0.0f, 0.0f, 5.0f });
+        destructibles.push_back({ obstacles[0].get(), 5.0f, false });
+        auto destructibleHit = CollisionSystem::FindFirstPlayerBulletHit(
+            bullet, movement, enemies, nullptr, destructibles, -30.0f, true, obstacles);
+        if (destructibleHit.destructible != &destructibles[0]) { return false; }
+        destructibles.clear();
+    }
     std::swap(enemies[0], enemies[1]);
     hit = CollisionSystem::FindFirstPlayerBulletHit(
         bullet, movement, enemies, nullptr, destructibles, -30.0f);

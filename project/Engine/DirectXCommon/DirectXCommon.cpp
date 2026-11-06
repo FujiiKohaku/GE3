@@ -1,4 +1,5 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "DirectXCommon.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_dx12.h"
@@ -607,7 +608,7 @@ void DirectXCommon::PostDraw()
     ID3D12CommandList* commandLists[] = { commandList.Get() };
     commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists); // GPUに命令を送る
     // GPU画面の交換を通知
-    swapChain->Present(1, 0);
+    { FpsScope scope("Wait.Present"); swapChain->Present(1, 0); }
     assert(SUCCEEDED(hr));
     // フェンスの値を更新
     fenceValue++;
@@ -615,6 +616,7 @@ void DirectXCommon::PostDraw()
     commandQueue->Signal(fence.Get(), fenceValue);
     // コマンド完了待ち
     if (fence->GetCompletedValue() < fenceValue) {
+        FpsScope scope("Wait.GpuFence");
 
         fence->SetEventOnCompletion(fenceValue, fenceEvent);
         WaitForSingleObject(fenceEvent, INFINITE);
@@ -651,6 +653,7 @@ ID3D12Resource* DirectXCommon::GetCurrentBackBuffer() const
 #pragma region
 Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::LoadCompiledShader(const std::wstring& hlslPath, bool shouldRecompile)
 {
+    FpsScope fpsScope("Resource.ShaderLoad");
     StartupTimingScope startupScope("Resource.ShaderLoad");
     const std::filesystem::path sourcePath(hlslPath);
     const std::filesystem::path compiledPath = MakeCompiledShaderPath(sourcePath);

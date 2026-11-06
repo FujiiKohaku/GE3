@@ -24,6 +24,8 @@
     <GameBuildSource Include="@(ClCompile)" />
     <ClCompile Remove="@(ClCompile)" />
     <ClCompile Include="$(projectRootPath)Tests\GameplayCollisionTests.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\DashEnemyTests.cpp" />
+    <ClCompile Include="$(projectRootPath)Tests\BoxColliderTests.cpp" />
     <GameObject Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\main.obj" />
   </ItemGroup>
   <!-- 必要な翻訳単位だけをリンクし、無関係なシーンをテストへ持ち込まない。 -->

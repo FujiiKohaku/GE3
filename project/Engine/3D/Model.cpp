@@ -1,4 +1,5 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "Model.h"
 #include "ModelCommon.h"
 #include "Object3dRootParameter.h"
@@ -13,6 +14,7 @@
 // ===============================================
 void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath,const std::string& filename)
 {
+    FpsScope fpsScope("Resource.ModelLoad");
     StartupTimingScope startupScope("Resource.ModelInitialize");
     modelCommon_ = modelCommon;
     modelData_ = Object3d::LoadModeFile(directorypath, filename);
@@ -21,6 +23,7 @@ void Model::Initialize(ModelCommon* modelCommon,const std::string& directorypath
 
 void Model::Initialize(ModelCommon* modelCommon, const ModelData& modelData)
 {
+    FpsScope fpsScope("Resource.ModelUpload");
     StartupTimingScope startupScope("Resource.ModelInitialize");
     modelCommon_ = modelCommon;
     modelData_ = modelData;

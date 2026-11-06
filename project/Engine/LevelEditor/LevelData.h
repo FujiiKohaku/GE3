@@ -5,6 +5,20 @@
 
 struct LevelData {
 
+    struct DashEnemySpawnData {
+        float activationDistance = 160.0f;
+        float forwardOffset = 100.0f;
+        float entrySeconds = 0.5f;
+        float trackingSeconds = 0.55f;
+        float lockSeconds = 0.45f;
+        float dashSpeed = 220.0f;
+        float dashDistance = 160.0f;
+        float recoverySeconds = 0.65f;
+        float exitSeconds = 0.4f;
+        float hp = 30.0f;
+        int damage = 2;
+    };
+
     struct StrafeEnemySpawnData {
         bool isEnteringFromLeft = false;
         float activationDistance = 120.0f;
@@ -54,6 +68,7 @@ struct LevelData {
         LoopEnemySpawnData loopEnemy;
         PaceEnemySpawnData paceEnemy;
         StrafeEnemySpawnData strafeEnemy;
+        DashEnemySpawnData dashEnemy;
         
         struct ScoreItemData {
             bool exists = false;
@@ -65,8 +80,10 @@ struct LevelData {
             std::string type;
             Vector3 center;
             Vector3 size;
+            // サイズ・中心は拡大率適用済み。trueなら中心のオフセットもモデルと回転する。
+            bool rotateOffset = false;
         } collider;
-        // Additional boxes use the same world-space offsets and sizes as collider.
+        // Additional boxes use the same scaled offsets/sizes and rotateOffset option as collider.
         std::vector<ColliderData> colliders;
 
         struct TriggerData {
@@ -136,6 +153,7 @@ struct LevelData {
         LoopEnemySpawnData loopEnemy;
         PaceEnemySpawnData paceEnemy;
         StrafeEnemySpawnData strafeEnemy;
+        DashEnemySpawnData dashEnemy;
         Vector3 translation;
         Vector3 rotation;
     };

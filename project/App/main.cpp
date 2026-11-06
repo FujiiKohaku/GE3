@@ -97,13 +97,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     bool hasLoggedStartupTime = false;
     const bool isVerifyingUnderwaterAtmosphere =
         std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos;
+    const bool isVerifyingAnemone =
+        std::wstring(GetCommandLineW()).find(L"--verify-anemone") != std::wstring::npos;
+    const bool isVerifyingDash =
+        std::wstring(GetCommandLineW()).find(L"--verify-dash-enemy") != std::wstring::npos;
     const bool isVerifyingFullscreen =
         std::wstring(GetCommandLineW()).find(L"--verify-fullscreen") != std::wstring::npos;
     const bool isVerifyingLoopEnemy =
         std::wstring(GetCommandLineW()).find(L"--verify-loop-enemy") != std::wstring::npos;
     int verificationFrameLimit = 300;
     if (isVerifyingLoopEnemy) { verificationFrameLimit = 900; }
-    const bool verifyOceanTransition = isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
+    if (isVerifyingAnemone) { verificationFrameLimit = 360; }
+    if (isVerifyingDash) { verificationFrameLimit = 480; }
+    const bool verifyOceanTransition = isVerifyingDash || isVerifyingAnemone || isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
         std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
     int oceanVerificationFrame = 0;
 
@@ -166,6 +172,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             }
             if (isVerifyingLoopEnemy && (oceanVerificationFrame == 320 || oceanVerificationFrame == 440 || oceanVerificationFrame == 560)) {
                 ScreenshotManager::GetInstance()->RequestCapture(true, false);
+            }
+            if (isVerifyingAnemone && (oceanVerificationFrame == 180 || oceanVerificationFrame == 240 || oceanVerificationFrame == 300)) {
+                ScreenshotManager::GetInstance()->RequestCapture(true, false);
+                Logger::Log("[AnemoneSmoke] Capture enemy and fan bullets");
             }
             if (oceanVerificationFrame == verificationFrameLimit) {
                 Logger::Log("[OceanSmoke] PASS: title -> stage01 initialization after loading and rendered gameplay");

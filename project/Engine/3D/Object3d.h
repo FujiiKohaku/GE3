@@ -168,9 +168,10 @@ public:
     void SetCollisionDamage(int damage) { collisionDamage_ = damage > 0 ? damage : 1; }
     int GetCollisionDamage() const { return collisionDamage_; }
 
-    void SetCollider(BoxCollider* collider)
+    void SetCollider(BoxCollider* collider, bool rotateOffset = false)
     {
         collider_ = collider;
+        rotateColliderOffset_ = rotateOffset;
         if (collider_ != nullptr) {
             colliderOffset_ = collider_->GetCenter() - transform.translate;
             collider_->SetRotation(transform.rotate);
@@ -187,19 +188,22 @@ public:
         if (index == 0) { return collider_; }
         return additionalColliders_.at(index - 1).collider;
     }
-    void AddCollider(BoxCollider* collider)
+    void AddCollider(BoxCollider* collider, bool rotateOffset = false)
     {
         if (collider == nullptr) { return; }
-        if (collider_ == nullptr) { SetCollider(collider); return; }
-        additionalColliders_.push_back({ collider, collider->GetCenter() - transform.translate });
+        if (collider_ == nullptr) { SetCollider(collider, rotateOffset); return; }
+        additionalColliders_.push_back({ collider, collider->GetCenter() - transform.translate, rotateOffset });
         collider->SetRotation(transform.rotate);
     }
     void ClearColliders() { collider_ = nullptr; additionalColliders_.clear(); }
+    // 描画リソースを使わず、位置・回転に合わせてコライダーだけを更新する。
+    void UpdateColliders();
 
 private:
     struct ColliderAttachment {
         BoxCollider* collider;
         Vector3 offset;
+        bool rotateOffset = false;
     };
     std::vector<ColliderAttachment> additionalColliders_;
     friend class Object3dManager;
@@ -265,6 +269,7 @@ private:
     int collisionDamage_ = 1;
     BoxCollider* collider_ = nullptr;
     Vector3 colliderOffset_ = { 0.0f, 0.0f, 0.0f };
+    bool rotateColliderOffset_ = false;
     std::string normalMapTextureKey_;
     std::string metallicRoughnessTextureKey_;
 };

@@ -1,4 +1,5 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "TextureManager.h"
 #include <chrono>
 #include <cstring>
@@ -54,6 +55,7 @@ void TextureManager::Initialize(DirectXCommon* dxCommon, SrvManager* srvManager)
 //=================================================================
 void TextureManager::LoadTexture(const std::string& filePath)
 {
+    FpsScope fpsScope("Resource.TextureLoad");
     StartupTimingScope startupScope("Resource.TextureLoad");
 
     if (filePath.empty()) {
@@ -314,6 +316,7 @@ void TextureManager::RegisterTexture(const std::string& textureKey, DirectX::Scr
 
 void TextureManager::FlushUploads()
 {
+    FpsScope fpsScope("Resource.TextureUpload");
     StartupTimingScope startupScope("Resource.TextureFlush");
     if (pendingUploadResources_.empty()) {
         return;

@@ -198,6 +198,8 @@ private:
     void SpawnPaceEnemy(const Vector3& position, const Vector3& rotation,
         const LevelData::PaceEnemySpawnData& settings, int enemyLevel);
     void SpawnTurretEnemy(const Vector3& position, const Vector3& rotation, int enemyLevel);
+    void SpawnAnemoneEnemy(const Vector3& position, const Vector3& rotation);
+    void SpawnDashEnemy(const Vector3& position, const LevelData::DashEnemySpawnData& settings);
     void SpawnStrafeEnemy(const Vector3& position, const Vector3& rotation,
         const LevelData::StrafeEnemySpawnData& settings, int enemyLevel);
     // レベルから生成したオブジェクトと、それに付随する判定情報を破棄する。
@@ -207,7 +209,7 @@ private:
     // ステージの配置情報を、敵や編隊の出現条件へ変換する。
     void LoadEnemyPopData(const LevelData& levelData);
     // 衝突システムの結果を受け取り、得点・ダメージ演出・ステージイベントへ反映する。
-    void CheckCollision();
+    void CheckCollision(const Vector3& previousPlayerPosition);
     // ペイント弾の命中を受けて、画面に付着したような表示を開始する。
     void StartPaintHitEffect();
     // 水滴が画面に付く演出を開始する。
@@ -290,6 +292,8 @@ private:
 
     std::unique_ptr<SceneObjectManager> sceneObjectManager_;
     std::unique_ptr<GameplayCollisionSystem> gameplayCollisionSystem_;
+    bool isDashVerification_ = false;
+    int dashVerificationPhase_ = -1;
 
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;

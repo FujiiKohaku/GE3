@@ -1,0 +1,12 @@
+{
+  "meshObjects": 68,
+  "triangles": 13444,
+  "tentacles": 12,
+  "openFrame": 1,
+  "closedFrame": 75,
+  "animationFrames": 150,
+  "fps": 30,
+  "frontBlender": "-Y",
+  "upBlender": "+Z",
+  "integration": "Stage01 lower route: 3 stationary open-pose enemies fire five-shot fans; no open/close behavior yet."
+}

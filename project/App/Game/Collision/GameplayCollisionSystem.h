@@ -41,24 +41,31 @@ struct StageTrigger {
 
 class GameplayCollisionSystem {
 public:
+    // 突進の移動を障害物で止め、射撃判定より先に実際の軌道を確定する。
+    void UpdateEnemyMovementCollisions(
+        std::vector<std::unique_ptr<BaseEnemy>>& enemies,
+        const std::vector<std::unique_ptr<Object3d>>& levelObjects);
     // プレイヤーとステージ障害物の接触に対応する。
     void UpdateStageCollisions(
         Player& player,
         const std::vector<std::unique_ptr<Object3d>>& levelObjects);
 
-    // 弾ごとに敵・破壊可能物・床の接触時刻を比較し、最初の命中だけを処理する。
+    // 弾ごとに敵・障害物・破壊可能物・床の接触時刻を比較し、最初の命中だけを処理する。
     GameplayCollisionEvents UpdatePlayerBulletCollisions(
         Player& player,
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss,
         std::vector<DestructibleLevelObject>& destructibles,
-        Object3d* floorObject, bool shouldCollideWithFloor = true);
+        Object3d* floorObject, bool shouldCollideWithFloor = true,
+        const std::vector<std::unique_ptr<Object3d>>& levelObjects = {});
 
-    // 敵本体と敵弾のプレイヤーへの接触を調べる。
+    // 敵本体と敵弾のプレイヤーへの接触を調べ、障害物が手前なら敵弾を遮る。
     GameplayCollisionEvents UpdateCombatCollisions(
         Player& player,
         std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets);
+        const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets,
+        const std::vector<std::unique_ptr<Object3d>>& levelObjects = {},
+        const Vector3* previousPlayerPosition = nullptr);
 
     // ステージ内のトリガーとの接触を調べ、ゲーム進行に使うイベントを返す。
     GameplayCollisionEvents UpdateTriggers(
@@ -84,7 +91,8 @@ private:
         const Sphere& bullet, const Vector3& movement,
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
-        float floorHeight, bool shouldCollideWithFloor = true);
+        float floorHeight, bool shouldCollideWithFloor = true,
+        const std::vector<std::unique_ptr<Object3d>>& levelObjects = {});
     // 直撃対象を除き、各敵の有効な部位へ最大一回だけ爆風ダメージを与える。
     static bool ApplyExplosionToEnemy(BaseEnemy& enemy, const Sphere& explosion, float damage,
         const BaseEnemy* directEnemy);

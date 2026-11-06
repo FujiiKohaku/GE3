@@ -64,6 +64,7 @@ public:
     double GetFrameGpuTimeMs() const { return frameTimer_.GetDurationMs(); }
     double GetDlaaGpuTimeMs() const { return dlaaTimer_.GetDurationMs(); }
     bool HasGpuTimingSample() const { return frameTimer_.HasSample(); }
+    bool HasDlaaTimingSample() const { return dlaaTimer_.HasSample(); }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     nlohmann::json GetDevelopmentState() const;
     nlohmann::json GetDevelopmentControls() const;

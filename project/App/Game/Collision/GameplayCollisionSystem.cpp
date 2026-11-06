@@ -4,12 +4,14 @@
 #include "App/Game/Player/Player.h"
 #include "App/Game/Player/Combat/Bullet/Common/PlayerBullet.h"
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Enemy/DashEnemy/DashEnemy.h"
 #include "App/Game/Enemy/Bullet/Common/EnemyBullet.h"
 #include "Engine/audio/SoundManager.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/CollisionManager/BoxCollider.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Effect/EffectManager.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 
 #include <cmath>
 #include <algorithm>
@@ -19,11 +21,30 @@ namespace {
 constexpr float kPlayerObstacleRadius = 1.0f;
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 
+// 弾の移動区間で最初に接触する障害物を探す。
+SweepHit FindFirstObstacleHit(const Sphere& bullet, const Vector3& movement,
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects)
+{
+    SweepHit nearest {};
+    for (const auto& object : levelObjects) {
+        for (size_t index = 0; index < object->GetColliderCount(); ++index) {
+            const BoxCollider* collider = object->GetCollider(index);
+            const OBB& box = collider->GetOBB();
+            const SweepHit hit = CollisionManager::SweepSphere(bullet, movement, box);
+            if (hit.isHit && (!nearest.isHit || hit.time < nearest.time)) {
+                nearest = hit;
+            }
+        }
+    }
+    return nearest;
+}
+
 // 敵弾の移動区間とプレイヤーの当たり判定を取り、ダメージと命中演出を処理する。
 void CheckEnemyBulletsAgainstPlayer(
     Player& player,
     const std::vector<std::unique_ptr<EnemyBullet>>& bullets,
-    GameplayCollisionEvents& events)
+    GameplayCollisionEvents& events,
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects)
 {
     const Sphere playerSphere {
         player.GetTranslate(),
@@ -40,11 +61,18 @@ void CheckEnemyBulletsAgainstPlayer(
         };
         const Vector3 movement =
             bullet->GetPosition() - bullet->GetPreviousPosition();
-        const bool hitPlayer = CollisionManager::SweepSphere(
+        const SweepHit playerHit = CollisionManager::SweepSphere(
             bulletSphere,
             movement,
-            playerSphere).isHit;
-        if (!hitPlayer) {
+            playerSphere);
+        const SweepHit obstacleHit = FindFirstObstacleHit(bulletSphere, movement, levelObjects);
+        // 同時に接触した場合も障害物で遮る。
+        if (obstacleHit.isHit && (!playerHit.isHit || obstacleHit.time <= playerHit.time)) {
+            EffectManager::GetInstance()->PlayEffect("HitEffect", obstacleHit.position);
+            bullet->SetDead();
+            continue;
+        }
+        if (!playerHit.isHit) {
             continue;
         }
 
@@ -62,21 +90,47 @@ void CheckEnemyBulletsAgainstPlayer(
 }
 }
 
+void GameplayCollisionSystem::UpdateEnemyMovementCollisions(
+    std::vector<std::unique_ptr<BaseEnemy>>& enemies,
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects)
+{
+    FpsScope fpsScope("Collision.EnemyMovement");
+    for (const auto& enemy : enemies) {
+        auto* dash = dynamic_cast<DashEnemy*>(enemy.get());
+        if (!dash || dash->IsDead()) { continue; }
+        const auto& motion = dash->GetMotion();
+        for (size_t index = 0; index < motion.segmentCount; ++index) {
+            const auto& segment = motion.segments[index];
+            if (!segment.attacking) { continue; }
+            const SweepHit hit = FindFirstObstacleHit(Sphere { segment.start, DashEnemy::kAttackRadius },
+                segment.end - segment.start, levelObjects);
+            if (hit.isHit) {
+                dash->StopAtObstacle(index, hit.time);
+                EffectManager::GetInstance()->PlayEffect("HitEffect", dash->GetPosition());
+                break;
+            }
+        }
+        if (motion.IsWarning()) {
+            const SweepHit wall = FindFirstObstacleHit(Sphere { motion.position, DashEnemy::kAttackRadius },
+                motion.direction * motion.settings.dashDistance, levelObjects);
+            dash->SetWarningLength(motion.settings.dashDistance * (wall.isHit ? wall.time : 1.0f));
+        }
+    }
+}
+
 // プレイヤーとステージ障害物の当たり判定を取り、接触への対応を行う。
 void GameplayCollisionSystem::UpdateStageCollisions(
     Player& player,
     const std::vector<std::unique_ptr<Object3d>>& levelObjects)
 {
+    FpsScope fpsScope("Collision.PlayerStage");
     const Vector3 playerPosition = player.GetTranslate();
     const Sphere playerSphere { playerPosition, kPlayerObstacleRadius };
 
     for (const std::unique_ptr<Object3d>& levelObject : levelObjects) {
       for (size_t colliderIndex = 0; colliderIndex < levelObject->GetColliderCount(); ++colliderIndex) {
         BoxCollider* collider = levelObject->GetCollider(colliderIndex);
-        const OBB obstacleBox = CollisionManager::MakeOBB(
-            collider->GetCenter(),
-            collider->GetSize(),
-            collider->GetRotation());
+        const OBB& obstacleBox = collider->GetOBB();
         if (CollisionManager::Intersect(playerSphere, obstacleBox).isHit) {
             if (player.ApplyDamage(levelObject->GetCollisionDamage())) {
                 SoundManager::GetInstance()->Play("EnvironmentCollision");
@@ -95,7 +149,8 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
     const Sphere& bullet, const Vector3& movement,
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
-    float floorHeight, bool shouldCollideWithFloor)
+    float floorHeight, bool shouldCollideWithFloor,
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects)
 {
     PlayerBulletHit nearest {};
     for (DestructibleLevelObject& destructible : destructibles) {
@@ -104,14 +159,20 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
         }
         for (size_t colliderIndex = 0; colliderIndex < destructible.object->GetColliderCount(); ++colliderIndex) {
             const BoxCollider* collider = destructible.object->GetCollider(colliderIndex);
-            const OBB box = CollisionManager::MakeOBB(
-                collider->GetCenter(), collider->GetSize(), collider->GetRotation());
+            const OBB& box = collider->GetOBB();
             const SweepHit hit = CollisionManager::SweepSphere(bullet, movement, box);
             if (hit.isHit && (!nearest.hit.isHit || hit.time < nearest.hit.time)) {
                 nearest.hit = hit;
                 nearest.destructible = &destructible;
             }
         }
+    }
+
+    const SweepHit obstacleHit = FindFirstObstacleHit(bullet, movement, levelObjects);
+    // 同じコライダーなら、先に調べた破壊可能物の処理を維持する。
+    if (obstacleHit.isHit && (!nearest.hit.isHit || obstacleHit.time < nearest.hit.time)) {
+        nearest.hit = obstacleHit;
+        nearest.destructible = nullptr;
     }
 
     // 床は従来どおり弾の中心で判定し、到達した時刻と位置を求める。
@@ -205,8 +266,10 @@ uint32_t GameplayCollisionSystem::ApplyExplosionDamage(const Vector3& position,
 GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
     Player& player, const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
-    Object3d* floorObject, bool shouldCollideWithFloor)
+    Object3d* floorObject, bool shouldCollideWithFloor,
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects)
 {
+    FpsScope fpsScope("Collision.PlayerBullets");
     GameplayCollisionEvents events {};
     float floorHeight = -30.0f;
     if (floorObject != nullptr) {
@@ -219,7 +282,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
         const Sphere sphere { bullet->GetPreviousPosition(), bullet->GetCollisionRadius() };
         const Vector3 movement = bullet->GetPosition() - bullet->GetPreviousPosition();
         const PlayerBulletHit nearest = FindFirstPlayerBulletHit(
-            sphere, movement, enemies, boss, destructibles, floorHeight, shouldCollideWithFloor);
+            sphere, movement, enemies, boss, destructibles, floorHeight, shouldCollideWithFloor, levelObjects);
         if (!nearest.hit.isHit) {
             continue;
         }
@@ -279,8 +342,11 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
 GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     Player& player,
     std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets)
+    const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets,
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects,
+    const Vector3* previousPlayerPosition)
 {
+    FpsScope fpsScope("Collision.Combat");
     GameplayCollisionEvents events {};
     const Sphere playerSphere {
         player.GetTranslate(),
@@ -288,6 +354,22 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     };
 
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies) {
+        if (auto* dash = dynamic_cast<DashEnemy*>(enemy.get())) {
+            const Vector3 previous = previousPlayerPosition ? *previousPlayerPosition : player.GetTranslate();
+            const SweepHit hit = dash->FindPlayerContact(previous, player.GetTranslate());
+            if (hit.isHit) {
+                const Vector3 target = previous + (player.GetTranslate() - previous) * hit.time;
+                // 薄い壁越しに二つの球が重なる場合も、中心間に壁があれば遮る。
+                const SweepHit wall = FindFirstObstacleHit(Sphere { hit.position, 0.0f }, target - hit.position, levelObjects);
+                if (!wall.isHit) {
+                    dash->ConsumePlayerContact();
+                    if (player.ApplyDamage(dash->GetMotion().settings.damage)) {
+                        EffectManager::GetInstance()->PlayEffect("DamageHit", player.GetTranslate());
+                    }
+                }
+            }
+            continue;
+        }
         if (!enemy->IsDead()) {
             std::vector<EnemyCollisionPart> collisionParts;
             enemy->GetCollisionParts(collisionParts);
@@ -300,7 +382,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
         }
     }
 
-    CheckEnemyBulletsAgainstPlayer(player, independentBullets, events);
+    CheckEnemyBulletsAgainstPlayer(player, independentBullets, events, levelObjects);
     return events;
 }
 
@@ -309,6 +391,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
     Player& player,
     std::vector<StageTrigger>& triggers)
 {
+    FpsScope fpsScope("Collision.Triggers");
     GameplayCollisionEvents events {};
     const Sphere playerSphere {
         player.GetTranslate(),

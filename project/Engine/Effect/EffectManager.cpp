@@ -1,4 +1,5 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "EffectManager.h"
 #include "EffectConfigValidation.h"
 
@@ -1185,6 +1186,7 @@ EffectHandle EffectManager::StartEffect(
     float duration,
     EffectPositionProvider positionProvider, bool shouldUseDefaultLoop)
 {
+    FpsScope fpsScope("Effects.Start");
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)
     const std::chrono::steady_clock::time_point startEffectBeginTime =
         std::chrono::steady_clock::now();
@@ -1574,6 +1576,7 @@ EffectManager::ActiveEffectResource EffectManager::CreateActiveEffectResource(
     const EffectRuntime& runtime,
     const Vector3& position)
 {
+    FpsScope fpsScope("Resource.EffectCreate");
     ActiveEffectResource resource {};
     resource.renderType = runtime.renderType;
     resource.maxParticles = runtime.maxParticles;
@@ -2261,6 +2264,7 @@ void EffectManager::InitializePendingEffects()
 
 void EffectManager::Update()
 {
+    FpsScope fpsScope("Effects.Update");
     deltaTime_ = TimeManager::GetInstance()->GetDeltaTime();
 
 #if defined(_DEBUG) || defined(ENABLE_PERFORMANCE_LOG)

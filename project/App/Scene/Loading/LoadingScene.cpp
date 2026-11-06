@@ -8,6 +8,7 @@
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/Debug/DebugRenderer.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/Light/LightManager.h"
@@ -70,6 +71,7 @@ void LoadingScene::Initialize()
 // 読み込みの完了を確認し、必要な文字も準備してから遷移先へ進む。
 void LoadingScene::Update()
 {
+    FpsMonitor::GetInstance().SetContext("Loading");
     if (!hasDrawnFirstFrame_) {
         hasDrawnFirstFrame_ = true;
     } else if (!hasPreparedSceneFont_) {

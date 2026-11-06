@@ -5,8 +5,10 @@
 // ReadCompleted is called only after the submitted command list's fence completes.
 class GpuTimestampTimer {
 public:
-    void Initialize() {
-#if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS) || defined(KOHAKU_RENDER_TESTS)
+    void Initialize(bool enableInRelease = false) {
+#if !defined(_DEBUG) && !defined(ENABLE_DEVELOPMENT_TOOLS) && !defined(KOHAKU_RENDER_TESTS)
+        if (!enableInRelease) { return; }
+#endif
         auto* dx = DirectXCommon::GetInstance();
         D3D12_QUERY_HEAP_DESC description = {};
         description.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
@@ -21,7 +23,6 @@ public:
             D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&readback_)))) { return; }
         if (FAILED(dx->GetCommandQueue()->GetTimestampFrequency(&frequency_)) || frequency_ == 0) { return; }
         isAvailable_ = true;
-#endif
     }
     void Begin() {
         hasSample_ = false;

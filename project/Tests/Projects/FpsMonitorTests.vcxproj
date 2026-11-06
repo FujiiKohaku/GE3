@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>FpsMonitorTests</ProjectName>
+    <TargetName>FpsMonitorTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\FpsMonitorTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>FpsMonitorTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)FpsMonitorTests.exe</TargetPath>
+    <GameObjectConfiguration>$(Configuration)</GameObjectConfiguration>
+    <GameObjectConfiguration Condition="'$(Configuration)' == 'Development'">Develop</GameObjectConfiguration>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>$(IntDir)FpsMonitorGameObjects.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <GameBuildSource Include="@(ClCompile)" />
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)Tests\FpsMonitorTests.cpp" />
+    <GameObject Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(GameObjectConfiguration)\main.obj" />
+  </ItemGroup>
+  <Target Name="ArchiveGameObjects" BeforeTargets="Link">
+    <WriteLinesToFile File="$(IntDir)FpsMonitorGameObjects.rsp" Lines="@(GameObject->'&quot;%(FullPath)&quot;')" Overwrite="true" />
+    <Exec Command="&quot;$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe&quot; /nologo /OUT:&quot;$(IntDir)FpsMonitorGameObjects.lib&quot; @&quot;$(IntDir)FpsMonitorGameObjects.rsp&quot;" />
+  </Target>
+</Project>

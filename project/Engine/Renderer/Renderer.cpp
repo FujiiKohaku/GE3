@@ -1,4 +1,5 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "SceneRenderResolution.h"
 #include "Engine/Reflection/ScreenSpaceReflection.h"
 #include "Engine/Raytracing/DxrRenderer.h"
@@ -106,8 +107,8 @@ void Renderer::Initialize()
         StartupTimingScope startupScope("Renderer.DXRLocalShadow");
         dxrLocalShadowRenderer_->Initialize();
     }
-    frameTimer_.Initialize();
-    dlaaTimer_.Initialize();
+    frameTimer_.Initialize(FpsMonitor::GetInstance().IsEnabled());
+    dlaaTimer_.Initialize(FpsMonitor::GetInstance().IsEnabled());
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     DevelopmentWebPanel::GetInstance().RegisterSource<Renderer>(this, "antialiasing", "アンチエイリアス比較", false,
         &Renderer::GetDevelopmentState, &Renderer::GetDevelopmentControls, &Renderer::SetDevelopmentBool,
@@ -241,6 +242,7 @@ void Renderer::DrawImGui()
 
 void Renderer::Draw(SceneManager* sceneManager)
 {
+    FpsScope fpsScope("Render.Commands");
     StartupTimingScope startupScope("Frame.Renderer");
     Object3dManager::GetInstance()->BeginTransparentCollection();
     ApplySceneRenderResolution();
@@ -583,8 +585,11 @@ void Renderer::Draw(SceneManager* sceneManager)
     postEffectManager_->GetVolumetricLightRenderer()->ReadCompleted();
     temporalSuperResolution_->ReadCompleted();
     RecordGpuSample();
-    ScreenshotManager::GetInstance()->CompleteCapture();
-    GifRecordingManager::GetInstance()->CompleteCapture();
+    {
+        FpsScope scope("Capture.ReadbackEncode");
+        ScreenshotManager::GetInstance()->CompleteCapture();
+        GifRecordingManager::GetInstance()->CompleteCapture();
+    }
 }
 
 void Renderer::SetAntiAliasing(bool isDlaaEnabled, bool isFxaaEnabled)

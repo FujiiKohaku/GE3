@@ -27,6 +27,34 @@ float ReadPaceEnemyNumber(const nlohmann::json& settingsJson, const char* name,
     return ReadEnemyNumber(settingsJson, name, defaultValue, minimum, maximum, "PaceEnemy");
 }
 
+LevelData::DashEnemySpawnData ReadDashEnemySettings(const nlohmann::json& objectJson)
+{
+    LevelData::DashEnemySpawnData settings;
+    if (!objectJson.contains("dashEnemy")) { return settings; }
+    const auto& json = objectJson["dashEnemy"];
+    if (!json.is_object()) { Logger::Warning("Invalid DASHENEMY settings; using defaults"); return settings; }
+    const auto read = [&](const char* key, float& value, float minimum, float maximum) {
+        value = ReadEnemyNumber(json, key, value, minimum, maximum, "DASHENEMY");
+    };
+    read("activationDistance", settings.activationDistance, 50, 500);
+    read("forwardOffset", settings.forwardOffset, 50, 150);
+    read("entrySeconds", settings.entrySeconds, 0.1f, 5);
+    read("trackingSeconds", settings.trackingSeconds, 0.1f, 5);
+    read("lockSeconds", settings.lockSeconds, 0.2f, 3);
+    read("dashSpeed", settings.dashSpeed, 50, 500);
+    read("dashDistance", settings.dashDistance, 50, 300);
+    read("recoverySeconds", settings.recoverySeconds, 0.1f, 5);
+    read("exitSeconds", settings.exitSeconds, 0.1f, 3);
+    read("hp", settings.hp, 1, 100);
+    if (json.contains("damage")) {
+        const auto& damage = json["damage"];
+        if (damage.is_number_integer() && damage.get<double>() >= 1 && damage.get<double>() <= 10) {
+            settings.damage = damage.get<int>();
+        } else { Logger::Warning("Invalid DASHENEMY damage; using default"); }
+    }
+    return settings;
+}
+
 LevelData::StrafeEnemySpawnData ReadStrafeEnemySettings(const nlohmann::json& objectJson)
 {
     LevelData::StrafeEnemySpawnData settings;
@@ -194,7 +222,11 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     LevelData::LoopEnemySpawnData loopEnemySettings;
     LevelData::PaceEnemySpawnData paceEnemySettings;
     LevelData::StrafeEnemySpawnData strafeEnemySettings;
+    LevelData::DashEnemySpawnData dashEnemySettings;
     if (typeStr == "EnemySpawn") {
+        if (objectJson.value("file_name", std::string()) == "DASHENEMY") {
+            dashEnemySettings = ReadDashEnemySettings(objectJson);
+        }
         enemyLevel = ReadEnemyLevel(objectJson);
         if (objectJson.value("file_name", std::string()) == "LoopEnemy") {
             loopEnemySettings = ReadLoopEnemySettings(objectJson);
@@ -235,6 +267,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
         spawnData.loopEnemy = loopEnemySettings;
         spawnData.paceEnemy = paceEnemySettings;
         spawnData.strafeEnemy = strafeEnemySettings;
+        spawnData.dashEnemy = dashEnemySettings;
 
         if (objectJson.contains("file_name")) {
             spawnData.fileName = objectJson["file_name"].get<std::string>();
@@ -265,6 +298,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     objectData.loopEnemy = loopEnemySettings;
     objectData.paceEnemy = paceEnemySettings;
     objectData.strafeEnemy = strafeEnemySettings;
+    objectData.dashEnemy = dashEnemySettings;
 
     objectData.type = objectJson["type"].get<std::string>();
 
@@ -311,6 +345,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     if (objectJson.contains("collider")) {
         const nlohmann::json& collider = objectJson["collider"];
         objectData.collider.exists = true;
+        objectData.collider.rotateOffset = collider.value("rotate_offset", false);
         if (collider.contains("type")) {
             objectData.collider.type = collider["type"].get<std::string>();
         }
@@ -330,6 +365,7 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
         for (const nlohmann::json& colliderJson : objectJson["colliders"]) {
             LevelData::ObjectData::ColliderData colliderData {};
             colliderData.exists = true;
+            colliderData.rotateOffset = colliderJson.value("rotate_offset", false);
             colliderData.type = colliderJson.at("type").get<std::string>();
             colliderData.center = {
                 colliderJson.at("center")[0].get<float>(),

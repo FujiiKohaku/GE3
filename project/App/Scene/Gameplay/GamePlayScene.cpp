@@ -1,6 +1,7 @@
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
 #include "Engine/Capture/GifRecordingManager.h"
+#include "Engine/Screenshot/ScreenshotManager.h"
 // ステージ進行の中心。プレイヤー・敵・ボス・背景・HUD・演出を組み合わせて更新する。
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
 #include "Engine/Renderer/Renderer.h"
@@ -10,6 +11,8 @@
 #include "App/Game/Enemy/LoopEnemy/LoopEnemy.h"
 #include "App/Game/Enemy/PaceEnemy/PaceEnemy.h"
 #include "App/Game/Enemy/TurretEnemy/TurretEnemy.h"
+#include "App/Game/Enemy/AnemoneEnemy/AnemoneEnemy.h"
+#include "App/Game/Enemy/DashEnemy/DashEnemy.h"
 #include "App/Game/Enemy/StrafeEnemy/StrafeEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
@@ -41,6 +44,7 @@
 #include "App/Scene/Result/GameOverScene.h"
 #include "App/Scene/Title/TitleScene.h"
 #include "Engine/Debug/DebugRenderer.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/Input/Input.h"
 #include "Engine/Time/TimeManager.h"
@@ -1280,6 +1284,32 @@ void GamePlayScene::Initialize()
 
     InitializeTutorialPresentation();
     InitializeStageObjectiveBanner();
+    isDashVerification_ = stageId_ == "stage01" &&
+        std::wstring(GetCommandLineW()).find(L"--verify-dash-enemy") != std::wstring::npos;
+    if (isDashVerification_) {
+        const bool underwater = std::wstring(GetCommandLineW()).find(L"--dash-underwater") != std::wstring::npos;
+        railDistance_ = underwater ? 2800.0f : 850.0f;
+        if (underwater) { railBranch_.Update(0.0f, railDistance_, -1.0f, true); }
+        const Vector3 position = GetRailPosition(railDistance_);
+        player_->SetRailFrame(position, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 });
+        player_->SetTranslate(position);
+        debugCameraController_->SetDebugMode(true);
+        camera_->LookAt(position + Vector3 { 0, 8, -35 }, position + Vector3 { 0, 0, 110 });
+        camera_->Update();
+        Logger::Log("[DashSmoke] Started near DASHENEMY");
+    }
+    if (stageId_ == "stage01" &&
+        std::wstring(GetCommandLineW()).find(L"--verify-anemone") != std::wstring::npos) {
+        railBranch_.Update(0.0f, 2170.0f, -1.0f, true);
+        railDistance_ = 2170.0f;
+        const Vector3 position = GetRailPosition(railDistance_);
+        player_->SetRailFrame(position, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 });
+        player_->SetTranslate(position);
+        debugCameraController_->SetDebugMode(true);
+        camera_->LookAt({ 0.0f, -83.0f, 2170.0f }, { -25.0f, -99.0f, 2280.0f });
+        camera_->Update();
+        Logger::Log("[AnemoneSmoke] Started underwater near the first anemone");
+    }
     if (stageId_ == "stage01" &&
         std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos) {
         debugCameraController_->SetDebugMode(true);
@@ -1375,6 +1405,11 @@ void GamePlayScene::CalculateRailBasis(const Vector3& forward, Vector3& right, V
 // ポーズや演出の状態を確認し、レール・機体・敵・判定・カメラ・UIを更新する。
 void GamePlayScene::Update()
 {
+    auto& fpsMonitor = FpsMonitor::GetInstance();
+    fpsMonitor.SetContext(stageId_);
+    fpsMonitor.SetCounter("Enemies", enemies_.size());
+    fpsMonitor.SetCounter("EnemyBullets", enemyBulletManager_.GetBullets().size());
+    fpsMonitor.SetCounter("StageObjects", levelObjects_.size());
     if (UpdateTutorialPresentation()) return;
     // TABキーによるポーズメニュー（Pause Menu）切り替え
     Input* input = Input::GetInstance();
@@ -1562,14 +1597,17 @@ void GamePlayScene::Update()
     rail_->Update();
 
     // 敵全体の更新
-    for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
-        if (stageId_ == "stage01") { enemy->SetAppearanceTarget(player_->GetTranslate()); }
-        enemy->Update();
-    }
+    {
+        FpsScope fpsScope("Gameplay.Enemies");
+        for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
+            if (stageId_ == "stage01") { enemy->SetAppearanceTarget(player_->GetTranslate()); }
+            enemy->Update();
+        }
 
-    std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
-        return enemy->IsDead();
-    });
+        std::erase_if(enemies_, [](const std::unique_ptr<BaseEnemy>& enemy) {
+            return enemy->IsDead();
+        });
+    }
     const Vector3 currentRailPosition =
         GetRailPosition(railDistance_);
     Vector3 currentRailForward =
@@ -2042,7 +2080,23 @@ void GamePlayScene::Update()
 
 
     // コリジョン判定の実行
-    CheckCollision();
+    CheckCollision(previousPlayerPosition);
+    if (isDashVerification_) {
+        for (const auto& enemy : enemies_) {
+            const auto* dash = dynamic_cast<const DashEnemy*>(enemy.get());
+            if (!dash || !dash->GetMotion().IsVisible()) { continue; }
+            const auto phase = dash->GetMotion().phase;
+            if (dashVerificationPhase_ != static_cast<int>(phase)) {
+                dashVerificationPhase_ = static_cast<int>(phase);
+                if (phase == DashPhase::Tracking || phase == DashPhase::Locked ||
+                    phase == DashPhase::Dash || phase == DashPhase::Recovery) {
+                    ScreenshotManager::GetInstance()->RequestCapture(true, false);
+                    Logger::Log("[DashSmoke] Capture phase=" + std::to_string(dashVerificationPhase_));
+                }
+            }
+            break;
+        }
+    }
     UpdatePlayerDamagePostEffects();
     UpdateCameraShakePostEffect();
 
@@ -3739,10 +3793,12 @@ void GamePlayScene::DrawImGui()
 }
 
 // 衝突システムの結果を受け取り、得点・ダメージ演出・ステージイベントへ反映する。
-void GamePlayScene::CheckCollision()
+void GamePlayScene::CheckCollision(const Vector3& previousPlayerPosition)
 {
+    FpsScope fpsScope("Gameplay.Collision");
 
     if (gameplayCollisionSystem_ != nullptr) {
+        gameplayCollisionSystem_->UpdateEnemyMovementCollisions(enemies_, levelObjects_);
         gameplayCollisionSystem_->UpdateStageCollisions(
             *player_,
             levelObjects_);
@@ -3755,7 +3811,7 @@ void GamePlayScene::CheckCollision()
                 enemies_,
                 GetActiveBoss(),
                 destructibleLevelObjects_,
-                floorObj_.get(), !railBranch_.IsLowerRouteActive(railDistance_));
+                floorObj_.get(), !railBranch_.IsLowerRouteActive(railDistance_), levelObjects_);
         if (events.scoreAwarded != 0) {
             score_ += events.scoreAwarded;
             scoreHudValueText_->SetText(std::to_string(score_));
@@ -3763,7 +3819,7 @@ void GamePlayScene::CheckCollision()
         }
         const GameplayCollisionEvents combatEvents =
             gameplayCollisionSystem_->UpdateCombatCollisions(
-                *player_, enemies_, enemyBulletManager_.GetBullets());
+                *player_, enemies_, enemyBulletManager_.GetBullets(), levelObjects_, &previousPlayerPosition);
         if (combatEvents.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }
@@ -4372,10 +4428,7 @@ void GamePlayScene::DrawCollisionDebug()
         const Vector3 size = collider->GetSize();
         const float radius = 0.5f * std::sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
         if (!isNearCamera(collider->GetCenter(), radius)) continue;
-        const OBB box = CollisionManager::MakeOBB(
-            collider->GetCenter(),
-            collider->GetSize(),
-            collider->GetRotation());
+        const OBB& box = collider->GetOBB();
         debugRenderer->AddWireOBB(
             box.center,
             box.size,
@@ -4931,6 +4984,25 @@ void GamePlayScene::SpawnTurretEnemy(const Vector3& position, const Vector3& rot
     enemies_.push_back(std::move(enemy));
 }
 
+void GamePlayScene::SpawnDashEnemy(const Vector3& position, const LevelData::DashEnemySpawnData& settings)
+{
+    auto enemy = std::make_unique<DashEnemy>();
+    enemy->Initialize(ModelManager::GetInstance()->CreateCube("resources/Textures/white.png"), player_.get(), settings);
+    enemy->SetPosition(position);
+    enemies_.push_back(std::move(enemy));
+}
+
+void GamePlayScene::SpawnAnemoneEnemy(const Vector3& position, const Vector3& rotation)
+{
+    Model* model = ModelManager::GetInstance()->Load("Enemy/Anemone/AnemoneOpen.obj");
+    auto enemy = std::make_unique<AnemoneEnemy>();
+    enemy->Initialize(model, enemyBulletModel_, player_.get(), stageSettings_.floorHeight);
+    enemy->SetPosition(position);
+    // このモデルの口は+Z向き。プレイヤーが近づく-Z側に向ける。
+    enemy->SetRotate(rotation + Vector3 { 0.0f, std::numbers::pi_v<float>, 0.0f });
+    enemies_.push_back(std::move(enemy));
+}
+
 void GamePlayScene::SpawnStrafeEnemy(const Vector3& position, const Vector3& rotation,
     const LevelData::StrafeEnemySpawnData& settings, int enemyLevel)
 {
@@ -4955,6 +5027,10 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
             SpawnPaceEnemy(enemyData.translation, enemyData.rotation, enemyData.paceEnemy, enemyData.enemyLevel);
         } else if (enemyData.fileName == "TurretEnemy") {
             SpawnTurretEnemy(enemyData.translation, enemyData.rotation, enemyData.enemyLevel);
+        } else if (enemyData.fileName == "AnemoneEnemy") {
+            SpawnAnemoneEnemy(enemyData.translation, enemyData.rotation);
+        } else if (enemyData.fileName == "DASHENEMY") {
+            SpawnDashEnemy(enemyData.translation, enemyData.dashEnemy);
         } else if (enemyData.fileName == "StrafeEnemy") {
             SpawnStrafeEnemy(enemyData.translation, enemyData.rotation, enemyData.strafeEnemy, enemyData.enemyLevel);
         } else if (enemyData.fileName == "MoveEnemy") {
@@ -5278,7 +5354,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                     collider->SetSize(objData.collider.size);
 
                     BoxCollider* registeredCollider = CollisionManager::GetInstance()->RegisterCollider(std::move(collider));
-                    levelObject->SetCollider(registeredCollider);
+                    levelObject->SetCollider(registeredCollider, objData.collider.rotateOffset);
                 }
             }
 
@@ -5288,7 +5364,7 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 collider->SetCenter(objData.translation + colliderData.center);
                 collider->SetSize(colliderData.size);
                 BoxCollider* registeredCollider = CollisionManager::GetInstance()->RegisterCollider(std::move(collider));
-                levelObject->AddCollider(registeredCollider);
+                levelObject->AddCollider(registeredCollider, colliderData.rotateOffset);
             }
             levelObjects_.push_back(std::move(levelObject));
         }
@@ -5299,6 +5375,10 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 SpawnPaceEnemy(objData.translation, objData.rotation, objData.paceEnemy, objData.enemyLevel);
             } else if (objData.fileName == "TurretEnemy") {
                 SpawnTurretEnemy(objData.translation, objData.rotation, objData.enemyLevel);
+            } else if (objData.fileName == "AnemoneEnemy") {
+                SpawnAnemoneEnemy(objData.translation, objData.rotation);
+            } else if (objData.fileName == "DASHENEMY") {
+                SpawnDashEnemy(objData.translation, objData.dashEnemy);
             } else if (objData.fileName == "StrafeEnemy") {
                 SpawnStrafeEnemy(objData.translation, objData.rotation, objData.strafeEnemy, objData.enemyLevel);
             } else if (objData.fileName == "MoveEnemy") {

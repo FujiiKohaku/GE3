@@ -1,6 +1,7 @@
 // 現在と次のシーンを管理し、シーン切替と描画・ポストエフェクト設定の受け渡しを行う。
 #include "App/Scene/Common/SceneManager.h"
 #include <cassert>
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include <cmath>
 #include "Engine/Light/LightManager.h"
 #include "Engine/Time/TimeManager.h"
@@ -14,6 +15,7 @@ void SceneManager::Update()
     }
 
     if (nextScene_) {
+        FpsScope fpsScope("Scene.SwitchAndInitialize");
         if (scene_) {
             // 共有設定の解除は次シーンの初期化前に済ませ、本体の破棄だけを遅延する。
             scene_->Finalize();
@@ -66,6 +68,7 @@ void SceneManager::Finalize()
 // 画面に重ねるスプライトや文字を描画する。
 void SceneManager::Draw2D()
 {
+    FpsScope fpsScope("Render.UI");
     // 実行中シーンの2D描画
     if (scene_) {
         scene_->Draw2D();
@@ -75,6 +78,7 @@ void SceneManager::Draw2D()
 // 現在表示するモデルや追加パーツを描画する。
 void SceneManager::Draw3D()
 {
+    FpsScope fpsScope("Render.Scene3D");
     // 実行中シーンの3D描画
     if (scene_) {
         scene_->Draw3D();
@@ -90,6 +94,7 @@ bool SceneManager::SubmitRaytracingScene(DxrRenderer& renderer) {
 // このシーンで使用するパーティクルを描画する。
 void SceneManager::DrawParticle()
 {
+    FpsScope fpsScope("Render.Particles");
     if (scene_) {
         scene_->DrawParticle();
     }
@@ -245,6 +250,7 @@ float SceneManager::GetCameraShakeStrength() const
 // 現在のシーンに、影を落とす物体の描画を依頼する。
 void SceneManager::DrawShadow(ShadowMapRenderer& renderer)
 {
+    FpsScope fpsScope("Render.ShadowGeometry");
     if (scene_) { scene_->DrawShadow(renderer); }
 }
 ShadowSettings SceneManager::GetShadowSettings() const

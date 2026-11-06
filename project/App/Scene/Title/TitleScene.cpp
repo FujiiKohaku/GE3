@@ -1,4 +1,5 @@
 #include "Engine/Debug/Profiler/StartupTiming.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 // タイトルの基地背景・ステージ選択・設定画面と、各画面をつなぐカメラ演出を扱う。
 #include "App/Scene/Title/TitleScene.h"
 
@@ -1134,6 +1135,7 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
 // 現在のタイトル状態へ入力と更新を渡し、背景とUIの演出を進める。
 void TitleScene::Update()
 {
+    FpsMonitor::GetInstance().SetContext("Title");
     const float deltaTime =
         (std::min)(TimeManager::GetInstance()->GetDeltaTime(), 1.0f / 20.0f);
     idleTime_ += deltaTime;

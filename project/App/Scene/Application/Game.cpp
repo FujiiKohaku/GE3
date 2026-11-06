@@ -4,6 +4,7 @@
 #include "Engine/Debug/Profiler/Profiler.h"
 #include "Engine/Debug/Profiler/BootProfiler.h"
 #include "Engine/Debug/Profiler/ProfilerScope.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
@@ -73,6 +74,12 @@ void Game::Initialize()
 {
     auto prevTime = std::chrono::steady_clock::now();
     Logger::Log("Game Initialize Start");
+    auto& fpsMonitor = FpsMonitor::GetInstance();
+    fpsMonitor.Initialize(FpsMonitor::Config {});
+    fpsMonitor.LoadConfig("resources/Config/FpsMonitor.json");
+    Logger::Log(std::format("[FpsMonitor] enabled={} threshold={:.1f}fps lowDuration={:.1f}s cooldown={:.1f}s",
+        fpsMonitor.IsEnabled(), fpsMonitor.GetConfig().thresholdFps,
+        fpsMonitor.GetConfig().lowFpsSeconds, fpsMonitor.GetConfig().cooldownSeconds));
     ShowCursor(FALSE); // カーソルを消す
     SetUnhandledExceptionFilter(Utility::ExportDump);
 
@@ -241,8 +248,11 @@ void Game::Initialize()
 // 入力と各管理機能を更新し、現在のシーンを一フレーム進める。
 void Game::Update()
 {
+    FpsMonitor::GetInstance().BeginFrame();
+    FpsScope frameScope("Game.Update");
+    if (IsIconic(WinApp::GetInstance()->GetHwnd())) { FpsMonitor::GetInstance().SkipFrame(); }
     TimeManager::GetInstance()->Update();
-    SoundManager::GetInstance()->Update();
+    { FpsScope scope("Audio.Update"); SoundManager::GetInstance()->Update(); }
 
     // フレーム全体の開始
     Profiler::GetInstance()->BeginFrame();
@@ -252,7 +262,7 @@ void Game::Update()
     UpdatePerformanceLog();
 #endif
 
-    Input::GetInstance()->Update();
+    { FpsScope scope("Input.Update"); Input::GetInstance()->Update(); }
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_F11)) {
         if (!renderer_->ToggleFullscreen()) {
@@ -304,6 +314,7 @@ void Game::Update()
 
     if (Input::GetInstance()->IsKeyTrigger(DIK_ESCAPE) && !SceneManager::GetInstance()->IsPauseMenuOpen()) {
         Logger::Log("Escape exit confirmation opened");
+        FpsMonitor::GetInstance().SkipFrame();
         const int result = MessageBoxW(
             WinApp::GetInstance()->GetHwnd(),
             L"本当にゲームを終了しますか？",
@@ -325,6 +336,7 @@ void Game::Update()
 
     {
         ProfilerScope scope("SceneUpdate");
+        FpsScope fpsScope("Scene.Update");
         SceneManager::GetInstance()->Update();
     }
     
@@ -351,6 +363,7 @@ void Game::Update()
     
     {
         ProfilerScope scope("Renderer");
+        FpsScope fpsScope("Render.Update");
         renderer_->Update();
     }
     
@@ -372,7 +385,15 @@ void Game::Update()
 // 描画処理を実行し、更新済みのゲーム画面を表示する。
 void Game::Draw()
 {
-    renderer_->Draw(SceneManager::GetInstance());
+    auto& monitor = FpsMonitor::GetInstance();
+    {
+        FpsScope scope("Game.Draw");
+        renderer_->Draw(SceneManager::GetInstance());
+    }
+    monitor.SetGpuFrame(renderer_->GetFrameGpuTimeMs(), renderer_->HasGpuTimingSample());
+    monitor.SetGpuDetail("DLAA", renderer_->GetDlaaGpuTimeMs(), renderer_->HasDlaaTimingSample());
+    monitor.SetCounter("ActiveEffects", EffectManager::GetInstance()->GetActiveEffects().size());
+    monitor.EndFrame();
 }
 
 // シーンやエンジン機能を終了し、確保したリソースを解放する。
@@ -446,13 +467,11 @@ void Game::UpdatePerformanceLog()
 
     const std::chrono::steady_clock::time_point now =
         std::chrono::steady_clock::now();
-    const double frameTimeMs =
-        std::chrono::duration<double, std::milli>(
-            now - performanceFrameStartTime_).count();
     performanceFrameStartTime_ = now;
 
     EffectManager* effectManager = EffectManager::GetInstance();
-    effectManager->ReportAndResetFramePerformance(frameTimeMs);
+    // Counters still reset each frame; incident output is rate-limited by FpsMonitor.
+    effectManager->ReportAndResetFramePerformance(0.0);
 
     const double elapsedSeconds =
         std::chrono::duration<double>(now - performanceLogStartTime_).count();
