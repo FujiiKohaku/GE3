@@ -27,7 +27,7 @@ private:
     float elapsedSeconds_ = 0.0f;
     static constexpr float kCoilAngleRate = 2.35f;
     static constexpr float kCoilBaseRadius = 7.0f;
-    static constexpr float kCoilHeight = 30.0f;
+    static constexpr float kCoilHeight = 15.0f;
     static constexpr float kCoilSegmentAngleRadians = 0.65f;
     static constexpr float kCoilSegmentHeightRate = 0.46f;
     static constexpr float kCoilFormationDurationSeconds = 1.1f;

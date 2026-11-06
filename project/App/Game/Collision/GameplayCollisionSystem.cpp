@@ -44,7 +44,8 @@ void CheckEnemyBulletsAgainstPlayer(
     Player& player,
     const std::vector<std::unique_ptr<EnemyBullet>>& bullets,
     GameplayCollisionEvents& events,
-    const std::vector<std::unique_ptr<Object3d>>& levelObjects)
+    const std::vector<std::unique_ptr<Object3d>>& levelObjects,
+    bool collideWithObstacles)
 {
     const Sphere playerSphere {
         player.GetTranslate(),
@@ -65,7 +66,11 @@ void CheckEnemyBulletsAgainstPlayer(
             bulletSphere,
             movement,
             playerSphere);
-        const SweepHit obstacleHit = FindFirstObstacleHit(bulletSphere, movement, levelObjects);
+        SweepHit obstacleHit {};
+        if (collideWithObstacles) {
+            FpsScope obstacleScope("Collision.EnemyBulletObstacle");
+            obstacleHit = FindFirstObstacleHit(bulletSphere, movement, levelObjects);
+        }
         // 同時に接触した場合も障害物で遮る。
         if (obstacleHit.isHit && (!playerHit.isHit || obstacleHit.time <= playerHit.time)) {
             EffectManager::GetInstance()->PlayEffect("HitEffect", obstacleHit.position);
@@ -344,7 +349,8 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
     std::vector<std::unique_ptr<BaseEnemy>>& enemies,
     const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets,
     const std::vector<std::unique_ptr<Object3d>>& levelObjects,
-    const Vector3* previousPlayerPosition)
+    const Vector3* previousPlayerPosition,
+    bool enemyBulletsCollideWithObstacles)
 {
     FpsScope fpsScope("Collision.Combat");
     GameplayCollisionEvents events {};
@@ -382,7 +388,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
         }
     }
 
-    CheckEnemyBulletsAgainstPlayer(player, independentBullets, events, levelObjects);
+    CheckEnemyBulletsAgainstPlayer(player, independentBullets, events, levelObjects, enemyBulletsCollideWithObstacles);
     return events;
 }
 

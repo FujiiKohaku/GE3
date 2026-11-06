@@ -109,9 +109,10 @@ Vector3 FearWormSpiralBarrageState::CalculateTarget(const FearWormMovementContex
         result.z += forwardDistance;
     }
 
-    // 地面にめり込まないように下限（Y = kMinimumHeight）をかける
-    if (result.y < kMinimumHeight) {
-        result.y = kMinimumHeight;
+    // レール高さに対する下限を設ける。
+    const float minimumHeight = context.playerPosition.y + kMinimumHeight;
+    if (result.y < minimumHeight) {
+        result.y = minimumHeight;
     }
 
     return result;

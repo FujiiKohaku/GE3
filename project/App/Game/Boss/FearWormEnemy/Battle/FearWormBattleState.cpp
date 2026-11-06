@@ -65,32 +65,12 @@ Vector3 FearWormBattleState::CalculateFearWormTarget(FearWormMovementType type, 
     }
 }
 
-// 視線の高さを反映した、攻撃間で共通の座標計算入力を作る。
+// 攻撃の移動基準には、操作や視線に影響されないレール位置を使う。
 FearWormMovementContext FearWormBattleState::CreateMovementContext(const FearWormEnemy& boss,
     const Vector3& playerPosition) const
 {
-
-    Vector3 adjustedPlayerPosition = playerPosition;
-
-    // プレイヤーのカメラのピッチ角（上下の角度）を取得し、基準とするY座標を補正する
-    if (boss.player_ != nullptr && boss.player_->GetCamera() != nullptr) {
-        Camera* camera = boss.player_->GetCamera();
-
-        // カメラのピッチ角を取得（ラジアン）
-        // 上を向くと pitch < 0 になるため、符号を反転します
-        float pitch = -camera->GetRotate().x;
-
-        // プレイヤーとボスの奥行き（Z方向）の距離
-        float distanceZ = std::abs(playerPosition.z - boss.GetPosition().z);
-
-        // プレイヤーから見たカメラの視線の高低差（Yオフセット）を計算
-        float lookOffsetY = distanceZ * std::sin(pitch);
-
-        // ボスの基準高度を補正
-        adjustedPlayerPosition.y += lookOffsetY;
-    }
-
-    return { adjustedPlayerPosition, orbitAngle_, boss.parallelForwardOffset_ };
+    const Vector3 basePosition = boss.player_ != nullptr ? boss.GetBattleMovementOrigin() : playerPosition;
+    return { basePosition, orbitAngle_, boss.parallelForwardOffset_ };
 }
 
 // 指定した部位の位置から、通常射撃用の弾を生成する。
@@ -134,9 +114,8 @@ Vector3 FearWormBattleState::HeadLookRotation(const FearWormEnemy& boss) const
 void FearWormBattleState::FireDirectionalBullet(FearWormEnemy& boss, const Vector3& position, const Vector3& direction,
     bool shouldPlayMuzzleEffect)
 {
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    auto bullet = boss.AcquireNormalBullet(bulletModel_);
     bullet->SetFogEnabled(false);
-    bullet->Initialize(bulletModel_);
 
     Vector3 velocity { };
     velocity.x = direction.x * bulletSpeed_;
@@ -245,7 +224,8 @@ void FearWormBattleState::SubmitRaytracing(FearWormEnemy& boss, DxrRenderer& ren
 }
 void FearWormBattleState::Enter(FearWormEnemy& boss)
 {
-    ChangeAction(ActionType::OrbitShot, boss);
+    const bool verifyCoil = std::wstring(GetCommandLineW()).find(L"--verify-coil-performance") != std::wstring::npos;
+    ChangeAction(verifyCoil ? ActionType::CoilBarrage : ActionType::OrbitShot, boss);
 }
 
 void FearWormBattleState::Exit(FearWormEnemy& boss)

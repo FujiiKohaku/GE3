@@ -17,6 +17,7 @@
 class Camera;
 class Model;
 class EnemyBulletManager;
+class NormalEnemyBullet;
 
 // 敵の一部位の形状と識別情報。radiusは箱の場合は包絡球の半径。
 struct EnemyCollisionPart {
@@ -64,6 +65,7 @@ public:
     virtual Vector3 GetPosition() const;
     // 生成した敵弾の引き渡し先を設定する。管理クラスの所有権は受け取らない。
     static void SetBulletManager(EnemyBulletManager* bulletManager);
+    static std::unique_ptr<NormalEnemyBullet> AcquireNormalBullet(Model* model);
     virtual void SetPosition(const Vector3& position);
     virtual void SetRotate(const Vector3& rotate);
     void SetPatrolWaypoints(const std::vector<Vector3>& waypoints)

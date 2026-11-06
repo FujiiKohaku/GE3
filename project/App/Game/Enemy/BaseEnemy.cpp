@@ -216,6 +216,14 @@ void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
     bulletManager_ = bulletManager;
 }
 
+std::unique_ptr<NormalEnemyBullet> BaseEnemy::AcquireNormalBullet(Model* model)
+{
+    if (bulletManager_ != nullptr) { return bulletManager_->AcquireNormalBullet(model); }
+    auto bullet = std::make_unique<NormalEnemyBullet>();
+    bullet->Initialize(model);
+    return bullet;
+}
+
 // 生成した弾の所有権を敵弾管理へ渡し、必要なら発射音も鳴らす。
 void BaseEnemy::AddEnemyBullet(std::unique_ptr<EnemyBullet> bullet, bool shouldPlayShotSound)
 {

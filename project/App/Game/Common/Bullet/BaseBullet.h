@@ -83,6 +83,8 @@ private:
     Camera* camera_ = nullptr;
 
 protected:
+    // 破棄せず再利用する弾の共通状態を初期値に戻す。
+    void ResetForReuse(Model* model);
     EulerTransform transform_;
 
     Vector3 velocity_;

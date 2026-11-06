@@ -98,7 +98,7 @@ void FearWormEntryState::UpdateSegmentPositions(FearWormEnemy& boss)
     const Vector3 playerPosition = boss.player_->GetTranslate();
     const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
     const FearWormMovementContext movementContext {
-        playerPosition, kExitOrbitAngleRadians, boss.parallelForwardOffset_
+        boss.GetBattleMovementOrigin(), kExitOrbitAngleRadians, boss.parallelForwardOffset_
     };
     const Vector3 battlePosition = FearWormMovement::CalculateOrbitTarget(movementContext);
     // 頭から尾へ開始時刻をずらし、段階が変わっても同じ軌道を継続する。

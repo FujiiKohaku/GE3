@@ -2,12 +2,15 @@
 #pragma once
 
 #include "App/Game/Enemy/Bullet/Common/EnemyBullet.h"
+#include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 
 #include <memory>
 #include <vector>
 
 class EnemyBulletManager {
 public:
+    // 空きがあれば再利用し、なければその場で生成する。
+    std::unique_ptr<NormalEnemyBullet> AcquireNormalBullet(Model* model);
     // 敵弾を霧の影響から除外する設定を保持する。
     void SetFogExclusionEnabled(bool isEnabled);
     // 新しい敵弾の所有権を受け取り、管理対象へ追加する。
@@ -28,4 +31,5 @@ public:
 private:
     bool fogExclusionEnabled_ = false;
     std::vector<std::unique_ptr<EnemyBullet>> bullets_;
+    std::vector<std::unique_ptr<NormalEnemyBullet>> availableNormalBullets_;
 };

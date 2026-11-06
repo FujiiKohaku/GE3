@@ -165,8 +165,7 @@ void NormalEnemy::FireBullet()
 // 指定方向へ飛ぶ敵弾を生成し、弾管理へ引き渡す。
 void NormalEnemy::SpawnBullet(const Vector3& direction, bool shouldPlayShotSound)
 {
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
-    bullet->Initialize(bulletModel_);
+    auto bullet = AcquireNormalBullet(bulletModel_);
     bullet->SetTranslate(transform_.translate);
     bullet->SetVelocity(direction * bulletSpeed_);
     AddEnemyBullet(std::move(bullet), shouldPlayShotSound);

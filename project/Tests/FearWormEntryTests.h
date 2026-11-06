@@ -80,7 +80,7 @@ inline bool RunFearWormEntryTests()
             boss.entryState_.currentPhase_->Update(boss.entryState_, boss);
             if (boss.entryState_.elapsedSeconds_ != elapsedSeconds) { return false; }
             const Vector3 surfacePosition = boss.entryState_.EntrySurfacePosition(player.GetTranslate());
-            const FearWormMovementContext movementContext { player.GetTranslate(), 2.35f, boss.parallelForwardOffset_ };
+            const FearWormMovementContext movementContext { boss.GetBattleMovementOrigin(), 2.35f, boss.parallelForwardOffset_ };
             const Vector3 targetPosition = FearWormMovement::CalculateOrbitTarget(movementContext);
             if (boss.battleState_.orbitAngle_ != 0.4f
                 || boss.battleState_.movementPattern_ != FearWormBattleState::MovementPattern::Line
@@ -108,7 +108,7 @@ inline bool RunFearWormEntryTests()
 
             const float entryDurationSeconds = FearWormEntryState::CalculateEntryDurationSeconds(segmentCount);
             const Vector3 surfacePosition = boss.entryState_.EntrySurfacePosition(player.GetTranslate());
-            const FearWormMovementContext movementContext { player.GetTranslate(), 2.35f, boss.parallelForwardOffset_ };
+            const FearWormMovementContext movementContext { boss.GetBattleMovementOrigin(), 2.35f, boss.parallelForwardOffset_ };
             const Vector3 targetPosition = FearWormMovement::CalculateOrbitTarget(movementContext);
             for (float elapsedSeconds = 0.0f; elapsedSeconds < entryDurationSeconds; elapsedSeconds += deltaSeconds) {
                 boss.entryState_.elapsedSeconds_ = elapsedSeconds;

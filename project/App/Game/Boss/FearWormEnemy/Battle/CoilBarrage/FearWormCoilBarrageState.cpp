@@ -5,8 +5,12 @@
 #include "Engine/Time/TimeManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/3D/Object3d.h"
+#include "Engine/Logger/Logger.h"
+#include "Engine/Debug/Profiler/FpsMonitor.h"
 #include <cmath>
 #include <algorithm>
+#include <chrono>
+#include <format>
 
 Vector3 FearWormCoilBarrageState::CalculateFormationPosition(const FearWormFormationContext& context,
     const Vector3& followPosition, float) const
@@ -26,6 +30,7 @@ void FearWormCoilBarrageState::Enter(FearWormBattleState& battle, FearWormEnemy&
 {
     Reset();
     battle.movementPattern_ = FearWormBattleState::MovementPattern::Coil;
+    Logger::Log("[CoilPerformance] begin");
 }
 
 void FearWormCoilBarrageState::Update(FearWormBattleState& battle, FearWormEnemy& boss)
@@ -40,6 +45,7 @@ void FearWormCoilBarrageState::Update(FearWormBattleState& battle, FearWormEnemy
 
 void FearWormCoilBarrageState::Exit(FearWormBattleState&, FearWormEnemy&)
 {
+    Logger::Log("[CoilPerformance] end");
     elapsedSeconds_ = 0.0f;
     nextFireSeconds_ = 0.0f;
 }
@@ -70,12 +76,19 @@ void FearWormCoilBarrageState::FireBarrage(FearWormBattleState& battle, FearWorm
     const float backwardSpeedRatio = 1.0f / std::sqrt(1.0f + kCoilBarrageSpreadRatio * kCoilBarrageSpreadRatio);
     const float radialSpeedRatio = kCoilBarrageSpreadRatio * backwardSpeedRatio;
 
+    // 発射単位で集計し、普段のフレームへのログ出力を避ける。
+    using Clock = std::chrono::steady_clock;
+    const auto volleyStart = Clock::now();
+    Clock::duration bulletTime {};
+    Clock::duration effectTime {};
+    size_t aliveSegments = 0;
     // 生存している各部位から発射
     for (size_t segmentIndex = 0; segmentIndex < boss.GetAttackSegmentCount(); segmentIndex++) {
 
         if (!boss.IsAttackSegmentAlive(segmentIndex)) {
             continue;
         }
+        ++aliveSegments;
 
         const Vector3 position = boss.GetAttackSegmentPosition(segmentIndex);
         const float angleOffset = static_cast<float>(segmentIndex) * kCoilBarrageSegmentAngleRadians
@@ -92,10 +105,24 @@ void FearWormCoilBarrageState::FireBarrage(FearWormBattleState& battle, FearWorm
                 -backwardSpeedRatio
             };
 
-            battle.FireDirectionalBullet(boss, position, direction, false);
+            const auto bulletStart = Clock::now();
+            {
+                FpsScope scope("Coil.BulletCreate");
+                battle.FireDirectionalBullet(boss, position, direction, false);
+            }
+            bulletTime += Clock::now() - bulletStart;
         }
-        EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+        const auto effectStart = Clock::now();
+        {
+            FpsScope scope("Coil.ShotEffect");
+            EffectManager::GetInstance()->PlayEffect("WormShotFlash", position);
+        }
+        effectTime += Clock::now() - effectStart;
     }
+    const auto ms = [](Clock::duration duration) { return std::chrono::duration<double, std::milli>(duration).count(); };
+    Logger::Log(std::format("[CoilPerformance] volley elapsed={:.3f}s segments={} bullets={} total={:.3f}ms bulletCreate={:.3f}ms shotEffect={:.3f}ms",
+        elapsedSeconds_, aliveSegments, aliveSegments * kCoilBarrageBulletCount,
+        ms(Clock::now() - volleyStart), ms(bulletTime), ms(effectTime)));
 }
 
 Vector3 FearWormCoilBarrageState::CalculateTarget(const FearWormMovementContext& context, float elapsedSeconds)

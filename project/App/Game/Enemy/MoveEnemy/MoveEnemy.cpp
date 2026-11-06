@@ -118,8 +118,7 @@ void MoveEnemy::FireBullet()
         return;
     }
 
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
-    bullet->Initialize(bulletModel_);
+    auto bullet = AcquireNormalBullet(bulletModel_);
 
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 direction = Normalize(playerPosition - transform_.translate);

@@ -65,7 +65,8 @@ public:
         std::vector<std::unique_ptr<BaseEnemy>>& enemies,
         const std::vector<std::unique_ptr<EnemyBullet>>& independentBullets,
         const std::vector<std::unique_ptr<Object3d>>& levelObjects = {},
-        const Vector3* previousPlayerPosition = nullptr);
+        const Vector3* previousPlayerPosition = nullptr,
+        bool enemyBulletsCollideWithObstacles = true);
 
     // ステージ内のトリガーとの接触を調べ、ゲーム進行に使うイベントを返す。
     GameplayCollisionEvents UpdateTriggers(

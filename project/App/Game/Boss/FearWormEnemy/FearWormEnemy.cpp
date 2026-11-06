@@ -13,6 +13,7 @@
 #include <cmath>
 #include <utility>
 #include "Engine/3D/Object3dManager.h"
+#include "Engine/3D/ModelManager.h"
 
 // コンストラクタ。初期状態を待機状態に設定する。
 FearWormEnemy::FearWormEnemy()
@@ -207,6 +208,7 @@ void FearWormEnemy::SetPosition(const Vector3& position)
 {
     // 基準位置と行動状態を初期状態へ戻す。
     transform_.translate = position;
+    headForward_ = { 0.0f, 0.0f, 1.0f };
     waitState_.SetStartPosition(position);
     ChangeState(BossState::Wait);
     entryState_.Reset();
@@ -345,6 +347,19 @@ void FearWormEnemy::InitializeSegments(Model* model)
     // 体のセグメントを初期化
     segments_.clear();
     segments_.reserve(kWormSegmentCount);
+    Model* bodyModel = ModelManager::GetInstance()->Load("Boss/FearWorm/Body/FearWormBody.obj");
+    for (size_t index = 0; index < headPoseModels_.size(); ++index) {
+        headPoseModels_[index] = ModelManager::GetInstance()->Load(
+            "Boss/FearWorm/Head/FearWormHead_" + std::to_string(index) + ".obj");
+    }
+    headOpenAmount_ = 0.0f;
+    headPoseIndex_ = 0;
+    headEye_ = std::make_unique<Object3d>();
+    headEye_->Initialize(Object3dManager::GetInstance());
+    headEye_->SetModel(ModelManager::GetInstance()->Load("Boss/FearWorm/Head/FearWormEye.obj"));
+    headEye_->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+    headEye_->SetEnableLighting(false);
+    headEye_->SetCastShadow(false);
 
     // 体作成
     for (int32_t index = 0; index < kWormSegmentCount; index = index + 1) {
@@ -354,8 +369,8 @@ void FearWormEnemy::InitializeSegments(Model* model)
         segment.object->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
         segment.object->SetCastShadow(true);
         segment.object->SetReceiveShadow(true);
-        segment.object->SetModel(model);
-        segment.object->SetEnableLighting(false);
+        segment.object->SetModel(index == 0 ? headPoseModels_[0] : bodyModel);
+        segment.object->SetEnableLighting(true);
         segment.isHead = false;
         segment.isAlive = true;
         segment.hp = kBodyHp;
@@ -381,6 +396,15 @@ void FearWormEnemy::InitializeSegments(Model* model)
 // 計算済みの部位位置と向きを、描画用のオブジェクトへ反映する。
 void FearWormEnemy::UpdateSegmentObjects()
 {
+    const bool openHead = state_ == BossState::Battle &&
+        battleState_.actionType_ == FearWormBattleState::ActionType::Beam && battleState_.beamActionState_.IsAiming();
+    const float openStep = (std::max)(0.0f, TimeManager::GetInstance()->GetDeltaTime()) * 3.5f;
+    headOpenAmount_ = std::clamp(headOpenAmount_ + (openHead ? openStep : -openStep), 0.0f, 1.0f);
+    const int nextHeadPose = static_cast<int>(std::round(headOpenAmount_ * 4.0f));
+    if (nextHeadPose != headPoseIndex_ && !segments_.empty() && segments_[0].object && headPoseModels_[nextHeadPose]) {
+        segments_[0].object->SetModel(headPoseModels_[nextHeadPose]);
+        headPoseIndex_ = nextHeadPose;
+    }
     for (size_t index = 0; index < segments_.size(); index = index + 1) {
         Segment& segment = segments_[index];
 
@@ -397,7 +421,7 @@ void FearWormEnemy::UpdateSegmentObjects()
 
         Vector4 color { };
         if (segment.isHead) {
-            color = kHeadColor;
+            color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
             if (!HasAliveBodyParts()) {
                 color = kVulnerableHeadColor;
@@ -405,7 +429,7 @@ void FearWormEnemy::UpdateSegmentObjects()
 
             color = battleState_.HeadAttackColor(color);
         } else {
-            color = kBodyColor;
+            color = { 1.0f, 1.0f, 1.0f, 1.0f };
         }
 
         if (segment.hitFlashTimer > 0.0f) {
@@ -431,8 +455,37 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         rotate.y = moveTime_ + static_cast<float>(index) * kSegmentRotationOffset;
-        if (segment.isHead && battleState_.ShouldAimHead(*this)) {
-            rotate = HeadLookRotation();
+        if (!segment.isHead) {
+            // 前の生存部位へ向け、リングの軸を胴体のつながりに沿わせる。
+            size_t front = index;
+            while (front > 0) {
+                --front;
+                if (segments_[front].isAlive) { break; }
+            }
+            const Vector3 direction = segments_[front].position - segment.position;
+            const float horizontal = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+            if (Vector3Length(direction) > 0.0001f) {
+                rotate.x = -std::atan2(direction.y, horizontal);
+                rotate.y = -std::atan2(direction.x, direction.z);
+            }
+        }
+        if (segment.isHead) {
+            // 体が向かう方向を正面にし、ビームを狙う間だけ照準方向へ向ける。
+            for (size_t next = 1; next < segments_.size(); ++next) {
+                if (!segments_[next].isAlive) { continue; }
+                const Vector3 forward = segment.position - segments_[next].position;
+                if (Vector3Length(forward) > 0.0001f) { headForward_ = Normalize(forward); }
+                break;
+            }
+            Vector3 direction = headForward_;
+            if (battleState_.actionType_ == FearWormBattleState::ActionType::Beam &&
+                battleState_.ShouldAimHead(*this)) { direction = battleState_.headAimDirection_; }
+            const float horizontal = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+            if (Vector3Length(direction) > 0.0001f) {
+                rotate.x = -std::atan2(direction.y, horizontal);
+                // OBJの正面はローカル+Z方向。
+                rotate.y = -std::atan2(direction.x, direction.z);
+            }
         }
 
         segment.object->SetScale(scale);
@@ -440,6 +493,11 @@ void FearWormEnemy::UpdateSegmentObjects()
         segment.object->SetTranslate(segment.position);
         segment.object->SetColor(color);
         segment.object->Update();
+    }
+    if (headEye_ && !segments_.empty() && segments_[0].object) {
+        // コアは頭に固定し、頭の姿勢に追従させる。
+        headEye_->SetCustomWorldMatrix(segments_[0].object->GetWorldMatrix());
+        headEye_->Update();
     }
 }
 
@@ -463,6 +521,7 @@ void FearWormEnemy::Draw()
             }
 
             segment.object->Draw();
+            if (segment.isHead && headEye_) { headEye_->Draw(); }
         }
     }
 
@@ -591,6 +650,7 @@ void FearWormEnemy::OnCollisionPartGuarded(int32_t partIndex, const Vector3& pos
 void FearWormEnemy::PlayBodyBreakEffect(const Vector3& position)
 {
     EffectManager::GetInstance()->PlayEffect("WormBodyBreak", position);
+    EffectManager::GetInstance()->PlayEffect("FearWormBodyDebris", position);
 }
 
 // 頭が攻撃を防いだ位置へ、ガードのエフェクトを出す。
@@ -705,6 +765,14 @@ float FearWormEnemy::GetBodyHpFraction() const
 Vector3 FearWormEnemy::GetAttackTargetPosition() const
 {
     return player_ != nullptr ? player_->GetTranslate() : Vector3{};
+}
+
+Vector3 FearWormEnemy::GetBattleMovementOrigin() const
+{
+    constexpr float kBattleHeightOffset = -5.0f;
+    Vector3 origin = player_ != nullptr ? player_->GetRailBasePosition() : Vector3 {};
+    origin.y += kBattleHeightOffset;
+    return origin;
 }
 
 bool FearWormEnemy::IsAttackSegmentAlive(size_t index) const

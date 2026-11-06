@@ -108,8 +108,7 @@ void StrafeEnemy::Attack()
     const float distance = Vector3Length(toPlayer);
     if (distance <= 0.001f || distance > kAttackRange ||
         Dot(transform_.translate - player_->GetTranslate(), railForward_) <= 0.0f) { return; }
-    std::unique_ptr<NormalEnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
-    bullet->Initialize(bulletModel_);
+    auto bullet = AcquireNormalBullet(bulletModel_);
     bullet->SetTranslate(transform_.translate);
     bullet->SetVelocity(toPlayer * (bulletSpeedPerFrame_ / distance));
     AddEnemyBullet(std::move(bullet));

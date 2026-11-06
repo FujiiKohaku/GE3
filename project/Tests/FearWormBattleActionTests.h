@@ -190,7 +190,7 @@ inline bool RunFearWormBattleActionTests()
         const float expectedElapsedSeconds = spiralElapsedSeconds[phaseIndex] + deltaTimeSeconds;
         const float expectedAngleRadians = spiralAnglesRadians[phaseIndex]
             + deltaTimeSeconds * 2.5f * boss.MovementSpeedRate();
-        Vector3 expectedTarget = player.GetTranslate();
+        Vector3 expectedTarget = boss.GetBattleMovementOrigin();
         expectedTarget.y += 7.0f;
         expectedTarget.z += boss.parallelForwardOffset_ + 50.0f;
         if (expectedElapsedSeconds >= 2.0f) {
@@ -208,7 +208,7 @@ inline bool RunFearWormBattleActionTests()
     }
     // 共通計算はStateの内部値ではなく、呼び出し元から受け取った値を使う。
     const Vector3 explicitTarget = FearWormSpiralBarrageState::CalculateTarget(battle.CreateMovementContext(boss, player.GetTranslate()), 3.0f, 0.0f);
-    const Vector3 expectedExplicitTarget = player.GetTranslate()
+    const Vector3 expectedExplicitTarget = boss.GetBattleMovementOrigin()
         + Vector3 { 5.0f, 7.0f, boss.parallelForwardOffset_ + 50.0f };
     if (Vector3LengthSquared(explicitTarget - expectedExplicitTarget) > 0.000001f) {
         return false;

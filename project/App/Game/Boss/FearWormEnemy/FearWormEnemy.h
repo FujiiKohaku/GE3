@@ -6,6 +6,7 @@
 #include "Entry/FearWormEntryState.h"
 #include "Battle/FearWormBattleState.h"
 #include "Dead/FearWormDeadState.h"
+#include <array>
 class Model;
 class Object3d;
 class Player;
@@ -76,6 +77,8 @@ public:
     // 攻撃に渡す情報は値として公開し、部位や描画オブジェクトは公開しない。
     bool HasAttackTarget() const { return player_ != nullptr; }
     Vector3 GetAttackTargetPosition() const;
+    // 戦闘中の移動と登場終点に使うレール基準の位置。
+    Vector3 GetBattleMovementOrigin() const;
     size_t GetAttackSegmentCount() const { return segments_.size(); }
     bool IsAttackSegmentAlive(size_t index) const;
     Vector3 GetAttackSegmentPosition(size_t index) const;
@@ -204,12 +207,17 @@ private:
     Player* player_ = nullptr;
 
     std::vector<Segment> segments_;
+    std::array<Model*, 5> headPoseModels_ {};
+    std::unique_ptr<Object3d> headEye_;
+    Vector3 headForward_ { 0.0f, 0.0f, 1.0f };
+    float headOpenAmount_ = 0.0f;
+    int headPoseIndex_ = 0;
     float oceanWakeCooldownSeconds_ = 0.0f;
     size_t nextOceanSegment_ = 0;
 
     float moveTime_ = 0.0f;
     float segmentSpacing_ = 5.0f;
-    float parallelForwardOffset_ = 92.0f;
+    float parallelForwardOffset_ = 102.0f;
 
     bool vulnerableEffectPlayed_ = false;
 

@@ -106,9 +106,8 @@ void FearWormHeadChargeState::FireChargedBullet(FearWormBattleState& battle, Fea
     }
 
     // 頭部の発射位置からプレイヤーへ向かう弾を生成する。
-    std::unique_ptr<EnemyBullet> bullet = std::make_unique<NormalEnemyBullet>();
+    auto bullet = boss.AcquireNormalBullet(battle.GetBulletModel());
     bullet->SetFogEnabled(false);
-    bullet->Initialize(battle.GetBulletModel());
 
     Vector3 position = battle.HeadMuzzlePosition(boss);
 

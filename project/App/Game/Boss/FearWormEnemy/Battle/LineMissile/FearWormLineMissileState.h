@@ -24,7 +24,7 @@ public:
 
 private:
     static constexpr float kTargetOffsetX = 20.0f;
-    static constexpr float kMissileAttackHeight = 20.0f;
+    static constexpr float kMissileAttackHeight = 15.0f;
     static constexpr float kTargetForwardOffset = 75.0f;
     static constexpr float kFormationDurationSeconds = 1.0f;
     static constexpr float kFormationWaveScaleY = 3.2f;

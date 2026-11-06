@@ -1265,6 +1265,11 @@
     <ClInclude Include="App\Game\Boss\IceJellyfish\PoseController\IceJellyfishPoseController.h"><Filter>App\Game\Boss\IceJellyfish\PoseController</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <Filter Include="Player\Aim">
+      <UniqueIdentifier>{6e5a0b97-9769-4cb1-a5ab-9200e8d5ab8c}</UniqueIdentifier>
+    </Filter>
+    <ClInclude Include="App\Game\Player\Aim\PlayerAimController.h"><Filter>Player\Aim</Filter></ClInclude>
+    <ClCompile Include="App\Game\Player\Aim\PlayerAimController.cpp"><Filter>Player\Aim</Filter></ClCompile>
     <Filter Include="Player\Movement">
       <UniqueIdentifier>{3b242db2-760f-49b1-a1f3-68c611a827e7}</UniqueIdentifier>
     </Filter>

@@ -100,7 +100,7 @@ Vector3 FearWormLineMissileState::CalculateTarget(const FearWormMovementContext&
 {
     Vector3 result = context.playerPosition;
     result.x += kTargetOffsetX;
-    result.y = kMissileAttackHeight;
+    result.y += kMissileAttackHeight;
     result.z += context.forwardOffset + kTargetForwardOffset;
     return result;
 }

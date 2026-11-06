@@ -22,6 +22,25 @@ void BaseBullet::Initialize(Model* model)
     object_->SetTranslate(transform_.translate);
 }
 
+void BaseBullet::ResetForReuse(Model* model)
+{
+    assert(model != nullptr && object_ != nullptr);
+    isAlive_ = true;
+    lifeTime_ = 0.0f;
+    maxLifeTime_ = 5.0f;
+    damage_ = 1;
+    collisionRadius_ = 1.0f;
+    velocity_ = {};
+    previousPosition_ = {};
+    transform_ = {};
+    camera_ = nullptr;
+    fogEnabled_ = true;
+    object_->SetModel(model);
+    // 新規生成時と同様、弾に個別カメラがなければ既定カメラを使う。
+    object_->SetCamera(Object3dManager::GetInstance()->GetDefaultCamera());
+    object_->SetFogEnabled(true);
+}
+
 // 前回位置を保存して移動し、経過時間が寿命を超えたら弾を消滅扱いにする。
 void BaseBullet::Update()
 {

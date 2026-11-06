@@ -105,11 +105,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         std::wstring(GetCommandLineW()).find(L"--verify-fullscreen") != std::wstring::npos;
     const bool isVerifyingLoopEnemy =
         std::wstring(GetCommandLineW()).find(L"--verify-loop-enemy") != std::wstring::npos;
+    const bool isVerifyingCoilPerformance =
+        std::wstring(GetCommandLineW()).find(L"--verify-coil-performance") != std::wstring::npos;
     int verificationFrameLimit = 300;
     if (isVerifyingLoopEnemy) { verificationFrameLimit = 900; }
     if (isVerifyingAnemone) { verificationFrameLimit = 360; }
     if (isVerifyingDash) { verificationFrameLimit = 480; }
-    const bool verifyOceanTransition = isVerifyingDash || isVerifyingAnemone || isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
+    if (isVerifyingCoilPerformance) { verificationFrameLimit = 1200; }
+    const bool verifyOceanTransition = isVerifyingCoilPerformance || isVerifyingDash || isVerifyingAnemone || isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
         std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
     int oceanVerificationFrame = 0;
 
@@ -176,6 +179,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             if (isVerifyingAnemone && (oceanVerificationFrame == 180 || oceanVerificationFrame == 240 || oceanVerificationFrame == 300)) {
                 ScreenshotManager::GetInstance()->RequestCapture(true, false);
                 Logger::Log("[AnemoneSmoke] Capture enemy and fan bullets");
+            }
+            if (isVerifyingCoilPerformance && (oceanVerificationFrame == 620 || oceanVerificationFrame == 750)) {
+                ScreenshotManager::GetInstance()->RequestCapture(true, false);
+                Logger::Log("[CoilPerformance] Capture boss appearance");
             }
             if (oceanVerificationFrame == verificationFrameLimit) {
                 Logger::Log("[OceanSmoke] PASS: title -> stage01 initialization after loading and rendered gameplay");

@@ -127,6 +127,19 @@ bool RunEnemyBulletObstacleTests()
         if (bullets[0]->IsAlive() || events.paintBulletHitPlayer == blocked ||
             player.GetCurrentHp() != initialHp - (blocked ? 0 : 1)) { return false; }
     }
+    // ボス戦では壁を無視し、壁の後ろにいるプレイヤーには命中する。
+    {
+        Player bossFightPlayer;
+        PlayerTestAccess::Transform(bossFightPlayer).translate = { 0.0f, 0.0f, 10.0f };
+        const int hp = bossFightPlayer.GetCurrentHp();
+        collider.SetCenter({ 0.0f, 0.0f, 5.0f });
+        std::vector<std::unique_ptr<EnemyBullet>> bossBullets;
+        auto bossBullet = std::make_unique<ObstacleTestEnemyBullet>();
+        bossBullet->SetMovement({}, { 0.0f, 0.0f, 20.0f });
+        bossBullets.push_back(std::move(bossBullet));
+        const auto hit = system.UpdateCombatCollisions(bossFightPlayer, enemies, bossBullets, obstacles, nullptr, false);
+        if (bossBullets[0]->IsAlive() || !hit.paintBulletHitPlayer || bossFightPlayer.GetCurrentHp() != hp - 1) { return false; }
+    }
     // プレイヤーに当たらない弾も障害物だけで消える。
     Player player;
     PlayerTestAccess::Transform(player).translate = { 20.0f, 0.0f, 10.0f };

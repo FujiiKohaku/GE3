@@ -7,4 +7,5 @@ class NormalEnemyBullet : public EnemyBullet {
 public:
     // 通常の敵弾として使う色・大きさ・描画設定を適用する。
     void Initialize(Model* model) override;
+    void ResetForReuse(Model* model);
 };

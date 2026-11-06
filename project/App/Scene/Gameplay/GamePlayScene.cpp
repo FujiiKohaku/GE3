@@ -1284,6 +1284,33 @@ void GamePlayScene::Initialize()
 
     InitializeTutorialPresentation();
     InitializeStageObjectiveBanner();
+    if (stageId_ == "stage01" &&
+        std::wstring(GetCommandLineW()).find(L"--verify-coil-performance") != std::wstring::npos) {
+        // 実際の描画オブジェクトを使い、回収と状態初期化を検証する。
+        auto pooledBullet = enemyBulletManager_.AcquireNormalBullet(enemyBulletModel_);
+        const auto* originalBullet = pooledBullet.get();
+        pooledBullet->SetDamage(9);
+        pooledBullet->SetCollisionRadius(9.0f);
+        pooledBullet->SetScale({ 2.0f, 2.0f, 2.0f });
+        pooledBullet->SetFogEnabled(false);
+        pooledBullet->SetDead();
+        enemyBulletManager_.Add(std::move(pooledBullet));
+        enemyBulletManager_.Update({}, { 0.0f, 0.0f, 1.0f });
+        auto reusedBullet = enemyBulletManager_.AcquireNormalBullet(enemyBulletModel_);
+        const Vector3 scale = reusedBullet->GetObject3d()->GetScale();
+        if (reusedBullet.get() != originalBullet || !reusedBullet->IsAlive() ||
+            reusedBullet->GetDamage() != 1 || reusedBullet->GetCollisionRadius() != 1.5f ||
+            !reusedBullet->IsFogEnabled() || std::abs(scale.x - 0.3f) > 0.0001f ||
+            std::abs(scale.y - 0.3f) > 0.0001f || std::abs(scale.z - 0.3f) > 0.0001f) {
+            throw std::runtime_error("Normal enemy bullet pool reuse verification failed");
+        }
+        Logger::Log("[CoilPerformance] PASS: normal bullet recycled and reset");
+        railDistance_ = stageSettings_.bossSpawnDistance;
+        const Vector3 position = GetRailPosition(railDistance_);
+        player_->SetRailFrame(position, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 });
+        player_->SetTranslate(position);
+        Logger::Log("[CoilPerformance] verification started near boss");
+    }
     isDashVerification_ = stageId_ == "stage01" &&
         std::wstring(GetCommandLineW()).find(L"--verify-dash-enemy") != std::wstring::npos;
     if (isDashVerification_) {
@@ -3817,9 +3844,12 @@ void GamePlayScene::CheckCollision(const Vector3& previousPlayerPosition)
             scoreHudValueText_->SetText(std::to_string(score_));
             scoreHudValueText_->Update();
         }
+        const BaseBoss* activeBoss = GetActiveBoss();
+        const bool enemyBulletsCollideWithObstacles = activeBoss == nullptr || activeBoss->IsDead();
         const GameplayCollisionEvents combatEvents =
             gameplayCollisionSystem_->UpdateCombatCollisions(
-                *player_, enemies_, enemyBulletManager_.GetBullets(), levelObjects_, &previousPlayerPosition);
+                *player_, enemies_, enemyBulletManager_.GetBullets(), levelObjects_, &previousPlayerPosition,
+                enemyBulletsCollideWithObstacles);
         if (combatEvents.paintBulletHitPlayer) {
             StartPaintHitEffect();
         }

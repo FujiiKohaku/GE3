@@ -77,8 +77,7 @@ void AnemoneEnemy::Attack()
     const auto directions = AnemoneShotPattern::CalculateDirections(muzzle, player_->GetTranslate(),
         player_->GetAutomaticWorldVelocity());
     for (size_t index = 0; index < directions.size(); ++index) {
-        auto bullet = std::make_unique<NormalEnemyBullet>();
-        bullet->Initialize(bulletModel_);
+        auto bullet = AcquireNormalBullet(bulletModel_);
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(directions[index] * AnemoneShotPattern::kBulletSpeed);
         bullet->SetColor({ 1.0f, 0.4f, 0.08f, 1.0f });

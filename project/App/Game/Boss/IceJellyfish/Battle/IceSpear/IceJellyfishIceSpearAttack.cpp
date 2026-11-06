@@ -111,8 +111,7 @@ void IceJellyfishIceSpearAttack::FireVolley(IceJellyfish& boss, const PendingVol
                     0.0f });
             }
 
-            auto bullet = std::make_unique<NormalEnemyBullet>();
-            bullet->Initialize(boss.GetAttackBulletModel());
+            auto bullet = boss.AcquireNormalBullet(boss.GetAttackBulletModel());
             bullet->SetTranslate(muzzle);
             bullet->SetVelocity(direction * speed);
             bullet->SetColor(kBulletColor);

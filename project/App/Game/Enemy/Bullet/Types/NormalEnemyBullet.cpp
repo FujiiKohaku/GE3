@@ -20,3 +20,18 @@ void NormalEnemyBullet::Initialize(Model* model)
     SetCastShadow(false);
     SetColor({ 1.0f, 0.0f, 0.0f, 1.0f });
 }
+
+void NormalEnemyBullet::ResetForReuse(Model* model)
+{
+    BaseBullet::ResetForReuse(model);
+    transform_.scale = { 0.3f, 0.3f, 0.3f };
+    SetMaxLifeTime(20.0f);
+    SetCollisionRadius(1.5f);
+    SetEnableLighting(false);
+    SetPixelShaderPath("resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl");
+    SetTransparent(true);
+    SetTransparentDepthWrite(false);
+    SetCastShadow(false);
+    SetColor({ 1.0f, 0.0f, 0.0f, 1.0f });
+    SetTranslate({});
+}

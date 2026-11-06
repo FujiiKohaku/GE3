@@ -3,12 +3,26 @@
 
 #include <algorithm>
 #include <utility>
+#include <typeinfo>
 
 namespace {
 bool IsDeadBullet(const std::unique_ptr<EnemyBullet>& bullet)
 {
     return !bullet->IsAlive();
 }
+}
+
+std::unique_ptr<NormalEnemyBullet> EnemyBulletManager::AcquireNormalBullet(Model* model)
+{
+    if (availableNormalBullets_.empty()) {
+        auto bullet = std::make_unique<NormalEnemyBullet>();
+        bullet->Initialize(model);
+        return bullet;
+    }
+    auto bullet = std::move(availableNormalBullets_.back());
+    availableNormalBullets_.pop_back();
+    bullet->ResetForReuse(model);
+    return bullet;
 }
 
 // 敵弾を霧の影響から除外する設定を保持する。
@@ -40,7 +54,12 @@ void EnemyBulletManager::Update(const Vector3& playerPosition, const Vector3& pl
             bullet->SetDead();
         }
     }
-    std::erase_if(bullets_, IsDeadBullet);
+    for (auto& bullet : bullets_) {
+        if (!bullet->IsAlive() && typeid(*bullet) == typeid(NormalEnemyBullet)) {
+            availableNormalBullets_.emplace_back(static_cast<NormalEnemyBullet*>(bullet.release()));
+        }
+    }
+    std::erase_if(bullets_, [](const auto& bullet) { return !bullet || IsDeadBullet(bullet); });
 }
 
 // 管理中の敵弾を順に描画する。
@@ -61,4 +80,5 @@ const std::vector<std::unique_ptr<EnemyBullet>>& EnemyBulletManager::GetBullets(
 void EnemyBulletManager::Clear()
 {
     bullets_.clear();
+    availableNormalBullets_.clear();
 }

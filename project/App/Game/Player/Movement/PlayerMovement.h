@@ -9,6 +9,7 @@ class PlayerMovement {
 public:
     void SetCamera(const Camera* camera) { camera_ = camera; }
     const Vector3& GetRailOffset() const { return railOffset_; }
+    const Vector3& GetRailBasePosition() const { return railBasePosition_; }
     const Vector3& GetFlightForward() const { return railForward_; }
     bool IsAllRangeMode() const { return isAllRangeMode_; }
     bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }

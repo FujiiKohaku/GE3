@@ -1,5 +1,7 @@
 #pragma once
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
+#include "App/Game/Player/Player.h"
+#include "Engine/Camera/Camera.h"
 #include <array>
 #include <cmath>
 
@@ -14,7 +16,7 @@ inline bool RunFearWormMovementTests()
     using FearWormMovementContext = FearWormEnemy::FearWormMovementContext;
     FearWormMovementContext context { {10.0f, 20.0f, 30.0f}, 0.0f, 100.0f };
     const std::array<Vector3, 6> expected {{
-        {26, 27, 130}, {17, 50, 130}, {10, 27, 132.5f}, {10, 28, 132}, {30, 20, 205}, {10, 27, 180}
+        {26, 27, 130}, {17, 35, 130}, {10, 27, 132.5f}, {10, 28, 132}, {30, 35, 205}, {10, 27, 180}
     }};
     for (int i = 0; i < 6; ++i) {
         const Vector3 target = FearWormEnemy::CalculateFearWormTarget(static_cast<FearWormMovementType>(i), context);
@@ -23,18 +25,18 @@ inline bool RunFearWormMovementTests()
     Vector3 target = FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Spiral, context, 7.0f);
     if (!IsFearWormValueClose(target.x, 35.0f) || !IsFearWormValueClose(target.y, 27.0f)) return false;
     context.playerPosition.y = -100.0f;
-    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Spiral, context).y != 1.5f) return false;
-    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Line, context).y != 20.0f) return false;
+    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Spiral, context).y != -93.0f) return false;
+    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Line, context).y != -85.0f) return false;
     context.playerPosition.y = 100.0f;
-    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Line, context).y != 20.0f) return false;
+    if (FearWormEnemy::CalculateFearWormTarget(FearWormMovementType::Line, context).y != 115.0f) return false;
     // 分離前の計算結果を固定値で検証する。角度0だけでは見落とす周波数・位相も対象。
     const FearWormMovementContext angledContext { { 10.0f, 20.0f, 30.0f }, 0.7f, 100.0f };
     const std::array<Vector3, 6> angledExpected {{
         { 24.2083745f, 31.5095238f, 131.5935586f },
-        { 9.4810508f, 50.0000000f, 136.9807372f },
+        { 9.4810508f, 35.0000000f, 136.9807372f },
         { 20.5364601f, 35.5453705f, 131.4643572f },
         { 13.5156985f, 30.5222894f, 131.8787454f },
-        { 30.0000000f, 20.0000000f, 205.0000000f },
+        { 30.0000000f, 35.0000000f, 205.0000000f },
         { 14.5294719f, 38.6504886f, 180.0000000f }
     }};
     const std::array<float, 6> actionElapsedSeconds { 0.0f, 2.0f, 0.0f, 0.0f, 0.0f, 4.5f };
@@ -67,6 +69,33 @@ inline bool RunFearWormMovementTests()
         return false;
     }
     FearWormEnemy boss;
+    // 機体やカメラの上下移動では軌道が変わらず、レール高さには追従する。
+    Player player;
+    Camera camera;
+    player.SetCamera(&camera);
+    player.SetTranslate({ 12.0f, 30.0f, 100.0f });
+    player.SetRailFrame({ 0.0f, -20.0f, 100.0f }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 });
+    boss.player_ = &player;
+    const auto baseContext = boss.battleState_.CreateMovementContext(boss, player.GetTranslate());
+    std::array<Vector3, 6> initialTargets {};
+    for (int i = 0; i < 6; ++i) {
+        initialTargets[i] = FearWormEnemy::CalculateFearWormTarget(static_cast<FearWormMovementType>(i), baseContext);
+    }
+    player.SetTranslate({ -15.0f, -50.0f, 100.0f });
+    player.SetRailFrame({ 0.0f, -20.0f, 100.0f }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 });
+    camera.SetRotate({ -0.5f, 0.0f, 0.0f });
+    const auto movedContext = boss.battleState_.CreateMovementContext(boss, player.GetTranslate());
+    for (int i = 0; i < 6; ++i) {
+        const auto type = static_cast<FearWormMovementType>(i);
+        if (Vector3LengthSquared(FearWormEnemy::CalculateFearWormTarget(type, movedContext) - initialTargets[i]) > 0.000001f) return false;
+    }
+    player.SetRailFrame({ 0.0f, -85.0f, 100.0f }, { 1, 0, 0 }, { 0, 1, 0 }, { 0, 0, 1 });
+    const auto lowerContext = boss.battleState_.CreateMovementContext(boss, player.GetTranslate());
+    for (int i = 0; i < 6; ++i) {
+        const auto type = static_cast<FearWormMovementType>(i);
+        const Vector3 difference = FearWormEnemy::CalculateFearWormTarget(type, lowerContext) - initialTargets[i];
+        if (Vector3LengthSquared(difference - Vector3 { 0.0f, -65.0f, 0.0f }) > 0.000001f) return false;
+    }
     // 整列への補間はクラスではなく、実際の胴体更新を通して確認する。
     boss.segments_.resize(2);
     boss.segments_[0].position = {0.0f, 0.0f, 0.0f};

@@ -42,8 +42,7 @@ void IceJellyfishPulseBarrageAttack::FireRing(IceJellyfish& boss,
     int ringCount = count;
 
     if (includeCenter) {
-        auto centerBullet = std::make_unique<NormalEnemyBullet>();
-        centerBullet->Initialize(boss.GetAttackBulletModel());
+        auto centerBullet = boss.AcquireNormalBullet(boss.GetAttackBulletModel());
         centerBullet->SetTranslate(muzzle);
         centerBullet->SetVelocity(targetDirection * speed);
         centerBullet->SetColor(kBulletColor);
@@ -60,8 +59,7 @@ void IceJellyfishPulseBarrageAttack::FireRing(IceJellyfish& boss,
             std::cos(angle) * spread,
             std::sin(angle) * spread,
             0.0f });
-        auto bullet = std::make_unique<NormalEnemyBullet>();
-        bullet->Initialize(boss.GetAttackBulletModel());
+        auto bullet = boss.AcquireNormalBullet(boss.GetAttackBulletModel());
         bullet->SetTranslate(muzzle);
         bullet->SetVelocity(direction * speed);
         bullet->SetColor(kBulletColor);

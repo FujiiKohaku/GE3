@@ -6,6 +6,7 @@
 #include "Engine/math/MathStruct.h"
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "Movement/PlayerMovement.h"
+#include "Aim/PlayerAimController.h"
 #include "Input/PlayerInput.h"
 #include "States/Entry/PlayerEntryState.h"
 #include "States/Battle/PlayerBattleState.h"
@@ -61,6 +62,8 @@ public:
     void ApplyRailAreaForce(const Vector3& force);
     // 使用クラス：GamePlayScene。レール基準位置からの左右・上下の移動量を返す。
     const Vector3& GetRailOffset() const { return movement_.GetRailOffset(); }
+    // 操作による移動量を含まない、現在のレール基準位置。
+    const Vector3& GetRailBasePosition() const { return movement_.GetRailBasePosition(); }
     void SetRailMinimumHeight(float height) { movement_.SetRailMinimumHeight(height); }
     void SetRailHeightRange(const RailHeightRange& range) { movement_.SetRailHeightRange(range); }
     // 敵の照準などに使う前進速度を返す。死亡時は0、レール飛行では通常速度を使う。
@@ -94,7 +97,7 @@ public:
     const Vector2& GetStarFoxSteeringInput() const { return movement_.GetSteeringInput(); }
 
     // GamePlaySceneのレティクルとオーバーヒートゲージの配置に使う照準位置を返す。
-    const Vector2& GetAimScreenPosition() const { return aimScreenPosition_; }
+    const Vector2& GetAimScreenPosition() const { return aimController_.GetAimScreenPosition(); }
     // 操縦・射撃の前と、描画用カメラ更新後にパッド照準の距離を補正する。
     void ConstrainGamepadAimToPlayer();
     // 外部から現在の武器の発射を要求する。死亡・過熱・クールダウン中は発射されない。
@@ -160,20 +163,17 @@ private:
     PlayerBattleState battleState_;
     PlayerDeadState deadState_;
 
-    // 照準。
-    void InitializeAim();
-    void UpdateMouseAim();
-    // スティック入力を照準の移動量に変換し、入力を離したら少しずつ中央へ戻す。
-    void UpdateGamepadAim(float stickX, float stickY, bool isPitchInverted, float deltaTimeSeconds, float sensitivity = 1.0f);
-    void ClampAimScreenPosition();
-    // 画面上の機体から照準が離れすぎないように制限し、入力の内部位置も揃える。
-    void ClampGamepadAimToPlayer(const Vector2& playerScreenPosition);
-    // 機体からの照準のずれを、操舵処理が使う画面座標へ変換する。
-    Vector2 GetGamepadSteeringScreenPosition() const;
-    void CreateAimRay(Ray& aimRay, const Camera& activeCamera) const;
-    Vector3 CreateConvergencePoint(const Ray& aimRay) const;
-    void UpdateSmoothedAimDistance(const Camera& activeCamera, float deltaTimeSeconds);
-    Vector3 ResolveAimPoint(const Ray& aimRay) const;
+    // 照準の計算は専用クラスに委譲する。
+    void InitializeAim() { aimController_.InitializeAim(); }
+    void UpdateMouseAim() { aimController_.UpdateMouseAim(); }
+    void UpdateGamepadAim(float x, float y, bool inverted, float dt, float sensitivity = 1.0f) { aimController_.UpdateGamepadAim(x, y, inverted, dt, sensitivity); }
+    void ClampAimScreenPosition() { aimController_.ClampAimScreenPosition(); }
+    void ClampGamepadAimToPlayer(const Vector2& position) { aimController_.ClampGamepadAimToPlayer(position); }
+    Vector2 GetGamepadSteeringScreenPosition() const { return aimController_.GetGamepadSteeringScreenPosition(); }
+    void CreateAimRay(Ray& ray, const Camera& camera) const { aimController_.CreateAimRay(ray, camera); }
+    Vector3 CreateConvergencePoint(const Ray& ray) const { return aimController_.CreateConvergencePoint(ray); }
+    void UpdateSmoothedAimDistance(const Camera& camera, float dt) { aimController_.UpdateSmoothedAimDistance(camera, dt); }
+    Vector3 ResolveAimPoint(const Ray& ray) const { return aimController_.ResolveAimPoint(ray); }
 
     // 入力方式はパッドを優先し、その他は設定された操作方式を使う。
     using ControlInputType = PlayerInput::ControlInputType;
@@ -225,14 +225,7 @@ private:
     // 死亡状態と被弾中の点滅を調べ、今のフレームで機体を描画するかを返す。
     bool ShouldDraw() const;
 
-    static constexpr float kGamepadMaxAimDistanceRatio = 0.40f;
-    const float kAimConvergenceDistance = 220.0f;
-    const float kAimDistanceFollowSpeed = 12.0f;
-    Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
-    Vector2 gamepadAimOffset_ = {};
-    Vector2 gamepadAimAnchor_ = {};
-    bool hasGamepadAimAnchor_ = false;
-    float smoothedAimDistance_ = kAimConvergenceDistance;
+    PlayerAimController aimController_;
 
     int maxHp_ = 20;
     int currentHp_ = maxHp_;
