@@ -6,6 +6,93 @@
 #include "Engine/Logger/Logger.h"
 
 namespace {
+float ReadEnemyNumber(const nlohmann::json& settingsJson, const char* name,
+    float defaultValue, float minimum, float maximum, const char* enemyName)
+{
+    if (!settingsJson.contains(name)) { return defaultValue; }
+    const nlohmann::json& valueJson = settingsJson[name];
+    if (valueJson.is_number()) {
+        const double value = valueJson.get<double>();
+        if (std::isfinite(value) && value >= minimum && value <= maximum) {
+            return static_cast<float>(value);
+        }
+    }
+    Logger::Warning(std::string("Invalid ") + enemyName + " " + name + "; using default");
+    return defaultValue;
+}
+
+float ReadPaceEnemyNumber(const nlohmann::json& settingsJson, const char* name,
+    float defaultValue, float minimum, float maximum)
+{
+    return ReadEnemyNumber(settingsJson, name, defaultValue, minimum, maximum, "PaceEnemy");
+}
+
+LevelData::StrafeEnemySpawnData ReadStrafeEnemySettings(const nlohmann::json& objectJson)
+{
+    LevelData::StrafeEnemySpawnData settings;
+    if (!objectJson.contains("strafeEnemy")) { return settings; }
+    const nlohmann::json& settingsJson = objectJson["strafeEnemy"];
+    if (!settingsJson.is_object()) { Logger::Warning("Invalid strafeEnemy settings; using defaults"); return settings; }
+    if (settingsJson.contains("entrySide")) {
+        const nlohmann::json& sideJson = settingsJson["entrySide"];
+        if (sideJson.is_string() && sideJson.get<std::string>() == "left") { settings.isEnteringFromLeft = true; }
+        else if (!sideJson.is_string() || sideJson.get<std::string>() != "right") {
+            Logger::Warning("Invalid StrafeEnemy entrySide; using right");
+        }
+    }
+    settings.activationDistance = ReadEnemyNumber(settingsJson, "activationDistance", settings.activationDistance, 10.0f, 500.0f, "StrafeEnemy");
+    settings.durationSeconds = ReadEnemyNumber(settingsJson, "durationSeconds", settings.durationSeconds, 1.0f, 20.0f, "StrafeEnemy");
+    settings.forwardOffset = ReadEnemyNumber(settingsJson, "forwardOffset", settings.forwardOffset, 10.0f, 150.0f, "StrafeEnemy");
+    settings.offsetX = ReadEnemyNumber(settingsJson, "offsetX", settings.offsetX, -80.0f, 80.0f, "StrafeEnemy");
+    settings.offsetY = ReadEnemyNumber(settingsJson, "offsetY", settings.offsetY, -80.0f, 80.0f, "StrafeEnemy");
+    settings.sideDistance = ReadEnemyNumber(settingsJson, "sideDistance", settings.sideDistance, 40.0f, 200.0f, "StrafeEnemy");
+    settings.fireStartProgress = ReadEnemyNumber(settingsJson, "fireStartProgress", settings.fireStartProgress, 0.0f, 0.9f, "StrafeEnemy");
+    settings.fireEndProgress = ReadEnemyNumber(settingsJson, "fireEndProgress", settings.fireEndProgress, 0.0f, 0.9f, "StrafeEnemy");
+    if (settingsJson.contains("shotCount")) {
+        const nlohmann::json& countJson = settingsJson["shotCount"];
+        if (countJson.is_number_integer() && countJson.get<double>() >= 1.0 && countJson.get<double>() <= 8.0) {
+            settings.shotCount = countJson.get<int>();
+        } else { Logger::Warning("Invalid StrafeEnemy shotCount; using 3"); }
+    }
+    if (settings.fireEndProgress < settings.fireStartProgress ||
+        (settings.shotCount > 1 && settings.fireEndProgress == settings.fireStartProgress)) {
+        Logger::Warning("Invalid StrafeEnemy firing window; using 0.25..0.75");
+        settings.fireStartProgress = 0.25f;
+        settings.fireEndProgress = 0.75f;
+    }
+    return settings;
+}
+
+LevelData::PaceEnemySpawnData ReadPaceEnemySettings(const nlohmann::json& objectJson)
+{
+    LevelData::PaceEnemySpawnData settings;
+    if (!objectJson.contains("paceEnemy")) { return settings; }
+    const nlohmann::json& settingsJson = objectJson["paceEnemy"];
+    if (!settingsJson.is_object()) {
+        Logger::Warning("Invalid paceEnemy settings; using defaults");
+        return settings;
+    }
+    if (settingsJson.contains("entrySide")) {
+        const nlohmann::json& sideJson = settingsJson["entrySide"];
+        if (sideJson.is_string() && sideJson.get<std::string>() == "left") {
+            settings.isEnteringFromLeft = true;
+        } else if (!sideJson.is_string() || sideJson.get<std::string>() != "right") {
+            Logger::Warning("Invalid PaceEnemy entrySide; using right");
+        }
+    }
+    settings.activationDistance = ReadPaceEnemyNumber(settingsJson, "activationDistance", settings.activationDistance, 10.0f, 500.0f);
+    settings.entryDurationSeconds = ReadPaceEnemyNumber(settingsJson, "entryDurationSeconds", settings.entryDurationSeconds, 0.1f, 30.0f);
+    settings.holdDurationSeconds = ReadPaceEnemyNumber(settingsJson, "holdDurationSeconds", settings.holdDurationSeconds, 0.0f, 120.0f);
+    settings.exitDurationSeconds = ReadPaceEnemyNumber(settingsJson, "exitDurationSeconds", settings.exitDurationSeconds, 0.1f, 30.0f);
+    settings.forwardOffset = ReadPaceEnemyNumber(settingsJson, "forwardOffset", settings.forwardOffset, 10.0f, 150.0f);
+    settings.offsetX = ReadPaceEnemyNumber(settingsJson, "offsetX", settings.offsetX, -80.0f, 80.0f);
+    settings.offsetY = ReadPaceEnemyNumber(settingsJson, "offsetY", settings.offsetY, -80.0f, 80.0f);
+    settings.swayAmplitude = ReadPaceEnemyNumber(settingsJson, "swayAmplitude", settings.swayAmplitude, 0.0f, 40.0f);
+    settings.swayPeriodSeconds = ReadPaceEnemyNumber(settingsJson, "swayPeriodSeconds", settings.swayPeriodSeconds, 0.1f, 60.0f);
+    settings.sideTravelDistance = ReadPaceEnemyNumber(settingsJson, "sideTravelDistance", settings.sideTravelDistance, 40.0f, 500.0f);
+    return settings;
+}
+
 LevelData::LoopEnemySpawnData ReadLoopEnemySettings(const nlohmann::json& objectJson)
 {
     LevelData::LoopEnemySpawnData settings;
@@ -105,10 +192,18 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     std::string typeStr = objectJson["type"].get<std::string>();
     int enemyLevel = 2;
     LevelData::LoopEnemySpawnData loopEnemySettings;
+    LevelData::PaceEnemySpawnData paceEnemySettings;
+    LevelData::StrafeEnemySpawnData strafeEnemySettings;
     if (typeStr == "EnemySpawn") {
         enemyLevel = ReadEnemyLevel(objectJson);
         if (objectJson.value("file_name", std::string()) == "LoopEnemy") {
             loopEnemySettings = ReadLoopEnemySettings(objectJson);
+        }
+        if (objectJson.value("file_name", std::string()) == "PaceEnemy") {
+            paceEnemySettings = ReadPaceEnemySettings(objectJson);
+        }
+        if (objectJson.value("file_name", std::string()) == "StrafeEnemy") {
+            strafeEnemySettings = ReadStrafeEnemySettings(objectJson);
         }
     }
     if (typeStr == "PlayerSpawn") {
@@ -138,6 +233,8 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
         LevelData::EnemySpawnData spawnData {};
         spawnData.enemyLevel = enemyLevel;
         spawnData.loopEnemy = loopEnemySettings;
+        spawnData.paceEnemy = paceEnemySettings;
+        spawnData.strafeEnemy = strafeEnemySettings;
 
         if (objectJson.contains("file_name")) {
             spawnData.fileName = objectJson["file_name"].get<std::string>();
@@ -166,6 +263,8 @@ void LevelDataLoader::LoadObject(const nlohmann::json& objectJson, LevelData& le
     LevelData::ObjectData objectData;
     objectData.enemyLevel = enemyLevel;
     objectData.loopEnemy = loopEnemySettings;
+    objectData.paceEnemy = paceEnemySettings;
+    objectData.strafeEnemy = strafeEnemySettings;
 
     objectData.type = objectJson["type"].get<std::string>();
 

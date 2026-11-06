@@ -13,8 +13,8 @@
   },
   "Particle": {
     "LifeTime": 0.055,
-    "StartScale": 0.1,
-    "EndScale": 0.65,
+    "StartScale": 0.4,
+    "EndScale": 1.2,
     "StartRotation": 0.0,
     "RotationSpeed": 0.0,
     "Velocity": [

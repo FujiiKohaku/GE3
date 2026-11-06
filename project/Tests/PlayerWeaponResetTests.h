@@ -27,8 +27,17 @@ inline bool RunPlayerWeaponResetTests()
     controller.bullets_.push_back(std::make_unique<PlayerWeaponResetBulletProbe>(stopped, destroyed));
     controller.currentWeapon_ = controller.kWeaponHomingMissile;
     controller.shotsFired_ = 100;
-    controller.missileFireCooldownSeconds_ = 0.0f;
-    for (int index = 0; index < 41; ++index) { controller.weaponHeat_.AddShotHeat(); }
+    auto cooldownContext = controller.MakeWeaponContext();
+    cooldownContext.canFire = true;
+    cooldownContext.emit = PlayerWeaponTest::IgnoreTarget;
+    assert(controller.weapons_[controller.kWeaponMissileBullet]->Fire(cooldownContext));
+    assert(controller.weapons_[controller.kWeaponHomingMissile]->Fire(cooldownContext));
+    assert(controller.weapons_[controller.kWeaponMissileBullet]->GetReloadRatio() == 0.0f);
+    assert(controller.weapons_[controller.kWeaponHomingMissile]->GetReloadRatio() == 0.0f);
+    constexpr int kMaxShots = 1000;
+    for (int index = 0; index < kMaxShots && controller.GetHeatRatio() < 1.0f; ++index) {
+        controller.weaponHeat_.AddShotHeat();
+    }
     controller.weaponHeat_.Update(1.0f, true);
     assert(controller.IsOverheated());
     controller.homingLock_.SetTargets({ nullptr });
@@ -52,7 +61,8 @@ inline bool RunPlayerWeaponResetTests()
     assert(std::strcmp(controller.weapons_[1]->GetName(), "ミサイル") == 0);
     assert(std::strcmp(controller.weapons_[2]->GetName(), "ホーミングミサイル") == 0);
     assert(controller.GetHeatRatio() == 0.0f && !controller.IsOverheated());
-    assert(controller.missileFireCooldownSeconds_ == controller.kMissileFireIntervalSeconds);
+    assert(controller.weapons_[controller.kWeaponMissileBullet]->GetReloadRatio() == 1.0f);
+    assert(controller.weapons_[controller.kWeaponHomingMissile]->GetReloadRatio() == 1.0f);
     assert(controller.camera_ == &camera && sharedTargets->empty());
     assert(!controller.homingLock_.UpdateFireInput(false, true, &camera, {}, {}, {}));
     auto resetContext = controller.MakeWeaponContext();

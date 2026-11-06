@@ -1,0 +1,12 @@
+
+  [2026-11-05 12:35:12] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-05 12:35:12] [Log] Shader build completed. Compiled: 0, Up-to-date: 572
+  GameplayCollisionTests.cpp
+  コード生成しています。
+  2015 of 8177 functions (24.6%) were compiled, the rest were copied from previous compilation.
+    73 functions were new in current compilation
+    138 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  GameplayCollisionTests.vcxproj -> C:\Projects\KohakuEngine\project\..\generated\outputs\Release\GameplayCollisionTests.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

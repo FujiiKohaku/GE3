@@ -1309,4 +1309,55 @@
       <Filter>App\Game\Enemy\LoopEnemy</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Enemy\PaceEnemy" />
+    <ClCompile Include="App\Game\Enemy\PaceEnemy\PaceEnemy.cpp">
+      <Filter>App\Game\Enemy\PaceEnemy</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Enemy\PaceEnemy\PaceEnemy.h">
+      <Filter>App\Game\Enemy\PaceEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\PaceEnemy\PaceEnemyPath.h">
+      <Filter>App\Game\Enemy\PaceEnemy</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Enemy\TurretEnemy" />
+    <ClCompile Include="App\Game\Enemy\TurretEnemy\TurretEnemy.cpp">
+      <Filter>App\Game\Enemy\TurretEnemy</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Enemy\TurretEnemy\TurretEnemy.h">
+      <Filter>App\Game\Enemy\TurretEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\TurretEnemy\TurretEnemyAim.h">
+      <Filter>App\Game\Enemy\TurretEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\TurretEnemy\TurretShotFeedback.h">
+      <Filter>App\Game\Enemy\TurretEnemy</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App\Game\Enemy\Bullet\Types\TurretEnemyBullet.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Enemy\Bullet\Types\TurretEnemyBullet.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="App\Game\Enemy\StrafeEnemy" />
+    <ClCompile Include="App\Game\Enemy\StrafeEnemy\StrafeEnemy.cpp">
+      <Filter>App\Game\Enemy\StrafeEnemy</Filter>
+    </ClCompile>
+    <ClInclude Include="App\Game\Enemy\StrafeEnemy\StrafeEnemy.h">
+      <Filter>App\Game\Enemy\StrafeEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\StrafeEnemy\StrafeEnemyPath.h">
+      <Filter>App\Game\Enemy\StrafeEnemy</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App\Game\Hazard\ElectricGate.cpp" />
+    <ClInclude Include="App\Game\Hazard\ElectricGate.h" />
+  </ItemGroup>
 </Project>

@@ -24,7 +24,7 @@ public:
     bool IsCompact() const { return false; }
     // 成功表示中の項目も完了数に含め、全項目数を超えない値を返す。
     int GetCompletedCount() const;
-    static constexpr int kStepCount = 13;
+    static constexpr int kStepCount = 8;
     // 標的練習中はレール進行を止め、それ以外でも次のチェックポイントを越えないようにする。
     float LimitRailDistance(float distance) const;
     std::string GetTitle() const;
@@ -36,7 +36,7 @@ public:
 
 private:
     friend struct TutorialTestAccess;
-    enum class StepType { Move, DefeatTargets, Heat, Boost, Brake, Bank, Roll, WeaponPractice, Pause };
+    enum class StepType { Move, DefeatTargets, Heat, Boost, Brake, WeaponPractice, Pause };
     struct StepData {
         StepType type;
         std::string title;
@@ -57,11 +57,8 @@ private:
         bool isPitchInverted = false;
         float moveX = 0.0f;
         float moveY = 0.0f;
-        bool isSpaceTriggered = false;
         bool isBoosting = false;
         float speedMultiplier = 1.0f;
-        float bank = 0.0f;
-        bool isRolling = false;
         float heat = 0.0f;
         bool isOverheated = false;
         std::string weapon;
@@ -82,8 +79,6 @@ private:
     void UpdateMoveStep(const StepInput& input, float deltaTimeSeconds);
     // 押し続けた時間を数える。途中で離した場合は連続時間を数え直す。
     void UpdateHoldStep(bool isHeld, float deltaTimeSeconds);
-    // 左右それぞれのバンク長押しを記録する。キーボードではSPACEによる省略を認める。
-    void UpdateBankStep(const StepInput& input, float deltaTimeSeconds);
     // 進捗や入力機器に合わせて、現在行う操作を説明する文章を作る。
     std::string GetStepOperation(const StepInput& input) const;
     // 発熱後の案内変更を含め、現在の項目に表示するボタン一覧を返す。
@@ -97,10 +92,7 @@ private:
     float successTimeSeconds_ = 0.0f;
     std::array<float, 4> directionTimeSeconds_ {};
     unsigned completedDirections_ = 0;
-    std::array<float, 2> bankTimeSeconds_ {};
-    unsigned completedBankDirections_ = 0;
     float holdTimeSeconds_ = 0.0f;
     bool hasHeatRaised_ = false;
-    bool wasRolling_ = false;
     bool hasPauseOpened_ = false;
 };

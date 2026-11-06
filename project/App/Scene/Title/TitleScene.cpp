@@ -1359,9 +1359,14 @@ void TitleScene::UpdateInterface(float deltaTime)
     settingsBackText_->SetText(pad ? "B  BACK" : "BACKSPACE / S  BACK");
     stageControlsText_->SetText(pad ? "D-PAD  SELECT     A  DEPLOY     B  OVERVIEW" :
         "A / D  SELECT     SPACE  DEPLOY     BACKSPACE  OVERVIEW");
-    settingsItemsText_->SetText(pad ? std::string("PAD PITCH: ") +
-        (input->IsGamepadPitchInverted() ? "INVERTED" : "NORMAL") + " [A / D-PAD]\n\nLS AIM / A,RT FIRE\n\nX BOOST / Y BRAKE\n\nLB,RB TILT / DOUBLE TAP ROLL" :
-        "DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
+    if (pad) {
+        std::string pitchLabel = "NORMAL";
+        if (input->IsGamepadPitchInverted()) { pitchLabel = "INVERTED"; }
+        settingsItemsText_->SetText("PAD PITCH: " + pitchLabel
+            + " [A / D-PAD]\n\nLS AIM / A,RT FIRE\n\nX BOOST / Y BRAKE");
+    } else {
+        settingsItemsText_->SetText("DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
+    }
     (void)deltaTime;
     float stageAmount = 0.0f;
     float stageTitleExit = 0.0f;

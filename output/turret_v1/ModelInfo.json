@@ -1,0 +1,22 @@
+{
+  "triangles": 1440,
+  "parts": [
+    "TurretBase",
+    "TurretYaw",
+    "TurretBarrel"
+  ],
+  "muzzle": "MuzzlePoint",
+  "blenderForward": "-Y",
+  "objForward": "+Z",
+  "objUp": "+Y",
+  "yawPivotBlender": [
+    0,
+    0,
+    0.62
+  ],
+  "pitchPivotRelativeToYawBlender": [
+    0,
+    0,
+    0.5
+  ]
+}

@@ -42,16 +42,6 @@ Vector2 PlayerInput::ReadKeyboardSteering(const Input& input)
     return steering;
 }
 
-PlayerInput::MovementInput PlayerInput::ReadMovement(const Input& input)
-{
-    MovementInput movementInput;
-    if (input.IsGamepadButtonPressed(XINPUT_GAMEPAD_LEFT_SHOULDER)) { movementInput.manualBank += 0.9f; }
-    if (input.IsGamepadButtonPressed(XINPUT_GAMEPAD_RIGHT_SHOULDER)) { movementInput.manualBank -= 0.9f; }
-    movementInput.isLeftRollTriggered = input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER);
-    movementInput.isRightRollTriggered = input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER);
-    return movementInput;
-}
-
 PlayerInput::BoostInput PlayerInput::ReadBoost(const Input& input, bool isEnabled)
 {
     BoostInput boostInput;

@@ -5,6 +5,9 @@
 #include "Engine/audio/SoundManager.h"
 #include <algorithm>
 #include <cmath>
+#include <format>
+#include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
+#include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
 
 // 先頭の項目へ戻し、プレイヤーの現在状態を使って訓練を開始する。
 void TutorialController::Initialize(const Player& player)
@@ -28,7 +31,6 @@ void TutorialController::EnterStep(const Player& player)
     currentWeapon_ = player.GetCurrentWeaponDisplayName();
     StepInput initial;
     initial.weapon = currentWeapon_;
-    initial.isRolling = player.IsRolling();
     ResetStep(initial);
 }
 
@@ -38,11 +40,8 @@ void TutorialController::ResetStep(const StepInput& input)
     hasAchievedStep_ = false;
     directionTimeSeconds_.fill(0.0f);
     completedDirections_ = 0;
-    bankTimeSeconds_.fill(0.0f);
-    completedBankDirections_ = 0;
     holdTimeSeconds_ = 0.0f;
     hasHeatRaised_ = false;
-    wasRolling_ = input.isRolling;
     hasPauseOpened_ = false;
 }
 
@@ -60,11 +59,8 @@ TutorialController::StepInput TutorialController::ReadStepInput(const Input& inp
         state.moveX = static_cast<float>(input.GetMouseDeltaX());
         state.moveY = -static_cast<float>(input.GetMouseDeltaY());
     }
-    state.isSpaceTriggered = input.IsKeyTrigger(DIK_SPACE);
     state.isBoosting = player.IsBoosting();
     state.speedMultiplier = player.GetForwardSpeedMultiplier();
-    state.bank = player.GetManualBank();
-    state.isRolling = player.IsRolling();
     state.heat = player.GetHeatRatio();
     state.isOverheated = player.IsOverheated();
     state.weapon = player.GetCurrentWeaponDisplayName();
@@ -138,17 +134,6 @@ void TutorialController::UpdateStep(const StepInput& input, float deltaTimeSecon
     case StepType::Brake:
         UpdateHoldStep(input.speedMultiplier < 0.99f, deltaTimeSeconds);
         break;
-    case StepType::Bank:
-        UpdateBankStep(input, deltaTimeSeconds);
-        break;
-    case StepType::Roll:
-        if (input.isGamepadConnected) {
-            hasAchievedStep_ = hasAchievedStep_ || (input.isRolling && !wasRolling_);
-        } else {
-            hasAchievedStep_ = hasAchievedStep_ || input.isSpaceTriggered;
-        }
-        wasRolling_ = input.isRolling;
-        break;
     case StepType::Pause:
         hasAchievedStep_ = hasAchievedStep_ || hasPauseOpened_;
         break;
@@ -180,22 +165,6 @@ void TutorialController::UpdateHoldStep(bool isHeld, float deltaTimeSeconds)
     if (isHeld) { holdTimeSeconds_ += deltaTimeSeconds; }
     else { holdTimeSeconds_ = 0.0f; }
     hasAchievedStep_ = hasAchievedStep_ || holdTimeSeconds_ >= 1.5f;
-}
-
-// 左右それぞれのバンク長押しを記録する。キーボードではSPACEによる省略を認める。
-void TutorialController::UpdateBankStep(const StepInput& input, float deltaTimeSeconds)
-{
-    if (!input.isGamepadConnected) {
-        hasAchievedStep_ = hasAchievedStep_ || input.isSpaceTriggered;
-        return;
-    }
-    if (input.bank > 0.5f) { bankTimeSeconds_[0] += deltaTimeSeconds; }
-    else { bankTimeSeconds_[0] = 0.0f; }
-    if (input.bank < -0.5f) { bankTimeSeconds_[1] += deltaTimeSeconds; }
-    else { bankTimeSeconds_[1] = 0.0f; }
-    if (bankTimeSeconds_[0] >= 0.35f) { completedBankDirections_ |= 1; }
-    if (bankTimeSeconds_[1] >= 0.35f) { completedBankDirections_ |= 2; }
-    hasAchievedStep_ = hasAchievedStep_ || completedBankDirections_ == 3;
 }
 
 // ポーズの練習中だけ、手動でポーズを開いた事実を記録する。
@@ -278,13 +247,6 @@ std::string TutorialController::GetStepOperation(const StepInput& input) const
         if (hasHeatRaised_) { return "射撃を離してゲージを冷ます"; }
         if (input.isGamepadConnected) { return "アサルトを選んで射撃を長押し"; }
         return "1でアサルト → 左クリックを長押し";
-    case StepType::Bank: {
-        if (!input.isGamepadConnected) { return "SPACE：次の練習へ"; }
-        int count = 0;
-        if (completedBankDirections_ & 1) { ++count; }
-        if (completedBankDirections_ & 2) { ++count; }
-        return "左右をそれぞれ長押し " + std::to_string(count) + "/2";
-    }
     default:
         if (input.isGamepadConnected) { return step->gamepadOperation; }
         return step->keyboardOperation;
@@ -342,20 +304,21 @@ std::string TutorialController::GetGlyphText()
 // 全項目の設定を一か所にまとめる。説明文や標的数を変更するときはこの表を編集する。
 const std::array<TutorialController::StepData, TutorialController::kStepCount>& TutorialController::GetSteps()
 {
+    static const std::string kMissileInstruction = std::format(
+        "ミサイルは、アサルトより一発の威力が高い武器です。\n着弾時に爆発し、周囲の敵も巻き込みます。\n押すたびに発射し、次の一発まで{:g}秒待ちます。\n熱はたまりません。ミサイルで敵を3体倒しましょう。",
+        MissilePlayerWeapon::kFireIntervalSeconds);
+    static const std::string kHomingInstruction = std::format(
+        "ホーミングミサイルは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n爆発せず、直撃した敵だけにダメージを与えます。\n熱はたまらず、発射間隔は{:g}秒。敵を3体倒しましょう。",
+        HomingPlayerWeapon::kFireIntervalSeconds);
     static const std::array<StepData, kStepCount> steps = {{
         StepData { StepType::Move, "MOVE", "マウスで照準を操作します。\n左右・上下の4方向へ動かしてください。", "左スティックで機体と照準を操作します。\n左右・上下の4方向へ動かしてください。", "", "", { "LS" }, 0, false, "", 180.0f, false },
-        StepData { StepType::DefeatTargets, "FIRE", "マウスで照準を敵に合わせ、左クリックで撃ちます。\n反撃しない敵を3体倒しましょう。長押しでも撃てます。", "照準を敵に合わせ、AまたはRTで撃ちます。\n反撃しない敵を3体倒しましょう。長押しでも撃てます。", "", "", { "A", "RT" }, 3, false, "", 450.0f, false },
+        StepData { StepType::DefeatTargets, "FIRE", "マウスで照準を合わせ、左クリック長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "左スティックで照準を合わせ、AまたはRT長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "", "", { "A", "RT" }, 3, true, "", 450.0f, false },
         StepData { StepType::Heat, "HEAT", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "", "", { "DPAD", "A", "RT" }, 0, false, "", 450.0f, true },
-        StepData { StepType::DefeatTargets, "MOVING TARGET", "今度は、ゆっくり動く敵を3体倒しましょう。\n照準で敵を追いかけて撃ちます。時間制限はありません。", "今度は、ゆっくり動く敵を3体倒しましょう。\n照準で敵を追いかけて撃ちます。時間制限はありません。", "", "", { "A", "RT" }, 3, true, "", 600.0f, false },
         StepData { StepType::Boost, "BOOST", "SHIFTまたは右クリックを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "Xを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "SHIFT / 右クリック 長押し", "長押しで加速", { "X" }, 0, false, "", 750.0f, false },
         StepData { StepType::Brake, "BRAKE", "CTRLを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "Yを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "CTRL 長押し", "長押しで減速", { "Y" }, 0, false, "", 1050.0f, false },
-        StepData { StepType::Bank, "BANK", "機体を傾ける操作は、パッドのLB・RBを使います。\nキーボードでは練習を省略できます。SPACEで次へ進みます。", "LBで左、RBで右へ機体を傾けます。\n片方ずつ少し長押しし、機体の動きを確かめましょう。", "", "", { "LB", "RB" }, 0, false, "", 1350.0f, false },
-        StepData { StepType::Roll, "ROLL", "回転する操作は、パッドのLB・RBの2回押しです。\nキーボードでは練習を省略できます。SPACEで次へ進みます。", "同じLBまたはRBを素早く2回押すと機体が回転します。\nまずボタンを離してから、トントンと2回押しましょう。", "SPACE：次の練習へ", "どちらかを素早く2回押す", { "LB", "RB" }, 0, false, "", 1710.0f, false },
-        StepData { StepType::WeaponPractice, "アサルト", "アサルトは、狙った方向へ高速連射する武器です。\n長押しで連射し、熱が高くなるほど威力が上がります。\nアサルトを選び、敵を3体倒してください。", "アサルトは、狙った方向へ高速連射する武器です。\n長押しで連射し、熱が高くなるほど威力が上がります。\nアサルトを選び、敵を3体倒してください。", "", "", { "DPAD" }, 3, false, "アサルト", 2070.0f, true },
-        StepData { StepType::WeaponPractice, "ミサイル", "ミサイルは、アサルトより一発の威力が高い武器です。\n着弾時に爆発し、周囲の敵も巻き込みます。\n押すたびに発射し、次の一発まで2秒待ちます。\n熱はたまりません。ミサイルで敵を3体倒しましょう。", "ミサイルは、アサルトより一発の威力が高い武器です。\n着弾時に爆発し、周囲の敵も巻き込みます。\n押すたびに発射し、次の一発まで2秒待ちます。\n熱はたまりません。ミサイルで敵を3体倒しましょう。", "", "", { "DPAD" }, 3, false, "ミサイル", 2070.0f, true },
-        StepData { StepType::WeaponPractice, "ホーミングミサイル", "ホーミングミサイルは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n爆発せず、直撃した敵だけにダメージを与えます。\n熱はたまらず、発射間隔は2秒。敵を3体倒しましょう。", "ホーミングミサイルは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n爆発せず、直撃した敵だけにダメージを与えます。\n熱はたまらず、発射間隔は2秒。敵を3体倒しましょう。", "", "", { "DPAD" }, 3, false, "ホーミングミサイル", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "ミサイル", kMissileInstruction, kMissileInstruction, "", "", { "DPAD" }, 3, false, "ミサイル", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "ホーミングミサイル", kHomingInstruction, kHomingInstruction, "", "", { "DPAD" }, 3, false, "ホーミングミサイル", 2070.0f, true },
         StepData { StepType::Pause, "PAUSE", "TABでポーズし、設定を確認できます。\nTABまたはESCで訓練へ戻ってください。", "STARTでポーズし、設定を確認できます。\nSTARTまたはBで訓練へ戻れます。", "TAB → 設定 / ESCで戻る", "メニューでポーズ・もう一度押して戻る", { "MENU" }, 0, false, "", 2400.0f, false },
-        StepData { StepType::DefeatTargets, "PRACTICE", "最後は、動く敵を5体倒す練習です。\n移動と射撃を組み合わせましょう。敵は反撃しません。", "最後は、動く敵を5体倒す練習です。\n移動と射撃を組み合わせましょう。敵は反撃しません。", "", "", { "A", "RT" }, 5, true, "", 2600.0f, false }
     }};
     return steps;
 }

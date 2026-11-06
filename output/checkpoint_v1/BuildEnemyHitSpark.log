@@ -1,0 +1,18 @@
+
+  imgui.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\imgui.lib
+  DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\DirectXTex.lib
+  [2026-11-04 17:58:07] [Log] Shader compile queue started. Pending: 4, Max parallel: 12
+  [2026-11-04 17:58:07] [Log] Compiling Effects\EnemyHitSpark\Emit.CS.hlsl -> Effects\EnemyHitSpark\Emit.CS.dxil (cs_6_0)
+  [2026-11-04 17:58:07] [Log] Compiling Effects\EnemyHitSpark\Render.PS.hlsl -> Effects\EnemyHitSpark\Render.PS.dxil (ps_6_0)
+  [2026-11-04 17:58:07] [Log] Compiling Effects\EnemyHitSpark\Render.VS.hlsl -> Effects\EnemyHitSpark\Render.VS.dxil (vs_6_0)
+  [2026-11-04 17:58:07] [Log] Compiling Effects\EnemyHitSpark\Update.CS.hlsl -> Effects\EnemyHitSpark\Update.CS.dxil (cs_6_0)
+  [2026-11-04 17:58:08] [Log] Shader build completed. Compiled: 4, Up-to-date: 568
+  GameplayCollisionSystem.cpp
+  コード生成しています。
+  19 of 20738 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    118 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  KohakuEngine.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\KohakuEngine.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

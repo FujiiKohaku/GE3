@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
+#include <cstdio>
 #include <limits>
 
 // 実機なしでも、同時押し・切断・接続直後の状態を再現する。
@@ -123,16 +125,14 @@ void TestGamepadAimAndRailControls()
     InputTestAccess::Set(input, pad);
     PlayerTestAccess::UpdateMovement(movement, &input);
     assert(movement.GetRailOffset().x > 0.0f); // WASDモードでもパッドは照準から操舵する。
-    assert(movement.GetManualBank() > 0.0f);
-    assert(!movement.IsRolling());
     InputTestAccess::Set(input, {}, pad);
     PlayerTestAccess::UpdateMovement(movement, &input);
     InputTestAccess::Set(input, pad);
     PlayerTestAccess::UpdateMovement(movement, &input);
-    assert(movement.IsRolling());
+    InputTestAccess::Set(input, pad, pad);
+    PlayerTestAccess::UpdateMovement(movement, &input);
+    assert(std::abs(PlayerTestAccess::Transform(movement).rotate.z) < 0.0001f);
     PlayerTestAccess::StopMovement(movement);
-    assert(!movement.IsRolling());
-    assert(movement.GetManualBank() == 0.0f);
     pad.wButtons = XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y;
     InputTestAccess::Set(input, pad);
     PlayerTestAccess::UpdateBoost(movement, &input, false);
@@ -392,18 +392,37 @@ void TestIndependentAllRangeMovement()
         movement.EnableAllRangeMode(transform, 600.0f, 5.0f, 180.0f);
         const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
         for (int frameIndex = 0; frameIndex < framesPerSecond; ++frameIndex) {
-            movement.UpdateMovement(transform, {}, 1.0f, 0.0f, false, false, deltaTimeSeconds);
+            movement.UpdateMovement(transform, {}, 1.0f, deltaTimeSeconds);
         }
         assert(IsNear(transform.translate.z, 30.0f));
         assert(IsNear(transform.translate.y, 50.0f));
 
         assert(movement.UpdateBoost(false, true));
-        movement.UpdateMovement(transform, {}, 1.0f, 0.0f, false, false, 1.0f);
+        movement.UpdateMovement(transform, {}, 1.0f, 1.0f);
         assert(IsNear(transform.translate.z, 90.0f));
         assert(!movement.UpdateBoost(true, true));
         assert(!movement.IsBoosting());
-        movement.UpdateMovement(transform, {}, 1.0f, 0.0f, false, false, 1.0f);
+        movement.UpdateMovement(transform, {}, 1.0f, 1.0f);
         assert(IsNear(transform.translate.z, 105.0f));
+    }
+}
+
+void TestMovementWithoutBank()
+{
+    for (int framesPerSecond : { 30, 60, 120 }) {
+        for (float direction : { -1.0f, 1.0f }) {
+            PlayerMovement movement;
+            EulerTransform transform {};
+            transform.translate = { 0.0f, 50.0f, 0.0f };
+            transform.rotate.z = 0.4f;
+            movement.InitializeMovement(transform);
+            movement.EnableAllRangeMode(transform, 600.0f, 5.0f, 180.0f);
+            const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
+            for (int frame = 0; frame < framesPerSecond; ++frame) {
+                movement.UpdateMovement(transform, { direction, 0.0f }, 1.0f, deltaTimeSeconds);
+                assert(IsNear(transform.rotate.z, 0.0f));
+            }
+        }
     }
 }
 
@@ -465,9 +484,6 @@ void TestPlayerInputOperations()
     XINPUT_GAMEPAD pad{};
     pad.wButtons = XINPUT_GAMEPAD_LEFT_SHOULDER | XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y;
     InputTestAccess::Set(input, pad);
-    PlayerInput::MovementInput movementInput = PlayerInput::ReadMovement(input);
-    assert(IsNear(movementInput.manualBank, 0.9f));
-    assert(movementInput.isLeftRollTriggered && !movementInput.isRightRollTriggered);
     const PlayerInput::BoostInput boostInput = PlayerInput::ReadBoost(input, true);
     assert(boostInput.isBraking && boostInput.shouldBoost);
     PlayerMovement movement;
@@ -477,19 +493,10 @@ void TestPlayerInputOperations()
     const PlayerInput::BoostInput disabledBoost = PlayerInput::ReadBoost(input, false);
     assert(!disabledBoost.isBraking && !disabledBoost.shouldBoost);
 
-    InputTestAccess::Set(input, pad, pad);
-    assert(!PlayerInput::ReadMovement(input).isLeftRollTriggered);
-    pad.wButtons |= XINPUT_GAMEPAD_RIGHT_SHOULDER;
-    InputTestAccess::Set(input, pad);
-    movementInput = PlayerInput::ReadMovement(input);
-    assert(movementInput.manualBank == 0.0f);
     InputTestAccess::Set(input, {}, {}, false);
-    movementInput = PlayerInput::ReadMovement(input);
-    assert(movementInput.manualBank == 0.0f);
-    assert(!movementInput.isLeftRollTriggered && !movementInput.isRightRollTriggered);
 }
 
-int main()
+int main(int argumentCount, char** arguments)
 {
     _set_error_mode(_OUT_TO_STDERR);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
@@ -507,6 +514,13 @@ int main()
     TestGamepadAimDistanceLimit();
     TestRailFrameAndAreaForce();
     TestAllRangeAndControls();
+    TestMovementWithoutBank();
+    if (argumentCount == 2 && std::strcmp(arguments[1], "--movement-input-only") == 0) {
+        TestIndependentAllRangeMovement();
+        TestPlayerInputOperations();
+        std::puts("PASS: movement input, flight without bank or roll, and frame rates");
+        return 0;
+    }
     TestScreenConstraintWithCamera();
     TestIndependentAllRangeMovement();
     TestMovementRailMinimumHeight();

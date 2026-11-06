@@ -34,9 +34,9 @@ private:
     bool isOverheated_ = false;
     float graceRemainingSeconds_ = 0.0f;
     static constexpr float kGraceDurationSeconds = 30.0f / 60.0f;
-    static constexpr float kAssaultShotHeat = 0.025f;
-    static constexpr float kCoolingPerSecond = 0.20f;
-    static constexpr float kOverheatCoolingPerSecond = 0.25f;
+    static constexpr float kAssaultShotHeat = 0.020f;
+    static constexpr float kCoolingPerSecond = 0.45f;
+    static constexpr float kOverheatCoolingPerSecond = 0.35f;
 };
 
 // ロック候補と確定した対象を保持し、ボタンを離した瞬間の発射を判定する。
@@ -95,7 +95,7 @@ public:
     void ResetHomingLock() { homingLock_.Reset(); }
     bool IsHomingMissileSelected() const { return GetCurrentWeapon().IsHoming(); }
     bool IsMissileSelected() const { return currentWeapon_ == kWeaponMissileBullet; }
-    float GetMissileReloadRatio() const { return missileFireCooldownSeconds_ / kMissileFireIntervalSeconds; }
+    float GetMissileReloadRatio() const { return GetCurrentWeapon().GetReloadRatio(); }
     const char* GetCurrentWeaponName() const;
     float GetHeatRatio() const { return weaponHeat_.GetHeatRatio(); }
     bool IsOverheated() const { return weaponHeat_.IsOverheated(); }
@@ -142,8 +142,6 @@ private:
     std::array<std::unique_ptr<BasePlayerWeapon>, kWeaponCount> weapons_ {
         std::make_unique<AssaultPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
         std::make_unique<HomingPlayerWeapon>() };
-    static constexpr float kMissileFireIntervalSeconds = 2.0f;
-    float missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
 #ifdef _DEBUG
     bool shouldDrawDebugLines_ = false;
     Vector3 debugAimRayOrigin_ = {};

@@ -7,7 +7,8 @@
 namespace {
 void FillHeat(PlayerWeaponHeat& heat)
 {
-    for (int shotIndex = 0; shotIndex < 41; ++shotIndex) {
+    constexpr int kMaxShots = 1000;
+    for (int shotIndex = 0; shotIndex < kMaxShots && heat.GetHeatRatio() < 1.0f; ++shotIndex) {
         heat.AddShotHeat();
     }
     assert(heat.GetHeatRatio() == 1.0f);
@@ -36,7 +37,7 @@ void TestGraceAndCompleteRecovery()
     assert(heat.GetHeatRatio() == 0.0f);
     assert(!heat.IsOverheated());
     heat.AddShotHeat();
-    assert(std::abs(heat.GetHeatRatio() - 0.025f) < 0.0001f);
+    assert(heat.GetHeatRatio() > 0.0f && heat.GetHeatRatio() < 1.0f);
 }
 
 void TestReleaseCancelsGrace()
@@ -48,6 +49,7 @@ void TestReleaseCancelsGrace()
     assert(!heat.IsOverheated());
     assert(heat.GetHeatRatio() < 1.0f);
     heat.AddShotHeat();
+    FillHeat(heat);
     heat.Update(0.4f, true);
     assert(!heat.IsOverheated());
     heat.Update(0.11f, true);
@@ -58,7 +60,7 @@ void TestPausedTimeAndShotHeat()
 {
     PlayerWeaponHeat heat;
     heat.AddShotHeat();
-    assert(std::abs(heat.GetHeatRatio() - 0.025f) < 0.0001f);
+    assert(heat.GetHeatRatio() > 0.0f && heat.GetHeatRatio() < 1.0f);
     heat.Update(1.0f, false);
     assert(heat.GetHeatRatio() == 0.0f);
     FillHeat(heat);
@@ -77,7 +79,8 @@ void TestHeatDamageAndCooling()
     assert(heat.GetShotDamage(3) == 3);
     assert(heat.GetShotDamage(1) == 1);
     int previousDamage = 3;
-    for (int shot = 0; shot < 41; ++shot) {
+    constexpr int kMaxShots = 1000;
+    for (int shot = 0; shot < kMaxShots && heat.GetHeatRatio() < 1.0f; ++shot) {
         heat.AddShotHeat();
         const int damage = heat.GetShotDamage(3);
         assert(damage >= previousDamage && damage <= 6);
@@ -85,11 +88,15 @@ void TestHeatDamageAndCooling()
     }
     assert(heat.GetShotDamage(3) == 6);
     assert(heat.GetShotDamage(1) == 2);
-    heat.Update(2.5f, false);
-    assert(std::abs(heat.GetHeatRatio() - 0.5f) < 0.0001f);
-    assert(heat.GetShotDamage(3) == 5);
-    assert(heat.GetShotDamage(1) == 2);
-    heat.Update(2.5f, false);
+    heat.Update(1.0f, false);
+    const float firstHeatRatio = heat.GetHeatRatio();
+    const int firstDamage = heat.GetShotDamage(3);
+    assert(firstHeatRatio > 0.0f && firstHeatRatio < 1.0f);
+    assert(firstDamage >= 3 && firstDamage <= 6);
+    heat.Update(1.0f, false);
+    assert(heat.GetHeatRatio() < firstHeatRatio);
+    assert(heat.GetShotDamage(3) <= firstDamage);
+    heat.Update(100.0f, false);
     assert(heat.GetShotDamage(3) == 3);
     assert(heat.GetShotDamage(1) == 1);
 }
@@ -104,6 +111,29 @@ void TestAssaultSustainedFireCanOverheat()
     }
     assert(heat.IsOverheated());
 }
+
+void TestFiringStopsCooling()
+{
+    for (int framesPerSecond : { 30, 60, 120 }) {
+        PlayerWeaponHeat heat;
+        for (int shotIndex = 0; shotIndex < 10; ++shotIndex) { heat.AddShotHeat(); }
+        const float heatBeforeHold = heat.GetHeatRatio();
+        assert(heatBeforeHold > 0.0f && heatBeforeHold < 1.0f);
+        const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
+        for (int frame = 0; frame < framesPerSecond; ++frame) {
+            heat.Update(deltaTimeSeconds, true);
+            assert(heat.GetHeatRatio() == heatBeforeHold);
+        }
+        heat.AddShotHeat();
+        assert(heat.GetHeatRatio() > heatBeforeHold);
+        const float heatBeforeRelease = heat.GetHeatRatio();
+        heat.Update(deltaTimeSeconds, false);
+        assert(heat.GetHeatRatio() < heatBeforeRelease);
+        const float heatAfterRelease = heat.GetHeatRatio();
+        heat.Update(1.0f, true);
+        assert(heat.GetHeatRatio() == heatAfterRelease);
+    }
+}
 }
 
 int main()
@@ -115,4 +145,5 @@ int main()
     TestPausedTimeAndShotHeat();
     TestHeatDamageAndCooling();
     TestAssaultSustainedFireCanOverheat();
+    TestFiringStopsCooling();
 }

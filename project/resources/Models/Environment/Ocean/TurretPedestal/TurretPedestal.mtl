@@ -1,0 +1,11 @@
+newmtl PedestalStone
+Kd 1 1 1
+map_Kd Sandstone.png
+
+newmtl PedestalLight
+Kd 1 1 1
+map_Kd SandstoneLight.png
+
+newmtl PedestalJoint
+Kd 1 1 1
+map_Kd SandstoneShade.png

@@ -1,0 +1,224 @@
+
+  imgui.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\imgui.lib
+  DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\DirectXTex.lib
+  [2026-11-05 14:59:16] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-05 14:59:16] [Log] Shader build completed. Compiled: 0, Up-to-date: 572
+  SavePoint.cpp
+  GameplayCollisionSystem.cpp
+  LoadingScene.cpp
+  StageCatalog.cpp
+  TutorialCommPanel.cpp
+  TutorialController.cpp
+  ClearScene.cpp
+  BaseEnemy.cpp
+  EnemyDebugViews.cpp
+  EnemyBullet.cpp
+  EnemyBulletManager.cpp
+  NormalEnemyBullet.cpp
+  TurretEnemyBullet.cpp
+  SwarmPulseBullet.cpp
+  TrackingEnemyBullet.cpp
+  BaseBullet.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  Collision.cpp
+  CollisionManager.cpp
+  TimeManager.cpp
+  EditorManager.cpp
+  EngineStruct.cpp
+  EffectManager.cpp
+  AutoExposureRenderer.cpp
+  BloomRenderer.cpp
+  VolumetricLightRenderer.cpp
+  FogManager.cpp
+  FogRenderer.cpp
+  Renderer.cpp
+  MotionVectorRenderer.cpp
+  DlssSuperResolution.cpp
+  TemporalSuperResolution.cpp
+  ShadowCamera.cpp
+  ShadowMapRenderer.cpp
+  LocalShadowRenderer.cpp
+  ScreenshotManager.cpp
+  CopyImageRenderer.cpp
+  PostEffectManager.cpp
+  PostEffectPreset.cpp
+  PostEffectShaderReload.cpp
+  Model.cpp
+  SkinningObject3d.cpp
+  SkyBox.cpp
+  SkyBoxManager.cpp
+  AnimationActor.cpp
+  AnimationLoder.cpp
+  AnimationEventLoader.cpp
+  Animation.cpp
+  KeyFrame.cpp
+  DebugCameraController.cpp
+  Light.cpp
+  LightManager.cpp
+  DebugRenderer.cpp
+  Rail.cpp
+  MathStruct.cpp
+  Object3DStruct.cpp
+  NodeAnimation.cpp
+  PlayAnimation.cpp
+  ParticleData.cpp
+  ParticleMeshManager.cpp
+  ParticleRenderManager.cpp
+  SceneManager.cpp
+  BaseScene.cpp
+  BlendUtil.cpp
+  Camera.cpp
+  D3DResourceLeakChecker.cpp
+  DirectXCommon.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  GamePlayScene.cpp
+  BasePauseState.cpp
+  DevelopmentWebPanel.cpp
+  ImGuiManager.cpp
+  Game.cpp
+  Profiler.cpp
+  CPUProfiler.cpp
+  GPUProfiler.cpp
+  MemoryProfiler.cpp
+  PerformanceCounter.cpp
+  BootProfiler.cpp
+  TimelineProfiler.cpp
+  ProfilerScope.cpp
+  Input.cpp
+  Logger.cpp
+  main.cpp
+  SoundManager.cpp
+  Sprite.cpp
+  SpriteMaterialManager.cpp
+  SpriteMeshManager.cpp
+  SpriteManager.cpp
+  SpriteRenderManager.cpp
+  FontManager.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  Text.cpp
+  TextRenderer.cpp
+  Utf8Utility.cpp
+  Object3dManager.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  Object3d.cpp
+  OceanSurface.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  WaterPillarRenderer.cpp
+  ModelCommon.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  ModelManager.cpp
+  SphereObject.cpp
+  SpriteStruct.cpp
+  Joint.cpp
+  Skeleton.cpp
+  SkinCluster.cpp
+  SkinningObject3dManager.cpp
+  SrvManager.cpp
+  StringUtility.cpp
+  TextureManager.cpp
+  TitleScene.cpp
+  BaseTitleState.cpp
+  SpriteTestScene.cpp
+  TextTestScene.cpp
+  TestScene1.cpp
+  Utility.cpp
+  MatrixMath.cpp
+  WinApp.cpp
+  Player.cpp
+  WaterPillarHazard.cpp
+  OffscreenRenderer.cpp
+  ParticleBoardMesh.cpp
+  ParticleBoxMesh.cpp
+  ParticleSphereMesh.cpp
+  ParticleConeMesh.cpp
+  ParticleRingMesh.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  ParticleCylinderMesh.cpp
+  GPUParticleStruct.cpp
+  PostEffectType.cpp
+  LevelData.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  LevelDataLoader.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  Ray.cpp
+  Sphere.cpp
+  SceneObjectManager.cpp
+  GameOverScene.cpp
+  NormalEnemy.cpp
+  ArmoredEnemy.cpp
+  SwarmEnemy.cpp
+  MoveEnemy.cpp
+  LoopEnemy.cpp
+  PaceEnemy.cpp
+  TurretEnemy.cpp
+  PaintShooterEnemy.cpp
+  FearWormEnemy.cpp
+  FearWormWaitState.cpp
+  FearWormEntryState.cpp
+  FearWormBattleState.cpp
+  FearWormDeadState.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  BossEncounterController.cpp
+  IceJellyfish.cpp
+  PaintBullet.cpp
+  ScreenSpaceReflection.cpp
+  DxrRenderer.cpp
+  DxrShadowRenderer.cpp
+  DxrReflectionRenderer.cpp
+  DxrLocalShadowRenderer.cpp
+  ShadowDenoiser.cpp
+  ScreenSpaceGlobalIllumination.cpp
+  PlayerBullet.cpp
+  HomingMissileBullet.cpp
+  MissileBullet.cpp
+  NormalBullet.cpp
+  PlayerWeaponController.cpp
+  HomingPlayerWeapon.cpp
+  AssaultPlayerWeapon.cpp
+  MissilePlayerWeapon.cpp
+  BasePlayerWeapon.cpp
+  FearWormJumOutState.cpp
+  FearWormWaitForBodyState.cpp
+  GifWriter.cpp
+  GifRecordingManager.cpp
+  CameraPreferences.cpp
+  FearWormOrbitShotState.cpp
+  FearWormWeaveSpreadState.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  FearWormDriftBurstState.cpp
+  FearWormCoilBarrageState.cpp
+  FearWormHeadChargeState.cpp
+  FearWormLineMissileState.cpp
+  FearWormSpiralBarrageState.cpp
+  FearWormBeamState.cpp
+  FearWormMovement.cpp
+  FearWormBeam.cpp
+  IceJellyfishWaitState.cpp
+  IceJellyfishEntryState.cpp
+  IceJellyfishBattleState.cpp
+  IceJellyfishPulseBarrageAttack.cpp
+  IceJellyfishIceSpearAttack.cpp
+  IceJellyfishIcePillarAttack.cpp
+  IceJellyfishDeadState.cpp
+  PlayerEntryState.cpp
+  PlayerBattleState.cpp
+  PlayerDeadState.cpp
+  IceJellyfishCollision.cpp
+  IceJellyfishPoseController.cpp
+  PlayerMovement.cpp
+  PlayerInput.cpp
+  StartupTiming.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  コード生成しています。
+  45 of 20865 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
+    24 functions were new in current compilation
+    237 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  KohakuEngine.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\KohakuEngine.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

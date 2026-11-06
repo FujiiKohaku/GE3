@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup><SolutionDir>$(MSBuildThisFileDirectory)..\..\project\</SolutionDir></PropertyGroup>
+  <Import Project="..\..\project\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>DeathExplosionPreview</ProjectName><TargetName>DeathExplosionPreview</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\DeathExplosionPreview\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>DeathExplosionPreview.exe</TargetFileName>
+    <TargetPath>$(OutDir)DeathExplosionPreview.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup><Link><SubSystem>Console</SubSystem></Link></ItemDefinitionGroup>
+  <ItemGroup>
+    <GameBuildSource Include="@(ClCompile)" />
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)..\output\death_explosion_preview\Preview.cpp" />
+    <Object Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(Configuration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(Configuration)\main.obj" />
+  </ItemGroup>
+</Project>

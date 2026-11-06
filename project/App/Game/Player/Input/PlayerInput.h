@@ -14,12 +14,6 @@ public:
         float sensitivity = 1.0f;
     };
 
-    struct MovementInput {
-        float manualBank = 0.0f;
-        bool isLeftRollTriggered = false;
-        bool isRightRollTriggered = false;
-    };
-
     struct BoostInput {
         bool isBraking = false;
         bool shouldBoost = false;
@@ -29,6 +23,5 @@ public:
     static Vector2 ReadMousePosition();
     static AimInput ReadGamepadAim(const Input& input);
     static Vector2 ReadKeyboardSteering(const Input& input);
-    static MovementInput ReadMovement(const Input& input);
     static BoostInput ReadBoost(const Input& input, bool isEnabled);
 };

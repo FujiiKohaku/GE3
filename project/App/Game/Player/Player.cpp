@@ -530,14 +530,12 @@ void Player::SynchronizeOrientation()
 // 操作入力を読み、レール飛行か全方向飛行かに応じて移動処理を選ぶ。
 void Player::UpdateMovement(Input* input)
 {
-    const PlayerInput::MovementInput movementInput = PlayerInput::ReadMovement(*input);
     const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
     const ControlInput control = GetControlInput(*input,
         { static_cast<float>(WinApp::GetInstance()->GetClientWidth()),
           static_cast<float>(WinApp::GetInstance()->GetClientHeight()) },
         movement_.IsAllRangeMode(), deltaTimeSeconds);
-    movement_.UpdateMovement(transform_, control.steering, control.railResponse, movementInput.manualBank,
-        movementInput.isLeftRollTriggered, movementInput.isRightRollTriggered, deltaTimeSeconds);
+    movement_.UpdateMovement(transform_, control.steering, control.railResponse, deltaTimeSeconds);
 }
 
 // レール基準位置と操縦によるずれを合成し、画面内に収まる機体位置を決める。
@@ -600,12 +598,6 @@ void Player::UpdateSteering(const Vector2& aimPosition, const Vector2& screenSiz
     bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad)
 {
     movement_.UpdateSteering(aimPosition, screenSizePixels, isAllRangeMode, deltaTimeSeconds, isGamepad);
-}
-
-// 入力の取得は呼び出し元に任せ、渡された左右の押下でロールを制御する。
-void Player::UpdateRoll(EulerTransform& transform, bool isLeftTriggered, bool isRightTriggered, float deltaTimeSeconds)
-{
-    movement_.UpdateRoll(transform, isLeftTriggered, isRightTriggered, deltaTimeSeconds);
 }
 
 // レールの基準位置に左右・上下のずれを加え、ワールド位置へ変換する。

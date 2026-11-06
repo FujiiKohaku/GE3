@@ -41,7 +41,9 @@ struct StageSettings {
     std::vector<float> swarmWaveDistances;
     std::vector<Vector3> recoveryItemPositions;
     std::vector<float> recoveryItemDistances;
+    std::vector<float> savePointDistances;
     std::vector<float> paintEnemyDistances;
+    std::vector<float> electricGateDistances;
 };
 
 class StageCatalog {

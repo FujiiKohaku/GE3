@@ -18,11 +18,17 @@ class Camera;
 class Model;
 class EnemyBulletManager;
 
-// 敵の一部位を当たり判定に渡すための位置・半径・識別情報。
+// 敵の一部位の形状と識別情報。radiusは箱の場合は包絡球の半径。
 struct EnemyCollisionPart {
     Vector3 position = { 0.0f, 0.0f, 0.0f };
     float radius = 3.0f;
     int32_t partIndex = 0;
+    bool isBox = false;
+    OBB box {};
+
+    CollisionHit IntersectSphere(const Sphere& sphere) const;
+    SweepHit SweepSphere(const Sphere& sphere, const Vector3& movement) const;
+    float GetSurfaceDistance(const Vector3& point) const;
 };
 
 class BaseEnemy {
@@ -78,7 +84,7 @@ public:
     virtual SweepHit SweepBullet(const Sphere& bullet, const Vector3& movement, int32_t& partIndex) const;
     // 命中位置と部位番号を受け取り、部位へのダメージ処理へ渡す。
     virtual void OnBulletHit(int32_t partIndex, float damage, const Vector3& position);
-    // 照準が敵を狙えるように、部位の球をレイ判定へ登録する。
+    // 照準が敵を狙えるように、部位の球または箱をレイ判定へ登録する。
     virtual void RegisterRaycastTargets(CollisionObjectId& nextObjectId) const;
     virtual bool RequiresBulletOcclusionCheck() const { return false; }
     // 標準の敵がダメージを受けられる状態かを返す。

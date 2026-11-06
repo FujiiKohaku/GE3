@@ -54,11 +54,18 @@ PixelShaderOutput main(VertexShaderOutput input)
     alpha = saturate(materialParameters.color.a);
 #else
     const float3 kEnemyOutlineColor = float3(0.0f, 0.0f, 0.0f);
+#if defined(KOHAKU_TURRET_BULLET)
+    const float3 kEnemyBodyTint = float3(0.65f, 0.12f, 1.0f);
+    const float3 kEnemyCoreColor = float3(0.90f, 0.70f, 1.0f);
+    const float kEnemyBodyOpacity = 0.95f;
+    const float kEnemyCoreOpacity = 1.0f;
+#else
     const float3 kEnemyBodyTint = float3(1.0f, 0.16f, 0.07f);
     const float3 kEnemyCoreColor = float3(1.0f, 0.55f, 0.60f);
     const float kEnemyBodyOpacity = 0.70f;
-    const float kEnemyOutlineOpacity = 1.0f;
     const float kEnemyCoreOpacity = 0.88f;
+#endif
+    const float kEnemyOutlineOpacity = 1.0f;
 
     // 黒い外周で形を保ち、朱色の胴体は海面が少し透けるようにする。
     // 球の投影半径に対する外周幅を、従来の境界値から1.3倍へ広げる。

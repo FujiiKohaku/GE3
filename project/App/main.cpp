@@ -151,7 +151,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         } catch (const std::exception& error) {
             Logger::Error(std::string("Frame failed: ") + error.what());
             Logger::Flush();
-            if (!verifyOceanTransition) throw;
             return 1;
         }
         if (verifyOceanTransition) {

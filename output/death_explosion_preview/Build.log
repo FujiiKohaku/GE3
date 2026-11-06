@@ -1,0 +1,15 @@
+
+  [2026-11-04 18:26:55] [Log] Shader compile queue started. Pending: 2, Max parallel: 12
+  [2026-11-04 18:26:55] [Log] Compiling Effects\ExplosionFlame\Render.PS.hlsl -> Effects\ExplosionFlame\Render.PS.dxil (ps_6_0)
+  [2026-11-04 18:26:55] [Log] Compiling Effects\ExplosionFlame\Update.CS.hlsl -> Effects\ExplosionFlame\Update.CS.dxil (cs_6_0)
+  [2026-11-04 18:26:55] [Log] Shader build completed. Compiled: 2, Up-to-date: 570
+  Preview.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  コード生成しています。
+  4 of 20744 functions (<0.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    101 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  Preview.vcxproj -> C:\Projects\KohakuEngine\project\..\generated\outputs\Release\DeathExplosionPreview.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

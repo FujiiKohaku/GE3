@@ -8,6 +8,9 @@
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Game/Enemy/MoveEnemy/MoveEnemy.h"
 #include "App/Game/Enemy/LoopEnemy/LoopEnemy.h"
+#include "App/Game/Enemy/PaceEnemy/PaceEnemy.h"
+#include "App/Game/Enemy/TurretEnemy/TurretEnemy.h"
+#include "App/Game/Enemy/StrafeEnemy/StrafeEnemy.h"
 #include "App/Game/Boss/FearWormEnemy/FearWormEnemy.h"
 #include "App/Game/Enemy/PaintEnemy/PaintShooterEnemy.h"
 #include "App/Game/Enemy/Bullet/Types/PaintBullet.h"
@@ -503,6 +506,7 @@ void GamePlayScene::Initialize()
         { "BossDestroyed", "resources/Audio/GameSfx/boss_destroyed.wav", 0.42f, 0.50f },
         { "FearWormCutIn", "resources/Audio/GameSfx/fear_worm_cut_in.wav", 0.40f, 0.50f },
         { "EnemyShot", "resources/Audio/GameSfx/enemy_shot.wav", 0.10f, 0.12f },
+        { "TurretShot", "resources/Audio/GameSfx/turret_shot.wav", 0.22f, 0.10f },
         { "HomingLock", "resources/Audio/GameSfx/homing_lock.wav", 0.20f, 0.12f },
         { "PauseToggle", "resources/Audio/GameSfx/pause_toggle.wav", 0.18f, 0.15f },
         { "TutorialConfirm", "resources/Audio/GameSfx/ui_confirm.wav", 0.20f, 0.15f },
@@ -713,6 +717,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Allocating aimSprite");
     aimSprite_ = std::make_unique<Sprite>();
     previousMissileReloadRatio_ = 1.0f;
+    wasHomingReloadSelected_ = false;
     missileReadyFlashRemainingSeconds_ = 0.0f;
     Logger::Log("GamePlayScene::Initialize: Initializing aimSprite");
     aimSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
@@ -923,18 +928,28 @@ void GamePlayScene::Initialize()
         railBranchUpperText_->SetFontSize(28.0f);
         railBranchUpperText_->SetAnchorPoint({ 0.5f, 0.5f });
         railBranchUpperText_->SetOutlineWidth(2.0f);
+        railBranchUpperText_->Update();
         railBranchLowerText_ = std::make_unique<Text>();
         railBranchLowerText_->Initialize(kDefaultFont);
         railBranchLowerText_->SetText(kRailBranchLowerText);
         railBranchLowerText_->SetFontSize(28.0f);
         railBranchLowerText_->SetAnchorPoint({ 0.5f, 0.5f });
         railBranchLowerText_->SetOutlineWidth(2.0f);
+        railBranchLowerText_->Update();
         railBranchStatusText_ = std::make_unique<Text>();
         railBranchStatusText_->Initialize(kDefaultFont);
         railBranchStatusText_->SetFontSize(23.0f);
         railBranchStatusText_->SetAnchorPoint({ 0.5f, 0.5f });
         railBranchStatusText_->SetColor({ 0.7f, 0.95f, 1.0f, 1.0f });
         railBranchStatusText_->SetOutlineWidth(2.0f);
+        // 最長の案内文でバッファを確保し、選択表示時や海中への切替時の新規確保を避ける。
+        railBranchStatusText_->SetText(kRailBranchUnderwaterStatus);
+        railBranchStatusText_->Update();
+        railBranchStatusText_->SetText(kRailBranchSelectionStatus);
+        railBranchStatusText_->Update();
+        // 案内の開始距離までは非表示にする。確保済みバッファはそのまま保持する。
+        railBranchStatusText_->SetText("");
+        railBranchStatusText_->Update();
     }
 
     score_ = 0;
@@ -1170,6 +1185,8 @@ void GamePlayScene::Initialize()
         }
     }
     InitializeRecoveryItems(recoveryItemModel);
+    InitializeSavePoints();
+    InitializeElectricGates();
     if (stageId_ == "stage03") {
         EffectManager::GetInstance()->AttachEffect("IceMotes", player_.get());
     }
@@ -1682,6 +1699,7 @@ void GamePlayScene::Update()
         GetActiveBoss());
 
     // プレイヤーの位置・回転などのワールドトランスフォームの確定
+    const Vector3 previousPlayerPosition = player_->GetTranslate();
     UpdatePlayerTransform(currentPosition, railRight, railUp, forward);
     if (stageSettings_.allRangeMode) {
         currentPosition = player_->GetTranslate();
@@ -1694,6 +1712,20 @@ void GamePlayScene::Update()
 
     // 進行距離を更新
     railDistance_ = nextRailDistance;
+
+    for (std::unique_ptr<SavePoint>& savePoint : savePoints_) {
+        if (savePoint->Update(player_->GetTranslate(), TimeManager::GetInstance()->GetDeltaTime())) {
+            Logger::Log("[SavePoint] Checkpoint reached in " + stageId_);
+        }
+    }
+
+    for (std::unique_ptr<ElectricGate>& gate : electricGates_) {
+        gate->Update(player_->GetTranslate(), TimeManager::GetInstance()->GetDeltaTime());
+        if (gate->CheckCollision(previousPlayerPosition, player_->GetTranslate()) &&
+            player_->ApplyDamage(ElectricGate::kContactDamage)) {
+            EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
+        }
+    }
 
     // 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
@@ -1894,14 +1926,17 @@ void GamePlayScene::Update()
     aimSprite_->SetEffectStrength(reticleMode);
     constexpr float kMissileReadyFlashDurationSeconds = 0.22f;
     const float missileReloadRatio = player_->GetMissileReloadRatio();
+    const bool isHomingReloadSelected = player_->IsHomingMissileSelected();
+    const bool hasReloadWeaponChanged = isHomingReloadSelected != wasHomingReloadSelected_;
     missileReadyFlashRemainingSeconds_ = (std::max)(0.0f,
         missileReadyFlashRemainingSeconds_ - TimeManager::GetInstance()->GetDeltaTime());
-    if (missileReloadRatio < 1.0f) {
+    if (hasReloadWeaponChanged || missileReloadRatio < 1.0f) {
         missileReadyFlashRemainingSeconds_ = 0.0f;
     } else if (previousMissileReloadRatio_ < 1.0f) {
         missileReadyFlashRemainingSeconds_ = kMissileReadyFlashDurationSeconds;
     }
     previousMissileReloadRatio_ = missileReloadRatio;
+    wasHomingReloadSelected_ = isHomingReloadSelected;
     aimSprite_->SetEffectThreshold(missileReloadRatio);
     aimSprite_->SetEffectPhase(missileReadyFlashRemainingSeconds_ / kMissileReadyFlashDurationSeconds);
     aimSprite_->SetPosition(aimUiPosition);
@@ -2299,19 +2334,12 @@ void GamePlayScene::UpdatePlayerTransform(
                 float aimX = steering.x;
                 float aimY = steering.y;
 
-                // Point the nose toward the reticle and bank into horizontal
-                // movement, while preserving the rail's base orientation.
+                // 照準へ機首を向け、左右移動によるバンクは加えない。
                 constexpr float kMaxAimYaw = 0.42f;
                 constexpr float kMaxAimPitch = 0.34f;
-                constexpr float kMaxAimBank = 0.30f;
                 playerRotate.y -= aimX * kMaxAimYaw;
                 playerRotate.x += aimY * kMaxAimPitch;
-                playerRotate.z = -aimX * kMaxAimBank;
             }
-        }
-        playerRotate.z += player_->GetManualBank();
-        if (player_->IsRolling()) {
-            playerRotate.z = player_->GetRotate().z;
         }
         player_->SetRotate(playerRotate);
     }
@@ -2640,6 +2668,12 @@ void GamePlayScene::Draw3D()
     Object3dManager::GetInstance()->PreDraw();
 
     // Object3dManager::GetInstance()->SetGlowPSO();
+    for (std::unique_ptr<SavePoint>& savePoint : savePoints_) {
+        savePoint->Draw3D();
+    }
+    for (std::unique_ptr<ElectricGate>& gate : electricGates_) {
+        gate->Draw();
+    }
     // Object3dManager::GetInstance()->SetNormalPSO();
     // Object3dManager::GetInstance()->SetBlendMode(kBlendModeMultiply);
     // terrain_->Draw();
@@ -2720,6 +2754,42 @@ void GamePlayScene::DrawParticle()
 {
     EffectManager::GetInstance()->PreDraw();
     EffectManager::GetInstance()->Draw();
+}
+
+// レールの向きと床の高さに合わせて、通過式チェックポイントを配置する。
+void GamePlayScene::InitializeSavePoints()
+{
+    savePoints_.clear();
+    savePoints_.reserve(stageSettings_.savePointDistances.size());
+    for (float distance : stageSettings_.savePointDistances) {
+        SavePointSettings settings;
+        settings.position = rail_->GetPositionByDistance(distance);
+        settings.position.y = stageSettings_.floorHeight;
+        const Vector3 forward = rail_->GetPositionByDistance(distance + 1.0f)
+            - rail_->GetPositionByDistance(distance - 1.0f);
+        settings.yawRadians = std::atan2(forward.x, forward.z);
+        std::unique_ptr<SavePoint> savePoint = std::make_unique<SavePoint>();
+        savePoint->Initialize(settings, player_->GetTranslate());
+        savePoints_.push_back(std::move(savePoint));
+    }
+}
+
+// レールに直交する向きで、電撃ゲートの見た目確認用オブジェクトを配置する。
+void GamePlayScene::InitializeElectricGates()
+{
+    constexpr float kDisplayScale = 5.0f;
+    constexpr float kBaseSubmersion = 4.0f;
+    electricGates_.clear();
+    electricGates_.reserve(stageSettings_.electricGateDistances.size());
+    for (float distance : stageSettings_.electricGateDistances) {
+        Vector3 position = rail_->GetPositionByDistance(distance);
+        position.y = stageSettings_.floorHeight - kBaseSubmersion;
+        const Vector3 forward = rail_->GetPositionByDistance(distance + 1.0f)
+            - rail_->GetPositionByDistance(distance - 1.0f);
+        std::unique_ptr<ElectricGate> gate = std::make_unique<ElectricGate>();
+        gate->Initialize(position, -std::atan2(forward.x, forward.z), kDisplayScale);
+        electricGates_.push_back(std::move(gate));
+    }
 }
 
 // 回復アイテムのモデルと配置状態を準備する。
@@ -3172,6 +3242,9 @@ void GamePlayScene::Draw2D()
     } else {
         // 通常プレイ中の画面右上HP数値テキストの描画
         TextRenderer::GetInstance()->PreDraw();
+        for (std::unique_ptr<SavePoint>& savePoint : savePoints_) {
+            savePoint->Draw2D();
+        }
         if (shouldDrawStageObjective) {
             stageObjectiveLabelText_->Draw();
             stageObjectiveText_->Draw();
@@ -4326,6 +4399,11 @@ void GamePlayScene::DrawCollisionDebug()
         enemy->GetCollisionParts(collisionParts);
         for (const EnemyCollisionPart& part : collisionParts) {
             if (!isNearCamera(part.position, part.radius)) continue;
+            if (part.isBox) {
+                debugRenderer->AddWireOBB(part.box.center, part.box.size,
+                    part.box.orientation[0], part.box.orientation[1], part.box.orientation[2], kEnemyColor);
+                continue;
+            }
             debugRenderer->AddWireSphere(
                 part.position,
                 part.radius,
@@ -4825,6 +4903,46 @@ void GamePlayScene::SpawnLoopEnemies(const Vector3& position, const Vector3& rot
     }
 }
 
+void GamePlayScene::SpawnPaceEnemy(const Vector3& position, const Vector3& rotation,
+    const LevelData::PaceEnemySpawnData& settings, int enemyLevel)
+{
+    Model* cubeModel = ModelManager::GetInstance()->CreateCube("resources/Textures/white.png");
+    std::unique_ptr<PaceEnemy> enemy = std::make_unique<PaceEnemy>();
+    enemy->Initialize(cubeModel, enemyBulletModel_, player_.get());
+    enemy->ApplySettings(normalEnemyLevels_.GetSettings(enemyLevel));
+    enemy->SetRadialShotEnabled(false);
+    enemy->SetPosition(position);
+    enemy->SetRotate(rotation);
+    enemy->ConfigureFlight(settings);
+    enemies_.push_back(std::move(enemy));
+}
+
+void GamePlayScene::SpawnTurretEnemy(const Vector3& position, const Vector3& rotation, int enemyLevel)
+{
+    ModelManager* modelManager = ModelManager::GetInstance();
+    Model* baseModel = modelManager->Load("Enemy/Turret/TurretBase.obj");
+    Model* yawModel = modelManager->Load("Enemy/Turret/TurretYaw.obj");
+    Model* barrelModel = modelManager->Load("Enemy/Turret/TurretBarrel.obj");
+    std::unique_ptr<TurretEnemy> enemy = std::make_unique<TurretEnemy>();
+    enemy->Initialize(baseModel, yawModel, barrelModel, enemyBulletModel_, player_.get(),
+        normalEnemyLevels_.GetSettings(enemyLevel));
+    enemy->SetPosition(position);
+    enemy->SetRotate(rotation);
+    enemies_.push_back(std::move(enemy));
+}
+
+void GamePlayScene::SpawnStrafeEnemy(const Vector3& position, const Vector3& rotation,
+    const LevelData::StrafeEnemySpawnData& settings, int enemyLevel)
+{
+    Model* model = ModelManager::GetInstance()->CreateCube("resources/Textures/white.png");
+    std::unique_ptr<StrafeEnemy> enemy = std::make_unique<StrafeEnemy>();
+    enemy->Initialize(model, enemyBulletModel_, player_.get(), normalEnemyLevels_.GetSettings(enemyLevel));
+    enemy->SetPosition(position);
+    enemy->SetRotate(rotation);
+    enemy->ConfigureFlight(settings);
+    enemies_.push_back(std::move(enemy));
+}
+
 // ステージの配置情報を、敵や編隊の出現条件へ変換する。
 void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
 {
@@ -4833,6 +4951,12 @@ void GamePlayScene::LoadEnemyPopData(const LevelData& levelData)
     for (const auto& enemyData : levelData.enemies) {
         if (enemyData.fileName == "LoopEnemy") {
             SpawnLoopEnemies(enemyData.translation, enemyData.rotation, enemyData.loopEnemy);
+        } else if (enemyData.fileName == "PaceEnemy") {
+            SpawnPaceEnemy(enemyData.translation, enemyData.rotation, enemyData.paceEnemy, enemyData.enemyLevel);
+        } else if (enemyData.fileName == "TurretEnemy") {
+            SpawnTurretEnemy(enemyData.translation, enemyData.rotation, enemyData.enemyLevel);
+        } else if (enemyData.fileName == "StrafeEnemy") {
+            SpawnStrafeEnemy(enemyData.translation, enemyData.rotation, enemyData.strafeEnemy, enemyData.enemyLevel);
         } else if (enemyData.fileName == "MoveEnemy") {
             std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
             enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());
@@ -5171,6 +5295,12 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
         else if (objData.type == "EnemySpawn") {
             if (objData.fileName == "LoopEnemy") {
                 SpawnLoopEnemies(objData.translation, objData.rotation, objData.loopEnemy);
+            } else if (objData.fileName == "PaceEnemy") {
+                SpawnPaceEnemy(objData.translation, objData.rotation, objData.paceEnemy, objData.enemyLevel);
+            } else if (objData.fileName == "TurretEnemy") {
+                SpawnTurretEnemy(objData.translation, objData.rotation, objData.enemyLevel);
+            } else if (objData.fileName == "StrafeEnemy") {
+                SpawnStrafeEnemy(objData.translation, objData.rotation, objData.strafeEnemy, objData.enemyLevel);
             } else if (objData.fileName == "MoveEnemy") {
                 std::unique_ptr<MoveEnemy> enemy = std::make_unique<MoveEnemy>();
                 enemy->Initialize(enemyModel_, enemyBulletModel_, player_.get());

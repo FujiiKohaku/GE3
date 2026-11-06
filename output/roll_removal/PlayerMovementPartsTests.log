@@ -1,0 +1,14 @@
+
+  [2026-11-04 18:57:56] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-04 18:57:56] [Log] Shader build completed. Compiled: 0, Up-to-date: 572
+cl : コマンド ライン  warning D9025: '/DNDEBUG' より '/UNDEBUG' が優先されます。 [C:\Projects\KohakuEngine\project\Tests\Projects\PlayerMovementPartsTests.vcxproj]
+  PlayerMovementPartsTests.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  コード生成しています。
+  4914 of 17636 functions (27.9%) were compiled, the rest were copied from previous compilation.
+    470 functions were new in current compilation
+    2140 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  PlayerMovementPartsTests.vcxproj -> C:\Projects\KohakuEngine\project\..\generated\outputs\Release\PlayerMovementPartsTests.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

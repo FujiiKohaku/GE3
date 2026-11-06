@@ -8,71 +8,6 @@ bool IsNear(float actual, float expected)
     return std::abs(actual - expected) < 0.0001f;
 }
 
-void TestRollDurationAndCooldown()
-{
-    Player roll;
-    EulerTransform transform{};
-    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
-    assert(!roll.IsRolling());
-    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
-    assert(roll.IsRolling());
-    PlayerTestAccess::UpdateRoll(roll, transform, false, false);
-    assert(transform.rotate.z > 0.0f);
-    for (int frameIndex = 0; frameIndex < 28; ++frameIndex) {
-        PlayerTestAccess::UpdateRoll(roll, transform, false, false);
-    }
-    assert(roll.IsRolling());
-    PlayerTestAccess::UpdateRoll(roll, transform, false, false);
-    assert(!roll.IsRolling());
-    assert(transform.rotate.z == 0.0f);
-    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
-    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
-    assert(!roll.IsRolling());
-    for (int frameIndex = 0; frameIndex < 58; ++frameIndex) {
-        PlayerTestAccess::UpdateRoll(roll, transform, false, false);
-    }
-    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
-    PlayerTestAccess::UpdateRoll(roll, transform, false, true);
-    assert(roll.IsRolling());
-    PlayerTestAccess::UpdateRoll(roll, transform, false, false);
-    assert(transform.rotate.z < 0.0f);
-    PlayerTestAccess::StopRoll(roll);
-    assert(!roll.IsRolling());
-}
-
-void TestRollTapExpiry()
-{
-    Player roll;
-    EulerTransform transform{};
-    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
-    for (int frameIndex = 0; frameIndex < 15; ++frameIndex) {
-        PlayerTestAccess::UpdateRoll(roll, transform, false, false);
-    }
-    PlayerTestAccess::UpdateRoll(roll, transform, true, false);
-    assert(!roll.IsRolling());
-}
-
-void TestRollAtDifferentFrameRates()
-{
-    const int frameRates[] = { 30, 120 };
-    for (int framesPerSecond : frameRates) {
-        Player roll;
-        EulerTransform transform{};
-        const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
-        PlayerTestAccess::UpdateRoll(roll, transform, true, false, deltaTimeSeconds);
-        PlayerTestAccess::UpdateRoll(roll, transform, true, false, deltaTimeSeconds);
-        assert(roll.IsRolling());
-        const int durationFrames = framesPerSecond / 2;
-        for (int frameIndex = 0; frameIndex < durationFrames - 1; ++frameIndex) {
-            PlayerTestAccess::UpdateRoll(roll, transform, false, false, deltaTimeSeconds);
-        }
-        assert(roll.IsRolling());
-        PlayerTestAccess::UpdateRoll(roll, transform, false, false, deltaTimeSeconds);
-        assert(!roll.IsRolling());
-        assert(transform.rotate.z == 0.0f);
-    }
-}
-
 void TestSteeringDeadZoneAndReset()
 {
     Player steering;
@@ -156,9 +91,6 @@ void TestGamepadImmediateFollowAndReversal()
 
 int main()
 {
-    TestRollDurationAndCooldown();
-    TestRollTapExpiry();
-    TestRollAtDifferentFrameRates();
     TestSteeringDeadZoneAndReset();
     TestAllRangeSteeringTimeStep();
     TestGamepadSteeringIndependentOfMouse();

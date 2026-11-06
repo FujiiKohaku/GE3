@@ -1,0 +1,14 @@
+
+  imgui.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\imgui.lib
+  DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\DirectXTex.lib
+  [2026-11-04 17:21:08] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-04 17:21:08] [Log] Shader build completed. Compiled: 0, Up-to-date: 568
+  SavePoint.cpp
+  コード生成しています。
+  170 of 20738 functions ( 0.8%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    270 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  KohakuEngine.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\KohakuEngine.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

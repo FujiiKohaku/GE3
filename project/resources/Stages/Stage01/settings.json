@@ -1,5 +1,7 @@
 {
   "id": "stage01",
+  "save_point_distances": [670.0],
+  "electric_gate_distances": [400.0],
   "shadows": {
     "enabled": true,
     "resolution": 2048,

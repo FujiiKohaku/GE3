@@ -44,6 +44,8 @@
 #include "App/Game/Tutorial/TutorialCommPanel.h"
 #include "App/Game/Tutorial/TutorialController.h"
 #include "App/Game/Hazard/WaterPillarHazard.h"
+#include "App/Game/Hazard/ElectricGate.h"
+#include "App/Game/SavePoint/SavePoint.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
 #include "Engine/postEffect/CopyImageRenderer.h"
@@ -193,6 +195,11 @@ private:
     // 配置データの種類に応じてモデル・障害物・トリガーなどを生成する。
     void CreateLevelObjects(const LevelData& levelData);
     void SpawnLoopEnemies(const Vector3& position, const Vector3& rotation, const LevelData::LoopEnemySpawnData& settings);
+    void SpawnPaceEnemy(const Vector3& position, const Vector3& rotation,
+        const LevelData::PaceEnemySpawnData& settings, int enemyLevel);
+    void SpawnTurretEnemy(const Vector3& position, const Vector3& rotation, int enemyLevel);
+    void SpawnStrafeEnemy(const Vector3& position, const Vector3& rotation,
+        const LevelData::StrafeEnemySpawnData& settings, int enemyLevel);
     // レベルから生成したオブジェクトと、それに付随する判定情報を破棄する。
     void ClearLevelObjects();
     // 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
@@ -270,6 +277,8 @@ private:
         int32_t travelDirection);
     // 回復アイテムのモデルと配置状態を準備する。
     void InitializeRecoveryItems(Model* model);
+    void InitializeSavePoints();
+    void InitializeElectricGates();
     // 回復アイテムの見た目とプレイヤーとの接触を更新する。
     void UpdateRecoveryItems();
     // 海中や海上の生き物を、背景演出用の位置へ配置する。
@@ -342,6 +351,8 @@ private:
         bool collected = false;
     };
     std::vector<RecoveryItem> recoveryItems_;
+    std::vector<std::unique_ptr<SavePoint>> savePoints_;
+    std::vector<std::unique_ptr<ElectricGate>> electricGates_;
 
     // player
     std::unique_ptr<Player> player_;
@@ -352,6 +363,7 @@ private:
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
     float previousMissileReloadRatio_ = 1.0f;
+    bool wasHomingReloadSelected_ = false;
     float missileReadyFlashRemainingSeconds_ = 0.0f;
     std::unique_ptr<Sprite> overheatGaugeSprite_;
     bool wasReticleOverheated_ = false;

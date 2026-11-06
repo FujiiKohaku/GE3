@@ -26,6 +26,12 @@
     <ProjectName>KohakuEngine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <ItemGroup>
+    <ClInclude Include="$(projectRootPath)App\Game\SavePoint\SavePoint.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\SavePoint\SavePoint.cpp" />
+    <ClInclude Include="$(projectRootPath)App\Game\Hazard\ElectricGate.h" />
+    <ClCompile Include="$(projectRootPath)App\Game\Hazard\ElectricGate.cpp" />
+  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -178,6 +184,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Common\EnemyBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\EnemyBulletManager.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\NormalEnemyBullet.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\TurretEnemyBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\SwarmPulseBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\TrackingEnemyBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Common\Bullet\BaseBullet.cpp" />
@@ -321,6 +328,9 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\SwarmEnemy\SwarmEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaceEnemy\PaceEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\TurretEnemy\TurretEnemy.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\StrafeEnemy\StrafeEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\Wait\FearWormWaitState.cpp" />
@@ -360,6 +370,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\PaintBullet.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\NormalEnemyBullet.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\TurretEnemyBullet.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\SwarmPulseBullet.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\TrackingEnemyBullet.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Common\Bullet\BaseBullet.h" />
@@ -491,6 +502,13 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\SwarmEnemy\SwarmEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\MoveEnemy\MoveEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\PaceEnemy\PaceEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\TurretEnemy\TurretEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\StrafeEnemy\StrafeEnemy.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\StrafeEnemy\StrafeEnemyPath.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\TurretEnemy\TurretEnemyAim.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\TurretEnemy\TurretShotFeedback.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\PaceEnemy\PaceEnemyPath.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\LoopEnemy\LoopEnemyPath.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\FearWormEnemy\FearWormEnemy.h" />
     <ClInclude Include="$(projectRootPath)Tests\FearWormStateTests.h" />

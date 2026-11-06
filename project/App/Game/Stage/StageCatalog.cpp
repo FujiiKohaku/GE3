@@ -234,6 +234,25 @@ bool StageCatalog::LoadStageSettings(
         settings.recoveryItemDistances =
             json["recovery_item_distances"].get<std::vector<float>>();
     }
+    if (json.contains("save_point_distances")) {
+        settings.savePointDistances = json["save_point_distances"].get<std::vector<float>>();
+    }
+    for (float distance : settings.savePointDistances) {
+        if (!std::isfinite(distance) || distance <= 0.0f || distance > settings.railLength
+            || settings.allRangeMode) {
+            lastError_ = "Invalid save point distance: " + settings.id;
+            return false;
+        }
+    }
+    if (json.contains("electric_gate_distances")) {
+        settings.electricGateDistances = json["electric_gate_distances"].get<std::vector<float>>();
+    }
+    for (float distance : settings.electricGateDistances) {
+        if (!std::isfinite(distance) || distance <= 0.0f || distance > settings.railLength || settings.allRangeMode) {
+            lastError_ = "Invalid electric gate distance: " + settings.id;
+            return false;
+        }
+    }
     if (json.contains("paint_enemy_distances")) {
         settings.paintEnemyDistances =
             json["paint_enemy_distances"].get<std::vector<float>>();

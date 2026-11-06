@@ -19,9 +19,6 @@ struct PlayerTestAccess {
     static bool IsAlive(const Player& player) { return player.IsAlive(); }
     static bool IsFalling(const Player& player) { return player.IsFalling(); }
     static bool ShouldDraw(const Player& player) { return player.ShouldDraw(); }
-    static void UpdateRoll(Player& player, EulerTransform& transform, bool isLeftTriggered,
-        bool isRightTriggered, float deltaTimeSeconds = 1.0f / 60.0f) { player.UpdateRoll(transform, isLeftTriggered, isRightTriggered, deltaTimeSeconds); }
-    static void StopRoll(Player& player) { player.StopRoll(); }
     static void UpdateSteering(Player& player, const Vector2& position, const Vector2& screenSize,
         bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad = false) { player.UpdateSteering(position, screenSize, isAllRangeMode, deltaTimeSeconds, isGamepad); }
     static void ResetSteering(Player& player) { player.ResetSteering(); }

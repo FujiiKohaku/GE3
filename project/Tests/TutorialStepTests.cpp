@@ -73,8 +73,6 @@ void VerifyTutorialGlyphCoverage()
                 if (sampleIndex == 2) input.heat = 0.0f;
                 input.defeatedTargets = data.requiredKills;
                 input.moveX = 1.0f;
-                input.bank = 1.0f;
-                input.isRolling = true;
                 step->Update(input, 0.5f);
                 VerifyGlyphCoverage(preparedGlyphs, step->GetOperation(input));
                 for (const std::string& button : step->GetButtonHints()) {
@@ -97,6 +95,7 @@ void VerifyTutorialProgression()
 
     TutorialTestAccess::SelectStep(tutorial, 1, player);
     assert(tutorial.GetTargetCount() == 3);
+    assert(tutorial.HasMovingTargets());
     assert(tutorial.LimitRailDistance(1000.0f) == 0.0f);
     tutorial.SetDefeatedTargets(3);
     tutorial.Update(input, player, std::numeric_limits<float>::quiet_NaN());
@@ -113,9 +112,9 @@ void VerifyTutorialProgression()
     assert(tutorial.GetTitle().find("HEAT") != std::string::npos);
     assert(tutorial.LimitRailDistance(1000.0f) == 0.0f);
 
-    TutorialTestAccess::SelectStep(tutorial, 12, player);
-    assert(tutorial.HasMovingTargets());
-    tutorial.SetDefeatedTargets(5);
+    TutorialTestAccess::SelectStep(tutorial, 7, player);
+    assert(!tutorial.HasMovingTargets());
+    tutorial.NotifyManualPauseOpened();
     tutorial.Update(input, player, 6.0f);
     assert(!tutorial.IsComplete());
     tutorial.Update(input, player, 3.0f);
@@ -162,7 +161,7 @@ int main()
     }
     assert(steps[0]->IsAchieved());
 
-    for (int index : {1, 3, 12}) {
+    for (int index : {1}) {
         input.defeatedTargets = steps[index]->GetData().requiredKills - 1;
         steps[index]->Update(input, 0.1f);
         assert(!steps[index]->IsAchieved());
@@ -170,8 +169,8 @@ int main()
         steps[index]->Update(input, 0.1f);
         assert(steps[index]->IsAchieved());
     }
-    assert(steps[12]->GetData().requiredKills == 5);
-    assert(steps[3]->GetData().hasMovingTargets && steps[12]->GetData().hasMovingTargets);
+    assert(steps[1]->GetData().requiredKills == 3);
+    assert(steps[1]->GetData().hasMovingTargets);
 
     input.heat = 0.0f;
     steps[2]->Update(input, 0.1f);
@@ -183,7 +182,7 @@ int main()
     input.isOverheated = false; steps[2]->Update(input, 0.1f);
     assert(steps[2]->IsAchieved());
 
-    for (int index : {4, 5}) {
+    for (int index : {3, 4}) {
         input.isBoosting = true; input.speedMultiplier = 0.5f;
         steps[index]->Update(input, 1.0f);
         assert(!steps[index]->IsAchieved());
@@ -195,27 +194,12 @@ int main()
         steps[index]->Update(input, 0.5f);
         assert(steps[index]->IsAchieved());
     }
-    input.isGamepadConnected = true;
-    input.bank = 0.9f; steps[6]->Update(input, 0.35f);
-    assert(!steps[6]->IsAchieved());
-    input.bank = -0.9f; steps[6]->Update(input, 0.35f);
-    assert(steps[6]->IsAchieved());
-    input.isRolling = true; steps[7]->Enter(input);
-    steps[7]->Update(input, 0.1f);
-    assert(!steps[7]->IsAchieved()); // 入場前からのロールは達成にしない。
-    input.isRolling = false; steps[7]->Update(input, 0.1f);
-    input.isRolling = true; steps[7]->Update(input, 0.1f);
-    assert(steps[7]->IsAchieved());
-    input.isGamepadConnected = false; input.isSpaceTriggered = true;
-    for (int index : {6, 7}) {
-        steps[index]->Enter(input); steps[index]->Update(input, 0.1f);
-        assert(steps[index]->IsAchieved());
-    }
-
-    assert(steps[8]->GetData().practiceWeapon == "アサルト");
-    assert(steps[9]->GetData().practiceWeapon == "ミサイル");
-    assert(steps[10]->GetData().practiceWeapon == "ホーミングミサイル");
-    for (int index = 8; index <= 10; ++index) {
+    assert(steps[5]->GetData().practiceWeapon == "ミサイル");
+    assert(steps[6]->GetData().practiceWeapon == "ホーミングミサイル");
+    assert(steps[5]->GetData().keyboardInstruction.find("2秒") != std::string::npos);
+    assert(steps[6]->GetData().keyboardInstruction.find("4秒") != std::string::npos);
+    assert(steps[6]->GetData().gamepadInstruction.find("4秒") != std::string::npos);
+    for (int index = 5; index <= 6; ++index) {
         input.weapon = "WrongWeapon"; input.defeatedTargets = 3;
         steps[index]->Update(input, 0.1f);
         assert(!steps[index]->IsAchieved());
@@ -225,10 +209,10 @@ int main()
         steps[index]->Enter(input);
         assert(!steps[index]->IsAchieved());
     }
-    steps[11]->Update(input, 0.1f); assert(!steps[11]->IsAchieved());
-    steps[11]->NotifyManualPauseOpened(); steps[11]->Update(input, 0.1f);
-    assert(steps[11]->IsAchieved());
-    steps[11]->Enter(input); steps[11]->Update(input, 0.1f);
-    assert(!steps[11]->IsAchieved());
-    std::cout << "TutorialController tests passed (13 steps)\n";
+    steps[7]->Update(input, 0.1f); assert(!steps[7]->IsAchieved());
+    steps[7]->NotifyManualPauseOpened(); steps[7]->Update(input, 0.1f);
+    assert(steps[7]->IsAchieved());
+    steps[7]->Enter(input); steps[7]->Update(input, 0.1f);
+    assert(!steps[7]->IsAchieved());
+    std::cout << "TutorialController tests passed (8 steps)\n";
 }

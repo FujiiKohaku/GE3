@@ -43,10 +43,10 @@ protected:
     void SetBulletSpeed(float bulletSpeed);
     void SetFireInterval(int32_t fireIntervalFrames);
 
-private:
     friend bool RunAppTimingTests();
     // プレイヤーの前方かつ射程内にいる場合だけ発射タイマーを進める。
     void Attack() override;
+private:
     // プレイヤーへ向かう弾と、設定に応じた放射状の追加弾を発射する。
     void FireBullet();
     // 指定方向へ飛ぶ敵弾を生成し、弾管理へ引き渡す。

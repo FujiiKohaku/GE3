@@ -12,9 +12,9 @@
     "Frequency": 0.05
   },
   "Particle": {
-    "LifeTime": 0.28,
-    "StartScale": 0.3,
-    "EndScale": 0.025,
+    "LifeTime": 0.18,
+    "StartScale": 0.2,
+    "EndScale": 0.015,
     "StartRotation": 0.0,
     "RotationSpeed": 0.35,
     "Velocity": [

@@ -1,0 +1,3 @@
+[2026-11-05 15:25:49] [Log] Shader compile queue started. Pending: 1, Max parallel: 12
+[2026-11-05 15:25:49] [Log] Compiling Shaders\Object3D\TurretBullet\Render.PS.hlsl -> Shaders\Object3D\TurretBullet\Render.PS.dxil (ps_6_0)
+[2026-11-05 15:25:49] [Log] Shader build completed. Compiled: 1, Up-to-date: 574

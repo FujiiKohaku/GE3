@@ -81,9 +81,7 @@ public:
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
     bool IsBoosting() const { return movement_.IsBoosting(); }
     float GetForwardSpeedMultiplier() const { return movement_.GetForwardSpeedMultiplier(); }
-    bool IsRolling() const { return movement_.IsRolling(); }
     void ResetHomingLock() { weaponController_.ResetHomingLock(); }
-    float GetManualBank() const { return movement_.GetManualBank(); }
     // 使用クラス：GamePlayScene。キーボード移動とマウス操舵を切り替える。
     void SetControlMode(ControlMode mode);
     // 現在の操作方式を返す。
@@ -92,7 +90,7 @@ public:
     void SetMouseSensitivity(float sensitivity);
     // 現在のマウス操舵の感度を返す。
     float GetMouseSensitivity() const { return movement_.GetMouseSensitivity(); }
-    // 使用クラス：GamePlayScene。機首や傾きの演出に使う操舵入力を返す。
+    // 使用クラス：GamePlayScene。照準へ機首を向けるための操舵入力を返す。
     const Vector2& GetStarFoxSteeringInput() const { return movement_.GetSteeringInput(); }
 
     // GamePlaySceneのレティクルとオーバーヒートゲージの配置に使う照準位置を返す。
@@ -213,8 +211,6 @@ private:
         bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad = false);
     void ResetSteering() { movement_.ResetSteering(); }
     // 左右のロール開始と進行を処理し、一回転後に通常姿勢へ戻す。
-    void UpdateRoll(EulerTransform& transform, bool isLeftTriggered, bool isRightTriggered, float deltaTimeSeconds);
-    void StopRoll() { movement_.StopRoll(); }
     // 機体の大きさとカメラ投影を考慮し、画面からはみ出ないレール上のずれへ補正する。
     Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
     // レールの基準位置に左右・上下のずれを加え、ワールド位置へ変換する。

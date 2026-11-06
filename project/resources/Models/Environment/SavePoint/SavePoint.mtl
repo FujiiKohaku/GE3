@@ -1,0 +1,15 @@
+newmtl PearlArmor
+Kd 1 1 1
+map_Kd PearlArmor.png
+
+newmtl GraphiteFrame
+Kd 1 1 1
+map_Kd GraphiteFrame.png
+
+newmtl LanternCore
+Kd 1 1 1
+map_Kd LanternCore.png
+
+newmtl CyanEmission
+Kd 1 1 1
+map_Kd CyanEmission.png

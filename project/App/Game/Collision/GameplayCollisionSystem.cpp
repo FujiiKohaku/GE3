@@ -167,11 +167,8 @@ bool GameplayCollisionSystem::ApplyExplosionToEnemy(BaseEnemy& enemy, const Sphe
     float nearestDistance = (std::numeric_limits<float>::max)();
     for (const auto& part : parts) {
         if (!enemy.IsCollisionPartDamageable(part.partIndex)) { continue; }
-        const Vector3 offset = part.position - explosion.center;
-        const float distanceSquared = Dot(offset, offset);
-        const float combinedRadius = explosion.radius + part.radius;
-        if (distanceSquared > combinedRadius * combinedRadius) { continue; }
-        const float surfaceDistance = (std::max)(0.0f, std::sqrt(distanceSquared) - part.radius);
+        if (!part.IntersectSphere(explosion).isHit) { continue; }
+        const float surfaceDistance = part.GetSurfaceDistance(explosion.center);
         if (!hasHitPart || surfaceDistance < nearestDistance) {
             hasHitPart = true;
             nearestPartIndex = part.partIndex;
@@ -233,6 +230,11 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
             BaseEnemy& enemy = *nearest.enemy;
             if (enemy.IsCollisionPartDamageable(nearest.partIndex)) {
                 if (!hasExplosion) { bullet->OnHitEnemy(nearest.hit.position); }
+                if (bullet->GetDamage() > 0) {
+                    // 部位中心へ埋まらないよう、弾の接触時の位置へ小さな火花を出す。
+                    const Vector3 sparkPosition = sphere.center + movement * nearest.hit.time;
+                    EffectManager::GetInstance()->PlayEffect("EnemyHitSpark", sparkPosition);
+                }
                 SoundManager::GetInstance()->Play("EnemyHit");
             } else {
                 SoundManager::GetInstance()->Play("ArmorDeflect");
@@ -290,9 +292,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateCombatCollisions(
             std::vector<EnemyCollisionPart> collisionParts;
             enemy->GetCollisionParts(collisionParts);
             for (const EnemyCollisionPart& part : collisionParts) {
-                if (CollisionManager::Intersect(
-                        playerSphere,
-                        Sphere { part.position, part.radius }).isHit) {
+                if (part.IntersectSphere(playerSphere).isHit) {
                     OutputDebugStringA("Player Hit Enemy\n");
                     break;
                 }

@@ -166,7 +166,9 @@ float4 main(VertexShaderOutput input) : SV_TARGET
 
     // 消失フェードアウト
     float fadeOut = 1.0f - smoothstep(0.65f, 1.0f, paintProgress);
-    float finalAlpha = saturate(paintPattern * fadeOut * paintIntensity * screenEdgeMask * 1.5f);
+    // ペイント越しにも敵や背景が見えるよう、通常強度での不透明度を最大55%に抑える。
+    const float kMaxPaintOpacity = 0.55f;
+    float finalAlpha = saturate(paintPattern * fadeOut * paintIntensity * screenEdgeMask * kMaxPaintOpacity);
 
     // カラー適用
     float3 inkColor = paintColor;

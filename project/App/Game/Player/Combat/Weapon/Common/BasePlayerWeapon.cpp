@@ -4,6 +4,33 @@
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "Engine/audio/SoundManager.h"
 #include <algorithm>
+#include <cmath>
+
+void CooldownPlayerWeapon::UpdateCooldown(float deltaTimeSeconds)
+{
+    if (!std::isfinite(deltaTimeSeconds) || deltaTimeSeconds <= 0.0f) { return; }
+    elapsedCooldownSeconds_ = (std::min)(static_cast<double>(fireIntervalSeconds_),
+        elapsedCooldownSeconds_ + static_cast<double>(deltaTimeSeconds));
+}
+
+float CooldownPlayerWeapon::GetReloadRatio() const
+{
+    if (IsReadyToFire()) { return 1.0f; }
+    return std::clamp(static_cast<float>(elapsedCooldownSeconds_ / fireIntervalSeconds_), 0.0f, 1.0f);
+}
+
+bool CooldownPlayerWeapon::IsReadyToFire() const
+{
+    constexpr float kCooldownToleranceSeconds = 0.000001f;
+    return elapsedCooldownSeconds_ + kCooldownToleranceSeconds >= fireIntervalSeconds_;
+}
+
+bool CooldownPlayerWeapon::TryStartCooldown()
+{
+    if (!IsReadyToFire()) { return false; }
+    elapsedCooldownSeconds_ = 0.0f;
+    return true;
+}
 
 // 初押しで即座に撃ち、長押し中は経過時間に応じた発数を要求する。
 void AutomaticPlayerWeapon::Update(PlayerWeaponContext& context, bool held, bool triggered, float dt)

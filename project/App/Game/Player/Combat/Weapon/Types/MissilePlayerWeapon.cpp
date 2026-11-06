@@ -9,11 +9,10 @@ void MissilePlayerWeapon::Update(PlayerWeaponContext& context, bool, bool trigge
     if (context.canFire && triggered) context.fire();
 }
 
-// 共通のミサイル待ち時間を確認し、発射できたら待ち時間を数え直す。
+// この武器の待ち時間を確認し、発射できたら待ち時間を数え直す。
 bool MissilePlayerWeapon::Fire(PlayerWeaponContext& context)
 {
-    if (!context.canFire || context.missileCooldown + 0.000001f < 2.0f) return false;
-    context.missileCooldown = 0.0f;
+    if (!context.canFire || !TryStartCooldown()) { return false; }
     SoundManager::GetInstance()->Play("MissileShot");
     context.emit(nullptr);
     return true;

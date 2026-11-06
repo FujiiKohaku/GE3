@@ -12,6 +12,32 @@
 
 EnemyBulletManager* BaseEnemy::bulletManager_ = nullptr;
 
+CollisionHit EnemyCollisionPart::IntersectSphere(const Sphere& sphere) const
+{
+    if (isBox) { return CollisionManager::Intersect(sphere, box); }
+    return CollisionManager::Intersect(sphere, Sphere { position, radius });
+}
+
+SweepHit EnemyCollisionPart::SweepSphere(const Sphere& sphere, const Vector3& movement) const
+{
+    if (isBox) { return CollisionManager::SweepSphere(sphere, movement, box); }
+    return CollisionManager::SweepSphere(sphere, movement, Sphere { position, radius });
+}
+
+float EnemyCollisionPart::GetSurfaceDistance(const Vector3& point) const
+{
+    if (!isBox) { return (std::max)(0.0f, Vector3Length(point - position) - radius); }
+    const Vector3 offset = point - box.center;
+    const float halfSizes[3] = { box.size.x * 0.5f, box.size.y * 0.5f, box.size.z * 0.5f };
+    Vector3 nearestPoint = box.center;
+    for (int axisIndex = 0; axisIndex < 3; ++axisIndex) {
+        const float projection = Dot(offset, box.orientation[axisIndex]);
+        nearestPoint += box.orientation[axisIndex] *
+            std::clamp(projection, -halfSizes[axisIndex], halfSizes[axisIndex]);
+    }
+    return Vector3Length(point - nearestPoint);
+}
+
 // モデルと材質を設定し、敵として共通の描画オブジェクトを作る。
 void BaseEnemy::Initialize(Model* model)
 {
@@ -358,7 +384,7 @@ SweepHit BaseEnemy::SweepBullet(const Sphere& bullet, const Vector3& movement, i
     GetCollisionParts(parts);
     SweepHit nearest {};
     for (const auto& part : parts) {
-        SweepHit hit = CollisionManager::SweepSphere(bullet, movement, Sphere { part.position, part.radius });
+        SweepHit hit = part.SweepSphere(bullet, movement);
         if (hit.isHit && (!nearest.isHit || hit.time < nearest.time)) {
             partIndex = part.partIndex;
             // 命中順は接触時刻で決め、演出は従来どおり部位の中心へ出す。
@@ -374,13 +400,17 @@ void BaseEnemy::OnBulletHit(int32_t partIndex, float damage, const Vector3& posi
     if (IsCollisionPartDamageable(partIndex)) { ApplyDamageToPart(partIndex, damage); }
     else { OnCollisionPartGuarded(partIndex, position); }
 }
-// 照準が敵を狙えるように、部位の球をレイ判定へ登録する。
+// 照準が敵を狙えるように、部位の球または箱をレイ判定へ登録する。
 void BaseEnemy::RegisterRaycastTargets(CollisionObjectId& nextObjectId) const
 {
     if (IsDead()) { return; }
     std::vector<EnemyCollisionPart> parts;
     GetCollisionParts(parts);
     for (const auto& part : parts) {
-        CollisionManager::GetInstance()->RegisterRaycastSphereTarget(nextObjectId++, Sphere { part.position, part.radius });
+        if (part.isBox) {
+            CollisionManager::GetInstance()->RegisterRaycastObbTarget(nextObjectId++, part.box);
+        } else {
+            CollisionManager::GetInstance()->RegisterRaycastSphereTarget(nextObjectId++, Sphere { part.position, part.radius });
+        }
     }
 }

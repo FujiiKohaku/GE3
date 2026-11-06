@@ -1,0 +1,17 @@
+
+  imgui.cpp
+  imgui_demo.cpp
+  imgui_draw.cpp
+  imgui_impl_dx12.cpp
+  imgui_impl_win32.cpp
+  ImGuizmo.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+C:\Projects\KohakuEngine\project\externals\imgui\imgui.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_demo.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_draw.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_dx12.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\ImGuizmo.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_impl_win32.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_tables.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]
+C:\Projects\KohakuEngine\project\externals\imgui\imgui_widgets.cpp(1,1): error C1902: プログラム データベース マネージャーが一致していません。セットアップが正しく行われているか確認してください。 [C:\Projects\KohakuEngine\project\externals\imgui\imgui.vcxproj]

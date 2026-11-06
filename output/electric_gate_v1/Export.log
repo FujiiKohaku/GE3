@@ -1,0 +1,11 @@
+Info: File exported successfully
+Info: File exported successfully
+Exported electric gate assets: C:\Projects\KohakuEngine\project\resources\Models\Environment\ElectricGate
+Blender 4.4.1 (hash d8845b3bb572 built 2025-04-15 02:59:10)
+Read blend: "C:\Projects\KohakuEngine\output\electric_gate_v1\ElectricGate.blend"
+Writing to C:\Projects\KohakuEngine\project\resources\Models\Environment\ElectricGate\ElectricGateBody.obj
+OBJ export of 'ElectricGateBody.obj' took 4.48 ms
+Writing to C:\Projects\KohakuEngine\project\resources\Models\Environment\ElectricGate\ElectricGateEmitters.obj
+OBJ export of 'ElectricGateEmitters.obj' took 2.08 ms
+
+Blender quit

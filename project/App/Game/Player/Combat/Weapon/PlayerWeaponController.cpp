@@ -38,7 +38,6 @@ void PlayerWeaponController::ResetCombatState()
     weaponHeat_ = PlayerWeaponHeat{};
     shotsFired_ = 0;
     currentWeapon_ = kWeaponAssault;
-    missileFireCooldownSeconds_ = kMissileFireIntervalSeconds;
     // 選択されていない武器も作り直し、連射間隔の経過状態を残さない。
     weapons_ = {
         std::make_unique<AssaultPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
@@ -65,7 +64,7 @@ void PlayerWeaponController::SetCamera(Camera* camera)
 // 発熱・ロック・機体情報と発射用の呼び出し先を、武器が使う情報へまとめる。
 PlayerWeaponContext PlayerWeaponController::MakeWeaponContext(const Camera* activeCamera)
 {
-    return { weaponHeat_, homingLock_, missileFireCooldownSeconds_, camera_,
+    return { weaponHeat_, homingLock_, camera_,
         transform_.translate, player_.GetFlightForward(), player_.GetAimScreenPosition(),
         !player_.IsDead() && bulletModel_ != nullptr && camera_ != nullptr,
         std::bind(&PlayerWeaponController::FireCurrentCameraBullet, this),
@@ -93,7 +92,9 @@ void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
     if (input->IsPrimaryFireBlocked()) homingLock_.Reset();
     if (!isDebugMode) UpdateWeaponSwitch(input);
     const float dt = TimeManager::GetInstance()->GetDeltaTime();
-    missileFireCooldownSeconds_ = (std::min)(kMissileFireIntervalSeconds, missileFireCooldownSeconds_ + dt);
+    for (const std::unique_ptr<BasePlayerWeapon>& weapon : weapons_) {
+        weapon->UpdateCooldown(dt);
+    }
     BasePlayerWeapon& weapon = GetCurrentWeapon();
     if (isDebugMode || !weapon.IsHoming()) homingLock_.Reset();
     auto context = MakeWeaponContext();
@@ -273,7 +274,7 @@ void PlayerWeaponHeat::Update(float deltaTimeSeconds, bool isFireHeld)
     if (deltaTimeSeconds <= 0.0f) {
         return;
     }
-    bool shouldCoolHeat = true;
+    bool shouldCoolHeat = !isFireHeld || isOverheated_;
     if (graceRemainingSeconds_ > 0.0f) {
         if (isFireHeld) {
             shouldCoolHeat = false;

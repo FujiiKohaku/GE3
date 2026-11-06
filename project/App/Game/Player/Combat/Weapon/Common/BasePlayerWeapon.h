@@ -11,7 +11,6 @@ class BaseEnemy;
 struct PlayerWeaponContext {
     PlayerWeaponHeat& heat;
     PlayerHomingLock& lock;
-    float& missileCooldown;
     Camera* camera;
     Vector3 position;
     Vector3 forward;
@@ -28,10 +27,28 @@ public:
     virtual const char* GetName() const = 0;
     virtual bool IsHoming() const { return false; }
     virtual bool UsesHeat() const { return false; }
+    virtual void UpdateCooldown(float deltaTimeSeconds) {}
+    virtual float GetReloadRatio() const { return 1.0f; }
     virtual void Update(PlayerWeaponContext& context, bool held, bool triggered, float dt) = 0;
     virtual bool Fire(PlayerWeaponContext& context) = 0;
     virtual std::unique_ptr<PlayerBullet> CreateBullet(Model* model, PlayerWeaponContext& context,
         BaseEnemy* target, float& speed) const = 0;
+};
+
+// 各武器の設定値と独立した待ち時間を保持する。生成直後は発射可能。
+class CooldownPlayerWeapon : public BasePlayerWeapon {
+public:
+    void UpdateCooldown(float deltaTimeSeconds) override;
+    float GetReloadRatio() const override;
+    float GetFireIntervalSeconds() const { return fireIntervalSeconds_; }
+    bool IsReadyToFire() const;
+protected:
+    explicit CooldownPlayerWeapon(float fireIntervalSeconds)
+        : fireIntervalSeconds_(fireIntervalSeconds), elapsedCooldownSeconds_(fireIntervalSeconds) {}
+    bool TryStartCooldown();
+private:
+    float fireIntervalSeconds_;
+    double elapsedCooldownSeconds_;
 };
 
 // アサルトの連射動作。威力・間隔は派生側が指定する。

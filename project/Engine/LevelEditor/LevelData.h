@@ -5,6 +5,33 @@
 
 struct LevelData {
 
+    struct StrafeEnemySpawnData {
+        bool isEnteringFromLeft = false;
+        float activationDistance = 120.0f;
+        float durationSeconds = 4.0f;
+        float forwardOffset = 90.0f;
+        float offsetX = 0.0f;
+        float offsetY = 4.0f;
+        float sideDistance = 80.0f;
+        int shotCount = 3;
+        float fireStartProgress = 0.25f;
+        float fireEndProgress = 0.75f;
+    };
+
+    struct PaceEnemySpawnData {
+        bool isEnteringFromLeft = false;
+        float activationDistance = 120.0f;
+        float entryDurationSeconds = 1.5f;
+        float holdDurationSeconds = 6.0f;
+        float exitDurationSeconds = 1.5f;
+        float forwardOffset = 100.0f;
+        float offsetX = 0.0f;
+        float offsetY = 0.0f;
+        float swayAmplitude = 12.0f;
+        float swayPeriodSeconds = 4.0f;
+        float sideTravelDistance = 80.0f;
+    };
+
     struct LoopEnemySpawnData {
         int count = 1;
         bool isEnteringFromLeft = false;
@@ -25,6 +52,8 @@ struct LevelData {
         bool disabled = false;
         int enemyLevel = 2;
         LoopEnemySpawnData loopEnemy;
+        PaceEnemySpawnData paceEnemy;
+        StrafeEnemySpawnData strafeEnemy;
         
         struct ScoreItemData {
             bool exists = false;
@@ -105,6 +134,8 @@ struct LevelData {
         std::string fileName;
         int enemyLevel = 2;
         LoopEnemySpawnData loopEnemy;
+        PaceEnemySpawnData paceEnemy;
+        StrafeEnemySpawnData strafeEnemy;
         Vector3 translation;
         Vector3 rotation;
     };

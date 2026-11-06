@@ -7,7 +7,7 @@
 // 再発射可能な間だけロックを更新し、離した際に発射できたらロックを解除する。
 void HomingPlayerWeapon::Update(PlayerWeaponContext& context, bool held, bool, float)
 {
-    const bool isLockEnabled = context.canFire && context.missileCooldown + 0.000001f >= 2.0f;
+    const bool isLockEnabled = context.canFire && IsReadyToFire();
     if (context.lock.UpdateFireInput(held, isLockEnabled, context.camera,
         context.position, context.forward, context.aim)) {
         if (context.fire()) context.lock.ClearTargets();
@@ -17,8 +17,7 @@ void HomingPlayerWeapon::Update(PlayerWeaponContext& context, bool held, bool, f
 // ミサイルの待ち時間を確認し、ロック対象ごとに発射する。対象がなければ通常方向へ一発撃つ。
 bool HomingPlayerWeapon::Fire(PlayerWeaponContext& context)
 {
-    if (!context.canFire || context.missileCooldown + 0.000001f < 2.0f) return false;
-    context.missileCooldown = 0.0f;
+    if (!context.canFire || !TryStartCooldown()) { return false; }
     SoundManager::GetInstance()->Play("MissileShot");
     if (context.lock.GetLockedTargets().empty()) {
         context.emit(nullptr);

@@ -1,0 +1,11 @@
+
+  imgui.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\imgui.lib
+  DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\DirectXTex.lib
+  [2026-11-04 18:22:33] [Log] Shader compile queue started. Pending: 3, Max parallel: 12
+  [2026-11-04 18:22:33] [Log] Compiling Effects\ExplosionFlame\Emit.CS.hlsl -> Effects\ExplosionFlame\Emit.CS.dxil (cs_6_0)
+  [2026-11-04 18:22:33] [Log] Compiling Effects\ExplosionFlame\Render.PS.hlsl -> Effects\ExplosionFlame\Render.PS.dxil (ps_6_0)
+  [2026-11-04 18:22:33] [Log] Compiling Effects\ExplosionFlame\Update.CS.hlsl -> Effects\ExplosionFlame\Update.CS.dxil (cs_6_0)
+  [2026-11-04 18:22:33] [Log] Shader build completed. Compiled: 3, Up-to-date: 569
+  KohakuEngine.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\KohakuEngine.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

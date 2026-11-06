@@ -1,0 +1,12 @@
+
+  [2026-11-04 17:02:25] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-04 17:02:25] [Log] Shader build completed. Compiled: 0, Up-to-date: 568
+cl : コマンド ライン  warning D9025: '/DNDEBUG' より '/UNDEBUG' が優先されます。 [C:\Projects\KohakuEngine\project\Tests\Projects\SavePointTests.vcxproj]
+  SavePointTests.cpp
+  コード生成しています。
+  Previous IPDB not found, fall back to full compilation.
+  All 17643 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  コード生成が終了しました。
+  SavePointTests.vcxproj -> C:\Projects\KohakuEngine\project\..\generated\outputs\Release\SavePointTests.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

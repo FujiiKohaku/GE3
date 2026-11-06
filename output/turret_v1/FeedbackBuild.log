@@ -1,0 +1,20 @@
+
+  imgui.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\imgui.lib
+  DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\DirectXTex.lib
+  [2026-11-05 15:20:29] [Log] Shader compile queue started. Pending: 3, Max parallel: 12
+  [2026-11-05 15:20:29] [Log] Compiling Shaders\Object3D\DanmakuBullet\Render.PS.hlsl -> Shaders\Object3D\DanmakuBullet\Render.PS.dxil (ps_6_0)
+  [2026-11-05 15:20:29] [Log] Compiling Shaders\Object3D\TurretMuzzle\Render.PS.hlsl -> Shaders\Object3D\TurretMuzzle\Render.PS.dxil (ps_6_0)
+  [2026-11-05 15:20:29] [Log] Compiling Shaders\Object3D\TurretTrail\Render.PS.hlsl -> Shaders\Object3D\TurretTrail\Render.PS.dxil (ps_6_0)
+  [2026-11-05 15:20:29] [Log] Shader build completed. Compiled: 3, Up-to-date: 572
+  TurretEnemyBullet.cpp
+  TurretEnemy.cpp
+  GamePlayScene.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  コード生成しています。
+  159 of 20872 functions ( 0.8%) were compiled, the rest were copied from previous compilation.
+    8 functions were new in current compilation
+    294 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  KohakuEngine.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\KohakuEngine.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。

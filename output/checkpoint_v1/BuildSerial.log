@@ -1,0 +1,240 @@
+
+  imgui.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\imgui.lib
+  DirectXTex_Desktop_2022_Win10.vcxproj -> C:\Projects\KohakuEngine\generated\outputs\Release\DirectXTex.lib
+  [2026-11-04 16:56:26] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-04 16:56:26] [Log] Shader build completed. Compiled: 0, Up-to-date: 568
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  SavePoint.cpp
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  GameplayCollisionSystem.cpp
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  LoadingScene.cpp
+  StageCatalog.cpp
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  TutorialCommPanel.cpp
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  TutorialController.cpp
+  ClearScene.cpp
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  BaseEnemy.cpp
+  EnemyDebugViews.cpp
+cl : コマンド ライン  warning D9025: '/Zi' より '/Z7' が優先されます。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+  EnemyBullet.cpp
+  EnemyBulletManager.cpp
+  NormalEnemyBullet.cpp
+  SwarmPulseBullet.cpp
+  TrackingEnemyBullet.cpp
+  BaseBullet.cpp
+  Collision.cpp
+  CollisionManager.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  TimeManager.cpp
+  EditorManager.cpp
+  EngineStruct.cpp
+  EffectManager.cpp
+  AutoExposureRenderer.cpp
+  BloomRenderer.cpp
+  VolumetricLightRenderer.cpp
+  FogManager.cpp
+  FogRenderer.cpp
+  Renderer.cpp
+  MotionVectorRenderer.cpp
+  DlssSuperResolution.cpp
+  TemporalSuperResolution.cpp
+  ShadowCamera.cpp
+  ShadowMapRenderer.cpp
+  LocalShadowRenderer.cpp
+  ScreenshotManager.cpp
+  CopyImageRenderer.cpp
+  PostEffectManager.cpp
+  PostEffectPreset.cpp
+  PostEffectShaderReload.cpp
+  Model.cpp
+  SkinningObject3d.cpp
+  SkyBox.cpp
+  SkyBoxManager.cpp
+  AnimationActor.cpp
+  AnimationLoder.cpp
+  AnimationEventLoader.cpp
+  Animation.cpp
+  KeyFrame.cpp
+  DebugCameraController.cpp
+  Light.cpp
+  LightManager.cpp
+  DebugRenderer.cpp
+  Rail.cpp
+  MathStruct.cpp
+  Object3DStruct.cpp
+  NodeAnimation.cpp
+  PlayAnimation.cpp
+  ParticleData.cpp
+  ParticleMeshManager.cpp
+  ParticleRenderManager.cpp
+  SceneManager.cpp
+  BaseScene.cpp
+  BlendUtil.cpp
+  Camera.cpp
+  D3DResourceLeakChecker.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  DirectXCommon.cpp
+  GamePlayScene.cpp
+  BasePauseState.cpp
+  DevelopmentWebPanel.cpp
+  ImGuiManager.cpp
+  Game.cpp
+  Profiler.cpp
+  CPUProfiler.cpp
+  GPUProfiler.cpp
+  MemoryProfiler.cpp
+  PerformanceCounter.cpp
+  BootProfiler.cpp
+  TimelineProfiler.cpp
+  ProfilerScope.cpp
+  Input.cpp
+  Logger.cpp
+  main.cpp
+  SoundManager.cpp
+  Sprite.cpp
+  SpriteMaterialManager.cpp
+  SpriteMeshManager.cpp
+  SpriteManager.cpp
+  SpriteRenderManager.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  FontManager.cpp
+  Text.cpp
+  TextRenderer.cpp
+  Utf8Utility.cpp
+  Object3dManager.cpp
+  Object3d.cpp
+  OceanSurface.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  WaterPillarRenderer.cpp
+  ModelCommon.cpp
+  ModelManager.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  SphereObject.cpp
+  SpriteStruct.cpp
+  Joint.cpp
+  Skeleton.cpp
+  SkinCluster.cpp
+  SkinningObject3dManager.cpp
+  SrvManager.cpp
+  StringUtility.cpp
+  TextureManager.cpp
+C:\Projects\KohakuEngine\project\App\main.cpp(154,41): warning C4297: 'WinMain': 例外をスローしないはずだがそれをする関数。 [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]
+      C:\Projects\KohakuEngine\project\App\main.cpp(154,41):
+      ___declspec(nothrow)、throw()、noexcept(true)、 または noexcept が関数に対して指定されました
+  
+  TitleScene.cpp
+  BaseTitleState.cpp
+  SpriteTestScene.cpp
+  TextTestScene.cpp
+  TestScene1.cpp
+  Utility.cpp
+  MatrixMath.cpp
+  WinApp.cpp
+  Player.cpp
+  WaterPillarHazard.cpp
+  OffscreenRenderer.cpp
+  ParticleBoardMesh.cpp
+  ParticleBoxMesh.cpp
+  ParticleSphereMesh.cpp
+  ParticleConeMesh.cpp
+  ParticleRingMesh.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  ParticleCylinderMesh.cpp
+  GPUParticleStruct.cpp
+  PostEffectType.cpp
+  LevelData.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  LevelDataLoader.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  Ray.cpp
+  Sphere.cpp
+  SceneObjectManager.cpp
+  GameOverScene.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  NormalEnemy.cpp
+  ArmoredEnemy.cpp
+  SwarmEnemy.cpp
+  MoveEnemy.cpp
+  LoopEnemy.cpp
+  PaintShooterEnemy.cpp
+  FearWormEnemy.cpp
+  FearWormWaitState.cpp
+  FearWormEntryState.cpp
+  FearWormBattleState.cpp
+  FearWormDeadState.cpp
+  BossEncounterController.cpp
+  IceJellyfish.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  PaintBullet.cpp
+  ScreenSpaceReflection.cpp
+  DxrRenderer.cpp
+  DxrShadowRenderer.cpp
+  DxrReflectionRenderer.cpp
+  DxrLocalShadowRenderer.cpp
+  ShadowDenoiser.cpp
+  ScreenSpaceGlobalIllumination.cpp
+  PlayerBullet.cpp
+  HomingMissileBullet.cpp
+  MissileBullet.cpp
+  NormalBullet.cpp
+  PlayerWeaponController.cpp
+  HomingPlayerWeapon.cpp
+  AssaultPlayerWeapon.cpp
+  MissilePlayerWeapon.cpp
+  BasePlayerWeapon.cpp
+  FearWormJumOutState.cpp
+  FearWormWaitForBodyState.cpp
+  GifWriter.cpp
+  GifRecordingManager.cpp
+  CameraPreferences.cpp
+  FearWormOrbitShotState.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  FearWormWeaveSpreadState.cpp
+  FearWormDriftBurstState.cpp
+  FearWormCoilBarrageState.cpp
+  FearWormHeadChargeState.cpp
+  FearWormLineMissileState.cpp
+  FearWormSpiralBarrageState.cpp
+  FearWormBeamState.cpp
+  FearWormMovement.cpp
+  FearWormBeam.cpp
+  IceJellyfishWaitState.cpp
+  IceJellyfishEntryState.cpp
+  IceJellyfishBattleState.cpp
+  IceJellyfishPulseBarrageAttack.cpp
+  IceJellyfishIceSpearAttack.cpp
+  IceJellyfishIcePillarAttack.cpp
+  IceJellyfishDeadState.cpp
+  PlayerEntryState.cpp
+  PlayerBattleState.cpp
+  PlayerDeadState.cpp
+  IceJellyfishCollision.cpp
+  IceJellyfishPoseController.cpp
+  PlayerMovement.cpp
+  PlayerInput.cpp
+  StartupTiming.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  コード生成しています。
+  3644 of 20738 functions (17.6%) were compiled, the rest were copied from previous compilation.
+    84 functions were new in current compilation
+    1942 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+LINK : fatal error LNK1101: MSPDB140.DLL バージョンが正しくありません。この製品のインストールを再確認してください [C:\Projects\KohakuEngine\project\KohakuEngine.vcxproj]

@@ -4,6 +4,8 @@
 
 class HomingPlayerWeapon final : public MissilePlayerWeapon {
 public:
+    static constexpr float kFireIntervalSeconds = 4.0f;
+    HomingPlayerWeapon() : MissilePlayerWeapon(kFireIntervalSeconds) {}
     const char* GetName() const override { return "ホーミングミサイル"; }
     bool IsHoming() const override { return true; }
     // 押している間はロックを更新し、離した際に発射できたらロックを解除する。

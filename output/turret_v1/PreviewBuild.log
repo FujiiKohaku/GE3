@@ -1,0 +1,12 @@
+
+  [2026-11-05 15:24:34] [Log] Shader compile queue started. Pending: 0, Max parallel: 12
+  [2026-11-05 15:24:34] [Log] Shader build completed. Compiled: 0, Up-to-date: 575
+  TurretFeedbackPreview.cpp
+  C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\um\dinput.h: DIRECTINPUT_VERSION undefined. Defaulting to version 0x0800
+  コード生成しています。
+  Previous IPDB not found, fall back to full compilation.
+  All 20864 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  コード生成が終了しました。
+  TurretFeedbackPreview.vcxproj -> C:\Projects\KohakuEngine\project\..\generated\outputs\Release\TurretFeedbackPreview.exe
+          1 個のファイルをコピーしました。
+          1 個のファイルをコピーしました。
