@@ -1703,8 +1703,17 @@ void GamePlayScene::Update()
         cameraShakeTime_ = 0.0f;
         cameraShakeDuration_ = 0.0f;
         cameraShakeStrength_ = 0.0f;
-        SceneManager::GetInstance()->SetCameraShakeStrength(0.0f);
+        // 戦闘中の揺れを解除し、死亡演出自身の時間に同期した揺れを適用する。
+        float deathShakeStrength = 0.0f;
+        if (const auto* fearWorm = dynamic_cast<const FearWormEnemy*>(activeBoss)) {
+            deathShakeStrength = fearWorm->GetDeathCameraShakeStrength();
+        }
+        SceneManager::GetInstance()->SetCameraShakeStrength(deathShakeStrength);
         SceneManager::GetInstance()->RemovePostEffect(PostEffectType::CameraShake);
+        if (deathShakeStrength > 0.0f) {
+            SceneManager::GetInstance()->AddPostEffect(
+                PostEffectType::CameraShake, PostEffectStage::AfterParticle);
+        }
 
         // 死亡演出は上のBossEncounterController::Updateで1回だけ進める。
         EffectManager::GetInstance()->Update();

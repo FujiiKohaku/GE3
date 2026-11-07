@@ -3,26 +3,58 @@
 #include "Engine/Time/TimeManager.h"
 #include "Engine/Effect/EffectManager.h"
 #include "Engine/3D/Object3d.h"
+#include <algorithm>
+#include <cmath>
 
 void FearWormDeadState::Enter(FearWormEnemy& boss)
 {
-    // 攻撃状態をクリア（発射済みの弾はManager側で飛び続ける）
     boss.battleState_.StopAttacksForDeath(boss);
     isDeathSequenceFinished_ = false;
     elapsedSeconds_ = 0.0f;
-
-    // 胴体セグメントは即座にすべて非表示にする
+    hasPlayedPrelude_ = false;
+    hasBurst_ = false;
     for (size_t index = 1; index < boss.segments_.size(); ++index) {
         boss.segments_[index].isAlive = false;
     }
+    if (boss.segments_.empty()) {
+        isDeathSequenceFinished_ = true;
+        return;
+    }
+    origin_ = boss.segments_[0].position;
+    if (boss.segments_[0].object) {
+        rotationRadians_ = boss.segments_[0].object->GetRotate();
+    }
+}
 
-    // 頭部の位置で大爆発エフェクトを即座に再生
-    EffectManager::GetInstance()->PlayEffect("WormDeathExplosion", boss.segments_[0].position);
+void FearWormDeadState::Burst(FearWormEnemy& boss)
+{
+    hasBurst_ = true;
+    boss.segments_[0].position = origin_;
+    boss.segments_[0].isAlive = false;
+    auto* effectManager = EffectManager::GetInstance();
+    effectManager->PlayEffect("WormDeathExplosion", origin_);
+    effectManager->PlayEffect("MissileExplosionRing", origin_);
+    effectManager->PlayEffect("FearWormHeadDebris", origin_);
+}
 
-    // 落下物理パラメータの初期化
-    // 前方（Zマイナス方向＝手前）へ飛び出しながら、上方向にポンと跳ね上がる初速を設定
-    velocityUnitsPerSecond_ = kInitialVelocityUnitsPerSecond;
-    rotationRadians_ = boss.segments_[0].object->GetRotate();
+float FearWormDeadState::GetCameraShakeStrength() const
+{
+    if (isDeathSequenceFinished_ || elapsedSeconds_ < kFreezeDurationSeconds) {
+        return 0.0f;
+    }
+    if (elapsedSeconds_ < kBurstStartSeconds) {
+        const float charge = (elapsedSeconds_ - kFreezeDurationSeconds)
+            / (kBurstStartSeconds - kFreezeDurationSeconds);
+        return 0.0015f + charge * charge * 0.0045f;
+    }
+    const float burstElapsedSeconds = elapsedSeconds_ - kBurstStartSeconds;
+    if (burstElapsedSeconds < kImpactShakeDurationSeconds) {
+        const float impactProgress = burstElapsedSeconds / kImpactShakeDurationSeconds;
+        return kImpactShakeStrength * (1.0f - impactProgress * 0.25f);
+    }
+    const float remaining = 1.0f - std::clamp(
+        (burstElapsedSeconds - kImpactShakeDurationSeconds) / kShakeDecayDurationSeconds, 0.0f, 1.0f);
+    return kAftershockShakeStrength * remaining * remaining;
 }
 
 void FearWormDeadState::Update(FearWormEnemy& boss)
@@ -30,30 +62,40 @@ void FearWormDeadState::Update(FearWormEnemy& boss)
     if (isDeathSequenceFinished_) {
         return;
     }
+    elapsedSeconds_ += (std::max)(0.0f, TimeManager::GetInstance()->GetDeltaTime());
+    if (!hasPlayedPrelude_ && elapsedSeconds_ >= kFreezeDurationSeconds) {
+        hasPlayedPrelude_ = true;
+        EffectManager::GetInstance()->PlayEffect("FearWormDeathPrelude", origin_);
+    }
+    if (!hasBurst_ && elapsedSeconds_ >= kBurstStartSeconds) {
+        Burst(boss);
+    }
+    if (hasBurst_) {
+        isDeathSequenceFinished_ = elapsedSeconds_ >= kDeathDurationSeconds;
+        return;
+    }
 
-    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
-    elapsedSeconds_ += deltaTimeSeconds;
-
-    // 重力を適用して落下速度を下方向（Yマイナス）に引っ張る
-    velocityUnitsPerSecond_.y -= kGravityUnitsPerSecondSquared * deltaTimeSeconds;
-
-    // 速度を頭部座標に適用
-    boss.segments_[0].position.x += velocityUnitsPerSecond_.x * deltaTimeSeconds;
-    boss.segments_[0].position.y += velocityUnitsPerSecond_.y * deltaTimeSeconds;
-    boss.segments_[0].position.z += velocityUnitsPerSecond_.z * deltaTimeSeconds;
-
-    // 回転速度を頭部回転角に適用
-    rotationRadians_.x += kAngularVelocityRadiansPerSecond.x * deltaTimeSeconds;
-    rotationRadians_.y += kAngularVelocityRadiansPerSecond.y * deltaTimeSeconds;
-    rotationRadians_.z += kAngularVelocityRadiansPerSecond.z * deltaTimeSeconds;
-    boss.segments_[0].object->SetRotate(rotationRadians_);
-
-    // 頭部の座標だけを更新するため、Object3dの更新を呼ぶ
-    boss.segments_[0].object->SetTranslate(boss.segments_[0].position);
-    boss.segments_[0].object->Update();
-
-    // 落下時間（1.6秒）が経過するか、十分に下へ落ちたら演出を完了する
-    if (elapsedSeconds_ >= kDeathFallbackDurationSeconds || boss.segments_[0].position.y < kDeathFinishHeight) {
-        isDeathSequenceFinished_ = true;
+    auto& head = boss.segments_[0];
+    if (!head.object) {
+        return;
+    }
+    const float charge = std::clamp((elapsedSeconds_ - kFreezeDurationSeconds)
+        / (kBurstStartSeconds - kFreezeDurationSeconds), 0.0f, 1.0f);
+    const float tremble = charge * charge;
+    head.position = origin_ + Vector3{
+        std::sin(elapsedSeconds_ * 91.0f) * tremble * 0.22f,
+        charge * 0.45f + std::sin(elapsedSeconds_ * 113.0f) * tremble * 0.12f,
+        std::cos(elapsedSeconds_ * 79.0f) * tremble * 0.12f };
+    head.object->SetTranslate(head.position);
+    head.object->SetRotate(rotationRadians_ + Vector3{
+        std::sin(elapsedSeconds_ * 63.0f) * tremble * 0.035f,
+        0.0f, std::cos(elapsedSeconds_ * 71.0f) * tremble * 0.045f });
+    const float scaleRate = 1.0f + tremble * 0.08f;
+    head.object->SetScale(head.scale * scaleRate);
+    const float glow = charge * (0.65f + 0.35f * std::sin(elapsedSeconds_ * 36.0f));
+    head.object->SetColor({ 1.0f, 0.18f + glow * 0.82f, 0.04f + glow * 0.96f, 1.0f });
+    head.object->Update();
+    if (boss.headEye_) {
+        boss.headEye_->SetColor({ 1.0f - charge, 1.0f - charge, 1.0f - charge, 1.0f });
     }
 }

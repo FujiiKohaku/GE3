@@ -43,6 +43,7 @@ public:
 
     // 撃破演出が完了してシーン遷移可能かを返す。
     bool IsDeathSequenceFinished() const override;
+    float GetDeathCameraShakeStrength() const;
 
     // 頭部をボスの代表位置として返す。
     Vector3 GetPosition() const override;

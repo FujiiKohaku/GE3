@@ -38,6 +38,7 @@ inline bool RunFearWormStateTests()
     FearWormEnemy otherBoss;
     if (boss.GetBossState() != BossState::Wait
         || boss.currentState_ != &boss.waitState_
+        || boss.GetDeathCameraShakeStrength() != 0.0f
         || otherBoss.currentState_ != &otherBoss.waitState_
         || boss.currentState_ == otherBoss.currentState_) {
         return false;
@@ -100,6 +101,51 @@ inline bool RunFearWormStateTests()
     boss.UpdateState();
     if (boss.deadState_.elapsedSeconds_ != 0.75f || !boss.IsDeathSequenceFinished()) {
         return false;
+    }
+
+    // 描画資源なしでも、静止→予兆→一度だけ破砕→余韻の順序と終了時刻がFPSに依存しない。
+    boss.segments_[0].object.reset();
+    for (const int32_t framesPerSecond : { 30, 60, 120 }) {
+        FearWormTestClock deathSequenceClock;
+        deathSequenceClock.SetDelta(1.0f / static_cast<float>(framesPerSecond));
+        const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+        boss.segments_[0].isAlive = true;
+        boss.segments_[0].position = { 10.0f, 20.0f, 30.0f };
+        boss.deadState_.Enter(boss);
+        float maximumShakeStrength = 0.0f;
+        while (!boss.IsDeathSequenceFinished()) {
+            boss.deadState_.Update(boss);
+            const float elapsedSeconds = boss.deadState_.elapsedSeconds_;
+            const float shakeStrength = boss.GetDeathCameraShakeStrength();
+            maximumShakeStrength = (std::max)(maximumShakeStrength, shakeStrength);
+            if (shakeStrength < 0.0f || shakeStrength > FearWormDeadState::kImpactShakeStrength
+                || (elapsedSeconds < FearWormDeadState::kFreezeDurationSeconds && shakeStrength != 0.0f)
+                || (elapsedSeconds >= FearWormDeadState::kBurstStartSeconds
+                    + FearWormDeadState::kImpactShakeDurationSeconds
+                    + FearWormDeadState::kShakeDecayDurationSeconds && shakeStrength != 0.0f)
+                || (elapsedSeconds >= FearWormDeadState::kFreezeDurationSeconds
+                    && elapsedSeconds < FearWormDeadState::kBurstStartSeconds
+                    && (shakeStrength < 0.0015f || shakeStrength > 0.006f))) {
+                return false;
+            }
+            if (boss.deadState_.hasPlayedPrelude_
+                != (elapsedSeconds >= FearWormDeadState::kFreezeDurationSeconds)
+                || boss.deadState_.hasBurst_ != (elapsedSeconds >= FearWormDeadState::kBurstStartSeconds)
+                || boss.segments_[0].isAlive == boss.deadState_.hasBurst_
+                || boss.segments_[0].position.x != 10.0f
+                || boss.segments_[0].position.y != 20.0f
+                || boss.segments_[0].position.z != 30.0f) {
+                return false;
+            }
+        }
+        const float finishedSeconds = boss.deadState_.elapsedSeconds_;
+        if (finishedSeconds < FearWormDeadState::kDeathDurationSeconds
+            || finishedSeconds > FearWormDeadState::kDeathDurationSeconds + deltaTimeSeconds + 0.0001f
+            || maximumShakeStrength < 0.03f || boss.GetDeathCameraShakeStrength() != 0.0f) {
+            return false;
+        }
+        boss.deadState_.Update(boss);
+        if (boss.deadState_.elapsedSeconds_ != finishedSeconds) { return false; }
     }
 
     // 配置し直したボスの攻撃状態だけを初期化し、別個体には影響させない。

@@ -265,6 +265,14 @@ bool FearWormEnemy::IsDeathSequenceFinished() const
     return deadState_.IsDeathSequenceFinished();
 }
 
+float FearWormEnemy::GetDeathCameraShakeStrength() const
+{
+    if (state_ != BossState::Dead) {
+        return 0.0f;
+    }
+    return deadState_.GetCameraShakeStrength();
+}
+
 // 撃破後の演出へ切り替え、通常の戦闘処理を終える。
 void FearWormEnemy::OnDeath()
 {
@@ -396,6 +404,14 @@ void FearWormEnemy::InitializeSegments(Model* model)
 // 計算済みの部位位置と向きを、描画用のオブジェクトへ反映する。
 void FearWormEnemy::UpdateSegmentObjects()
 {
+    if (state_ == BossState::Dead) {
+        // 死亡状態で設定した発光・震え・拡縮を維持し、目だけ追従させる。
+        if (headEye_ && !segments_.empty() && segments_[0].object && segments_[0].isAlive) {
+            headEye_->SetCustomWorldMatrix(segments_[0].object->GetWorldMatrix());
+            headEye_->Update();
+        }
+        return;
+    }
     const bool openHead = state_ == BossState::Battle &&
         battleState_.actionType_ == FearWormBattleState::ActionType::Beam && battleState_.beamActionState_.IsAiming();
     const float openStep = (std::max)(0.0f, TimeManager::GetInstance()->GetDeltaTime()) * 3.5f;
@@ -447,13 +463,6 @@ void FearWormEnemy::UpdateSegmentObjects()
         scale.z = segment.scale.z * pulse;
 
         Vector3 rotate { };
-        if (segment.isHead && GetBossState() == BossState::Dead) {
-            // 死亡中は死亡状態の更新で回転と座標を設定しUpdateも呼ぶため、共通の上書き処理をバイパスする
-            segment.object->SetScale(scale);
-            segment.object->SetColor(color);
-            continue;
-        }
-
         rotate.y = moveTime_ + static_cast<float>(index) * kSegmentRotationOffset;
         if (!segment.isHead) {
             // 前の生存部位へ向け、リングの軸を胴体のつながりに沿わせる。
