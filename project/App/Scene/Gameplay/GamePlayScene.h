@@ -562,8 +562,16 @@ private:
     Vector3 playerDeathCameraOffset_ {};
     Vector3 playerDeathCameraLookTarget_ {};
 
-    // ボス撃破ディゾルブ用タイマー
-    float bossDeathDissolveTimer_ = 0.0f;
+    // クリア時は機体の右前方へ回り込み、引きながら暗転する。
+    void UpdateClearPresentation();
+    float clearPresentationTimer_ = 0.0f;
+    bool clearPresentationStarted_ = false;
+    Vector3 clearCameraStartPosition_ {};
+    Vector3 clearCameraStartTarget_ {};
+    Vector3 clearPlayerBoundsCenter_ {};
+    float clearPlayerBoundsRadius_ = 1.0f;
+    float clearCameraStartFov_ = 0.45f;
+    std::unique_ptr<Sprite> clearFadeSprite_;
 
     // ブースト加速ソニックブーム衝撃音波タイマー
     float sonicBoomTimer_ = 0.0f;

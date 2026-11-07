@@ -231,7 +231,9 @@ constexpr float kUpdateCameraShakeDurationDefault = 0.45f;
 constexpr float kUpdatePlayerDeathAfterExplosionTimerThreshold = 0.8f;
 constexpr float kUpdateFloorObjTranslateZ = 0.5f;
 constexpr float kUpdateFloorObjScaleX = 1000.0f;
-constexpr float kUpdateDissolveProgressDivisor = 2.0f;
+constexpr float kClearCameraMoveSeconds = 0.9f;
+constexpr float kClearFadeStartSeconds = 1.2f;
+constexpr float kClearFadeDurationSeconds = 0.8f;
 constexpr float kUpdateTutorialGateDistanceOffset = 150.0f;
 constexpr float kUpdateObjectTranslateZ = 3400.0f;
 constexpr float kUpdateForwardMultiplier = 20.0f;
@@ -622,6 +624,8 @@ void GamePlayScene::Initialize()
     ModelManager::GetInstance()->Load("Characters/Enemy/Drone/dolone.obj");
     Model* recoveryItemModel = ModelManager::GetInstance()->Load("Debug/Samples/AnimatedCube/AnimatedCube.gltf");
     Model* playerModel = ModelManager::GetInstance()->Load("fish/fish.obj");
+    clearPlayerBoundsCenter_ = playerModel->GetBoundsCenter();
+    clearPlayerBoundsRadius_ = playerModel->GetBoundsRadius();
 
     // エネミー・弾モデル
     enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
@@ -1553,6 +1557,12 @@ void GamePlayScene::Update()
         return;
     }
 
+    if (clearPresentationStarted_) {
+        EffectManager::GetInstance()->Update();
+        UpdateClearPresentation();
+        return;
+    }
+
     // HPが尽きた後は通常のゲーム進行を止め、落下と爆発だけを更新する。
     if (player_ && player_->IsDead()) {
         RestoreBossCutInTimeScale();
@@ -1698,7 +1708,7 @@ void GamePlayScene::Update()
         }
     }
 
-    // ボス撃破でディゾルブ消滅演出の完了後にクリアシーンへ遷移
+    // ボスの死亡演出後、機体を映すカメラ演出と暗転を経てクリアへ遷移。
     if (activeBoss != nullptr && activeBoss->IsDead()) {
         cameraShakeTime_ = 0.0f;
         cameraShakeDuration_ = 0.0f;
@@ -1719,22 +1729,7 @@ void GamePlayScene::Update()
         EffectManager::GetInstance()->Update();
 
         if (activeBoss->IsDeathSequenceFinished()) {
-            StopPlayerEngineEffects();
-            bossDeathDissolveTimer_ += TimeManager::GetInstance()->GetDeltaTime();
-            float dissolveProgress = bossDeathDissolveTimer_ / kUpdateDissolveProgressDivisor;
-            if (dissolveProgress > 1.0f) dissolveProgress = 1.0f;
-
-            // 撃破ディゾルブポストエフェクトの適用
-            SceneManager::GetInstance()->SetVignetteStrength(dissolveProgress);
-            SceneManager::GetInstance()->AddPostEffect(
-                PostEffectType::Dissolve,
-                PostEffectStage::BeforeParticle);
-
-            // たっぷり2.0秒かけてディゾルブ消滅が100%完了してからクリア画面へ遷移！
-            if (dissolveProgress >= 1.0f) {
-                ResetGameplayPostEffects();
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
-            }
+            UpdateClearPresentation();
         }
 
         return;
@@ -1754,9 +1749,7 @@ void GamePlayScene::Update()
 
     if (stageId_ == "stage02" && stageSettings_.bossType == "None"
         && nextRailDistance >= rail_->GetTotalLength()) {
-        StopPlayerEngineEffects();
-        ResetGameplayPostEffects();
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+        UpdateClearPresentation();
         return;
     }
 
@@ -3255,9 +3248,78 @@ void GamePlayScene::UpdatePlayerHpArc()
 }
 
 // 照準・HP・得点・通信パネルなど、画面に重ねる情報を描画する。
+void GamePlayScene::UpdateClearPresentation()
+{
+    constexpr float kPresentationFov = 0.6f;
+    constexpr float kPi = 3.14159265f;
+    if (!clearPresentationStarted_) {
+        clearPresentationStarted_ = true;
+        clearCameraStartPosition_ = camera_->GetTranslate();
+        const auto& world = camera_->GetWorldMatrix();
+        clearCameraStartTarget_ = clearCameraStartPosition_ +
+            Vector3 { world.m[2][0], world.m[2][1], world.m[2][2] } *
+            Vector3Length(player_->GetTranslate() - clearCameraStartPosition_);
+        clearCameraStartFov_ = camera_->GetFovY();
+        ResetGameplayPostEffects();
+        StopPlayerEngineEffects();
+        clearFadeSprite_ = std::make_unique<Sprite>();
+        clearFadeSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+        clearFadeSprite_->SetPosition({ 0.0f, 0.0f });
+        clearFadeSprite_->SetSize({ 1280.0f, 720.0f });
+    }
+
+    clearPresentationTimer_ += TimeManager::GetInstance()->GetDeltaTime();
+    const float progress = std::clamp(clearPresentationTimer_ / kClearCameraMoveSeconds, 0.0f, 1.0f);
+    const float blend = progress * progress * (3.0f - 2.0f * progress);
+    const auto playerMatrix = MatrixMath::MakeAffineMatrix(
+        player_->GetScale(), player_->GetRotate(), player_->GetTranslate());
+    const Vector3 center = MatrixMath::Transform(clearPlayerBoundsCenter_, playerMatrix);
+    Vector3 right {}, up {};
+    const Vector3 forward = Normalize(player_->GetFlightForward());
+    CalculateRailBasis(forward, right, up);
+    const Vector3 startOffset = clearCameraStartPosition_ - center;
+    const float startRight = Dot(startOffset, right);
+    const float startForward = Dot(startOffset, forward);
+    const float startAngle = std::atan2(startRight, startForward);
+    float angleDelta = kPi * 0.25f - startAngle;
+    while (angleDelta > kPi) angleDelta -= 2.0f * kPi;
+    while (angleDelta < -kPi) angleDelta += 2.0f * kPi;
+    const float angle = startAngle + angleDelta * blend;
+
+    // モデルの外接球と縦横の画角から、全体が収まる距離を確保する。
+    const Vector3 scale = player_->GetScale();
+    const float radius = (std::max)(0.1f, clearPlayerBoundsRadius_ *
+        (std::max)({ std::abs(scale.x), std::abs(scale.y), std::abs(scale.z) }));
+    const float halfFov = (std::min)(kPresentationFov * 0.5f,
+        std::atan(std::tan(kPresentationFov * 0.5f) * camera_->GetAspectRatio()));
+    const float distance = radius * 1.25f / std::sin(halfFov);
+    const float pullBack = 1.0f + 0.08f * (std::max)(0.0f, clearPresentationTimer_ - kClearCameraMoveSeconds);
+    const float horizontalDistance = std::sqrt(startRight * startRight + startForward * startForward) *
+        (1.0f - blend) + distance * pullBack * blend;
+    const float height = Dot(startOffset, up) * (1.0f - blend) + distance * 0.18f * blend;
+    camera_->SetFovY(clearCameraStartFov_ + (kPresentationFov - clearCameraStartFov_) * blend);
+    camera_->LookAt(center + (right * std::sin(angle) + forward * std::cos(angle)) *
+        horizontalDistance + up * height, Lerp(clearCameraStartTarget_, center, blend));
+    camera_->Update();
+    if (skyBox_) skyBox_->Update(camera_.get());
+
+    const float fade = std::clamp((clearPresentationTimer_ - kClearFadeStartSeconds) /
+        kClearFadeDurationSeconds, 0.0f, 1.0f);
+    clearFadeSprite_->SetColor({ 0.0f, 0.0f, 0.0f, fade });
+    clearFadeSprite_->Update();
+    if (fade >= 1.0f) {
+        PageTransition::RequestReveal({ 0.0f, 0.0f, 0.0f, 1.0f }, 0.4f);
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<ClearScene>());
+    }
+}
+
 void GamePlayScene::Draw2D()
 {
     SpriteManager::GetInstance()->PreDraw();
+    if (clearPresentationStarted_) {
+        if (clearFadeSprite_) clearFadeSprite_->Draw();
+        return;
+    }
     if (!isPaused_ && bossCutInSprite_ && bossCutInTimerSeconds_ >= 0.0f) {
         bossCutInSprite_->Draw();
     }
