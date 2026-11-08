@@ -29,6 +29,7 @@ struct PostEffectInfo {
 
 class Renderer;
 class VolumetricLightRenderer;
+class FogVolumeManager;
 
 class SceneManager {
 public:
@@ -36,6 +37,8 @@ public:
     Renderer* GetRenderer() const { return renderer_; }
     void SetPauseMenuOpen(bool open) { isPauseMenuOpen_ = open; }
     bool IsPauseMenuOpen() const { return isPauseMenuOpen_; }
+    void SetFogVolumeManager(FogVolumeManager* fogVolumeManager) { fogVolumeManager_ = fogVolumeManager; }
+    FogVolumeManager* GetFogVolumeManager() const { return fogVolumeManager_; }
     void SetVolumetricLightRenderer(VolumetricLightRenderer* renderer) { volumetricLightRenderer_ = renderer; }
     VolumetricLightRenderer* GetVolumetricLightRenderer() const { return volumetricLightRenderer_; }
     static constexpr float kDefaultCameraShakeStrength = 0.008f;
@@ -151,6 +154,7 @@ public:
 private:
     bool isPauseMenuOpen_ = false;
     Renderer* renderer_ = nullptr; // Borrowed; cleared before Game destroys the renderer.
+    FogVolumeManager* fogVolumeManager_ = nullptr;
     VolumetricLightRenderer* volumetricLightRenderer_ = nullptr;
     SceneManager() = default;
     ~SceneManager() = default;

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>FogVolumeManagerTests</ProjectName>
+    <TargetName>FogVolumeManagerTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\FogVolumeManagerTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>FogVolumeManagerTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)FogVolumeManagerTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link><SubSystem>Console</SubSystem></Link>
+    <ClCompile><UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)Tests\FogVolumeManagerTests.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\PostEffect\Volumetric\FogVolumeManager.cpp" />
+  </ItemGroup>
+</Project>

@@ -94,9 +94,10 @@ public:
             ScreenshotManager::GetInstance()->RequestCapture(true, false);
         if (frame_ == 60) {
             auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer();
-            volume->SetEnabled(true); volume->SetLocalFogEnabled(true);
-            volume->SetHeightFog(100, 0.02f, 0.1f); volume->SetNoiseParameters(0.1f, 0, {});
-            volume->SetFogColor({ 0.1f, 0.18f, 0.26f }); volume->SetLightIntensity(0);
+            FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager();
+            volume->SetEnabled(true); fogVolumeManager->SetEnabled(true);
+            fogVolumeManager->SetHeightFog(100, 0.02f, 0.1f); fogVolumeManager->SetNoiseParameters(0.1f, 0, {});
+            fogVolumeManager->SetColor({ 0.1f, 0.18f, 0.26f }); volume->SetLightIntensity(0);
             LightManager::GetInstance()->SetAtmosphere(true, 0.01f, 1.0f, 0.1f);
             Logger::Log("ObjectFogVerification phase=distance+volume native");
         }

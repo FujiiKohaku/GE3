@@ -10,7 +10,7 @@
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Input/Input.h"
 #include "Engine/Light/LightManager.h"
-#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
+#include "Engine/PostEffect/Volumetric/FogVolumeManager.h"
 #include "Engine/Time/TimeManager.h"
 #include "Engine/audio/SoundManager.h"
 #include "App/Game/Stage/StageCatalog.h"
@@ -373,7 +373,7 @@ void TitleScene::Initialize()
     }
     UpdateInterface(0.0f);
 
-    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+    if (FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager()) {
         FogPreset fogPreset;
         fogPreset.parameters.isEnabled = true;
         fogPreset.parameters.color = kInitializeFogPresetParametersColor;
@@ -392,7 +392,7 @@ void TitleScene::Initialize()
         windowFog.halfExtents = { 18.0f, 10.0f, 26.0f };
         windowFog.density = 0.0015f;
         windowFog.edgeSoftness = 5.0f;
-        volume->ApplyFogPreset(fogPreset);
+        fogVolumeManager->ApplyPreset(fogPreset);
     }
 
     UpdateSceneLighting();
@@ -1688,15 +1688,15 @@ void TitleScene::UpdateSceneLighting()
         roomAmount = 1.0f - SmoothStep(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
     }
     const float frozenAmount = Clamp01(frozenRoomAmount_) * roomAmount;
-    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
-        volume->SetFogColor(Lerp(kHangarFogColor,
+    if (FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager()) {
+        fogVolumeManager->SetColor(Lerp(kHangarFogColor,
             kFrozenFogColor, frozenAmount));
-        FogVolumeSettings floorFog = volume->GetFogVolumes()[0];
+        FogVolumeSettings floorFog = fogVolumeManager->GetVolumes()[0];
         floorFog.density = std::lerp(0.0015f, 0.006f, frozenAmount);
-        volume->SetFogVolume(0, floorFog);
-        FogVolumeSettings windowFog = volume->GetFogVolumes()[1];
+        fogVolumeManager->SetVolume(0, floorFog);
+        FogVolumeSettings windowFog = fogVolumeManager->GetVolumes()[1];
         windowFog.density = std::lerp(0.0015f, 0.0025f, frozenAmount);
-        volume->SetFogVolume(1, windowFog);
+        fogVolumeManager->SetVolume(1, windowFog);
     }
     const auto ice = VisualPresetLibrary::GetInstance().GetLighting("stage03");
     const Vector3 color = Lerp(Vector3 { 0.98f, 0.80f, 0.64f },

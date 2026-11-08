@@ -1,6 +1,8 @@
 # ボリューメトリックライト
 
-`PostEffectManager` が `VolumetricLightRenderer` を所有します。既存の太陽光とシャドウマップを利用し、HDR画面へ光の散乱を合成します。初期設定は有効、強度0.35、密度0.003、距離240、方向性0.35、32サンプルです。
+`PostEffectManager` が `VolumetricLightRenderer` と `FogVolumeManager` を別々に所有します。`FogVolumeManager` は空間に配置する霧・高さ霧・ノイズ・プリセットを管理し、GPUリソースを持ちません。`VolumetricLightRenderer` はその情報と既存の太陽光・シャドウマップを使って、散乱光と霧による減衰をHDR画面へ合成します。初期設定は有効、強度0.35、密度0.003、距離240、方向性0.35、32サンプルです。
+
+単独でレンダラーを使う場合は `Initialize(dxCommon, fogVolumeManager)` へ霧の管理クラスを渡します。管理クラスはレンダラーより長く生存させます。シーンでは `SceneManager::GetFogVolumeManager()`、描画・照明の操作には `GetVolumetricLightRenderer()` を使います。
 
 ```cpp
 #include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
@@ -26,7 +28,7 @@ volume->SetSampleCount(32);
 1. 既存のシャドウマップを描画する。
 2. `Renderer` が `SetFrameInputs(camera, shadowRenderer)` を毎フレーム呼ぶ。
 3. 3Dシーンの深度を使い、縦横1/2の解像度で光を計算する。
-4. 深度を考慮してHDR画面へ合成し、既存のポストエフェクト・パーティクル・ブルーム・トーンマッピングへ渡す。HUDは最後に描く。
+4. `BeforeParticle` のアウトラインを先に描き、その輪郭線を含むHDR画面へ霧を合成する。残りのポストエフェクト・パーティクル・ブルーム・トーンマッピングへ渡す。HUDは最後に描く。
 
 1280×720なら計算対象は640×360です。32サンプルでは約737万回の影参照（比較サンプラーによるフィルタリング込みの負荷はGPU依存）が発生します。時間蓄積OFFの追加描画は計算と合成の2回、追加画像は散乱光＋深度が約1.76MiB、透過率が約0.44MiBです。OFF時や必要な情報が無効な場合、これらの描画を省略します。
 
@@ -44,12 +46,13 @@ volume->SetSampleCount(32);
 
 ## 局所霧の設定
 
-新しい描画クラスは追加せず、同じ `VolumetricLightRenderer` を拡張しています。設定構造体 `FogVolumeSettings` と形状列挙型 `FogVolumeShape` を使います。
+霧の配置は `FogVolumeManager` が担当します。設定構造体 `FogVolumeSettings` と形状列挙型 `FogVolumeShape` は `FogVolumeManager.h` に定義されています。描画パスとGPUリソースは既存レンダラーを利用し、二重に確保しません。
 
 ```cpp
-volume->SetLocalFogEnabled(true);
-volume->SetFogColor({ 0.58f, 0.80f, 0.96f });
-volume->SetNoiseParameters(0.025f, 0.35f, { 0.8f, 0.0f, 0.3f });
+auto* fogVolumeManager = postEffects->GetFogVolumeManager();
+fogVolumeManager->SetEnabled(true);
+fogVolumeManager->SetColor({ 0.58f, 0.80f, 0.96f });
+fogVolumeManager->SetNoiseParameters(0.025f, 0.35f, { 0.8f, 0.0f, 0.3f });
 
 FogVolumeSettings fog;
 fog.isEnabled = true;
@@ -58,18 +61,18 @@ fog.center = { 0.0f, 4.0f, 200.0f };
 fog.radius = 40.0f;
 fog.density = 0.006f;
 fog.edgeSoftness = 8.0f;
-volume->SetFogVolume(0, fog);
+fogVolumeManager->SetVolume(0, fog);
 ```
 
 箱を使う場合は `shape = FogVolumeShape::Box` とし、`halfExtents` に各軸の半幅を指定します。例えば `{ 75.0f, 12.0f, 75.0f }` は幅150・高さ24・奥行き150です。球も箱も外側では密度0、境界から内側の `edgeSoftness` 区間で滑らかに濃くなります。境界幅は半径または箱の最小半幅以下である必要があります。Setterの戻り値がfalseなら設定は変更されません。
 
-最大8個を配置でき、重なった密度は加算して0.1に制限します。個々の濃度は0～0.05です。`SetFogVolume` は設定をコピーするため、呼び出し元の構造体を保持する必要はありません。無効化は `isEnabled = false` の設定を同じインデックスへ渡します。`ClearFogVolumes()` は配置だけ、`ResetLocalFog()` は色・高さ・ノイズ・有効状態も初期値へ戻します。
+最大8個を配置でき、重なった密度は加算して0.1に制限します。個々の濃度は0～0.05です。`SetVolume` は設定をコピーするため、呼び出し元の構造体を保持する必要はありません。無効化は `isEnabled = false` の設定を同じインデックスへ渡します。`ClearVolumes()` は配置だけ、`Reset()` は色・高さ・ノイズ・有効状態も初期値へ戻します。
 
-`SetHeightFog(baseHeight, density, heightFalloff)` で基準高さ以下に一定濃度、その上に指数的に薄れる霧を配置できます。濃度0で無効です。局所霧のモードでは従来の均一密度 `SetFogDensity()` を使用せず、配置した霧と高さ霧の密度を使用します。`SetLocalFogEnabled(false)` で従来の光だけの動作へ戻ります。
+`FogVolumeManager::SetHeightFog(baseHeight, density, heightFalloff)` で基準高さ以下に一定濃度、その上に指数的に薄れる霧を配置できます。濃度0で無効です。局所霧のモードではレンダラーの均一密度 `SetFogDensity()` を使用せず、配置した霧と高さ霧の密度を使用します。`FogVolumeManager::SetEnabled(false)` で従来の光だけの動作へ戻ります。
 
 ノイズの強度は0～1、スケールは大きいほど細かくなります。移動速度はワールド単位／秒です。強度0で計算を省略します。霧のない場所へノイズだけで霧を追加せず、空間に固定した補間ノイズを動かします。
 
-開発Webパネルの「立体霧」「局所霧 0～7」から各設定を操作できます。stage03では局所霧0をクラゲボスの足元へ配置し、X/Zだけ毎フレーム追従します。そのため局所霧0の中心座標はゲーム更新で上書きされます。手動配置には局所霧1～7を使用してください。`Game` がレンダラーを `SceneManager` へ非所有参照として渡し、次のシーンを初期化する前に `ResetLocalFog()` を呼びます。遅れて終了する旧シーンから新シーンの設定は消しません。
+開発Webパネルの「立体霧」「局所霧 0～7」から各設定を操作できます。ボスに追従する霧の中心座標はゲーム更新で上書きされるため、手動配置には追従に使用していない枠を使用してください。`Game` が霧管理とレンダラーをそれぞれ `SceneManager` へ非所有参照として渡し、次のシーンを初期化する前に `FogVolumeManager::Reset()` を呼びます。遅れて終了する旧シーンから新シーンの設定は消しません。
 
 合成は `scene * transmittance + fogColor * (1 - transmittance) + scatteredLight` です。深度を使うため不透明物の手前まで積分し、UIは影響を受けません。後から描く透明パーティクルにはこの霧による減衰を個別適用していません。通常の距離フォグを同時に強く設定すると濃さが重なるので、遠景向けに調整してください。
 
@@ -87,9 +90,9 @@ volume->SetFogVolume(0, fog);
 
 ## シーン別の霧プリセット
 
-各シーンが `FogPreset` を構築し、汎用の `VolumetricLightRenderer::ApplyFogPreset()` で同じレンダラーへ適用します。Stage01は暖色の薄い高さ霧（床から6上、密度0.0015、減衰0.16、ノイズなし）、Stage03は既存の青いボス足元霧を設定します。Stage01の照明色と距離フォグは維持します。
+各シーンが `FogPreset` を構築し、`FogVolumeManager::ApplyPreset()` で配置・設定を適用します。Stage01は暖色の薄い高さ霧（床から6上、密度0.0015、減衰0.16、ノイズなし）、Stage03は既存の青いボス足元霧を設定します。Stage01の照明色と距離フォグは維持します。
 
-タイトルは初期化時に霧の配置を適用し、照明更新では色と密度だけを補間します。格納庫床付近の箱型霧を暖色・密度0.0015から青色・密度0.006へ凍結演出と同じ割合で補間します。上部の光の通り道にもう1個の薄い箱型霧（密度0.0015～0.0025）を配置し、ノイズは使いません。局所霧0・1を演出が更新するため、開発パネルで追加配置する場合は2～7を使用してください。シーン切り替えでは既存の `ResetLocalFog()` が前シーンの設定を解除します。
+タイトルは初期化時に霧の配置を適用し、照明更新では色と密度だけを補間します。格納庫床付近の箱型霧を暖色・密度0.0015から青色・密度0.006へ凍結演出と同じ割合で補間します。上部の光の通り道にもう1個の薄い箱型霧（密度0.0015～0.0025）を配置し、ノイズは使いません。局所霧0・1を演出が更新するため、開発パネルで追加配置する場合は2～7を使用してください。シーン切り替えでは `FogVolumeManager::Reset()` が前シーンの設定を解除します。
 
 追加の影パスや描画リソースは作成せず、既存の半解像度計算と合成を使用します。以下の測定値は既存のテスト環境の値で、今回のStage01・タイトルの追加負荷の実測値ではありません。
 
@@ -108,4 +111,10 @@ volume->SetFogVolume(0, fog);
 
 GPUやシーンで変わる測定値です。低負荷にする場合は `SetSampleCount(16)`、霧2個以内、ノイズ強度0を目安にしてください。測定結果と比較画像は `generated/Captures/ShadowMapTests` へ出力します。
 
-ApplyFogPreset() は局所霧の設定全体を置き換えます。シーン名やゲームオブジェクトには依存せず、色・高さ・ノイズ・最大8個の配置を受け取ります。不正な値を含む場合はfalseを返し、現在の設定を保持します。成功時は時間依存のノイズオフセットと描画入力をリセットするため、初期化やプリセット切り替えで使い、毎フレームの補間・追従には既存の個別Setterを使用してください。
+`FogVolumeManager::ApplyPreset()` は局所霧の設定全体を置き換えます。シーン名やゲームオブジェクトには依存せず、色・高さ・ノイズ・最大8個の配置を受け取ります。不正な値を含む場合はfalseを返し、現在の設定を保持します。成功時はノイズオフセットを初期化してリセット番号を更新し、レンダラーが古い描画入力・時間履歴を破棄します。初期化やプリセット切り替えで使い、毎フレームの補間・追従には個別Setterを使用してください。
+
+## クラス分離後の検証
+
+`Tests/Projects/FogVolumeManagerTests.vcxproj` は配置・不正値・プリセット失敗時の保持・リセット通知・ノイズ時間・インスタンス間の独立性をGPUなしで検証します。描画の検証は既存の `ShadowMapTests.exe --volumetric` を使用します。シェーダー・描画パス・GPUテクスチャはクラス分離で追加していません。
+
+2026-11-08の検証では、ゲーム本体のDebug／x64ビルド、`FogVolumeManagerTests`、`ShadowMapTests --volumetric`（画像比較とD3D12検証）が成功しました。APIを移行した `DxrValidationTests.cpp` もコンパイル確認済みです。描画テスト末尾の距離霧チェックは、古い固定値450から現行プリセットデータとの照合に変更しています。

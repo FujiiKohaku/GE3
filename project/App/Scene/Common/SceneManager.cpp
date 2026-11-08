@@ -5,7 +5,7 @@
 #include <cmath>
 #include "Engine/Light/LightManager.h"
 #include "Engine/Time/TimeManager.h"
-#include "Engine/PostEffect/Volumetric/VolumetricLightRenderer.h"
+#include "Engine/PostEffect/Volumetric/FogVolumeManager.h"
 
 // 予約されたシーンへの切替と、現在のシーンの更新を行う。
 void SceneManager::Update()
@@ -31,7 +31,7 @@ void SceneManager::Update()
             lights->SetSpotLightShadowEnabled(0, false);
         }
         SetSceneExposure(1.0f);
-        if (volumetricLightRenderer_ != nullptr) { volumetricLightRenderer_->ResetLocalFog(); }
+        if (fogVolumeManager_ != nullptr) { fogVolumeManager_->Reset(); }
         RemovePostEffect(PostEffectType::ArchiveAtmosphere);
         radialBlurSettings_ = {};
         effectParameters_.clear();

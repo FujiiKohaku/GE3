@@ -38,7 +38,7 @@ bool ParseFogVolumeKey(const std::string& key, uint32_t& volumeIndex, std::strin
     const char* begin = key.data() + prefix.size();
     const char* end = key.data() + separator;
     const auto result = std::from_chars(begin, end, volumeIndex);
-    if (result.ec != std::errc() || result.ptr != end || volumeIndex >= VolumetricLightRenderer::kMaxFogVolumes) { return false; }
+    if (result.ec != std::errc() || result.ptr != end || volumeIndex >= FogVolumeManager::kMaxFogVolumes) { return false; }
     field = key.substr(separator + 1);
     return !field.empty();
 }
@@ -175,7 +175,7 @@ nlohmann::json PostEffectManager::GetDevelopmentControls() const
         {{"key", "outlineNormalStrength"}, {"label", "輪郭法線強度"}, {"group", "ポストエフェクト"}, {"type", "number"}, {"minimum", 0}, {"maximum", 1}, {"step", 0.01}},
     });
     nlohmann::json controls = kControls;
-    for (uint32_t volumeIndex = 0; volumeIndex < VolumetricLightRenderer::kMaxFogVolumes; ++volumeIndex) {
+    for (uint32_t volumeIndex = 0; volumeIndex < FogVolumeManager::kMaxFogVolumes; ++volumeIndex) {
         const std::string prefix = "fogVolume." + std::to_string(volumeIndex) + ".";
         const std::string group = "局所霧 " + std::to_string(volumeIndex);
         controls.push_back({ {"key", prefix + "enabled"}, {"label", "有効"}, {"group", group}, {"type", "bool"} });
@@ -218,14 +218,14 @@ bool PostEffectManager::SetDevelopmentBool(const std::string& key, bool isEnable
         return lights->SetAtmosphere(isEnabled, atmosphere.y, atmosphere.z, atmosphere.w);
     }
     if (key == "volumeTemporal") { volumetricLightRenderer_->SetTemporalEnabled(isEnabled); return true; }
-    if (key == "localFogEnabled") { volumetricLightRenderer_->SetLocalFogEnabled(isEnabled); return true; }
+    if (key == "localFogEnabled") { fogVolumeManager_->SetEnabled(isEnabled); return true; }
     uint32_t volumeIndex = 0;
     std::string field;
     if (ParseFogVolumeKey(key, volumeIndex, field)) {
         if (field != "enabled") { return false; }
-        FogVolumeSettings settings = volumetricLightRenderer_->GetFogVolumes()[volumeIndex];
+        FogVolumeSettings settings = fogVolumeManager_->GetVolumes()[volumeIndex];
         settings.isEnabled = isEnabled;
-        return volumetricLightRenderer_->SetFogVolume(volumeIndex, settings);
+        return fogVolumeManager_->SetVolume(volumeIndex, settings);
     }
     if (isEnabled) { return ApplyDevelopmentSetting(key, "true"); }
     return ApplyDevelopmentSetting(key, "false");
@@ -288,7 +288,7 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
     uint32_t volumeIndex = 0;
     std::string field;
     if (ParseFogVolumeKey(key, volumeIndex, field)) {
-        FogVolumeSettings settings = volumetricLightRenderer_->GetFogVolumes()[volumeIndex];
+        FogVolumeSettings settings = fogVolumeManager_->GetVolumes()[volumeIndex];
         if (field == "shape") {
             if (number == 0.0f) { settings.shape = FogVolumeShape::Sphere; }
             else if (number == 1.0f) { settings.shape = FogVolumeShape::Box; }
@@ -304,31 +304,31 @@ bool PostEffectManager::SetDevelopmentNumber(const std::string& key, double valu
         else if (field == "density") { settings.density = number; }
         else if (field == "softness") { settings.edgeSoftness = number; }
         else { return false; }
-        return volumetricLightRenderer_->SetFogVolume(volumeIndex, settings);
+        return fogVolumeManager_->SetVolume(volumeIndex, settings);
     }
-    LocalFogParameters fog = volumetricLightRenderer_->GetLocalFogParameters();
+    LocalFogParameters fog = fogVolumeManager_->GetParameters();
     if (key == "volumeHistoryWeight") { return volumetricLightRenderer_->SetHistoryWeight(number); }
     if (key == "volumeScatteringAlbedo") { return volumetricLightRenderer_->SetScatteringAlbedo(number); }
     if (key == "volumeQuality") {
         if (number < 0 || number > 2 || std::floor(number) != number) { return false; }
         return volumetricLightRenderer_->SetQuality(static_cast<VolumetricQuality>(static_cast<int>(number)));
     }
-    if (key == "localFogHeight") { return volumetricLightRenderer_->SetHeightFog(number, fog.heightDensity, fog.heightFalloff); }
-    if (key == "localFogHeightDensity") { return volumetricLightRenderer_->SetHeightFog(fog.baseHeight, number, fog.heightFalloff); }
-    if (key == "localFogHeightFalloff") { return volumetricLightRenderer_->SetHeightFog(fog.baseHeight, fog.heightDensity, number); }
-    if (key == "localFogNoiseScale") { return volumetricLightRenderer_->SetNoiseParameters(number, fog.noiseStrength, fog.noiseVelocity); }
-    if (key == "localFogNoiseStrength") { return volumetricLightRenderer_->SetNoiseParameters(fog.noiseScale, number, fog.noiseVelocity); }
+    if (key == "localFogHeight") { return fogVolumeManager_->SetHeightFog(number, fog.heightDensity, fog.heightFalloff); }
+    if (key == "localFogHeightDensity") { return fogVolumeManager_->SetHeightFog(fog.baseHeight, number, fog.heightFalloff); }
+    if (key == "localFogHeightFalloff") { return fogVolumeManager_->SetHeightFog(fog.baseHeight, fog.heightDensity, number); }
+    if (key == "localFogNoiseScale") { return fogVolumeManager_->SetNoiseParameters(number, fog.noiseStrength, fog.noiseVelocity); }
+    if (key == "localFogNoiseStrength") { return fogVolumeManager_->SetNoiseParameters(fog.noiseScale, number, fog.noiseVelocity); }
     if (key == "localFogVelocityX" || key == "localFogVelocityY" || key == "localFogVelocityZ") {
         if (key == "localFogVelocityX") { fog.noiseVelocity.x = number; }
         if (key == "localFogVelocityY") { fog.noiseVelocity.y = number; }
         if (key == "localFogVelocityZ") { fog.noiseVelocity.z = number; }
-        return volumetricLightRenderer_->SetNoiseParameters(fog.noiseScale, fog.noiseStrength, fog.noiseVelocity);
+        return fogVolumeManager_->SetNoiseParameters(fog.noiseScale, fog.noiseStrength, fog.noiseVelocity);
     }
     if (key == "localFogColorR" || key == "localFogColorG" || key == "localFogColorB") {
         if (key == "localFogColorR") { fog.color.x = number; }
         if (key == "localFogColorG") { fog.color.y = number; }
         if (key == "localFogColorB") { fog.color.z = number; }
-        return volumetricLightRenderer_->SetFogColor(fog.color);
+        return fogVolumeManager_->SetColor(fog.color);
     }
     return ApplyDevelopmentSetting(key, nlohmann::json(value).dump());
 }
@@ -419,7 +419,7 @@ nlohmann::json PostEffectManager::GetDevelopmentSettings() const
     for (const auto& pass : state["passes"]) {
         state["pass."+std::to_string(pass["type"].get<int>())] = pass["enabled"];
     }
-    const LocalFogParameters& localFog = volumetricLightRenderer_->GetLocalFogParameters();
+    const LocalFogParameters& localFog = fogVolumeManager_->GetParameters();
     state["localFogEnabled"] = localFog.isEnabled;
     state["localFogHeight"] = localFog.baseHeight;
     state["localFogHeightDensity"] = localFog.heightDensity;
@@ -432,8 +432,8 @@ nlohmann::json PostEffectManager::GetDevelopmentSettings() const
     state["localFogColorR"] = localFog.color.x;
     state["localFogColorG"] = localFog.color.y;
     state["localFogColorB"] = localFog.color.z;
-    for (uint32_t volumeIndex = 0; volumeIndex < VolumetricLightRenderer::kMaxFogVolumes; ++volumeIndex) {
-        const FogVolumeSettings& settings = volumetricLightRenderer_->GetFogVolumes()[volumeIndex];
+    for (uint32_t volumeIndex = 0; volumeIndex < FogVolumeManager::kMaxFogVolumes; ++volumeIndex) {
+        const FogVolumeSettings& settings = fogVolumeManager_->GetVolumes()[volumeIndex];
         const std::string prefix = "fogVolume." + std::to_string(volumeIndex) + ".";
         state[prefix + "enabled"] = settings.isEnabled;
         state[prefix + "shape"] = static_cast<int>(settings.shape);
@@ -603,10 +603,11 @@ void PostEffectManager::Initialize(DirectXCommon* dxCommon)
         StartupTimingScope startupScope("PostFX.Bloom");
         bloomRenderer_->Initialize(dxCommon_);
     }
+    fogVolumeManager_ = std::make_unique<FogVolumeManager>();
     volumetricLightRenderer_ = std::make_unique<VolumetricLightRenderer>();
     {
         StartupTimingScope startupScope("PostFX.VolumetricLight");
-        volumetricLightRenderer_->Initialize(dxCommon_);
+        volumetricLightRenderer_->Initialize(dxCommon_, *fogVolumeManager_);
     }
 
     fogManager_ = std::make_unique<FogManager>();
@@ -970,7 +971,7 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
         target.EndRender();
         return;
     }
-    bool volumeApplied = false;
+    bool hasAppliedEffect = false;
     auto parameterEdit10 = copyImageRenderer_->BeginParameterEdit();
     auto& screenSettings = parameterEdit10.Get();
     screenSettings.screenCameraSettings.w = 0.0f;
@@ -982,22 +983,41 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
         ApplyPostEffectToCurrentTarget(PostEffectType::ScreenLighting, sceneColorHandle);
         target.EndRender();
         sceneColorHandle = target.GetSrvHandleGPU();
-        volumeApplied = true;
+        hasAppliedEffect = true;
+    }
+    // 輪郭線も霧で減衰させるため、立体霧の合成より先に描く。
+    if (sceneManager != nullptr) {
+        for (const PostEffectInfo& postEffect : sceneManager->GetPostEffects()) {
+            const bool isOutlineEffect = postEffect.type == PostEffectType::DepthOutline ||
+                postEffect.type == PostEffectType::LuminanceBasedOutline ||
+                postEffect.type == PostEffectType::Outline;
+            if (!postEffect.enabled || postEffect.stage != PostEffectStage::BeforeParticle ||
+                !isOutlineEffect) { continue; }
+            uint32_t targetIndex = 0;
+            if (hasAppliedEffect) { targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_); }
+            RenderTarget& target = GetActiveTargets()[targetIndex];
+            target.BeginRender();
+            ApplyPostEffectToCurrentTarget(postEffect.type, sceneColorHandle);
+            target.EndRender();
+            sceneColorHandle = target.GetSrvHandleGPU();
+            particleCompositionTargetIndex_ = targetIndex;
+            hasAppliedEffect = true;
+        }
     }
     if (volumetricLightRenderer_->Generate(fogRenderer_->GetDepthSRVHandle(), sceneDepthReady_)) {
         uint32_t targetIndex = 0;
-        if (volumeApplied) { targetIndex = 1; }
+        if (hasAppliedEffect) { targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_); }
         particleCompositionTargetIndex_ = targetIndex;
         RenderTarget& target = GetActiveTargets()[targetIndex];
         target.BeginRender();
         volumetricLightRenderer_->Composite(sceneColorHandle);
         target.EndRender();
         sceneColorHandle = target.GetSrvHandleGPU();
-        volumeApplied = true;
+        hasAppliedEffect = true;
     }
 
     if (sceneManager == nullptr) {
-        if (volumeApplied) { return; }
+        if (hasAppliedEffect) { return; }
         RenderTarget& renderTarget =
             GetActiveTargets()[particleCompositionTargetIndex_];
         renderTarget.BeginRender();
@@ -1014,12 +1034,14 @@ void PostEffectManager::PrepareSceneForTemporalResolve(
     D3D12_GPU_DESCRIPTOR_HANDLE inputHandle =
         sceneColorHandle;
     uint32_t targetIndex = 0;
-    if (volumeApplied) { targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_); }
-    bool appliedSceneEffect = volumeApplied;
+    if (hasAppliedEffect) { targetIndex = GetNextPingPongIndex(particleCompositionTargetIndex_); }
+    bool appliedSceneEffect = hasAppliedEffect;
 
     for (const PostEffectInfo& postEffect : postEffects) {
         if (!postEffect.enabled || postEffect.type == PostEffectType::FXAA ||
-            postEffect.type == PostEffectType::ToneMap || postEffect.type == PostEffectType::Bloom) {
+            postEffect.type == PostEffectType::ToneMap || postEffect.type == PostEffectType::Bloom ||
+            postEffect.type == PostEffectType::DepthOutline || postEffect.type == PostEffectType::LuminanceBasedOutline ||
+            postEffect.type == PostEffectType::Outline) {
             continue;
         }
 

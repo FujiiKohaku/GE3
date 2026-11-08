@@ -917,8 +917,9 @@ int RunTemporalIntegrationTest(bool shouldValidateQuality = false, bool shouldVa
                 renderer->GetDxrLocalShadowRenderer()->SetSettings(localSettings);
             }
             auto* qualityVolume = renderer->GetPostEffectManager()->GetVolumetricLightRenderer();
-            qualityVolume->SetEnabled(true); qualityVolume->SetLocalFogEnabled(true);
-            Require(qualityVolume->SetHeightFog(0, 0.003f, 0.02f), "Quality test fog rejected");
+            FogVolumeManager* qualityFog = renderer->GetPostEffectManager()->GetFogVolumeManager();
+            qualityVolume->SetEnabled(true); qualityFog->SetEnabled(true);
+            Require(qualityFog->SetHeightFog(0, 0.003f, 0.02f), "Quality test fog rejected");
             renderer->SetTemporalAntiAliasing(true, false);
             const char* kPresetNames[] = {"quality", "balanced", "performance"};
             const uint32_t kSunSamples[] = {16, 8, 2}; const uint32_t kLightingSamples[] = {8, 4, 1};
@@ -1528,6 +1529,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 "HDR bloom did not spread vertically");
             }
             auto* volume = post.GetVolumetricLightRenderer();
+            FogVolumeManager* fogVolumeManager = post.GetFogVolumeManager();
             volume->SetTemporalEnabled(false);
             Require(volume->IsReady(), "Volumetric light initialization failed");
             VolumetricLightRenderer uninitializedVolume;
@@ -1625,33 +1627,33 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             testFog.halfExtents = { 40.0f, 20.0f, 40.0f };
             testFog.density = 0.025f;
             testFog.edgeSoftness = 10.0f;
-            Require(volume->SetFogVolume(0, testFog), "Valid fog volume was rejected");
+            Require(fogVolumeManager->SetVolume(0, testFog), "Valid fog volume was rejected");
             FogVolumeSettings invalidFog = testFog;
             invalidFog.density = std::numeric_limits<float>::quiet_NaN();
-            Require(!volume->SetFogVolume(0, invalidFog), "NaN fog density was accepted");
+            Require(!fogVolumeManager->SetVolume(0, invalidFog), "NaN fog density was accepted");
             invalidFog = testFog; invalidFog.radius = 0.0f;
-            Require(!volume->SetFogVolume(0, invalidFog), "Zero fog radius was accepted");
-            Require(!volume->SetFogVolume(8, testFog), "Fog volume limit was ignored");
-            Require(!volume->SetNoiseParameters(0.0f, 0.5f, {}), "Zero noise scale was accepted");
-            Require(!volume->SetHeightFog(0.0f, -1.0f, 0.1f), "Negative height fog was accepted");
-            Require(!volume->SetFogColor({ std::numeric_limits<float>::infinity(), 0.0f, 0.0f }), "Infinite fog color was accepted");
+            Require(!fogVolumeManager->SetVolume(0, invalidFog), "Zero fog radius was accepted");
+            Require(!fogVolumeManager->SetVolume(8, testFog), "Fog volume limit was ignored");
+            Require(!fogVolumeManager->SetNoiseParameters(0.0f, 0.5f, {}), "Zero noise scale was accepted");
+            Require(!fogVolumeManager->SetHeightFog(0.0f, -1.0f, 0.1f), "Negative height fog was accepted");
+            Require(!fogVolumeManager->SetColor({ std::numeric_limits<float>::infinity(), 0.0f, 0.0f }), "Infinite fog color was accepted");
             std::vector<uint8_t> localFogImages[11];
             for (int mode = 0; mode < 11; ++mode) {
-                volume->ResetLocalFog();
+                fogVolumeManager->Reset();
                 volume->SetEnabled(true);
                 volume->SetFogDensity(0.0f);
                 volume->SetLightIntensity(0.0f);
-                volume->SetLocalFogEnabled(mode != 0 && mode != 8);
+                fogVolumeManager->SetEnabled(mode != 0 && mode != 8);
                 FogVolumeSettings settingsFog = testFog;
                 if (mode == 2) { settingsFog.shape = FogVolumeShape::Box; }
                 if (mode == 3) { settingsFog.center.x = 1000.0f; }
                 if (mode == 9) { settingsFog.center = camera.GetTranslate(); settingsFog.radius = 60.0f; }
-                Require(volume->SetFogVolume(0, settingsFog), "Fog volume setup failed");
-                if (mode == 5 || mode == 6) { Require(volume->SetNoiseParameters(0.1f, 0.8f, {}), "Noise setup failed"); }
+                Require(fogVolumeManager->SetVolume(0, settingsFog), "Fog volume setup failed");
+                if (mode == 5 || mode == 6) { Require(fogVolumeManager->SetNoiseParameters(0.1f, 0.8f, {}), "Noise setup failed"); }
                 if (mode == 7) { volume->SetLightIntensity(0.35f); }
                 if (mode == 10) {
-                    volume->ClearFogVolumes();
-                    Require(volume->SetHeightFog(0.0f, 0.025f, 0.1f), "Height fog setup failed");
+                    fogVolumeManager->ClearVolumes();
+                    Require(fogVolumeManager->SetHeightFog(0.0f, 0.025f, 0.1f), "Height fog setup failed");
                 }
                 if (mode == 4) { volume->SetFrameInputs(&camera, nullptr); }
                 else { volume->SetFrameInputs(&camera, &shadows); }
@@ -1675,23 +1677,64 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Require(localFogImages[0] == localFogImages[8], "Reset fog changed the base image");
             Require(ChangedPixels(localFogImages[0], localFogImages[9]) > 500, "Camera inside fog failed");
             Require(ChangedPixels(localFogImages[0], localFogImages[10]) > 500, "Height fog did not affect the image");
-            volume->ResetLocalFog();
-            Require(!volume->GetLocalFogParameters().isEnabled && !volume->GetFogVolumes()[0].isEnabled, "Local fog reset retained settings");
+            fogVolumeManager->Reset();
+            Require(!fogVolumeManager->GetParameters().isEnabled && !fogVolumeManager->GetVolumes()[0].isEnabled, "Local fog reset retained settings");
             Logger::Log("Local fog PASS: sphere, box, height, noise, stable frames, camera inside, shadow fallback, invalid settings and reset");
+            // 霧の内側では、後処理の輪郭線も背景と一緒に減衰することを画像で確認する。
+            SceneManager* outlineSceneManager = SceneManager::GetInstance();
+            const std::vector<PostEffectInfo> previousPostEffects = outlineSceneManager->GetPostEffects();
+            outlineSceneManager->ClearPostEffects();
+            outlineSceneManager->AddPostEffect(PostEffectType::DepthOutline);
+            post.UpdateCameraInputs(&camera);
+            FogVolumeSettings outlineFog;
+            outlineFog.isEnabled = true;
+            outlineFog.center = camera.GetTranslate();
+            outlineFog.radius = 1000.0f;
+            outlineFog.density = 0.05f;
+            outlineFog.edgeSoftness = 1.0f;
+            std::vector<uint8_t> fogOutlineImages[4];
+            for (int mode = 0; mode < 4; ++mode) {
+                fogVolumeManager->Reset();
+                fogVolumeManager->SetEnabled(mode >= 2);
+                Require(fogVolumeManager->SetVolume(0, outlineFog), "Outline fog fixture was rejected");
+                outlineSceneManager->SetPostEffectEnabled(PostEffectType::DepthOutline, mode % 2 == 1);
+                volume->SetFrameInputs(&camera, &shadows);
+                SrvManager::GetInstance()->PreDraw();
+                post.PreDrawDepth();
+                offscreen.PreDraw(post.GetDepthDSVHandle());
+                Object3dManager::GetInstance()->PreDraw(); floor.Draw(); ice.Draw();
+                offscreen.PostDraw(); post.PostDrawDepth();
+                dx->PreDraw();
+                post.Apply(outlineSceneManager, offscreen.GetSrvHandleGPU());
+                fogOutlineImages[mode] = ReadFrame(dx, directory / ("fog-outline-" + std::to_string(mode) + ".png"));
+            }
+            const size_t clearOutlinePixels = ChangedPixels(fogOutlineImages[0], fogOutlineImages[1]);
+            const size_t fogOutlinePixels = ChangedPixels(fogOutlineImages[2], fogOutlineImages[3]);
+            Require(clearOutlinePixels > 100, "Outline fixture did not produce visible edges without fog");
+            Require(fogOutlinePixels < clearOutlinePixels / 2, "Dense fog did not attenuate post-process outlines");
+            outlineSceneManager->ApplyPostEffectChain(previousPostEffects);
+            fogVolumeManager->Reset();
+            Logger::Log("Fog outline PASS: post-process edges fade inside dense volumetric fog");
             FogPreset fogPreset;
             fogPreset.parameters.isEnabled = true;
             fogPreset.parameters.color = { 0.4f, 0.5f, 0.6f };
             fogPreset.volumes[0] = testFog;
-            Require(volume->ApplyFogPreset(fogPreset), "Valid generic fog preset was rejected");
+            Require(fogVolumeManager->ApplyPreset(fogPreset), "Valid generic fog preset was rejected");
             fogPreset.parameters.color = { 0.8f, 0.7f, 0.6f };
             fogPreset.volumes[7].edgeSoftness = -1.0f;
-            Require(!volume->ApplyFogPreset(fogPreset), "Invalid generic fog preset was accepted");
-            Require(volume->GetLocalFogParameters().color.x == 0.4f &&
-                volume->GetFogVolumes()[0].density == testFog.density,
+            Require(!fogVolumeManager->ApplyPreset(fogPreset), "Invalid generic fog preset was accepted");
+            Require(fogVolumeManager->GetParameters().color.x == 0.4f &&
+                fogVolumeManager->GetVolumes()[0].density == testFog.density,
                 "Invalid preset partially changed active fog settings");
-            Require(volume->ApplyFogPreset(FogPreset {}), "Empty fog preset was rejected");
-            Require(!volume->GetLocalFogParameters().isEnabled && !volume->GetFogVolumes()[0].isEnabled,
+            Require(fogVolumeManager->ApplyPreset(FogPreset {}), "Empty fog preset was rejected");
+            Require(!fogVolumeManager->GetParameters().isEnabled && !fogVolumeManager->GetVolumes()[0].isEnabled,
                 "Empty preset retained previous fog volumes");
+            volume->SetFrameInputs(&camera, &shadows);
+            Require(volume->HasValidFrameInputs(), "Separated fog renderer did not accept frame inputs");
+            fogVolumeManager->Reset();
+            Require(!volume->HasValidFrameInputs(), "Fog reset retained renderer frame inputs");
+            Require(!volume->HasObjectFogData(), "Fog reset retained transparent object fog data");
+            Require(!volume->Generate({}, true), "Fog reset generated stale frame constants");
             SceneManager* sceneManager = SceneManager::GetInstance();
             RadialBlurSettings invalidBlur;
             invalidBlur.width = std::numeric_limits<float>::quiet_NaN();
@@ -1806,15 +1849,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 { 0.2f, -0.8f, 0.6f }, 4.0f, 220.0f, 2.0f, 0.65f);
             Require(fogSpotHandle != kInvalidSpotLightHandle, "Fog spot registration failed");
             volume->SetEnabled(true);
-            volume->ResetLocalFog();
-            volume->SetLocalFogEnabled(true);
+            fogVolumeManager->Reset();
+            fogVolumeManager->SetEnabled(true);
             volume->SetLightIntensity(0.35f);
             volume->SetSampleCount(32);
             FogVolumeSettings spotFog = testFog;
             spotFog.radius = 65.0f;
             spotFog.center = { 0.0f, 20.0f, 25.0f };
             spotFog.density = 0.006f;
-            volume->SetFogVolume(0, spotFog);
+            fogVolumeManager->SetVolume(0, spotFog);
             std::vector<uint8_t> spotFogImages[5];
             double spotFogAveragesMs[5] {};
             for (int mode = 0; mode < 5; ++mode) {
@@ -1864,7 +1907,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             }
             spotFogTimingFile << "Added shadowed spot ms: " << spotFogAveragesMs[2] - spotFogAveragesMs[0] << "\n";
             lights->ClearDynamicSpotLights();
-            volume->ResetLocalFog();
+            fogVolumeManager->Reset();
             Logger::Log("Spot fog PASS: scattering ON/OFF, shadow occlusion, missing/incomplete shadows, stale handles");
             std::ofstream localTimingFile(directory / "local-light-timing.txt");
             localTimingFile << "1280x720, 512 shadow faces, debug layer enabled, 20 samples; shadow passes + geometry + post processing\n";
@@ -1998,16 +2041,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             volume->SetFogDensity(0.003f); volume->SetLightIntensity(0.35f);
             for (int mode = 0; mode < 4; ++mode) {
                 volume->SetEnabled(mode != 0);
-                volume->ResetLocalFog();
+                fogVolumeManager->Reset();
                 if (mode >= 2) {
-                    volume->SetLocalFogEnabled(true);
+                    fogVolumeManager->SetEnabled(true);
                     uint32_t fogCount = 2;
-                    if (mode == 3) { fogCount = 8; volume->SetNoiseParameters(0.05f, 0.5f, {}); }
+                    if (mode == 3) { fogCount = 8; fogVolumeManager->SetNoiseParameters(0.05f, 0.5f, {}); }
                     for (uint32_t volumeIndex = 0; volumeIndex < fogCount; ++volumeIndex) {
                         FogVolumeSettings timingFog = testFog;
                         timingFog.center.x += static_cast<float>(volumeIndex) * 2.0f;
                         timingFog.density = 0.003f;
-                        volume->SetFogVolume(volumeIndex, timingFog);
+                        fogVolumeManager->SetVolume(volumeIndex, timingFog);
                     }
                 }
                 for (int sample = 0; sample < 24; ++sample) {
@@ -2027,15 +2070,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             }
             std::ofstream(directory / "volumetric-timing.txt") << "1280x720, half-resolution 32 samples, debug layer enabled, 20 samples\nOFF ms: "
                 << volumeAverages[0] << "\nLight only ms: " << volumeAverages[1] << "\nLocal 2 volumes ms: " << volumeAverages[2] << "\nLocal 8 + noise ms: " << volumeAverages[3] << "\nAdded light ms: " << volumeAverages[1] - volumeAverages[0] << "\n";
-            volume->ResetLocalFog();
+            fogVolumeManager->Reset();
             Logger::Log("Volumetric PASS: lighting, missing/disabled shadows, missing camera/depth, zero/NaN intensity, zero density, consumed frame inputs");
 
             Logger::Log("Graphics tests PASS: HDR highlight separation, material reflection, hemisphere lighting, emissive bloom halo");
             SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere("stage03"));
-            Require(SceneManager::GetInstance()->GetSceneDistanceFog().start == 450.0f,
+            Require(SceneManager::GetInstance()->GetSceneDistanceFog().start ==
+                VisualPresetLibrary::GetInstance().GetAtmosphere("stage03").distanceFog.start,
                 "Ice atmosphere preset was not applied");
             SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere("stage01"));
-            Require(SceneManager::GetInstance()->GetSceneDistanceFog().start == 380.0f,
+            Require(SceneManager::GetInstance()->GetSceneDistanceFog().start ==
+                VisualPresetLibrary::GetInstance().GetAtmosphere("stage01").distanceFog.start,
                 "Ice fog preset leaked into another stage");
             dx->WaitForGPU();
         }

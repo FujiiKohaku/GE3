@@ -198,6 +198,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Exposure\AutoExposureRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Bloom\BloomRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Volumetric\VolumetricLightRenderer.cpp" />
+    <ClCompile Include="$(projectRootPath)Engine\PostEffect\Volumetric\FogVolumeManager.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Fog\FogManager.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\PostEffect\Fog\FogRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)Engine\Renderer\Renderer.cpp" />
@@ -390,6 +391,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Effect\EffectManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Bloom\BloomRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Volumetric\VolumetricLightRenderer.h" />
+    <ClInclude Include="$(projectRootPath)Engine\PostEffect\Volumetric\FogVolumeManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Fog\FogData.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Fog\FogManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\Fog\FogRenderer.h" />

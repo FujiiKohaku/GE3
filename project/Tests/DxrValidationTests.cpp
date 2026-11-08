@@ -2353,14 +2353,15 @@ void RunVolumetricQualityValidation(DirectXCommon* dxCommon) {
     auto outputHeap = dxCommon->CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
     auto outputRtv = outputHeap->GetCPUDescriptorHandleForHeapStart();
     dxCommon->GetDevice()->CreateRenderTargetView(output.GetColorTexture(), nullptr, outputRtv);
-    VolumetricLightRenderer volume; Require(volume.Initialize(dxCommon), "Volumetric renderer initialization failed");
+    FogVolumeManager fogVolumeManager;
+    VolumetricLightRenderer volume; Require(volume.Initialize(dxCommon, fogVolumeManager), "Volumetric renderer initialization failed");
     Require(volume.SetQuality(VolumetricQuality::Low) && volume.GetParameters().sampleCount == 16, "Low volume quality mismatch");
     Require(volume.SetQuality(VolumetricQuality::High) && volume.GetParameters().sampleCount == 64, "High volume quality mismatch");
     Require(volume.SetQuality(VolumetricQuality::Medium) && volume.GetParameters().sampleCount == 32, "Medium volume quality mismatch");
     Require(!volume.SetHistoryWeight(std::nanf("")) && !volume.SetHistoryWeight(1), "Invalid volumetric history weight accepted");
     Require(!volume.SetScatteringAlbedo(-0.1f) && !volume.SetScatteringAlbedo(std::nanf("")), "Invalid scattering albedo accepted");
-    volume.SetMaxDistance(10); volume.SetLocalFogEnabled(true); volume.SetHeightFog(1000, 0.01f, 0.1f);
-    volume.SetFogColor({0.6f, 0.7f, 0.8f}); volume.SetTemporalEnabled(false); volume.SetScatteringAlbedo(0);
+    volume.SetMaxDistance(10); fogVolumeManager.SetEnabled(true); fogVolumeManager.SetHeightFog(1000, 0.01f, 0.1f);
+    fogVolumeManager.SetColor({0.6f, 0.7f, 0.8f}); volume.SetTemporalEnabled(false); volume.SetScatteringAlbedo(0);
     uint64_t rawAllocationBytes = volume.GetAllocationBytes();
     std::ofstream report("generated/Captures/DxrTests/volumetric-quality-result.txt"); report.setf(std::ios::unitbuf);
     auto* source = DrawVolumeFrame(dxCommon, volume, camera, scene, output, outputRtv, post);
@@ -2377,9 +2378,9 @@ void RunVolumetricQualityValidation(DirectXCommon* dxCommon) {
     source = DrawVolumeFrame(dxCommon, volume, camera, scene, output, outputRtv, post);
     RequireColor(ReadTextureCenter(dxCommon, source, "volume-half-albedo.png"), Vector3{0.2f, 0.4f, 0.8f} * expectedTransmission
         + Vector3{0.6f, 0.7f, 0.8f} * (0.5f * (1 - expectedTransmission)), "Scattering/absorption split did not preserve extinction");
-    volume.SetScatteringAlbedo(0); volume.SetHeightFog(0, 0, 0.1f);
+    volume.SetScatteringAlbedo(0); fogVolumeManager.SetHeightFog(0, 0, 0.1f);
     FogVolumeSettings sphere; sphere.isEnabled = true; sphere.center = {0, 0, 5}; sphere.radius = 0.9f; sphere.density = 0.05f; sphere.edgeSoftness = 0.1f;
-    Require(volume.SetFogVolume(0, sphere), "Thin volume fixture rejected"); volume.SetSampleCount(64);
+    Require(fogVolumeManager.SetVolume(0, sphere), "Thin volume fixture rejected"); volume.SetSampleCount(64);
     DrawVolumeFrame(dxCommon, volume, camera, scene, output, outputRtv, post);
     std::vector<float> reference; ReadTextureCenter(dxCommon, volume.GetRawTransmittanceTexture(), "volume-reference64.png", nullptr, &reference);
     volume.SetSampleCount(8); volume.SetTemporalEnabled(true);
@@ -2425,7 +2426,7 @@ void RunVolumetricQualityValidation(DirectXCommon* dxCommon) {
     camera.SetTranslate({0.01f, 0, 0}); camera.Update();
     DrawVolumeFrame(dxCommon, volume, camera, scene, output, outputRtv, post, 2); dxCommon->PostDraw();
     Require(volume.HasUsedHistory(), "Small camera motion discarded volume history");
-    sphere.density = 0.01f; volume.SetFogVolume(0, sphere);
+    sphere.density = 0.01f; fogVolumeManager.SetVolume(0, sphere);
     DrawVolumeFrame(dxCommon, volume, camera, scene, output, outputRtv, post, 2); dxCommon->PostDraw();
     Require(!volume.HasUsedHistory(), "Density change kept incompatible volume history");
     volume.SetFrameInputs(nullptr, nullptr); Require(!volume.Generate(post.GetDepthSrv(), true), "Missing volume camera was accepted");

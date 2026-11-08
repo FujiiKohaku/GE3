@@ -2,6 +2,7 @@
 #include "Engine/DirectXCommon/DirectXCommon.h"
 #include "Engine/math/MathStruct.h"
 #include "Engine/Debug/GpuTimestampTimer.h"
+#include "FogVolumeManager.h"
 #include <cstdint>
 #include <array>
 #include <wrl.h>
@@ -10,29 +11,6 @@ class ShadowMapRenderer;
 class LocalShadowRenderer;
 
 enum class VolumetricQuality { Low, Medium, High, Custom };
-
-enum class FogVolumeShape { Sphere, Box };
-
-struct FogVolumeSettings {
-    bool isEnabled = false;
-    FogVolumeShape shape = FogVolumeShape::Sphere;
-    Vector3 center {};
-    Vector3 halfExtents { 20.0f, 10.0f, 20.0f };
-    float radius = 20.0f;
-    float density = 0.01f;
-    float edgeSoftness = 2.0f;
-};
-
-struct LocalFogParameters {
-    bool isEnabled = false;
-    Vector3 color { 0.58f, 0.80f, 0.96f };
-    float baseHeight = 0.0f;
-    float heightDensity = 0.0f;
-    float heightFalloff = 0.1f;
-    float noiseScale = 0.05f;
-    float noiseStrength = 0.0f;
-    Vector3 noiseVelocity {};
-};
 
 struct VolumetricLightParameters {
     bool enabled = true;
@@ -48,19 +26,13 @@ struct VolumetricLightParameters {
     VolumetricQuality quality = VolumetricQuality::Medium;
 };
 
-struct FogPreset {
-    LocalFogParameters parameters;
-    std::array<FogVolumeSettings, 8> volumes {};
-};
-
-// One directional light. The scene owns its direction and its matching shadow map.
+// 光の散乱・霧の減衰を描画する。霧の配置と設定は外部のFogVolumeManagerから受け取る。
 class VolumetricLightRenderer {
     friend class PostEffectManager;
 public:
-    static constexpr uint32_t kMaxFogVolumes = 8;
     static constexpr uint32_t kMaxVolumetricSpotLights = 2;
     ~VolumetricLightRenderer();
-    bool Initialize(DirectXCommon* dxCommon);
+    bool Initialize(DirectXCommon* dxCommon, FogVolumeManager& fogVolumeManager);
     void SetEnabled(bool isEnabled);
     void SetLightColor(const Vector3& color);
     void SetLightIntensity(float intensity);
@@ -76,7 +48,7 @@ public:
     void ResetHistory();
     void ResizeSceneTargets();
     void ReadCompleted();
-    bool HasUsedHistory() const { return hasUsedHistory_; }
+    bool HasUsedHistory() const { return hasUsedHistory_ && IsFogStateCurrent(); }
     uint64_t GetAllocationBytes() const { return allocationBytes_; }
     double GetRaymarchGpuTimeMs() const { return raymarchTimer_.GetDurationMs(); }
     double GetTemporalGpuTimeMs() const { return temporalTimer_.GetDurationMs(); }
@@ -84,16 +56,6 @@ public:
     ID3D12Resource* GetRawTransmittanceTexture() const { return transmittanceTexture_.Get(); }
     ID3D12Resource* GetFilteredTransmittanceTexture() const;
     const VolumetricLightParameters& GetParameters() const { return parameters_; }
-    void SetLocalFogEnabled(bool isEnabled);
-    bool ApplyFogPreset(const FogPreset& preset);
-    bool SetFogVolume(uint32_t volumeIndex, const FogVolumeSettings& settings);
-    const std::array<FogVolumeSettings, kMaxFogVolumes>& GetFogVolumes() const { return fogVolumes_; }
-    const LocalFogParameters& GetLocalFogParameters() const { return localFog_; }
-    void ClearFogVolumes();
-    void ResetLocalFog();
-    bool SetHeightFog(float baseHeight, float density, float heightFalloff);
-    bool SetNoiseParameters(float scale, float strength, const Vector3& velocity);
-    bool SetFogColor(const Vector3& color);
     void SetUnderwaterAppearance(float surfaceHeight, float blend, float elapsedSeconds);
     // Must be supplied after shadow rendering, for every frame.
     void SetFrameInputs(const Camera* camera, const ShadowMapRenderer* shadows,
@@ -103,12 +65,17 @@ public:
     void DrawImGui();
     bool IsReady() const { return ready_; }
     void SetObjectFogMask(D3D12_GPU_DESCRIPTOR_HANDLE mask) { objectFogMaskSrv_ = mask; }
-    bool HasObjectFogData() const { return objectFogReady_; }
+    bool HasObjectFogData() const { return objectFogReady_ && IsFogStateCurrent(); }
     D3D12_GPU_VIRTUAL_ADDRESS GetObjectFogConstants() const { return constantsResource_->GetGPUVirtualAddress(); }
     D3D12_GPU_DESCRIPTOR_HANDLE GetObjectFogShadow() const { return shadowSrv_; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetObjectFogLocalShadow() const { return localShadowSrv_; }
-    bool HasValidFrameInputs() const { return frameValid_; }
+    bool HasValidFrameInputs() const { return frameValid_ && IsFogStateCurrent(); }
 private:
+    bool IsFogStateCurrent() const
+    {
+        return fogVolumeManager_ != nullptr &&
+            frameFogResetRevision_ == fogVolumeManager_->GetResetRevision();
+    }
     struct FogVolumeConstants {
         Vector4 centerAndShape {};
         Vector4 extentsAndDensity {};
@@ -125,7 +92,7 @@ private:
         Vector4 heightAndVolumeCount {};
         Vector4 noiseScaleAndOffset {};
         Vector4 noiseSettings {};
-        std::array<FogVolumeConstants, kMaxFogVolumes> volumes {};
+        std::array<FogVolumeConstants, FogVolumeManager::kMaxFogVolumes> volumes {};
         Vector4 spotCountAndBias {};
         struct SpotConstants {
             Matrix4x4 lightViewProjection {};
@@ -149,10 +116,10 @@ private:
     void Transition(D3D12_RESOURCE_STATES state);
     DirectXCommon* dxCommon_ = nullptr;
     VolumetricLightParameters parameters_;
-    LocalFogParameters localFog_;
+    // PostEffectManagerまたは呼び出し元が所有し、レンダラーより長く生存する。
+    FogVolumeManager* fogVolumeManager_ = nullptr;
+    uint64_t frameFogResetRevision_ = 0;
     Vector4 underwaterSettings_ {};
-    std::array<FogVolumeSettings, kMaxFogVolumes> fogVolumes_ {};
-    Vector3 noiseOffset_ {};
     Constants frameConstants_ {};
     Constants* constantsData_ = nullptr;
     Microsoft::WRL::ComPtr<ID3D12Resource> constantsResource_;

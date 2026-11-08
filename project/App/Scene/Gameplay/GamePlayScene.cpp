@@ -131,6 +131,10 @@ constexpr float kInitializeFogPresetParametersNoiseScaleDefault = 0.025f;
 constexpr float kInitializeFogPresetParametersBaseHeightOffset = 6.0f;
 constexpr float kInitializeFogPresetParametersHeightDensityDefault = 0.0015f;
 constexpr float kInitializeFogPresetParametersHeightFalloffDefault = 0.16f;
+constexpr float kStage01DenseFogRailDistance = 520.0f;
+constexpr Vector3 kStage01DenseFogHalfExtents = { 45.0f, 30.0f, 90.0f };
+constexpr float kStage01DenseFogDensity = 0.05f;
+constexpr float kStage01DenseFogEdgeSoftness = 12.0f;
 constexpr float kInitializeFootFogCenterY = 4.0f;
 constexpr float kBossSpotLightIntensity = 0.65f;
 constexpr float kBossSpotLightDistance = 240.0f;
@@ -662,7 +666,9 @@ void GamePlayScene::Initialize()
     // フローズンステージの敵弾は、ボス・通常敵ともに霧から除外する。
     enemyBulletManager_.SetFogExclusionEnabled(stageId_ == "stage03");
     SceneManager::GetInstance()->ApplyAtmospherePreset(VisualPresetLibrary::GetInstance().GetAtmosphere(stageId_));
-    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+    FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager();
+    if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer();
+        volume != nullptr && fogVolumeManager != nullptr) {
         FogPreset fogPreset;
         volume->SetFogDensity(0.003f);
         if (stageId_ == "tutorial") {
@@ -675,6 +681,13 @@ void GamePlayScene::Initialize()
             fogPreset.parameters.baseHeight = stageSettings_.floorHeight + kInitializeFogPresetParametersBaseHeightOffset;
             fogPreset.parameters.heightDensity = kInitializeFogPresetParametersHeightDensityDefault;
             fogPreset.parameters.heightFalloff = kInitializeFogPresetParametersHeightFalloffDefault;
+            FogVolumeSettings& denseFog = fogPreset.volumes[0];
+            denseFog.isEnabled = true;
+            denseFog.shape = FogVolumeShape::Box;
+            denseFog.center = rail_->GetPositionByDistance(kStage01DenseFogRailDistance);
+            denseFog.halfExtents = kStage01DenseFogHalfExtents;
+            denseFog.density = kStage01DenseFogDensity;
+            denseFog.edgeSoftness = kStage01DenseFogEdgeSoftness;
         } else if (stageId_ == "stage03") {
             // Keep the ice air clear while retaining a faint cold haze.
             volume->SetFogDensity(0.0006f);
@@ -698,7 +711,7 @@ void GamePlayScene::Initialize()
             lightMist.density = 0.0012f;
             lightMist.edgeSoftness = 15.0f;
         }
-        volume->ApplyFogPreset(fogPreset);
+        fogVolumeManager->ApplyPreset(fogPreset);
     }
     if (stageId_ == "stage03") {
         auto* lights = LightManager::GetInstance();
@@ -1667,11 +1680,11 @@ void GamePlayScene::Update()
         LightManager::GetInstance()->SetSpotLightPosition(bossSpotLightHandle_, positions.spotLightPosition);
         LightManager::GetInstance()->SetPointLightPosition(bossPointLightHandle_, positions.pointLightPosition);
         if (stageId_ == "stage03") {
-            if (auto* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
+            if (FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager()) {
                 for (uint32_t index = 0; index < positions.fogCenters.size(); ++index) {
-                    auto fog = volume->GetFogVolumes()[index];
+                    auto fog = fogVolumeManager->GetVolumes()[index];
                     fog.center = positions.fogCenters[index];
-                    volume->SetFogVolume(index, fog);
+                    fogVolumeManager->SetVolume(index, fog);
                 }
             }
         }
@@ -4789,12 +4802,14 @@ void GamePlayScene::ResetGameplayPostEffects()
     }
     if (hasBranchSurfaceFog_) {
         SceneManager::GetInstance()->SetSceneFogColor(branchSurfaceSceneFogColor_);
-        if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer()) {
-            volume->SetFogColor(branchSurfaceFogParameters_.color);
+        FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager();
+        if (VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer();
+            volume != nullptr && fogVolumeManager != nullptr) {
+            fogVolumeManager->SetColor(branchSurfaceFogParameters_.color);
             volume->SetFogDensity(branchSurfaceFogDensity_);
-            volume->SetHeightFog(branchSurfaceFogParameters_.baseHeight,
+            fogVolumeManager->SetHeightFog(branchSurfaceFogParameters_.baseHeight,
                 branchSurfaceFogParameters_.heightDensity, branchSurfaceFogParameters_.heightFalloff);
-            volume->SetNoiseParameters(branchSurfaceFogParameters_.noiseScale,
+            fogVolumeManager->SetNoiseParameters(branchSurfaceFogParameters_.noiseScale,
                 branchSurfaceFogParameters_.noiseStrength, branchSurfaceFogParameters_.noiseVelocity);
             volume->SetLightIntensity(branchSurfaceVolumeParameters_.lightIntensity);
             volume->SetMaxDistance(branchSurfaceVolumeParameters_.maxDistance);
@@ -5657,7 +5672,8 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
         railBranchLowerText_->Update();
     }
     VolumetricLightRenderer* volume = SceneManager::GetInstance()->GetVolumetricLightRenderer();
-    if (stageId_ != "stage01" || volume == nullptr) { return; }
+    FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager();
+    if (stageId_ != "stage01" || volume == nullptr || fogVolumeManager == nullptr) { return; }
     const float cameraHeight = camera_->GetTranslate().y;
     float underwaterBlend = std::clamp((stageSettings_.floorHeight - cameraHeight) / 12.0f, 0.0f, 1.0f);
     underwaterBlend = underwaterBlend * underwaterBlend * (3.0f - 2.0f * underwaterBlend);
@@ -5666,7 +5682,7 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
     volume->SetUnderwaterAppearance(stageSettings_.floorHeight, underwaterBlend, underwaterElapsedSeconds_);
     if (underwaterBlend > 0.0f && !hasBranchSurfaceFog_) {
         branchSurfaceSceneFogColor_ = SceneManager::GetInstance()->GetSceneFogColor();
-        branchSurfaceFogParameters_ = volume->GetLocalFogParameters();
+        branchSurfaceFogParameters_ = fogVolumeManager->GetParameters();
         branchSurfaceFogDensity_ = volume->GetParameters().fogDensity;
         branchSurfaceVolumeParameters_ = volume->GetParameters();
         hasBranchSurfaceFog_ = true;
@@ -5679,7 +5695,7 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
         underwaterColor, underwaterBlend);
     SceneManager::GetInstance()->SetSceneFogColor(
         { sceneFogColor.x, sceneFogColor.y, sceneFogColor.z, branchSurfaceSceneFogColor_.w });
-    volume->SetFogColor(Lerp(branchSurfaceFogParameters_.color, underwaterColor, underwaterBlend));
+    fogVolumeManager->SetColor(Lerp(branchSurfaceFogParameters_.color, underwaterColor, underwaterBlend));
     volume->SetFogDensity(branchSurfaceFogDensity_ + (0.0065f - branchSurfaceFogDensity_) * underwaterBlend);
     const float baseHeight = branchSurfaceFogParameters_.baseHeight +
         (stageSettings_.floorHeight - branchSurfaceFogParameters_.baseHeight) * underwaterBlend;
@@ -5687,8 +5703,8 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
         (0.0065f - branchSurfaceFogParameters_.heightDensity) * underwaterBlend;
     const float heightFalloff = branchSurfaceFogParameters_.heightFalloff +
         (0.018f - branchSurfaceFogParameters_.heightFalloff) * underwaterBlend;
-    volume->SetHeightFog(baseHeight, density, heightFalloff);
-    volume->SetNoiseParameters(branchSurfaceFogParameters_.noiseScale +
+    fogVolumeManager->SetHeightFog(baseHeight, density, heightFalloff);
+    fogVolumeManager->SetNoiseParameters(branchSurfaceFogParameters_.noiseScale +
         (0.018f - branchSurfaceFogParameters_.noiseScale) * underwaterBlend,
         branchSurfaceFogParameters_.noiseStrength * (1.0f - underwaterBlend),
         Lerp(branchSurfaceFogParameters_.noiseVelocity, { 0.10f, 0.0f, 0.04f }, underwaterBlend));

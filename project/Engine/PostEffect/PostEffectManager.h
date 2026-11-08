@@ -16,6 +16,7 @@
 class Camera;
 class BloomRenderer;
 class VolumetricLightRenderer;
+class FogVolumeManager;
 class FogManager;
 class FogRenderer;
 class SceneManager;
@@ -94,6 +95,7 @@ public:
     D3D12_GPU_VIRTUAL_ADDRESS GetFogConstantBufferView() const;
     CopyImageRenderer* GetCopyImageRenderer() const { return copyImageRenderer_.get(); }
     BloomRenderer* GetBloomRenderer() const { return bloomRenderer_.get(); }
+    FogVolumeManager* GetFogVolumeManager() const { return fogVolumeManager_.get(); }
     VolumetricLightRenderer* GetVolumetricLightRenderer() const { return volumetricLightRenderer_.get(); }
 
 private:
@@ -153,6 +155,7 @@ private:
     Camera* exposureCamera_ = nullptr;
     uint64_t exposureCameraHistoryId_ = 0;
     float exposureDeltaSeconds_ = 1.0f / 60.0f;
+    std::unique_ptr<FogVolumeManager> fogVolumeManager_;
     std::unique_ptr<VolumetricLightRenderer> volumetricLightRenderer_;
     bool sceneDepthReady_ = false;
     bool isIndirectLightingDebugVisible_ = false;

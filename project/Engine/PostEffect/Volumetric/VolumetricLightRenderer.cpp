@@ -36,9 +36,6 @@ float SafeVolumeValue(float value, float minimum, float maximum, float fallback)
     if (!std::isfinite(value)) { return fallback; }
     return std::clamp(value, minimum, maximum);
 }
-bool IsFiniteVector(const Vector3& value) {
-    return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
-}
 Microsoft::WRL::ComPtr<ID3D12PipelineState> CreateVolumePipeline(DirectXCommon* dxCommon_, ID3D12RootSignature* rootSignature, const std::wstring& pixelShaderPath, bool isRaymarch)
 {
     ID3D12Device* device = dxCommon_->GetDevice();
@@ -103,9 +100,10 @@ VolumetricLightRenderer::~VolumetricLightRenderer() {
     if (transmittanceSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(transmittanceSrvIndex_); }
     if (localShadowFallbackSrvIndex_ != 0xffffffffu) { SrvManager::GetInstance()->Free(localShadowFallbackSrvIndex_); }
 }
-bool VolumetricLightRenderer::Initialize(DirectXCommon* dxCommon) {
+bool VolumetricLightRenderer::Initialize(DirectXCommon* dxCommon, FogVolumeManager& fogVolumeManager) {
     if (dxCommon == nullptr) { return false; }
     dxCommon_ = dxCommon;
+    fogVolumeManager_ = &fogVolumeManager;
     try {
         CreateResources();
         CreatePipelines();
@@ -122,10 +120,6 @@ void VolumetricLightRenderer::ReadCompleted() { raymarchTimer_.ReadCompleted(); 
 void VolumetricLightRenderer::SetEnabled(bool isEnabled) {
     if (parameters_.enabled != isEnabled) { ResetHistory(); }
     parameters_.enabled = isEnabled;
-}
-void VolumetricLightRenderer::SetLocalFogEnabled(bool isEnabled) {
-    if (localFog_.isEnabled != isEnabled) { ResetHistory(); }
-    localFog_.isEnabled = isEnabled;
 }
 void VolumetricLightRenderer::SetTemporalEnabled(bool isEnabled) {
     if (parameters_.shouldUseTemporalHistory != isEnabled) { ResetHistory(); }
@@ -149,7 +143,7 @@ bool VolumetricLightRenderer::SetQuality(VolumetricQuality quality) {
     parameters_.quality = quality; return true;
 }
 ID3D12Resource* VolumetricLightRenderer::GetFilteredTransmittanceTexture() const {
-    if (parameters_.shouldUseTemporalHistory && hasHistory_) { return historyTransmittanceTextures_[historyIndex_].Get(); }
+    if (parameters_.shouldUseTemporalHistory && hasHistory_ && IsFogStateCurrent()) { return historyTransmittanceTextures_[historyIndex_].Get(); }
     return transmittanceTexture_.Get();
 }
 void VolumetricLightRenderer::SetLightColor(const Vector3& color) {
@@ -164,74 +158,6 @@ void VolumetricLightRenderer::SetSampleCount(int32_t samples) {
     int32_t sampleCount = std::clamp(samples, 8, 64);
     if (parameters_.sampleCount != sampleCount) { ResetHistory(); }
     parameters_.sampleCount = sampleCount; parameters_.quality = VolumetricQuality::Custom;
-}
-bool VolumetricLightRenderer::SetFogVolume(uint32_t volumeIndex, const FogVolumeSettings& settings) {
-    if (volumeIndex >= kMaxFogVolumes || !IsFiniteVector(settings.center) || !IsFiniteVector(settings.halfExtents) ||
-        !std::isfinite(settings.radius) || !std::isfinite(settings.density) || !std::isfinite(settings.edgeSoftness)) { return false; }
-    if (settings.shape != FogVolumeShape::Sphere && settings.shape != FogVolumeShape::Box) { return false; }
-    if (settings.radius <= 0.0f || settings.radius > 10000.0f || settings.halfExtents.x <= 0.0f ||
-        settings.halfExtents.y <= 0.0f || settings.halfExtents.z <= 0.0f || settings.halfExtents.x > 10000.0f ||
-        settings.halfExtents.y > 10000.0f || settings.halfExtents.z > 10000.0f || settings.density < 0.0f ||
-        settings.density > 0.05f || settings.edgeSoftness <= 0.0f) { return false; }
-    float minimumExtent = settings.radius;
-    if (settings.shape == FogVolumeShape::Box) {
-        minimumExtent = (std::min)({ settings.halfExtents.x, settings.halfExtents.y, settings.halfExtents.z });
-    }
-    if (settings.edgeSoftness > minimumExtent) { return false; }
-    fogVolumes_[volumeIndex] = settings;
-    return true;
-}
-void VolumetricLightRenderer::ClearFogVolumes() { fogVolumes_ = {}; }
-bool VolumetricLightRenderer::ApplyFogPreset(const FogPreset& preset) {
-    const LocalFogParameters previousParameters = localFog_;
-    const auto previousVolumes = fogVolumes_;
-    const LocalFogParameters& settings = preset.parameters;
-    bool isValid = SetFogColor(settings.color) &&
-        SetHeightFog(settings.baseHeight, settings.heightDensity, settings.heightFalloff) &&
-        SetNoiseParameters(settings.noiseScale, settings.noiseStrength, settings.noiseVelocity);
-    for (uint32_t volumeIndex = 0; isValid && volumeIndex < kMaxFogVolumes; ++volumeIndex) {
-        isValid = SetFogVolume(volumeIndex, preset.volumes[volumeIndex]);
-    }
-    if (!isValid) {
-        localFog_ = previousParameters;
-        fogVolumes_ = previousVolumes;
-        return false;
-    }
-    localFog_.isEnabled = settings.isEnabled;
-    noiseOffset_ = {};
-    frameValid_ = false;
-    generated_ = false;
-    return true;
-}
-void VolumetricLightRenderer::ResetLocalFog() {
-    ClearFogVolumes();
-    localFog_ = {};
-    noiseOffset_ = {};
-    frameValid_ = false;
-    generated_ = false;
-}
-bool VolumetricLightRenderer::SetHeightFog(float baseHeight, float density, float heightFalloff) {
-    if (!std::isfinite(baseHeight) || !std::isfinite(density) || !std::isfinite(heightFalloff) ||
-        density < 0.0f || density > 0.05f || heightFalloff <= 0.0f || heightFalloff > 10.0f) { return false; }
-    localFog_.baseHeight = baseHeight;
-    localFog_.heightDensity = density;
-    localFog_.heightFalloff = heightFalloff;
-    return true;
-}
-bool VolumetricLightRenderer::SetNoiseParameters(float scale, float strength, const Vector3& velocity) {
-    if (!std::isfinite(scale) || !std::isfinite(strength) || !IsFiniteVector(velocity) || scale <= 0.0f ||
-        scale > 10.0f || strength < 0.0f || strength > 1.0f || std::abs(velocity.x) > 100.0f ||
-        std::abs(velocity.y) > 100.0f || std::abs(velocity.z) > 100.0f) { return false; }
-    localFog_.noiseScale = scale;
-    localFog_.noiseStrength = strength;
-    localFog_.noiseVelocity = velocity;
-    return true;
-}
-bool VolumetricLightRenderer::SetFogColor(const Vector3& color) {
-    if (!IsFiniteVector(color) || color.x < 0.0f || color.y < 0.0f || color.z < 0.0f ||
-        color.x > 4.0f || color.y > 4.0f || color.z > 4.0f) { return false; }
-    localFog_.color = color;
-    return true;
 }
 void VolumetricLightRenderer::SetUnderwaterAppearance(float surfaceHeight, float blend, float elapsedSeconds) {
     if (!std::isfinite(surfaceHeight) || !std::isfinite(blend) || !std::isfinite(elapsedSeconds)) { return; }
@@ -256,7 +182,11 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
     localShadowSrv_ = {};
     frameConstants_.spotCountAndBias = {};
     frameConstants_.spotLights = {}; frameConstants_.volumes = {};
-    if (!ready_ || camera == nullptr) { ResetHistory(); return; }
+    if (!ready_ || camera == nullptr || fogVolumeManager_ == nullptr) { ResetHistory(); return; }
+    const uint64_t fogResetRevision = fogVolumeManager_->GetResetRevision();
+    if (frameFogResetRevision_ != fogResetRevision) { ResetHistory(); }
+    frameFogResetRevision_ = fogResetRevision;
+    const LocalFogParameters& localFog = fogVolumeManager_->GetParameters();
     bool hasValidShadow = false;
     Vector3 direction { 0.0f, -1.0f, 0.0f };
     frameConstants_.lightColorAndIntensity = {};
@@ -324,7 +254,7 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
         }
         frameConstants_.spotCountAndBias.x = static_cast<float>(spotCount);
     }
-    if (!hasValidShadow && !localFog_.isEnabled && frameConstants_.spotCountAndBias.x == 0.0f) { ResetHistory(); return; }
+    if (!hasValidShadow && !localFog.isEnabled && frameConstants_.spotCountAndBias.x == 0.0f) { ResetHistory(); return; }
     if (!hasValidShadow) { direction = { 0.0f, -1.0f, 0.0f }; }
     if (camera->GetNearClip() <= 0.0f || camera->GetFarClip() <= camera->GetNearClip()) { ResetHistory(); return; }
     const auto& world = camera->GetWorldMatrix();
@@ -355,19 +285,16 @@ void VolumetricLightRenderer::SetFrameInputs(const Camera* camera, const ShadowM
     frameConstants_.cameraAndDistance = { world.m[3][0], world.m[3][1], world.m[3][2], parameters_.maxDistance };
     frameConstants_.underwaterSettings = underwaterSettings_;
     frameConstants_.lightDirectionAndDensity = { direction.x, direction.y, direction.z, parameters_.fogDensity };
-    frameConstants_.fogColorAndEnabled = { localFog_.color.x, localFog_.color.y, localFog_.color.z, 0.0f };
-    if (localFog_.isEnabled) { frameConstants_.fogColorAndEnabled.w = 1.0f; }
-    frameConstants_.heightAndVolumeCount = { localFog_.baseHeight, localFog_.heightDensity, localFog_.heightFalloff, 0.0f };
-    const float deltaSeconds = SafeVolumeValue(TimeManager::GetInstance()->GetDeltaTime(), 0.0f, 0.1f, 0.0f);
-    // 周期ノイズの座標だけを折り返し、長時間実行時の精度低下を防ぐ。
-    noiseOffset_.x = std::fmod(noiseOffset_.x + localFog_.noiseVelocity.x * localFog_.noiseScale * deltaSeconds, 256.0f);
-    noiseOffset_.y = std::fmod(noiseOffset_.y + localFog_.noiseVelocity.y * localFog_.noiseScale * deltaSeconds, 256.0f);
-    noiseOffset_.z = std::fmod(noiseOffset_.z + localFog_.noiseVelocity.z * localFog_.noiseScale * deltaSeconds, 256.0f);
-    frameConstants_.noiseScaleAndOffset = { localFog_.noiseScale, noiseOffset_.x, noiseOffset_.y, noiseOffset_.z };
-    frameConstants_.noiseSettings = { localFog_.noiseStrength, 0.0f, 0.0f, 0.0f };
+    frameConstants_.fogColorAndEnabled = { localFog.color.x, localFog.color.y, localFog.color.z, 0.0f };
+    if (localFog.isEnabled) { frameConstants_.fogColorAndEnabled.w = 1.0f; }
+    frameConstants_.heightAndVolumeCount = { localFog.baseHeight, localFog.heightDensity, localFog.heightFalloff, 0.0f };
+    fogVolumeManager_->UpdateNoise(TimeManager::GetInstance()->GetDeltaTime());
+    const Vector3& noiseOffset = fogVolumeManager_->GetNoiseOffset();
+    frameConstants_.noiseScaleAndOffset = { localFog.noiseScale, noiseOffset.x, noiseOffset.y, noiseOffset.z };
+    frameConstants_.noiseSettings = { localFog.noiseStrength, 0.0f, 0.0f, 0.0f };
     uint32_t volumeCount = 0;
-    for (const FogVolumeSettings& volume : fogVolumes_) {
-        if (!localFog_.isEnabled || !volume.isEnabled || volume.density <= 0.0f) { continue; }
+    for (const FogVolumeSettings& volume : fogVolumeManager_->GetVolumes()) {
+        if (!localFog.isEnabled || !volume.isEnabled || volume.density <= 0.0f) { continue; }
         const Vector3 relativeCenter { volume.center.x - world.m[3][0], volume.center.y - world.m[3][1], volume.center.z - world.m[3][2] };
         float boundingRadius = volume.radius;
         if (volume.shape == FogVolumeShape::Box) {
@@ -589,20 +516,26 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     objectFogReady_ = false;
     generated_ = false; hasUsedHistory_ = false;
     raymarchTimer_.ResetSample(); temporalTimer_.ResetSample(); compositeTimer_.ResetSample();
+    if (!IsFogStateCurrent()) {
+        frameValid_ = false;
+        ResetHistory();
+        return false;
+    }
+    const LocalFogParameters& localFog = fogVolumeManager_->GetParameters();
     bool valid = frameValid_;
     frameValid_ = false; // Consume the frame; a missing update never reuses old shadows.
     if (!ready_ || !valid || !depthReady || depthHandle.ptr == 0 || !parameters_.enabled ||
-        (!localFog_.isEnabled && (parameters_.fogDensity <= 0.0f ||
+        (!localFog.isEnabled && (parameters_.fogDensity <= 0.0f ||
             (frameConstants_.lightColorAndIntensity.w <= 0.0f && frameConstants_.spotCountAndBias.x == 0.0f)))) { ResetHistory(); return false; }
     if (shadowSrv_.ptr == 0) { shadowSrv_ = depthHandle; }
     uint64_t lightingHash = 14695981039346656037ull;
     const Vector4 kValues[] = {frameConstants_.lightDirectionAndDensity, frameConstants_.lightColorAndIntensity,
         frameConstants_.settings, frameConstants_.fogColorAndEnabled, frameConstants_.heightAndVolumeCount, frameConstants_.spotCountAndBias,
-        {localFog_.noiseScale, localFog_.noiseStrength, parameters_.scatteringAlbedo, parameters_.maxDistance},
+        {localFog.noiseScale, localFog.noiseStrength, parameters_.scatteringAlbedo, parameters_.maxDistance},
         {underwaterSettings_.x, underwaterSettings_.y, 0.0f, 0.0f}};
     lightingHash = HashVolumeBytes(lightingHash, kValues, sizeof(kValues));
     lightingHash = HashVolumeBytes(lightingHash, &frameConstants_.lightViewProjection, sizeof(Matrix4x4));
-    for (const auto& volume : fogVolumes_) {
+    for (const auto& volume : fogVolumeManager_->GetVolumes()) {
         lightingHash = HashVolumeBytes(lightingHash, &volume.center, sizeof(Vector3));
         lightingHash = HashVolumeBytes(lightingHash, &volume.halfExtents, sizeof(Vector3));
         const Vector4 kVolume = {volume.radius, volume.density, volume.edgeSoftness, static_cast<float>(volume.shape)};
@@ -656,6 +589,12 @@ bool VolumetricLightRenderer::Generate(D3D12_GPU_DESCRIPTOR_HANDLE depthHandle, 
     return true;
 }
 void VolumetricLightRenderer::Composite(D3D12_GPU_DESCRIPTOR_HANDLE sceneColorHandle) {
+    if (!IsFogStateCurrent()) {
+        generated_ = false;
+        objectFogReady_ = false;
+        ResetHistory();
+        return;
+    }
     if (!generated_ || sceneColorHandle.ptr == 0) { return; }
     D3D12_VIEWPORT viewport { 0, 0, float(SceneRenderResolution::GetWidth()), float(SceneRenderResolution::GetHeight()), 0, 1 };
     D3D12_RECT scissor { 0, 0, SceneRenderResolution::GetWidth(), SceneRenderResolution::GetHeight() };

@@ -200,6 +200,7 @@ void Game::Initialize()
         renderer_->Initialize();
     }
     SceneManager::GetInstance()->SetRenderer(renderer_.get());
+    SceneManager::GetInstance()->SetFogVolumeManager(renderer_->GetPostEffectManager()->GetFogVolumeManager());
     SceneManager::GetInstance()->SetVolumetricLightRenderer(renderer_->GetPostEffectManager()->GetVolumetricLightRenderer());
 #if defined(_DEBUG)
     if (std::wstring(GetCommandLineW()).find(L"--verify-object-fog") != std::wstring::npos) {
@@ -413,6 +414,7 @@ void Game::Finalize()
 #ifdef USE_IMGUI
     ImGuiManager::Finalize();
 #endif
+    SceneManager::GetInstance()->SetFogVolumeManager(nullptr);
     SceneManager::GetInstance()->SetVolumetricLightRenderer(nullptr);
     SceneManager::GetInstance()->SetRenderer(nullptr);
     renderer_.reset();
