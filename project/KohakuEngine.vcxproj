@@ -30,6 +30,7 @@
     <ClInclude Include="$(projectRootPath)App\Game\SavePoint\SavePoint.h" />
     <ClCompile Include="$(projectRootPath)App\Game\SavePoint\SavePoint.cpp" />
     <ClInclude Include="$(projectRootPath)App\Game\Hazard\ElectricGate.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Hazard\ElectricGateCycleSettings.h" />
     <ClCompile Include="$(projectRootPath)App\Game\Hazard\ElectricGate.cpp" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

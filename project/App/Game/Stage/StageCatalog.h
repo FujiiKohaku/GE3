@@ -7,6 +7,7 @@
 #include "Engine/Shadow/ShadowSettings.h"
 #include "RailBranchRoute.h"
 #include "RailHeightRange.h"
+#include "App/Game/Hazard/ElectricGateCycleSettings.h"
 
 struct StageSettings {
     ShadowSettings shadows;
@@ -44,6 +45,7 @@ struct StageSettings {
     std::vector<float> savePointDistances;
     std::vector<float> paintEnemyDistances;
     std::vector<float> electricGateDistances;
+    ElectricGateCycleSettings electricGateCycle;
 };
 
 class StageCatalog {

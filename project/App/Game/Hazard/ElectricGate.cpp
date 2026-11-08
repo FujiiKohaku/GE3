@@ -30,12 +30,16 @@ float CalculateJitter(float pointIndex, float shapeIndex, float arcIndex)
 ElectricGate::ElectricGate() = default;
 ElectricGate::~ElectricGate() = default;
 
-void ElectricGate::Initialize(const Vector3& position, float yawRadians, float scale)
+void ElectricGate::Initialize(const Vector3& position, float yawRadians, float scale,
+    const ElectricGateCycleSettings& cycleSettings)
 {
+    cycle_ = ElectricGateCycle{};
+    cycle_.Initialize(cycleSettings);
     position_ = position;
     yawRadians_ = yawRadians;
     scale_ = scale;
     elapsedSeconds_ = 0.0f;
+    isVisible_ = false;
     body_ = std::make_unique<Object3d>();
     body_->Initialize(Object3dManager::GetInstance());
     body_->SetModel(ModelManager::GetInstance()->Load("Environment/ElectricGate/ElectricGateBody.obj"));
@@ -51,7 +55,7 @@ void ElectricGate::Initialize(const Vector3& position, float yawRadians, float s
     emitters_->SetTranslate(position);
     emitters_->SetRotate({ 0.0f, yawRadians, 0.0f });
     emitters_->SetEnableLighting(false);
-    emitters_->SetColor({ 4.0f, 2.0f, 1.0f, 1.0f });
+    UpdateEmitterColor();
     emitters_->Update();
 
     // 放電2段と枝分かれを1つの固定サイズバッファへまとめる。
@@ -145,13 +149,32 @@ void ElectricGate::UpdateDischarge()
 
 void ElectricGate::Update(const Vector3& playerPosition, float deltaTimeSeconds)
 {
-    elapsedSeconds_ += (std::max)(deltaTimeSeconds, 0.0f);
+    cycle_.Update(deltaTimeSeconds);
+    if (std::isfinite(deltaTimeSeconds) && deltaTimeSeconds > 0.0f) {
+        constexpr float kAnimationPeriodSeconds = 60.0f;
+        elapsedSeconds_ = std::fmod(elapsedSeconds_ + std::fmod(deltaTimeSeconds,
+            kAnimationPeriodSeconds), kAnimationPeriodSeconds);
+    }
     const float distance = Vector3Length(position_ - playerPosition);
     isVisible_ = distance < 750.0f && playerPosition.z < position_.z + 100.0f;
     if (!isVisible_) { return; }
+    UpdateEmitterColor();
+    emitters_->Update();
+    if (!IsDischarging()) { return; }
     UpdateDischarge();
     discharge_->SetColor({ 1.0f, 0.16f, 0.015f, 0.9f + 0.1f * std::sin(elapsedSeconds_ * 73.0f) });
     discharge_->Update();
+}
+
+void ElectricGate::UpdateEmitterColor()
+{
+    float brightness = 0.08f;
+    if (cycle_.GetState() == ElectricGateState::Warning) {
+        brightness = 0.4f + 2.6f * cycle_.GetWarningProgress();
+    } else if (IsDischarging()) {
+        brightness = 4.0f;
+    }
+    emitters_->SetColor({ brightness, brightness * 0.5f, brightness * 0.25f, 1.0f });
 }
 
 void ElectricGate::Draw()
@@ -159,18 +182,21 @@ void ElectricGate::Draw()
     if (!isVisible_) { return; }
     body_->Draw();
     emitters_->Draw();
-    discharge_->Draw();
+    if (IsDischarging()) { discharge_->Draw(); }
 }
 
 bool ElectricGate::CheckCollision(const Vector3& previousPlayerPosition, const Vector3& playerPosition,
     float playerRadius) const
 {
-    return CheckDischargeCollision(position_, yawRadians_, scale_, previousPlayerPosition, playerPosition, playerRadius);
+    return CheckDischargeCollision(position_, yawRadians_, scale_, previousPlayerPosition,
+        playerPosition, playerRadius, &cycle_);
 }
 
 bool ElectricGate::CheckDischargeCollision(const Vector3& gatePosition, float yawRadians, float scale,
-    const Vector3& previousPlayerPosition, const Vector3& playerPosition, float playerRadius)
+    const Vector3& previousPlayerPosition, const Vector3& playerPosition, float playerRadius,
+    const ElectricGateCycle* cycle)
 {
+    if (cycle != nullptr && !cycle->HasDischargeDuringFrameInterval(0.0, 1.0)) { return false; }
     if (!ValueValidation::IsFinite(gatePosition) || !ValueValidation::IsFinite(previousPlayerPosition) ||
         !ValueValidation::IsFinite(playerPosition) || !std::isfinite(yawRadians) ||
         !std::isfinite(scale) || scale <= 0.0f || !std::isfinite(playerRadius) || playerRadius < 0.0f) {
@@ -185,7 +211,15 @@ bool ElectricGate::CheckDischargeCollision(const Vector3& gatePosition, float ya
         Vector3 center = gatePosition;
         center.y += (kLowerArcHeight + static_cast<float>(arcIndex) * kArcHeightInterval) * scale;
         const OBB dischargeBox = CollisionManager::MakeOBB(center, size, { 0.0f, yawRadians, 0.0f });
-        if (CollisionManager::SweepSphere(playerSphere, movement, dischargeBox).isHit) { return true; }
+        const SweepHit entryHit = CollisionManager::SweepSphere(playerSphere, movement, dischargeBox);
+        if (!entryHit.isHit) { continue; }
+        if (cycle == nullptr) { return true; }
+        // 凸な帯への進入・退出時刻を両方向のSweepから求める。
+        // 周期数に関係なく、1本につき最大2回のSweepで放電時間との重なりを判定する。
+        const SweepHit exitHit = CollisionManager::SweepSphere(
+            Sphere{ playerPosition, playerRadius }, movement * -1.0f, dischargeBox);
+        if (exitHit.isHit && cycle->HasDischargeDuringFrameInterval(
+            entryHit.time, 1.0 - static_cast<double>(exitHit.time))) { return true; }
     }
     return false;
 }

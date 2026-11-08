@@ -244,6 +244,30 @@ bool StageCatalog::LoadStageSettings(
             return false;
         }
     }
+    if (json.contains("electric_gate_cycle")) {
+        const nlohmann::json& cycle = json["electric_gate_cycle"];
+        if (!cycle.is_object()) {
+            lastError_ = "Invalid electric_gate_cycle: " + settings.id;
+            return false;
+        }
+        const char* fieldNames[] = { "off_duration_seconds", "warning_duration_seconds",
+            "on_duration_seconds", "initial_phase_seconds" };
+        for (const char* fieldName : fieldNames) {
+            if (cycle.contains(fieldName) && !cycle[fieldName].is_number()) {
+                lastError_ = "Invalid electric_gate_cycle." + std::string(fieldName) + ": " + settings.id;
+                return false;
+            }
+        }
+        settings.electricGateCycle.offDurationSeconds = cycle.value("off_duration_seconds", 3.0);
+        settings.electricGateCycle.warningDurationSeconds = cycle.value("warning_duration_seconds", 0.75);
+        settings.electricGateCycle.onDurationSeconds = cycle.value("on_duration_seconds", 2.0);
+        settings.electricGateCycle.initialPhaseSeconds = cycle.value("initial_phase_seconds", 0.0);
+    }
+    if (!settings.electricGateCycle.IsValid()) {
+        lastError_ = "Invalid electric_gate_cycle (off_duration_seconds, warning_duration_seconds, "
+            "on_duration_seconds, initial_phase_seconds): " + settings.id;
+        return false;
+    }
     if (json.contains("electric_gate_distances")) {
         settings.electricGateDistances = json["electric_gate_distances"].get<std::vector<float>>();
     }

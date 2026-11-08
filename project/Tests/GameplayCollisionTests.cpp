@@ -9,6 +9,7 @@
 #include "App/Game/Enemy/Bullet/Types/TurretEnemyBullet.h"
 #include "App/Game/Hazard/WaterPillarHazard.h"
 #include "App/Game/Hazard/ElectricGate.h"
+#include "App/Game/Stage/StageCatalog.h"
 #include "Tests/PlayerTestAccess.h"
 #include "App/Game/Player/Combat/Bullet/Types/MissileBullet.h"
 #include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
@@ -22,6 +23,55 @@
 #include <cstring>
 #include <utility>
 #include <limits>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+
+bool RunElectricGateConfigurationTests()
+{
+    const std::filesystem::path testDirectory = std::filesystem::path("runtime") /
+        ("ElectricGateCycleTests_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directories(testDirectory);
+    const std::filesystem::path stagePath = testDirectory / "stage.json";
+    const std::filesystem::path catalogPath = testDirectory / "catalog.json";
+    {
+        std::ofstream catalogFile(catalogPath);
+        catalogFile << "{\"stages\":[{\"settings\":\"" << stagePath.generic_string() << "\"}]}";
+    }
+    const char* cycleValues[] = {
+        "{}",
+        "{\"off_duration_seconds\":4,\"warning_duration_seconds\":1,\"on_duration_seconds\":2,\"initial_phase_seconds\":4}",
+        "{\"off_duration_seconds\":0}",
+        "{\"warning_duration_seconds\":4}",
+        "{\"on_duration_seconds\":-1}",
+        "{\"initial_phase_seconds\":5}",
+        "{\"off_duration_seconds\":\"invalid\"}",
+        "null"
+    };
+    bool hasPassed = true;
+    StageCatalog* catalog = StageCatalog::GetInstance();
+    for (size_t caseIndex = 0; caseIndex < std::size(cycleValues); ++caseIndex) {
+        {
+            std::ofstream stageFile(stagePath);
+            stageFile << "{\"id\":\"electric_gate_test\",\"layout\":\"resources/Scenes/stage01.json\",\"electric_gate_cycle\":"
+                << cycleValues[caseIndex] << "}";
+        }
+        const bool hasLoaded = catalog->Load(catalogPath.string());
+        if (hasLoaded != (caseIndex < 2)) { hasPassed = false; }
+        if (!hasLoaded && (catalog->GetLastError().find("electric_gate_cycle") == std::string::npos ||
+            catalog->GetLastError().find("electric_gate_test") == std::string::npos)) { hasPassed = false; }
+        if (hasLoaded && caseIndex == 1) {
+            const StageSettings* settings = catalog->Find("electric_gate_test");
+            if (settings == nullptr || settings->electricGateCycle.offDurationSeconds != 4.0 ||
+                settings->electricGateCycle.initialPhaseSeconds != 4.0) { hasPassed = false; }
+        }
+    }
+    std::filesystem::remove(stagePath);
+    std::filesystem::remove(catalogPath);
+    std::filesystem::remove(testDirectory);
+    if (!catalog->Load()) { return false; }
+    return hasPassed;
+}
 
 bool RunDashEnemyTests();
 bool RunBoxColliderTests();
@@ -456,12 +506,125 @@ private:
     int hitCount_ = 0;
 };
 
+bool RunElectricGateCycleTests()
+{
+    if (!RunElectricGateConfigurationTests()) { return false; }
+    ElectricGateCycle cycle;
+    if (cycle.GetState() != ElectricGateState::Off ||
+        cycle.HasDischargeDuringFrameInterval(0.0, 1.0)) { return false; }
+    cycle.Update(2.25);
+    if (cycle.GetState() != ElectricGateState::Warning || cycle.GetWarningProgress() != 0.0f) { return false; }
+    cycle.Update(0.375);
+    if (std::abs(cycle.GetWarningProgress() - 0.5f) > 0.00001f) { return false; }
+    cycle.Update(0.375);
+    if (cycle.GetState() != ElectricGateState::On ||
+        cycle.HasDischargeDuringFrameInterval(0.0, 0.9) ||
+        !cycle.HasDischargeDuringFrameInterval(1.0, 1.0)) { return false; }
+    cycle.Update(2.0);
+    if (cycle.GetState() != ElectricGateState::Off ||
+        !cycle.HasDischargeDuringFrameInterval(0.0, 0.9) ||
+        cycle.HasDischargeDuringFrameInterval(1.0, 1.0)) { return false; }
+    cycle.Update(1000003.25);
+    if (cycle.GetState() != ElectricGateState::On ||
+        !cycle.HasDischargeDuringFrameInterval(0.0, 1.0)) { return false; }
+    cycle.Update(0.0);
+    cycle.Update(-1.0);
+    cycle.Update(std::numeric_limits<double>::quiet_NaN());
+    cycle.Update(std::numeric_limits<double>::infinity());
+    if (cycle.GetState() != ElectricGateState::On ||
+        !cycle.HasDischargeDuringFrameInterval(0.0, 1.0)) { return false; }
+
+    const int frameRates[] = { 30, 60, 120 };
+    for (int frameRate : frameRates) {
+        cycle.Initialize({});
+        for (int frameIndex = 0; frameIndex < frameRate * 8; ++frameIndex) {
+            cycle.Update(1.0 / static_cast<double>(frameRate));
+        }
+        cycle.Update(0.25);
+        if (cycle.GetState() != ElectricGateState::On) { return false; }
+    }
+    ElectricGateCycleSettings settings;
+    settings.warningDurationSeconds = 0.0;
+    settings.initialPhaseSeconds = 3.0;
+    if (!cycle.Initialize(settings) || cycle.GetState() != ElectricGateState::On) { return false; }
+    cycle.Initialize({});
+    if (cycle.GetState() != ElectricGateState::Off) { return false; }
+    settings.offDurationSeconds = 0.0;
+    if (settings.IsValid() || cycle.Initialize(settings)) { return false; }
+    settings = {};
+    settings.warningDurationSeconds = 3.01;
+    if (settings.IsValid()) { return false; }
+    settings = {};
+    settings.onDurationSeconds = -1.0;
+    if (settings.IsValid()) { return false; }
+    settings = {};
+    settings.initialPhaseSeconds = 5.0;
+    if (settings.IsValid()) { return false; }
+    settings.initialPhaseSeconds = -1.0;
+    if (settings.IsValid()) { return false; }
+    settings = {};
+    settings.warningDurationSeconds = std::numeric_limits<double>::quiet_NaN();
+    if (settings.IsValid()) { return false; }
+    settings = {};
+    settings.onDurationSeconds = std::numeric_limits<double>::infinity();
+    if (settings.IsValid()) { return false; }
+    settings = {};
+    settings.offDurationSeconds = (std::numeric_limits<double>::max)();
+    settings.onDurationSeconds = (std::numeric_limits<double>::max)();
+    if (settings.IsValid()) { return false; }
+    StageCatalog* catalog = StageCatalog::GetInstance();
+    if (!catalog->Load()) { return false; }
+    const StageSettings* stage = catalog->Find("stage01");
+    if (stage == nullptr || stage->electricGateCycle.offDurationSeconds != 3.0 ||
+        stage->electricGateCycle.warningDurationSeconds != 0.75 ||
+        stage->electricGateCycle.onDurationSeconds != 2.0) { return false; }
+    stage = catalog->Find("stage02");
+    return stage != nullptr && stage->electricGateCycle.IsValid();
+}
+
 bool RunElectricGateCollisionTests()
 {
+    if (!RunElectricGateCycleTests()) { std::puts("FAILED: electric gate cycle/settings"); return false; }
     const Vector3 gatePosition { 12.0f, -34.0f, 400.0f };
     constexpr float kScale = 5.0f;
     constexpr float kPlayerRadius = 1.0f;
     const float arcHeights[] = { -23.0f, -16.25f };
+    const Vector3 timedStart { gatePosition.x, -23.0f, 380.0f };
+    const Vector3 timedEnd { gatePosition.x, -23.0f, 420.0f };
+    const Vector3 contact { gatePosition.x, -23.0f, 400.0f };
+    ElectricGateCycle cycle;
+    cycle.Update(1.0);
+    if (ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        timedStart, timedEnd, kPlayerRadius, &cycle)) { return false; }
+    cycle.Update(1.5);
+    if (cycle.GetState() != ElectricGateState::Warning ||
+        ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+            contact, contact, kPlayerRadius, &cycle)) { return false; }
+    // 前半に通過後、フレーム末尾でONになっても被弾しない。
+    cycle.Update(0.6);
+    if (ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        timedStart, timedEnd, kPlayerRadius, &cycle)) { return false; }
+    cycle.Update(0.0);
+    if (!ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        contact, contact, kPlayerRadius, &cycle)) { return false; }
+    // フレーム末尾はOFFでも、前半の放電中に通過したら被弾する。
+    cycle.Initialize({ 3.0, 0.75, 2.0, 4.6 });
+    cycle.Update(0.6);
+    if (!ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        timedStart, timedEnd, kPlayerRadius, &cycle)) { return false; }
+    // ONが終了してから接触する場合は被弾しない。
+    cycle.Initialize({ 3.0, 0.75, 2.0, 4.9 });
+    cycle.Update(0.6);
+    if (ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        timedStart, timedEnd, kPlayerRadius, &cycle)) { return false; }
+    cycle.Initialize({ 3.0, 0.75, 2.0, 2.7 });
+    cycle.Update(0.6);
+    if (!ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        timedStart, timedEnd, kPlayerRadius, &cycle)) { return false; }
+    cycle.Initialize({});
+    cycle.Update(1000000.0);
+    if (!ElectricGate::CheckDischargeCollision(gatePosition, 0.0f, kScale,
+        timedStart, timedEnd, kPlayerRadius, &cycle)) { return false; }
     for (float height : arcHeights) {
         const Vector3 start { gatePosition.x, height, 380.0f };
         const Vector3 end { gatePosition.x, height, 420.0f };

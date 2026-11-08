@@ -2870,7 +2870,8 @@ void GamePlayScene::InitializeElectricGates()
         const Vector3 forward = rail_->GetPositionByDistance(distance + 1.0f)
             - rail_->GetPositionByDistance(distance - 1.0f);
         std::unique_ptr<ElectricGate> gate = std::make_unique<ElectricGate>();
-        gate->Initialize(position, -std::atan2(forward.x, forward.z), kDisplayScale);
+        gate->Initialize(position, -std::atan2(forward.x, forward.z), kDisplayScale,
+            stageSettings_.electricGateCycle);
         electricGates_.push_back(std::move(gate));
     }
 }

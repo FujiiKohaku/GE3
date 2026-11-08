@@ -2,6 +2,12 @@
   "id": "stage01",
   "save_point_distances": [670.0],
   "electric_gate_distances": [400.0],
+  "electric_gate_cycle": {
+    "off_duration_seconds": 3.0,
+    "warning_duration_seconds": 0.75,
+    "on_duration_seconds": 2.0,
+    "initial_phase_seconds": 0.0
+  },
   "shadows": {
     "enabled": true,
     "resolution": 2048,
