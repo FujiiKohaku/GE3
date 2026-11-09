@@ -887,4 +887,58 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Debug\Profiler\StartupTiming.h" />
     <ClCompile Include="$(projectRootPath)Engine\Debug\Profiler\StartupTiming.cpp" />
   </ItemGroup>
+<ItemGroup>
+<ClCompile Include="$(projectRootPath)App\AlmaRun\AlmaRunScene.cpp"><ObjectFileName>$(IntDir)AlmaAlmaRunScene.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\AlmaRunScene.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Background.cpp"><ObjectFileName>$(IntDir)AlmaBackground.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Background.h" />
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Biome.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\BitmapFont.cpp"><ObjectFileName>$(IntDir)AlmaBitmapFont.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\BitmapFont.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\BurstParticles.cpp"><ObjectFileName>$(IntDir)AlmaBurstParticles.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\BurstParticles.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\CameraController.cpp"><ObjectFileName>$(IntDir)AlmaCameraController.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\CameraController.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\ClearScene.cpp"><ObjectFileName>$(IntDir)AlmaClearScene.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\ClearScene.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\DeathParticles.cpp"><ObjectFileName>$(IntDir)AlmaDeathParticles.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\DeathParticles.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\DustParticles.cpp"><ObjectFileName>$(IntDir)AlmaDustParticles.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\DustParticles.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Enemy.cpp"><ObjectFileName>$(IntDir)AlmaEnemy.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Enemy.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Enemy2.cpp"><ObjectFileName>$(IntDir)AlmaEnemy2.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Enemy2.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Fade.cpp"><ObjectFileName>$(IntDir)AlmaFade.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Fade.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\FallingSpike.cpp"><ObjectFileName>$(IntDir)AlmaFallingSpike.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\FallingSpike.h" />
+<ClInclude Include="$(projectRootPath)App\AlmaRun\FxUtil.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\GameHUD.cpp"><ObjectFileName>$(IntDir)AlmaGameHUD.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\GameHUD.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\GameOverScene.cpp"><ObjectFileName>$(IntDir)AlmaGameOverScene.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\GameOverScene.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\GameScene.cpp"><ObjectFileName>$(IntDir)AlmaGameScene.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\GameScene.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\HitEffect.cpp"><ObjectFileName>$(IntDir)AlmaHitEffect.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\HitEffect.h" />
+<ClInclude Include="$(projectRootPath)App\AlmaRun\KamataEngine.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\MapChipField.cpp"><ObjectFileName>$(IntDir)AlmaMapChipField.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\MapChipField.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Math.cpp"><ObjectFileName>$(IntDir)AlmaMath.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Math.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Player.cpp"><ObjectFileName>$(IntDir)AlmaPlayer.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Player.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\RisingSpike.cpp"><ObjectFileName>$(IntDir)AlmaRisingSpike.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\RisingSpike.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\ScoreManager.cpp"><ObjectFileName>$(IntDir)AlmaScoreManager.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\ScoreManager.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\Skydome.cpp"><ObjectFileName>$(IntDir)AlmaSkydome.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\Skydome.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\SparkParticles.cpp"><ObjectFileName>$(IntDir)AlmaSparkParticles.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\SparkParticles.h" />
+<ClCompile Include="$(projectRootPath)App\AlmaRun\TitleScene.cpp"><ObjectFileName>$(IntDir)AlmaTitleScene.obj</ObjectFileName></ClCompile>
+<ClInclude Include="$(projectRootPath)App\AlmaRun\TitleScene.h" />
+</ItemGroup>
 </Project>
+

@@ -9,6 +9,7 @@
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
 #include "App/Scene/Title/TitleScene.h"
+#include "App/AlmaRun/AlmaRunScene.h"
 #if defined(_DEBUG)
 #include "Tests/ObjectFogVerificationScene.h"
 #endif
@@ -190,7 +191,7 @@ void Game::Initialize()
     GetBootProfilerForGame()->Begin("Scene");
     {
         StartupTimingScope startupScope("Game.ScheduleTitle");
-        SceneManager::GetInstance()->SetNextScene(std::make_unique<TitleScene>());
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<AlmaRunScene>());
     }
     GetBootProfilerForGame()->End("Scene");
 
@@ -555,3 +556,4 @@ void Game::UnlockCursor()
 {
     ClipCursor(nullptr);
 }
+
