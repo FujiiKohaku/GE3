@@ -11,6 +11,13 @@ AlmaBitmapFont* AlmaBitmapFont::GetInstance() {
 	return &instance;
 }
 
+void AlmaBitmapFont::Finalize() {
+	for (auto* sprite : pool_) { delete sprite; }
+	pool_.clear();
+	index_ = 0;
+	initialized_ = false;
+}
+
 void AlmaBitmapFont::EnsureInitialized() {
 	if (initialized_) {
 		return;

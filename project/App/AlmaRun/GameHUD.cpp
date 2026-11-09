@@ -176,13 +176,9 @@ void AlmaGameHUD::Draw(const AlmaHudState& state) {
 		DrawRect(hpShine_, barX, barY + 2, barW * hpRatio, 6, {1, 1, 1, 0.35f});
 		float heartScale = hpRatio <= 0.3f ? 1.0f + 0.18f * std::sin(time_ * 8.0f) : 1.0f;
 		DrawIcon(heart_, 38, barY + barH * 0.5f, 36 * heartScale, white);
-		font->Draw(ToStr(static_cast<int>(state.hp)) + "/" + ToStr(static_cast<int>(state.maxHp)), barX + barW - 6, barY + 3, 1.0f, white, AlmaAlign::kRight);
 
 		// コイン表示
 		DrawIcon(coinIcon_, 38, 72, 30 * (1.0f + coinPulse_ * 0.25f), white);
-		font->Draw("x " + ToStr(state.coins), 70, 72, 2.0f * (1.0f + coinPulse_ * 0.15f), gold, AlmaAlign::kLeft);
-		int toHeal = AlmaScoreManager::kCoinsPerHeal - (state.coins % AlmaScoreManager::kCoinsPerHeal);
-		font->Draw("HEAL IN " + ToStr(toHeal), 310, 80, 1.0f, {0.75f, 1.0f, 0.75f, 0.85f}, AlmaAlign::kRight);
 
 		// ===== 上中央：距離メーター =====
 		font->Draw(ToStr(state.distance) + " m", 640, 12, 3.4f, white, AlmaAlign::kCenter);

@@ -1,6 +1,8 @@
 #include "Fade.h"
 #include <algorithm>
 
+AlmaFade::~AlmaFade() { delete sprite_; }
+
 void AlmaFade::Initialize() {
 	// 02_13_page10
 	// スプライト生成

@@ -2,7 +2,7 @@
 #include "Bloom/BloomRenderer.h"
 #include "Fog/FogRenderer.h"
 #include "Volumetric/VolumetricLightRenderer.h"
-#include "App/Scene/Common/SceneManager.h"
+#include "App/AlmaRun/Common/SceneManager.h"
 #include <set>
 #include <stdexcept>
 

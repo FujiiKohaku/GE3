@@ -3,8 +3,11 @@
 #include "GameScene.h"
 #include "GameOverScene.h"
 #include "ClearScene.h"
-#include "App/Scene/Common/SceneManager.h"
+#include "BitmapFont.h"
+#include "App/AlmaRun/Common/SceneManager.h"
 #include "Engine/Light/LightManager.h"
+#include "Engine/Logger/Logger.h"
+#include "Engine/Screenshot/ScreenshotManager.h"
 using namespace KamataEngine;
 AlmaRunScene::AlmaRunScene()=default;
 AlmaRunScene::~AlmaRunScene()=default;
@@ -15,6 +18,7 @@ void AlmaRunScene::Start(Phase next) {
  if(next==Phase::Game){game=std::make_unique<AlmaGameScene>();game->Initialize();}
  if(next==Phase::Over){over=std::make_unique<AlmaGameOverScene>();over->Initialize();}
  if(next==Phase::Clear){clear=std::make_unique<AlmaClearScene>();clear->Initialize();}
+ Logger::Log("[AlmaRun] Initialized phase " + std::to_string(static_cast<int>(next)));
 }
 void AlmaRunScene::Initialize(){
  Object3dManager::GetInstance()->Initialize(::DirectXCommon::GetInstance());
@@ -26,9 +30,32 @@ void AlmaRunScene::Initialize(){
  auto* scenes=SceneManager::GetInstance();scenes->SetSceneFogColor({0.62f,0.72f,0.83f,1});
  scenes->SetSceneDistanceFog({45,110,0.45f,1.2f});scenes->AddPostEffect(PostEffectType::Fog,PostEffectStage::BeforeParticle);
  Start(Phase::Title);
+ verification=std::wstring(GetCommandLineW()).find(L"--verify-almarun")!=std::wstring::npos;
 }
-void AlmaRunScene::Finalize(){uiDraws.clear();title.reset();game.reset();over.reset();clear.reset();Object3dManager::GetInstance()->SetDefaultCamera(nullptr);}
+void AlmaRunScene::Finalize(){
+ ::DirectXCommon::GetInstance()->WaitForGPU();
+ uiDraws.clear();title.reset();game.reset();over.reset();clear.reset();
+ AlmaBitmapFont::GetInstance()->Finalize();
+ PrimitiveDrawer::GetInstance()->Finalize();
+ Object3dManager::GetInstance()->SetDefaultCamera(nullptr);
+}
 void AlmaRunScene::Update(){
+ // Opt-in smoke run exercises every scene using the normal update/draw path.
+ if(verification){
+  ++verificationFrame;
+  switch(verificationFrame){
+  case 60: Start(Phase::Game);break;
+  case 360: Start(Phase::Over);break;
+  case 480: Start(Phase::Game);break;
+  case 720: Start(Phase::Clear);break;
+  case 840: Start(Phase::Title);break;
+  case 960: Start(Phase::Game);break;
+  case 1200: Logger::Log("[AlmaRun] Verification complete: 1200 frames");Logger::Flush();PostQuitMessage(0);break;
+  }
+  if(verificationFrame==120 || verificationFrame==180 || verificationFrame==240 || verificationFrame==600 || verificationFrame==810){
+   ScreenshotManager::GetInstance()->RequestCapture(true,false);
+  }
+ }
  if(::Input::GetInstance()->IsKeyTrigger(DIK_F6)){enhanced=!enhanced;}
  if(title){title->Update();if(title->IsFinished())Start(Phase::Game);}
  else if(game){game->Update();if(game->IsFinished()){auto next=game->IsReturnToTitle()?Phase::Title:game->IsClear()?Phase::Clear:Phase::Over;Start(next);}}

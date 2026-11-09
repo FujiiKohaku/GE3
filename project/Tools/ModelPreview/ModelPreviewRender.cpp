@@ -1,5 +1,5 @@
 #include "ModelPreviewApp.h"
-#include "App/Scene/Common/SceneManager.h"
+#include "App/AlmaRun/Common/SceneManager.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"

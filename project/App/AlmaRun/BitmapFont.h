@@ -14,6 +14,7 @@ public:
 	enum class AlmaAlign { kLeft, kCenter, kRight };
 
 	static AlmaBitmapFont* GetInstance();
+	void Finalize();
 
 	// 毎フレーム描画前に呼ぶ（スプライトプールの使用位置をリセット）
 	void BeginFrame() { index_ = 0; }

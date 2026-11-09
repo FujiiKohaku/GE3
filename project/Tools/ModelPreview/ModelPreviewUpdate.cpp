@@ -1,6 +1,6 @@
 #include "ModelPreviewApp.h"
-#include "App/Game/VisualPresetLibrary.h"
-#include "App/Scene/Common/SceneManager.h"
+#include "Tools/ModelPreview/Support/VisualPresetLibrary.h"
+#include "App/AlmaRun/Common/SceneManager.h"
 #include "Engine/3D/SkyBox/SkyBox.h"
 #include "Engine/Camera/Camera.h"
 #include "Engine/ImGuiManager/ImGuiManager.h"

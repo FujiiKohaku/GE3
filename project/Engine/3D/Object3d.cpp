@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #include "Engine/Shadow/ShadowMapRenderer.h"
 #include <cmath>
 #include "Engine/Logger/Logger.h"
@@ -351,10 +352,11 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
 
     std::filesystem::path p(filePath);
     if (!std::filesystem::exists(p)) {
-        OutputDebugStringA("FILE NOT FOUND: ");
-        OutputDebugStringA(filePath.c_str());
-        OutputDebugStringA("\n");
-        assert(false);
+        const std::string message = "Model file not found: " + filePath
+            + " (working directory: " + std::filesystem::current_path().string() + ")";
+        Logger::Error(message);
+        Logger::Flush();
+        throw std::runtime_error(message);
     }
     char cwd[MAX_PATH];
     GetCurrentDirectoryA(MAX_PATH, cwd);
@@ -371,8 +373,13 @@ ModelData Object3d::LoadModeFile(const std::string& directoryPath,
                 aiProcess_FlipWindingOrder | aiProcess_FlipUVs);
     }
 
-    assert(scene);
-    assert(scene->HasMeshes());
+    if (scene == nullptr || !scene->HasMeshes() || scene->mRootNode == nullptr) {
+        const std::string message = "Model import failed: " + filePath
+            + " (Assimp: " + importer.GetErrorString() + ")";
+        Logger::Error(message);
+        Logger::Flush();
+        throw std::runtime_error(message);
+    }
 
     // -------------------------
     // Mesh -> MeshPrimitive

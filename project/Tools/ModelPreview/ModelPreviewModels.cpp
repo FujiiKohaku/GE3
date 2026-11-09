@@ -1,5 +1,5 @@
 #include "ModelPreviewApp.h"
-#include "App/Game/VisualPresetLibrary.h"
+#include "Tools/ModelPreview/Support/VisualPresetLibrary.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/Logger/Logger.h"
 #include "Engine/TextureManager/TextureManager.h"

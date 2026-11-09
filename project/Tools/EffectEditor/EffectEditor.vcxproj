@@ -16,7 +16,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Remove="$(projectRootPath)App\**\*.cpp" />
-    <ClCompile Include="$(projectRootPath)App\Scene\Common\SceneManager.cpp" />
+    <ClCompile Include="$(projectRootPath)App\AlmaRun\Common\SceneManager.cpp" />
     <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditor.cpp" />
     <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditorApp.cpp" />
     <ClCompile Include="$(projectRootPath)Tools\EffectEditor\EffectEditorData.cpp" />

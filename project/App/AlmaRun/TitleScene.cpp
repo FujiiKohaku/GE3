@@ -11,7 +11,14 @@
 //--------------------------------------------------
 // デストラクタ
 //--------------------------------------------------
-AlmaTitleScene::~AlmaTitleScene() { delete fade_; delete modelTitle_; delete modelPlayer_; delete sun_; delete backGround_; delete pushSpace_; }
+AlmaTitleScene::~AlmaTitleScene() {
+	delete fade_;
+	delete modelTitle_;
+	delete modelPlayer_;
+	delete sun_;
+	delete backGround_;
+	delete pushSpace_;
+}
 
 //==================================================
 // 初期化

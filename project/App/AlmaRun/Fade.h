@@ -2,6 +2,7 @@
 #include "KamataEngine.h"
 class AlmaFade {
 public:
+	~AlmaFade();
 	void Initialize();
 
 	void Update();
