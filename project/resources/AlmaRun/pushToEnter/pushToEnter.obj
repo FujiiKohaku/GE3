@@ -1,6 +1,7 @@
 # Blender 4.4.1
 # www.blender.org
 mtllib pushToEnter.mtl
+usemtl WhiteText
 o テキスト
 v 2.529000 0.260000 -0.346000
 v 2.531000 0.260000 -0.346000

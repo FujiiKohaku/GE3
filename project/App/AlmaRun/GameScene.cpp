@@ -20,6 +20,7 @@ constexpr int kWindowBehind = 15;
 constexpr int kWindowAhead = 36;
 constexpr uint32_t kRows = 20;
 constexpr float kDt = 1.0f / 60.0f;
+constexpr float kInitialRunSpeed = 0.12f;
 
 const AlmaVector4 kColorWhite{1.0f, 1.0f, 1.0f, 1.0f};
 const AlmaVector4 kColorGold{1.0f, 0.86f, 0.25f, 1.0f};
@@ -270,6 +271,7 @@ void AlmaGameScene::Initialize() {
 	fov_ = 45.0f;
 	lastArea_ = 0;
 	speedLevel_ = 0;
+	player_->SetBaseSpeed(kInitialRunSpeed);
 }
 
 //==================================================
@@ -449,7 +451,7 @@ void AlmaGameScene::UpdatePlay() {
 		speedLevel_ = level;
 		hud_.ShowBanner("SPEED UP!", "SPEED LV " + std::to_string(speedLevel_ + 1), kColorCyan);
 	}
-	player_->SetBaseSpeed(0.2f + 0.01f * static_cast<float>(speedLevel_));
+	player_->SetBaseSpeed(kInitialRunSpeed + 0.01f * static_cast<float>(speedLevel_));
 
 	// ===== エリア切り替え（500mごと） =====
 	int area = Biome::AreaNumberAt(distance);

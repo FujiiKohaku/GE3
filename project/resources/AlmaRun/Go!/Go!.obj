@@ -1,6 +1,7 @@
 # Blender 4.4.1
 # www.blender.org
 mtllib Go!.mtl
+usemtl WhiteText
 o テキスト
 v 1.487450 0.340000 -0.042887
 v 1.485847 0.340000 -0.035097

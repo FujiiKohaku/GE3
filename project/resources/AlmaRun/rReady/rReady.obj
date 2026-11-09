@@ -1,6 +1,7 @@
 # Blender 4.4.1
 # www.blender.org
 mtllib rReady.mtl
+usemtl WhiteText
 o テキスト
 v 2.041000 0.210000 0.230000
 v 2.194000 0.210000 -0.096000

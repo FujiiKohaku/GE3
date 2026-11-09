@@ -1,6 +1,7 @@
 # Blender 4.4.1
 # www.blender.org
 mtllib pushSpace.mtl
+usemtl WhiteText
 o テキスト
 v 2.436000 0.360000 -0.594000
 v 2.436000 0.360000 -0.388000

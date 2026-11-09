@@ -1,2 +1,6 @@
 # Blender 4.4.1 MTL File: 'gameover.blend'
 # www.blender.org
+
+newmtl WhiteText
+Kd 1.000000 1.000000 1.000000
+map_Kd ../white1x1.png

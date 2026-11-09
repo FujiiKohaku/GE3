@@ -1,6 +1,7 @@
 # Blender 4.4.1
 # www.blender.org
 mtllib gameover.mtl
+usemtl WhiteText
 o テキスト
 v 2.825962 0.220000 -0.670527
 v 2.856065 0.220000 -0.666223

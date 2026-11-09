@@ -1,6 +1,7 @@
 # Blender 4.4.1
 # www.blender.org
 mtllib aru.mtl
+usemtl WhiteText
 o テキスト
 v 4.881234 0.839399 -1.177703
 v 4.845649 0.839399 -1.213519
