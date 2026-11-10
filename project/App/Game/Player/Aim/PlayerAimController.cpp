@@ -10,7 +10,6 @@
 // 照準を画面中央に置き、狙う距離を基準値に戻す。
 void PlayerAimController::InitializeAim()
 {
-
     aimScreenPosition_.x = static_cast<float>(WinApp::GetInstance()->GetClientWidth()) / 2.0f;
     aimScreenPosition_.y = static_cast<float>(WinApp::GetInstance()->GetClientHeight()) / 2.0f;
     smoothedAimDistance_ = kAimConvergenceDistance;
@@ -139,9 +138,13 @@ void PlayerAimController::UpdateGamepadAim(float stickX, float stickY, bool isPi
 // 画面上の照準を通って奥へ伸びるレイを作り、引数のaimRayに結果を書き込む。
 void PlayerAimController::CreateAimRay(Ray& aimRay, const Camera& activeCamera) const
 {
+
+    
+    // 現在の照準位置を取得する
     float mouseX = aimScreenPosition_.x;
     float mouseY = aimScreenPosition_.y;
 
+    // 画面の幅と高さを取得する
     float screenWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
     float screenHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
 

@@ -91,14 +91,15 @@ void CollisionManager::RegisterRaycastSphereTarget(
     raycastSphereTargets_.push_back({ objectId, sphere, category });
 }
 
-bool CollisionManager::Raycast(
-    const Ray& ray,
-    RaycastHit& hit,
-    CollisionLayer queryMask) const
+// レイ判定を行い、最初に当たる対象の情報を返す。対象がなければfalseを返す。
+bool CollisionManager::Raycast(const Ray& ray,RaycastHit& hit,CollisionLayer queryMask) const
 {
+
+    // レイの方向を正規化する。正規化されていないと、距離計算が正しく行えない。
     Ray normalizedRay = ray;
     normalizedRay.direction = Normalize(ray.direction);
 
+    // レイの方向がゼロベクトルの場合、正規化できないので判定を行わない。
     if (Dot(normalizedRay.direction, normalizedRay.direction) <= 0.0f) {
         return false;
     }
@@ -109,22 +110,30 @@ bool CollisionManager::Raycast(
     BoxCollider* nearestCollider = nullptr;
     Vector3 nearestPosition = { 0.0f, 0.0f, 0.0f };
 
+    // 球の当たり判定を持つ対象との交差判定を行う。
     for (const RaycastSphereTarget& target : raycastSphereTargets_) {
+
+
+        // 対象のカテゴリがクエリマスクに含まれていない場合、判定をスキップする。
         if ((target.category & queryMask) == 0) {
             continue;
         }
+
+
+
         float distance = 0.0f;
         if (!RaySphereIntersect(normalizedRay, target.sphere, distance)) {
             continue;
         }
+
         if (!isHit || distance < nearestDistance) {
             isHit = true;
             nearestDistance = distance;
             nearestObjectId = target.objectId;
             nearestCollider = nullptr;
-            nearestPosition =
-                normalizedRay.origin + normalizedRay.direction * distance;
+            nearestPosition =normalizedRay.origin + normalizedRay.direction * distance;
         }
+
     }
 
     for (const RaycastObbTarget& target : raycastObbTargets_) {
