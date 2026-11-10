@@ -8,7 +8,7 @@
 #include "Engine/CollisionManager/CollisionManager.h"
 #include "Engine/Development/DevelopmentWebPanel.h"
 #include "Engine/PostEffect/PostEffectManager.h"
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 #if defined(_DEBUG)
 #include "Tests/ObjectFogVerificationScene.h"
 #endif
@@ -19,6 +19,7 @@
 #include <format>
 
 namespace {
+// 前回のフレームからの経過時間を計測し、初期化処理の所要時間をログに出力する。
 void CheckInitializeTime(const char* name, std::chrono::steady_clock::time_point& prevTime)
 {
     auto nowTime = std::chrono::steady_clock::now();
@@ -29,7 +30,9 @@ void CheckInitializeTime(const char* name, std::chrono::steady_clock::time_point
     prevTime = nowTime;
 }
 
-BootProfiler* GetBootProfilerForGame()
+
+// BootProfilerの取得。Profilerが未初期化の場合はダミーを返す。
+    BootProfiler* GetBootProfilerForGame()
 {
     BootProfiler* bootProfiler =
         Profiler::GetInstance()->GetBootProfiler();
@@ -217,8 +220,7 @@ void Game::Initialize()
     {
         StartupTimingScope startupScope("Game.GifRecorder");
         GifRecordingManager::GetInstance()->Initialize(
-            DirectXCommon::GetInstance(),
-            WinApp::GetInstance());
+            DirectXCommon::GetInstance(),WinApp::GetInstance());
     }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     renderer_->GetPostEffectManager()->RegisterDevelopmentPanel();

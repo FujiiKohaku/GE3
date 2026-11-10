@@ -2,7 +2,8 @@
 #pragma once
 
 #include "App/Scene/Common/BaseScene.h"
-#include "BaseTitleState.h"
+#include "App/Scene/Title/Base/BaseTitleState.h"
+#include "App/Scene/Title/TitleScene/Settings/SettingsUi.h"
 #include "Engine/2D/Sprite.h"
 #include "Engine/2D/Text/Text.h"
 #include "Engine/3D/Object3d.h"
@@ -139,11 +140,6 @@ private:
     // 部屋のモデルをレイトレーシング用のシーンへ登録する。
     void SubmitRaytracingRoom(const std::vector<StageRoomObject>* roomObjects, DxrRenderer& renderer);
 
-    static float Clamp01(float value);
-    // 開始と終了で変化が緩やかになる補間値を作り、画面遷移に使う。
-    static float SmoothStep(float value);
-    // 目標を少し通り越して戻る補間値を作り、UIの出現に弾みを付ける。
-    static float EaseOutBack(float value);
 
     std::unique_ptr<Camera> camera_;
     SpotLightHandle windowLightHandle_ = kInvalidSpotLightHandle;
@@ -153,17 +149,12 @@ private:
     std::vector<StageRoomObject> firstFlightRoomObjects_;
     std::vector<StageRoomObject> frozenPassageRoomObjects_;
 
+    SettingsUi settingsUi_;
     std::unique_ptr<Sprite> atmosphereTint_;
-    std::unique_ptr<Sprite> settingsBackdrop_;
-    std::unique_ptr<Sprite> settingsAccent_;
     std::unique_ptr<Sprite> stagePanel_;
     std::unique_ptr<Sprite> frozenFogOverlay_;
     std::unique_ptr<Text> logoText_;
     std::unique_ptr<Text> pushToStartText_;
-    std::unique_ptr<Text> settingsShortcutText_;
-    std::unique_ptr<Text> settingsTitleText_;
-    std::unique_ptr<Text> settingsItemsText_;
-    std::unique_ptr<Text> settingsBackText_;
     std::unique_ptr<Text> stageHeaderText_;
     std::unique_ptr<Text> stageNameText_;
     std::unique_ptr<Text> stageDescriptionText_;

@@ -13,8 +13,8 @@ inline bool CountShot(int& shots)
     ++shots;
     return true;
 }
-inline void IgnoreTarget(BaseEnemy*) {}
-inline void CountEmission(int& shots, BaseEnemy*) { ++shots; }
+inline void IgnoreTarget(CombatTarget*) {}
+inline void CountEmission(int& shots, CombatTarget*) { ++shots; }
 }
 
 // 描画を起動せず、基底ポインタ経由の発射タイミングと発射制限を検証する。

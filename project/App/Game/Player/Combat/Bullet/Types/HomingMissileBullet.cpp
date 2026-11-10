@@ -1,3 +1,4 @@
+#include "App/Game/Common/CombatTarget.h"
 // 生存しているロック対象へ進行方向を曲げ、目標を通り過ぎた回数も管理するミサイル。
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
@@ -13,7 +14,7 @@ void HomingMissileBullet::OnHitEnemy(const Vector3& position)
 }
 
 // ロック対象と候補一覧を記録する。候補一覧は弱参照で保持し、寿命を引き延ばさない。
-void HomingMissileBullet::SetTarget(BaseEnemy* target, const std::shared_ptr<const std::vector<BaseEnemy*>>& activeTargets)
+void HomingMissileBullet::SetTarget(CombatTarget* target, const std::shared_ptr<const std::vector<CombatTarget*>>& activeTargets)
 {
     target_ = target;
     activeTargets_ = activeTargets;
@@ -23,7 +24,7 @@ void HomingMissileBullet::SetTarget(BaseEnemy* target, const std::shared_ptr<con
 // 対象の生存を確認して進行方向を曲げ、接近時の補正と通過回数によって追尾を制御する。
 void HomingMissileBullet::Move()
 {
-    const std::shared_ptr<const std::vector<BaseEnemy*>> activeTargets = activeTargets_.lock();
+    const std::shared_ptr<const std::vector<CombatTarget*>> activeTargets = activeTargets_.lock();
     const bool targetIsActive = activeTargets != nullptr &&
         std::find(activeTargets->begin(), activeTargets->end(), target_) != activeTargets->end();
 

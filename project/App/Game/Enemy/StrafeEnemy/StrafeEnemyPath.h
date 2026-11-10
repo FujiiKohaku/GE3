@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/Math/ValueValidation.h"
 
 #include "Engine/LevelEditor/LevelData.h"
 #include <algorithm>
@@ -13,13 +14,13 @@ class StrafeEnemyPath {
 public:
     static bool IsValidSettings(const LevelData::StrafeEnemySpawnData& settings)
     {
-        return IsInRange(settings.activationDistance, 10.0f, 500.0f) &&
-            IsInRange(settings.durationSeconds, 1.0f, 20.0f) &&
-            IsInRange(settings.forwardOffset, 10.0f, 150.0f) &&
-            IsInRange(settings.offsetX, -80.0f, 80.0f) && IsInRange(settings.offsetY, -80.0f, 80.0f) &&
-            IsInRange(settings.sideDistance, 40.0f, 200.0f) && settings.shotCount >= 1 && settings.shotCount <= 8 &&
-            IsInRange(settings.fireStartProgress, 0.0f, 0.9f) &&
-            IsInRange(settings.fireEndProgress, 0.0f, 0.9f) && settings.fireEndProgress >= settings.fireStartProgress &&
+        return ValueValidation::IsInRange(settings.activationDistance, 10.0f, 500.0f) &&
+            ValueValidation::IsInRange(settings.durationSeconds, 1.0f, 20.0f) &&
+            ValueValidation::IsInRange(settings.forwardOffset, 10.0f, 150.0f) &&
+            ValueValidation::IsInRange(settings.offsetX, -80.0f, 80.0f) && ValueValidation::IsInRange(settings.offsetY, -80.0f, 80.0f) &&
+            ValueValidation::IsInRange(settings.sideDistance, 40.0f, 200.0f) && settings.shotCount >= 1 && settings.shotCount <= 8 &&
+            ValueValidation::IsInRange(settings.fireStartProgress, 0.0f, 0.9f) &&
+            ValueValidation::IsInRange(settings.fireEndProgress, 0.0f, 0.9f) && settings.fireEndProgress >= settings.fireStartProgress &&
             (settings.shotCount == 1 || settings.fireEndProgress > settings.fireStartProgress);
     }
 
@@ -49,9 +50,4 @@ public:
         return count;
     }
 
-private:
-    static bool IsInRange(float value, float minimum, float maximum)
-    {
-        return std::isfinite(value) && value >= minimum && value <= maximum;
-    }
 };

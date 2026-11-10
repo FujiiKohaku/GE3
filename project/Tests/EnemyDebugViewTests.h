@@ -21,8 +21,8 @@ inline bool RunEnemyDebugViewTests()
     if (controls.size() != 5 || controls[0]["key"] != "enemy.2.pattern" ||
         controls[4]["key"] != "enemy.2.reset") return false;
     IceJellyfish boss;
-    base = &boss;
-    auto bossView = base->CreateDebugView();
+    BaseBoss* bossBase = &boss;
+    auto bossView = bossBase->CreateDebugView();
     if (!bossView || !bossView->HasBossInspector() || bossView->HasMovementControls() ||
         bossView->GetBossHp() != boss.GetHp()) return false;
     BaseEnemy ordinary;

@@ -208,10 +208,25 @@
     <ClCompile Include="App\Game\Stage\StageCatalog.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\Title\TitleScene.cpp">
+    <ClCompile Include="App\Scene\Title\TitleScene\TitleScene.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="App\Scene\Title\BaseTitleState.cpp">
+    <ClCompile Include="App\Scene\Title\Base\BaseTitleState.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\Title\TitleScene\Menu\TitleMenuStates.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\Title\TitleScene\Settings\SettingsState.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\Title\TitleScene\Settings\SettingsUi.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\Title\TitleScene\Settings\SettingsTransitionState.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="App\Scene\Title\TitleScene\StageSelect\StageSelectStates.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="App\Scene\Test\SpriteTestScene.cpp">
@@ -660,10 +675,25 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Scene\Loading\LoadingScene.h" />
-    <ClInclude Include="App\Scene\Title\TitleScene.h">
+    <ClInclude Include="App\Scene\Title\TitleScene\TitleScene.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="App\Scene\Title\BaseTitleState.h">
+    <ClInclude Include="App\Scene\Title\Base\BaseTitleState.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\Title\TitleScene\Menu\TitleMenuStates.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\Title\TitleScene\Settings\SettingsState.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\Title\TitleScene\Settings\SettingsUi.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\Title\TitleScene\Settings\SettingsTransitionState.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Scene\Title\TitleScene\StageSelect\StageSelectStates.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="App\Scene\Test\SpriteTestScene.h">
@@ -688,6 +718,15 @@
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\math\MathStruct.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\math\Easing.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\math\MathUtility.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\math\Bezier.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="Engine\math\Object3DStruct.h">
@@ -1178,6 +1217,8 @@
     <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\State\FearWormBattleAction.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\State</Filter></ClInclude>
     <ClInclude Include="App\Game\Boss\FearWormEnemy\Battle\State\FearWormTiming.h"><Filter>App\Game\Boss\FearWormEnemy\Battle\State</Filter></ClInclude>
     <ClInclude Include="App\Game\Common\GameTiming.h"><Filter>App\Game\Common</Filter></ClInclude>
+    <ClInclude Include="App\Game\Common\CombatTarget.h"><Filter>App\Game\Common</Filter></ClInclude>
+    <ClInclude Include="App\Game\Common\EnemyBulletService.h"><Filter>App\Game\Common</Filter></ClInclude>
     <ClInclude Include="Tests\FearWormBattleActionTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
     <ClInclude Include="Tests\FearWormTimingTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>
     <ClInclude Include="Tests\AppTimingTests.h"><Filter>ヘッダー ファイル</Filter></ClInclude>

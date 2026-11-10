@@ -1,3 +1,4 @@
+#include "Engine/Math/MathUtility.h"
 // モデル・アニメーション・足の接地補正・エフェクトなどを確認するための開発用シーン。
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
@@ -11,7 +12,7 @@
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/Light/LightManager.h"
 #include "Engine/input/Input.h"
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 #include "externals/imgui/imgui.h"
 #include "Engine/3D/ModelManager.h"
 #include "Engine/DirectXCommon/DirectXCommon.h"
@@ -30,127 +31,6 @@ namespace {
 constexpr float kFootAnkleToSoleDistance = 0.16f;
 constexpr const char* kDefaultFont =
     "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
-
-Vector3 CrossVector(const Vector3& first, const Vector3& second)
-{
-    return {
-        first.y * second.z - first.z * second.y,
-        first.z * second.x - first.x * second.z,
-        first.x * second.y - first.y * second.x
-    };
-}
-
-Vector3 TransformDirection(
-    const Vector3& direction,
-    const Matrix4x4& matrix)
-{
-    return {
-        direction.x * matrix.m[0][0] +
-            direction.y * matrix.m[1][0] +
-            direction.z * matrix.m[2][0],
-        direction.x * matrix.m[0][1] +
-            direction.y * matrix.m[1][1] +
-            direction.z * matrix.m[2][1],
-        direction.x * matrix.m[0][2] +
-            direction.y * matrix.m[1][2] +
-            direction.z * matrix.m[2][2]
-    };
-}
-
-Vector3 GetMatrixTranslation(const Matrix4x4& matrix)
-{
-    return {
-        matrix.m[3][0],
-        matrix.m[3][1],
-        matrix.m[3][2]
-    };
-}
-
-Quaternion MultiplyQuaternion(
-    const Quaternion& first,
-    const Quaternion& second)
-{
-    return {
-        first.w * second.x +
-            first.x * second.w +
-            first.y * second.z -
-            first.z * second.y,
-        first.w * second.y -
-            first.x * second.z +
-            first.y * second.w +
-            first.z * second.x,
-        first.w * second.z +
-            first.x * second.y -
-            first.y * second.x +
-            first.z * second.w,
-        first.w * second.w -
-            first.x * second.x -
-            first.y * second.y -
-            first.z * second.z
-    };
-}
-
-Quaternion QuaternionFromTo(
-    const Vector3& fromDirection,
-    const Vector3& toDirection)
-{
-    Vector3 from = NormalizeSafe(fromDirection);
-    Vector3 to = NormalizeSafe(toDirection);
-    float directionDot = std::clamp(Dot(from, to), -1.0f, 1.0f);
-
-    if (directionDot >= 0.9999f) {
-        return { 0.0f, 0.0f, 0.0f, 1.0f };
-    }
-
-    if (directionDot <= -0.9999f) {
-        Vector3 rotationAxis =
-            CrossVector(from, { 1.0f, 0.0f, 0.0f });
-        if (Vector3LengthSquared(rotationAxis) <= 0.0001f) {
-            rotationAxis =
-                CrossVector(from, { 0.0f, 1.0f, 0.0f });
-        }
-        rotationAxis = NormalizeSafe(rotationAxis);
-        return {
-            rotationAxis.x,
-            rotationAxis.y,
-            rotationAxis.z,
-            0.0f
-        };
-    }
-
-    Vector3 rotationAxis = CrossVector(from, to);
-    Quaternion rotation = {
-        rotationAxis.x,
-        rotationAxis.y,
-        rotationAxis.z,
-        1.0f + directionDot
-    };
-    return Normalize(rotation);
-}
-
-float MoveTowardFloat(
-    float currentValue,
-    float targetValue,
-    float maximumDelta)
-{
-    if (currentValue < targetValue) {
-        const float increasedValue =
-            currentValue + maximumDelta;
-        if (increasedValue > targetValue) {
-            return targetValue;
-        }
-        return increasedValue;
-    }
-    if (currentValue > targetValue) {
-        const float decreasedValue =
-            currentValue - maximumDelta;
-        if (decreasedValue < targetValue) {
-            return targetValue;
-        }
-        return decreasedValue;
-    }
-    return targetValue;
-}
 
 float CalculateFootContactWeight(
     float footHeight,
@@ -188,59 +68,6 @@ float CalculateAnimationFootContactWeight(float liftFromLowestFoot)
         (fullReleaseLift - fullContactLift);
 }
 
-bool TrySampleTriangleSurface(
-    const Vector3& vertexA,
-    const Vector3& vertexB,
-    const Vector3& vertexC,
-    float worldX,
-    float worldZ,
-    float& surfaceHeight,
-    Vector3& surfaceNormal)
-{
-    const float denominator =
-        (vertexB.z - vertexC.z) *
-            (vertexA.x - vertexC.x) +
-        (vertexC.x - vertexB.x) *
-            (vertexA.z - vertexC.z);
-    if (std::abs(denominator) <= 0.000001f) {
-        return false;
-    }
-
-    const float weightA =
-        ((vertexB.z - vertexC.z) *
-             (worldX - vertexC.x) +
-         (vertexC.x - vertexB.x) *
-             (worldZ - vertexC.z)) /
-        denominator;
-    const float weightB =
-        ((vertexC.z - vertexA.z) *
-             (worldX - vertexC.x) +
-         (vertexA.x - vertexC.x) *
-             (worldZ - vertexC.z)) /
-        denominator;
-    const float weightC = 1.0f - weightA - weightB;
-    const float tolerance = -0.0001f;
-    if (weightA < tolerance ||
-        weightB < tolerance ||
-        weightC < tolerance) {
-        return false;
-    }
-
-    surfaceHeight =
-        vertexA.y * weightA +
-        vertexB.y * weightB +
-        vertexC.y * weightC;
-    surfaceNormal =
-        NormalizeSafe(
-            CrossVector(
-                vertexB - vertexA,
-                vertexC - vertexA));
-    if (surfaceNormal.y < 0.0f) {
-        surfaceNormal = surfaceNormal * -1.0f;
-    }
-    return true;
-}
-
 void RotateIkJointToward(
     Skeleton& skeleton,
     int32_t jointIndex,
@@ -249,9 +76,9 @@ void RotateIkJointToward(
 {
     const Joint& joint = skeleton.GetJoints()[jointIndex];
     const Vector3 jointPosition =
-        GetMatrixTranslation(joint.GetSkeletonSpaceMatrix());
+        MathUtility::GetMatrixTranslation(joint.GetSkeletonSpaceMatrix());
     const Vector3 effectorPosition =
-        GetMatrixTranslation(
+        MathUtility::GetMatrixTranslation(
             skeleton.GetJoints()[effectorIndex].GetSkeletonSpaceMatrix());
     Vector3 currentDirection = effectorPosition - jointPosition;
     Vector3 targetDirection = targetPosition - jointPosition;
@@ -268,14 +95,14 @@ void RotateIkJointToward(
                     .GetSkeletonSpaceMatrix());
     }
     currentDirection =
-        TransformDirection(currentDirection, parentInverse);
+        MathUtility::TransformDirection(currentDirection, parentInverse);
     targetDirection =
-        TransformDirection(targetDirection, parentInverse);
+        MathUtility::TransformDirection(targetDirection, parentInverse);
 
     const Quaternion rotationDelta =
-        QuaternionFromTo(currentDirection, targetDirection);
+        MathUtility::QuaternionFromTo(currentDirection, targetDirection);
     skeleton.SetJointRotation(jointIndex, Normalize(
-            MultiplyQuaternion(
+            MathUtility::MultiplyQuaternion(
                 rotationDelta,
                 joint.GetTransform().rotate)));
     skeleton.UpdateSkeleton();
@@ -289,13 +116,13 @@ void ApplyKneePoleCorrection(
     const Vector3& animatedKneeDirection)
 {
     const Vector3 hipPosition =
-        GetMatrixTranslation(
+        MathUtility::GetMatrixTranslation(
             skeleton.GetJoints()[upperIndex].GetSkeletonSpaceMatrix());
     const Vector3 kneePosition =
-        GetMatrixTranslation(
+        MathUtility::GetMatrixTranslation(
             skeleton.GetJoints()[lowerIndex].GetSkeletonSpaceMatrix());
     const Vector3 footPosition =
-        GetMatrixTranslation(
+        MathUtility::GetMatrixTranslation(
             skeleton.GetJoints()[footIndex].GetSkeletonSpaceMatrix());
     Vector3 legAxis = footPosition - hipPosition;
     if (Vector3LengthSquared(legAxis) <= 0.000001f) {
@@ -325,20 +152,20 @@ void ApplyKneePoleCorrection(
                     .GetSkeletonSpaceMatrix());
     }
     currentKneeDirection =
-        TransformDirection(
+        MathUtility::TransformDirection(
             currentKneeDirection,
             parentInverse);
     targetKneeDirection =
-        TransformDirection(
+        MathUtility::TransformDirection(
             targetKneeDirection,
             parentInverse);
 
     const Quaternion poleRotation =
-        QuaternionFromTo(
+        MathUtility::QuaternionFromTo(
             currentKneeDirection,
             targetKneeDirection);
     skeleton.SetJointRotation(upperIndex, Normalize(
-            MultiplyQuaternion(
+            MathUtility::MultiplyQuaternion(
                 poleRotation,
                 upperJoint.GetTransform().rotate)));
     skeleton.UpdateSkeleton();
@@ -824,7 +651,7 @@ void TestScene1::Update()
             groundFollowDelta = 0.25f;
         }
         playerPos_.y =
-            MoveTowardFloat(
+            MathUtility::MoveTowardFloat(
                 playerPos_.y,
                 playerGroundHeight,
                 groundFollowDelta * GameTiming::CalculateReferenceStep(TimeManager::GetInstance()->GetDeltaTime()));
@@ -1823,7 +1650,7 @@ bool TestScene1::SampleTerrainSurface(
 
             Vector3 surfaceNormal =
                 NormalizeSafe(
-                    CrossVector(
+                    MathUtility::CrossVector(
                         vertexB - vertexA,
                         vertexC - vertexA));
             if (surfaceNormal.y < 0.0f) {
@@ -1864,7 +1691,7 @@ bool TestScene1::SampleTerrainSurface(
         float blockHeight = 0.0f;
         Vector3 blockNormal {};
         bool foundBlockSurface =
-            TrySampleTriangleSurface(
+            MathUtility::TrySampleTriangleSurface(
                 topCornerA,
                 topCornerB,
                 topCornerC,
@@ -1874,7 +1701,7 @@ bool TestScene1::SampleTerrainSurface(
                 blockNormal);
         if (!foundBlockSurface) {
             foundBlockSurface =
-                TrySampleTriangleSurface(
+                MathUtility::TrySampleTriangleSurface(
                     topCornerA,
                     topCornerC,
                     topCornerD,
@@ -1954,7 +1781,7 @@ bool TestScene1::SampleFootSoleSurface(
             });
         Vector3 slopeNormal =
             NormalizeSafe(
-                CrossVector(
+                MathUtility::CrossVector(
                     forwardSlope,
                     footRight));
         if (slopeNormal.y < 0.0f) {
@@ -2023,10 +1850,10 @@ void TestScene1::SolveLegIK(
     const Quaternion originalFootRotation =
         skeleton->GetJoints()[footIndex].GetTransform().rotate;
     const Vector3 originalHipPosition =
-        GetMatrixTranslation(
+        MathUtility::GetMatrixTranslation(
             skeleton->GetJoints()[upperIndex].GetSkeletonSpaceMatrix());
     const Vector3 originalKneePosition =
-        GetMatrixTranslation(
+        MathUtility::GetMatrixTranslation(
             skeleton->GetJoints()[lowerIndex].GetSkeletonSpaceMatrix());
     const Vector3 animatedKneeDirection =
         originalKneePosition - originalHipPosition;
@@ -2037,10 +1864,10 @@ void TestScene1::SolveLegIK(
         MatrixMath::Transform(worldTarget, inverseWorld);
     const Vector3 skeletonNormal =
         NormalizeSafe(
-            TransformDirection(worldNormal, inverseWorld));
+            MathUtility::TransformDirection(worldNormal, inverseWorld));
     const Vector3 skeletonWorldUp =
         NormalizeSafe(
-            TransformDirection(
+            MathUtility::TransformDirection(
                 { 0.0f, 1.0f, 0.0f },
                 inverseWorld));
 
@@ -2072,15 +1899,15 @@ void TestScene1::SolveLegIK(
                     .GetSkeletonSpaceMatrix());
     }
     const Vector3 currentFootUp =
-        TransformDirection(
+        MathUtility::TransformDirection(
             skeletonWorldUp,
             parentInverse);
     Vector3 targetFootUp =
-        TransformDirection(skeletonNormal, parentInverse);
+        MathUtility::TransformDirection(skeletonNormal, parentInverse);
     const Quaternion footRotationDelta =
-        QuaternionFromTo(currentFootUp, targetFootUp);
+        MathUtility::QuaternionFromTo(currentFootUp, targetFootUp);
     skeleton->SetJointRotation(footIndex, Normalize(
-            MultiplyQuaternion(
+            MathUtility::MultiplyQuaternion(
                 footRotationDelta,
                 footJoint.GetTransform().rotate)));
 
@@ -2179,12 +2006,12 @@ void TestScene1::ApplyFootIK()
         rightTargetWeight *= rightAnimationContact;
     }
     leftFootIkWeight_ =
-        MoveTowardFloat(
+        MathUtility::MoveTowardFloat(
             leftFootIkWeight_,
             leftTargetWeight,
             10.8f * TimeManager::GetInstance()->GetDeltaTime());
     rightFootIkWeight_ =
-        MoveTowardFloat(
+        MathUtility::MoveTowardFloat(
             rightFootIkWeight_,
             rightTargetWeight,
             10.8f * TimeManager::GetInstance()->GetDeltaTime());
@@ -2225,7 +2052,7 @@ void TestScene1::ApplyFootIK()
                 MatrixMath::Inverse(
                     playerActor_->GetObject()->GetWorldMatrix());
             const Vector3 localPelvisOffset =
-                TransformDirection(
+                MathUtility::TransformDirection(
                     { 0.0f, pelvisWorldOffset, 0.0f },
                     inverseWorld);
             skeleton->OffsetJointTranslation(pelvisIterator->second, { 0.0f, localPelvisOffset.y, 0.0f });

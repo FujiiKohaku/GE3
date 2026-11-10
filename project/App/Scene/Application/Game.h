@@ -59,7 +59,7 @@
 #include "App/Scene/Common/BaseScene.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 #include "App/Scene/Common/SceneManager.h"
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 
 #include "Engine/3D/SkinningObject3dManager.h"
 #include "Engine/3D/SkyBox/SkyBoxManager.h"
@@ -123,56 +123,6 @@ private:
     // ゲーム状態
     // ------------------------------
     bool isEnd_ = false;
-    //------------------------------
-    // パーティクル生成構造体
-    //------------------------------
-    //
-    // マテリアル情報（色・ライティング・UV変換など）
-    struct Material {
-        Vector4 color; // 色
-        int32_t enableLighting; // ライティング有効フラグ
-        float padding[3]; // アライメント調整
-        Matrix4x4 uvTransform; // UV変換行列
-    };
-
-    // 変換行列（WVP＋World）
-    struct TransformationMatrix {
-        Matrix4x4 WVP;
-        Matrix4x4 World;
-    };
-
-    // 平行光源データ
-    struct DirectionalLight {
-        Vector4 color;
-        Vector3 direction;
-        float intensity;
-    };
-
-    // マテリアル外部データ（ファイルパス・テクスチャ番号）
-    struct MaterialData {
-        std::string textureFilePath;
-        uint32_t textureIndex = 0;
-    };
-
-    // 頂点データ
-    struct VertexData {
-        Vector4 position;
-        Vector2 texcoord;
-        Vector3 normal;
-    };
-
-    // モデル全体データ（頂点配列＋マテリアル）
-    struct ModelData {
-        std::vector<VertexData> vertices;
-        MaterialData material;
-    };
-
-    // Transform情報（スケール・回転・位置）
-    struct Transform {
-        Vector3 scale;
-        Vector3 rotate;
-        Vector3 translate;
-    };
 
     bool endRequest_ = false;
     std::unique_ptr<Renderer> renderer_;

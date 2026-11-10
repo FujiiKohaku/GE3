@@ -1,3 +1,5 @@
+#include "Engine/Math/MathUtility.h"
+#include "Engine/Math/Easing.h"
 #include "IceJellyfishIceSpearAttack.h"
 #include "../../IceJellyfish.h"
 #include "App/Game/Player/Player.h"
@@ -27,21 +29,7 @@ constexpr float kVolleyIntervalSeconds = 0.20f;
 
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 
-float SmoothStep(float value)
-{
-    const float weight = std::clamp(value, 0.0f, 1.0f);
-    return weight * weight * (3.0f - 2.0f * weight);
-}
 
-Vector4 LerpColor(const Vector4& from, const Vector4& to, float weight)
-{
-    return {
-        from.x + (to.x - from.x) * weight,
-        from.y + (to.y - from.y) * weight,
-        from.z + (to.z - from.z) * weight,
-        from.w + (to.w - from.w) * weight
-    };
-}
 }
 
 Vector3 IceJellyfishIceSpearAttack::ApplyTentacleDirection(const IceJellyfish& boss,
@@ -70,7 +58,7 @@ bool IceJellyfishIceSpearAttack::TryApplyTentacleColor(const IceJellyfish& boss,
         return false;
     }
     constexpr Vector4 kChargedColor { 1.65f, 0.45f, 2.80f, 1.0f };
-    color = LerpColor(baseColor, kChargedColor, SmoothStep(iceSpearPoseWeight_));
+    color = MathUtility::LerpColor(baseColor, kChargedColor, Easing::SmoothStep(iceSpearPoseWeight_));
     return true;
 }
 

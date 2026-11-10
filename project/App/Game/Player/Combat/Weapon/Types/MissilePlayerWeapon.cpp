@@ -1,3 +1,4 @@
+#include "App/Game/Common/CombatTarget.h"
 // 発射間隔を空けながら、ボタンを押すたびにミサイルを発射する武器。
 #include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
 #include "App/Game/Player/Combat/Bullet/Types/MissileBullet.h"
@@ -20,7 +21,7 @@ bool MissilePlayerWeapon::Fire(PlayerWeaponContext& context)
 
 // ミサイルを作り、毎秒で設定された速さを弾の更新で使う単位へ変換する。
 std::unique_ptr<PlayerBullet> MissilePlayerWeapon::CreateBullet(
-    Model* model, PlayerWeaponContext&, BaseEnemy*, float& speed) const
+    Model* model, PlayerWeaponContext&, CombatTarget*, float& speed) const
 {
     auto bullet = std::make_unique<MissileBullet>();
     speed = bullet->GetSpeed() / 60.0f;

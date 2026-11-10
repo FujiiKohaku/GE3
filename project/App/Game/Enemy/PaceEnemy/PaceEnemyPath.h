@@ -1,4 +1,5 @@
 #pragma once
+#include "Engine/Math/ValueValidation.h"
 
 #include "Engine/LevelEditor/LevelData.h"
 #include <cmath>
@@ -15,16 +16,16 @@ class PaceEnemyPath {
 public:
     static bool IsValidSettings(const LevelData::PaceEnemySpawnData& settings)
     {
-        return IsInRange(settings.activationDistance, 10.0f, 500.0f) &&
-            IsInRange(settings.entryDurationSeconds, 0.1f, 30.0f) &&
-            IsInRange(settings.holdDurationSeconds, 0.0f, 120.0f) &&
-            IsInRange(settings.exitDurationSeconds, 0.1f, 30.0f) &&
-            IsInRange(settings.forwardOffset, 10.0f, 150.0f) &&
-            IsInRange(settings.offsetX, -80.0f, 80.0f) &&
-            IsInRange(settings.offsetY, -80.0f, 80.0f) &&
-            IsInRange(settings.swayAmplitude, 0.0f, 40.0f) &&
-            IsInRange(settings.swayPeriodSeconds, 0.1f, 60.0f) &&
-            IsInRange(settings.sideTravelDistance, 40.0f, 500.0f);
+        return ValueValidation::IsInRange(settings.activationDistance, 10.0f, 500.0f) &&
+            ValueValidation::IsInRange(settings.entryDurationSeconds, 0.1f, 30.0f) &&
+            ValueValidation::IsInRange(settings.holdDurationSeconds, 0.0f, 120.0f) &&
+            ValueValidation::IsInRange(settings.exitDurationSeconds, 0.1f, 30.0f) &&
+            ValueValidation::IsInRange(settings.forwardOffset, 10.0f, 150.0f) &&
+            ValueValidation::IsInRange(settings.offsetX, -80.0f, 80.0f) &&
+            ValueValidation::IsInRange(settings.offsetY, -80.0f, 80.0f) &&
+            ValueValidation::IsInRange(settings.swayAmplitude, 0.0f, 40.0f) &&
+            ValueValidation::IsInRange(settings.swayPeriodSeconds, 0.1f, 60.0f) &&
+            ValueValidation::IsInRange(settings.sideTravelDistance, 40.0f, 500.0f);
     }
 
     static PaceEnemyPathSample Sample(float elapsedSeconds, const LevelData::PaceEnemySpawnData& settings)
@@ -59,9 +60,4 @@ public:
         return sample;
     }
 
-private:
-    static bool IsInRange(float value, float minimum, float maximum)
-    {
-        return std::isfinite(value) && value >= minimum && value <= maximum;
-    }
 };

@@ -1,3 +1,4 @@
+#include "App/Game/Common/CombatTarget.h"
 // アサルトの連射間隔・発熱・弾生成の処理をまとめる。
 #include "App/Game/Player/Combat/Weapon/Common/BasePlayerWeapon.h"
 #include "App/Game/Player/Combat/Bullet/Types/NormalBullet.h"
@@ -61,7 +62,7 @@ bool AutomaticPlayerWeapon::Fire(PlayerWeaponContext& context)
 
 // 通常弾を生成し、武器の基本威力に現在の熱量による倍率を反映する。
 std::unique_ptr<PlayerBullet> AutomaticPlayerWeapon::CreateBullet(
-    Model* model, PlayerWeaponContext& context, BaseEnemy*, float&) const
+    Model* model, PlayerWeaponContext& context, CombatTarget*, float&) const
 {
     auto bullet = std::make_unique<NormalBullet>();
     bullet->Initialize(model);

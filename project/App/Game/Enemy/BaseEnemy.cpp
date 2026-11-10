@@ -1,5 +1,6 @@
 // 敵のHP・移動・攻撃・外見と部位の当たり判定をまとめる基底クラス。
 #include "App/Game/Enemy/BaseEnemy.h"
+#include "App/Game/Common/EnemyBulletService.h"
 #include "Engine/audio/SoundManager.h"
 
 #include "Engine/3D/Object3dManager.h"
@@ -214,14 +215,12 @@ void BaseEnemy::SubmitRaytracing(DxrRenderer& renderer) {
 void BaseEnemy::SetBulletManager(EnemyBulletManager* bulletManager)
 {
     bulletManager_ = bulletManager;
+    EnemyBulletService::SetManager(bulletManager);
 }
 
 std::unique_ptr<NormalEnemyBullet> BaseEnemy::AcquireNormalBullet(Model* model)
 {
-    if (bulletManager_ != nullptr) { return bulletManager_->AcquireNormalBullet(model); }
-    auto bullet = std::make_unique<NormalEnemyBullet>();
-    bullet->Initialize(model);
-    return bullet;
+    return EnemyBulletService::AcquireNormalBullet(model);
 }
 
 // 生成した弾の所有権を敵弾管理へ渡し、必要なら発射音も鳴らす。

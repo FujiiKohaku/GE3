@@ -92,9 +92,11 @@ void TestEngineEncapsulation()
 static_assert(std::is_same_v<decltype(std::declval<const EnemyBulletManager&>().GetBullets()),
     const std::vector<std::unique_ptr<EnemyBullet>>&>);
 static_assert(std::is_same_v<decltype(std::declval<const PlayerHomingLock&>().GetTargets()),
-    std::shared_ptr<const std::vector<BaseEnemy*>>>);
-// The active boss hierarchy shares enemy behavior and supports polymorphic deletion.
-static_assert(std::is_base_of_v<BaseEnemy, BaseBoss>);
+    std::shared_ptr<const std::vector<CombatTarget*>>>);
+// 敵とボスは独立し、攻撃対象の窓口を共有する。
+static_assert(!std::is_base_of_v<BaseEnemy, BaseBoss>);
+static_assert(std::is_base_of_v<CombatTarget, BaseEnemy>);
+static_assert(std::is_base_of_v<CombatTarget, BaseBoss>);
 static_assert(std::is_abstract_v<BaseBoss>);
 static_assert(std::has_virtual_destructor_v<BaseBoss>);
 

@@ -14,5 +14,5 @@ public:
     bool Fire(PlayerWeaponContext& context) override;
     // 追尾ミサイルを生成し、対象と生存確認用の敵一覧を設定する。
     std::unique_ptr<PlayerBullet> CreateBullet(Model* model, PlayerWeaponContext& context,
-        BaseEnemy* target, float& speed) const override;
+        CombatTarget* target, float& speed) const override;
 };

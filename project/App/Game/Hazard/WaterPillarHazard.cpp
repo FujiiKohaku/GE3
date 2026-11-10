@@ -1,3 +1,4 @@
+#include "Engine/Math/Easing.h"
 // レール上の進行に合わせて出現する水柱の、予告・表示・接触判定を扱う。
 #include "WaterPillarHazard.h"
 
@@ -13,23 +14,7 @@ constexpr float kActiveDuration = 5.5f;
 constexpr float kFadingDuration = 0.75f;
 constexpr float kPreviewHeightRatio = 0.16f;
 
-float EaseInQuart(float t)
-{
-    t = std::clamp(t, 0.0f, 1.0f);
-    return t * t * t * t;
-}
 
-float EaseInCubic(float t)
-{
-    t = std::clamp(t, 0.0f, 1.0f);
-    return t * t * t;
-}
-
-float SmoothStep(float t)
-{
-    t = std::clamp(t, 0.0f, 1.0f);
-    return t * t * (3.0f - 2.0f * t);
-}
 }
 
 // 水柱の位置・出現距離・遅延時間と、描画に使う参照を記録する。
@@ -87,20 +72,20 @@ void WaterPillarHazard::ApplyVisuals()
     float alpha = 0.0f;
 
     if (state_ == State::Warning) {
-        const float previewProgress = SmoothStep((timer_ / kWarningDuration - 0.42f) / 0.58f);
+        const float previewProgress = Easing::SmoothStep((timer_ / kWarningDuration - 0.42f) / 0.58f);
         pillarRatio = previewProgress * kPreviewHeightRatio;
         alpha = previewProgress * 0.20f;
     } else if (state_ == State::Rising) {
-        const float riseProgress = EaseInQuart(timer_ / kRisingDuration);
+        const float riseProgress = Easing::EaseInQuart(timer_ / kRisingDuration);
         pillarRatio = kPreviewHeightRatio + (1.0f - kPreviewHeightRatio) * riseProgress;
-        alpha = SmoothStep(timer_ / kRisingDuration) * 0.86f;
+        alpha = Easing::SmoothStep(timer_ / kRisingDuration) * 0.86f;
     } else if (state_ == State::Active) {
         pillarRatio = 1.0f;
         alpha = 0.82f;
     } else if (state_ == State::Fading) {
-        const float fadeProgress = EaseInCubic(timer_ / kFadingDuration);
+        const float fadeProgress = Easing::EaseInCubic(timer_ / kFadingDuration);
         pillarRatio = 1.0f - fadeProgress;
-        alpha = (1.0f - SmoothStep(timer_ / kFadingDuration)) * 0.72f;
+        alpha = (1.0f - Easing::SmoothStep(timer_ / kFadingDuration)) * 0.72f;
     }
 
     const float visibleHeight = height_ * pillarRatio;
@@ -120,7 +105,7 @@ void WaterPillarHazard::DrawPillar()
 bool WaterPillarHazard::CheckCollision(const Vector3& playerPosition) const
 {
     const float risingHeightRatio = kPreviewHeightRatio +
-        (1.0f - kPreviewHeightRatio) * EaseInQuart(timer_ / kRisingDuration);
+        (1.0f - kPreviewHeightRatio) * Easing::EaseInQuart(timer_ / kRisingDuration);
     if (state_ != State::Active &&
         !(state_ == State::Rising && risingHeightRatio >= 0.62f)) return false;
     const float dx = playerPosition.x - position_.x;

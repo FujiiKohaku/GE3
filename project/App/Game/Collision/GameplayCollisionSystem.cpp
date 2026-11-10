@@ -21,6 +21,31 @@ namespace {
 constexpr float kPlayerObstacleRadius = 1.0f;
 constexpr float kPlayerEnemyCollisionRadius = 2.0f;
 
+// 対象の型に依存せず、有効な部位のうち最も近い部位へ爆風を適用する。
+template<class Target>
+bool ApplyExplosionToTarget(Target& target, const Sphere& explosion, float damage, bool isDirectHit)
+{
+    if (isDirectHit || target.IsDead()) { return false; }
+    std::vector<EnemyCollisionPart> parts;
+    target.GetCollisionParts(parts);
+    bool hasHitPart = false;
+    int32_t nearestPartIndex = 0;
+    float nearestDistance = (std::numeric_limits<float>::max)();
+    for (const auto& part : parts) {
+        if (!target.IsCollisionPartDamageable(part.partIndex)) { continue; }
+        if (!part.IntersectSphere(explosion).isHit) { continue; }
+        const float surfaceDistance = part.GetSurfaceDistance(explosion.center);
+        if (!hasHitPart || surfaceDistance < nearestDistance) {
+            hasHitPart = true;
+            nearestPartIndex = part.partIndex;
+            nearestDistance = surfaceDistance;
+        }
+    }
+    if (!hasHitPart) { return false; }
+    target.OnBulletHit(nearestPartIndex, damage, explosion.center);
+    return target.IsDead();
+}
+
 // 弾の移動区間で最初に接触する障害物を探す。
 SweepHit FindFirstObstacleHit(const Sphere& bullet, const Vector3& movement,
     const std::vector<std::unique_ptr<Object3d>>& levelObjects)
@@ -153,7 +178,7 @@ void GameplayCollisionSystem::UpdateStageCollisions(
 GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlayerBulletHit(
     const Sphere& bullet, const Vector3& movement,
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
+    CombatTarget* boss, std::vector<DestructibleLevelObject>& destructibles,
     float floorHeight, bool shouldCollideWithFloor,
     const std::vector<std::unique_ptr<Object3d>>& levelObjects)
 {
@@ -222,33 +247,15 @@ GameplayCollisionSystem::PlayerBulletHit GameplayCollisionSystem::FindFirstPlaye
     return nearest;
 }
 
-bool GameplayCollisionSystem::ApplyExplosionToEnemy(BaseEnemy& enemy, const Sphere& explosion,
-    float damage, const BaseEnemy* directEnemy)
+bool GameplayCollisionSystem::ApplyExplosionToEnemy(CombatTarget& enemy, const Sphere& explosion,
+    float damage, const CombatTarget* directEnemy)
 {
-    if (&enemy == directEnemy || enemy.IsDead()) { return false; }
-    std::vector<EnemyCollisionPart> parts;
-    enemy.GetCollisionParts(parts);
-    bool hasHitPart = false;
-    int32_t nearestPartIndex = 0;
-    float nearestDistance = (std::numeric_limits<float>::max)();
-    for (const auto& part : parts) {
-        if (!enemy.IsCollisionPartDamageable(part.partIndex)) { continue; }
-        if (!part.IntersectSphere(explosion).isHit) { continue; }
-        const float surfaceDistance = part.GetSurfaceDistance(explosion.center);
-        if (!hasHitPart || surfaceDistance < nearestDistance) {
-            hasHitPart = true;
-            nearestPartIndex = part.partIndex;
-            nearestDistance = surfaceDistance;
-        }
-    }
-    if (!hasHitPart) { return false; }
-    enemy.OnBulletHit(nearestPartIndex, damage, explosion.center);
-    return enemy.IsDead();
+    return ApplyExplosionToTarget(enemy, explosion, damage, &enemy == directEnemy);
 }
 
 uint32_t GameplayCollisionSystem::ApplyExplosionDamage(const Vector3& position,
     const PlayerBulletExplosionSettings& settings, const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    BaseEnemy* boss, const BaseEnemy* directEnemy)
+    CombatTarget* boss, const CombatTarget* directEnemy)
 {
     if (!std::isfinite(settings.radius) || !std::isfinite(settings.damage) ||
         settings.radius <= 0.0f || settings.damage <= 0.0f) { return 0; }
@@ -270,7 +277,7 @@ uint32_t GameplayCollisionSystem::ApplyExplosionDamage(const Vector3& position,
 
 GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
     Player& player, const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
+    CombatTarget* boss, std::vector<DestructibleLevelObject>& destructibles,
     Object3d* floorObject, bool shouldCollideWithFloor,
     const std::vector<std::unique_ptr<Object3d>>& levelObjects)
 {
@@ -295,7 +302,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
         const bool hasExplosion = explosionSettings.radius > 0.0f;
         if (hasExplosion) { bullet->OnHitEnemy(nearest.hit.position); }
         if (nearest.enemy != nullptr) {
-            BaseEnemy& enemy = *nearest.enemy;
+            CombatTarget& enemy = *nearest.enemy;
             if (enemy.IsCollisionPartDamageable(nearest.partIndex)) {
                 if (!hasExplosion) { bullet->OnHitEnemy(nearest.hit.position); }
                 if (bullet->GetDamage() > 0) {
@@ -430,7 +437,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdateTriggers(
 // 照準が参照するレイ判定の対象を、現在の障害物・敵・ボスの配置で登録し直す。
 void GameplayCollisionSystem::SyncRaycastTargets(
     const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-    const BaseEnemy* boss)
+    const CombatTarget* boss)
 {
     CollisionManager* collisionManager = CollisionManager::GetInstance();
     collisionManager->ClearRaycastSphereTargets();

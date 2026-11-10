@@ -1,7 +1,9 @@
+#include "Engine/Math/Bezier.h"
+#include "Engine/Math/Easing.h"
 #include "Engine/Debug/Profiler/StartupTiming.h"
 #include "Engine/Debug/Profiler/FpsMonitor.h"
 // タイトルの基地背景・ステージ選択・設定画面と、各画面をつなぐカメラ演出を扱う。
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 
 #include "Engine/2D/SpriteManager.h"
 #include "Engine/2D/Text/TextRenderer.h"
@@ -36,13 +38,6 @@ constexpr Vector2 kInitializeInterfaceLogoTextPosition = { 84.0f, 92.0f };
 constexpr Vector4 kInitializeInterfaceLogoTextColor = { 0.88f, 0.97f, 1.0f, 1.0f };
 constexpr Vector2 kInitializeInterfaceLogoTextShadowOffset = { 8.0f, 8.0f };
 constexpr Vector2 kInitializeInterfacePushToStartTextPosition = { 88.0f, 550.0f };
-constexpr Vector2 kInitializeInterfaceSettingsShortcutTextPosition = { 90.0f, 602.0f };
-constexpr Vector4 kInitializeInterfaceSettingsShortcutTextColor = { 0.72f, 0.86f, 0.94f, 1.0f };
-constexpr Vector4 kInitializeInterfaceSettingsBackdropColor = { 0.015f, 0.035f, 0.09f, 0.0f };
-constexpr Vector4 kInitializeInterfaceSettingsAccentColor = { 0.10f, 0.86f, 1.0f, 0.0f };
-constexpr Vector4 kInitializeInterfaceSettingsTitleTextColor = { 1.0f, 0.78f, 0.22f, 0.0f };
-constexpr Vector4 kInitializeInterfaceSettingsItemsTextColor = { 0.90f, 0.96f, 1.0f, 0.0f };
-constexpr Vector4 kInitializeInterfaceSettingsBackTextColor = { 0.62f, 0.84f, 0.94f, 0.0f };
 constexpr Vector4 kInitializeStageSelectionStagePanelColor = { 0.008f, 0.026f, 0.055f, 0.0f };
 constexpr Vector4 kInitializeStageSelectionFrozenFogOverlayColor = { 0.72f, 0.90f, 1.0f, 0.0f };
 constexpr Vector4 kInitializeStageSelectionStageHeaderTextColor = { 0.20f, 0.90f, 1.0f, 0.0f };
@@ -82,7 +77,7 @@ constexpr float kIceMotionBaseScale = 0.72f;
 constexpr float kIceMotionScaleStep = 0.20f;
 constexpr float kIceMotionDelayStep = 0.025f;
 constexpr float kLogoOutlineWidth = 2.0f;
-constexpr float kSettingsTitleOutlineWidth = 2.0f;
+
 constexpr float kStageNameMaxWidth = 640.0f;
 constexpr float kStageDescriptionMaxWidth = 610.0f;
 constexpr float kUpdateStageRoomObjectGroupPositionXMultiplier = 0.75f;
@@ -103,46 +98,19 @@ constexpr float kSimulationTintFadeDuration = 0.70f;
 constexpr float kUpdateTutorialStartPresentationSimulationTextColorRed = 0.35f;
 constexpr float kUpdateTutorialStartPresentationSimulationTextColorGreen = 0.90f;
 constexpr float kUpdateTutorialStartPresentationSimulationTextColorAlpha = 0.25f;
+constexpr float kUpdateInterfaceFrozenFogOverlayColorRed = 0.72f;
+constexpr float kUpdateInterfaceFrozenFogOverlayColorGreen = 0.90f;
 constexpr float kUpdateInterfaceStageTitleExitDivisor = 0.35f;
 constexpr float kUpdateInterfaceLogoTextPositionX = 84.0f;
 constexpr float kUpdateInterfaceLogoTextPositionY = 92.0f;
 constexpr float kUpdateInterfaceLogoTextColorRed = 0.88f;
 constexpr float kUpdateInterfaceLogoTextColorGreen = 0.97f;
+constexpr float kLogoShadowAlpha = 0.6f;
 constexpr float kStartPromptBaseX = 88.0f;
 constexpr float kStartPromptExitOffsetScale = 1.18f;
 constexpr float kStartPromptY = 550.0f;
 constexpr float kUpdateInterfacePushToStartTextColorRed = 0.78f;
 constexpr float kUpdateInterfacePushToStartTextColorGreen = 0.94f;
-constexpr float kSettingsShortcutBaseX = 90.0f;
-constexpr float kSettingsShortcutExitOffsetScale = 1.34f;
-constexpr float kSettingsShortcutY = 602.0f;
-constexpr float kUpdateInterfaceSettingsShortcutTextColorRed = 0.72f;
-constexpr float kUpdateInterfaceSettingsShortcutTextColorGreen = 0.86f;
-constexpr float kUpdateInterfaceSettingsShortcutTextColorBlue = 0.94f;
-constexpr float kUpdateInterfaceSettingsBackdropPositionY = 360.0f;
-constexpr float kUpdateInterfaceSettingsAccentPositionX = 470.0f;
-constexpr float kUpdateInterfaceSettingsAccentPositionY = 360.0f;
-constexpr float kUpdateInterfaceSettingsBackdropColorRed = 0.015f;
-constexpr float kUpdateInterfaceSettingsBackdropColorGreen = 0.035f;
-constexpr float kUpdateInterfaceSettingsBackdropColorBlue = 0.09f;
-constexpr float kUpdateInterfaceSettingsBackdropColorAlpha = 0.94f;
-constexpr float kUpdateInterfaceSettingsAccentColorRed = 0.10f;
-constexpr float kUpdateInterfaceSettingsAccentColorGreen = 0.86f;
-constexpr float kUpdateInterfaceSettingsAccentColorAlpha = 0.95f;
-constexpr float kUpdateInterfaceSettingsTitleTextPositionY = 104.0f;
-constexpr float kUpdateInterfaceSettingsTitleTextColorGreen = 0.78f;
-constexpr float kUpdateInterfaceSettingsTitleTextColorBlue = 0.22f;
-constexpr float kUpdateInterfaceSettingsItemsTextPositionX = 48.0f;
-constexpr float kUpdateInterfaceSettingsItemsTextPositionY = 248.0f;
-constexpr float kUpdateInterfaceSettingsItemsTextColorRed = 0.90f;
-constexpr float kUpdateInterfaceSettingsItemsTextColorGreen = 0.96f;
-constexpr float kUpdateInterfaceSettingsBackTextPositionX = 48.0f;
-constexpr float kUpdateInterfaceSettingsBackTextPositionY = 626.0f;
-constexpr float kUpdateInterfaceSettingsBackTextColorRed = 0.62f;
-constexpr float kUpdateInterfaceSettingsBackTextColorGreen = 0.84f;
-constexpr float kUpdateInterfaceSettingsBackTextColorBlue = 0.94f;
-constexpr float kUpdateInterfaceFrozenFogOverlayColorRed = 0.72f;
-constexpr float kUpdateInterfaceFrozenFogOverlayColorGreen = 0.90f;
 constexpr float kUpdateInterfaceStagePanelPositionX = 640.0f;
 constexpr float kUpdateInterfaceProgressThreshold = 0.46f;
 constexpr float kUpdateInterfaceRoomUiOffsetMultiplier = 260.0f;
@@ -212,28 +180,6 @@ const Vector3 kStageConfirmEye = { 0.0f, 7.0f, -27.0f };
 const Vector3 kStageConfirmTarget = { 0.0f, 7.0f, -48.0f };
 const Vector3 kSettingsEye = { -78.0f, 34.0f, -58.0f };
 const Vector3 kSettingsTarget = { -24.0f, 3.0f, -4.0f };
-
-Vector3 CubicBezier(
-    const Vector3& p0,
-    const Vector3& p1,
-    const Vector3& p2,
-    const Vector3& p3,
-    float time)
-{
-    const float inverse = 1.0f - time;
-    const float weight0 = inverse * inverse * inverse;
-    const float weight1 = 3.0f * inverse * inverse * time;
-    const float weight2 = 3.0f * inverse * time * time;
-    const float weight3 = time * time * time;
-    return {
-        p0.x * weight0 + p1.x * weight1 +
-            p2.x * weight2 + p3.x * weight3,
-        p0.y * weight0 + p1.y * weight1 +
-            p2.y * weight2 + p3.y * weight3,
-        p0.z * weight0 + p1.z * weight1 +
-            p2.z * weight2 + p3.z * weight3,
-    };
-}
 
 Vector3 EvaluateHangarEyePath(float pathTime)
 {
@@ -838,50 +784,8 @@ void TitleScene::InitializeInterface()
     pushToStartText_->SetFontSize(26.0f);
     pushToStartText_->SetLetterSpacing(1.0f);
     pushToStartText_->SetOutlineWidth(1.0f);
+    settingsUi_.Initialize(kDefaultFont, kWhiteTexture);
 
-    settingsShortcutText_ = std::make_unique<Text>();
-    settingsShortcutText_->Initialize(kDefaultFont);
-    settingsShortcutText_->SetText("S  SETTINGS");
-    settingsShortcutText_->SetPosition(kInitializeInterfaceSettingsShortcutTextPosition);
-    settingsShortcutText_->SetFontSize(20.0f);
-    settingsShortcutText_->SetColor(kInitializeInterfaceSettingsShortcutTextColor);
-    settingsShortcutText_->SetOutlineWidth(1.0f);
-
-    settingsBackdrop_ = std::make_unique<Sprite>();
-    settingsBackdrop_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    settingsBackdrop_->SetAnchorPoint({ 0.5f, 0.5f });
-    settingsBackdrop_->SetSize({ 930.0f, 820.0f });
-    settingsBackdrop_->SetRotation(-0.075f);
-    settingsBackdrop_->SetColor(kInitializeInterfaceSettingsBackdropColor);
-
-    settingsAccent_ = std::make_unique<Sprite>();
-    settingsAccent_->Initialize(SpriteManager::GetInstance(), kWhiteTexture);
-    settingsAccent_->SetAnchorPoint({ 0.5f, 0.5f });
-    settingsAccent_->SetSize({ 84.0f, 900.0f });
-    settingsAccent_->SetRotation(-0.18f);
-    settingsAccent_->SetColor(kInitializeInterfaceSettingsAccentColor);
-
-    settingsTitleText_ = std::make_unique<Text>();
-    settingsTitleText_->Initialize(kDefaultFont);
-    settingsTitleText_->SetText("SETTINGS");
-    settingsTitleText_->SetFontSize(68.0f);
-    settingsTitleText_->SetRotation(-0.045f);
-    settingsTitleText_->SetColor(kInitializeInterfaceSettingsTitleTextColor);
-    settingsTitleText_->SetOutlineWidth(kSettingsTitleOutlineWidth);
-
-    settingsItemsText_ = std::make_unique<Text>();
-    settingsItemsText_->Initialize(kDefaultFont);
-    settingsItemsText_->SetText(
-        "DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
-    settingsItemsText_->SetFontSize(29.0f);
-    settingsItemsText_->SetLineSpacing(8.0f);
-    settingsItemsText_->SetColor(kInitializeInterfaceSettingsItemsTextColor);
-
-    settingsBackText_ = std::make_unique<Text>();
-    settingsBackText_->Initialize(kDefaultFont);
-    settingsBackText_->SetText("BACKSPACE / S  BACK");
-    settingsBackText_->SetFontSize(19.0f);
-    settingsBackText_->SetColor(kInitializeInterfaceSettingsBackTextColor);
 
 }
 
@@ -1036,7 +940,7 @@ void TitleScene::UpdateStageRoomObjectGroup(
     float settleDirection)
 {
     for (StageRoomObject& roomObject : roomObjects) {
-        const float delayedSettle = Clamp01(
+        const float delayedSettle = Easing::Clamp01(
             (settleAmount - roomObject.delay) /
             (std::max)(0.01f, 1.0f - roomObject.delay));
         const float spring =
@@ -1075,11 +979,11 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
     }
 
     stageRoomTransitionTime_ += deltaTime;
-    const float progress = Clamp01(
+    const float progress = Easing::Clamp01(
         stageRoomTransitionTime_ / kStageRoomTransitionDuration);
-    const float outgoingProgress = SmoothStep(progress / 0.46f);
-    const float incomingProgress = Clamp01((progress - 0.32f) / 0.52f);
-    const float incomingEase = SmoothStep(incomingProgress);
+    const float outgoingProgress = Easing::SmoothStep(progress / 0.46f);
+    const float incomingProgress = Easing::Clamp01((progress - 0.32f) / 0.52f);
+    const float incomingEase = Easing::SmoothStep(incomingProgress);
     const float direction = static_cast<float>(stageRoomTransitionDirection_);
 
     // 前回の遷移で残った座標を先に戻し、今回描く2セットだけ動かす。
@@ -1114,9 +1018,9 @@ void TitleScene::UpdateStageRoomTransition(float deltaTime)
     const bool enteringFrozen =
         stages_[nextStageIndex_].id == "stage03";
     if (enteringFrozen) {
-        frozenRoomAmount_ = SmoothStep((progress - 0.18f) / 0.62f);
+        frozenRoomAmount_ = Easing::SmoothStep((progress - 0.18f) / 0.62f);
     } else if (leavingFrozen) {
-        frozenRoomAmount_ = 1.0f - SmoothStep(progress / 0.52f);
+        frozenRoomAmount_ = 1.0f - Easing::SmoothStep(progress / 0.52f);
     } else {
         frozenRoomAmount_ = 0.0f;
     }
@@ -1203,21 +1107,21 @@ void TitleScene::InitializeTutorialAnimation()
 // Stateが決めた進行度を、訓練への出発演出へ反映する。
 void TitleScene::UpdateTutorialStartPresentation(float progress)
 {
-    const float eased = SmoothStep(progress);
+    const float eased = Easing::SmoothStep(progress);
     camera_->LookAt(CubicBezier(simulationStartEye_, { 120.0f, 45.0f, 38.0f },
         { 28.0f, 15.0f, 30.0f }, { 10.0f, 8.0f, 14.0f }, eased),
         Lerp(kOverviewTarget, { 0.0f, 3.0f, -5.0f }, eased));
     camera_->SetFovY(0.64f - 0.10f * eased);
     camera_->Update();
-    const float scan = SmoothStep(Clamp01((progress - 0.15f) / 0.65f));
+    const float scan = Easing::SmoothStep(Easing::Clamp01((progress - 0.15f) / 0.65f));
     aircraft_->SetColor({ 1.0f - kUpdateTutorialStartPresentationAircraftColorRed * scan, 1.0f, 1.0f + kUpdateTutorialStartPresentationAircraftColorBlue * scan, 1.0f });
     simulationScan_->SetPosition({ 0.0f, -kSimulationScanStartYMagnitude + kSimulationScanTravelDistance * scan });
     simulationScan_->SetColor({ kUpdateTutorialStartPresentationSimulationScanColorRed, kUpdateTutorialStartPresentationSimulationScanColorGreen, 1.0f, kUpdateTutorialStartPresentationSimulationScanColorAlpha * std::sin(progress * std::numbers::pi_v<float>) });
     simulationScan_->Update();
     simulationTint_->SetColor({ kUpdateTutorialStartPresentationSimulationTintColorRed, kUpdateTutorialStartPresentationSimulationTintColorGreen, kUpdateTutorialStartPresentationSimulationTintColorBlue,
-        SmoothStep(Clamp01((progress - kSimulationTintFadeStart) / kSimulationTintFadeDuration)) });
+        Easing::SmoothStep(Easing::Clamp01((progress - kSimulationTintFadeStart) / kSimulationTintFadeDuration)) });
     simulationTint_->Update();
-    simulationText_->SetColor({ kUpdateTutorialStartPresentationSimulationTextColorRed, kUpdateTutorialStartPresentationSimulationTextColorGreen, 1.0f, SmoothStep(Clamp01((progress - kUpdateTutorialStartPresentationSimulationTextColorAlpha) / kUpdateTutorialStartPresentationSimulationTextColorAlpha)) });
+    simulationText_->SetColor({ kUpdateTutorialStartPresentationSimulationTextColorRed, kUpdateTutorialStartPresentationSimulationTextColorGreen, 1.0f, Easing::SmoothStep(Easing::Clamp01((progress - kUpdateTutorialStartPresentationSimulationTextColorAlpha) / kUpdateTutorialStartPresentationSimulationTextColorAlpha)) });
     simulationText_->Update();
 }
 
@@ -1301,11 +1205,11 @@ void TitleScene::UpdateStageSelection(float deltaTime)
     Vector3 target = kStageEntryTarget;
 
     if (stageRoomTransitionActive_) {
-        const float progress = Clamp01(
+        const float progress = Easing::Clamp01(
             stageRoomTransitionTime_ / kStageRoomTransitionDuration);
         if (progress >= 0.80f) {
             const float impactProgress =
-                Clamp01((progress - 0.80f) / 0.20f);
+                Easing::Clamp01((progress - 0.80f) / 0.20f);
             const float envelope =
                 std::sin(impactProgress * std::numbers::pi_v<float>) *
                 (1.0f - impactProgress * 0.35f);
@@ -1330,7 +1234,7 @@ void TitleScene::UpdateStageSelection(float deltaTime)
 // Stateが決めた進行度を、ステージ出発時のカメラへ反映する。
 void TitleScene::UpdateStageConfirmationCamera(float progress)
 {
-    const float eased = SmoothStep(progress);
+    const float eased = Easing::SmoothStep(progress);
     camera_->LookAt(
         Lerp(kStageEntryEye, kStageConfirmEye, eased),
         Lerp(kStageEntryTarget, kStageConfirmTarget, eased));
@@ -1357,40 +1261,30 @@ void TitleScene::UpdateInterface(float deltaTime)
     const Input* input = Input::GetInstance();
     const bool pad = input->IsUsingGamepad();
     pushToStartText_->SetText(pad ? "PRESS A  /  GAME START" : "PRESS SPACE  /  GAME START");
-    settingsShortcutText_->SetText(pad ? "Y  SETTINGS" : "S  SETTINGS");
-    settingsBackText_->SetText(pad ? "B  BACK" : "BACKSPACE / S  BACK");
     stageControlsText_->SetText(pad ? "D-PAD  SELECT     A  DEPLOY     B  OVERVIEW" :
         "A / D  SELECT     SPACE  DEPLOY     BACKSPACE  OVERVIEW");
-    if (pad) {
-        std::string pitchLabel = "NORMAL";
-        if (input->IsGamepadPitchInverted()) { pitchLabel = "INVERTED"; }
-        settingsItemsText_->SetText("PAD PITCH: " + pitchLabel
-            + " [A / D-PAD]\n\nLS AIM / A,RT FIRE\n\nX BOOST / Y BRAKE");
-    } else {
-        settingsItemsText_->SetText("DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
-    }
     (void)deltaTime;
     float stageAmount = 0.0f;
     float stageTitleExit = 0.0f;
     if (viewState_ == ViewState::StartingTutorial) {
-        stageTitleExit = SmoothStep(Clamp01(animationTime_ / kUpdateInterfaceStageTitleExitDivisor));
+        stageTitleExit = Easing::SmoothStep(Easing::Clamp01(animationTime_ / kUpdateInterfaceStageTitleExitDivisor));
     }
     if (viewState_ == ViewState::StageSelect) {
         stageAmount = 1.0f;
         stageTitleExit = 1.0f;
     } else if (viewState_ == ViewState::EnteringStageSelect) {
         const float progress =
-            Clamp01(animationTime_ / TitleTransitionSettings::kStageEnterDurationSeconds);
-        stageAmount = EaseOutBack((progress - 0.74f) / 0.26f);
-        stageTitleExit = SmoothStep(progress / 0.22f);
+            Easing::Clamp01(animationTime_ / TitleTransitionSettings::kStageEnterDurationSeconds);
+        stageAmount = Easing::EaseOutBack((progress - 0.74f) / 0.26f);
+        stageTitleExit = Easing::SmoothStep(progress / 0.22f);
     } else if (viewState_ == ViewState::LeavingStageSelect) {
         const float progress =
-            Clamp01(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
-        stageAmount = 1.0f - SmoothStep(progress / 0.35f);
-        stageTitleExit = 1.0f - SmoothStep((progress - 0.55f) / 0.45f);
+            Easing::Clamp01(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
+        stageAmount = 1.0f - Easing::SmoothStep(progress / 0.35f);
+        stageTitleExit = 1.0f - Easing::SmoothStep((progress - 0.55f) / 0.45f);
     } else if (viewState_ == ViewState::ConfirmingStage) {
-        stageAmount = 1.0f - SmoothStep(
-            Clamp01(animationTime_ / TitleTransitionSettings::kStageConfirmDurationSeconds));
+        stageAmount = 1.0f - Easing::SmoothStep(
+            Easing::Clamp01(animationTime_ / TitleTransitionSettings::kStageConfirmDurationSeconds));
         stageTitleExit = 1.0f;
     }
 
@@ -1398,51 +1292,33 @@ void TitleScene::UpdateInterface(float deltaTime)
     if (viewState_ == ViewState::Settings) {
         settingsAmount = 1.0f;
     } else if (viewState_ == ViewState::EnteringSettings) {
-        settingsAmount = EaseOutBack(
-            Clamp01(animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds));
+        settingsAmount = Easing::EaseOutBack(
+            Easing::Clamp01(animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds));
     } else if (viewState_ == ViewState::LeavingSettings) {
-        settingsAmount = 1.0f - SmoothStep(
-            Clamp01(animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds));
+        settingsAmount = 1.0f - Easing::SmoothStep(
+            Easing::Clamp01(animationTime_ / TitleTransitionSettings::kSettingsDurationSeconds));
     }
 
     const float titleExit =
-        Clamp01((std::max)(stageTitleExit, settingsAmount));
+        Easing::Clamp01((std::max)(stageTitleExit, settingsAmount));
     const float titleOffset = -520.0f * titleExit;
-    const float titleAlpha = 1.0f - Clamp01(titleExit);
+    const float titleAlpha = 1.0f - Easing::Clamp01(titleExit);
     logoText_->SetPosition({ kUpdateInterfaceLogoTextPositionX + titleOffset, kUpdateInterfaceLogoTextPositionY });
     logoText_->SetRotation(-0.035f * titleExit);
     logoText_->SetColor({ kUpdateInterfaceLogoTextColorRed, kUpdateInterfaceLogoTextColorGreen, 1.0f, titleAlpha });
+    logoText_->SetOutlineColor({ 0.0f, 0.0f, 0.0f, titleAlpha });
+    logoText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * titleAlpha });
 
     const float promptAlpha =
         (0.58f + 0.42f * std::sin(idleTime_ * 3.2f)) * titleAlpha;
     pushToStartText_->SetPosition({ kStartPromptBaseX + titleOffset * kStartPromptExitOffsetScale, kStartPromptY });
     pushToStartText_->SetColor({ kUpdateInterfacePushToStartTextColorRed, kUpdateInterfacePushToStartTextColorGreen, 1.0f, promptAlpha });
-    settingsShortcutText_->SetPosition(
-        { kSettingsShortcutBaseX + titleOffset * kSettingsShortcutExitOffsetScale, kSettingsShortcutY });
-    settingsShortcutText_->SetColor(
-        { kUpdateInterfaceSettingsShortcutTextColorRed, kUpdateInterfaceSettingsShortcutTextColorGreen, kUpdateInterfaceSettingsShortcutTextColorBlue, titleAlpha });
-
-    const float panelX = 1480.0f + (790.0f - 1480.0f) * settingsAmount;
-    settingsBackdrop_->SetPosition({ panelX, kUpdateInterfaceSettingsBackdropPositionY });
-    settingsAccent_->SetPosition({ panelX - kUpdateInterfaceSettingsAccentPositionX, kUpdateInterfaceSettingsAccentPositionY });
-    settingsBackdrop_->SetColor(
-        { kUpdateInterfaceSettingsBackdropColorRed, kUpdateInterfaceSettingsBackdropColorGreen, kUpdateInterfaceSettingsBackdropColorBlue, kUpdateInterfaceSettingsBackdropColorAlpha * Clamp01(settingsAmount) });
-    settingsAccent_->SetColor(
-        { kUpdateInterfaceSettingsAccentColorRed, kUpdateInterfaceSettingsAccentColorGreen, 1.0f, kUpdateInterfaceSettingsAccentColorAlpha * Clamp01(settingsAmount) });
-
-    const float textX = 1420.0f + (560.0f - 1420.0f) * settingsAmount;
-    settingsTitleText_->SetPosition({ textX, kUpdateInterfaceSettingsTitleTextPositionY });
-    settingsTitleText_->SetColor(
-        { 1.0f, kUpdateInterfaceSettingsTitleTextColorGreen, kUpdateInterfaceSettingsTitleTextColorBlue, Clamp01(settingsAmount) });
-    settingsItemsText_->SetPosition({ textX + kUpdateInterfaceSettingsItemsTextPositionX, kUpdateInterfaceSettingsItemsTextPositionY });
-    settingsItemsText_->SetColor(
-        { kUpdateInterfaceSettingsItemsTextColorRed, kUpdateInterfaceSettingsItemsTextColorGreen, 1.0f, Clamp01(settingsAmount) });
-    settingsBackText_->SetPosition({ textX + kUpdateInterfaceSettingsBackTextPositionX, kUpdateInterfaceSettingsBackTextPositionY });
-    settingsBackText_->SetColor(
-        { kUpdateInterfaceSettingsBackTextColorRed, kUpdateInterfaceSettingsBackTextColorGreen, kUpdateInterfaceSettingsBackTextColorBlue, Clamp01(settingsAmount) });
+    pushToStartText_->SetOutlineColor({ 0.0f, 0.0f, 0.0f, promptAlpha });
+    pushToStartText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * promptAlpha });
+    settingsUi_.Update(input, settingsAmount, titleOffset, titleAlpha);
 
     // 格納庫内の端末表示。カメラが入口を越えてから起動する。
-    const float stageAlpha = Clamp01(stageAmount);
+    const float stageAlpha = Easing::Clamp01(stageAmount);
     const float fogPulse = 0.045f + 0.012f * std::sin(idleTime_ * 0.85f);
     frozenFogOverlay_->SetColor({
         kUpdateInterfaceFrozenFogOverlayColorRed, kUpdateInterfaceFrozenFogOverlayColorGreen, 1.0f,
@@ -1454,25 +1330,25 @@ void TitleScene::UpdateInterface(float deltaTime)
     float roomUiOffset = 0.0f;
     float panelKick = 0.0f;
     if (stageRoomTransitionActive_) {
-        const float progress = Clamp01(
+        const float progress = Easing::Clamp01(
             stageRoomTransitionTime_ / kStageRoomTransitionDuration);
         const float direction =
             static_cast<float>(stageRoomTransitionDirection_);
         if (progress >= 0.80f) {
             const float impactProgress =
-                Clamp01((progress - 0.80f) / 0.20f);
+                Easing::Clamp01((progress - 0.80f) / 0.20f);
             panelKick = direction *
                 std::sin(impactProgress * 3.0f *
                     std::numbers::pi_v<float>) *
                 (1.0f - impactProgress) * 0.012f;
         }
         if (progress < kUpdateInterfaceProgressThreshold) {
-            const float exit = SmoothStep(progress / 0.46f);
+            const float exit = Easing::SmoothStep(progress / 0.46f);
             roomUiAlpha = 1.0f - exit;
             roomUiOffset = -direction * kUpdateInterfaceRoomUiOffsetMultiplier * exit;
         } else {
-            const float enter = Clamp01((progress - 0.46f) / 0.54f);
-            const float uiEase = SmoothStep(enter);
+            const float enter = Easing::Clamp01((progress - 0.46f) / 0.54f);
+            const float uiEase = Easing::SmoothStep(enter);
             roomUiAlpha = uiEase;
             roomUiOffset =
                 direction * kUpdateInterfaceRoomUiOffsetMultiplier * (1.0f - uiEase);
@@ -1502,18 +1378,19 @@ void TitleScene::UpdateInterface(float deltaTime)
     stageControlsText_->SetPosition({ kUpdateInterfaceStageControlsTextPositionX, stageTextY + kUpdateInterfaceStageControlsTextPositionY });
     stageControlsText_->SetColor(
         { kUpdateInterfaceStageControlsTextColorRed, kUpdateInterfaceStageControlsTextColorGreen, kUpdateInterfaceStageControlsTextColorBlue, stageAlpha });
+    stageHeaderText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * stageAlpha });
+    stageNameText_->SetOutlineColor({ 0.0f, 0.0f, 0.0f, changingTextAlpha });
+    stageNameText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * changingTextAlpha });
+    stageDescriptionText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * changingTextAlpha });
+    stagePageText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * changingTextAlpha });
+    stageControlsText_->SetShadowColor({ 0.0f, 0.0f, 0.0f, kLogoShadowAlpha * stageAlpha });
 
     atmosphereTint_->Update();
     frozenFogOverlay_->Update();
     stagePanel_->Update();
-    settingsBackdrop_->Update();
-    settingsAccent_->Update();
     logoText_->Update();
     pushToStartText_->Update();
-    settingsShortcutText_->Update();
-    settingsTitleText_->Update();
-    settingsItemsText_->Update();
-    settingsBackText_->Update();
+    settingsUi_.UpdateObjects();
     stageHeaderText_->Update();
     stageNameText_->Update();
     stageDescriptionText_->Update();
@@ -1521,51 +1398,62 @@ void TitleScene::UpdateInterface(float deltaTime)
     stageControlsText_->Update();
 }
 
-float TitleScene::Clamp01(float value)
-{
-    return std::clamp(value, 0.0f, 1.0f);
-}
-
-// 開始と終了で変化が緩やかになる補間値を作り、画面遷移に使う。
-float TitleScene::SmoothStep(float value)
-{
-    const float clamped = Clamp01(value);
-    return clamped * clamped * (3.0f - 2.0f * clamped);
-}
-
-// 目標を少し通り越して戻る補間値を作り、UIの出現に弾みを付ける。
-float TitleScene::EaseOutBack(float value)
-{
-    const float clamped = Clamp01(value);
-    constexpr float c1 = 1.702f;
-    constexpr float c3 = c1 + 1.0f;
-    const float shifted = clamped - 1.0f;
-    return 1.0f + c3 * shifted * shifted * shifted +
-        c1 * shifted * shifted;
-}
-
 // 画面に重ねるスプライトや文字を描画する。
 void TitleScene::Draw2D()
 {
+    bool isTitleUiVisible = false;
+    bool isSettingsUiVisible = false;
+    bool isStageUiVisible = false;
+    switch (viewState_) {
+    case ViewState::Title:
+    case ViewState::StartingTutorial:
+        isTitleUiVisible = true;
+        break;
+    case ViewState::EnteringSettings:
+    case ViewState::LeavingSettings:
+        isTitleUiVisible = true;
+        isSettingsUiVisible = true;
+        break;
+    case ViewState::Settings:
+        isSettingsUiVisible = true;
+        break;
+    case ViewState::EnteringStageSelect:
+    case ViewState::LeavingStageSelect:
+        isTitleUiVisible = true;
+        isStageUiVisible = true;
+        break;
+    case ViewState::StageSelect:
+    case ViewState::ConfirmingStage:
+        isStageUiVisible = true;
+        break;
+    }
+
     SpriteManager::GetInstance()->PreDraw();
     atmosphereTint_->Draw();
-    frozenFogOverlay_->Draw();
-    stagePanel_->Draw();
-    settingsBackdrop_->Draw();
-    settingsAccent_->Draw();
+    if (isStageUiVisible) {
+        frozenFogOverlay_->Draw();
+        stagePanel_->Draw();
+    }
+    if (isSettingsUiVisible) {
+        settingsUi_.DrawBackground();
+    }
 
     TextRenderer::GetInstance()->PreDraw();
-    logoText_->Draw();
-    pushToStartText_->Draw();
-    settingsShortcutText_->Draw();
-    settingsTitleText_->Draw();
-    settingsItemsText_->Draw();
-    settingsBackText_->Draw();
-    stageHeaderText_->Draw();
-    stageNameText_->Draw();
-    stageDescriptionText_->Draw();
-    stagePageText_->Draw();
-    stageControlsText_->Draw();
+    if (isTitleUiVisible) {
+        logoText_->Draw();
+        pushToStartText_->Draw();
+        settingsUi_.DrawShortcut();
+    }
+    if (isSettingsUiVisible) {
+        settingsUi_.DrawSettingsText();
+    }
+    if (isStageUiVisible) {
+        stageHeaderText_->Draw();
+        stageNameText_->Draw();
+        stageDescriptionText_->Draw();
+        stagePageText_->Draw();
+        stageControlsText_->Draw();
+    }
     if (viewState_ == ViewState::StartingTutorial) {
         SpriteManager::GetInstance()->PreDraw();
         simulationTint_->Draw();
@@ -1622,7 +1510,7 @@ bool TitleScene::SubmitRaytracingScene(DxrRenderer& renderer) {
     if (aircraft_) { aircraft_->SubmitRaytracing(renderer); }
     if (!stages_.empty()) {
         if (stageRoomTransitionActive_) {
-            float progress = Clamp01(stageRoomTransitionTime_ / kStageRoomTransitionDuration);
+            float progress = Easing::Clamp01(stageRoomTransitionTime_ / kStageRoomTransitionDuration);
             if (progress < 0.56f) { SubmitRaytracingRoom(FindStageRoomObjects(stages_[previousStageIndex_].id), renderer); }
             if (progress >= 0.30f) { SubmitRaytracingRoom(FindStageRoomObjects(stages_[nextStageIndex_].id), renderer); }
         } else { SubmitRaytracingRoom(FindStageRoomObjects(stages_[currentStageIndex_].id), renderer); }
@@ -1636,7 +1524,7 @@ void TitleScene::DrawVisibleRoomObjects(ShadowMapRenderer* shadows)
 
     if (!stages_.empty()) {
         if (stageRoomTransitionActive_) {
-            const float progress = Clamp01(
+            const float progress = Easing::Clamp01(
                 stageRoomTransitionTime_ / kStageRoomTransitionDuration);
             if (progress < 0.56f) {
                 DrawRoomObjects(
@@ -1683,11 +1571,11 @@ void TitleScene::UpdateSceneLighting()
         viewState_ == ViewState::EnteringSettings || viewState_ == ViewState::LeavingSettings) {
         roomAmount = 0.0f;
     } else if (viewState_ == ViewState::EnteringStageSelect) {
-        roomAmount = SmoothStep(animationTime_ / TitleTransitionSettings::kStageEnterDurationSeconds);
+        roomAmount = Easing::SmoothStep(animationTime_ / TitleTransitionSettings::kStageEnterDurationSeconds);
     } else if (viewState_ == ViewState::LeavingStageSelect) {
-        roomAmount = 1.0f - SmoothStep(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
+        roomAmount = 1.0f - Easing::SmoothStep(animationTime_ / TitleTransitionSettings::kStageReturnDurationSeconds);
     }
-    const float frozenAmount = Clamp01(frozenRoomAmount_) * roomAmount;
+    const float frozenAmount = Easing::Clamp01(frozenRoomAmount_) * roomAmount;
     if (FogVolumeManager* fogVolumeManager = SceneManager::GetInstance()->GetFogVolumeManager()) {
         fogVolumeManager->SetColor(Lerp(kHangarFogColor,
             kFrozenFogColor, frozenAmount));

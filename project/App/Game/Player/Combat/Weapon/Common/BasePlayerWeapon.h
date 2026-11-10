@@ -5,7 +5,7 @@
 
 class PlayerWeaponHeat;
 class PlayerHomingLock;
-class BaseEnemy;
+class CombatTarget;
 
 // 武器が参照する機体状態と共有状態。管理クラス側の値を参照し、武器ごとの重複保持を避ける。
 struct PlayerWeaponContext {
@@ -17,7 +17,7 @@ struct PlayerWeaponContext {
     Vector2 aim;
     bool canFire;
     std::function<bool()> fire;
-    std::function<void(BaseEnemy*)> emit;
+    std::function<void(CombatTarget*)> emit;
 };
 
 // 武器に共通する更新・発射・弾生成を、選択中の基底ポインタから呼び出す。
@@ -32,7 +32,7 @@ public:
     virtual void Update(PlayerWeaponContext& context, bool held, bool triggered, float dt) = 0;
     virtual bool Fire(PlayerWeaponContext& context) = 0;
     virtual std::unique_ptr<PlayerBullet> CreateBullet(Model* model, PlayerWeaponContext& context,
-        BaseEnemy* target, float& speed) const = 0;
+        CombatTarget* target, float& speed) const = 0;
 };
 
 // 各武器の設定値と独立した待ち時間を保持する。生成直後は発射可能。
@@ -61,7 +61,7 @@ public:
     bool Fire(PlayerWeaponContext& context) override;
     // 通常弾を生成し、武器の基本威力に現在の熱量による倍率を反映する。
     std::unique_ptr<PlayerBullet> CreateBullet(Model* model, PlayerWeaponContext& context,
-        BaseEnemy* target, float& speed) const override;
+        CombatTarget* target, float& speed) const override;
 protected:
     AutomaticPlayerWeapon(float intervalSeconds, int damage, const char* sound)
         : interval_(intervalSeconds), damage_(damage), sound_(sound) {}

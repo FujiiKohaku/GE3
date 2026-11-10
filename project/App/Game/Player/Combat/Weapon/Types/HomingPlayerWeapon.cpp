@@ -1,3 +1,4 @@
+#include "App/Game/Common/CombatTarget.h"
 // 射撃を長押しして敵をロックし、離すとロック対象へミサイルを発射する武器。
 #include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
 #include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
@@ -22,14 +23,14 @@ bool HomingPlayerWeapon::Fire(PlayerWeaponContext& context)
     if (context.lock.GetLockedTargets().empty()) {
         context.emit(nullptr);
     } else {
-        for (BaseEnemy* target : context.lock.GetLockedTargets()) context.emit(target);
+        for (CombatTarget* target : context.lock.GetLockedTargets()) context.emit(target);
     }
     return true;
 }
 
 // 追尾ミサイルを生成し、対象と生存確認用の敵一覧を設定する。
 std::unique_ptr<PlayerBullet> HomingPlayerWeapon::CreateBullet(
-    Model* model, PlayerWeaponContext& context, BaseEnemy* target, float& speed) const
+    Model* model, PlayerWeaponContext& context, CombatTarget* target, float& speed) const
 {
     auto bullet = std::make_unique<HomingMissileBullet>();
     speed = bullet->GetSpeed() / 60.0f;

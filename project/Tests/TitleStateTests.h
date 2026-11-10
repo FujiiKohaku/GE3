@@ -1,5 +1,5 @@
 #pragma once
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 #include <vector>
 
 inline bool RunTitleStateTests()

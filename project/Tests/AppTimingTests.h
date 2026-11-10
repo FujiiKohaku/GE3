@@ -68,7 +68,7 @@ inline bool RunAppTimingTests()
         swarm.SetSwarmVelocity({ 0.1f, 0.2f, 0.3f });
         BaseEnemy target;
         target.SetPosition({ 50.0f, 10.0f, 200.0f });
-        auto targets = std::make_shared<const std::vector<BaseEnemy*>>(std::vector<BaseEnemy*> { &target });
+        auto targets = std::make_shared<const std::vector<CombatTarget*>>(std::vector<CombatTarget*> { &target });
         HomingTimingProbe homing;
         homing.SetTranslate({});
         homing.SetVelocity({ 0.0f, 0.0f, 1.0f });

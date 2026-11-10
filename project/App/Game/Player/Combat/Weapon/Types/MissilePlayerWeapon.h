@@ -13,7 +13,7 @@ public:
     bool Fire(PlayerWeaponContext& context) override;
     // ミサイルを作り、毎秒で設定された速さを弾の更新で使う単位へ変換する。
     std::unique_ptr<PlayerBullet> CreateBullet(Model* model, PlayerWeaponContext& context,
-        BaseEnemy* target, float& speed) const override;
+        CombatTarget* target, float& speed) const override;
 protected:
     explicit MissilePlayerWeapon(float fireIntervalSeconds) : CooldownPlayerWeapon(fireIntervalSeconds) {}
 };

@@ -12,6 +12,7 @@
 class Object3d;
 class Player;
 class BaseEnemy;
+class CombatTarget;
 class EnemyBullet;
 struct PlayerBulletExplosionSettings;
 
@@ -54,7 +55,7 @@ public:
     GameplayCollisionEvents UpdatePlayerBulletCollisions(
         Player& player,
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        BaseEnemy* boss,
+        CombatTarget* boss,
         std::vector<DestructibleLevelObject>& destructibles,
         Object3d* floorObject, bool shouldCollideWithFloor = true,
         const std::vector<std::unique_ptr<Object3d>>& levelObjects = {});
@@ -76,14 +77,14 @@ public:
     // 照準が参照するレイ判定の対象を、現在の障害物・敵・ボスの配置で登録し直す。
     void SyncRaycastTargets(
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        const BaseEnemy* boss);
+        const CombatTarget* boss);
 
 private:
     friend bool RunGameplayCollisionTests();
 
     struct PlayerBulletHit {
         SweepHit hit {};
-        BaseEnemy* enemy = nullptr;
+        CombatTarget* enemy = nullptr;
         DestructibleLevelObject* destructible = nullptr;
         int32_t partIndex = 0;
     };
@@ -91,12 +92,12 @@ private:
     static PlayerBulletHit FindFirstPlayerBulletHit(
         const Sphere& bullet, const Vector3& movement,
         const std::vector<std::unique_ptr<BaseEnemy>>& enemies,
-        BaseEnemy* boss, std::vector<DestructibleLevelObject>& destructibles,
+        CombatTarget* boss, std::vector<DestructibleLevelObject>& destructibles,
         float floorHeight, bool shouldCollideWithFloor = true,
         const std::vector<std::unique_ptr<Object3d>>& levelObjects = {});
     // 直撃対象を除き、各敵の有効な部位へ最大一回だけ爆風ダメージを与える。
-    static bool ApplyExplosionToEnemy(BaseEnemy& enemy, const Sphere& explosion, float damage,
-        const BaseEnemy* directEnemy);
+    static bool ApplyExplosionToEnemy(CombatTarget& enemy, const Sphere& explosion, float damage,
+        const CombatTarget* directEnemy);
     static uint32_t ApplyExplosionDamage(const Vector3& position, const PlayerBulletExplosionSettings& settings,
-        const std::vector<std::unique_ptr<BaseEnemy>>& enemies, BaseEnemy* boss, const BaseEnemy* directEnemy);
+        const std::vector<std::unique_ptr<BaseEnemy>>& enemies, CombatTarget* boss, const CombatTarget* directEnemy);
 };

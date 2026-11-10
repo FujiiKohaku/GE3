@@ -42,7 +42,7 @@
 
 #include "App/Scene/Result/ClearScene.h"
 #include "App/Scene/Result/GameOverScene.h"
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 #include "Engine/Debug/DebugRenderer.h"
 #include "Engine/Debug/Profiler/FpsMonitor.h"
 #include "Engine/Logger/Logger.h"
@@ -2383,14 +2383,14 @@ void GamePlayScene::UpdatePlayerTransform(
     const Vector3& railUp,
     const Vector3& forward)
 {
-    std::vector<BaseEnemy*> homingTargets;
+    std::vector<CombatTarget*> homingTargets;
     homingTargets.reserve(enemies_.size() + 1);
     for (const std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         if (!enemy->IsDead()) {
             homingTargets.push_back(enemy.get());
         }
     }
-    if (BaseEnemy* boss = GetActiveBoss(); boss != nullptr && !boss->IsDead()) {
+    if (BaseBoss* boss = GetActiveBoss(); boss != nullptr && !boss->IsDead()) {
         homingTargets.push_back(boss);
     }
     player_->SetHomingTargets(homingTargets);

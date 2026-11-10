@@ -108,6 +108,7 @@ private:
     // 基本設定
     static constexpr float kHeadHp = 40.0f;
     static constexpr float kBaseMoveSpeed = 0.10f;
+    float moveSpeed_ = kBaseMoveSpeed;
 
     static constexpr float kMaximumMovementSpeedAdd = 0.45f;
 

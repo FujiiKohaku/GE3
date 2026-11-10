@@ -43,7 +43,7 @@ private:
 class PlayerHomingLock {
 public:
     // 現在の候補一覧を共有データへ反映し、弾が対象の生存を確認できるようにする。
-    void SetTargets(const std::vector<BaseEnemy*>& targets);
+    void SetTargets(const std::vector<CombatTarget*>& targets);
     // 発射済みミサイルも参照する対象一覧と、入力中のロックを無効化する。
     void ClearHomingTargets();
     // 押下中のロック更新と、ボタンを離した瞬間の発射要求を判定する。
@@ -54,15 +54,15 @@ public:
     void Reset();
     // 生存中のロック対象の位置を集め、画面のロックマーカー表示に使う。
     void GetPositions(std::vector<Vector3>& positions) const;
-    const std::vector<BaseEnemy*>& GetLockedTargets() const { return lockedTargets_; }
-    std::shared_ptr<const std::vector<BaseEnemy*>> GetTargets() const { return targets_; }
+    const std::vector<CombatTarget*>& GetLockedTargets() const { return lockedTargets_; }
+    std::shared_ptr<const std::vector<CombatTarget*>> GetTargets() const { return targets_; }
 
 private:
     // 前方距離と画面上の照準との近さを調べ、条件を満たす敵を上限数までロックする。
     void UpdateTargets(bool isLocking, Camera* camera, const Vector3& position,
         const Vector3& forward, const Vector2& aimPosition);
-    std::shared_ptr<std::vector<BaseEnemy*>> targets_ = std::make_shared<std::vector<BaseEnemy*>>();
-    std::vector<BaseEnemy*> lockedTargets_;
+    std::shared_ptr<std::vector<CombatTarget*>> targets_ = std::make_shared<std::vector<CombatTarget*>>();
+    std::vector<CombatTarget*> lockedTargets_;
     bool wasFireHeld_ = false;
     static constexpr float kMaxForwardDistance = 250.0f;
     static constexpr size_t kMaxLockCount = 6;
@@ -88,7 +88,7 @@ public:
     void SubmitRaytracing(DxrRenderer& renderer);
     const std::vector<std::unique_ptr<PlayerBullet>>& GetBullets() const { return bullets_; }
     uint64_t GetShotsFired() const { return shotsFired_; }
-    void SetHomingTargets(const std::vector<BaseEnemy*>& targets) { homingLock_.SetTargets(targets); }
+    void SetHomingTargets(const std::vector<CombatTarget*>& targets) { homingLock_.SetTargets(targets); }
     void ClearHomingTargets() { homingLock_.ClearHomingTargets(); }
     // 追尾ミサイル選択中だけ、ロック表示に必要な敵の位置を書き出す。
     void GetHomingLockPositions(std::vector<Vector3>& positions) const;
@@ -123,9 +123,9 @@ private:
     // 有効なカメラがある場合だけ、現在の武器へ発射を要求する。
     bool FireCurrentCameraBullet();
     // 発射用カメラを選び、指定したロック対象への弾を生成する。
-    void EmitBulletForCamera(const Camera* activeCamera, BaseEnemy* target);
+    void EmitBulletForCamera(const Camera* activeCamera, CombatTarget* target);
     // 武器に弾を生成させ、熱量の色・銃口位置・照準方向・機体速度を反映して所有する。
-    void FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget);
+    void FireSingleBullet(const Camera& activeCamera, CombatTarget* homingTarget);
 
     const EulerTransform& transform_;
     const Player& player_;

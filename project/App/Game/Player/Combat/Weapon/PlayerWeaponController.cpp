@@ -1,3 +1,4 @@
+#include "App/Game/Common/CombatTarget.h"
 // 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
 #include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "App/Game/Player/Player.h"
@@ -79,7 +80,7 @@ bool PlayerWeaponController::FireCurrentCameraBullet()
 }
 
 // 発射用カメラを選び、指定したロック対象への弾を生成する。
-void PlayerWeaponController::EmitBulletForCamera(const Camera* activeCamera, BaseEnemy* target)
+void PlayerWeaponController::EmitBulletForCamera(const Camera* activeCamera, CombatTarget* target)
 {
     const Camera* shotCamera = activeCamera;
     if (shotCamera == nullptr) { shotCamera = camera_; }
@@ -133,7 +134,7 @@ bool PlayerWeaponController::FireBullet(const Camera& activeCamera)
     return GetCurrentWeapon().Fire(context);
 }
 // 武器に弾を生成させ、熱量の色・銃口位置・照準方向・機体速度を反映して所有する。
-void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, BaseEnemy* homingTarget)
+void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, CombatTarget* homingTarget)
 {
 
     float shotSpeed = bulletSpeed_;
@@ -315,7 +316,7 @@ void PlayerWeaponHeat::AddShotHeat()
 // ロック対象の管理と発射タイミング。
 namespace {
 struct LockCandidate {
-    BaseEnemy* enemy;
+    CombatTarget* enemy;
     float screenDistanceSquared;
 };
 
@@ -326,7 +327,7 @@ bool CompareLockCandidates(const LockCandidate& left, const LockCandidate& right
 }
 
 // 現在の候補一覧を共有データへ反映し、弾が対象の生存を確認できるようにする。
-void PlayerHomingLock::SetTargets(const std::vector<BaseEnemy*>& targets)
+void PlayerHomingLock::SetTargets(const std::vector<CombatTarget*>& targets)
 {
     *targets_ = targets;
     for (auto targetIterator = lockedTargets_.begin(); targetIterator != lockedTargets_.end();) {
@@ -380,7 +381,7 @@ void PlayerHomingLock::UpdateTargets(bool isLocking, Camera* camera,
     const std::size_t previousLockCount = lockedTargets_.size();
     constexpr float kLockRadiusPixels = 120.0f;
     std::vector<LockCandidate> candidates;
-    for (BaseEnemy* enemy : *targets_) {
+    for (CombatTarget* enemy : *targets_) {
         if (enemy == nullptr || enemy->IsDead()) {
             continue;
         }
@@ -421,7 +422,7 @@ void PlayerHomingLock::UpdateTargets(bool isLocking, Camera* camera,
 void PlayerHomingLock::GetPositions(std::vector<Vector3>& positions) const
 {
     positions.clear();
-    for (BaseEnemy* target : lockedTargets_) {
+    for (CombatTarget* target : lockedTargets_) {
         if (target != nullptr && !target->IsDead()) {
             positions.push_back(target->GetPosition());
         }

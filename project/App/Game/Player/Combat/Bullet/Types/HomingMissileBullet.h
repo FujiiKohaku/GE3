@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-class BaseEnemy;
+class CombatTarget;
 
 class HomingMissileBullet : public MissileBullet {
 public:
@@ -13,15 +13,15 @@ public:
     void OnHitEnemy(const Vector3& position) override;
     PlayerBulletExplosionSettings GetExplosionSettings() const override { return {}; }
     // ロック対象と候補一覧を記録する。候補一覧は弱参照で保持し、寿命を引き延ばさない。
-    void SetTarget(BaseEnemy* target, const std::shared_ptr<const std::vector<BaseEnemy*>>& activeTargets);
+    void SetTarget(CombatTarget* target, const std::shared_ptr<const std::vector<CombatTarget*>>& activeTargets);
 
 protected:
     // 対象の生存を確認して進行方向を曲げ、接近時の補正と通過回数によって追尾を制御する。
     void Move() override;
 
 private:
-    BaseEnemy* target_ = nullptr;
-    std::weak_ptr<const std::vector<BaseEnemy*>> activeTargets_;
+    CombatTarget* target_ = nullptr;
+    std::weak_ptr<const std::vector<CombatTarget*>> activeTargets_;
     float homingStrength_ = 0.08f;
     int targetPassCount_ = 0;
 

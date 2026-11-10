@@ -4,6 +4,10 @@
 
 namespace ValueValidation {
 inline bool IsFinite(float value) { return std::isfinite(value); }
+inline bool IsInRange(float value, float minimum, float maximum)
+{
+    return IsFinite(value) && value >= minimum && value <= maximum;
+}
 inline bool IsFinite(const Vector2& v) { return IsFinite(v.x) && IsFinite(v.y); }
 inline bool IsFinite(const Vector3& v) { return IsFinite(v.x) && IsFinite(v.y) && IsFinite(v.z); }
 inline bool IsFinite(const Vector4& v) { return IsFinite(v.x) && IsFinite(v.y) && IsFinite(v.z) && IsFinite(v.w); }

@@ -5,7 +5,7 @@
 #include "Engine/2D/Text/TextRenderer.h"
 #include "App/Scene/Gameplay/GamePlayScene.h"
 
-#include "App/Scene/Title/TitleScene.h"
+#include "App/Scene/Title/TitleScene/TitleScene.h"
 #include "Engine/audio/SoundManager.h"
 // ゲームオーバー表示と再挑戦・タイトルへ戻る操作案内を準備する。
 void GameOverScene::Initialize()

@@ -1,6 +1,7 @@
 // 敵のHP・移動・攻撃・外見と部位の当たり判定をまとめる基底クラス。
 #pragma once
 
+#include "App/Game/Common/CombatTarget.h"
 #include "Engine/3D/Object3d.h"
 #include <memory>
 #include <vector>
@@ -19,20 +20,7 @@ class Model;
 class EnemyBulletManager;
 class NormalEnemyBullet;
 
-// 敵の一部位の形状と識別情報。radiusは箱の場合は包絡球の半径。
-struct EnemyCollisionPart {
-    Vector3 position = { 0.0f, 0.0f, 0.0f };
-    float radius = 3.0f;
-    int32_t partIndex = 0;
-    bool isBox = false;
-    OBB box {};
-
-    CollisionHit IntersectSphere(const Sphere& sphere) const;
-    SweepHit SweepSphere(const Sphere& sphere, const Vector3& movement) const;
-    float GetSurfaceDistance(const Vector3& point) const;
-};
-
-class BaseEnemy {
+class BaseEnemy : public CombatTarget {
 public:
     virtual ~BaseEnemy() = default;
     // ステージの外見対応表に渡す識別名。未対応の敵は外見を変更しない。
@@ -60,7 +48,7 @@ public:
     // 標準では射撃しない。具体的な敵の派生クラスで攻撃を実装する。
     virtual void Attack();
 
-    bool IsDead() const;
+    bool IsDead() const override;
 
     virtual Vector3 GetPosition() const;
     // 生成した敵弾の引き渡し先を設定する。管理クラスの所有権は受け取らない。

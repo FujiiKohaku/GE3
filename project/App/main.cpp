@@ -77,11 +77,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
         return RunPlayerWeaponPolymorphismTests() ? 0 : 1;
     }
 #endif
-    const std::chrono::steady_clock::time_point startupBeginTime =
-        std::chrono::steady_clock::now();
+    // 起動時の時間を計測するため、最初に現在時刻を取得する。
+    const std::chrono::steady_clock::time_point startupBeginTime =std::chrono::steady_clock::now();
 
     StartupTiming::Begin(startupBeginTime);
+    // ログ出力の初期化を行い、アプリケーション開始をログに残す。
     Logger::Initialize();
+    // ログ出力の初期化を行い、アプリケーション開始をログに残す。
     Logger::Log("Application Start");
 
     D3DResourceLeakChecker leakChecker;
