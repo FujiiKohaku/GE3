@@ -27,48 +27,55 @@ inline bool RunPlayerWeaponResetTests()
     controller.bullets_.push_back(std::make_unique<PlayerWeaponResetBulletProbe>(stopped, destroyed));
     controller.currentWeapon_ = controller.kWeaponHomingMissile;
     controller.shotsFired_ = 100;
-    auto cooldownContext = controller.MakeWeaponContext();
-    cooldownContext.canFire = true;
-    cooldownContext.emit = PlayerWeaponTest::IgnoreTarget;
-    assert(controller.weapons_[controller.kWeaponMissileBullet]->Fire(cooldownContext));
-    assert(controller.weapons_[controller.kWeaponHomingMissile]->Fire(cooldownContext));
-    assert(controller.weapons_[controller.kWeaponMissileBullet]->GetReloadRatio() == 0.0f);
-    assert(controller.weapons_[controller.kWeaponHomingMissile]->GetReloadRatio() == 0.0f);
+    controller.currentWeapon_ = controller.kWeaponMissileBullet;
+    assert(controller.TryStartCooldown());
+    controller.currentWeapon_ = controller.kWeaponHomingMissile;
+    assert(controller.TryStartCooldown());
+    assert(controller.GetMissileReloadRatio() == 0.0f);
     constexpr int kMaxShots = 1000;
     for (int index = 0; index < kMaxShots && controller.GetHeatRatio() < 1.0f; ++index) {
-        controller.weaponHeat_.AddShotHeat();
+        controller.AddShotHeat();
     }
-    controller.weaponHeat_.Update(1.0f, true);
+    controller.UpdateHeat(1.0f, true);
     assert(controller.IsOverheated());
-    controller.homingLock_.SetTargets({ nullptr });
-    const auto sharedTargets = controller.homingLock_.GetTargets();
-    controller.homingLock_.UpdateFireInput(true, true, nullptr, {}, {}, {});
+    controller.SetHomingTargets({ nullptr });
+    const auto sharedTargets = controller.homingTargets_;
+    controller.UpdateHomingFireInput(true, true, nullptr, {}, {}, {});
 
     // 非選択のアサルトに、連射間隔の途中の状態を作る。
-    int shots = 0;
-    auto context = controller.MakeWeaponContext();
-    context.canFire = true;
-    context.fire = std::bind(PlayerWeaponTest::CountShot, std::ref(shots));
-    controller.weapons_[controller.kWeaponAssault]->Update(context, true, false, 0.04f);
+    controller.currentWeapon_ = controller.kWeaponAssault;
+    int shots = controller.GetRequestedShotCount(true, false, 0.04f);
     assert(shots == 0);
 
+    // ボタンを離すまで禁止し、フォーカス喪失後も意図せず発射しない。
+    assert(controller.UpdateFireInputState(true, true, 0));
+    assert(!controller.UpdateFireInputState(true, true, 0));
+    controller.BlockFireUntilRelease();
+    assert(!controller.UpdateFireInputState(true, true, 0));
+    assert(!controller.UpdateFireInputState(false, true, 0));
+    assert(controller.UpdateFireInputState(true, true, 0));
+    assert(!controller.UpdateFireInputState(false, false, 1));
+    assert(!controller.UpdateFireInputState(true, true, 1));
+    assert(!controller.UpdateFireInputState(false, true, 1));
+    assert(controller.UpdateFireInputState(true, true, 1));
+    // 更新を停止中にフォーカスが失われても、復帰後に禁止する。
+    assert(!controller.UpdateFireInputState(true, true, 2));
+    assert(!controller.UpdateFireInputState(false, true, 2));
+    assert(controller.UpdateFireInputState(true, true, 2));
     // 描画初期化なしで、Initializeと同じ戦闘状態リセットを検証する。
     controller.ResetCombatState();
     assert(stopped && destroyed && controller.GetBullets().empty());
     assert(controller.currentWeapon_ == controller.kWeaponAssault && controller.GetShotsFired() == 0);
-    assert(controller.weapons_.size() == 3);
     assert(std::strcmp(controller.GetCurrentWeaponName(), "アサルト") == 0);
-    assert(std::strcmp(controller.weapons_[1]->GetName(), "ミサイル") == 0);
-    assert(std::strcmp(controller.weapons_[2]->GetName(), "ホーミングミサイル") == 0);
     assert(controller.GetHeatRatio() == 0.0f && !controller.IsOverheated());
-    assert(controller.weapons_[controller.kWeaponMissileBullet]->GetReloadRatio() == 1.0f);
-    assert(controller.weapons_[controller.kWeaponHomingMissile]->GetReloadRatio() == 1.0f);
+    controller.currentWeapon_ = controller.kWeaponMissileBullet;
+    assert(controller.GetMissileReloadRatio() == 1.0f);
+    controller.currentWeapon_ = controller.kWeaponHomingMissile;
+    assert(controller.GetMissileReloadRatio() == 1.0f);
     assert(controller.camera_ == &camera && sharedTargets->empty());
-    assert(!controller.homingLock_.UpdateFireInput(false, true, &camera, {}, {}, {}));
-    auto resetContext = controller.MakeWeaponContext();
-    resetContext.canFire = true;
-    resetContext.fire = std::bind(PlayerWeaponTest::CountShot, std::ref(shots));
-    controller.weapons_[controller.kWeaponAssault]->Update(resetContext, true, false, 0.02f);
+    assert(!controller.UpdateHomingFireInput(false, true, &camera, {}, {}, {}));
+    controller.currentWeapon_ = controller.kWeaponAssault;
+    shots = controller.GetRequestedShotCount(true, false, 0.02f);
     assert(shots == 0);
     controller.ResetCombatState(); // 繰り返しても安全。
     return true;

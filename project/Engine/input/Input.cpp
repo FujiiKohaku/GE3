@@ -140,12 +140,15 @@ void Input::Update()
     }
 
     const bool isForeground = GetForegroundWindow() == winApp_->GetHwnd();
+    if (isForeground_ && !isForeground) {
+        ++focusLossCount_;
+    }
+    isForeground_ = isForeground;
     if (!isForeground) {
         std::memset(keys_, 0, sizeof(keys_));
         mouseState_ = {};
         gamepadState_ = {};
         gamepadButtonsReady_ = false;
-        blockPrimaryFire_ = true;
         LogGamepadDiagnostics(nextGamepadState, gamepadPollResults.data(), isForeground);
         return;
     }
@@ -177,10 +180,6 @@ void Input::Update()
         isUsingGamepad_ = true;
     } else if (mouseActivity) {
         isUsingGamepad_ = false;
-    }
-    if (blockPrimaryFire_ && !IsKeyPressed(DIK_SPACE) && !IsMousePressed(0) &&
-        !IsGamepadButtonPressed(XINPUT_GAMEPAD_A) && !IsGamepadRightTriggerPressed()) {
-        blockPrimaryFire_ = false;
     }
     LogGamepadDiagnostics(nextGamepadState, gamepadPollResults.data(), isForeground);
 }
@@ -334,21 +333,6 @@ bool Input::IsGamepadRightTriggerPressed() const
 {
     return isGamepadConnected_ && gamepadButtonsReady_ &&
         gamepadState_.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
-}
-
-bool Input::IsPrimaryFirePressed() const
-{
-    return !blockPrimaryFire_ && (IsKeyPressed(DIK_SPACE) || IsMousePressed(0) ||
-        IsGamepadButtonPressed(XINPUT_GAMEPAD_A) || IsGamepadRightTriggerPressed());
-}
-
-bool Input::IsPrimaryFireTrigger() const
-{
-    const bool wasPressed = (preKeys_[DIK_SPACE] & 0x80) != 0 ||
-        (preMouseState_.rgbButtons[0] & 0x80) != 0 ||
-        (preGamepadState_.Gamepad.wButtons & XINPUT_GAMEPAD_A) != 0 ||
-        preGamepadState_.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
-    return IsPrimaryFirePressed() && !wasPressed;
 }
 
 namespace {

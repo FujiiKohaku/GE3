@@ -1,11 +1,20 @@
-#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Player.h"
 #include "Tests/PlayerWeaponResetTests.h"
 #include "Tests/PlayerWeaponPolymorphismTests.h"
 #include <cassert>
 #include <cmath>
 
+struct PlayerWeaponHeatTestAccess {
+    Player player;
+    PlayerWeaponController controller{player};
+    void Update(float deltaTimeSeconds, bool isHeld) { controller.UpdateHeat(deltaTimeSeconds, isHeld); }
+    void AddShotHeat() { controller.AddShotHeat(); }
+    float GetHeatRatio() const { return controller.GetHeatRatio(); }
+    bool IsOverheated() const { return controller.IsOverheated(); }
+    int GetShotDamage(int damage) const { return controller.GetShotDamage(damage); }
+};
 namespace {
-void FillHeat(PlayerWeaponHeat& heat)
+void FillHeat(PlayerWeaponHeatTestAccess& heat)
 {
     constexpr int kMaxShots = 1000;
     for (int shotIndex = 0; shotIndex < kMaxShots && heat.GetHeatRatio() < 1.0f; ++shotIndex) {
@@ -16,7 +25,7 @@ void FillHeat(PlayerWeaponHeat& heat)
 
 void TestGraceAndCompleteRecovery()
 {
-    PlayerWeaponHeat heat;
+    PlayerWeaponHeatTestAccess heat;
     FillHeat(heat);
     assert(!heat.IsOverheated());
     heat.Update(0.25f, true);
@@ -42,7 +51,7 @@ void TestGraceAndCompleteRecovery()
 
 void TestReleaseCancelsGrace()
 {
-    PlayerWeaponHeat heat;
+    PlayerWeaponHeatTestAccess heat;
     FillHeat(heat);
     heat.Update(0.4f, true);
     heat.Update(0.1f, false);
@@ -58,7 +67,7 @@ void TestReleaseCancelsGrace()
 
 void TestPausedTimeAndShotHeat()
 {
-    PlayerWeaponHeat heat;
+    PlayerWeaponHeatTestAccess heat;
     heat.AddShotHeat();
     assert(heat.GetHeatRatio() > 0.0f && heat.GetHeatRatio() < 1.0f);
     heat.Update(1.0f, false);
@@ -75,7 +84,7 @@ void TestPausedTimeAndShotHeat()
 
 void TestHeatDamageAndCooling()
 {
-    PlayerWeaponHeat heat;
+    PlayerWeaponHeatTestAccess heat;
     assert(heat.GetShotDamage(3) == 3);
     assert(heat.GetShotDamage(1) == 1);
     int previousDamage = 3;
@@ -103,7 +112,7 @@ void TestHeatDamageAndCooling()
 
 void TestAssaultSustainedFireCanOverheat()
 {
-    PlayerWeaponHeat heat;
+    PlayerWeaponHeatTestAccess heat;
     for (int shot = 0; shot < 100; ++shot) {
         heat.Update(0.05f, true);
         if (!heat.IsOverheated()) heat.AddShotHeat();
@@ -115,7 +124,7 @@ void TestAssaultSustainedFireCanOverheat()
 void TestFiringStopsCooling()
 {
     for (int framesPerSecond : { 30, 60, 120 }) {
-        PlayerWeaponHeat heat;
+        PlayerWeaponHeatTestAccess heat;
         for (int shotIndex = 0; shotIndex < 10; ++shotIndex) { heat.AddShotHeat(); }
         const float heatBeforeHold = heat.GetHeatRatio();
         assert(heatBeforeHold > 0.0f && heatBeforeHold < 1.0f);

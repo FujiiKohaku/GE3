@@ -1,17 +1,280 @@
-// Playerの姿勢と公開APIを保持し、登場・戦闘・死亡の更新を各Stateへ委譲する。
 #pragma once
+#include "App/Game/Player/Aim/PlayerAimController.h"
+#include "App/Game/Common/Bullet/BaseBullet.h"
+#include "Engine/Effect/EffectManager.h"
+#include <memory>
+#include <vector>
+#include <array>
+#include "Engine/math/MathStruct.h"
+#include <cstdint>
+#include "App/Game/Stage/RailHeightRange.h"
 #include "Engine/3D/Model.h"
 #include "Engine/3D/Object3d.h"
 #include "Engine/debugcamera/DebugCameraController.h"
-#include "Engine/math/MathStruct.h"
-#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
-#include "Movement/PlayerMovement.h"
-#include "Aim/PlayerAimController.h"
-#include "Input/PlayerInput.h"
-#include "States/Entry/PlayerEntryState.h"
-#include "States/Battle/PlayerBattleState.h"
-#include "States/Dead/PlayerDeadState.h"
-#include <memory>
+
+// PlayerBullet
+// プレイヤー弾に共通する敵への命中処理を定義し、敵弾とは別の型として扱う。
+
+struct PlayerBulletExplosionSettings {
+    float radius = 0.0f;
+    float damage = 0.0f;
+};
+
+class PlayerBullet : public BaseBullet {
+public:
+    virtual ~PlayerBullet() = default;
+    // 弾種固有の命中演出を追加するための共通の呼び出し口。標準では何も行わない。
+    virtual void OnHitEnemy(const Vector3& position);
+    // 半径が0なら爆発しない。衝突したフレームにだけ爆風を判定する。
+    virtual PlayerBulletExplosionSettings GetExplosionSettings() const { return {}; }
+};
+
+// NormalBullet
+// プレイヤーの通常弾の描画設定と、敵への命中時のエフェクトを扱う。
+class NormalBullet : public PlayerBullet {
+public:
+    // 通常弾の色・シェーダー・霧や影の設定を適用し、機体から見やすい弾にする。
+    void Initialize(Model* model) override;
+
+    // 共通の移動と寿命処理を使い、通常弾を進める。
+    void Update() override;
+
+    // 通常弾の命中位置へヒットエフェクトを出す。
+    void OnHitEnemy(const Vector3& position) override;
+};
+
+// MissileBullet
+// ミサイルの描画・威力と航跡エフェクトを扱う。消滅時には航跡も停止する。
+
+
+
+class MissileBullet : public PlayerBullet {
+public:
+    // ミサイルの見た目と威力を設定し、追従する航跡エフェクトを開始する。
+    void Initialize(Model* model) override;
+    // 移動と寿命を更新し、航跡を追従させる。消滅した場合は航跡を停止する。
+    void Update() override;
+    // 本体の位置を設定し、航跡の追従先も同じ位置へ更新する。
+    void SetTranslate(const Vector3& translate) override;
+    // 弾を消滅扱いにし、その場に航跡だけが残り続けないよう停止する。
+    void SetDead() override;
+   // void Move() override;
+    float GetSpeed() const
+    {
+        return speed_;
+    }
+    // 命中位置にミサイル用の演出を出す。
+    void OnHitEnemy(const Vector3& position) override;
+    PlayerBulletExplosionSettings GetExplosionSettings() const override;
+    // 球状エフェクトのEndScaleを、描画と共通のワールド半径として読む。
+    static PlayerBulletExplosionSettings GetExplosionSettingsFromConfig(const nlohmann::json& config);
+
+private:
+    // ミサイルの位置を追いかけるループエフェクトを生成する。
+    void CreateTrailEffect();
+    // 弾の位置に航跡の発生位置を追従させる。
+    void UpdateTrailPosition();
+    // 再生中の航跡を停止し、エフェクトのハンドルを無効化する。
+    void StopTrailEffect();
+
+private:
+    static constexpr float kExplosionDamage = 5.0f;
+    float speed_ = 180.0f;
+    float scale_ = 2.0f;
+
+    EffectHandle trailEffectHandle_ = kInvalidEffectHandle;
+
+    std::shared_ptr<Vector3> trailPosition_;
+};
+
+// HomingMissileBullet
+// 生存しているロック対象へ進行方向を曲げ、目標を通り過ぎた回数も管理するミサイル。
+
+
+class CombatTarget;
+
+class HomingMissileBullet : public MissileBullet {
+public:
+    // 追尾弾は直撃だけ。親のミサイル用爆発演出と範囲ダメージを使わない。
+    void OnHitEnemy(const Vector3& position) override;
+    PlayerBulletExplosionSettings GetExplosionSettings() const override { return {}; }
+    // ロック対象と候補一覧を記録する。候補一覧は弱参照で保持し、寿命を引き延ばさない。
+    void SetTarget(CombatTarget* target, const std::shared_ptr<const std::vector<CombatTarget*>>& activeTargets);
+
+protected:
+    // 対象の生存を確認して進行方向を曲げ、接近時の補正と通過回数によって追尾を制御する。
+    void Move() override;
+
+private:
+    CombatTarget* target_ = nullptr;
+    std::weak_ptr<const std::vector<CombatTarget*>> activeTargets_;
+    float homingStrength_ = 0.08f;
+    int targetPassCount_ = 0;
+
+    static constexpr float kCloseHomingDistance = 50.0f;
+    static constexpr float kCloseHomingStrength = 0.32f;
+    static constexpr float kTargetSnapDistance = 10.0f;
+    static constexpr int kMaxTargetPassCount = 2;
+};
+
+#include "App/Game/Player/PlayerWeaponController.h"
+
+// PlayerMovement
+class Camera;
+
+// 操舵・飛行・レール上の自機位置を管理する。PlayerとStateには依存しない。
+class PlayerMovement {
+public:
+    void SetCamera(const Camera* camera) { camera_ = camera; }
+    const Vector3& GetRailOffset() const { return railOffset_; }
+    const Vector3& GetRailBasePosition() const { return railBasePosition_; }
+    const Vector3& GetFlightForward() const { return railForward_; }
+    bool IsAllRangeMode() const { return isAllRangeMode_; }
+    bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
+    bool IsBoosting() const { return isBoosting_; }
+    float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
+    float GetMouseSensitivity() const { return mouseSensitivity_; }
+    const Vector2& GetSteeringInput() const { return steeringInput_; }
+    Vector3 GetWorldVelocity() const { return railForward_ * velocity_.z; }
+    void SetRailMinimumHeight(float height) { railMinimumHeight_ = height; hasRailMinimumHeight_ = true; hasRailHeightRange_ = false; }
+    void SetRailHeightRange(const RailHeightRange& range) { railHeightRange_ = range; hasRailHeightRange_ = true; }
+    void ResetSteering() { steeringInput_ = {}; }
+    void UpdateMovement(EulerTransform& transform, const Vector2& steering, float railResponse,
+        float deltaTimeSeconds);
+    void InitializeMovement(const EulerTransform& transform);
+    void SynchronizePosition(const EulerTransform& transform);
+    void SynchronizeOrientation(const EulerTransform& transform);
+    void ApplyRailPosition(EulerTransform& transform);
+    void StopMovement();
+    Vector3 GetAutomaticMovementVelocity() const;
+    void SetRailFrame(const Vector3& railBasePosition,
+        const Vector3& railRight, const Vector3& railUp, const Vector3& railForward);
+    void ApplyRailAreaForce(const Vector3& force, float deltaTimeSeconds);
+    // ブーストを開始したフレームだけtrueを返す。効果音は呼び出し側で再生する。
+    bool UpdateBoost(bool isBraking, bool shouldBoost);
+    void EnableAllRangeMode(const EulerTransform& transform, float areaRadius, float minHeight, float maxHeight);
+    void SetMouseSensitivity(float sensitivity);
+    void UpdateSteering(const Vector2& aimPosition, const Vector2& screenSizePixels,
+        bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad);
+    Vector3 CalculateRailWorldPosition(const Vector3& railOffset) const;
+    Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
+
+private:
+    void UpdateAllRangeMove(EulerTransform& transform, Vector2 steering, float deltaTimeSeconds);
+    void UpdateFlightOrientation(const Vector2& steering, float deltaTimeSeconds);
+    void UpdateFlightAreaReturn(const EulerTransform& transform, Vector2& steering, float deltaTimeSeconds);
+    void UpdateFlightHeight(const EulerTransform& transform, float deltaTimeSeconds);
+    void UpdateFlightPosition(EulerTransform& transform, float deltaTimeSeconds);
+    Vector2 CalculateScreenCorrection(const Vector3& railOffset) const;
+    void UpdateScreenBounds(const Vector3& worldPosition, float& minX, float& maxX, float& minY, float& maxY) const;
+    void EnforceHeightRange(Vector3& offset) const;
+    // カメラは外部所有。Playerから設定された参照を利用する。
+    const Camera* camera_ = nullptr;
+
+    bool isBoosting_ = false;
+    bool isAllRangeMode_ = false;
+    bool isReturningToFlightArea_ = false;
+    float flightAreaRadius_ = 600.0f;
+    float flightMinHeight_ = 5.0f;
+    float flightMaxHeight_ = 180.0f;
+    float flightYaw_ = 0.0f;
+    float flightPitch_ = 0.0f;
+    float normalMaxSpeed_ = 0.5f;
+    float boostMaxSpeed_ = 1.0f;
+    float normalAcceleration_ = 0.2f;
+    float boostAcceleration_ = 0.35f;
+    float moveSpeed_ = normalAcceleration_;
+    Vector3 velocity_ = { 0.0f, 0.0f, 0.5f };
+    Vector3 railBasePosition_ = { 0.0f, 0.0f, 0.0f };
+    Vector3 railRight_ = { 1.0f, 0.0f, 0.0f };
+    Vector3 railUp_ = { 0.0f, 1.0f, 0.0f };
+    Vector3 railForward_ = { 0.0f, 0.0f, 1.0f };
+    Vector3 railOffset_ = { 0.0f, 0.0f, 0.0f };
+
+    float mouseSensitivity_ = 1.0f; // 中央からの照準のずれに掛ける倍率。
+    Vector2 steeringInput_ = {}; // 補間済みの入力。Xは右向き、Yは上向きが正で、中央は0。
+
+    float railMoveLimitX_ = 20.0f;
+    float railMoveLimitY_ = 15.0f;
+    float railMinimumHeight_ = 0.0f;
+    bool hasRailMinimumHeight_ = false;
+    RailHeightRange railHeightRange_;
+    bool hasRailHeightRange_ = false;
+    // 画面端に残す余白。単位はピクセル。
+    float playerClampMarginX_ = 10.0f;
+    float playerClampMarginY_ = 10.0f;
+    // 補正判定に使う機体の半幅・半高さ。単位はワールド座標。
+    float playerBoundsHalfWidth_ = 1.5f;
+    float playerBoundsHalfHeight_ = 1.0f;
+
+};
+
+// PlayerInput
+class Input;
+
+// 入力機器の状態を、自機の操作に使う値へ変換する。PlayerとMovementは参照しない。
+class PlayerInput {
+public:
+    enum class ControlInputType { Keyboard, Mouse, Gamepad };
+
+    struct AimInput {
+        Vector2 stick = {};
+        bool isPitchInverted = false;
+        float sensitivity = 1.0f;
+    };
+
+    struct BoostInput {
+        bool isBraking = false;
+        bool shouldBoost = false;
+    };
+
+    static ControlInputType GetControlInputType(const Input& input, bool shouldUseMouse);
+    static Vector2 ReadMousePosition();
+    static AimInput ReadGamepadAim(const Input& input);
+    static Vector2 ReadKeyboardSteering(const Input& input);
+    static BoostInput ReadBoost(const Input& input, bool isEnabled);
+};
+
+// PlayerEntryState
+class Player;
+
+// Player固有の登場演出はまだないため、待ち時間を加えず戦闘へ進む。
+class PlayerEntryState {
+public:
+    void Update(Player& player);
+};
+
+// PlayerBattleState
+class Player;
+
+// 通常操作中の照準・移動・射撃の更新順序を管理する。
+class PlayerBattleState {
+public:
+    void Update(Player& player);
+};
+
+// PlayerDeadState
+class Player;
+
+// 死亡開始時の操作解除と、機体の落下・回転を管理する。
+class PlayerDeadState {
+public:
+    void Enter(Player& player);
+    void Update(Player& player);
+    void UpdateAnimation(EulerTransform& transform, float deltaTimeSeconds);
+    bool IsExplosionReady() const { return isExplosionReady_; }
+    // 落下中は機体を表示し、爆発へ進める状態になったら非表示にする。
+    bool ShouldDraw() const { return !isExplosionReady_; }
+
+private:
+    float deathTimerSeconds_ = 0.0f;
+    float deathFallVelocity_ = 0.0f;
+    bool isExplosionReady_ = false;
+    static constexpr float kDeathFallDurationSeconds = 1.2f;
+};
+
+// Player
+// Playerの姿勢と公開APIを保持し、登場・戦闘・死亡の更新を各Stateへ委譲する。
 
 class Camera;
 class Input;
@@ -85,6 +348,7 @@ public:
     bool IsBoosting() const { return movement_.IsBoosting(); }
     float GetForwardSpeedMultiplier() const { return movement_.GetForwardSpeedMultiplier(); }
     void ResetHomingLock() { weaponController_.ResetHomingLock(); }
+    void BlockFireUntilRelease() { weaponController_.BlockFireUntilRelease(); }
     // 使用クラス：GamePlayScene。キーボード移動とマウス操舵を切り替える。
     void SetControlMode(ControlMode mode);
     // 現在の操作方式を返す。
@@ -170,10 +434,9 @@ private:
     void ClampAimScreenPosition() { aimController_.ClampAimScreenPosition(); }
     void ClampGamepadAimToPlayer(const Vector2& position) { aimController_.ClampGamepadAimToPlayer(position); }
     Vector2 GetGamepadSteeringScreenPosition() const { return aimController_.GetGamepadSteeringScreenPosition(); }
-    void CreateAimRay(Ray& ray, const Camera& camera) const { aimController_.CreateAimRay(ray, camera); }
-    Vector3 CreateConvergencePoint(const Ray& ray) const { return aimController_.CreateConvergencePoint(ray); }
-    void UpdateSmoothedAimDistance(const Camera& camera, float dt) { aimController_.UpdateSmoothedAimDistance(camera, dt); }
-    Vector3 ResolveAimPoint(const Ray& ray) const { return aimController_.ResolveAimPoint(ray); }
+    void UpdateAim(const Camera& camera, float deltaTimeSeconds) { aimController_.Update(camera, deltaTimeSeconds); }
+    Vector3 GetAimPoint(const Camera& camera) const { return aimController_.GetAimPoint(camera); }
+    Vector3 GetAimRayOrigin(const Camera& camera) const { return aimController_.GetAimRayOrigin(camera); }
 
     // 入力方式はパッドを優先し、その他は設定された操作方式を使う。
     using ControlInputType = PlayerInput::ControlInputType;

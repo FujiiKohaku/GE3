@@ -1,6 +1,5 @@
 #include "App/Scene/Gameplay/GamePlayScene.h"
-#include "App/Game/Player/Combat/Bullet/Types/HomingMissileBullet.h"
-#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Player.h"
 #include "App/Game/Stage/StageCatalog.h"
 #include "Engine/Time/TimeManager.h"
 #include "externals/json.hpp"
@@ -16,22 +15,23 @@ public:
 
 bool RunHomingInvalidationTests()
 {
-    PlayerHomingLock lock;
+    Player player;
+    PlayerWeaponController lock(player);
     auto target = std::make_unique<BaseEnemy>();
-    lock.SetTargets({ target.get() });
-    const auto activeTargets = lock.GetTargets();
+    lock.SetHomingTargets({ target.get() });
+    const auto activeTargets = lock.homingTargets_;
     LifecycleTestMissile missile;
     missile.SetTranslate({ 0.0f, 0.0f, 0.0f });
     missile.SetVelocity({ 0.0f, 0.0f, 1.0f });
     missile.SetTarget(target.get(), activeTargets);
     lock.ClearHomingTargets();
-    if (!activeTargets->empty() || !lock.GetLockedTargets().empty()) { return false; }
+    if (!activeTargets->empty() || !lock.lockedTargets_.empty()) { return false; }
     target.reset();
     // 描画を初期化せず実際の追尾処理を通し、削除済み対象を参照しないことを確認する。
     missile.AdvanceMovement();
     if (!missile.IsAlive()) { return false; }
     target = std::make_unique<BaseEnemy>();
-    lock.SetTargets({ target.get() });
+    lock.SetHomingTargets({ target.get() });
     if (activeTargets->size() != 1 || activeTargets->front() != target.get()) { return false; }
     lock.ClearHomingTargets();
     return true;

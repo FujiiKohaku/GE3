@@ -1,13 +1,11 @@
+#include "App/Game/Player/Player.h"
 // チュートリアルの項目順・達成判定・説明文を管理する。画面表示はTutorialCommPanelへ任せる。
 #include "TutorialController.h"
-#include "App/Game/Player/Player.h"
 #include "Engine/Input/Input.h"
 #include "Engine/audio/SoundManager.h"
 #include <algorithm>
 #include <cmath>
 #include <format>
-#include "App/Game/Player/Combat/Weapon/Types/MissilePlayerWeapon.h"
-#include "App/Game/Player/Combat/Weapon/Types/HomingPlayerWeapon.h"
 
 // 先頭の項目へ戻し、プレイヤーの現在状態を使って訓練を開始する。
 void TutorialController::Initialize(const Player& player)
@@ -306,10 +304,10 @@ const std::array<TutorialController::StepData, TutorialController::kStepCount>& 
 {
     static const std::string kMissileInstruction = std::format(
         "ミサイルは、アサルトより一発の威力が高い武器です。\n着弾時に爆発し、周囲の敵も巻き込みます。\n押すたびに発射し、次の一発まで{:g}秒待ちます。\n熱はたまりません。ミサイルで敵を3体倒しましょう。",
-        MissilePlayerWeapon::kFireIntervalSeconds);
+        PlayerWeaponController::kMissileFireIntervalSeconds);
     static const std::string kHomingInstruction = std::format(
         "ホーミングミサイルは、敵を追いかけるミサイルです。\n射撃を長押しして敵を狙い、ロック後に離すと発射。\n爆発せず、直撃した敵だけにダメージを与えます。\n熱はたまらず、発射間隔は{:g}秒。敵を3体倒しましょう。",
-        HomingPlayerWeapon::kFireIntervalSeconds);
+        PlayerWeaponController::kHomingFireIntervalSeconds);
     static const std::array<StepData, kStepCount> steps = {{
         StepData { StepType::Move, "MOVE", "マウスで照準を操作します。\n左右・上下の4方向へ動かしてください。", "左スティックで機体と照準を操作します。\n左右・上下の4方向へ動かしてください。", "", "", { "LS" }, 0, false, "", 180.0f, false },
         StepData { StepType::DefeatTargets, "FIRE", "マウスで照準を合わせ、左クリック長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "左スティックで照準を合わせ、AまたはRT長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "", "", { "A", "RT" }, 3, true, "", 450.0f, false },

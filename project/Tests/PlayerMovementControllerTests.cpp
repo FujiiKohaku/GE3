@@ -38,7 +38,6 @@ struct InputTestAccess {
         input.isGamepadConnected_ = connected;
         input.gamepadButtonsReady_ = ready;
         input.isUsingGamepad_ = connected;
-        input.blockPrimaryFire_ = false;
         input.keys_[DIK_SPACE] = keyboardFire ? 0x80 : 0;
         input.preKeys_[DIK_SPACE] = 0;
     }
@@ -53,13 +52,12 @@ void TestGamepadFireAndDeadZone()
     pad.bRightTrigger = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
     pad.sThumbLX = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;
     InputTestAccess::Set(input, pad);
-    assert(!input.IsPrimaryFirePressed());
+    assert(!input.IsGamepadRightTriggerPressed());
     assert(input.GetGamepadLeftStickX() == 0.0f);
     pad.bRightTrigger++;
     pad.sThumbLX = 32767;
     InputTestAccess::Set(input, pad);
-    assert(input.IsPrimaryFirePressed());
-    assert(input.IsPrimaryFireTrigger());
+    assert(input.IsGamepadRightTriggerPressed());
     assert(std::abs(input.GetGamepadLeftStickX() - 1.0f) < 0.0001f);
     pad.sThumbLY = 32767;
     InputTestAccess::Set(input, pad);
@@ -69,24 +67,18 @@ void TestGamepadFireAndDeadZone()
     XINPUT_GAMEPAD previous = pad;
     pad.wButtons = XINPUT_GAMEPAD_A;
     InputTestAccess::Set(input, pad, previous);
-    assert(input.IsPrimaryFirePressed());
-    assert(!input.IsPrimaryFireTrigger()); // RTを押したままAを追加しても再発射しない。
+    assert(input.IsGamepadButtonPressed(XINPUT_GAMEPAD_A));
     pad.bRightTrigger = 0;
     InputTestAccess::Set(input, pad, previous);
-    assert(input.IsPrimaryFirePressed());
-    assert(!input.IsPrimaryFireTrigger()); // RTを離してもAが残れば長押しを維持する。
-    input.BlockPrimaryFireUntilRelease();
-    assert(!input.IsPrimaryFirePressed());
-    assert(!input.IsPrimaryFireTrigger());
+    assert(input.IsGamepadButtonPressed(XINPUT_GAMEPAD_A));
     InputTestAccess::Set(input, pad, {}, true, false);
     assert(!input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_A));
-    assert(!input.IsPrimaryFirePressed()); // 再接続時の押しっぱなしを無視する。
+    assert(!input.IsGamepadRightTriggerPressed()); // 再接続時の押しっぱなしを無視する。
     InputTestAccess::Set(input, pad, {}, false);
-    assert(!input.IsPrimaryFirePressed());
+    assert(!input.IsGamepadRightTriggerPressed());
     assert(input.GetGamepadLeftStickX() == 0.0f);
     InputTestAccess::Set(input, {}, {}, false, false, true);
-    assert(input.IsPrimaryFirePressed()); // パッドなしでも従来のSpace入力が使える。
-    assert(input.IsPrimaryFireTrigger());
+    assert(input.IsKeyPressed(DIK_SPACE)); // パッドなしでもSpace入力が使える。
     InputTestAccess::Set(input, {});
 }
 

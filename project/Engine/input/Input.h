@@ -2,6 +2,7 @@
 #include "Engine/Winapp/WinApp.h"
 #include <dinput.h>
 #include <xinput.h>
+#include <cstdint>
 #include <memory>
 #include <wrl.h>
 
@@ -32,10 +33,8 @@ public:
     bool IsGamepadRightTriggerPressed() const;
     bool IsUsingGamepad() const { return isUsingGamepad_; }
     bool WasActiveGamepadDisconnected() const { return activeGamepadDisconnected_; }
-    bool IsPrimaryFirePressed() const;
-    bool IsPrimaryFireTrigger() const;
-    void BlockPrimaryFireUntilRelease() { blockPrimaryFire_ = true; }
-    bool IsPrimaryFireBlocked() const { return blockPrimaryFire_; }
+    bool IsForeground() const { return isForeground_; }
+    uint64_t GetFocusLossCount() const { return focusLossCount_; }
     bool IsGamepadPitchInverted() const { return gamepadPitchInverted_; }
     void ToggleGamepadPitchInverted() { gamepadPitchInverted_ = !gamepadPitchInverted_; }
     float GetGamepadAimSensitivity() const { return gamepadAimSensitivity_; }
@@ -79,7 +78,8 @@ private:
     bool isUsingGamepad_ = false;
     bool activeGamepadDisconnected_ = false;
     bool gamepadButtonsReady_ = false;
-    bool blockPrimaryFire_ = false;
+    bool isForeground_ = true;
+    uint64_t focusLossCount_ = 0;
     bool gamepadPitchInverted_ = false;
     float gamepadAimSensitivity_ = 1.0f;
     ULONGLONG lastGamepadDiagnosticsTimeMs_ = 0;

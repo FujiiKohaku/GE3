@@ -1,6 +1,6 @@
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
-#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
+#include "App/Game/Player/Player.h"
 #include "App/Game/Boss/Common/BaseBoss.h"
 #include <cassert>
 #include <type_traits>
@@ -91,8 +91,6 @@ void TestEngineEncapsulation()
 // Callers cannot modify the owning containers through the public getters.
 static_assert(std::is_same_v<decltype(std::declval<const EnemyBulletManager&>().GetBullets()),
     const std::vector<std::unique_ptr<EnemyBullet>>&>);
-static_assert(std::is_same_v<decltype(std::declval<const PlayerHomingLock&>().GetTargets()),
-    std::shared_ptr<const std::vector<CombatTarget*>>>);
 // 敵とボスは独立し、攻撃対象の窓口を共有する。
 static_assert(!std::is_base_of_v<BaseEnemy, BaseBoss>);
 static_assert(std::is_base_of_v<CombatTarget, BaseEnemy>);

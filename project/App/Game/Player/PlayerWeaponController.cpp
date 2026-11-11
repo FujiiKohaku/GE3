@@ -1,20 +1,94 @@
-#include "App/Game/Common/CombatTarget.h"
-// 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
-#include "App/Game/Player/Combat/Weapon/PlayerWeaponController.h"
 #include "App/Game/Player/Player.h"
+#include "Engine/Effect/EffectManager.h"
+#include <cmath>
+#include "App/Game/Common/CombatTarget.h"
+#include "App/Game/Common/GameTiming.h"
+#include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/BaseEnemy.h"
+#include <algorithm>
+#include "Engine/audio/SoundManager.h"
 #include "Engine/Camera/Camera.h"
-#include <functional>
 #include "Engine/3D/ModelManager.h"
 #include "Engine/Input/Input.h"
-#include "Engine/Time/TimeManager.h"
 #include "Engine/CollisionManager/CollisionManager.h"
-#include "Engine/Effect/EffectManager.h"
 #include "Engine/Debug/DebugRenderer.h"
-#include <algorithm>
-#include <cmath>
-#include "Engine/audio/SoundManager.h"
+#include "Engine/Winapp/WinApp.h"
+#include <numbers>
+#include "Engine/math/MatrixMath.h"
+#include "Engine/3D/Object3dManager.h"
+#include <cassert>
 
+// PlayerWeaponController
+// 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
+
+// クールダウンの残り時間を減らし、0未満になった場合は0に揃える。
+void PlayerWeaponController::UpdateCooldowns(float deltaTimeSeconds)
+{
+    missileCooldownRemainingSeconds_ -= deltaTimeSeconds;
+    if (missileCooldownRemainingSeconds_ < 0.0) {
+        missileCooldownRemainingSeconds_ = 0.0;
+    }
+    homingCooldownRemainingSeconds_ -= deltaTimeSeconds;
+    if (homingCooldownRemainingSeconds_ < 0.0) {
+        homingCooldownRemainingSeconds_ = 0.0;
+    }
+}
+
+bool PlayerWeaponController::IsWeaponReady() const
+{
+    constexpr float kCooldownToleranceSeconds = 0.000001f;
+    if (currentWeapon_ == kWeaponMissileBullet) {
+        if (missileCooldownRemainingSeconds_ > kCooldownToleranceSeconds) {
+            return false;
+        }
+        return true;
+    }
+    if (currentWeapon_ == kWeaponHomingMissile) {
+        if (homingCooldownRemainingSeconds_ > kCooldownToleranceSeconds) {
+            return false;
+        }
+        return true;
+    }
+    return true;
+}
+
+bool PlayerWeaponController::TryStartCooldown()
+{
+    if (!IsWeaponReady()) { return false; }
+    if (currentWeapon_ == kWeaponMissileBullet) { missileCooldownRemainingSeconds_ = kMissileFireIntervalSeconds; }
+    if (currentWeapon_ == kWeaponHomingMissile) { homingCooldownRemainingSeconds_ = kHomingFireIntervalSeconds; }
+    return true;
+}
+
+float PlayerWeaponController::GetMissileReloadRatio() const
+{
+    if (IsWeaponReady()) { return 1.0f; }
+    if (currentWeapon_ == kWeaponMissileBullet) {
+        return std::clamp(static_cast<float>(1.0 - missileCooldownRemainingSeconds_ / kMissileFireIntervalSeconds), 0.0f, 1.0f);
+    }
+    return std::clamp(static_cast<float>(1.0 - homingCooldownRemainingSeconds_ / kHomingFireIntervalSeconds), 0.0f, 1.0f);
+}
+
+int PlayerWeaponController::GetRequestedShotCount(bool isHeld, bool isTriggered, float deltaTimeSeconds)
+{
+    if (currentWeapon_ != kWeaponAssault) {
+        if (isTriggered) { return 1; }
+        return 0;
+    }
+    int requestedShotCount = 0;
+    if (isTriggered) {
+        assaultCooldownSeconds_ = 0.0f;
+        ++requestedShotCount;
+    }
+    if (isHeld) {
+        assaultCooldownSeconds_ += deltaTimeSeconds;
+        while (assaultCooldownSeconds_ + 0.000001f >= kAssaultFireIntervalSeconds) {
+            assaultCooldownSeconds_ = (std::max)(0.0f, assaultCooldownSeconds_ - kAssaultFireIntervalSeconds);
+            ++requestedShotCount;
+        }
+    }
+    return requestedShotCount;
+}
 // 機体の姿勢と状態を参照する。参照先のPlayerは、この管理クラスより長く生存する必要がある。
 PlayerWeaponController::PlayerWeaponController(const Player& player)
     : transform_(player.transform_), player_(player)
@@ -35,14 +109,18 @@ void PlayerWeaponController::ResetCombatState()
         bullet->SetDead();
     }
     bullets_.clear();
-    homingLock_.ClearHomingTargets();
-    weaponHeat_ = PlayerWeaponHeat{};
+    ClearHomingTargets();
+    heatRatio_ = 0.0f;
+    isOverheated_ = false;
+    graceRemainingSeconds_ = 0.0f;
     shotsFired_ = 0;
+    isFireBlocked_ = false;
+    wasFireHeld_ = false;
+    lastFocusLossCount_ = 0;
     currentWeapon_ = kWeaponAssault;
-    // 選択されていない武器も作り直し、連射間隔の経過状態を残さない。
-    weapons_ = {
-        std::make_unique<AssaultPlayerWeapon>(), std::make_unique<MissilePlayerWeapon>(),
-        std::make_unique<HomingPlayerWeapon>() };
+    assaultCooldownSeconds_ = 0.0f;
+    missileCooldownRemainingSeconds_ = 0.0;
+    homingCooldownRemainingSeconds_ = 0.0;
 #ifdef _DEBUG
     shouldDrawDebugLines_ = false;
     debugAimRayOrigin_ = {};
@@ -62,54 +140,65 @@ void PlayerWeaponController::SetCamera(Camera* camera)
     }
 }
 
-// 発熱・ロック・機体情報と発射用の呼び出し先を、武器が使う情報へまとめる。
-PlayerWeaponContext PlayerWeaponController::MakeWeaponContext(const Camera* activeCamera)
+void PlayerWeaponController::BlockFireUntilRelease()
 {
-    return { weaponHeat_, homingLock_, camera_,
-        transform_.translate, player_.GetFlightForward(), player_.GetAimScreenPosition(),
-        !player_.IsDead() && bulletModel_ != nullptr && camera_ != nullptr,
-        std::bind(&PlayerWeaponController::FireCurrentCameraBullet, this),
-        std::bind(&PlayerWeaponController::EmitBulletForCamera, this, activeCamera, std::placeholders::_1) };
+    isFireBlocked_ = true;
+    wasFireHeld_ = false;
+    ResetHomingLock();
 }
 
-// 有効なカメラがある場合だけ、現在の武器へ発射を要求する。
-bool PlayerWeaponController::FireCurrentCameraBullet()
+bool PlayerWeaponController::UpdateFireInputState(bool isFireHeld, bool isForeground, uint64_t focusLossCount)
 {
-    if (camera_ == nullptr) { return false; }
-    return FireBullet(*camera_);
+    if (focusLossCount != lastFocusLossCount_) {
+        lastFocusLossCount_ = focusLossCount;
+        BlockFireUntilRelease();
+    }
+    if (!isForeground) {
+        BlockFireUntilRelease();
+        return false;
+    }
+    if (isFireBlocked_) {
+        if (!isFireHeld) {
+            isFireBlocked_ = false;
+        }
+        return false;
+    }
+    const bool isTriggered = isFireHeld && !wasFireHeld_;
+    wasFireHeld_ = isFireHeld;
+    return isTriggered;
 }
-
-// 発射用カメラを選び、指定したロック対象への弾を生成する。
-void PlayerWeaponController::EmitBulletForCamera(const Camera* activeCamera, CombatTarget* target)
-{
-    const Camera* shotCamera = activeCamera;
-    if (shotCamera == nullptr) { shotCamera = camera_; }
-    if (shotCamera != nullptr) { FireSingleBullet(*shotCamera, target); }
-}
-
 // 武器切替・冷却・ミサイル間隔を更新し、選択中の武器へ射撃入力を渡す。
 void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
 {
-    if (input->IsPrimaryFireBlocked()) homingLock_.Reset();
     if (!isDebugMode) UpdateWeaponSwitch(input);
     const float dt = TimeManager::GetInstance()->GetDeltaTime();
-    for (const std::unique_ptr<BasePlayerWeapon>& weapon : weapons_) {
-        weapon->UpdateCooldown(dt);
+    UpdateCooldowns(dt);
+    const bool isHoming = IsHomingMissileSelected();
+    const bool isAssault = currentWeapon_ == kWeaponAssault;
+    if (isDebugMode || !isHoming) ResetHomingLock();
+    const bool canFire = !player_.IsDead() && bulletModel_ != nullptr && camera_ != nullptr && !isDebugMode;
+    const bool isPhysicalFireHeld = input->IsKeyPressed(DIK_SPACE) || input->IsMousePressed(0) ||
+        input->IsGamepadButtonPressed(XINPUT_GAMEPAD_A) || input->IsGamepadRightTriggerPressed();
+    bool isTriggered = UpdateFireInputState(isPhysicalFireHeld, input->IsForeground(), input->GetFocusLossCount());
+    const bool isFireHeld = isPhysicalFireHeld && !isFireBlocked_ && input->IsForeground();
+    UpdateHeat(dt, canFire && isAssault && isFireHeld);
+    if (isHoming) {
+        isTriggered = UpdateHomingFireInput(isFireHeld, canFire && IsWeaponReady(),
+            camera_, transform_.translate, player_.GetFlightForward(), player_.GetAimScreenPosition());
     }
-    BasePlayerWeapon& weapon = GetCurrentWeapon();
-    if (isDebugMode || !weapon.IsHoming()) homingLock_.Reset();
-    auto context = MakeWeaponContext();
-    context.canFire = context.canFire && !isDebugMode;
-    // ミサイル選択中にも共通の熱ゲージは冷却を続ける。
-    weaponHeat_.Update(dt, context.canFire && weapon.UsesHeat() && input->IsPrimaryFirePressed());
-    weapon.Update(context, input->IsPrimaryFirePressed(), input->IsPrimaryFireTrigger(), dt);
+    if (!canFire) { return; }
+    const int requestedShotCount = GetRequestedShotCount(isFireHeld, isTriggered, dt);
+    for (int shotIndex = 0; shotIndex < requestedShotCount; ++shotIndex) {
+        const bool isFired = FireBullet(*camera_);
+        if (isFired && isHoming) { lockedTargets_.clear(); }
+    }
 }
 // 追尾ミサイル選択中だけ、ロック表示に必要な敵の位置を書き出す。
 void PlayerWeaponController::GetHomingLockPositions(std::vector<Vector3>& positions) const
 {
     positions.clear();
     if (IsHomingMissileSelected()) {
-        homingLock_.GetPositions(positions);
+        GetLockedPositions(positions);
     }
 }
 
@@ -130,20 +219,52 @@ void PlayerWeaponController::SubmitRaytracing(DxrRenderer& renderer) {
 // 現在の武器へ発射を要求し、その武器固有の過熱やクールダウン判定を使う。
 bool PlayerWeaponController::FireBullet(const Camera& activeCamera)
 {
-    auto context = MakeWeaponContext(&activeCamera);
-    return GetCurrentWeapon().Fire(context);
+    if (player_.IsDead() || bulletModel_ == nullptr || camera_ == nullptr) { return false; }
+    const bool isAssault = currentWeapon_ == kWeaponAssault;
+    const bool isHoming = IsHomingMissileSelected();
+    if (isAssault && IsOverheated()) { return false; }
+    if (!TryStartCooldown()) { return false; }
+    if (isAssault) {
+        SoundManager::GetInstance()->Play("AssaultShot");
+    } else {
+        SoundManager::GetInstance()->Play("MissileShot");
+    }
+    if (isHoming && !lockedTargets_.empty()) {
+        for (CombatTarget* target : lockedTargets_) {
+            FireSingleBullet(activeCamera, target);
+        }
+    } else {
+        FireSingleBullet(activeCamera, nullptr);
+    }
+    if (isAssault) { AddShotHeat(); }
+    return true;
 }
 // 武器に弾を生成させ、熱量の色・銃口位置・照準方向・機体速度を反映して所有する。
 void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, CombatTarget* homingTarget)
 {
 
     float shotSpeed = bulletSpeed_;
-    auto context = MakeWeaponContext(&activeCamera);
-    std::unique_ptr<PlayerBullet> bullet = GetCurrentWeapon().CreateBullet(
-        bulletModel_, context, homingTarget, shotSpeed);
+    std::unique_ptr<PlayerBullet> bullet;
+    if (currentWeapon_ == kWeaponAssault) {
+        auto assaultBullet = std::make_unique<NormalBullet>();
+        assaultBullet->Initialize(bulletModel_);
+        assaultBullet->SetDamage(GetShotDamage(kAssaultBaseDamage));
+        bullet = std::move(assaultBullet);
+    } else if (currentWeapon_ == kWeaponMissileBullet) {
+        auto missileBullet = std::make_unique<MissileBullet>();
+        shotSpeed = missileBullet->GetSpeed() / 60.0f;
+        missileBullet->Initialize(bulletModel_);
+        bullet = std::move(missileBullet);
+    } else {
+        auto homingBullet = std::make_unique<HomingMissileBullet>();
+        shotSpeed = homingBullet->GetSpeed() / 60.0f;
+        homingBullet->Initialize(bulletModel_);
+        homingBullet->SetTarget(homingTarget, homingTargets_);
+        bullet = std::move(homingBullet);
+    }
     constexpr Vector4 kColdBulletColor = { 0.12f, 0.48f, 1.0f, 1.0f };
     constexpr Vector4 kHotBulletColor = { 0.85f, 0.015f, 0.008f, 1.0f };
-    const float heatRatio = std::clamp(weaponHeat_.GetHeatRatio(), 0.0f, 1.0f);
+    const float heatRatio = std::clamp(GetHeatRatio(), 0.0f, 1.0f);
     const Vector4 bulletColor = {
         kColdBulletColor.x + (kHotBulletColor.x - kColdBulletColor.x) * heatRatio,
         kColdBulletColor.y + (kHotBulletColor.y - kColdBulletColor.y) * heatRatio,
@@ -157,26 +278,18 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 
     bullet->SetTranslate(muzzlePosition);
 
-    Ray aimRay {};
-    // 発射処理で、画面上の照準を3D空間の方向へ変換する。
-    player_.CreateAimRay(aimRay, activeCamera);
-
-    // 銃口から弾を向ける位置を、補間済みの照準距離から求める。
-    Vector3 aimPoint = player_.ResolveAimPoint(aimRay);
+    // 照準更新時に求めた目標点へ銃口を向ける。
+    Vector3 aimPoint = player_.GetAimPoint(activeCamera);
 
 
 #ifdef _DEBUG
     shouldDrawDebugLines_ = true;
-    debugAimRayOrigin_ = aimRay.origin;
+    debugAimRayOrigin_ = player_.GetAimRayOrigin(activeCamera);
     debugAimPoint_ = aimPoint;
     debugMuzzlePosition_ = muzzlePosition;
 
-    Ray drawRay {};
-    // デバッグ描画用に照準レイと狙い位置を求め、発射方向との関係を表示する。
-    player_.CreateAimRay(drawRay, *camera_);
-    Vector3 drawAimPoint = player_.ResolveAimPoint(drawRay);
-    debugDrawRayOrigin_ = drawRay.origin;
-    debugDrawAimPoint_ = drawAimPoint;
+    debugDrawRayOrigin_ = player_.GetAimRayOrigin(*camera_);
+    debugDrawAimPoint_ = player_.GetAimPoint(*camera_);
 #endif
 
     Vector3 bulletDirection = Normalize(aimPoint - muzzlePosition);
@@ -220,7 +333,9 @@ void PlayerWeaponController::UpdateWeaponSwitch(Input* input)
 
 const char* PlayerWeaponController::GetCurrentWeaponName() const
 {
-    return GetCurrentWeapon().GetName();
+    if (currentWeapon_ == kWeaponMissileBullet) { return "ミサイル"; }
+    if (currentWeapon_ == kWeaponHomingMissile) { return "ホーミングミサイル"; }
+    return "アサルト";
 }
 // 所有しているプレイヤー弾を一フレームずつ更新する。
 void PlayerWeaponController::UpdateBullets()
@@ -262,7 +377,7 @@ void PlayerWeaponController::DrawAimDebugLines()
 
 // 発熱と冷却の共通処理。
 // 熱量が高いほど威力を増やす。発射時点の熱量でその弾の威力を決める。
-int PlayerWeaponHeat::GetShotDamage(int baseDamage) const
+int PlayerWeaponController::GetShotDamage(int baseDamage) const
 {
     // 発射時の熱量で威力を確定する。0%で等倍、100%で2倍。
     if (baseDamage <= 0) { return 0; }
@@ -270,7 +385,7 @@ int PlayerWeaponHeat::GetShotDamage(int baseDamage) const
 }
 
 // 連射中の過熱猶予と、射撃停止中・過熱中の冷却を進める。
-void PlayerWeaponHeat::Update(float deltaTimeSeconds, bool isFireHeld)
+void PlayerWeaponController::UpdateHeat(float deltaTimeSeconds, bool isFireHeld)
 {
     if (deltaTimeSeconds <= 0.0f) {
         return;
@@ -302,7 +417,7 @@ void PlayerWeaponHeat::Update(float deltaTimeSeconds, bool isFireHeld)
 }
 
 // アサルト一発分の熱量を加え、満タンになったときの猶予を準備する。
-void PlayerWeaponHeat::AddShotHeat()
+void PlayerWeaponController::AddShotHeat()
 {
     if (isOverheated_) {
         return;
@@ -327,9 +442,9 @@ bool CompareLockCandidates(const LockCandidate& left, const LockCandidate& right
 }
 
 // 現在の候補一覧を共有データへ反映し、弾が対象の生存を確認できるようにする。
-void PlayerHomingLock::SetTargets(const std::vector<CombatTarget*>& targets)
+void PlayerWeaponController::SetHomingTargets(const std::vector<CombatTarget*>& targets)
 {
-    *targets_ = targets;
+    *homingTargets_ = targets;
     for (auto targetIterator = lockedTargets_.begin(); targetIterator != lockedTargets_.end();) {
         if (std::find(targets.begin(), targets.end(), *targetIterator) == targets.end()) {
             targetIterator = lockedTargets_.erase(targetIterator);
@@ -339,38 +454,38 @@ void PlayerHomingLock::SetTargets(const std::vector<CombatTarget*>& targets)
     }
 }
 
-void PlayerHomingLock::ClearHomingTargets()
+void PlayerWeaponController::ClearHomingTargets()
 {
-    targets_->clear();
-    Reset();
+    homingTargets_->clear();
+    ResetHomingLock();
 }
 
 // ロック対象と前回の押下状態を消し、次の射撃入力を新しく受け付ける。
-void PlayerHomingLock::Reset()
+void PlayerWeaponController::ResetHomingLock()
 {
     lockedTargets_.clear();
-    wasFireHeld_ = false;
+    wasHomingFireHeld_ = false;
 }
 
 // 押下中のロック更新と、ボタンを離した瞬間の発射要求を判定する。
-bool PlayerHomingLock::UpdateFireInput(bool isFireHeld, bool isEnabled, Camera* camera,
+bool PlayerWeaponController::UpdateHomingFireInput(bool isFireHeld, bool isEnabled, Camera* camera,
     const Vector3& position, const Vector3& forward, const Vector2& aimPosition)
 {
     if (!isEnabled) {
-        Reset();
+        ResetHomingLock();
         return false;
     }
-    if (isFireHeld && !wasFireHeld_) {
-        ClearTargets();
+    if (isFireHeld && !wasHomingFireHeld_) {
+        lockedTargets_.clear();
     }
-    UpdateTargets(isFireHeld, camera, position, forward, aimPosition);
-    const bool shouldFire = !isFireHeld && wasFireHeld_ && camera != nullptr;
-    wasFireHeld_ = isFireHeld;
+    UpdateHomingTargets(isFireHeld, camera, position, forward, aimPosition);
+    const bool shouldFire = !isFireHeld && wasHomingFireHeld_ && camera != nullptr;
+    wasHomingFireHeld_ = isFireHeld;
     return shouldFire;
 }
 
 // 前方距離と画面上の照準との近さを調べ、条件を満たす敵を上限数までロックする。
-void PlayerHomingLock::UpdateTargets(bool isLocking, Camera* camera,
+void PlayerWeaponController::UpdateHomingTargets(bool isLocking, Camera* camera,
     const Vector3& position, const Vector3& forward, const Vector2& aimPosition)
 {
     if (!isLocking ||
@@ -381,7 +496,7 @@ void PlayerHomingLock::UpdateTargets(bool isLocking, Camera* camera,
     const std::size_t previousLockCount = lockedTargets_.size();
     constexpr float kLockRadiusPixels = 120.0f;
     std::vector<LockCandidate> candidates;
-    for (CombatTarget* enemy : *targets_) {
+    for (CombatTarget* enemy : *homingTargets_) {
         if (enemy == nullptr || enemy->IsDead()) {
             continue;
         }
@@ -419,7 +534,7 @@ void PlayerHomingLock::UpdateTargets(bool isLocking, Camera* camera,
 }
 
 // 生存中のロック対象の位置を集め、画面のロックマーカー表示に使う。
-void PlayerHomingLock::GetPositions(std::vector<Vector3>& positions) const
+void PlayerWeaponController::GetLockedPositions(std::vector<Vector3>& positions) const
 {
     positions.clear();
     for (CombatTarget* target : lockedTargets_) {
@@ -428,3 +543,4 @@ void PlayerHomingLock::GetPositions(std::vector<Vector3>& positions) const
         }
     }
 }
+

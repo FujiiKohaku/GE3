@@ -502,7 +502,6 @@ void GamePlayScene::Initialize()
     if (renderer != nullptr) {
         renderer->PrepareDlaaForGameplay();
     }
-    Input::GetInstance()->BlockPrimaryFireUntilRelease();
     SoundManager::GetInstance()->RegisterSounds({
         { "MissileShot", "resources/Audio/GameSfx/player_missile_shot.wav", 0.30f, 0.12f },
         { "AssaultShot", "resources/Audio/GameSfx/player_minigun_shot.wav", 0.13f, 0.10f },
@@ -746,7 +745,7 @@ void GamePlayScene::Initialize()
         "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
         "resources/Shaders/Sprite/WeaponReticle/Sprite.PS.hlsl");
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite size");
-    aimSprite_->SetSize({ 128.0f, 128.0f });
+    aimSprite_->SetSize(PlayerAimController::kReticleSizeUi);
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite anchor");
     aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite position");
@@ -1144,6 +1143,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Starting player initialization");
     player_ = std::make_unique<Player>();
     player_->Initialize(playerModel);
+    player_->BlockFireUntilRelease();
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
     player_->SetControlMode(gControlMode);
@@ -1489,8 +1489,7 @@ void GamePlayScene::Update()
             tutorialController_.NotifyManualPauseOpened();
         }
         ChangePauseState(PauseViewState::Menu);
-        input->BlockPrimaryFireUntilRelease();
-        if (player_) player_->ResetHomingLock();
+        if (player_) player_->BlockFireUntilRelease();
     }
 
     SceneManager::GetInstance()->SetPauseMenuOpen(isPaused_);
@@ -3512,8 +3511,7 @@ bool GamePlayScene::UpdateTutorialPresentation()
         railDistance_ >= tutorialGateDistance_;
     if (tutorialExitTime_ < 0.0f && (skip || (!isPaused_ && reachedGate))) {
         tutorialExitTime_ = 0.0f;
-        input->BlockPrimaryFireUntilRelease();
-        if (player_) player_->ResetHomingLock();
+        if (player_) player_->BlockFireUntilRelease();
     }
     if (tutorialExitTime_ < 0.0f) {
         if (isPaused_) return false;
@@ -3544,7 +3542,7 @@ bool GamePlayScene::UpdateTutorialPresentation()
             hasCameraFollowState_ = true;
             for (auto& object : levelObjects_) object->Update();
             if (player_) player_->SetTranslate(player_->GetTranslate());
-            Input::GetInstance()->BlockPrimaryFireUntilRelease();
+            if (player_) player_->BlockFireUntilRelease();
             if (player_) player_->ConstrainGamepadAimToPlayer();
             return true;
         }
@@ -3660,8 +3658,7 @@ PauseStateContext GamePlayScene::MakePauseContext()
     context.menuActions = {
         [this]() {
             SetPaused(false);
-            Input::GetInstance()->BlockPrimaryFireUntilRelease();
-            if (player_) player_->ResetHomingLock();
+            if (player_) player_->BlockFireUntilRelease();
             SoundManager::GetInstance()->Play("PauseToggle");
         },
         [this]() {

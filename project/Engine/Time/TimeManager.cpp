@@ -33,8 +33,14 @@ void TimeManager::Update()
         std::chrono::duration<float>(currentTime - previousTime_).count();
     previousTime_ = currentTime;
 
-    unscaledDeltaTime_ = std::clamp(measuredDeltaTime, 0.0f, maxDeltaTime_);
+    unscaledDeltaTime_ = 0.0f;
+    if (std::isfinite(measuredDeltaTime) && measuredDeltaTime >= 0.0f) {
+        unscaledDeltaTime_ = std::clamp(measuredDeltaTime, 0.0f, maxDeltaTime_);
+    }
     deltaTime_ = unscaledDeltaTime_ * timeScale_;
+    if (!std::isfinite(deltaTime_) || deltaTime_ < 0.0f) {
+        deltaTime_ = 0.0f;
+    }
     unscaledTotalTime_ += static_cast<double>(unscaledDeltaTime_);
     totalTime_ += static_cast<double>(deltaTime_);
     ++frameCount_;

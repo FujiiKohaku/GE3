@@ -10,6 +10,7 @@ public:
     void Initialize();
     void Update();
 
+    // フレーム時間は有限かつ0以上。不正な値は0として扱う。
     float GetDeltaTime() const { return deltaTime_; }
     float GetUnscaledDeltaTime() const { return unscaledDeltaTime_; }
     float GetTimeScale() const { return timeScale_; }

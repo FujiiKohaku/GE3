@@ -1085,7 +1085,6 @@ void TitleScene::InitializeTutorialAnimation()
 {
     StartupTimingScope startupScope("Title.TutorialAnimation");
     SoundManager::GetInstance()->Play("UiConfirm");
-    Input::GetInstance()->BlockPrimaryFireUntilRelease();
     simulationStartEye_ = camera_->GetTranslate();
     animationTime_ = 0.0f;
     stageTransitionQueued_ = false;
