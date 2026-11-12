@@ -422,8 +422,6 @@ public:
     void DrawShadow(ShadowMapRenderer& renderer);
     // デバッグビルドでHP・武器・熱量を表示する。
     void DrawImGui();
-    bool IsAimDistanceSmoothingEnabled() const { return shotPointCalculator_.IsAimDistanceSmoothingEnabled(); }
-    void SetAimDistanceSmoothingEnabled(bool isEnabled) { shotPointCalculator_.SetAimDistanceSmoothingEnabled(isEnabled); }
 
 private:
     friend class PlayerWeaponController;
@@ -452,8 +450,8 @@ private:
     void UpdateAim(const Camera& camera, float deltaTimeSeconds) {
         shotPointCalculator_.Update(camera, GetAimScreenPosition(), deltaTimeSeconds);
     }
-    Vector3 GetAimPoint(const Camera& camera) const { return shotPointCalculator_.GetAimPoint(camera, GetAimScreenPosition()); }
-    Vector3 GetAimRayOrigin(const Camera& camera) const { return shotPointCalculator_.GetAimRayOrigin(camera, GetAimScreenPosition()); }
+    Vector3 GetAimPoint() const { return shotPointCalculator_.GetAimPoint(); }
+    Vector3 GetAimRayOrigin() const { return shotPointCalculator_.GetAimRayOrigin(); }
 
     // 入力方式はパッドを優先し、その他は設定された操作方式を使う。
     using ControlInputType = PlayerInput::ControlInputType;

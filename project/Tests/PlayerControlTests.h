@@ -23,7 +23,7 @@ struct InputTestAccess {
     }
 };
 
-// 照準の保持値と、カメラ変更時の再計算が同じ距離を使うことを確認する。
+// カメラを変更しても、次のUpdateまでは保存済みの狙い先を返すことを確認する。
 inline bool RunAimPointCacheTests()
 {
     PlayerReticleController aim;
@@ -31,17 +31,17 @@ inline bool RunAimPointCacheTests()
     Camera camera;
     aim.InitializeAim();
     shotPointCalculator.Initialize();
-    const Vector3 initialAimPoint = shotPointCalculator.GetAimPoint(camera, aim.GetAimScreenPosition());
     shotPointCalculator.Update(camera, aim.GetAimScreenPosition(), 0.0f);
-    const Vector3 cachedAimPoint = shotPointCalculator.GetAimPoint(camera, aim.GetAimScreenPosition());
-    if (Vector3LengthSquared(cachedAimPoint - initialAimPoint) > 0.0001f) { return false; }
+    const Vector3 cachedAimPoint = shotPointCalculator.GetAimPoint();
+    const Vector3 cachedRayOrigin = shotPointCalculator.GetAimRayOrigin();
 
     camera.SetProjectionJitter({ 0.1f, 0.0f });
-    const Vector3 changedAimPoint = shotPointCalculator.GetAimPoint(camera, aim.GetAimScreenPosition());
-    if (Vector3LengthSquared(changedAimPoint - cachedAimPoint) < 0.0001f) { return false; }
+    const Vector3 changedAimPoint = shotPointCalculator.GetAimPoint();
+    if (Vector3LengthSquared(changedAimPoint - cachedAimPoint) > 0.0001f) { return false; }
+    if (Vector3LengthSquared(shotPointCalculator.GetAimRayOrigin() - cachedRayOrigin) > 0.0001f) { return false; }
     shotPointCalculator.Update(camera, aim.GetAimScreenPosition(), 0.0f);
-    const Vector3 updatedAimPoint = shotPointCalculator.GetAimPoint(camera, aim.GetAimScreenPosition());
-    return Vector3LengthSquared(updatedAimPoint - changedAimPoint) <= 0.0001f;
+    const Vector3 updatedAimPoint = shotPointCalculator.GetAimPoint();
+    return Vector3LengthSquared(updatedAimPoint - cachedAimPoint) > 0.0001f;
 }
 
 inline bool RunPlayerControlTests()

@@ -1468,16 +1468,6 @@ void GamePlayScene::Update()
     if (UpdateTutorialPresentation()) return;
     // TABキーによるポーズメニュー（Pause Menu）切り替え
     Input* input = Input::GetInstance();
-    // Releaseでも照準距離の補間を切り替え、弾道の違いを比較できるようにする。
-    if (input != nullptr && player_ != nullptr && input->IsKeyTrigger(DIK_F3)) {
-        const bool isAimDistanceSmoothingEnabled = !player_->IsAimDistanceSmoothingEnabled();
-        player_->SetAimDistanceSmoothingEnabled(isAimDistanceSmoothingEnabled);
-        if (isAimDistanceSmoothingEnabled) {
-            Logger::Log("Aim distance smoothing: ON");
-        } else {
-            Logger::Log("Aim distance smoothing: OFF");
-        }
-    }
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
     if (input != nullptr && input->IsKeyTrigger(DIK_F6)) {
         developmentPaused_ = !developmentPaused_;
@@ -4136,7 +4126,6 @@ nlohmann::json GamePlayScene::GetDevelopmentControls() const
         {{"key", "spotAngleDeg"}, {"label", "角度（度）"}, {"group", "スポットライト"}, {"type", "number"}, {"minimum", 2}, {"maximum", 90}, {"step", 1}},
         {{"key", "spotFalloffStartDeg"}, {"label", "減衰開始角（度）"}, {"group", "スポットライト"}, {"type", "number"}, {"minimum", 1}, {"maximum", 89}, {"step", 1}},
         {{"key", "invincibleMode"}, {"label", "無敵モード"}, {"type", "bool"}, {"group", "操作"}},
-        {{"key", "aimDistanceSmoothing"}, {"label", "照準距離の補間"}, {"type", "bool"}, {"group", "操作"}},
         {{"key", "freeCamera"}, {"label", "自由カメラ"}, {"type", "bool"}, {"group", "操作"}},
         {{"key", "paused"}, {"label", "一時停止"}, {"type", "bool"}, {"group", "操作"}},
         {{"key", "cameraSpeed"}, {"label", "自由カメラ速度"}, {"type", "number"}, {"minimum", 0.01}, {"maximum", 1000}, {"step", 0.1}, {"group", "操作"}},
@@ -4218,7 +4207,6 @@ nlohmann::json GamePlayScene::GetDevelopmentState() const
         { "cameraSpeed", debugCameraController_->GetMoveSpeed() },
         { "paused", developmentPaused_ },
         { "invincibleMode", player_->IsInvincibleMode() },
-        { "aimDistanceSmoothing", player_->IsAimDistanceSmoothingEnabled() },
         { "playerHp", player_->GetCurrentHp() },
         { "playerMaxHp", player_->GetMaxHp() },
         { "showRail", showRailDebug_ },
@@ -4309,7 +4297,6 @@ std::string GamePlayScene::GetDevelopmentStateJson() const
 // 指定されたキーと値を調べ、対応する検証用設定や操作へ反映する。
 bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::string& value)
 {
-    if (key == "aimDistanceSmoothing" && value != "true" && value != "false") { return false; }
     if ((key == "invincibleMode" || key == "lightEnabled" || key == "pointEnabled" || key == "spotEnabled" || key == "freeCamera" || key == "paused" || key == "showRail" || key == "showCollision" || key == "showPlayer" || key == "showEnemy" || key == "showStage" || key == "showBullet" || key == "showIce" || key == "collisionOverlay") && value != "true" && value != "false") { return false; }
     const bool isEnabled = value == "true";
     if (key == "invincibleMode") {
@@ -4494,7 +4481,6 @@ bool GamePlayScene::ApplyDevelopmentAction(const std::string& key, const std::st
 #undef SET_LIGHT
 #undef SET_VALUE
     }
-    if (key == "aimDistanceSmoothing") player_->SetAimDistanceSmoothingEnabled(isEnabled);
     else if (key == "freeCamera") debugCameraController_->SetDebugMode(isEnabled);
     else if (key == "returnCamera") debugCameraController_->SetDebugMode(false);
     else if (key == "cameraSpeed") {

@@ -1043,10 +1043,6 @@ void Player::DrawImGui()
     ImGui::Text("HP: %d / %d", GetCurrentHp(), GetMaxHp());
     ImGui::Text("Weapon: %s", weaponController_.GetCurrentWeaponName());
     ImGui::Text("Heat: %.2f", weaponController_.GetHeatRatio());
-    bool isAimDistanceSmoothingEnabled = shotPointCalculator_.IsAimDistanceSmoothingEnabled();
-    if (ImGui::Checkbox("Aim Distance Smoothing", &isAimDistanceSmoothingEnabled)) {
-        shotPointCalculator_.SetAimDistanceSmoothingEnabled(isAimDistanceSmoothingEnabled);
-    }
     ImGui::Text("Aim distance: %.2f", shotPointCalculator_.GetAimDistance());
     ImGui::End();
 #endif
@@ -1151,7 +1147,7 @@ Vector3 Player::GetNearAimPoint(const Camera& activeCamera) const
     constexpr float kNearAimDistance = 45.0f;
     constexpr float kMinAimDistance = 0.0001f;
     const Vector3 muzzlePosition = weaponController_.CalculateMuzzlePosition();
-    const Vector3 aimOffset = GetAimPoint(activeCamera) - muzzlePosition;
+    const Vector3 aimOffset = GetAimPoint() - muzzlePosition;
     const float aimDistance = Vector3Length(aimOffset);
     if (aimDistance <= kMinAimDistance) { return muzzlePosition; }
     const float nearDistance = (std::min)(kNearAimDistance, aimDistance * 0.5f);
@@ -1175,11 +1171,10 @@ void Player::UpdateAfterCamera(const Camera& activeCamera, float deltaTimeSecond
     shouldUpdateWeaponsAfterCamera_ = false;
     Input* input = Input::GetInstance();
     if (input == nullptr) { return; }
-    const Vector3 forwardPoint = shotPointCalculator_.CalculateForwardPoint(
-        transform_.translate, GetDirectGamepadAimDirection());
+    const Vector3 forwardPoint = transform_.translate +
+        GetDirectGamepadAimDirection() * PlayerShotPointCalculator::GetAimConvergenceDistance();
     reticleController_.UpdateFromWorldPoint(activeCamera, forwardPoint);
-    shotPointCalculator_.UpdateFromWorldPoint(activeCamera, GetAimScreenPosition(),
-        forwardPoint, deltaTimeSeconds);
+    shotPointCalculator_.Update(activeCamera, GetAimScreenPosition(), deltaTimeSeconds);
     ApplyTransform();
     object_->Update();
     weaponController_.UpdateInput(input, false);

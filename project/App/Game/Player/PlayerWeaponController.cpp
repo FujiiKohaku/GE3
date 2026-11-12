@@ -280,17 +280,17 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
     bullet->SetTranslate(muzzlePosition);
 
     // 照準更新時に求めた目標点へ銃口を向ける。
-    Vector3 aimPoint = player_.GetAimPoint(activeCamera);
+    Vector3 aimPoint = player_.GetAimPoint();
 
 
 #ifdef _DEBUG
     shouldDrawDebugLines_ = true;
-    debugAimRayOrigin_ = player_.GetAimRayOrigin(activeCamera);
+    debugAimRayOrigin_ = player_.GetAimRayOrigin();
     debugAimPoint_ = aimPoint;
     debugMuzzlePosition_ = muzzlePosition;
 
-    debugDrawRayOrigin_ = player_.GetAimRayOrigin(*camera_);
-    debugDrawAimPoint_ = player_.GetAimPoint(*camera_);
+    debugDrawRayOrigin_ = player_.GetAimRayOrigin();
+    debugDrawAimPoint_ = player_.GetAimPoint();
 #endif
 
     Vector3 bulletDirection = Normalize(aimPoint - muzzlePosition);
