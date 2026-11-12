@@ -1034,6 +1034,11 @@ void Player::DrawImGui()
     ImGui::Text("HP: %d / %d", GetCurrentHp(), GetMaxHp());
     ImGui::Text("Weapon: %s", weaponController_.GetCurrentWeaponName());
     ImGui::Text("Heat: %.2f", weaponController_.GetHeatRatio());
+    bool isAimDistanceSmoothingEnabled = aimController_.IsAimDistanceSmoothingEnabled();
+    if (ImGui::Checkbox("Aim Distance Smoothing", &isAimDistanceSmoothingEnabled)) {
+        aimController_.SetAimDistanceSmoothingEnabled(isAimDistanceSmoothingEnabled);
+    }
+    ImGui::Text("Aim distance: %.2f", aimController_.GetAimDistance());
     ImGui::End();
 #endif
 }

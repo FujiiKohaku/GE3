@@ -412,6 +412,8 @@ public:
     void DrawShadow(ShadowMapRenderer& renderer);
     // デバッグビルドでHP・武器・熱量を表示する。
     void DrawImGui();
+    bool IsAimDistanceSmoothingEnabled() const { return aimController_.IsAimDistanceSmoothingEnabled(); }
+    void SetAimDistanceSmoothingEnabled(bool isEnabled) { aimController_.SetAimDistanceSmoothingEnabled(isEnabled); }
 
 private:
     friend class PlayerWeaponController;

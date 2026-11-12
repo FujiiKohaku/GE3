@@ -17,6 +17,9 @@ public:
     Vector2 GetGamepadSteeringScreenPosition() const;
     const Vector2& GetAimScreenPosition() const { return aimScreenPosition_; }
     void Update(const Camera& activeCamera, float deltaTimeSeconds);
+    bool IsAimDistanceSmoothingEnabled() const { return isAimDistanceSmoothingEnabled_; }
+    void SetAimDistanceSmoothingEnabled(bool isEnabled) { isAimDistanceSmoothingEnabled_ = isEnabled; }
+    float GetAimDistance() const { return smoothedAimDistance_; }
     Vector3 GetAimPoint(const Camera& activeCamera) const;
     Vector3 GetAimRayOrigin(const Camera& activeCamera) const;
 
@@ -30,6 +33,7 @@ private:
     Vector2 gamepadAimOffset_ = {};
     Vector2 gamepadAimAnchor_ = {};
     bool hasGamepadAimAnchor_ = false;
+    bool isAimDistanceSmoothingEnabled_ = true;
     float smoothedAimDistance_ = kAimConvergenceDistance;
     Vector3 aimPoint_ {};
     Vector3 aimRayOrigin_ {};

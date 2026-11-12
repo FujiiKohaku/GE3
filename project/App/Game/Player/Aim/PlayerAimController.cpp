@@ -202,8 +202,12 @@ void PlayerAimController::Update(const Camera& activeCamera, float deltaTimeSeco
 
     // 対象が切り替わっても弾の収束位置が急変しないよう、奥行きだけを補間する。
     // 経過秒数から追従率を求め、フレームレートによる追従速度の差を抑える。
-    const float followRate = 1.0f - std::exp(-kAimDistanceFollowSpeed * deltaTimeSeconds);
-    smoothedAimDistance_ += (targetDistance - smoothedAimDistance_) * followRate;
+    if (isAimDistanceSmoothingEnabled_) {
+        const float followRate = 1.0f - std::exp(-kAimDistanceFollowSpeed * deltaTimeSeconds);
+        smoothedAimDistance_ += (targetDistance - smoothedAimDistance_) * followRate;
+    } else {
+        smoothedAimDistance_ = targetDistance;
+    }
     aimRayOrigin_ = aimRay.origin;
     aimPoint_ = aimRay.origin + aimRay.direction * smoothedAimDistance_;
     aimCamera_ = &activeCamera;
