@@ -64,7 +64,7 @@ inline bool RunPlayerControlTests()
     PlayerTestAccess::UpdateSteering(expected, player.GetAimScreenPosition(), screen, false, 0.016f);
     steering = PlayerTestAccess::GetControlSteering(player, input, screen, false, 0.016f);
     if (std::abs(steering.x - expected.GetStarFoxSteeringInput().x) > 0.0001f
-        || PlayerTestAccess::GetControlRailResponse(player, input, screen, false, 0.016f) != 2.75f) { return false; }
+        || PlayerTestAccess::GetControlRailResponse(player, input, screen, false, 0.016f) != 1.5f) { return false; }
     PlayerTestAccess::InitializeAim(player);
     InputTestAccess::Setup(input, true, false, false, 32767);
     PlayerTestAccess::UpdateAimFromInput(player, input, 0.1f);

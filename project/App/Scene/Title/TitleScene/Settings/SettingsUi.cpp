@@ -102,14 +102,23 @@ void SettingsUi::Update(const Input* input, float settingsAmount, float titleOff
         settingsShortcutText_->SetText("S  SETTINGS");
         settingsBackText_->SetText("BACKSPACE / S  BACK");
     }
-    if (isGamepad) {
-        std::string pitchLabel = "NORMAL";
-        if (input->IsGamepadPitchInverted()) { pitchLabel = "INVERTED"; }
-        settingsItemsText_->SetText("PAD PITCH: " + pitchLabel
-            + " [A / D-PAD]\n\nLS AIM / A,RT FIRE\n\nX BOOST / Y BRAKE");
-    } else {
-        settingsItemsText_->SetText("DISPLAY\n\nAUDIO\n\nCONTROLS\n\nACCESSIBILITY");
+    std::string styleLabel = "EX-ZODIAC";
+    std::string movementLabel = "LS MOVE / A,RT FIRE";
+    if (input->GetGamepadControlStyle() == Input::GamepadControlStyle::Legacy) {
+        styleLabel = "LEGACY";
+        movementLabel = "LS AIM / A,RT FIRE";
     }
+    std::string pitchLabel = "NORMAL";
+    if (input->IsGamepadPitchInverted()) { pitchLabel = "INVERTED"; }
+    std::string styleShortcut = " [C]";
+    std::string pitchShortcut = " [P]";
+    if (isGamepad) {
+        styleShortcut = " [LB / RB]";
+        pitchShortcut = " [A / D-PAD]";
+    }
+    settingsItemsText_->SetText("PAD STYLE: " + styleLabel + styleShortcut +
+        "\n\nPAD PITCH: " + pitchLabel + pitchShortcut +
+        "\n\n" + movementLabel + "\nX BOOST / Y BRAKE");
     settingsShortcutText_->SetPosition(
         { kSettingsShortcutBaseX + titleOffset * kSettingsShortcutExitOffsetScale, kSettingsShortcutY });
     settingsShortcutText_->SetColor(

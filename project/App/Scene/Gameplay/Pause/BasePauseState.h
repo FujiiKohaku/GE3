@@ -11,7 +11,7 @@ inline constexpr int kDefaultGifRecordingSeconds = 5;
 inline constexpr float kDefaultCameraFovDegrees = 25.783f;
 }
 
-enum class PauseViewState { Menu, Settings, Camera, Graphics };
+enum class PauseViewState { Menu, Settings, Camera, Graphics, Controller };
 struct PauseStateInput {
     bool up = false, down = false, left = false, right = false;
     bool back = false, confirm = false;
@@ -30,6 +30,7 @@ struct PauseStateContext {
     std::function<void(float)> adjustCameraFov;
     std::function<void(int)> cycleAntiAliasing;
     std::function<void(int)> cycleRenderQuality;
+    std::function<void()> toggleGamepadStyle;
 };
 struct PauseDisplayInput {
     int selection;
@@ -45,6 +46,7 @@ struct PauseDisplayInput {
     std::string antiAliasing = "OFF";
     std::string renderQuality = "カスタム";
     std::string dlaaStatus;
+    std::string gamepadControlStyle = "EX-ZODIAC風";
 };
 struct PauseDisplay {
     std::string title;

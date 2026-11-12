@@ -10,7 +10,53 @@
 #include <cmath>
 #include <cstring>
 #include <sstream>
+#include <filesystem>
+#include <fstream>
+#include "externals/json.hpp"
 std::unique_ptr<Input> Input::instance_ = nullptr;
+
+namespace {
+constexpr const char* kControllerSettingsPath = "generated/settings/controller.json";
+}
+
+const char* Input::GetGamepadControlStyleName() const
+{
+    if (gamepadControlStyle_ == GamepadControlStyle::Legacy) { return "既存操作"; }
+    return "EX-ZODIAC風";
+}
+
+void Input::LoadGamepadControlStyle()
+{
+    std::ifstream settingsFile(kControllerSettingsPath);
+    if (!settingsFile) { return; }
+    const auto settings = nlohmann::json::parse(settingsFile, nullptr, false);
+    if (!settings.is_object() || !settings.contains("gamepadControlStyle") ||
+        !settings["gamepadControlStyle"].is_string()) { return; }
+    const std::string style = settings["gamepadControlStyle"].get<std::string>();
+    if (style == "legacy") { gamepadControlStyle_ = GamepadControlStyle::Legacy; }
+    if (style == "exZodiac") { gamepadControlStyle_ = GamepadControlStyle::ExZodiac; }
+}
+
+void Input::ToggleGamepadControlStyle()
+{
+    std::string style = "exZodiac";
+    if (gamepadControlStyle_ == GamepadControlStyle::ExZodiac) {
+        gamepadControlStyle_ = GamepadControlStyle::Legacy;
+        style = "legacy";
+    } else {
+        gamepadControlStyle_ = GamepadControlStyle::ExZodiac;
+    }
+    std::error_code directoryError;
+    std::filesystem::create_directories("generated/settings", directoryError);
+    if (directoryError) {
+        Logger::Warning("Controller settings directory could not be created");
+        return;
+    }
+    std::ofstream settingsFile(kControllerSettingsPath);
+    settingsFile << nlohmann::json({ { "gamepadControlStyle", style } }).dump(2);
+    settingsFile.close();
+    if (!settingsFile) { Logger::Warning("Controller settings could not be saved"); }
+}
 
 
 Input* Input::GetInstance()
@@ -33,6 +79,7 @@ bool Input::Initialize(WinApp* winApp)
     HRESULT result;
 
     winApp_ = winApp;
+    LoadGamepadControlStyle();
 
     result = DirectInput8Create(
         winApp_->GetHinstance(),

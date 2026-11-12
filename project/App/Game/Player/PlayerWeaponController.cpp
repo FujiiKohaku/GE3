@@ -34,6 +34,7 @@ void PlayerWeaponController::UpdateCooldowns(float deltaTimeSeconds)
     }
 }
 
+// 選択中の武器が発射可能かどうかを返す。クールダウン中はfalse。
 bool PlayerWeaponController::IsWeaponReady() const
 {
     constexpr float kCooldownToleranceSeconds = 0.000001f;
@@ -52,17 +53,16 @@ bool PlayerWeaponController::IsWeaponReady() const
     return true;
 }
 
-bool PlayerWeaponController::TryStartCooldown()
+// 発射後に、選択中の武器のクールダウンを開始する。
+void PlayerWeaponController::StartCooldown()
 {
-    if (!IsWeaponReady()) { return false; }
     if (currentWeapon_ == kWeaponMissileBullet) { missileCooldownRemainingSeconds_ = kMissileFireIntervalSeconds; }
     if (currentWeapon_ == kWeaponHomingMissile) { homingCooldownRemainingSeconds_ = kHomingFireIntervalSeconds; }
-    return true;
 }
 
 float PlayerWeaponController::GetMissileReloadRatio() const
 {
-    if (IsWeaponReady()) { return 1.0f; }
+    if (IsWeaponReady()) { return 1.0f; }       
     if (currentWeapon_ == kWeaponMissileBullet) {
         return std::clamp(static_cast<float>(1.0 - missileCooldownRemainingSeconds_ / kMissileFireIntervalSeconds), 0.0f, 1.0f);
     }
@@ -223,7 +223,7 @@ bool PlayerWeaponController::FireBullet(const Camera& activeCamera)
     const bool isAssault = currentWeapon_ == kWeaponAssault;
     const bool isHoming = IsHomingMissileSelected();
     if (isAssault && IsOverheated()) { return false; }
-    if (!TryStartCooldown()) { return false; }
+    if (!IsWeaponReady()) { return false; }
     if (isAssault) {
         SoundManager::GetInstance()->Play("AssaultShot");
     } else {
@@ -236,6 +236,7 @@ bool PlayerWeaponController::FireBullet(const Camera& activeCamera)
     } else {
         FireSingleBullet(activeCamera, nullptr);
     }
+    StartCooldown();
     if (isAssault) { AddShotHeat(); }
     return true;
 }

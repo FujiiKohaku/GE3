@@ -15,9 +15,15 @@ void SettingsState::HandleInput(TitleScene& scene, const Input& input) const
         return;
     }
     if (input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_A) ||
+        input.IsKeyTrigger(DIK_P) ||
         input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT) ||
         input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT)) {
         Input::GetInstance()->ToggleGamepadPitchInverted();
+    }
+    if (input.IsKeyTrigger(DIK_C) ||
+        input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER) ||
+        input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
+        Input::GetInstance()->ToggleGamepadControlStyle();
     }
 }
 

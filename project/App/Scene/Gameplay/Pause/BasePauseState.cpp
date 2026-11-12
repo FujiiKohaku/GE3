@@ -56,14 +56,14 @@ public:
         else if (input.confirm) Activate(context);
     }
     void Activate(PauseStateContext& context) const override {
+        if (context.selection == 0) context.changeState(PauseViewState::Controller, 0);
         if (context.selection == 1) context.togglePitch();
         if (context.selection == 3) context.changeState(PauseViewState::Graphics, 0);
     }
     void AdjustSensitivity(PauseStateContext& context, float amount) const override {
-        if (context.selection == 0) context.adjustPad(amount);
-        else if (context.selection == 2) context.adjustMouse(amount);
+        if (context.selection == 2) context.adjustMouse(amount);
     }
-    bool HasSensitivityControls(int row) const override { return row == 0 || row == 2; }
+    bool HasSensitivityControls(int row) const override { return row == 2; }
     void HandleControlToggle(PauseStateContext& context, bool triggered) const override {
         if (triggered) context.toggleControl();
     }
@@ -73,10 +73,43 @@ public:
             "↑↓: 選択 / ←→: 感度 / ENTER: 決定\nC: マウス操作切替 / ESC: 戻る" };
         display.hint += "\nGIF録画時間: " + std::to_string(input.gifRecordingSeconds) + "秒（5 / 10 / 15 / 30秒）";
         display.hint += "\nF7: 短く / F8: 長く / F9: 録画・停止";
-        display.rows = { "PAD AIM: " + std::to_string(static_cast<int>(input.padSensitivity * 100.0f + 0.5f)) + "%",
+        display.rows = { "コントローラー設定",
             std::string("PAD PITCH: ") + (input.invertedPitch ? "INVERTED" : "NORMAL"),
             "MOUSE: " + std::to_string(static_cast<int>(input.mouseSensitivity * 100.0f + 0.5f)) + "%",
             input.gamepad ? "映像設定 [A]" : "映像設定 [ENTER]" };
+        if (input.selection >= 0 && input.selection < 4) display.rows[input.selection].insert(0, "> ");
+        return display;
+    }
+};
+
+class PauseControllerState final : public BasePauseState {
+public:
+    PauseViewState GetType() const override { return PauseViewState::Controller; }
+    void HandleInput(PauseStateContext& context, const PauseStateInput& input) const override {
+        Navigate(context, input);
+        if (input.left) AdjustSensitivity(context, -0.1f);
+        if (input.right) AdjustSensitivity(context, 0.1f);
+        if (input.back) context.changeState(PauseViewState::Settings, 0);
+        else if (input.confirm) Activate(context);
+    }
+    void Activate(PauseStateContext& context) const override {
+        if (context.selection == 0 && context.toggleGamepadStyle) context.toggleGamepadStyle();
+        if (context.selection == 2) context.togglePitch();
+        if (context.selection == 3) context.changeState(PauseViewState::Settings, 0);
+    }
+    void AdjustSensitivity(PauseStateContext& context, float amount) const override {
+        if (context.selection == 0 && context.toggleGamepadStyle) context.toggleGamepadStyle();
+        if (context.selection == 1) context.adjustPad(amount);
+    }
+    bool HasSensitivityControls(int row) const override { return row == 0 || row == 1; }
+    PauseDisplay GetDisplay(const PauseDisplayInput& input) const override {
+        PauseDisplay display { "コントローラー設定", {}, "↑↓ / 十字キー: 選択　←→: 変更\nENTER / A: 決定　ESC / B: 戻る" };
+        std::string pitchLabel = "通常";
+        if (input.invertedPitch) { pitchLabel = "反転"; }
+        display.rows = { "操作: " + input.gamepadControlStyle,
+            "照準感度: " + std::to_string(static_cast<int>(input.padSensitivity * 100.0f + 0.5f)) + "%",
+            "上下操作: " + pitchLabel, "戻る" };
+        display.hint += "\nEX-ZODIAC風: スティックで機体を直接操縦\n既存操作: 照準へ機体が追従 / 操作方式は自動保存";
         if (input.selection >= 0 && input.selection < 4) display.rows[input.selection].insert(0, "> ");
         return display;
     }
@@ -158,6 +191,8 @@ const BasePauseState& GetPauseState(PauseViewState state)
     static const PauseSettingsState settings;
     static const PauseCameraState camera;
     static const PauseGraphicsState graphics;
+    static const PauseControllerState controller;
+    if (state == PauseViewState::Controller) return controller;
     if (state == PauseViewState::Graphics) return graphics;
     if (state == PauseViewState::Camera) return camera;
     return state == PauseViewState::Settings ? static_cast<const BasePauseState&>(settings) : static_cast<const BasePauseState&>(menu);
@@ -165,6 +200,9 @@ const BasePauseState& GetPauseState(PauseViewState state)
 
 PauseButtonRect GetPauseRowRect(PauseViewState page, int row) {
     constexpr float centers[] = { 290, 360, 430, 570 };
+    if (page == PauseViewState::Controller && row == 0) {
+        return { kPauseHorizontalCenter - 210.0f, centers[row] - kPauseRowHalfHeight, 420.0f, kPauseRowHeight };
+    }
     const float width = row == 2 || (row == 0 && (page == PauseViewState::Camera || page == PauseViewState::Graphics)) ? 300.0f : 220.0f;
     return {kPauseHorizontalCenter - width * kPauseRowHorizontalCenterFraction, centers[row] - kPauseRowHalfHeight, width, kPauseRowHeight};
 }

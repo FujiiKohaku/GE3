@@ -124,7 +124,7 @@ void PlayerAimController::UpdateGamepadAim(float stickX, float stickY, bool isPi
     stickY *= response;
     const float dt = (std::max)(deltaTimeSeconds, 0.0f);
     constexpr float kAimMoveSpeed = 1.8f;
-    constexpr float kAimReturnSpeed = 0.8f;
+    constexpr float kAimReturnSpeed = 4.0f;
     const float moveSpeed = kAimMoveSpeed * std::clamp(sensitivity, kMinGamepadSensitivity, kMaxGamepadSensitivity);
     float pitchDirection = -1.0f;
     if (isPitchInverted) { pitchDirection = 1.0f; }
@@ -192,9 +192,29 @@ void PlayerAimController::Update(const Camera& activeCamera, float deltaTimeSeco
 {
     Ray aimRay {};
     CreateAimRay(aimRay, activeCamera);
+    UpdateFromRay(aimRay, activeCamera, deltaTimeSeconds, kAimConvergenceDistance);
+}
+
+// 機首の先を画面へ投影し、表示と発射で同じ照準点を使う。
+void PlayerAimController::UpdateFromShip(const Camera& activeCamera, const Vector3& shipPosition,
+    const Vector3& shipDirection, float deltaTimeSeconds)
+{
+    const Vector3 forwardPoint = shipPosition + shipDirection * kAimConvergenceDistance;
+    aimScreenPosition_ = activeCamera.WorldToScreen(forwardPoint);
+    ClampAimScreenPosition();
+    hasGamepadAimAnchor_ = false;
+    Ray aimRay {};
+    CreateAimRay(aimRay, activeCamera);
+    const float fallbackDistance = (std::max)(1.0f, Dot(forwardPoint - aimRay.origin, aimRay.direction));
+    UpdateFromRay(aimRay, activeCamera, deltaTimeSeconds, fallbackDistance);
+}
+
+void PlayerAimController::UpdateFromRay(const Ray& aimRay, const Camera& activeCamera,
+    float deltaTimeSeconds, float fallbackDistance)
+{
 
     // 何も当たらなければ基準距離を使い、当たれば命中点までの距離を使う。
-    float targetDistance = kAimConvergenceDistance;
+    float targetDistance = fallbackDistance;
     RaycastHit hit {};
     if (CollisionManager::GetInstance()->Raycast(aimRay, hit)) {
         targetDistance = hit.distance;

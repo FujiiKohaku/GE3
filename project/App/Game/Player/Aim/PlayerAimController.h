@@ -17,6 +17,8 @@ public:
     Vector2 GetGamepadSteeringScreenPosition() const;
     const Vector2& GetAimScreenPosition() const { return aimScreenPosition_; }
     void Update(const Camera& activeCamera, float deltaTimeSeconds);
+    void UpdateFromShip(const Camera& activeCamera, const Vector3& shipPosition,
+        const Vector3& shipDirection, float deltaTimeSeconds);
     bool IsAimDistanceSmoothingEnabled() const { return isAimDistanceSmoothingEnabled_; }
     void SetAimDistanceSmoothingEnabled(bool isEnabled) { isAimDistanceSmoothingEnabled_ = isEnabled; }
     float GetAimDistance() const { return smoothedAimDistance_; }
@@ -24,6 +26,8 @@ public:
     Vector3 GetAimRayOrigin(const Camera& activeCamera) const;
 
 private:
+    void UpdateFromRay(const Ray& aimRay, const Camera& activeCamera,
+        float deltaTimeSeconds, float fallbackDistance);
     void CreateAimRay(Ray& aimRay, const Camera& activeCamera) const;
     bool IsAimCurrent(const Camera& activeCamera) const;
     static constexpr float kGamepadMaxAimDistanceRatio = 0.40f;

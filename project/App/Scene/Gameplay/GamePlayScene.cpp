@@ -752,6 +752,17 @@ void GamePlayScene::Initialize()
     aimSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth / kInitializeAimSpritePositionX, WinApp::GetInstance()->kClientHeight / kInitializeAimSpritePositionY });
     Logger::Log("GamePlayScene::Initialize: Updating aimSprite");
     aimSprite_->Update();
+    // 遠方の武器照準とは別に、近距離の射線を四隅の枠で表示する。
+    nearAimSprite_ = std::make_unique<Sprite>();
+    nearAimSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/aim.png");
+    nearAimSprite_->SetShaderPaths(
+        "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+        "resources/Shaders/Sprite/NearReticle/Sprite.PS.hlsl");
+    constexpr Vector2 kNearReticleSizeUi { 144.0f, 144.0f };
+    nearAimSprite_->SetSize(kNearReticleSizeUi);
+    nearAimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
+    nearAimSprite_->Update();
+    isNearAimVisible_ = false;
     overheatGaugeSprite_ = std::make_unique<Sprite>();
     wasReticleOverheated_ = false;
     overheatReadyFlashRemainingSeconds_ = 0.0f;
@@ -1534,7 +1545,8 @@ void GamePlayScene::Update()
             graphicsRenderer ? aaNames[graphicsRenderer->GetAntiAliasingMode()] : "利用不可",
             graphicsRenderer ? qualityNames[static_cast<int>(graphicsRenderer->GetRenderQualityPreset())] : "利用不可",
             !graphicsRenderer || !graphicsRenderer->IsDlaaAvailable() ? "DLAA非対応環境では選択をスキップ" :
-                (graphicsRenderer->IsDlaaActive() ? "DLAA: 動作中" : "DLAA: 利用可能（現在は未動作）") });
+                (graphicsRenderer->IsDlaaActive() ? "DLAA: 動作中" : "DLAA: 利用可能（現在は未動作）"),
+            Input::GetInstance()->GetGamepadControlStyleName() });
         Sprite* rowSprites[] = { pauseResumeBtnSprite_.get(), pauseRetryBtnSprite_.get(), pauseControlBtnSprite_.get(), pauseTitleBtnSprite_.get() };
         for (int row = 0; row < 4; ++row) {
             if (!rowSprites[row]) continue;
@@ -1818,6 +1830,7 @@ void GamePlayScene::Update()
 
     // 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
+    player_->UpdateAfterCamera(*camera_, TimeManager::GetInstance()->GetDeltaTime());
     // カメラの追従・FOV変更後も、表示される機体と照準の距離を制限する。
     player_->ConstrainGamepadAimToPlayer();
     UpdateRailBranchPresentation(nextRailDistance);
@@ -2008,6 +2021,22 @@ void GamePlayScene::Update()
 
     // レティクル（AimSprite）のスクリーン位置更新
     const Vector2 aimUiPosition = WinApp::GetInstance()->ClientToUi(player_->GetAimScreenPosition());
+    isNearAimVisible_ = false;
+    if (player_->IsUsingDirectGamepadControl() && !player_->IsDead()) {
+        const Vector3 nearAimPoint = player_->GetNearAimPoint(*camera_);
+        const Vector3 nearViewPosition = MatrixMath::Transform(nearAimPoint, camera_->GetViewMatrix());
+        if (std::isfinite(nearViewPosition.z) && nearViewPosition.z > camera_->GetNearClip()) {
+            const Vector2 nearScreenPosition = camera_->WorldToScreen(nearAimPoint);
+            if (std::isfinite(nearScreenPosition.x) && std::isfinite(nearScreenPosition.y) &&
+                nearScreenPosition.x >= 0.0f && nearScreenPosition.y >= 0.0f &&
+                nearScreenPosition.x <= static_cast<float>(WinApp::GetInstance()->GetClientWidth()) &&
+                nearScreenPosition.y <= static_cast<float>(WinApp::GetInstance()->GetClientHeight())) {
+                nearAimSprite_->SetPosition(WinApp::GetInstance()->ClientToUi(nearScreenPosition));
+                nearAimSprite_->Update();
+                isNearAimVisible_ = true;
+            }
+        }
+    }
     float reticleMode = 0.0f;
     if (player_->IsHomingMissileSelected()) {
         reticleMode = 1.0f;
@@ -2442,8 +2471,14 @@ void GamePlayScene::UpdatePlayerTransform(
                 // 照準へ機首を向け、左右移動によるバンクは加えない。
                 constexpr float kMaxAimYaw = 0.42f;
                 constexpr float kMaxAimPitch = 0.34f;
-                playerRotate.y -= aimX * kMaxAimYaw;
-                playerRotate.x += aimY * kMaxAimPitch;
+                if (player_->IsUsingDirectGamepadControl()) {
+                    const Vector2& directAim = player_->GetDirectGamepadAimInput();
+                    playerRotate.y -= directAim.x * Player::kDirectAimYawRadians;
+                    playerRotate.x += directAim.y * Player::kDirectAimPitchRadians;
+                } else {
+                    playerRotate.y -= aimX * kMaxAimYaw;
+                    playerRotate.x += aimY * kMaxAimPitch;
+                }
             }
         }
         player_->SetRotate(playerRotate);
@@ -3348,6 +3383,9 @@ void GamePlayScene::Draw2D()
     }
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
+        if (isNearAimVisible_ && player_->IsUsingDirectGamepadControl() && !player_->IsDead()) {
+            nearAimSprite_->Draw();
+        }
         if (player_->IsMissileSelected() || player_->IsHomingMissileSelected()) {
             aimSprite_->Draw();
         } else {
@@ -3664,6 +3702,7 @@ void GamePlayScene::SetPaused(bool isPaused)
 PauseStateContext GamePlayScene::MakePauseContext()
 {
     PauseStateContext context { pauseSelection_ };
+    context.toggleGamepadStyle = std::bind(&Input::ToggleGamepadControlStyle, Input::GetInstance());
     context.changeState = [this](PauseViewState state, int selection) { ChangePauseState(state, selection); };
     context.menuActions = {
         [this]() {

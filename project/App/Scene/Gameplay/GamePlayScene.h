@@ -366,6 +366,8 @@ private:
     // ------------------------------
     std::unique_ptr<Sprite> testSprite_;
     std::unique_ptr<Sprite> aimSprite_;
+    std::unique_ptr<Sprite> nearAimSprite_;
+    bool isNearAimVisible_ = false;
     float previousMissileReloadRatio_ = 1.0f;
     bool wasHomingReloadSelected_ = false;
     float missileReadyFlashRemainingSeconds_ = 0.0f;

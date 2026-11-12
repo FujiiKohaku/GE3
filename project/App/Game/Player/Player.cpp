@@ -783,6 +783,14 @@ void PlayerBattleState::Update(Player& player)
     }
     player.UpdateInvincibility(TimeManager::GetInstance()->GetDeltaTime());
     player.UpdateBoostState();
+    player.SynchronizeGamepadControlStyle(*input);
+    if (player.isUsingDirectGamepadControl_ && !player.isDebugMode_) {
+        // 新方式ではスティックで機体を動かし、照準と発射はカメラ確定後に行う。
+        player.UpdateMovement(input);
+        player.ApplyRailPosition();
+        player.shouldUpdateWeaponsAfterCamera_ = true;
+        return;
+    }
     if (!player.isDebugMode_) {
         // 照準を先に確定してから操舵し、発射と表示で参照する位置を揃える。
         // 使用中の入力機器から照準を取得し、操舵とレティクル表示に使う。
@@ -891,6 +899,7 @@ void Player::Initialize(Model* model)
 // 入力・被弾状態・移動・武器を更新し、最後に機体の姿勢を描画へ反映する。
 void Player::Update()
 {
+    shouldUpdateWeaponsAfterCamera_ = false;
     if (object_ == nullptr || TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
         // 未初期化・時間停止中は、入力や弾を含めて更新を進めない。
         return;
@@ -1081,7 +1090,7 @@ Player::ControlInput Player::UpdateAimSteering(const Vector2& screenSizePixels,
     Vector2 aimPosition = GetAimScreenPosition();
     if (isGamepad) { aimPosition = GetGamepadSteeringScreenPosition(); }
     UpdateSteering(aimPosition, screenSizePixels, isAllRangeMode, deltaTimeSeconds, isGamepad);
-    return { movement_.GetSteeringInput(), 2.75f };
+    return { movement_.GetSteeringInput(), 1.5f };
 }
 
 // キーボード・マウス・パッドの違いを、移動処理が共通に扱える入力へまとめる。
@@ -1090,6 +1099,9 @@ Player::ControlInput Player::GetControlInput(const Input& input, const Vector2& 
 {
     const ControlInputType inputType = GetControlInputType(input);
     if (inputType == ControlInputType::Gamepad) {
+        if (input.GetGamepadControlStyle() == Input::GamepadControlStyle::ExZodiac) {
+            return GetDirectGamepadControl(input, deltaTimeSeconds);
+        }
         return UpdateAimSteering(screenSizePixels, isAllRangeMode, deltaTimeSeconds, true);
     }
     if (inputType == ControlInputType::Mouse) {
@@ -1099,9 +1111,86 @@ Player::ControlInput Player::GetControlInput(const Input& input, const Vector2& 
     return { PlayerInput::ReadKeyboardSteering(input), 1.0f };
 }
 
+void Player::SynchronizeGamepadControlStyle(const Input& input)
+{
+    const bool shouldUseDirectControl = GetControlInputType(input) == ControlInputType::Gamepad &&
+        input.GetGamepadControlStyle() == Input::GamepadControlStyle::ExZodiac;
+    if (isUsingDirectGamepadControl_ == shouldUseDirectControl) { return; }
+    isUsingDirectGamepadControl_ = shouldUseDirectControl;
+    directGamepadAimInput_ = {};
+    ResetSteering();
+    InitializeAim();
+    BlockFireUntilRelease();
+}
+
+Player::ControlInput Player::GetDirectGamepadControl(const Input& input, float deltaTimeSeconds)
+{
+    Vector2 steering { input.GetGamepadLeftStickX(), input.GetGamepadLeftStickY() };
+    if (input.IsGamepadPitchInverted()) { steering.y = -steering.y; }
+    const float magnitude = std::sqrt(steering.x * steering.x + steering.y * steering.y);
+    const float response = 0.5f + 0.5f * (std::min)(magnitude, 1.0f);
+    steering.x *= response;
+    steering.y *= response;
+    movement_.SetSteeringInput(steering);
+    constexpr float kDirectAimFollowSpeed = 4.5f;
+    constexpr float kDirectMovementResponse = 1.5f;
+    const float followRate = 1.0f - std::exp(-kDirectAimFollowSpeed * (std::max)(0.0f, deltaTimeSeconds));
+    const float sensitivity = input.GetGamepadAimSensitivity();
+    const Vector2 targetAimInput {
+        std::clamp(steering.x * sensitivity, -1.0f, 1.0f),
+        std::clamp(steering.y * sensitivity, -1.0f, 1.0f)
+    };
+    directGamepadAimInput_.x += (targetAimInput.x - directGamepadAimInput_.x) * followRate;
+    directGamepadAimInput_.y += (targetAimInput.y - directGamepadAimInput_.y) * followRate;
+    return { steering, kDirectMovementResponse };
+}
+
+// 銃口から遠方の照準へ向かう射線上に、近距離表示用の点を置く。
+Vector3 Player::GetNearAimPoint(const Camera& activeCamera) const
+{
+    constexpr float kNearAimDistance = 45.0f;
+    constexpr float kMinAimDistance = 0.0001f;
+    const Vector3 muzzlePosition = weaponController_.CalculateMuzzlePosition();
+    const Vector3 aimOffset = GetAimPoint(activeCamera) - muzzlePosition;
+    const float aimDistance = Vector3Length(aimOffset);
+    if (aimDistance <= kMinAimDistance) { return muzzlePosition; }
+    const float nearDistance = (std::min)(kNearAimDistance, aimDistance * 0.5f);
+    return muzzlePosition + aimOffset * (nearDistance / aimDistance);
+}
+
+Vector3 Player::GetDirectGamepadAimDirection() const
+{
+    if (movement_.IsAllRangeMode()) { return movement_.GetFlightForward(); }
+    const float yawRadians = directGamepadAimInput_.x * kDirectAimYawRadians;
+    const float pitchRadians = directGamepadAimInput_.y * kDirectAimPitchRadians;
+    return Normalize(movement_.GetFlightForward() +
+        movement_.GetRailRight() * std::tan(yawRadians) +
+        movement_.GetRailUp() * std::tan(pitchRadians));
+}
+
+// 描画用カメラが確定した後、機首から照準を投影して発射する。
+void Player::UpdateAfterCamera(const Camera& activeCamera, float deltaTimeSeconds)
+{
+    if (!shouldUpdateWeaponsAfterCamera_ || state_ != State::Battle || deltaTimeSeconds <= 0.0f) { return; }
+    shouldUpdateWeaponsAfterCamera_ = false;
+    Input* input = Input::GetInstance();
+    if (input == nullptr) { return; }
+    aimController_.UpdateFromShip(activeCamera, transform_.translate,
+        GetDirectGamepadAimDirection(), deltaTimeSeconds);
+    ApplyTransform();
+    object_->Update();
+    weaponController_.UpdateInput(input, false);
+    weaponController_.UpdateBullets();
+    weaponController_.RemoveDeadBullets();
+#ifdef _DEBUG
+    weaponController_.DrawAimDebugLines();
+#endif
+}
+
 // 操作できる状態かを確認してから、機体の画面位置を基準にパッド照準を補正する。
 void Player::ConstrainGamepadAimToPlayer()
 {
+    if (isUsingDirectGamepadControl_) { return; }
     if (isDebugMode_ || !IsAlive()) { return; }
     const Input* input = Input::GetInstance();
     if (input == nullptr || GetControlInputType(*input) != ControlInputType::Gamepad || camera_ == nullptr) { return; }

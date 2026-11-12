@@ -28,9 +28,11 @@ inline bool RunPlayerWeaponResetTests()
     controller.currentWeapon_ = controller.kWeaponHomingMissile;
     controller.shotsFired_ = 100;
     controller.currentWeapon_ = controller.kWeaponMissileBullet;
-    assert(controller.TryStartCooldown());
+    assert(controller.IsWeaponReady());
+    controller.StartCooldown();
     controller.currentWeapon_ = controller.kWeaponHomingMissile;
-    assert(controller.TryStartCooldown());
+    assert(controller.IsWeaponReady());
+    controller.StartCooldown();
     assert(controller.GetMissileReloadRatio() == 0.0f);
     constexpr int kMaxShots = 1000;
     for (int index = 0; index < kMaxShots && controller.GetHeatRatio() < 1.0f; ++index) {

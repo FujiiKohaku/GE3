@@ -52,6 +52,8 @@ public:
     float GetMissileReloadRatio() const;
     const char* GetCurrentWeaponName() const;
     float GetHeatRatio() const { return heatRatio_; }
+    // 表示用の射線と発射で、同じ銃口のワールド座標を使う。
+    Vector3 CalculateMuzzlePosition() const;
     bool IsOverheated() const { return isOverheated_; }
 #ifdef _DEBUG
     // 照準レイと銃口からの射線を線で表示し、狙いのずれを確認できるようにする。
@@ -83,10 +85,8 @@ private:
     void UpdateWeaponSwitch(Input* input);
     void UpdateCooldowns(float deltaTimeSeconds);
     bool IsWeaponReady() const;
-    bool TryStartCooldown();
+    void StartCooldown();
     int GetRequestedShotCount(bool isHeld, bool isTriggered, float deltaTimeSeconds);
-    // 機体に対する銃口の相対位置を、現在の姿勢でワールド位置へ変換する。
-    Vector3 CalculateMuzzlePosition() const;
     // 武器に弾を生成させ、熱量の色・銃口位置・照準方向・機体速度を反映して所有する。
     void FireSingleBullet(const Camera& activeCamera, CombatTarget* homingTarget);
 

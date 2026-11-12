@@ -129,12 +129,15 @@ public:
     const Vector3& GetRailOffset() const { return railOffset_; }
     const Vector3& GetRailBasePosition() const { return railBasePosition_; }
     const Vector3& GetFlightForward() const { return railForward_; }
+    const Vector3& GetRailRight() const { return railRight_; }
+    const Vector3& GetRailUp() const { return railUp_; }
     bool IsAllRangeMode() const { return isAllRangeMode_; }
     bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
     bool IsBoosting() const { return isBoosting_; }
     float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
     float GetMouseSensitivity() const { return mouseSensitivity_; }
     const Vector2& GetSteeringInput() const { return steeringInput_; }
+    void SetSteeringInput(const Vector2& steering) { steeringInput_ = steering; }
     Vector3 GetWorldVelocity() const { return railForward_ * velocity_.z; }
     void SetRailMinimumHeight(float height) { railMinimumHeight_ = height; hasRailMinimumHeight_ = true; hasRailHeightRange_ = false; }
     void SetRailHeightRange(const RailHeightRange& range) { railHeightRange_ = range; hasRailHeightRange_ = true; }
@@ -283,6 +286,11 @@ struct Ray;
 // 自機の状態遷移・共有データ・描画を管理する。
 class Player {
 public:
+    static constexpr float kDirectAimYawRadians = 0.45f;
+    static constexpr float kDirectAimPitchRadians = 0.33f;
+    bool IsUsingDirectGamepadControl() const { return isUsingDirectGamepadControl_; }
+    const Vector2& GetDirectGamepadAimInput() const { return directGamepadAimInput_; }
+    void UpdateAfterCamera(const Camera& activeCamera, float deltaTimeSeconds);
     enum class ControlMode { KeyboardAndMouse, Controller };
     Player() = default;
     // 武器管理がPlayerを参照するため、コピー・ムーブを禁止する。
@@ -362,6 +370,7 @@ public:
 
     // GamePlaySceneのレティクルとオーバーヒートゲージの配置に使う照準位置を返す。
     const Vector2& GetAimScreenPosition() const { return aimController_.GetAimScreenPosition(); }
+    Vector3 GetNearAimPoint(const Camera& activeCamera) const;
     // 操縦・射撃の前と、描画用カメラ更新後にパッド照準の距離を補正する。
     void ConstrainGamepadAimToPlayer();
     // 外部から現在の武器の発射を要求する。死亡・過熱・クールダウン中は発射されない。
@@ -491,6 +500,12 @@ private:
     bool ShouldDraw() const;
 
     PlayerAimController aimController_;
+    bool isUsingDirectGamepadControl_ = false;
+    bool shouldUpdateWeaponsAfterCamera_ = false;
+    Vector2 directGamepadAimInput_ {};
+    void SynchronizeGamepadControlStyle(const Input& input);
+    ControlInput GetDirectGamepadControl(const Input& input, float deltaTimeSeconds);
+    Vector3 GetDirectGamepadAimDirection() const;
 
     int maxHp_ = 20;
     int currentHp_ = maxHp_;
