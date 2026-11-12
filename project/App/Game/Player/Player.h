@@ -1,5 +1,6 @@
 #pragma once
-#include "App/Game/Player/Aim/PlayerAimController.h"
+#include "App/Game/Player/Aim/PlayerReticleController.h"
+#include "App/Game/Player/Aim/PlayerShotPointCalculator.h"
 #include "App/Game/Common/Bullet/BaseBullet.h"
 #include "Engine/Effect/EffectManager.h"
 #include <memory>
@@ -369,7 +370,7 @@ public:
     const Vector2& GetStarFoxSteeringInput() const { return movement_.GetSteeringInput(); }
 
     // GamePlaySceneのレティクルとオーバーヒートゲージの配置に使う照準位置を返す。
-    const Vector2& GetAimScreenPosition() const { return aimController_.GetAimScreenPosition(); }
+    const Vector2& GetAimScreenPosition() const { return reticleController_.GetAimScreenPosition(); }
     Vector3 GetNearAimPoint(const Camera& activeCamera) const;
     // 操縦・射撃の前と、描画用カメラ更新後にパッド照準の距離を補正する。
     void ConstrainGamepadAimToPlayer();
@@ -421,8 +422,8 @@ public:
     void DrawShadow(ShadowMapRenderer& renderer);
     // デバッグビルドでHP・武器・熱量を表示する。
     void DrawImGui();
-    bool IsAimDistanceSmoothingEnabled() const { return aimController_.IsAimDistanceSmoothingEnabled(); }
-    void SetAimDistanceSmoothingEnabled(bool isEnabled) { aimController_.SetAimDistanceSmoothingEnabled(isEnabled); }
+    bool IsAimDistanceSmoothingEnabled() const { return shotPointCalculator_.IsAimDistanceSmoothingEnabled(); }
+    void SetAimDistanceSmoothingEnabled(bool isEnabled) { shotPointCalculator_.SetAimDistanceSmoothingEnabled(isEnabled); }
 
 private:
     friend class PlayerWeaponController;
@@ -439,15 +440,20 @@ private:
     PlayerDeadState deadState_;
 
     // 照準の計算は専用クラスに委譲する。
-    void InitializeAim() { aimController_.InitializeAim(); }
-    void UpdateMouseAim() { aimController_.UpdateMouseAim(); }
-    void UpdateGamepadAim(float x, float y, bool inverted, float dt, float sensitivity = 1.0f) { aimController_.UpdateGamepadAim(x, y, inverted, dt, sensitivity); }
-    void ClampAimScreenPosition() { aimController_.ClampAimScreenPosition(); }
-    void ClampGamepadAimToPlayer(const Vector2& position) { aimController_.ClampGamepadAimToPlayer(position); }
-    Vector2 GetGamepadSteeringScreenPosition() const { return aimController_.GetGamepadSteeringScreenPosition(); }
-    void UpdateAim(const Camera& camera, float deltaTimeSeconds) { aimController_.Update(camera, deltaTimeSeconds); }
-    Vector3 GetAimPoint(const Camera& camera) const { return aimController_.GetAimPoint(camera); }
-    Vector3 GetAimRayOrigin(const Camera& camera) const { return aimController_.GetAimRayOrigin(camera); }
+    void InitializeAim() {
+        reticleController_.InitializeAim();
+        shotPointCalculator_.Initialize();
+    }
+    void UpdateMouseAim() { reticleController_.UpdateMouseAim(); }
+    void UpdateGamepadAim(float x, float y, bool inverted, float dt, float sensitivity = 1.0f) { reticleController_.UpdateGamepadAim(x, y, inverted, dt, sensitivity); }
+    void ClampAimScreenPosition() { reticleController_.ClampAimScreenPosition(); }
+    void ClampGamepadAimToPlayer(const Vector2& position) { reticleController_.ClampGamepadAimToPlayer(position); }
+    Vector2 GetGamepadSteeringScreenPosition() const { return reticleController_.GetGamepadSteeringScreenPosition(); }
+    void UpdateAim(const Camera& camera, float deltaTimeSeconds) {
+        shotPointCalculator_.Update(camera, GetAimScreenPosition(), deltaTimeSeconds);
+    }
+    Vector3 GetAimPoint(const Camera& camera) const { return shotPointCalculator_.GetAimPoint(camera, GetAimScreenPosition()); }
+    Vector3 GetAimRayOrigin(const Camera& camera) const { return shotPointCalculator_.GetAimRayOrigin(camera, GetAimScreenPosition()); }
 
     // 入力方式はパッドを優先し、その他は設定された操作方式を使う。
     using ControlInputType = PlayerInput::ControlInputType;
@@ -499,7 +505,8 @@ private:
     // 死亡状態と被弾中の点滅を調べ、今のフレームで機体を描画するかを返す。
     bool ShouldDraw() const;
 
-    PlayerAimController aimController_;
+    PlayerReticleController reticleController_;
+    PlayerShotPointCalculator shotPointCalculator_;
     bool isUsingDirectGamepadControl_ = false;
     bool shouldUpdateWeaponsAfterCamera_ = false;
     Vector2 directGamepadAimInput_ {};

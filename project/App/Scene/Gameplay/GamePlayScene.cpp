@@ -745,7 +745,7 @@ void GamePlayScene::Initialize()
         "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
         "resources/Shaders/Sprite/WeaponReticle/Sprite.PS.hlsl");
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite size");
-    aimSprite_->SetSize(PlayerAimController::kReticleSizeUi);
+    aimSprite_->SetSize(PlayerReticleController::kReticleSizeUi);
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite anchor");
     aimSprite_->SetAnchorPoint({ 0.5f, 0.5f });
     Logger::Log("GamePlayScene::Initialize: Setting aimSprite position");

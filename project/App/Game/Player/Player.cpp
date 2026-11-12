@@ -1043,11 +1043,11 @@ void Player::DrawImGui()
     ImGui::Text("HP: %d / %d", GetCurrentHp(), GetMaxHp());
     ImGui::Text("Weapon: %s", weaponController_.GetCurrentWeaponName());
     ImGui::Text("Heat: %.2f", weaponController_.GetHeatRatio());
-    bool isAimDistanceSmoothingEnabled = aimController_.IsAimDistanceSmoothingEnabled();
+    bool isAimDistanceSmoothingEnabled = shotPointCalculator_.IsAimDistanceSmoothingEnabled();
     if (ImGui::Checkbox("Aim Distance Smoothing", &isAimDistanceSmoothingEnabled)) {
-        aimController_.SetAimDistanceSmoothingEnabled(isAimDistanceSmoothingEnabled);
+        shotPointCalculator_.SetAimDistanceSmoothingEnabled(isAimDistanceSmoothingEnabled);
     }
-    ImGui::Text("Aim distance: %.2f", aimController_.GetAimDistance());
+    ImGui::Text("Aim distance: %.2f", shotPointCalculator_.GetAimDistance());
     ImGui::End();
 #endif
 }
@@ -1175,8 +1175,11 @@ void Player::UpdateAfterCamera(const Camera& activeCamera, float deltaTimeSecond
     shouldUpdateWeaponsAfterCamera_ = false;
     Input* input = Input::GetInstance();
     if (input == nullptr) { return; }
-    aimController_.UpdateFromShip(activeCamera, transform_.translate,
-        GetDirectGamepadAimDirection(), deltaTimeSeconds);
+    const Vector3 forwardPoint = shotPointCalculator_.CalculateForwardPoint(
+        transform_.translate, GetDirectGamepadAimDirection());
+    reticleController_.UpdateFromWorldPoint(activeCamera, forwardPoint);
+    shotPointCalculator_.UpdateFromWorldPoint(activeCamera, GetAimScreenPosition(),
+        forwardPoint, deltaTimeSeconds);
     ApplyTransform();
     object_->Update();
     weaponController_.UpdateInput(input, false);

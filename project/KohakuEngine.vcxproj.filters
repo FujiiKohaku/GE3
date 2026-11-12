@@ -801,8 +801,10 @@
     </ClInclude>
     <ClInclude Include="App\Game\Player\PlayerWeaponController.h"><Filter>Player</Filter></ClInclude>
     <ClCompile Include="App\Game\Player\PlayerWeaponController.cpp"><Filter>Player</Filter></ClCompile>
-    <ClInclude Include="App\Game\Player\Aim\PlayerAimController.h"><Filter>Player\Aim</Filter></ClInclude>
-    <ClCompile Include="App\Game\Player\Aim\PlayerAimController.cpp"><Filter>Player\Aim</Filter></ClCompile>
+    <ClInclude Include="App\Game\Player\Aim\PlayerReticleController.h"><Filter>Player\Aim</Filter></ClInclude>
+    <ClCompile Include="App\Game\Player\Aim\PlayerReticleController.cpp"><Filter>Player\Aim</Filter></ClCompile>
+    <ClInclude Include="App\Game\Player\Aim\PlayerShotPointCalculator.h"><Filter>Player\Aim</Filter></ClInclude>
+    <ClCompile Include="App\Game\Player\Aim\PlayerShotPointCalculator.cpp"><Filter>Player\Aim</Filter></ClCompile>
     <ClInclude Include="App\Game\Player\Player.h">
       <Filter>Player</Filter>
     </ClInclude>
