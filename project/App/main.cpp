@@ -9,6 +9,7 @@
 
 #include <chrono>
 #ifdef _DEBUG
+#include "Tests/CameraInitializationTests.h"
 #include "Tests/PlayerWeaponPolymorphismTests.h"
 #include "Tests/TitleStateTests.h"
 #include "Tests/BeamStateTests.h"
@@ -31,6 +32,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
 {
 // デバッグ用の検証指定がある場合は、通常のゲーム起動より先に実行する。
 #ifdef _DEBUG
+    if (std::strstr(commandLine, "--verify-camera-initialization")) {
+        return RunCameraInitializationTests() ? 0 : 1;
+    }
     if (std::strstr(commandLine, "--verify-fear-worm-states")) {
         if (RunFearWormStateTests()) { return 0; }
         return 1;
@@ -97,6 +101,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     }
 
     bool hasLoggedStartupTime = false;
+    const bool isVerifyingOpenOcean =
+        std::wstring(GetCommandLineW()).find(L"--verify-open-ocean") != std::wstring::npos;
     const bool isVerifyingUnderwaterAtmosphere =
         std::wstring(GetCommandLineW()).find(L"--verify-underwater-atmosphere") != std::wstring::npos;
     const bool isVerifyingAnemone =
@@ -114,7 +120,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     if (isVerifyingAnemone) { verificationFrameLimit = 360; }
     if (isVerifyingDash) { verificationFrameLimit = 480; }
     if (isVerifyingCoilPerformance) { verificationFrameLimit = 1200; }
-    const bool verifyOceanTransition = isVerifyingCoilPerformance || isVerifyingDash || isVerifyingAnemone || isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
+    const bool verifyOceanTransition = isVerifyingOpenOcean || isVerifyingCoilPerformance || isVerifyingDash || isVerifyingAnemone || isVerifyingUnderwaterAtmosphere || isVerifyingFullscreen || isVerifyingLoopEnemy ||
         std::wstring(GetCommandLineW()).find(L"--verify-ocean-transition") != std::wstring::npos;
     int oceanVerificationFrame = 0;
 
@@ -168,8 +174,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
             Logger::Flush();
             ++oceanVerificationFrame;
             if (oceanVerificationFrame == 60) {
-                Logger::Log("[OceanSmoke] Request title -> stage01 transition");
-                SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::make_unique<GamePlayScene>("stage01")));
+                const std::string stageId = isVerifyingOpenOcean ? "stage04" : "stage01";
+                Logger::Log("[OceanSmoke] Request title -> " + stageId + " transition");
+                SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(std::make_unique<GamePlayScene>(stageId)));
+            }
+            if (oceanVerificationFrame == 180) {
+                ScreenshotManager::GetInstance()->RequestCapture(true, false);
             }
             if (isVerifyingUnderwaterAtmosphere && oceanVerificationFrame == 270) {
                 ScreenshotManager::GetInstance()->RequestCapture(true, false);
@@ -187,7 +197,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                 Logger::Log("[CoilPerformance] Capture boss appearance");
             }
             if (oceanVerificationFrame == verificationFrameLimit) {
-                Logger::Log("[OceanSmoke] PASS: title -> stage01 initialization after loading and rendered gameplay");
+                Logger::Log(std::string("[OceanSmoke] Completed: title -> ") +
+                    (isVerifyingOpenOcean ? "stage04" : "stage01") + " transition check");
                 break;
             }
         }

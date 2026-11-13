@@ -8,10 +8,6 @@
 
 class Input {
 public:
-    enum class GamepadControlStyle { Legacy, ExZodiac };
-    GamepadControlStyle GetGamepadControlStyle() const { return gamepadControlStyle_; }
-    void ToggleGamepadControlStyle();
-    const char* GetGamepadControlStyleName() const;
     static Input* GetInstance();
 
     bool Initialize(WinApp* winApp);
@@ -86,8 +82,6 @@ private:
     uint64_t focusLossCount_ = 0;
     bool gamepadPitchInverted_ = false;
     float gamepadAimSensitivity_ = 1.0f;
-    GamepadControlStyle gamepadControlStyle_ = GamepadControlStyle::ExZodiac;
-    void LoadGamepadControlStyle();
     ULONGLONG lastGamepadDiagnosticsTimeMs_ = 0;
     int gamepadDiagnosticsPeakLeftX_ = 0;
     int gamepadDiagnosticsPeakLeftY_ = 0;

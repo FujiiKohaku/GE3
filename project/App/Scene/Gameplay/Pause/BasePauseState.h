@@ -30,7 +30,6 @@ struct PauseStateContext {
     std::function<void(float)> adjustCameraFov;
     std::function<void(int)> cycleAntiAliasing;
     std::function<void(int)> cycleRenderQuality;
-    std::function<void()> toggleGamepadStyle;
 };
 struct PauseDisplayInput {
     int selection;
@@ -46,7 +45,6 @@ struct PauseDisplayInput {
     std::string antiAliasing = "OFF";
     std::string renderQuality = "カスタム";
     std::string dlaaStatus;
-    std::string gamepadControlStyle = "EX-ZODIAC風";
 };
 struct PauseDisplay {
     std::string title;

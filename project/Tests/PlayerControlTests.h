@@ -61,19 +61,13 @@ inline bool RunPlayerControlTests()
     if (steering.x != 1.0f || steering.y != 1.0f) { return false; }
     InputTestAccess::Setup(input, false, false, false, 0);
     player.SetControlMode(Player::ControlMode::Controller);
-    PlayerTestAccess::UpdateGamepadAim(player, 1.0f, 0.0f, false, 0.1f);
-    Player expected;
-    PlayerTestAccess::UpdateSteering(expected, player.GetAimScreenPosition(), screen, false, 0.016f);
     steering = PlayerTestAccess::GetControlSteering(player, input, screen, false, 0.016f);
-    if (std::abs(steering.x - expected.GetStarFoxSteeringInput().x) > 0.0001f
+    if (steering.x != 0.0f || steering.y != 0.0f
         || PlayerTestAccess::GetControlRailResponse(player, input, screen, false, 0.016f) != 1.5f) { return false; }
-    PlayerTestAccess::InitializeAim(player);
     InputTestAccess::Setup(input, true, false, false, 32767);
-    PlayerTestAccess::UpdateAimFromInput(player, input, 0.1f);
-    if (player.GetAimScreenPosition().x <= screen.x * 0.5f) { return false; }
-    PlayerTestAccess::UpdateSteering(expected, PlayerTestAccess::GetGamepadSteeringScreenPosition(player), screen, false, 0.016f, true);
     steering = PlayerTestAccess::GetControlSteering(player, input, screen, false, 0.016f);
-    if (std::abs(steering.x - expected.GetStarFoxSteeringInput().x) > 0.0001f) { return false; }
+    if (std::abs(steering.x - 1.0f) > 0.0001f || steering.y != 0.0f) { return false; }
+    if (player.GetDirectGamepadAimInput().x <= 0.0f) { return false; }
     player.SetMouseSensitivity(2.0f);
     const Vector2 sensitivitySteering = PlayerTestAccess::GetControlSteering(player, input, screen, false, 0.016f);
     if (std::abs(sensitivitySteering.x - steering.x) > 0.0001f) { return false; }
@@ -83,9 +77,5 @@ inline bool RunPlayerControlTests()
     if (!PlayerTestAccess::IsKeyboardControl(player, input)) { return false; }
     player.SetControlMode(Player::ControlMode::Controller);
     if (!PlayerTestAccess::IsMouseControl(player, input)) { return false; }
-    const Vector2 before = player.GetAimScreenPosition();
-    player.ConstrainGamepadAimToPlayer();
-    InputTestAccess::Setup(input, true, false, false, 0);
-    player.ConstrainGamepadAimToPlayer();
-    return player.GetAimScreenPosition().x == before.x && player.GetAimScreenPosition().y == before.y;
+    return true;
 }

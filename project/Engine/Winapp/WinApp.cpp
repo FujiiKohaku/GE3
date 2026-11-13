@@ -88,8 +88,12 @@ int32_t WinApp::GetClientWidth() const
     }
 
     RECT clientRect {};
-    GetClientRect(hwnd_, &clientRect);
-    return clientRect.right - clientRect.left;
+    if (!GetClientRect(hwnd_, &clientRect)) {
+        return kClientWidth;
+    }
+    // サイズを取得できない間も、呼び出し側に正の幅を返す。
+    const int32_t width = clientRect.right - clientRect.left;
+    return width > 0 ? width : kClientWidth;
 }
 
 int32_t WinApp::GetClientHeight() const
@@ -99,8 +103,12 @@ int32_t WinApp::GetClientHeight() const
     }
 
     RECT clientRect {};
-    GetClientRect(hwnd_, &clientRect);
-    return clientRect.bottom - clientRect.top;
+    if (!GetClientRect(hwnd_, &clientRect)) {
+        return kClientHeight;
+    }
+    // サイズを取得できない間も、呼び出し側に正の高さを返す。
+    const int32_t height = clientRect.bottom - clientRect.top;
+    return height > 0 ? height : kClientHeight;
 }
 
 int32_t WinApp::GetRenderWidth() const

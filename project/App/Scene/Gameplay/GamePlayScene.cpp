@@ -670,6 +670,7 @@ void GamePlayScene::Initialize()
         volume != nullptr && fogVolumeManager != nullptr) {
         FogPreset fogPreset;
         volume->SetFogDensity(0.003f);
+        volume->SetMaxDistance(240.0f);
         if (stageId_ == "tutorial") {
             volume->SetFogDensity(0.0002f);
         }
@@ -687,6 +688,56 @@ void GamePlayScene::Initialize()
             denseFog.halfExtents = kStage01DenseFogHalfExtents;
             denseFog.density = kStage01DenseFogDensity;
             denseFog.edgeSoftness = kStage01DenseFogEdgeSoftness;
+        } else if (stageId_ == "stage04") {
+            // OPEN OCEAN: 全体の霧を止め、局所的な海霧の濃淡を確認する。
+            volume->SetFogDensity(0.0f);
+            volume->SetMaxDistance(1000.0f);
+            fogPreset.parameters.isEnabled = true;
+            fogPreset.parameters.color = { 0.66f, 0.82f, 0.88f };
+            fogPreset.parameters.baseHeight = stageSettings_.floorHeight + 6.0f;
+            fogPreset.parameters.heightDensity = 0.0f;
+            fogPreset.parameters.heightFalloff = 0.10f;
+            // 大きな濃淡が横風と緩い上昇流で動くようにする。
+            fogPreset.parameters.noiseScale = 0.045f;
+            fogPreset.parameters.noiseStrength = 0.9f;
+            fogPreset.parameters.noiseVelocity = { 4.0f, 0.35f, 1.5f };
+
+            FogVolumeSettings& centerMist = fogPreset.volumes[0];
+            centerMist.isEnabled = true;
+            centerMist.shape = FogVolumeShape::Box;
+            centerMist.center = { 0.0f, stageSettings_.floorHeight + 18.0f, 20.0f };
+            centerMist.halfExtents = { 100.0f, 28.0f, 85.0f };
+            centerMist.density = 0.012f;
+            centerMist.edgeSoftness = 25.0f;
+
+            FogVolumeSettings& westMist = fogPreset.volumes[1];
+            westMist = centerMist;
+            westMist.center = { -250.0f, stageSettings_.floorHeight + 12.0f, -70.0f };
+            westMist.halfExtents = { 110.0f, 18.0f, 90.0f };
+            westMist.density = 0.007f;
+            westMist.edgeSoftness = 16.0f;
+
+            FogVolumeSettings& eastMist = fogPreset.volumes[2];
+            eastMist = centerMist;
+            eastMist.center = { 280.0f, stageSettings_.floorHeight + 38.0f, 150.0f };
+            eastMist.halfExtents = { 95.0f, 40.0f, 110.0f };
+            eastMist.density = 0.009f;
+            eastMist.edgeSoftness = 32.0f;
+
+            // 球状の霧を重ね、平らな上端に盛り上がりと濃い部分を作る。
+            FogVolumeSettings& centerBillow = fogPreset.volumes[3];
+            centerBillow.isEnabled = true;
+            centerBillow.shape = FogVolumeShape::Sphere;
+            centerBillow.center = { 35.0f, stageSettings_.floorHeight + 32.0f, 40.0f };
+            centerBillow.radius = 45.0f;
+            centerBillow.density = 0.006f;
+            centerBillow.edgeSoftness = 28.0f;
+
+            FogVolumeSettings& eastBillow = fogPreset.volumes[4];
+            eastBillow = centerBillow;
+            eastBillow.center = { 250.0f, stageSettings_.floorHeight + 58.0f, 175.0f };
+            eastBillow.radius = 50.0f;
+            eastBillow.density = 0.005f;
         } else if (stageId_ == "stage03") {
             // Keep the ice air clear while retaining a faint cold haze.
             volume->SetFogDensity(0.0006f);
@@ -1372,6 +1423,16 @@ void GamePlayScene::Initialize()
         camera_->Update();
         Logger::Log("[UnderwaterSmoke] Fixed underwater verification camera");
     }
+    if (!stageSettings_.allRangeMode && !debugCameraController_->GetDebugMode()) {
+        // 初回の機体更新が、ステージと無関係な初期カメラで画面内補正しないようにする。
+        const Vector3 position = GetRailPosition(railDistance_);
+        const Vector3 forward = CalculateRailForward(railDistance_, position);
+        Vector3 right {};
+        Vector3 up {};
+        CalculateRailBasis(forward, right, up);
+        hasCameraFollowState_ = false;
+        UpdateCamera(position, forward, right, up, railDistance_, Input::GetInstance());
+    }
     Logger::Log("GamePlayScene::Initialize: Completed successfully");
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     RegisterDevelopmentPanel();
@@ -1535,8 +1596,7 @@ void GamePlayScene::Update()
             graphicsRenderer ? aaNames[graphicsRenderer->GetAntiAliasingMode()] : "利用不可",
             graphicsRenderer ? qualityNames[static_cast<int>(graphicsRenderer->GetRenderQualityPreset())] : "利用不可",
             !graphicsRenderer || !graphicsRenderer->IsDlaaAvailable() ? "DLAA非対応環境では選択をスキップ" :
-                (graphicsRenderer->IsDlaaActive() ? "DLAA: 動作中" : "DLAA: 利用可能（現在は未動作）"),
-            Input::GetInstance()->GetGamepadControlStyleName() });
+                (graphicsRenderer->IsDlaaActive() ? "DLAA: 動作中" : "DLAA: 利用可能（現在は未動作）") });
         Sprite* rowSprites[] = { pauseResumeBtnSprite_.get(), pauseRetryBtnSprite_.get(), pauseControlBtnSprite_.get(), pauseTitleBtnSprite_.get() };
         for (int row = 0; row < 4; ++row) {
             if (!rowSprites[row]) continue;
@@ -1821,8 +1881,6 @@ void GamePlayScene::Update()
     // 描画用カメラと仮想カメラの同期・更新
     UpdateCamera(currentPosition, forward, railRight, railUp, nextRailDistance, input);
     player_->UpdateAfterCamera(*camera_, TimeManager::GetInstance()->GetDeltaTime());
-    // カメラの追従・FOV変更後も、表示される機体と照準の距離を制限する。
-    player_->ConstrainGamepadAimToPlayer();
     UpdateRailBranchPresentation(nextRailDistance);
     if (stageId_ == "tutorial" && !debugCameraController_->GetDebugMode()) {
         tutorialController_.SetDefeatedTargets(tutorialDefeatedTargets_ &&
@@ -3373,13 +3431,14 @@ void GamePlayScene::Draw2D()
     }
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
-        if (isNearAimVisible_ && player_->IsUsingDirectGamepadControl() && !player_->IsDead()) {
-            nearAimSprite_->Draw();
-        }
+        // 遠方の武器照準を先に描き、近距離の枠を手前に重ねる。
         if (player_->IsMissileSelected() || player_->IsHomingMissileSelected()) {
             aimSprite_->Draw();
         } else {
             overheatGaugeSprite_->Draw();
+        }
+        if (isNearAimVisible_ && player_->IsUsingDirectGamepadControl() && !player_->IsDead()) {
+            nearAimSprite_->Draw();
         }
         std::vector<Vector3> homingLockPositions;
         player_->GetHomingLockPositions(homingLockPositions);
@@ -3581,7 +3640,6 @@ bool GamePlayScene::UpdateTutorialPresentation()
             for (auto& object : levelObjects_) object->Update();
             if (player_) player_->SetTranslate(player_->GetTranslate());
             if (player_) player_->BlockFireUntilRelease();
-            if (player_) player_->ConstrainGamepadAimToPlayer();
             return true;
         }
         return false;
@@ -3692,7 +3750,6 @@ void GamePlayScene::SetPaused(bool isPaused)
 PauseStateContext GamePlayScene::MakePauseContext()
 {
     PauseStateContext context { pauseSelection_ };
-    context.toggleGamepadStyle = std::bind(&Input::ToggleGamepadControlStyle, Input::GetInstance());
     context.changeState = [this](PauseViewState state, int selection) { ChangePauseState(state, selection); };
     context.menuActions = {
         [this]() {
@@ -4693,6 +4750,10 @@ void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
         presetId = isPlayerBoosting ? "tutorial_boost" : "tutorial";
     }
     sceneManager->ApplyPostEffectChain(VisualPresetLibrary::GetInstance().GetPostEffects(presetId));
+    if (stageId_ == "stage04") {
+        // 局所的な海霧を確認しやすいよう、距離FOGだけを外す。
+        sceneManager->RemovePostEffect(PostEffectType::Fog);
+    }
     sceneManager->SetRadialBlurSettings(blur);
     constexpr float kSparkFadeRate = 12.0f;
     constexpr float kSparkStopThreshold = 0.01f;

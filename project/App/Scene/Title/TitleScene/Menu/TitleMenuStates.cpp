@@ -13,7 +13,12 @@ TitleViewState TitleMenuState::GetType() const
 
 void TitleMenuState::HandleInput(TitleScene& scene, const Input& input) const
 {
-    if (input.IsKeyTrigger(DIK_SPACE) || input.IsKeyTrigger(DIK_RETURN) ||
+    // 霧などの調整時に、OPEN OCEANへ直接進む。
+    if (input.IsKeyTrigger(DIK_O)) {
+        SoundManager::GetInstance()->Play("UiConfirm");
+        SceneManager::GetInstance()->SetNextScene(std::make_unique<LoadingScene>(
+            std::make_unique<GamePlayScene>("stage04")));
+    } else if (input.IsKeyTrigger(DIK_SPACE) || input.IsKeyTrigger(DIK_RETURN) ||
         input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)) {
         scene.StartGame();
     } else if (input.IsKeyTrigger(DIK_S) || input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_Y)) {

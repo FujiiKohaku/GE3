@@ -9,11 +9,13 @@ Camera::Camera()
     , aspectRatio_(static_cast<float>(WinApp::kClientWidth) / static_cast<float>(WinApp::kClientHeight))
     , nearClip_(0.1f)
     , farClip_(1000.0f)
-    , worldMatrix_(MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate))
-    , viewMatrix_(MatrixMath::Inverse(worldMatrix_))
-    , projectionMatrix_(MatrixMath::MakePerspectiveFovMatrix(fovY_, aspectRatio_, nearClip_, farClip_))
-    , viewProjectionMatrix_(MatrixMath::Multiply(viewMatrix_, projectionMatrix_))
 {
+    // メンバーは宣言順に初期化されるため、画角などが確定した本体で行列を作る。
+    worldMatrix_ = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
+    viewMatrix_ = MatrixMath::Inverse(worldMatrix_);
+    projectionMatrix_ = MatrixMath::MakePerspectiveFovMatrix(fovY_, aspectRatio_, nearClip_, farClip_);
+    viewProjectionMatrix_ = MatrixMath::Multiply(viewMatrix_, projectionMatrix_);
+    unjitteredViewProjectionMatrix_ = viewProjectionMatrix_;
 }
 
 void Camera::Initialize()

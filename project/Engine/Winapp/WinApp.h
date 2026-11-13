@@ -30,6 +30,7 @@ public:
 
     static const int32_t kClientWidth = 1280;
     static const int32_t kClientHeight = 720;
+    // 実際のサイズが取得できない場合や0以下の場合は、基準サイズを返す。
     int32_t GetClientWidth() const;
     int32_t GetClientHeight() const;
     static constexpr int32_t kFullscreenWidth = 1920;

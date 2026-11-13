@@ -73,7 +73,7 @@ private:
     Matrix4x4 viewMatrix_;
     Matrix4x4 projectionMatrix_;
     Matrix4x4 viewProjectionMatrix_;
-    Matrix4x4 unjitteredViewProjectionMatrix_ = viewProjectionMatrix_;
+    Matrix4x4 unjitteredViewProjectionMatrix_ {};
     Vector2 projectionJitterNdc_ = {};
     // プロジェクション計算用パラメータ
     float fovY_ = 0.45f; // 垂直方向の視野角

@@ -104,19 +104,13 @@ void SettingsUi::Update(const Input* input, float settingsAmount, float titleOff
     }
     std::string styleLabel = "EX-ZODIAC";
     std::string movementLabel = "LS MOVE / A,RT FIRE";
-    if (input->GetGamepadControlStyle() == Input::GamepadControlStyle::Legacy) {
-        styleLabel = "LEGACY";
-        movementLabel = "LS AIM / A,RT FIRE";
-    }
     std::string pitchLabel = "NORMAL";
     if (input->IsGamepadPitchInverted()) { pitchLabel = "INVERTED"; }
-    std::string styleShortcut = " [C]";
     std::string pitchShortcut = " [P]";
     if (isGamepad) {
-        styleShortcut = " [LB / RB]";
         pitchShortcut = " [A / D-PAD]";
     }
-    settingsItemsText_->SetText("PAD STYLE: " + styleLabel + styleShortcut +
+    settingsItemsText_->SetText("PAD STYLE: " + styleLabel +
         "\n\nPAD PITCH: " + pitchLabel + pitchShortcut +
         "\n\n" + movementLabel + "\nX BOOST / Y BRAKE");
     settingsShortcutText_->SetPosition(

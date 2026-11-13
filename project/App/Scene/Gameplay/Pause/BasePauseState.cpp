@@ -93,23 +93,21 @@ public:
         else if (input.confirm) Activate(context);
     }
     void Activate(PauseStateContext& context) const override {
-        if (context.selection == 0 && context.toggleGamepadStyle) context.toggleGamepadStyle();
         if (context.selection == 2) context.togglePitch();
         if (context.selection == 3) context.changeState(PauseViewState::Settings, 0);
     }
     void AdjustSensitivity(PauseStateContext& context, float amount) const override {
-        if (context.selection == 0 && context.toggleGamepadStyle) context.toggleGamepadStyle();
         if (context.selection == 1) context.adjustPad(amount);
     }
-    bool HasSensitivityControls(int row) const override { return row == 0 || row == 1; }
+    bool HasSensitivityControls(int row) const override { return row == 1; }
     PauseDisplay GetDisplay(const PauseDisplayInput& input) const override {
         PauseDisplay display { "コントローラー設定", {}, "↑↓ / 十字キー: 選択　←→: 変更\nENTER / A: 決定　ESC / B: 戻る" };
         std::string pitchLabel = "通常";
         if (input.invertedPitch) { pitchLabel = "反転"; }
-        display.rows = { "操作: " + input.gamepadControlStyle,
+        display.rows = { "操作: EX-ZODIAC風",
             "照準感度: " + std::to_string(static_cast<int>(input.padSensitivity * 100.0f + 0.5f)) + "%",
             "上下操作: " + pitchLabel, "戻る" };
-        display.hint += "\nEX-ZODIAC風: スティックで機体を直接操縦\n既存操作: 照準へ機体が追従 / 操作方式は自動保存";
+        display.hint += "\nEX-ZODIAC風: スティックで機体を直接操縦";
         if (input.selection >= 0 && input.selection < 4) display.rows[input.selection].insert(0, "> ");
         return display;
     }

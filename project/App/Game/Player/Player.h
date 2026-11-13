@@ -221,12 +221,6 @@ class PlayerInput {
 public:
     enum class ControlInputType { Keyboard, Mouse, Gamepad };
 
-    struct AimInput {
-        Vector2 stick = {};
-        bool isPitchInverted = false;
-        float sensitivity = 1.0f;
-    };
-
     struct BoostInput {
         bool isBraking = false;
         bool shouldBoost = false;
@@ -234,7 +228,6 @@ public:
 
     static ControlInputType GetControlInputType(const Input& input, bool shouldUseMouse);
     static Vector2 ReadMousePosition();
-    static AimInput ReadGamepadAim(const Input& input);
     static Vector2 ReadKeyboardSteering(const Input& input);
     static BoostInput ReadBoost(const Input& input, bool isEnabled);
 };
@@ -287,10 +280,10 @@ struct Ray;
 // 自機の状態遷移・共有データ・描画を管理する。
 class Player {
 public:
-    static constexpr float kDirectAimYawRadians = 0.45f;
-    static constexpr float kDirectAimPitchRadians = 0.33f;
+    static constexpr float kDirectAimYawRadians = PlayerReticleController::kDirectAimYawRadians;
+    static constexpr float kDirectAimPitchRadians = PlayerReticleController::kDirectAimPitchRadians;
     bool IsUsingDirectGamepadControl() const { return isUsingDirectGamepadControl_; }
-    const Vector2& GetDirectGamepadAimInput() const { return directGamepadAimInput_; }
+    const Vector2& GetDirectGamepadAimInput() const { return reticleController_.GetDirectGamepadAimInput(); }
     void UpdateAfterCamera(const Camera& activeCamera, float deltaTimeSeconds);
     enum class ControlMode { KeyboardAndMouse, Controller };
     Player() = default;
@@ -373,7 +366,6 @@ public:
     const Vector2& GetAimScreenPosition() const { return reticleController_.GetAimScreenPosition(); }
     Vector3 GetNearAimPoint(const Camera& activeCamera) const;
     // 操縦・射撃の前と、描画用カメラ更新後にパッド照準の距離を補正する。
-    void ConstrainGamepadAimToPlayer();
     // 外部から現在の武器の発射を要求する。死亡・過熱・クールダウン中は発射されない。
     void FireBullet(const Camera& activeCamera) { weaponController_.FireBullet(activeCamera); }
     // 使用クラス：GameplayCollisionSystem。プレイヤー弾の衝突判定に使う一覧を返す。
@@ -443,10 +435,7 @@ private:
         shotPointCalculator_.Initialize();
     }
     void UpdateMouseAim() { reticleController_.UpdateMouseAim(); }
-    void UpdateGamepadAim(float x, float y, bool inverted, float dt, float sensitivity = 1.0f) { reticleController_.UpdateGamepadAim(x, y, inverted, dt, sensitivity); }
     void ClampAimScreenPosition() { reticleController_.ClampAimScreenPosition(); }
-    void ClampGamepadAimToPlayer(const Vector2& position) { reticleController_.ClampGamepadAimToPlayer(position); }
-    Vector2 GetGamepadSteeringScreenPosition() const { return reticleController_.GetGamepadSteeringScreenPosition(); }
     void UpdateAim(const Camera& camera, float deltaTimeSeconds) {
         shotPointCalculator_.Update(camera, GetAimScreenPosition(), deltaTimeSeconds);
     }
@@ -462,11 +451,10 @@ private:
     // 使用中のパッドを優先し、パッドでなければ設定された操作方式を選ぶ。
     ControlInputType GetControlInputType(const Input& input) const;
     // 選択された操作方式に合わせて、マウスまたはパッドの照準を更新する。
-    void UpdateAimFromInput(const Input& input, float deltaTimeSeconds);
     // キーボード・マウス・パッドの違いを、移動処理が共通に扱える入力へまとめる。
     ControlInput GetControlInput(const Input& input, const Vector2& screenSizePixels, bool isAllRangeMode, float deltaTimeSeconds);
     // 照準の画面位置を機体の左右・上下の操舵入力へ変換する。
-    ControlInput UpdateAimSteering(const Vector2& screenSizePixels, bool isAllRangeMode, float deltaTimeSeconds, bool isGamepad);
+    ControlInput UpdateAimSteering(const Vector2& screenSizePixels, bool isAllRangeMode, float deltaTimeSeconds);
 
     // 移動・操舵・ロール・画面内補正。
     void InitializeMovement();
@@ -507,10 +495,8 @@ private:
     PlayerShotPointCalculator shotPointCalculator_;
     bool isUsingDirectGamepadControl_ = false;
     bool shouldUpdateWeaponsAfterCamera_ = false;
-    Vector2 directGamepadAimInput_ {};
     void SynchronizeGamepadControlStyle(const Input& input);
     ControlInput GetDirectGamepadControl(const Input& input, float deltaTimeSeconds);
-    Vector3 GetDirectGamepadAimDirection() const;
 
     int maxHp_ = 20;
     int currentHp_ = maxHp_;

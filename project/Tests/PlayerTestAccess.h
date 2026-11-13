@@ -10,10 +10,6 @@ struct PlayerTestAccess {
     static EulerTransform& Transform(Player& player) { return player.transform_; }
     static void InitializeAim(Player& player) { player.InitializeAim(); }
     static void InitializeMovement(Player& player) { player.InitializeMovement(); }
-    static void UpdateGamepadAim(Player& player, float stickX, float stickY, bool isPitchInverted,
-        float deltaTimeSeconds, float sensitivity = 1.0f) { player.UpdateGamepadAim(stickX, stickY, isPitchInverted, deltaTimeSeconds, sensitivity); }
-    static void ClampGamepadAimToPlayer(Player& player, const Vector2& position) { player.ClampGamepadAimToPlayer(position); }
-    static Vector2 GetGamepadSteeringScreenPosition(const Player& player) { return player.GetGamepadSteeringScreenPosition(); }
     static void UpdateInvincibility(Player& player, float deltaTimeSeconds = 1.0f / 60.0f) { player.UpdateInvincibility(deltaTimeSeconds); }
     static void UpdateDeathAnimation(Player& player, EulerTransform& transform, float deltaTimeSeconds) { player.deadState_.UpdateAnimation(transform, deltaTimeSeconds); }
     static bool IsAlive(const Player& player) { return player.IsAlive(); }
@@ -30,7 +26,6 @@ struct PlayerTestAccess {
     static void SynchronizeOrientation(Player& player) { player.SynchronizeOrientation(); }
     static Vector3 ClampRailOffsetToScreen(const Player& player, const Vector3& offset) { return player.ClampRailOffsetToScreen(offset); }
     static Vector3 CalculateRailWorldPosition(const Player& player, const Vector3& offset) { return player.CalculateRailWorldPosition(offset); }
-    static void UpdateAimFromInput(Player& player, const Input& input, float deltaTimeSeconds) { player.UpdateAimFromInput(input, deltaTimeSeconds); }
     static bool IsGamepadControl(const Player& player, const Input& input) { return player.GetControlInputType(input) == Player::ControlInputType::Gamepad; }
     static bool IsMouseControl(const Player& player, const Input& input) { return player.GetControlInputType(input) == Player::ControlInputType::Mouse; }
     static bool IsKeyboardControl(const Player& player, const Input& input) { return player.GetControlInputType(input) == Player::ControlInputType::Keyboard; }
