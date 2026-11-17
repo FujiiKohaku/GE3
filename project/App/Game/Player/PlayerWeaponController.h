@@ -1,14 +1,120 @@
 #pragma once
 #include "Engine/math/MathStruct.h"
+#include "App/Game/Common/Bullet/BaseBullet.h"
+#include "Engine/Effect/EffectManager.h"
 #include <array>
 #include <cstdint>
 #include <memory>
 #include <vector>
 
-class PlayerBullet;
 class DxrRenderer;
 
 class CombatTarget;
+
+// PlayerBullet
+// プレイヤー弾に共通する敵への命中処理を定義し、敵弾とは別の型として扱う。
+
+struct PlayerBulletExplosionSettings {
+    float radius = 0.0f;
+    float damage = 0.0f;
+};
+
+class PlayerBullet : public BaseBullet {
+public:
+    virtual ~PlayerBullet() = default;
+    // 弾種固有の命中演出を追加するための共通の呼び出し口。標準では何も行わない。
+    virtual void OnHitEnemy(const Vector3& position);
+    // 半径が0なら爆発しない。衝突したフレームにだけ爆風を判定する。
+    virtual PlayerBulletExplosionSettings GetExplosionSettings() const { return {}; }
+};
+
+// NormalBullet
+// プレイヤーの通常弾の描画設定と、敵への命中時のエフェクトを扱う。
+class NormalBullet : public PlayerBullet {
+public:
+    // 通常弾の色・シェーダー・霧や影の設定を適用し、機体から見やすい弾にする。
+    void Initialize(Model* model) override;
+
+    // 共通の移動と寿命処理を使い、通常弾を進める。
+    void Update() override;
+
+    // 通常弾の命中位置へヒットエフェクトを出す。
+    void OnHitEnemy(const Vector3& position) override;
+};
+
+// MissileBullet
+// ミサイルの描画・威力と航跡エフェクトを扱う。消滅時には航跡も停止する。
+
+
+
+class MissileBullet : public PlayerBullet {
+public:
+    // ミサイルの見た目と威力を設定し、追従する航跡エフェクトを開始する。
+    void Initialize(Model* model) override;
+    // 移動と寿命を更新し、航跡を追従させる。消滅した場合は航跡を停止する。
+    void Update() override;
+    // 本体の位置を設定し、航跡の追従先も同じ位置へ更新する。
+    void SetTranslate(const Vector3& translate) override;
+    // 弾を消滅扱いにし、その場に航跡だけが残り続けないよう停止する。
+    void SetDead() override;
+   // void Move() override;
+    float GetSpeed() const
+    {
+        return speed_;
+    }
+    // 命中位置にミサイル用の演出を出す。
+    void OnHitEnemy(const Vector3& position) override;
+    PlayerBulletExplosionSettings GetExplosionSettings() const override;
+    // 球状エフェクトのEndScaleを、描画と共通のワールド半径として読む。
+    static PlayerBulletExplosionSettings GetExplosionSettingsFromConfig(const nlohmann::json& config);
+
+private:
+    // ミサイルの位置を追いかけるループエフェクトを生成する。
+    void CreateTrailEffect();
+    // 弾の位置に航跡の発生位置を追従させる。
+    void UpdateTrailPosition();
+    // 再生中の航跡を停止し、エフェクトのハンドルを無効化する。
+    void StopTrailEffect();
+
+private:
+    static constexpr float kExplosionDamage = 5.0f;
+    float speed_ = 180.0f;
+    float scale_ = 2.0f;
+
+    EffectHandle trailEffectHandle_ = kInvalidEffectHandle;
+
+    std::shared_ptr<Vector3> trailPosition_;
+};
+
+// HomingMissileBullet
+// 生存しているロック対象へ進行方向を曲げ、目標を通り過ぎた回数も管理するミサイル。
+
+
+class CombatTarget;
+
+class HomingMissileBullet : public MissileBullet {
+public:
+    // 追尾弾は直撃だけ。親のミサイル用爆発演出と範囲ダメージを使わない。
+    void OnHitEnemy(const Vector3& position) override;
+    PlayerBulletExplosionSettings GetExplosionSettings() const override { return {}; }
+    // ロック対象と候補一覧を記録する。候補一覧は弱参照で保持し、寿命を引き延ばさない。
+    void SetTarget(CombatTarget* target, const std::shared_ptr<const std::vector<CombatTarget*>>& activeTargets);
+
+protected:
+    // 対象の生存を確認して進行方向を曲げ、接近時の補正と通過回数によって追尾を制御する。
+    void Move() override;
+
+private:
+    CombatTarget* target_ = nullptr;
+    std::weak_ptr<const std::vector<CombatTarget*>> activeTargets_;
+    float homingStrength_ = 0.08f;
+    int targetPassCount_ = 0;
+
+    static constexpr float kCloseHomingDistance = 50.0f;
+    static constexpr float kCloseHomingStrength = 0.32f;
+    static constexpr float kTargetSnapDistance = 10.0f;
+    static constexpr int kMaxTargetPassCount = 2;
+};
 
 // PlayerWeaponController
 // 選択中の武器を切り替え、発射・発熱・ロックオンと生成済みのプレイヤー弾を管理する。
@@ -66,7 +172,10 @@ private:
     friend bool RunHomingInvalidationTests();
     friend struct PlayerWeaponHeatTestAccess;
     void ResetCombatState();
-    void UpdateHeat(float deltaTimeSeconds, bool isFireHeld);
+    void UpdateAssaultInput(float deltaTimeSeconds, bool isFireHeld, bool isTriggered);
+    void UpdateMissileInput(bool isTriggered);
+    void UpdateHomingInput(bool isFireHeld);
+    void UpdateHeat(float deltaTimeSeconds, bool isAssaultFireActive);
     void AddShotHeat();
     int GetShotDamage(int baseDamage) const;
     bool UpdateHomingFireInput(bool isFireHeld, bool isEnabled, Camera* camera,
@@ -75,6 +184,10 @@ private:
         const Vector3& forward, const Vector2& aimPosition);
     void GetLockedPositions(std::vector<Vector3>& positions) const;
     bool UpdateFireInputState(bool isFireHeld, bool isForeground, uint64_t focusLossCount);
+    // 生存・弾モデル・カメラ・デバッグ状態から射撃の基本条件を確認する。
+    bool CanFire(bool isDebugMode) const;
+    // 入力機器のいずれかで射撃ボタンが押されているかを確認する。
+    bool IsPhysicalFireHeld(Input* input) const;
     enum WeaponType {
         kWeaponAssault = 0,
         kWeaponMissileBullet,

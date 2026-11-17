@@ -6,35 +6,54 @@
 #include <algorithm>
 #include <cmath>
 
-// EX-ZODIAC風操作では、同じスティック入力から操舵と照準方向を作る。
+//、同じスティック入力から操舵と照準方向を作る。
 Vector2 PlayerReticleController::UpdateDirectGamepadControl(const Input& input, float deltaTimeSeconds)
 {
     Vector2 steering { input.GetGamepadLeftStickX(), input.GetGamepadLeftStickY() };
 
 
+    //上下操作を反転する設定がONならスティックのYを反転させる。
+    if (input.IsGamepadPitchInverted()) 
+    { steering.y = -steering.y; }
 
-    if (input.IsGamepadPitchInverted()) { steering.y = -steering.y; }
+    //スティックをどれだけ倒しているかを計算
     const float magnitude = std::sqrt(steering.x * steering.x + steering.y * steering.y);
-    const float response = 0.5f + 0.5f * (std::min)(magnitude, 1.0f);
+    //少し倒したときの入力を弱めて、細かく操作しやすくしている
+    constexpr float kMinStickResponse = 0.5f;
+    const float response = kMinStickResponse +
+        (1.0f - kMinStickResponse) * (std::min)(magnitude, 1.0f);
+    //倍率をかけて方向をそのままにしたまま傾きの数値を調整している。
     steering.x *= response;
     steering.y *= response;
+    //スティックに対するAIMの反応の速さ、小さいとゆっくり、大きいと早い
     constexpr float kDirectAimFollowSpeed = 4.5f;
+
+    //FPSに依存せず指定した速さで目標に近づくためにやっている計算
     const float followRate = 1.0f - std::exp(-kDirectAimFollowSpeed * (std::max)(0.0f, deltaTimeSeconds));
     const float sensitivity = input.GetGamepadAimSensitivity();
+
+    //感度を-1.0から1.0の値でクランプする
+    //感度が高い場合はsteeringの数値が低くてもすぐ反応する。例: steering 0.2* 感度2倍 =0.4 
     const Vector2 targetAimInput {
         std::clamp(steering.x * sensitivity, -1.0f, 1.0f),
         std::clamp(steering.y * sensitivity, -1.0f, 1.0f)
     };
+
+
+    // 3D空間の狙い先を求めるため、照準入力を滑らかに更新する。
     directGamepadAimInput_.x += (targetAimInput.x - directGamepadAimInput_.x) * followRate;
     directGamepadAimInput_.y += (targetAimInput.y - directGamepadAimInput_.y) * followRate;
     return steering;
 }
 
+
+
 // 機体の進行方向とレールの左右・上下方向から、3D空間で狙う方向を求める。
-Vector3 PlayerReticleController::GetDirectGamepadAimDirection(bool isAllRangeMode,
-    const Vector3& forward, const Vector3& right, const Vector3& up) const
+Vector3 PlayerReticleController::GetDirectGamepadAimDirection(bool isAllRangeMode,const Vector3& forward, const Vector3& right, const Vector3& up) const
 {
-    if (isAllRangeMode) { return forward; }
+    //全飛行モードだったら機体の進行方向をそのまま狙う方向にする
+    if (isAllRangeMode)
+    { return forward; }
     const float yawRadians = directGamepadAimInput_.x * kDirectAimYawRadians;
     const float pitchRadians = directGamepadAimInput_.y * kDirectAimPitchRadians;
     return Normalize(forward + right * std::tan(yawRadians) + up * std::tan(pitchRadians));
@@ -55,10 +74,11 @@ Vector3 PlayerReticleController::GetNearAimPoint(const Vector3& muzzlePosition, 
 {
     constexpr float kNearAimDistance = 45.0f;
     constexpr float kMinAimDistance = 0.0001f;
+    constexpr float kNearAimMaxDistanceRatio = 0.5f;
     const Vector3 aimOffset = aimPoint - muzzlePosition;
     const float aimDistance = Vector3Length(aimOffset);
     if (aimDistance <= kMinAimDistance) { return muzzlePosition; }
-    const float nearDistance = (std::min)(kNearAimDistance, aimDistance * 0.5f);
+    const float nearDistance = (std::min)(kNearAimDistance, aimDistance * kNearAimMaxDistanceRatio);
     return muzzlePosition + aimOffset * (nearDistance / aimDistance);
 }
 
