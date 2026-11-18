@@ -1,0 +1,79 @@
+newmtl Ruins_Moss_00
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Moss_00.png
+
+newmtl Ruins_Moss_01
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Moss_01.png
+
+newmtl Ruins_Moss_02
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Moss_02.png
+
+newmtl Ruins_PanelCorridor_Masonry
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Masonry.png
+
+newmtl Ruins_Recess
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Recess.png
+
+newmtl Ruins_Sandstone_0
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Sandstone_0.png
+
+newmtl Ruins_Sandstone_1
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Sandstone_1.png
+
+newmtl Ruins_Sandstone_2
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Sandstone_2.png
+
+newmtl Ruins_Sandstone_3
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Sandstone_3.png
+
+newmtl Ruins_Turquoise_Inlay
+Kd 1 1 1
+Ks 0 0 0
+Ns 1
+d 1
+illum 2
+map_Kd Ruins_Turquoise_Inlay.png

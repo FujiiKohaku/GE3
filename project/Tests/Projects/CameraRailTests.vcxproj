@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildThisFileDirectory)..\..\</SolutionDir>
+  </PropertyGroup>
+  <Import Project="..\..\KohakuEngine.vcxproj" />
+  <PropertyGroup>
+    <ProjectName>CameraRailTests</ProjectName>
+    <TargetName>CameraRailTests</TargetName>
+    <IntDir>$(projectRootPath)..\generated\obj\CameraRailTests\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(projectRootPath)..\generated\outputs\$(Configuration)\</OutDir>
+    <TargetFileName>CameraRailTests.exe</TargetFileName>
+    <TargetPath>$(OutDir)CameraRailTests.exe</TargetPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link><SubSystem>Console</SubSystem></Link>
+    <ClCompile><UndefinePreprocessorDefinitions>NDEBUG;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions></ClCompile>
+  </ItemDefinitionGroup>
+  <!-- Player統合後のテストは、先にビルドしたゲームのオブジェクトを再利用する。 -->
+  <ItemGroup>
+    <GameBuildSource Include="@(ClCompile)" />
+    <ClCompile Remove="@(ClCompile)" />
+    <ClCompile Include="$(projectRootPath)Tests\CameraRailTests.cpp" />
+    <Object Include="@(GameBuildSource->'$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(Configuration)\%(Filename).obj')" Exclude="$(projectRootPath)..\generated\obj\KohakuEngine\$(Platform)\$(Configuration)\main.obj" />
+  </ItemGroup>
+</Project>
+

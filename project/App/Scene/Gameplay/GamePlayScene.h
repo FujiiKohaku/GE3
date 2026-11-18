@@ -236,6 +236,8 @@ private:
     void UpdateRailMovement(Vector3& outPosition, Vector3& outForward, Vector3& outRight, Vector3& outUp, float& outNextDistance);
     // ステージ・ルート・進行区間に応じた最低高度と最高高度をプレイヤーへ渡す。
     void UpdatePlayerRailHeightRange(float distance);
+    // Releaseでも使える、ステージ1の浮上完了地点への確認用ショートカット。
+    void WarpToSurfaceExit();
     // レール上の基準姿勢とプレイヤー操作を合わせて機体の位置・向きを更新する。
     void UpdatePlayerTransform(const Vector3& currentPosition, const Vector3& railRight, const Vector3& railUp, const Vector3& forward);
     // 機体とレールに追従する視点を作り、加減速や旋回によるカメラ演出を加える。
@@ -298,7 +300,9 @@ private:
     int test_ = 0;
     std::unique_ptr<EditorManager> editorManager_;
     std::unique_ptr<Rail> rail_;
+    CameraRail cameraRail_;
     RailBranchRoute railBranch_;
+    RuinsBranchRoute ruinsBranch_;
     std::unique_ptr<Text> railBranchUpperText_;
     std::unique_ptr<Text> railBranchLowerText_;
     std::unique_ptr<Text> railBranchStatusText_;

@@ -94,7 +94,7 @@ void TestStageConfiguration()
     assert(stage->railHeightRange.shouldUseFloorMinimum);
     assert(!stage->railLowerHeightRange.shouldUseFloorMinimum);
     assert(stage->railControlPoints.front().y == -20.0f);
-    assert(stage->railControlPoints.back().z == 7200.0f);
+    assert(stage->railControlPoints.back().z == stage->railLength);
     assert(!catalog->Find("stage02")->railBranch.isEnabled);
 }
 

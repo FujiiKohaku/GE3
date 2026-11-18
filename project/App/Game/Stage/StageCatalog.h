@@ -6,8 +6,10 @@
 #include <vector>
 #include "Engine/Shadow/ShadowSettings.h"
 #include "RailBranchRoute.h"
+#include "RuinsBranchRoute.h"
 #include "RailHeightRange.h"
 #include "App/Game/Hazard/ElectricGateCycleSettings.h"
+#include "App/Game/Camera/CameraRail.h"
 
 struct StageSettings {
     ShadowSettings shadows;
@@ -30,7 +32,9 @@ struct StageSettings {
     float flightMinHeight = 5.0f;
     float flightMaxHeight = 180.0f;
     std::vector<Vector3> railControlPoints;
+    std::vector<CameraRailPoint> cameraRailPoints;
     RailBranchSettings railBranch;
+    RuinsBranchSettings ruinsBranch;
     RailHeightRangeSettings railHeightRange;
     RailHeightRangeSettings railLowerHeightRange;
     std::vector<RailHeightZoneSettings> railHeightZones;

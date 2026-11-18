@@ -6,6 +6,7 @@
 
 class Rail {
 public:
+    virtual ~Rail() = default;
     void Initialize();
     void Update();
     void DrawDebug();

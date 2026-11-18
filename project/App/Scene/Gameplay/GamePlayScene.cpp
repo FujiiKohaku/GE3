@@ -131,10 +131,6 @@ constexpr float kInitializeFogPresetParametersNoiseScaleDefault = 0.025f;
 constexpr float kInitializeFogPresetParametersBaseHeightOffset = 6.0f;
 constexpr float kInitializeFogPresetParametersHeightDensityDefault = 0.0015f;
 constexpr float kInitializeFogPresetParametersHeightFalloffDefault = 0.16f;
-constexpr float kStage01DenseFogRailDistance = 520.0f;
-constexpr Vector3 kStage01DenseFogHalfExtents = { 45.0f, 30.0f, 90.0f };
-constexpr float kStage01DenseFogDensity = 0.05f;
-constexpr float kStage01DenseFogEdgeSoftness = 12.0f;
 constexpr float kInitializeFootFogCenterY = 4.0f;
 constexpr float kBossSpotLightIntensity = 0.65f;
 constexpr float kBossSpotLightDistance = 240.0f;
@@ -491,6 +487,8 @@ void GamePlayScene::PrepareLoadingFont() const
     fontManager->EnsureGlyphs(fontHandle, kRailBranchUpperText);
     fontManager->EnsureGlyphs(fontHandle, kRailBranchLowerText);
     fontManager->EnsureGlyphs(fontHandle, kRailBranchSelectionStatus);
+    fontManager->EnsureGlyphs(fontHandle, "左へ移動で遺跡内部へ / 直進で海上ルート 遺跡内部ルート");
+    fontManager->EnsureGlyphs(fontHandle, "遺跡入口へ進入 遺跡内部を通過中");
     fontManager->EnsureGlyphs(fontHandle, kRailBranchUnderwaterStatus);
     fontManager->EnsureGlyphs(fontHandle, kRailBranchMergeStatus);
 }
@@ -548,6 +546,7 @@ void GamePlayScene::Initialize()
     }
     railSpeed_ = stageSettings_.railSpeed;
     railBranch_.Initialize(stageSettings_.railBranch);
+    ruinsBranch_.Initialize(stageSettings_.ruinsBranch);
     hasBranchSurfaceFog_ = false;
 
     underwaterBlend_ = 0.0f;
@@ -559,6 +558,7 @@ void GamePlayScene::Initialize()
     gameplayCollisionSystem_ = std::make_unique<GameplayCollisionSystem>();
     rail_ = std::make_unique<Rail>();
     rail_->Initialize();
+    cameraRail_.Configure(stageSettings_.cameraRailPoints);
     if (!stageSettings_.railControlPoints.empty()) {
         for (const Vector3& point : stageSettings_.railControlPoints) {
             rail_->AddPoint(point);
@@ -681,13 +681,6 @@ void GamePlayScene::Initialize()
             fogPreset.parameters.baseHeight = stageSettings_.floorHeight + kInitializeFogPresetParametersBaseHeightOffset;
             fogPreset.parameters.heightDensity = kInitializeFogPresetParametersHeightDensityDefault;
             fogPreset.parameters.heightFalloff = kInitializeFogPresetParametersHeightFalloffDefault;
-            FogVolumeSettings& denseFog = fogPreset.volumes[0];
-            denseFog.isEnabled = true;
-            denseFog.shape = FogVolumeShape::Box;
-            denseFog.center = rail_->GetPositionByDistance(kStage01DenseFogRailDistance);
-            denseFog.halfExtents = kStage01DenseFogHalfExtents;
-            denseFog.density = kStage01DenseFogDensity;
-            denseFog.edgeSoftness = kStage01DenseFogEdgeSoftness;
         } else if (stageId_ == "stage04") {
             // OPEN OCEAN: 全体の霧を止め、局所的な海霧の濃淡を確認する。
             volume->SetFogDensity(0.0f);
@@ -1442,7 +1435,8 @@ void GamePlayScene::Initialize()
 // 既存レールの位置に、選択済みの下ルートの変位だけを加える。
 Vector3 GamePlayScene::GetRailPosition(float distance) const
 {
-    return rail_->GetPositionByDistance(distance) + railBranch_.GetOffset(distance);
+    const Vector3 mainPosition = rail_->GetPositionByDistance(distance) + railBranch_.GetOffset(distance);
+    return ruinsBranch_.GetPosition(distance, mainPosition);
 }
 
 // 少し先のレール位置から進行方向を求め、向きが求められない場合の代替方向も用意する。
@@ -1705,6 +1699,10 @@ void GamePlayScene::Update()
         UpdatePlayerDamagePostEffects();
         UpdateCameraShakePostEffect();
         return;
+    }
+    // F3は他の操作と重複しない、Releaseでも使える浮上完了地点ワープ。
+    if (Input::GetInstance()->IsKeyTrigger(DIK_F3)) {
+        WarpToSurfaceExit();
     }
     // ReleaseビルドでもVキーでボス戦の開始位置へワープできる。
     if (stageSettings_.bossType != "None" && Input::GetInstance()->IsKeyTrigger(DIK_V)) {
@@ -2419,6 +2417,8 @@ void GamePlayScene::UpdateRailMovement(
 
     railBranch_.Update(railDistance_, outNextDistance, player_->GetRailOffset().y,
         player_->GetCurrentHp() > 0 && !debugCameraController_->GetDebugMode());
+    ruinsBranch_.Update(railDistance_, outNextDistance, player_->GetRailOffset().x,
+        player_->GetCurrentHp() > 0 && !debugCameraController_->GetDebugMode());
     if (stageSettings_.railBranch.isEnabled && railDistance_ < stageSettings_.railBranch.startDistance &&
         outNextDistance >= stageSettings_.railBranch.startDistance && outNextDistance < stageSettings_.railBranch.endDistance) {
         if (railBranch_.IsLowerRouteSelected()) {
@@ -2460,6 +2460,43 @@ void GamePlayScene::UpdatePlayerRailHeightRange(float distance)
         range.maximumHeight = mainRange.maximumHeight + (range.maximumHeight - mainRange.maximumHeight) * lowerRouteBlend;
     }
     player_->SetRailHeightRange(range);
+}
+
+void GamePlayScene::WarpToSurfaceExit()
+{
+    if (stageId_ != "stage01" || !stageSettings_.railBranch.isEnabled || player_ == nullptr) { return; }
+    railBranch_.Initialize(stageSettings_.railBranch);
+    ruinsBranch_.Initialize(stageSettings_.ruinsBranch);
+    railDistance_ = stageSettings_.railBranch.endDistance;
+    player_->ClearHomingTargets();
+    enemyBulletManager_.Clear();
+    if (bossController_ && bossController_->IsSpawned()) {
+        bossController_->Initialize(stageSettings_.bossType, stageSettings_.bossSpawnDistance,
+            stageSettings_.bossPosition, fearWormEnemyModel_, enemyBulletModel_, player_.get(),
+            camera_.get(), rail_.get(), stageSettings_.bossRailAutoExtension,
+            stageSettings_.bossRailExtensionBuffer, stageSettings_.floorHeight);
+        rail_->StopAutoExtension();
+        RestoreBossCutInTimeScale();
+        bossCutInTimerSeconds_ = -1.0f;
+        hasPlayedBossCutIn_ = false;
+    }
+    const Vector3 position = GetRailPosition(railDistance_);
+    const Vector3 forward = CalculateRailForward(railDistance_, position);
+    Vector3 right {}, up {};
+    CalculateRailBasis(forward, right, up);
+    player_->SetTranslate(position);
+    player_->ResetRailMovementForWarp();
+    player_->SetRotate({});
+    player_->SetRailFrame(position, right, up, forward);
+    UpdatePlayerRailHeightRange(railDistance_);
+    nextSwarmWaveIndex_ = static_cast<size_t>(std::upper_bound(stageSettings_.swarmWaveDistances.begin(),
+        stageSettings_.swarmWaveDistances.end(), railDistance_) - stageSettings_.swarmWaveDistances.begin());
+    debugCameraController_->SetDebugMode(false);
+    hasCameraFollowState_ = false;
+    cameraShakeTime_ = cameraShakeDuration_ = cameraShakeStrength_ = 0.0f;
+    UpdateCamera(position, forward, right, up, railDistance_, Input::GetInstance());
+    UpdateRailBranchPresentation(railDistance_);
+    Logger::Log("[SurfaceWarp] F3: warped to surface exit at " + std::to_string(railDistance_));
 }
 
 // レール上の基準姿勢とプレイヤー操作を合わせて機体の位置・向きを更新する。
@@ -2675,7 +2712,9 @@ void GamePlayScene::UpdateCamera(
         // プレイヤーのレール相対移動量を取得
         Vector3 playerRailOffset = player_->GetRailOffset();
 
-        Vector3 targetDrawCameraPosition = currentPosition - cameraForward * cameraBackwardOffset;
+        const Vector3 cameraRailPosition = cameraRail_.GetBasePosition(
+            nextRailDistance, currentPosition, railRight, railUp, forward);
+        Vector3 targetDrawCameraPosition = cameraRailPosition - cameraForward * cameraBackwardOffset;
         targetDrawCameraPosition += railUp * (kCameraUpwardOffset + playerRailOffset.y * cameraHeightFollowFactor_);
         targetDrawCameraPosition += railRight *
             (playerRailOffset.x * cameraHorizontalFollowFactor_);
@@ -2708,7 +2747,8 @@ void GamePlayScene::UpdateCamera(
     camera_->Update();
 
     // エイム用仮想カメラ（aimCamera_）の更新 (遅延なしの最新情報でLookAt)
-    Vector3 targetCameraPosition = currentPosition - forward * cameraBackwardOffset;
+    Vector3 targetCameraPosition = cameraRail_.GetBasePosition(
+        nextRailDistance, currentPosition, railRight, railUp, forward) - forward * cameraBackwardOffset;
     targetCameraPosition.y += kCameraUpwardOffset;
     Vector3 targetLookAheadPosition = GetRailPosition(nextRailDistance + cameraLookAheadDistance_);
     
@@ -5743,6 +5783,13 @@ void GamePlayScene::UpdateRailBranchPresentation(float distance)
         const std::string* status = &kEmptyStatus;
         if (railBranch_.IsPreviewVisible(distance)) {
             status = &kRailBranchSelectionStatus;
+        } else if (ruinsBranch_.IsPreviewVisible(distance)) {
+            static const std::string kRuinsChoice = "左へ移動で遺跡内部へ / 直進で海上ルート";
+            static const std::string kRuinsApproach = "遺跡入口へ進入";
+            status = stageSettings_.ruinsBranch.isForced ? &kRuinsApproach : &kRuinsChoice;
+        } else if (ruinsBranch_.IsActive(distance)) {
+            static const std::string kRuinsActive = "遺跡内部を通過中";
+            status = &kRuinsActive;
         } else if (railBranch_.IsLowerRouteActive(distance)) {
             status = &kRailBranchUnderwaterStatus;
         } else if (railBranch_.IsLowerRouteSelected() &&

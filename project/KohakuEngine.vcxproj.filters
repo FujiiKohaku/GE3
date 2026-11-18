@@ -736,6 +736,12 @@
     <ClInclude Include="Engine\Rail\Rail.h">
       <Filter>Rail</Filter>
     </ClInclude>
+    <ClInclude Include="App\Game\Stage\RuinsBranchRoute.h">
+      <Filter>Rail</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Camera\CameraRail.h">
+      <Filter>Rail</Filter>
+    </ClInclude>
     <ClInclude Include="Engine\math\Light.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

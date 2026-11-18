@@ -195,6 +195,39 @@ bool StageCatalog::LoadStageSettings(
             }
         }
     }
+    if (json.contains("ruins_branch")) {
+        const auto& branch = json.at("ruins_branch");
+        settings.ruinsBranch.isEnabled = branch.value("enabled", false);
+        settings.ruinsBranch.isForced = branch.value("forced", false);
+        settings.ruinsBranch.startDistance = branch.at("start_distance").get<float>();
+        settings.ruinsBranch.endDistance = branch.at("end_distance").get<float>();
+        settings.ruinsBranch.previewDistance = branch.value("preview_distance", 240.0f);
+        settings.ruinsBranch.selectionOffsetX = branch.value("selection_offset_x", -3.0f);
+        for (const auto& point : branch.at("control_points")) {
+            if (!point.is_array() || point.size() != 3) {
+                lastError_ = "Invalid ruins branch control point: " + settings.id;
+                return false;
+            }
+            settings.ruinsBranch.controlPoints.push_back(ReadVector3(point, {}));
+        }
+    }
+    if (json.contains("camera_rail")) {
+        for (const auto& point : json.at("camera_rail").at("points")) {
+            CameraRailPoint cameraPoint;
+            cameraPoint.distance = point.at("distance").get<float>();
+            const auto& offset = point.at("offset");
+            if (!offset.is_array() || offset.size() != 3) {
+                lastError_ = "Camera rail offset requires three coordinates: " + settings.id;
+                return false;
+            }
+            cameraPoint.offset = ReadVector3(offset, {});
+            settings.cameraRailPoints.push_back(cameraPoint);
+        }
+        if (!CameraRail::IsValid(settings.cameraRailPoints)) {
+            lastError_ = "Invalid camera rail points (requires four ordered points and zero end offsets): " + settings.id;
+            return false;
+        }
+    }
     if (json.contains("boss")) {
         const nlohmann::json& boss = json["boss"];
         settings.bossType = boss.value("type", settings.bossType);
@@ -298,6 +331,13 @@ bool StageCatalog::LoadStageSettings(
     if (settings.railBranch.isEnabled &&
         (settings.allRangeMode || !settings.railBranch.IsValid(settings.railLength))) {
         lastError_ = "Invalid lower rail branch: " + settings.id;
+        return false;
+    }
+    if (settings.ruinsBranch.isEnabled && (settings.allRangeMode ||
+        !settings.ruinsBranch.IsValid(settings.railLength) ||
+        (settings.railBranch.isEnabled && settings.ruinsBranch.startDistance <= settings.railBranch.endDistance) ||
+        settings.ruinsBranch.endDistance >= settings.bossSpawnDistance)) {
+        lastError_ = "Invalid ruins branch: " + settings.id;
         return false;
     }
     if (!settings.railHeightRange.IsValid() || !settings.railLowerHeightRange.IsValid()) {

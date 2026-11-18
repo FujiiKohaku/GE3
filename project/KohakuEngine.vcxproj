@@ -427,6 +427,8 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Light\LightManager.h" />
     <ClInclude Include="$(projectRootPath)Engine\Debug\DebugRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\Rail\Rail.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Stage\RuinsBranchRoute.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Camera\CameraRail.h" />
     <ClInclude Include="$(projectRootPath)Engine\math\MathStruct.h" />
     <ClInclude Include="$(projectRootPath)Engine\math\Easing.h" />
     <ClInclude Include="$(projectRootPath)Engine\math\MathUtility.h" />

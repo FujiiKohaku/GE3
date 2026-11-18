@@ -220,6 +220,8 @@ public:
     void ApplyRailAreaForce(const Vector3& force);
     // 使用クラス：GamePlayScene。レール基準位置からの左右・上下の移動量を返す。
     const Vector3& GetRailOffset() const { return movement_.GetRailOffset(); }
+    // ワープ先の現在位置を基準に、操作オフセットと操舵の残りをリセットする。
+    void ResetRailMovementForWarp() { movement_.InitializeMovement(transform_); movement_.ResetSteering(); }
     // 操作による移動量を含まない、現在のレール基準位置。
     const Vector3& GetRailBasePosition() const { return movement_.GetRailBasePosition(); }
     void SetRailMinimumHeight(float height) { movement_.SetRailMinimumHeight(height); }
