@@ -268,7 +268,7 @@ private:
     void StopPlayerEngineEffects();
     // ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
     void UpdateBossHpHud();
-    void UpdatePlayerHpArc();
+    void UpdatePlayerGauges();
     void InitializeWeaponIcons();
     void UpdateWeaponIcons();
     void InitializeStageObjectiveBanner();
@@ -395,7 +395,6 @@ private:
     float stageObjectiveElapsedSeconds_ = 0.0f;
     bool isStageObjectiveVisible_ = false;
     std::vector<std::unique_ptr<Sprite>> weaponHudFrameSprites_;
-    std::vector<std::unique_ptr<Sprite>> playerHudFrameSprites_;
     std::vector<std::unique_ptr<Sprite>> bossHudFrameSprites_;
     std::unique_ptr<Text> weaponHudLabelText_;
     std::unique_ptr<Text> weaponHudNameText_;
@@ -559,7 +558,7 @@ private:
     // 被弾フラッシュ演出用
     float damageFlashRemainingSeconds_ = 0.0f;
     float lowHpPulseElapsedSeconds_ = 0.0f;
-    int lastPlayerHp_ = 20;
+    int lastPlayerHp_ = 0;
 
     // プレイヤー爆発後、ゲームオーバー画面へ移るまでの待機時間
     float playerDeathAfterExplosionTimer_ = 0.0f;
@@ -630,14 +629,10 @@ private:
     std::array<std::unique_ptr<Sprite>, 8> pauseAdjustSprites_;
     std::array<std::unique_ptr<Text>, 8> pauseAdjustTexts_;
 
-    // 画面右側のプレイヤーHPゲージUI
-    std::unique_ptr<Sprite> playerHpBgSprite_;
-    std::unique_ptr<Sprite> playerHpBarSprite_;
-    std::unique_ptr<Text> playerHpText_;
-    float displayedPlayerHpRatio_ = 1.0f;
-    // 機体の下側に重ねる、画面上でサイズが一定の円弧HPゲージ。
+    // 機体の左右に重ねる円弧ゲージ。
     std::unique_ptr<Sprite> playerHpArcSprite_;
-    bool isPlayerHpArcVisible_ = false;
+    std::unique_ptr<Sprite> playerBoostArcSprite_;
+    bool arePlayerGaugesVisible_ = false;
 
     // Release構成でも表示するボスHP HUD
     std::unique_ptr<Sprite> bossHeadHpBgSprite_;

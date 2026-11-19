@@ -28,6 +28,7 @@ public:
     bool IsAllRangeMode() const { return isAllRangeMode_; }
     bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
     bool IsBoosting() const { return isBoosting_; }
+    float GetBoostRatio() const { return static_cast<float>(boostRemainingSeconds_ / kBoostDurationSeconds); }
     float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
     float GetMouseSensitivity() const { return mouseSensitivity_; }
     const Vector2& GetSteeringInput() const { return steeringInput_; }
@@ -48,7 +49,7 @@ public:
         const Vector3& railRight, const Vector3& railUp, const Vector3& railForward);
     void ApplyRailAreaForce(const Vector3& force, float deltaTimeSeconds);
     // ブーストを開始したフレームだけtrueを返す。効果音は呼び出し側で再生する。
-    bool UpdateBoost(bool isBraking, bool shouldBoost);
+    bool UpdateBoost(bool isBraking, bool shouldBoost, float deltaTimeSeconds);
     void EnableAllRangeMode(const EulerTransform& transform, float areaRadius, float minHeight, float maxHeight);
     void SetMouseSensitivity(float sensitivity);
     void UpdateSteering(const Vector2& aimPosition, const Vector2& screenSizePixels,
@@ -57,6 +58,7 @@ public:
     Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
 
 private:
+    static constexpr double kBoostDurationSeconds = 4.0;
     void UpdateAllRangeMove(EulerTransform& transform, Vector2 steering, float deltaTimeSeconds);
     void UpdateFlightOrientation(const Vector2& steering, float deltaTimeSeconds);
     void UpdateFlightAreaReturn(const EulerTransform& transform, Vector2& steering, float deltaTimeSeconds);
@@ -69,6 +71,7 @@ private:
     const Camera* camera_ = nullptr;
 
     bool isBoosting_ = false;
+    double boostRemainingSeconds_ = kBoostDurationSeconds;
     bool isAllRangeMode_ = false;
     bool isReturningToFlightArea_ = false;
     float flightAreaRadius_ = 600.0f;
@@ -189,7 +192,7 @@ public:
     // 使用クラス：GamePlayScene。モデル・武器・移動・照準の初期状態を設定する。
     void Initialize(Model* model);
     // 使用クラス：GamePlayScene。照準・移動・発射・描画姿勢を順に更新する。
-    void Update();
+    void Update(bool hasUpdatedBoost = false);
     // レール進行の計算前に、このフレームのブースト入力を確定する。
     void UpdateBoostState();
     // 使用クラス：GamePlayScene。機体・移動・武器で使うカメラを揃える。
@@ -243,6 +246,7 @@ public:
     bool IsReturningToFlightArea() const { return movement_.IsReturningToFlightArea(); }
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
     bool IsBoosting() const { return movement_.IsBoosting(); }
+    float GetBoostRatio() const { return movement_.GetBoostRatio(); }
     float GetForwardSpeedMultiplier() const { return movement_.GetForwardSpeedMultiplier(); }
     void ResetHomingLock() { weaponController_.ResetHomingLock(); }
     void BlockFireUntilRelease() { weaponController_.BlockFireUntilRelease(); }
@@ -294,7 +298,7 @@ public:
     // 使用クラス：GamePlayScene。HPのHUD表示と被弾検出に使う現在値を返す。
     int GetCurrentHp() const { return currentHp_; }
     // 使用クラス：GamePlayScene。HP表示の上限を返す。
-    int GetMaxHp() const { return maxHp_; }
+    int GetMaxHp() const { return kMaxHp; }
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     // 開発用の無敵モードを設定する。
     void SetInvincibleMode(bool isEnabled) { isInvincibleMode_ = isEnabled; }
@@ -393,8 +397,8 @@ private:
     void SynchronizeGamepadControlStyle(const Input& input);
     ControlInput GetDirectGamepadControl(const Input& input, float deltaTimeSeconds);
 
-    int maxHp_ = 20;
-    int currentHp_ = maxHp_;
+    static constexpr int kMaxHp = 10;
+    int currentHp_ = kMaxHp;
     float invincibleRemainingSeconds_ = 0;
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     bool isInvincibleMode_ = false;

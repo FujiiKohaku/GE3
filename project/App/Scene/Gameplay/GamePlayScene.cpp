@@ -185,16 +185,6 @@ constexpr float kInitializeWeaponHudLabelTextPositionX = 98.0f;
 constexpr float kInitializeWeaponHudLabelTextPositionY = 92.0f;
 constexpr float kInitializeWeaponHudNameTextPositionX = 98.0f;
 constexpr float kInitializeWeaponHudNameTextPositionY = 68.0f;
-constexpr float kBossHpFrameRightInset = 18.0f;
-constexpr float kBossHpFrameTopInset = 8.0f;
-constexpr float kBossHpFrameWidth = 268.0f;
-constexpr float kBossHpFrameHeight = 70.0f;
-constexpr float kInitializePlayerHpBgSpritePositionX = 30.0f;
-constexpr float kInitializePlayerHpBgSpritePositionY = 40.0f;
-constexpr float kInitializePlayerHpBarSpritePositionX = 30.0f;
-constexpr float kInitializePlayerHpBarSpritePositionY = 40.0f;
-constexpr float kInitializePlayerHpTextPositionX = 30.0f;
-constexpr float kInitializePlayerHpTextPositionY = 12.0f;
 constexpr float kInitializeBossHeadHpBgSpriteSizeY = 14.0f;
 constexpr float kInitializeBossHeadHpBgSpritePositionY = 65.0f;
 constexpr float kInitializeBossHeadHpBarSpriteSizeY = 14.0f;
@@ -240,9 +230,6 @@ constexpr float kUpdateForwardMultiplier = 20.0f;
 constexpr float kForwardDebugLineWidth = 3.0f;
 constexpr float kUpdateSonicBoomTimerDefault = 0.85f;
 constexpr float kUpdateBoomProgressDivisor = 0.85f;
-constexpr float kUpdateDisplayedPlayerHpRatioDefault = 0.12f;
-constexpr float kUpdateBarWidthDefault = 220.0f;
-constexpr float kUpdatePlayerHpBarSpriteSizeY = 22.0f;
 constexpr float kUpdateHpRatioThreshold = 0.45f;
 constexpr float kUpdateDistanceThreshold = 40.0f;
 constexpr float kUpdateStrengthThreshold = 0.04f;
@@ -400,11 +387,29 @@ float gMouseSensitivity = 1.0f;
 
 // 機能色。ゲーム内エフェクトとHUDで同じ意味に同じ色を使う。
 constexpr Vector4 kPlayerActionCyan { 0.325f, 0.847f, 0.910f, 1.0f };
+constexpr Vector4 kPlayerHpGreen { 0.240f, 0.840f, 0.350f, 1.0f };
 constexpr Vector4 kDangerVermilion { 1.000f, 0.353f, 0.239f, 1.0f };
 constexpr Vector4 kRecoveryMint { 0.475f, 0.902f, 0.702f, 1.0f };
 constexpr Vector4 kHudIvory { 0.910f, 0.870f, 0.750f, 1.0f };
 constexpr Vector4 kHudBrass { 0.714f, 0.541f, 0.290f, 1.0f };
 constexpr Vector4 kHudPanel { 0.025f, 0.055f, 0.100f, 0.84f };
+
+std::unique_ptr<Sprite> CreatePlayerGauge(float rotation, const Vector4& color, bool isFlipped)
+{
+    auto gauge = std::make_unique<Sprite>();
+    gauge->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
+    gauge->SetShaderPaths(
+        "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
+        "resources/Shaders/Sprite/PlayerHpArc/PlayerHpArc.PS.hlsl");
+    gauge->SetSize({ 144.0f, 144.0f });
+    gauge->SetAnchorPoint({ 0.5f, 0.5f });
+    gauge->SetRotation(rotation);
+    gauge->SetIsFlipX(isFlipped);
+    gauge->SetColor(color);
+    gauge->SetEffectThreshold(1.0f);
+    gauge->Update();
+    return gauge;
+}
 
 void AddHudFramePart(
     std::vector<std::unique_ptr<Sprite>>& sprites,
@@ -1054,52 +1059,10 @@ void GamePlayScene::Initialize()
     scoreHudValueText_->SetOutlineWidth(1.0f);
     scoreHudValueText_->Update();
 
-    // -------------------------------------------------
-    // 画面右側に表示するプレイヤーHPゲージUIの初期化
-    // -------------------------------------------------
-    InitializeHudFrame(
-        playerHudFrameSprites_,
-        { WinApp::GetInstance()->kClientWidth - kBossHpFrameRightInset, kBossHpFrameTopInset },
-        { kBossHpFrameWidth, kBossHpFrameHeight },
-        { 1.0f, 0.0f },
-        kPlayerActionCyan);
-    playerHpBgSprite_ = std::make_unique<Sprite>();
-    playerHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    playerHpBgSprite_->SetSize({ 220.0f, 22.0f });
-    playerHpBgSprite_->SetAnchorPoint({ 1.0f, 0.0f });
-    playerHpBgSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - kInitializePlayerHpBgSpritePositionX, kInitializePlayerHpBgSpritePositionY });
-    playerHpBgSprite_->SetColor(kHudPanel);
-    playerHpBgSprite_->Update();
-
-    playerHpBarSprite_ = std::make_unique<Sprite>();
-    playerHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    playerHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
-    playerHpBarSprite_->SetSize({ 220.0f, 22.0f });
-    playerHpBarSprite_->SetAnchorPoint({ 1.0f, 0.0f });
-    playerHpBarSprite_->SetPosition({ WinApp::GetInstance()->kClientWidth - kInitializePlayerHpBarSpritePositionX, kInitializePlayerHpBarSpritePositionY });
-    playerHpBarSprite_->SetColor(kPlayerActionCyan);
-    playerHpBarSprite_->Update();
-
-    playerHpText_ = std::make_unique<Text>();
-    playerHpText_->Initialize(kDefaultFont);
-    playerHpText_->SetText("HP 20 / 20");
-    playerHpText_->SetPosition({ WinApp::GetInstance()->kClientWidth - kInitializePlayerHpTextPositionX, kInitializePlayerHpTextPositionY });
-    playerHpText_->SetAnchorPoint({ 1.0f, 0.0f });
-    playerHpText_->SetFontSize(20.0f);
-    playerHpText_->SetColor({ 1.0f, 1.0f, 1.0f, 1.0f });
-    playerHpText_->Update();
-
-    playerHpArcSprite_ = std::make_unique<Sprite>();
-    playerHpArcSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    playerHpArcSprite_->SetShaderPaths(
-        "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
-        "resources/Shaders/Sprite/PlayerHpArc/PlayerHpArc.PS.hlsl");
-    playerHpArcSprite_->SetSize({ 144.0f, 144.0f });
-    playerHpArcSprite_->SetAnchorPoint({ 0.5f, 0.5f });
-    playerHpArcSprite_->SetColor(kPlayerActionCyan);
-    playerHpArcSprite_->SetEffectThreshold(1.0f);
-    playerHpArcSprite_->Update();
-    isPlayerHpArcVisible_ = false;
+    constexpr float kGaugeRotation = std::numbers::pi_v<float> / 2.0f;
+    playerHpArcSprite_ = CreatePlayerGauge(kGaugeRotation, kPlayerHpGreen, false);
+    playerBoostArcSprite_ = CreatePlayerGauge(-kGaugeRotation, kPlayerActionCyan, true);
+    arePlayerGaugesVisible_ = false;
 
     const float bossHudCenterX = WinApp::GetInstance()->kClientWidth / 2.0f;
     const float bossHpBarLeft = bossHudCenterX - 170.0f;
@@ -2020,49 +1983,7 @@ void GamePlayScene::Update()
 
     UpdateWaterDropEffect();
 
-    // -------------------------------------------------
-    // 画面右側のプレイヤーHPゲージのリアルタイム更新
-    // -------------------------------------------------
-    if (player_ && playerHpBarSprite_ && playerHpText_) {
-        int currentHp = player_->GetCurrentHp();
-        int maxHp = player_->GetMaxHp();
-        float hpRatio = 0.0f;
-        if (maxHp > 0) {
-            hpRatio = static_cast<float>(currentHp) / static_cast<float>(maxHp);
-        }
-        if (hpRatio < 0.0f) hpRatio = 0.0f;
-        if (hpRatio > 1.0f) hpRatio = 1.0f;
-
-        // 残りHP割合に合わせてゲージの横幅を滑らかに変更
-        displayedPlayerHpRatio_ = std::lerp(
-            displayedPlayerHpRatio_,
-            hpRatio,
-            GameTiming::CalculateFollowBlend(kUpdateDisplayedPlayerHpRatioDefault, TimeManager::GetInstance()->GetDeltaTime()));
-        if (std::abs(displayedPlayerHpRatio_ - hpRatio) < 0.001f) {
-            displayedPlayerHpRatio_ = hpRatio;
-        }
-
-        float barWidth = kUpdateBarWidthDefault * displayedPlayerHpRatio_;
-        playerHpBarSprite_->SetSize({ barWidth, kUpdatePlayerHpBarSpriteSizeY });
-
-        // 回復色の緑はアイテム専用。通常HPはプレイヤー色のシアンで示す。
-        if (currentHp <= kLowHpWarningThreshold) {
-            playerHpBarSprite_->SetColor(kDangerVermilion);
-        } else if (hpRatio < kUpdateHpRatioThreshold) {
-            playerHpBarSprite_->SetColor(kHudBrass);
-        } else {
-            playerHpBarSprite_->SetColor(kPlayerActionCyan);
-        }
-
-        playerHpBarSprite_->Update();
-        if (playerHpBgSprite_) playerHpBgSprite_->Update();
-
-        // HP数値テキストの更新
-        playerHpText_->SetText("HP " + std::to_string(currentHp) + " / " + std::to_string(maxHp));
-        playerHpText_->Update();
-    }
-
-    UpdatePlayerHpArc();
+    UpdatePlayerGauges();
     UpdateWeaponIcons();
 
     // レティクル（AimSprite）のスクリーン位置更新
@@ -2523,8 +2444,8 @@ void GamePlayScene::UpdatePlayerTransform(
         player_->SetRailFrame(currentPosition, railRight, railUp, forward);
     }
     
-    // プレイヤーの内部座標（移動制限など）を更新
-    player_->Update();
+    // レール移動の前に確定した加減速を使い、ここでは残量を再更新しない。
+    player_->Update(true);
     if (weaponHudNameText_) {
         weaponHudNameText_->SetText(player_->GetCurrentWeaponDisplayName());
         weaponHudNameText_->Update();
@@ -3364,10 +3285,10 @@ void GamePlayScene::UpdateWeaponIcons()
     isWeaponSwitchVisible_ = true;
 }
 
-void GamePlayScene::UpdatePlayerHpArc()
+void GamePlayScene::UpdatePlayerGauges()
 {
-    isPlayerHpArcVisible_ = false;
-    if (!player_ || !camera_ || !playerHpArcSprite_ || player_->IsDead()) { return; }
+    arePlayerGaugesVisible_ = false;
+    if (!player_ || !camera_ || !playerHpArcSprite_ || !playerBoostArcSprite_ || player_->IsDead()) { return; }
 
     const Vector3 playerPosition = player_->GetTranslate();
     const Vector3 viewPosition = MatrixMath::Transform(playerPosition, camera_->GetViewMatrix());
@@ -3380,7 +3301,7 @@ void GamePlayScene::UpdatePlayerHpArc()
         hpRatio = std::clamp(static_cast<float>(player_->GetCurrentHp()) / static_cast<float>(maxHp), 0.0f, 1.0f);
     }
 
-    Vector4 hpColor = kPlayerActionCyan;
+    Vector4 hpColor = kPlayerHpGreen;
     if (player_->GetCurrentHp() <= kLowHpWarningThreshold) {
         hpColor = kDangerVermilion;
     } else if (hpRatio < kUpdateHpRatioThreshold) {
@@ -3390,7 +3311,10 @@ void GamePlayScene::UpdatePlayerHpArc()
     playerHpArcSprite_->SetColor(hpColor);
     playerHpArcSprite_->SetEffectThreshold(hpRatio);
     playerHpArcSprite_->Update();
-    isPlayerHpArcVisible_ = true;
+    playerBoostArcSprite_->SetPosition(uiPosition);
+    playerBoostArcSprite_->SetEffectThreshold(player_->GetBoostRatio());
+    playerBoostArcSprite_->Update();
+    arePlayerGaugesVisible_ = true;
 }
 
 // 照準・HP・得点・通信パネルなど、画面に重ねる情報を描画する。
@@ -3495,11 +3419,9 @@ void GamePlayScene::Draw2D()
     DrawHudFrame(weaponHudFrameSprites_);
     if (weaponHudBgSprite_) weaponHudBgSprite_->Draw();
     if (!isPaused_ && weaponHudIconSprite_) weaponHudIconSprite_->Draw();
-    DrawHudFrame(playerHudFrameSprites_);
-    if (playerHpBgSprite_) playerHpBgSprite_->Draw();
-    if (playerHpBarSprite_) playerHpBarSprite_->Draw();
-    if (isPlayerHpArcVisible_ && playerHpArcSprite_) {
+    if (arePlayerGaugesVisible_) {
         playerHpArcSprite_->Draw();
+        playerBoostArcSprite_->Draw();
     }
     if (!isPaused_ && isWeaponSwitchVisible_) {
         weaponSwitchIconSprite_->Draw();
@@ -3542,7 +3464,7 @@ void GamePlayScene::Draw2D()
             if (pauseState_->HasSensitivityControls(i / 2) && pauseAdjustTexts_[i]) pauseAdjustTexts_[i]->Draw();
         }
     } else {
-        // 通常プレイ中の画面右上HP数値テキストの描画
+        // 通常プレイ中のテキスト描画
         TextRenderer::GetInstance()->PreDraw();
         for (std::unique_ptr<SavePoint>& savePoint : savePoints_) {
             savePoint->Draw2D();
@@ -3561,7 +3483,6 @@ void GamePlayScene::Draw2D()
         if (railBranchStatusText_ && player_->GetCurrentHp() > 0) railBranchStatusText_->Draw();
         if (scoreHudLabelText_) scoreHudLabelText_->Draw();
         if (scoreHudValueText_) scoreHudValueText_->Draw();
-        if (playerHpText_) playerHpText_->Draw();
         if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
             if (bossNameText_) bossNameText_->Draw();
             if (bossHeadHpText_) bossHeadHpText_->Draw();

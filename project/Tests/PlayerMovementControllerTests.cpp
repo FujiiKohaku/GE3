@@ -277,10 +277,10 @@ void TestIndependentAllRangeMovement()
         assert(IsNear(transform.translate.z, 30.0f));
         assert(IsNear(transform.translate.y, 50.0f));
 
-        assert(movement.UpdateBoost(false, true));
+        assert(movement.UpdateBoost(false, true, 1.0f));
         movement.UpdateMovement(transform, {}, 1.0f, 1.0f);
         assert(IsNear(transform.translate.z, 90.0f));
-        assert(!movement.UpdateBoost(true, true));
+        assert(!movement.UpdateBoost(true, true, 1.0f));
         assert(!movement.IsBoosting());
         movement.UpdateMovement(transform, {}, 1.0f, 1.0f);
         assert(IsNear(transform.translate.z, 105.0f));
@@ -367,13 +367,36 @@ void TestPlayerInputOperations()
     const PlayerInput::BoostInput boostInput = PlayerInput::ReadBoost(input, true);
     assert(boostInput.isBraking && boostInput.shouldBoost);
     PlayerMovement movement;
-    movement.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost);
+    movement.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost, 1.0f / 60.0f);
     assert(!movement.IsBoosting());
     assert(IsNear(movement.GetForwardSpeedMultiplier(), 0.5f));
     const PlayerInput::BoostInput disabledBoost = PlayerInput::ReadBoost(input, false);
     assert(!disabledBoost.isBraking && !disabledBoost.shouldBoost);
 
     InputTestAccess::Set(input, {}, {}, false);
+}
+
+void TestBoostDurationAndRecharge()
+{
+    for (int framesPerSecond : { 30, 60, 120 }) {
+        PlayerMovement movement;
+        const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
+        for (int frameIndex = 0; frameIndex < 4 * framesPerSecond; ++frameIndex) {
+            const bool hasStarted = movement.UpdateBoost(false, true, deltaTimeSeconds);
+            assert(hasStarted == (frameIndex == 0));
+            assert(movement.IsBoosting());
+        }
+        assert(movement.GetBoostRatio() == 0.0f);
+        assert(!movement.UpdateBoost(false, true, 1.0f));
+        assert(!movement.IsBoosting());
+        assert(movement.GetBoostRatio() == 0.0f);
+
+        for (int frameIndex = 0; frameIndex < 4 * framesPerSecond; ++frameIndex) {
+            movement.UpdateBoost(false, false, deltaTimeSeconds);
+        }
+        assert(IsNear(movement.GetBoostRatio(), 1.0f));
+        assert(movement.UpdateBoost(false, true, deltaTimeSeconds));
+    }
 }
 
 int main(int argumentCount, char** arguments)
@@ -393,6 +416,7 @@ int main(int argumentCount, char** arguments)
     TestRailFrameAndAreaForce();
     TestAllRangeAndControls();
     TestMovementWithoutBank();
+    TestBoostDurationAndRecharge();
     if (argumentCount == 2 && std::strcmp(arguments[1], "--movement-input-only") == 0) {
         TestIndependentAllRangeMovement();
         TestPlayerInputOperations();

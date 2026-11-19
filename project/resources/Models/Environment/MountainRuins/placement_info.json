@@ -3,7 +3,7 @@
   "materialTextures": 17,
   "colliderBoxes": 32,
   "dimensions": [
-    335.82908821105957,
+    671.6581759999999,
     154.0149938762188,
     105.04556941986084
   ],
@@ -19,7 +19,7 @@
     9.5
   ],
   "passageSamples": 1140,
-  "minimumMeshClearance": 10.819404304027557,
+  "minimumMeshClearance": 11.696479797363281,
   "verifiedCorridor": {
     "x": [
       -16,

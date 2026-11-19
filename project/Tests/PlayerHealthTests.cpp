@@ -27,9 +27,11 @@ void TestEntryBattleAndDeathTransitions()
 void TestDamageAndInvincibility()
 {
     Player health;
+    assert(health.GetMaxHp() == 10);
+    assert(health.GetCurrentHp() == 10);
     assert(!health.ApplyDamage(0));
     assert(health.ApplyDamage(3));
-    assert(health.GetCurrentHp() == 17);
+    assert(health.GetCurrentHp() == 7);
     assert(!health.ApplyDamage(3));
     for (int frameIndex = 0; frameIndex < 59; ++frameIndex) {
         PlayerTestAccess::UpdateInvincibility(health);
@@ -37,7 +39,7 @@ void TestDamageAndInvincibility()
     assert(!health.ApplyDamage(3));
     PlayerTestAccess::UpdateInvincibility(health);
     assert(health.ApplyDamage(3));
-    assert(health.GetCurrentHp() == 14);
+    assert(health.GetCurrentHp() == 4);
 }
 
 void TestHealingAndDeath()

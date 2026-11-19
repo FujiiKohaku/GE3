@@ -97,11 +97,21 @@ void PlayerMovement::ApplyRailAreaForce(const Vector3& force, float deltaTimeSec
     railOffset_ = ClampRailOffsetToScreen(railOffset_);
 }
 
-bool PlayerMovement::UpdateBoost(bool isBraking, bool shouldBoost)
+bool PlayerMovement::UpdateBoost(bool isBraking, bool shouldBoost, float deltaTimeSeconds)
 {
     constexpr float kBrakeSpeedMultiplier = 0.5f;
+    constexpr double kBoostTimeToleranceSeconds = 0.000001;
+    const double elapsedSeconds = (std::max)(0.0, static_cast<double>(deltaTimeSeconds));
     const bool wasBoosting = isBoosting_;
-    isBoosting_ = shouldBoost && !isBraking;
+    isBoosting_ = shouldBoost && !isBraking && boostRemainingSeconds_ > 0.0;
+    if (isBoosting_) {
+        boostRemainingSeconds_ -= elapsedSeconds;
+        if (boostRemainingSeconds_ < kBoostTimeToleranceSeconds) {
+            boostRemainingSeconds_ = 0.0;
+        }
+    } else if (!shouldBoost) {
+        boostRemainingSeconds_ = (std::min)(kBoostDurationSeconds, boostRemainingSeconds_ + elapsedSeconds);
+    }
     velocity_.z = normalMaxSpeed_;
     moveSpeed_ = normalAcceleration_;
     if (isBraking) {
@@ -505,7 +515,6 @@ void PlayerBattleState::Update(Player& player)
         return;
     }
     player.UpdateInvincibility(TimeManager::GetInstance()->GetDeltaTime());
-    player.UpdateBoostState();
     player.SynchronizeGamepadControlStyle(*input);
     if (player.isUsingDirectGamepadControl_ && !player.isDebugMode_) {
         // 新方式ではスティックで機体を動かし、照準と発射はカメラ確定後に行う。
@@ -618,7 +627,7 @@ void Player::Initialize(Model* model)
 }
 
 // 入力・被弾状態・移動・武器を更新し、最後に機体の姿勢を描画へ反映する。
-void Player::Update()
+void Player::Update(bool hasUpdatedBoost)
 {
     shouldUpdateWeaponsAfterCamera_ = false;
     if (object_ == nullptr || TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
@@ -630,6 +639,9 @@ void Player::Update()
     }
     switch (state_) {
     case State::Battle:
+        if (!hasUpdatedBoost) {
+            UpdateBoostState();
+        }
         battleState_.Update(*this);
         break;
     case State::Dead:
@@ -897,14 +909,14 @@ bool Player::ApplyHealthDamage(int damage)
 // 生存中のHPを上限まで回復する。回復量が0以下、死亡中、またはHPが上限に達している場合は回復しない。
 bool Player::Heal(int amount)
 {
-    if (amount <= 0 || currentHp_ <= 0 || currentHp_ >= maxHp_) {
+    if (amount <= 0 || currentHp_ <= 0 || currentHp_ >= kMaxHp) {
         return false;
     }
 
     currentHp_ += amount;
     SoundManager::GetInstance()->Play("HealPickup");
-    if (currentHp_ > maxHp_) {
-        currentHp_ = maxHp_;
+    if (currentHp_ > kMaxHp) {
+        currentHp_ = kMaxHp;
     }
 
     return true;
@@ -978,7 +990,7 @@ void Player::SetControlMode(ControlMode mode)
 void Player::UpdateBoost(Input* input, bool isDebugMode)
 {
     const PlayerInput::BoostInput boostInput = PlayerInput::ReadBoost(*input, !isDebugMode);
-    if (movement_.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost)) {
+    if (movement_.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost, TimeManager::GetInstance()->GetDeltaTime())) {
         SoundManager::GetInstance()->Play("BoostStart");
     }
 }
