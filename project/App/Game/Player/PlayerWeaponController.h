@@ -34,6 +34,7 @@ class NormalBullet : public PlayerBullet {
 public:
     // 通常弾の色・シェーダー・霧や影の設定を適用し、機体から見やすい弾にする。
     void Initialize(Model* model) override;
+    void AlignToFlight(const Vector3& velocity);
 
     // 共通の移動と寿命処理を使い、通常弾を進める。
     void Update() override;

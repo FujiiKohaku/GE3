@@ -36,14 +36,25 @@ void NormalBullet::Initialize(Model* model)
 	BaseBullet::Initialize(model);
 	SetEnableLighting(false);
 	SetColor({ 0.12f, 0.48f, 1.0f, 1.0f });
-	SetPixelShaderPath("resources/Shaders/Object3D/PlayerBullet/Render.PS.hlsl");
+	SetPixelShaderPath("resources/Shaders/Object3D/AssaultBullet/Render.PS.hlsl");
 	SetFogEnabled(false);
 	SetTransparent(true);
 	SetTransparentDepthWrite(false);
 	SetCastShadow(false);
-	transform_.scale = { 0.3f, 0.3f, 0.3f };
+	constexpr Vector3 kAssaultTracerScale { 0.36f, 0.36f, 0.50f };
+	transform_.scale = kAssaultTracerScale;
 	transform_.rotate = { 0.0f, 0.0f, 0.0f };
 	transform_.translate = { 0.0f, 0.0f, 0.0f };
+}
+
+void NormalBullet::AlignToFlight(const Vector3& velocity)
+{
+	const float horizontalSpeed = std::hypot(velocity.x, velocity.z);
+	transform_.rotate = {
+		-std::atan2(velocity.y, horizontalSpeed),
+		-std::atan2(velocity.x, velocity.z),
+		0.0f
+	};
 }
 
 // 共通の移動と寿命処理を使い、通常弾を進める。
@@ -580,11 +591,13 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 
 	float shotSpeed = bulletSpeed_;
 	std::unique_ptr<PlayerBullet> bullet;
+	NormalBullet* assaultBullet = nullptr;
 	if (currentWeapon_ == kWeaponAssault) {
-		auto assaultBullet = std::make_unique<NormalBullet>();
-		assaultBullet->Initialize(bulletModel_);
-		assaultBullet->SetDamage(GetShotDamage(kAssaultBaseDamage));
-		bullet = std::move(assaultBullet);
+		auto normalBullet = std::make_unique<NormalBullet>();
+		normalBullet->Initialize(bulletModel_);
+		normalBullet->SetDamage(GetShotDamage(kAssaultBaseDamage));
+		assaultBullet = normalBullet.get();
+		bullet = std::move(normalBullet);
 	}
 	else if (currentWeapon_ == kWeaponMissileBullet) {
 		auto missileBullet = std::make_unique<MissileBullet>();
@@ -613,8 +626,6 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 	Vector3 muzzlePosition = CalculateMuzzlePosition();
 	EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzlePosition);
 
-	bullet->SetTranslate(muzzlePosition);
-
 	// 照準更新時に求めた目標点へ銃口を向ける。
 	Vector3 aimPoint = player_.GetAimPoint();
 
@@ -638,6 +649,10 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 	bulletVelocity.z = bulletDirection.z * shotSpeed + worldPlayerVelocity.z;
 
 	bullet->SetVelocity(bulletVelocity);
+	if (assaultBullet != nullptr) {
+		assaultBullet->AlignToFlight(bulletVelocity);
+	}
+	bullet->SetTranslate(muzzlePosition);
 
 	// 発射後の弾は管理側が所有し、以後の更新・衝突判定・削除の対象にする。
 	bullets_.push_back(std::move(bullet));

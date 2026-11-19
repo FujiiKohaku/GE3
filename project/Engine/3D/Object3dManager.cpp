@@ -52,6 +52,7 @@ const std::string& Object3dManager::GetTransparentShader(const std::string& shad
         { "resources/Shaders/Object3D/FearWormEntrySurface/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/FearWormEntrySurface.PS.hlsl" },
         { "resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Danmaku.PS.hlsl" },
         { "resources/Shaders/Object3D/PlayerBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/PlayerBullet.PS.hlsl" },
+        { "resources/Shaders/Object3D/AssaultBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/AssaultBullet.PS.hlsl" },
         { "resources/Shaders/Object3D/Unlit/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Unlit.PS.hlsl" }
     };
     auto found = shaders.find(shader);

@@ -34,4 +34,12 @@ private:
     };
     Vector2 aimScreenPosition_ = { 0.0f, 0.0f };
     Vector2 directGamepadAimInput_ = {};
+    // 照準を保持する残り時間
+    float aimHoldTimer_ = 0.0f;
+
+    // 照準を保持する時間
+    static constexpr float kAimHoldDuration = 0.3f;
+
+    // 前フレームでスティックを操作していたか
+    bool wasStickActive_ = false;
 };

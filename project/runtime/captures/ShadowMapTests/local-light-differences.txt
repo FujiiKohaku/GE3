@@ -1,2 +1,0 @@
-Point shadow pixels: 7337
-Spot shadow pixels: 2364
