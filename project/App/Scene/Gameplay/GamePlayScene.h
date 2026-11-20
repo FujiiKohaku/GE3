@@ -133,19 +133,6 @@ public:
 #endif
 
 private:
-    // ボス登場時のカットインに使う画像・文字・進行状態を準備する。
-    void InitializeBossCutIn();
-    // ボス登場の通知からカットインを開始し、表示と時間演出を進める。
-    void UpdateBossCutIn();
-    // カットインで変更した時間の進み方を元に戻す。
-    void RestoreBossCutInTimeScale();
-    static constexpr float kBossCutInDurationSeconds = 0.65f;
-    static constexpr float kBossCutInSlowDurationSeconds = 0.40f;
-    std::unique_ptr<Sprite> bossCutInSprite_;
-    float bossCutInTimerSeconds_ = -1.0f;
-    float bossCutInPreviousTimeScale_ = 1.0f;
-    bool hasPlayedBossCutIn_ = false;
-    bool isBossCutInSlowMotionActive_ = false;
 #if defined(KOHAKU_RENDER_TESTS)
     friend class ShadowTestStage;
     friend bool RunGameplayLifecycleTests();

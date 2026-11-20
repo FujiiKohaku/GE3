@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -16,7 +17,7 @@ class AnimationActor {
 public:
     void Initialize(const std::string& modelName);
 
-    void Update(float deltaTime);
+    void Update(float deltaTime, const std::function<void(Skeleton&)>& adjustPose = {});
     void Draw();
 
     void SetTranslate(const Vector3& translate);

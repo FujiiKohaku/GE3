@@ -95,7 +95,7 @@ void FearWormEntryState::UpdateSegmentPositions(FearWormEnemy& boss)
         return;
     }
 
-    const Vector3 playerPosition = boss.player_->GetTranslate();
+    const Vector3 playerPosition = boss.player_->GetRailBasePosition();
     const Vector3 surfacePosition = EntrySurfacePosition(playerPosition);
     const FearWormMovementContext movementContext {
         boss.GetBattleMovementOrigin(), kExitOrbitAngleRadians, boss.parallelForwardOffset_

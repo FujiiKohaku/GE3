@@ -256,7 +256,6 @@ constexpr float kBirdBobbingAmplitude = 2.0f;
 constexpr float kBirdBankingFrequency = 3.2f;
 constexpr float kBirdBankingAmplitude = 0.18f;
 constexpr float kUpdateRecoveryItemsItemRotationXMultiplier = 0.65f;
-constexpr float kUpdateBossCutInBossCutInPreviousTimeScaleMultiplier = 0.22f;
 constexpr float kTutorialInitializingEndSeconds = 1.5f;
 constexpr float kTutorialStartTitleEndSeconds = 2.3f;
 constexpr float kTutorialControlsEnableSeconds = 1.5f;
@@ -516,7 +515,6 @@ void GamePlayScene::Initialize()
         { "BrakeStart", "resources/Audio/GameSfx/brake_start.wav", 0.18f, 0.15f },
         { "EnemyDestroyed", "resources/Audio/GameSfx/enemy_destroyed.wav", 0.25f, 0.10f },
         { "BossDestroyed", "resources/Audio/GameSfx/boss_destroyed.wav", 0.42f, 0.50f },
-        { "FearWormCutIn", "resources/Audio/GameSfx/fear_worm_cut_in.wav", 0.40f, 0.50f },
         { "EnemyShot", "resources/Audio/GameSfx/enemy_shot.wav", 0.10f, 0.12f },
         { "TurretShot", "resources/Audio/GameSfx/turret_shot.wav", 0.22f, 0.10f },
         { "HomingLock", "resources/Audio/GameSfx/homing_lock.wav", 0.20f, 0.12f },
@@ -1160,7 +1158,7 @@ void GamePlayScene::Initialize()
     // =================================================
     Logger::Log("GamePlayScene::Initialize: Starting player initialization");
     player_ = std::make_unique<Player>();
-    player_->Initialize(playerModel);
+    player_->Initialize(playerModel, "Characters/AI_Android/AI_Android_Game_Cruise.glb");
     player_->BlockFireUntilRelease();
     player_->SetCamera(camera_.get());
     player_->SetDebugCameraController(debugCameraController_.get());
@@ -1213,7 +1211,6 @@ void GamePlayScene::Initialize()
         stageSettings_.bossRailExtensionBuffer,
         stageSettings_.floorHeight);
 
-    InitializeBossCutIn();
 
     Logger::Log("GamePlayScene::Initialize: player initialized successfully");
     if (!stageSettings_.recoveryItemDistances.empty()) {
@@ -1606,8 +1603,6 @@ void GamePlayScene::Update()
 
     // HPが尽きた後は通常のゲーム進行を止め、落下と爆発だけを更新する。
     if (player_ && player_->IsDead()) {
-        RestoreBossCutInTimeScale();
-        bossCutInTimerSeconds_ = -1.0f;
         StopPlayerEngineEffects();
         player_->Update();
 
@@ -1706,7 +1701,6 @@ void GamePlayScene::Update()
 
     // ボス出現処理
     bossController_->Update(railDistance_);
-    UpdateBossCutIn();
     if (const auto* jellyfish = dynamic_cast<const IceJellyfish*>(GetActiveBoss())) {
         const auto positions = jellyfish->GetPresentationPositions();
         LightManager::GetInstance()->SetSpotLightPosition(bossSpotLightHandle_, positions.spotLightPosition);
@@ -2397,9 +2391,6 @@ void GamePlayScene::WarpToSurfaceExit()
             camera_.get(), rail_.get(), stageSettings_.bossRailAutoExtension,
             stageSettings_.bossRailExtensionBuffer, stageSettings_.floorHeight);
         rail_->StopAutoExtension();
-        RestoreBossCutInTimeScale();
-        bossCutInTimerSeconds_ = -1.0f;
-        hasPlayedBossCutIn_ = false;
     }
     const Vector3 position = GetRailPosition(railDistance_);
     const Vector3 forward = CalculateRailForward(railDistance_, position);
@@ -3034,63 +3025,6 @@ void GamePlayScene::UpdateRecoveryItems()
     }
 }
 
-// ボス登場時のカットインに使う画像・文字・進行状態を準備する。
-void GamePlayScene::InitializeBossCutIn()
-{
-    RestoreBossCutInTimeScale();
-    bossCutInTimerSeconds_ = -1.0f;
-    hasPlayedBossCutIn_ = false;
-    bossCutInSprite_.reset();
-    if (stageSettings_.bossType != "FearWorm") { return; }
-    bossCutInSprite_ = std::make_unique<Sprite>();
-    bossCutInSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossCutInSprite_->SetShaderPaths("resources/Shaders/Sprite/Standard/Render.VS.hlsl",
-        "resources/Shaders/Sprite/FearWormCutIn/Render.PS.hlsl");
-    bossCutInSprite_->SetPosition({ 0.0f, 0.0f });
-    bossCutInSprite_->SetSize({ static_cast<float>(WinApp::kClientWidth), static_cast<float>(WinApp::kClientHeight) });
-    bossCutInSprite_->Update();
-}
-
-// カットインで変更した時間の進み方を元に戻す。
-void GamePlayScene::RestoreBossCutInTimeScale()
-{
-    if (!isBossCutInSlowMotionActive_) { return; }
-    TimeManager::GetInstance()->SetTimeScale(bossCutInPreviousTimeScale_);
-    isBossCutInSlowMotionActive_ = false;
-}
-
-// ボス登場の通知からカットインを開始し、表示と時間演出を進める。
-void GamePlayScene::UpdateBossCutIn()
-{
-    if (!bossCutInSprite_) { return; }
-    const auto* fearWorm = dynamic_cast<const FearWormEnemy*>(GetActiveBoss());
-    if (fearWorm == nullptr || fearWorm->IsDead()) {
-        RestoreBossCutInTimeScale();
-        bossCutInTimerSeconds_ = -1.0f;
-        return;
-    }
-    if (!hasPlayedBossCutIn_ && fearWorm->HasBreachedSurface()) {
-        hasPlayedBossCutIn_ = true;
-        bossCutInTimerSeconds_ = 0.0f;
-        bossCutInPreviousTimeScale_ = TimeManager::GetInstance()->GetTimeScale();
-        TimeManager::GetInstance()->SetTimeScale(bossCutInPreviousTimeScale_ * kUpdateBossCutInBossCutInPreviousTimeScaleMultiplier);
-        isBossCutInSlowMotionActive_ = true;
-        SoundManager::GetInstance()->Play("FearWormCutIn");
-    } else if (bossCutInTimerSeconds_ >= 0.0f) {
-        bossCutInTimerSeconds_ += TimeManager::GetInstance()->GetUnscaledDeltaTime();
-    }
-    if (bossCutInTimerSeconds_ < 0.0f) { return; }
-    if (bossCutInTimerSeconds_ >= kBossCutInSlowDurationSeconds) {
-        RestoreBossCutInTimeScale();
-    }
-    if (bossCutInTimerSeconds_ >= kBossCutInDurationSeconds) {
-        bossCutInTimerSeconds_ = -1.0f;
-        return;
-    }
-    bossCutInSprite_->SetEffectPhase(bossCutInTimerSeconds_);
-    bossCutInSprite_->Update();
-}
-
 void GamePlayScene::InitializeStageObjectiveBanner()
 {
     stageObjectiveElapsedSeconds_ = 0.0f;
@@ -3390,9 +3324,6 @@ void GamePlayScene::Draw2D()
         if (clearFadeSprite_) clearFadeSprite_->Draw();
         return;
     }
-    if (!isPaused_ && bossCutInSprite_ && bossCutInTimerSeconds_ >= 0.0f) {
-        bossCutInSprite_->Draw();
-    }
     // testSprite_->Draw();
     if (GetActiveBoss() == nullptr || !GetActiveBoss()->IsDead()) {
         // 遠方の武器照準を先に描き、近距離の枠を手前に重ねる。
@@ -3427,7 +3358,7 @@ void GamePlayScene::Draw2D()
         weaponSwitchIconSprite_->Draw();
     }
     const bool shouldDrawStageObjective = !isPaused_ && isStageObjectiveVisible_ &&
-        player_ && !player_->IsDead() && bossCutInTimerSeconds_ < 0.0f;
+        player_ && !player_->IsDead();
     if (shouldDrawStageObjective) {
         stageObjectivePanelSprite_->Draw();
         stageObjectiveAccentSprite_->Draw();
@@ -4668,8 +4599,6 @@ void GamePlayScene::Finalize()
 {
     SetPaused(false);
     SceneManager::GetInstance()->SetPauseMenuOpen(false);
-    RestoreBossCutInTimeScale();
-    bossCutInTimerSeconds_ = -1.0f;
     LightManager::GetInstance()->RemoveSpotLight(bossSpotLightHandle_);
     LightManager::GetInstance()->RemovePointLight(bossPointLightHandle_);
     bossSpotLightHandle_ = kInvalidSpotLightHandle;

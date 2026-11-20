@@ -21,10 +21,14 @@ void AnimationActor::Initialize(const std::string& modelName)
     object_->Initialize(SkinningObject3dManager::GetInstance());
 }
 
-void AnimationActor::Update(float deltaTime)
+void AnimationActor::Update(float deltaTime, const std::function<void(Skeleton&)>& adjustPose)
 {
     if (playAnimation_) {
         playAnimation_->Update(deltaTime);
+        if (adjustPose) {
+            adjustPose(skeleton_);
+            skeleton_.UpdateSkeleton();
+        }
     }
 
     if (object_) {

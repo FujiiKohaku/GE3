@@ -77,7 +77,7 @@ void FearWormJumOutState::Initialize()
 void FearWormJumOutState::UpdateSurface(FearWormEntryState& entry, FearWormEnemy& boss)
 {
     if (!surface_ || !boss.player_) { return; }
-    Vector3 surfacePosition = entry.EntrySurfacePosition(boss.player_->GetTranslate());
+    Vector3 surfacePosition = entry.EntrySurfacePosition(boss.player_->GetRailBasePosition());
     // 海面の波頂より上に置き、深度の競合を避ける。
     surfacePosition.y += kSurfaceHeightOffset;
     surfacePosition.z += kSurfaceOffsetZ;

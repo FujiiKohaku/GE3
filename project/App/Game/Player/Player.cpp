@@ -15,12 +15,15 @@
 #include "Engine/Winapp/WinApp.h"
 #include <numbers>
 #include "Engine/math/MatrixMath.h"
+#include "Engine/math/MathUtility.h"
 #include "Engine/3D/Object3dManager.h"
 #include <cassert>
 
 // PlayerMovement
 namespace {
 // 中央付近の小さな入力を無視し、意図しない操舵を防ぐ。
+constexpr float kMaxVisualBankRadians = 0.38f;
+
 float ApplySteeringDeadZone(float value)
 {
     constexpr float kDeadZone = 0.05f;
@@ -593,7 +596,7 @@ void PlayerDeadState::UpdateAnimation(EulerTransform& transform, float deltaTime
 // Playerの姿勢と公開APIを保持し、登場・戦闘・死亡の更新を各Stateへ委譲する。
 
 // 機体のモデルと武器を準備し、照準と移動の初期状態を揃える。
-void Player::Initialize(Model* model)
+void Player::Initialize(Model* model, const std::string& flightModelPath)
 {
     assert(model != nullptr);
 
@@ -611,6 +614,56 @@ void Player::Initialize(Model* model)
         object_->SetCamera(camera_);
     }
 
+    flightVisual_.reset();
+    wingFinJoints_.clear();
+    cruiseLimbJoints_.clear();
+    flightVisualVertical_ = 0.0f;
+    flightVisualBank_ = 0.0f;
+    if (!flightModelPath.empty()) {
+        flightVisual_ = std::make_unique<AnimationActor>();
+        flightVisual_->Initialize(flightModelPath);
+        flightVisual_->SetSkeletonDebugVisible(false);
+        flightVisual_->GetObject()->SetCamera(camera_);
+        flightVisual_->GetObject()->SetFrustumCullingEnabled(false);
+        flightVisual_->GetObject()->SetAlphaCutoff(0.35f);
+
+        const Skeleton& skeleton = *flightVisual_->GetSkeleton();
+        struct LimbResponse {
+            const char* name;
+            Vector3 axis;
+            float lateralDegrees;
+            float verticalDegrees;
+        };
+        constexpr LimbResponse limbResponses[] = {
+            { "J_Bip_L_LowerArm", { 0, 0, 1 }, 5.0f, -3.0f },
+            { "J_Bip_R_LowerArm", { 0, 0, 1 }, 5.0f, 3.0f },
+            { "J_Bip_L_Hand",     { 0, 0, 1 }, 3.0f, -2.0f },
+            { "J_Bip_R_Hand",     { 0, 0, 1 }, 3.0f, 2.0f },
+            { "J_Bip_L_LowerLeg", { 1, 0, 0 }, 9.0f, 10.0f },
+            { "J_Bip_R_LowerLeg", { 1, 0, 0 }, -9.0f, 10.0f },
+            { "J_Bip_L_Foot",     { 1, 0, 0 }, 5.0f, 5.0f },
+            { "J_Bip_R_Foot",     { 1, 0, 0 }, -5.0f, 5.0f },
+        };
+        for (const auto& response : limbResponses) {
+            const auto joint = skeleton.GetJointMap().find(response.name);
+            if (joint == skeleton.GetJointMap().end()) { continue; }
+            cruiseLimbJoints_.push_back({ joint->second, response.axis,
+                response.lateralDegrees, response.verticalDegrees });
+        }
+
+        constexpr std::array<float, 4> finAnglesDegrees{ 14.0f, 5.0f, -7.0f, -18.0f };
+        for (const char side : { 'L', 'R' }) {
+            for (size_t fin = 0; fin < finAnglesDegrees.size(); ++fin) {
+                const auto name = std::string("Wing_Fin_") + side + "_0" + std::to_string(fin + 1);
+                const auto joint = skeleton.GetJointMap().find(name);
+                if (joint == skeleton.GetJointMap().end()) { continue; }
+                const int32_t index = joint->second;
+                wingFinJoints_.push_back({ index, skeleton.GetJoints()[index].GetTransform().rotate,
+                    finAnglesDegrees[fin] * std::numbers::pi_v<float> / 180.0f, side == 'R' });
+            }
+        }
+    }
+
     weaponController_.Initialize();
 
     transform_.scale = { 1.0f, 1.0f, 1.0f };
@@ -618,9 +671,7 @@ void Player::Initialize(Model* model)
     transform_.translate = { 0.0f, -2.0f, 0.0f };
     InitializeMovement();
 
-    object_->SetScale(transform_.scale);
-    object_->SetRotate(transform_.rotate);
-    object_->SetTranslate(transform_.translate);
+    ApplyTransform();
 
     // プレイヤー初期化時に、照準を画面中央へ置き、狙う距離を基準値に戻す。
     InitializeAim();
@@ -649,6 +700,28 @@ void Player::Update(bool hasUpdatedBoost)
         break;
     case State::Entry:
         break;
+    }
+    if (flightVisual_) {
+        flightVisual_->Update(TimeManager::GetInstance()->GetDeltaTime(), [this](Skeleton& skeleton) {
+            const float steering = flightVisualBank_ / kMaxVisualBankRadians;
+            for (const auto& limb : cruiseLimbJoints_) {
+                const float degrees = steering * limb.horizontalDegrees +
+                    flightVisualVertical_ * limb.verticalDegrees;
+                const float halfAngle = degrees * std::numbers::pi_v<float> / 360.0f;
+                const Vector3 axis = limb.hingeAxis * std::sin(halfAngle);
+                const Quaternion hingeTurn{ axis.x, axis.y, axis.z, std::cos(halfAngle) };
+                const auto& cruiseRotation = skeleton.GetJoints()[limb.index].GetTransform().rotate;
+                skeleton.SetJointRotation(limb.index, MathUtility::MultiplyQuaternion(cruiseRotation, hingeTurn));
+            }
+            for (const auto& fin : wingFinJoints_) {
+                const bool opening = (steering > 0.0f) == fin.opensOnRightSteering;
+                constexpr float kClosingSweepRatio = 0.55f;
+                const float sweep = opening ? 1.0f : kClosingSweepRatio;
+                const float halfAngle = 0.5f * steering * fin.maxAngleRadians * sweep;
+                const Quaternion hingeTurn{ 0.0f, std::sin(halfAngle), 0.0f, std::cos(halfAngle) };
+                skeleton.SetJointRotation(fin.index, MathUtility::MultiplyQuaternion(fin.restRotation, hingeTurn));
+            }
+        });
     }
 }
 
@@ -680,6 +753,9 @@ void Player::SetCamera(Camera* camera)
     if (object_ != nullptr) {
         object_->SetCamera(camera);
     }
+    if (flightVisual_) {
+        flightVisual_->GetObject()->SetCamera(camera);
+    }
 }
 
 void Player::SetDebugCameraController(DebugCameraController* debugCameraController)
@@ -691,6 +767,9 @@ void Player::SetEnableLighting(bool isEnabled)
 {
     if (object_ != nullptr) {
         object_->SetEnableLighting(isEnabled);
+    }
+    if (flightVisual_) {
+        flightVisual_->GetObject()->SetEnableLighting(isEnabled);
     }
 }
 
@@ -741,14 +820,20 @@ void Player::Draw()
     weaponController_.DrawBullets();
     // 被弾後の点滅で機体を隠す場合も、発射済みの弾は表示する。
     if (ShouldDraw()) {
-        object_->Draw();
+        if (flightVisual_) {
+            SkinningObject3dManager::GetInstance()->PreDraw();
+            flightVisual_->Draw();
+            Object3dManager::GetInstance()->PreDraw();
+        } else {
+            object_->Draw();
+        }
     }
 }
 
 // 影を落とす対象のモデルを、影用の描画処理へ渡す。
 void Player::DrawShadow(ShadowMapRenderer& renderer)
 {
-    if (object_ != nullptr && ShouldDraw()) {
+    if (object_ != nullptr && !flightVisual_ && ShouldDraw()) {
         object_->DrawShadow(renderer);
     }
 }
@@ -757,7 +842,13 @@ void Player::DrawShadow(ShadowMapRenderer& renderer)
 void Player::SubmitRaytracing(DxrRenderer& renderer) {
     if (!object_) { return; }
     weaponController_.SubmitRaytracing(renderer);
-    if (ShouldDraw()) { object_->SubmitRaytracing(renderer); }
+    if (ShouldDraw()) {
+        if (flightVisual_) {
+            flightVisual_->GetObject()->SubmitRaytracing(renderer);
+        } else {
+            object_->SubmitRaytracing(renderer);
+        }
+    }
 }
 
 // 機体の位置・回転・拡大率を描画オブジェクトへ反映する。
@@ -766,6 +857,25 @@ void Player::ApplyTransform()
     object_->SetScale(transform_.scale);
     object_->SetRotate(transform_.rotate);
     object_->SetTranslate(transform_.translate);
+    if (flightVisual_) {
+        constexpr float kFlightVisualScale = 2.5f;
+        constexpr float kCruiseHipHeight = 1.02f;
+        const Vector3 visualScale = transform_.scale * kFlightVisualScale;
+        Vector3 visualRotation = transform_.rotate;
+        if (IsAlive()) {
+            constexpr float kVerticalVisualPitchRatio = 0.18f;
+            constexpr float kMaxVerticalVisualPitch = 5.0f * std::numbers::pi_v<float> / 180.0f;
+            visualRotation.x = std::clamp(visualRotation.x * kVerticalVisualPitchRatio, -kMaxVerticalVisualPitch, kMaxVerticalVisualPitch);
+        }
+        visualRotation.z += flightVisualBank_;
+        const Matrix4x4 visualTransform = MatrixMath::MakeAffineMatrix(
+            visualScale, visualRotation, transform_.translate);
+        flightVisual_->SetScale(visualScale);
+        flightVisual_->SetRotate(visualRotation);
+        flightVisual_->SetTranslate(MatrixMath::Transform(
+            {0.0f, -kCruiseHipHeight, 0.0f}, visualTransform));
+        flightVisual_->GetObject()->Update();
+    }
 }
 
 // 開発用の画面に内部状態や調整項目を表示する。
@@ -948,6 +1058,16 @@ void Player::UpdateMovement(Input* input)
           static_cast<float>(WinApp::GetInstance()->GetClientHeight()) },
         movement_.IsAllRangeMode(), deltaTimeSeconds);
     movement_.UpdateMovement(transform_, control.steering, control.railResponse, deltaTimeSeconds);
+
+
+    constexpr float kVisualBankResponse = 11.0f;
+    const float targetBank = kMaxVisualBankRadians * std::clamp(control.steering.x, -1.0f, 1.0f);
+    const float bankBlend = 1.0f - std::exp(-kVisualBankResponse * deltaTimeSeconds);
+    flightVisualBank_ += (targetBank - flightVisualBank_) * bankBlend;
+    const float verticalInput = std::clamp(control.steering.y, -1.0f, 1.0f);
+    constexpr float kLimbResponse = 7.0f;
+    const float limbBlend = 1.0f - std::exp(-kLimbResponse * deltaTimeSeconds);
+    flightVisualVertical_ += (verticalInput - flightVisualVertical_) * limbBlend;
 }
 
 // レール基準位置と操縦によるずれを合成し、画面内に収まる機体位置を決める。
@@ -960,6 +1080,8 @@ void Player::ApplyRailPosition()
 void Player::StopMovement()
 {
     movement_.StopMovement();
+    flightVisualVertical_ = 0.0f;
+    flightVisualBank_ = 0.0f;
 }
 
 Vector3 Player::GetAutomaticMovementVelocity() const

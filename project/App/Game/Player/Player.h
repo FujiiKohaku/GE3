@@ -9,6 +9,7 @@
 #include "App/Game/Stage/RailHeightRange.h"
 #include "Engine/3D/Model.h"
 #include "Engine/3D/Object3d.h"
+#include "Engine/Animation/AnimationActor.h"
 #include "Engine/debugcamera/DebugCameraController.h"
 
 #include "App/Game/Player/PlayerWeaponController.h"
@@ -190,7 +191,7 @@ public:
     Player& operator=(Player&&) = delete;
 
     // 使用クラス：GamePlayScene。モデル・武器・移動・照準の初期状態を設定する。
-    void Initialize(Model* model);
+    void Initialize(Model* model, const std::string& flightModelPath = {});
     // 使用クラス：GamePlayScene。照準・移動・発射・描画姿勢を順に更新する。
     void Update(bool hasUpdatedBoost = false);
     // レール進行の計算前に、このフレームのブースト入力を確定する。
@@ -412,6 +413,23 @@ private:
     void ApplyTransform();
 
     std::unique_ptr<Object3d> object_;
+    std::unique_ptr<AnimationActor> flightVisual_;
+    float flightVisualBank_ = 0.0f;
+    struct WingFinJoint {
+        int32_t index;
+        Quaternion restRotation;
+        float maxAngleRadians;
+        bool opensOnRightSteering;
+    };
+    std::vector<WingFinJoint> wingFinJoints_;
+    struct CruiseLimbJoint {
+        int32_t index;
+        Vector3 hingeAxis;
+        float horizontalDegrees;
+        float verticalDegrees;
+    };
+    std::vector<CruiseLimbJoint> cruiseLimbJoints_;
+    float flightVisualVertical_ = 0.0f;
     // カメラ類は外部所有。参照先はPlayerを使用している間、有効である必要がある。
     Camera* camera_ = nullptr;
     DebugCameraController* debugCameraController_ = nullptr;

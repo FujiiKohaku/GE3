@@ -47,8 +47,8 @@ private:
     static constexpr float kEntryFlightDurationSeconds = 2.4f;
     static constexpr float kEntrySegmentDelaySeconds = 0.075f;
     static constexpr float kExitOrbitAngleRadians = 2.35f;
-    // プレイヤーを基準にした、水面上の出現位置のオフセット。
-    static constexpr float kEntrySurfaceOffsetX = -12.0f;
+    // レール中央を基準にした、水面上の出現位置のオフセット。
+    static constexpr float kEntrySurfaceOffsetX = 0.0f;
     static constexpr float kEntrySurfaceOffsetZ = 86.0f;
     static constexpr int kMaxPhaseUpdatesPerFrame = 2;
 
