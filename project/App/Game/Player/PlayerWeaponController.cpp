@@ -472,6 +472,7 @@ void PlayerWeaponController::ResetCombatState()
 	currentWeapon_ = kWeaponAssault;
 	assaultCooldownSeconds_ = 0.0f;
 	missileCooldownRemainingSeconds_ = 0.0;
+	isNextAssaultShotLeft_ = true;
 	homingCooldownRemainingSeconds_ = 0.0;
 #ifdef _DEBUG
 	shouldDrawDebugLines_ = false;
@@ -582,7 +583,10 @@ bool PlayerWeaponController::FireBullet(const Camera& activeCamera)
 		FireSingleBullet(activeCamera, nullptr);
 	}
 	StartCooldown();
-	if (isAssault) { AddShotHeat(); }
+	if (isAssault) {
+		isNextAssaultShotLeft_ = !isNextAssaultShotLeft_;
+		AddShotHeat();
+	}
 	return true;
 }
 // 武器に弾を生成させ、熱量の色・銃口位置・照準方向・機体速度を反映して所有する。
@@ -623,7 +627,7 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 	};
 	bullet->SetColor(bulletColor);
 	bullet->SetCamera(camera_);
-	Vector3 muzzlePosition = CalculateMuzzlePosition();
+	Vector3 muzzlePosition = CalculateShotMuzzlePosition();
 	EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzlePosition);
 
 	// 照準更新時に求めた目標点へ銃口を向ける。
@@ -662,8 +666,29 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 // 機体に対する銃口の相対位置を、現在の姿勢でワールド位置へ変換する。
 Vector3 PlayerWeaponController::CalculateMuzzlePosition() const
 {
+	const Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
+	return MatrixMath::Transform({ 0.0f, bulletSpawnOffsetY_, bulletSpawnOffsetZ_ }, worldMatrix);
+}
+
+Vector3 PlayerWeaponController::CalculateShotMuzzlePosition() const
+{
+	if (currentWeapon_ == kWeaponAssault && player_.flightVisual_) {
+		// 羽の内側寄りの付け根を使い、見た目の傾きやアニメーションにも追従する。
+		const Skeleton& skeleton = *player_.flightVisual_->GetSkeleton();
+		const char* jointName = isNextAssaultShotLeft_ ? "Wing_Fin_L_02" : "Wing_Fin_R_02";
+		const auto joint = skeleton.GetJointMap().find(jointName);
+		if (joint != skeleton.GetJointMap().end()) {
+			const Vector3 modelPosition = MatrixMath::Transform(
+				Vector3{}, skeleton.GetJoints()[joint->second].GetSkeletonSpaceMatrix());
+			return MatrixMath::Transform(modelPosition, player_.flightVisual_->GetObject()->GetWorldMatrix());
+		}
+	}
 	Matrix4x4 worldMatrix = MatrixMath::MakeAffineMatrix(transform_.scale, transform_.rotate, transform_.translate);
 	Vector3 localMuzzle = { 0.0f, bulletSpawnOffsetY_, bulletSpawnOffsetZ_ };
+	if (currentWeapon_ == kWeaponAssault) {
+		// 羽の骨を持たないモデルでも左右交互に発射する。
+		localMuzzle.x = isNextAssaultShotLeft_ ? -1.25f : 1.25f;
+	}
 	return MatrixMath::Transform(localMuzzle, worldMatrix);
 }
 

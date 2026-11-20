@@ -18,7 +18,18 @@ private:
 
 inline bool RunPlayerWeaponResetTests()
 {
+    NormalBullet assaultBullet;
+    assaultBullet.SetDamage(1);
+    assert(assaultBullet.GetHitDamage() == 0.5f);
+    assaultBullet.SetDamage(2);
+    assert(assaultBullet.GetHitDamage() == 1.0f);
+    MissileBullet missileBullet;
+    missileBullet.SetDamage(10);
+    assert(missileBullet.GetHitDamage() == 10.0f);
     Player player;
+    player.SetScale({ 1.0f, 1.0f, 1.0f });
+    player.SetRotate({ 0.0f, 0.0f, 0.0f });
+    player.SetTranslate({ 0.0f, 0.0f, 0.0f });
     PlayerWeaponController controller(player);
     Camera camera;
     controller.SetCamera(&camera);
@@ -46,6 +57,11 @@ inline bool RunPlayerWeaponResetTests()
 
     // 非選択のアサルトに、連射間隔の途中の状態を作る。
     controller.currentWeapon_ = controller.kWeaponAssault;
+    const Vector3 leftMuzzle = controller.CalculateShotMuzzlePosition();
+    controller.isNextAssaultShotLeft_ = false;
+    const Vector3 rightMuzzle = controller.CalculateShotMuzzlePosition();
+    assert(leftMuzzle.x < rightMuzzle.x);
+    assert(leftMuzzle.y == rightMuzzle.y && leftMuzzle.z == rightMuzzle.z);
     int shots = controller.GetRequestedShotCount(true, false, 0.04f);
     assert(shots == 0);
 
@@ -68,6 +84,8 @@ inline bool RunPlayerWeaponResetTests()
     controller.ResetCombatState();
     assert(stopped && destroyed && controller.GetBullets().empty());
     assert(controller.currentWeapon_ == controller.kWeaponAssault && controller.GetShotsFired() == 0);
+    assert(controller.isNextAssaultShotLeft_);
+    assert(controller.CalculateShotMuzzlePosition().x == leftMuzzle.x);
     assert(std::strcmp(controller.GetCurrentWeaponName(), "アサルト") == 0);
     assert(controller.GetHeatRatio() == 0.0f && !controller.IsOverheated());
     controller.currentWeapon_ = controller.kWeaponMissileBullet;

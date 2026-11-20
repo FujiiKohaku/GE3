@@ -22,6 +22,8 @@ struct PlayerBulletExplosionSettings {
 class PlayerBullet : public BaseBullet {
 public:
     virtual ~PlayerBullet() = default;
+    // 衝突時の実ダメージ。整数の基本威力に対して小数倍率を適用できる。
+    virtual float GetHitDamage() const { return static_cast<float>(GetDamage()); }
     // 弾種固有の命中演出を追加するための共通の呼び出し口。標準では何も行わない。
     virtual void OnHitEnemy(const Vector3& position);
     // 半径が0なら爆発しない。衝突したフレームにだけ爆風を判定する。
@@ -32,6 +34,8 @@ public:
 // プレイヤーの通常弾の描画設定と、敵への命中時のエフェクトを扱う。
 class NormalBullet : public PlayerBullet {
 public:
+    // 両翼から交互に撃つアサルトの威力を従来の半分にする。
+    float GetHitDamage() const override { return PlayerBullet::GetHitDamage() * 0.5f; }
     // 通常弾の色・シェーダー・霧や影の設定を適用し、機体から見やすい弾にする。
     void Initialize(Model* model) override;
     void AlignToFlight(const Vector3& velocity);
@@ -159,7 +163,7 @@ public:
     float GetMissileReloadRatio() const;
     const char* GetCurrentWeaponName() const;
     float GetHeatRatio() const { return heatRatio_; }
-    // 表示用の射線と発射で、同じ銃口のワールド座標を使う。
+    // 照準表示用の基準位置。交互発射でも照準が左右に揺れないよう中央を使う。
     Vector3 CalculateMuzzlePosition() const;
     bool IsOverheated() const { return isOverheated_; }
 #ifdef _DEBUG
@@ -203,6 +207,7 @@ private:
     int GetRequestedShotCount(bool isHeld, bool isTriggered, float deltaTimeSeconds);
     // 武器に弾を生成させ、熱量の色・銃口位置・照準方向・機体速度を反映して所有する。
     void FireSingleBullet(const Camera& activeCamera, CombatTarget* homingTarget);
+    Vector3 CalculateShotMuzzlePosition() const;
 
     const EulerTransform& transform_;
     const Player& player_;
@@ -232,6 +237,7 @@ private:
     static constexpr float kAssaultFireIntervalSeconds = 3.0f / 60.0f;
     static constexpr int kAssaultBaseDamage = 1;
     float assaultCooldownSeconds_ = 0.0f;
+    bool isNextAssaultShotLeft_ = true;
     double missileCooldownRemainingSeconds_ = 0.0;
     double homingCooldownRemainingSeconds_ = 0.0;
 #ifdef _DEBUG

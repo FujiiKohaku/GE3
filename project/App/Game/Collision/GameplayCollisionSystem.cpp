@@ -304,7 +304,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
             CombatTarget& enemy = *nearest.enemy;
             if (enemy.IsCollisionPartDamageable(nearest.partIndex)) {
                 if (!hasExplosion) { bullet->OnHitEnemy(nearest.hit.position); }
-                if (bullet->GetDamage() > 0) {
+                if (bullet->GetHitDamage() > 0.0f) {
                     // 部位中心へ埋まらないよう、弾の接触時の位置へ小さな火花を出す。
                     const Vector3 sparkPosition = sphere.center + movement * nearest.hit.time;
                     EffectManager::GetInstance()->PlayEffect("EnemyHitSpark", sparkPosition);
@@ -313,7 +313,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
             } else {
                 SoundManager::GetInstance()->Play("ArmorDeflect");
             }
-            enemy.OnBulletHit(nearest.partIndex, static_cast<float>(bullet->GetDamage()), nearest.hit.position);
+            enemy.OnBulletHit(nearest.partIndex, bullet->GetHitDamage(), nearest.hit.position);
             if (enemy.IsDead()) {
                 if (&enemy == boss) {
                     SoundManager::GetInstance()->Play("BossDestroyed");
@@ -327,7 +327,7 @@ GameplayCollisionEvents GameplayCollisionSystem::UpdatePlayerBulletCollisions(
             if (!hasExplosion) { EffectManager::GetInstance()->PlayEffect("HitEffect", nearest.hit.position); }
             if (nearest.destructible != nullptr) {
                 DestructibleLevelObject& destructible = *nearest.destructible;
-                destructible.hp -= static_cast<float>(bullet->GetDamage());
+                destructible.hp -= bullet->GetHitDamage();
                 if (destructible.hp <= 0.0f) {
                     destructible.destroyed = true;
                     const Vector3 center = destructible.object->GetCollider()->GetCenter();
