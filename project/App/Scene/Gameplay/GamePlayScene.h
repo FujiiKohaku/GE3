@@ -254,7 +254,6 @@ private:
     // 機体に追従している噴射エフェクトを停止し、参照を解除する。
     void StopPlayerEngineEffects();
     // ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
-    void UpdateBossHpHud();
     void UpdatePlayerGauges();
     void InitializeWeaponIcons();
     void UpdateWeaponIcons();
@@ -382,7 +381,6 @@ private:
     float stageObjectiveElapsedSeconds_ = 0.0f;
     bool isStageObjectiveVisible_ = false;
     std::vector<std::unique_ptr<Sprite>> weaponHudFrameSprites_;
-    std::vector<std::unique_ptr<Sprite>> bossHudFrameSprites_;
     std::unique_ptr<Text> weaponHudLabelText_;
     std::unique_ptr<Text> weaponHudNameText_;
     uint32_t score_ = 0;
@@ -620,17 +618,6 @@ private:
     std::unique_ptr<Sprite> playerHpArcSprite_;
     std::unique_ptr<Sprite> playerBoostArcSprite_;
     bool arePlayerGaugesVisible_ = false;
-
-    // Release構成でも表示するボスHP HUD
-    std::unique_ptr<Sprite> bossHeadHpBgSprite_;
-    std::unique_ptr<Sprite> bossHeadHpBarSprite_;
-    std::unique_ptr<Sprite> bossBodyHpBgSprite_;
-    std::unique_ptr<Sprite> bossBodyHpBarSprite_;
-    std::unique_ptr<Text> bossNameText_;
-    std::unique_ptr<Text> bossHeadHpText_;
-    std::unique_ptr<Text> bossBodyHpText_;
-    float displayedBossHeadHpRatio_ = 1.0f;
-    float displayedBossBodyHpRatio_ = 1.0f;
 
     uint32_t bossSpotLightHandle_ = 0xffffffffu;
     uint32_t bossPointLightHandle_ = 0xffffffffu;

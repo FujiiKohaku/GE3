@@ -55,11 +55,15 @@ void TestGamepadFireAndDeadZone()
     pad.sThumbLX = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;
     InputTestAccess::Set(input, pad);
     assert(!input.IsGamepadRightTriggerPressed());
+    assert(!input.IsGamepadRightTriggerTrigger());
     assert(input.GetGamepadLeftStickX() == 0.0f);
     pad.bRightTrigger++;
     pad.sThumbLX = 32767;
     InputTestAccess::Set(input, pad);
     assert(input.IsGamepadRightTriggerPressed());
+    assert(input.IsGamepadRightTriggerTrigger());
+    InputTestAccess::Set(input, pad, pad);
+    assert(!input.IsGamepadRightTriggerTrigger());
     assert(std::abs(input.GetGamepadLeftStickX() - 1.0f) < 0.0001f);
     pad.sThumbLY = 32767;
     InputTestAccess::Set(input, pad);
@@ -72,11 +76,16 @@ void TestGamepadFireAndDeadZone()
     assert(input.IsGamepadButtonPressed(XINPUT_GAMEPAD_A));
     pad.bRightTrigger = 0;
     InputTestAccess::Set(input, pad, previous);
+    assert(!input.IsGamepadRightTriggerTrigger());
     assert(input.IsGamepadButtonPressed(XINPUT_GAMEPAD_A));
     InputTestAccess::Set(input, pad, {}, true, false);
     assert(!input.IsGamepadButtonTrigger(XINPUT_GAMEPAD_A));
     assert(!input.IsGamepadRightTriggerPressed()); // 再接続時の押しっぱなしを無視する。
+    pad.bRightTrigger = 255;
+    InputTestAccess::Set(input, pad, {}, true, false);
+    assert(!input.IsGamepadRightTriggerTrigger());
     InputTestAccess::Set(input, pad, {}, false);
+    assert(!input.IsGamepadRightTriggerTrigger());
     assert(!input.IsGamepadRightTriggerPressed());
     assert(input.GetGamepadLeftStickX() == 0.0f);
     InputTestAccess::Set(input, {}, {}, false, false, true);

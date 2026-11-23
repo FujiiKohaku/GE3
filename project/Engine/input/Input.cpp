@@ -334,6 +334,12 @@ bool Input::IsGamepadRightTriggerPressed() const
         gamepadState_.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 }
 
+bool Input::IsGamepadRightTriggerTrigger() const
+{
+    return IsGamepadRightTriggerPressed() &&
+        preGamepadState_.Gamepad.bRightTrigger <= XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+}
+
 namespace {
 float NormalizeStickAxis(SHORT value, SHORT otherAxis, SHORT deadZone)
 {

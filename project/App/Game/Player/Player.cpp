@@ -671,6 +671,8 @@ void Player::Initialize(Model* model, const std::string& flightModelPath)
     transform_.translate = { 0.0f, -2.0f, 0.0f };
     InitializeMovement();
 
+    // 初回描画前に飛行ポーズを適用
+    if (flightVisual_) { flightVisual_->Update(0.0f); }
     ApplyTransform();
 
     // プレイヤー初期化時に、照準を画面中央へ置き、狙う距離を基準値に戻す。
@@ -863,9 +865,11 @@ void Player::ApplyTransform()
         const Vector3 visualScale = transform_.scale * kFlightVisualScale;
         Vector3 visualRotation = transform_.rotate;
         if (IsAlive()) {
+            constexpr float kForwardLean = 8.0f * std::numbers::pi_v<float> / 180.0f;
             constexpr float kVerticalVisualPitchRatio = 0.18f;
             constexpr float kMaxVerticalVisualPitch = 5.0f * std::numbers::pi_v<float> / 180.0f;
             visualRotation.x = std::clamp(visualRotation.x * kVerticalVisualPitchRatio, -kMaxVerticalVisualPitch, kMaxVerticalVisualPitch);
+            visualRotation.x += kForwardLean;
         }
         visualRotation.z += flightVisualBank_;
         const Matrix4x4 visualTransform = MatrixMath::MakeAffineMatrix(

@@ -295,6 +295,38 @@ Model* ModelManager::CreateCube(const std::string& texturePath)
     return raw;
 }
 
+// ビーム用の円柱。正面から見ても穴にならないよう両端を閉じる。
+Model* ModelManager::CreateBeamCylinder()
+{
+    const std::string key = "Primitive/BeamCylinder";
+    if (auto found = models_.find(key); found != models_.end()) { return found->second.get(); }
+    constexpr uint32_t divisions = 32;
+    ModelData data = CreateCylinderModelData("resources/Textures/white.png", divisions);
+    MeshPrimitive& mesh = data.primitives.front();
+    for (uint32_t cap = 0; cap < 2; ++cap) {
+        const float y = static_cast<float>(cap);
+        const Vector3 normal { 0.0f, cap == 0 ? -1.0f : 1.0f, 0.0f };
+        const uint32_t center = static_cast<uint32_t>(mesh.vertices.size());
+        mesh.vertices.push_back({ { 0.0f, y, 0.0f, 1.0f }, { 0.5f, 1.0f - y }, normal });
+        for (uint32_t index = 0; index <= divisions; ++index) {
+            const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / divisions;
+            mesh.vertices.push_back({ { std::sin(angle), y, std::cos(angle), 1.0f },
+                { static_cast<float>(index) / divisions, 1.0f - y }, normal });
+        }
+        for (uint32_t index = 0; index < divisions; ++index) {
+            const uint32_t current = center + 1 + index;
+            const uint32_t next = current + 1;
+            if (cap == 0) { mesh.indices.insert(mesh.indices.end(), { center, current, next }); }
+            else { mesh.indices.insert(mesh.indices.end(), { center, next, current }); }
+        }
+    }
+    auto model = std::make_unique<Model>();
+    model->Initialize(modelCommon_.get(), data);
+    Model* result = model.get();
+    models_.emplace(key, std::move(model));
+    return result;
+}
+
 Model* ModelManager::CreateCylinder(const std::string& texturePath, uint32_t divisions)
 {
     const std::string actualTexturePath = texturePath.empty() ? kDefaultPlaneTexture : texturePath;

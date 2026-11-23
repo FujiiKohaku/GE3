@@ -31,9 +31,10 @@ public:
     float GetGamepadLeftStickX() const;
     float GetGamepadLeftStickY() const;
     bool IsGamepadRightTriggerPressed() const;
+    bool IsGamepadRightTriggerTrigger() const;
     bool IsUsingGamepad() const { return isUsingGamepad_; }
     bool WasActiveGamepadDisconnected() const { return activeGamepadDisconnected_; }
-    bool IsForeground() const { return isForeground_; }
+    bool IsGameWindowActive() const { return isForeground_; }
     uint64_t GetFocusLossCount() const { return focusLossCount_; }
     bool IsGamepadPitchInverted() const { return gamepadPitchInverted_; }
     void ToggleGamepadPitchInverted() { gamepadPitchInverted_ = !gamepadPitchInverted_; }

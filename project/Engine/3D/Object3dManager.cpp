@@ -50,6 +50,7 @@ const std::string& Object3dManager::GetTransparentShader(const std::string& shad
 {
     static const std::unordered_map<std::string, std::string> shaders {
         { "resources/Shaders/Object3D/FearWormEntrySurface/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/FearWormEntrySurface.PS.hlsl" },
+        { "resources/Shaders/Object3D/FearWormBeam/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/FearWormBeam.PS.hlsl" },
         { "resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Danmaku.PS.hlsl" },
         { "resources/Shaders/Object3D/PlayerBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/PlayerBullet.PS.hlsl" },
         { "resources/Shaders/Object3D/AssaultBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/AssaultBullet.PS.hlsl" },

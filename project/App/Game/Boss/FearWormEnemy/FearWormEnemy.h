@@ -178,6 +178,8 @@ private:
 
     // 部位の生成、描画、当たり判定、HP。
     void InitializeSegments(Model* model);
+    void InitializeHeadHpGear();
+    void DrawHeadHpGear();
     // 計算済みの部位位置と向きを、描画用のオブジェクトへ反映する。
     void UpdateSegmentObjects();
     // 胴体が破壊された位置に、破片や爆発の演出を出す。
@@ -211,6 +213,10 @@ private:
     std::vector<Segment> segments_;
     std::array<Model*, 5> headPoseModels_ {};
     std::unique_ptr<Object3d> headEye_;
+    static constexpr size_t kHeadHpGearSegmentCount = 24;
+    std::unique_ptr<Object3d> headHpGearFrame_;
+    std::array<std::unique_ptr<Object3d>, kHeadHpGearSegmentCount> headHpGearSegments_;
+    std::array<std::unique_ptr<Object3d>, kHeadHpGearSegmentCount> headShieldGearSegments_;
     Vector3 headForward_ { 0.0f, 0.0f, 1.0f };
     float headOpenAmount_ = 0.0f;
     int headPoseIndex_ = 0;

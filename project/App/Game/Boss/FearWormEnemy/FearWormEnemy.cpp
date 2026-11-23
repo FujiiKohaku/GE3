@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <cmath>
 #include <utility>
+#include <numbers>
+#include "Engine/math/MatrixMath.h"
 #include "Engine/3D/Object3dManager.h"
 #include "Engine/3D/ModelManager.h"
 
@@ -187,6 +189,7 @@ void FearWormEnemy::Initialize(Model* model, Model* bulletModel, Player* player)
     battleState_.Initialize(bulletModel);
 
     InitializeSegments(model);
+    InitializeHeadHpGear();
     InitializeBeam();
     entryState_.Initialize();
     SetPosition(transform_.translate);
@@ -489,6 +492,10 @@ void FearWormEnemy::UpdateSegmentObjects()
             Vector3 direction = headForward_;
             if (battleState_.actionType_ == FearWormBattleState::ActionType::Beam &&
                 battleState_.ShouldAimHead(*this)) { direction = battleState_.headAimDirection_; }
+            // 頭だけになったらプレイヤーを見る。
+            if (!HasAliveBodyParts() && player_ != nullptr) {
+                direction = player_->GetTranslate() - segment.position;
+            }
             const float horizontal = std::sqrt(direction.x * direction.x + direction.z * direction.z);
             if (Vector3Length(direction) > 0.0001f) {
                 rotate.x = -std::atan2(direction.y, horizontal);
@@ -534,7 +541,78 @@ void FearWormEnemy::Draw()
         }
     }
 
+    DrawHeadHpGear();
     DrawBeam();
+}
+
+// 頭の外周に置く歯車とHP目盛りを作る。
+void FearWormEnemy::InitializeHeadHpGear()
+{
+    ModelManager* models = ModelManager::GetInstance();
+    Model* frameModel = models->Load("Boss/FearWorm/HpGear/Frame.obj");
+    Model* segmentModel = models->Load("Boss/FearWorm/HpGear/HpSegment.obj");
+    Model* shieldModel = models->Load("Boss/FearWorm/HpGear/ShieldSegment.obj");
+    const auto createObject = [](Model* model, bool lighting) {
+        auto object = std::make_unique<Object3d>();
+        object->Initialize(Object3dManager::GetInstance());
+        object->SetModel(model);
+        object->SetMaterial("resources/Shaders/Object3D/ShadowStandard");
+        object->SetEnableLighting(lighting);
+        object->SetCastShadow(false);
+        object->SetReceiveShadow(false);
+        object->SetSurfaceProperties(0.3f, 0.65f, 0.7f);
+        return object;
+    };
+    headHpGearFrame_ = createObject(frameModel, true);
+    headHpGearFrame_->SetColor({ 0.56f, 0.38f, 0.18f, 1.0f });
+    for (auto& segment : headHpGearSegments_) {
+        segment = createObject(segmentModel, false);
+    }
+    for (auto& segment : headShieldGearSegments_) {
+        segment = createObject(shieldModel, false);
+    }
+}
+
+// 頭の姿勢に追従し、内側にHP、外側にシールドを表示する。
+void FearWormEnemy::DrawHeadHpGear()
+{
+    if ((state_ != BossState::Entry && state_ != BossState::Battle) || IsDead() || segments_.empty()
+        || !segments_[0].isAlive || !segments_[0].object || !headHpGearFrame_) { return; }
+    if (state_ == BossState::Entry &&
+        segments_[0].position.y + segments_[0].scale.y < entryState_.GetWaterHeight()) { return; }
+    Camera* camera = Object3dManager::GetInstance()->GetDefaultCamera();
+    if (camera == nullptr) { return; }
+
+    // モデルの表を頭の正面(+Z)へ向け、頭の拡大率を基準サイズに換算する。
+    const float scale = 1.0f / kHeadScale;
+    const Matrix4x4 local = MatrixMath::MakeAffineMatrix(
+        Vector3 { scale, scale, scale }, Vector3 { 0.0f, std::numbers::pi_v<float>, 0.0f }, Vector3 {});
+    const Matrix4x4 world = MatrixMath::Multiply(local, segments_[0].object->GetWorldMatrix());
+    headHpGearFrame_->SetCamera(camera);
+    headHpGearFrame_->SetCustomWorldMatrix(world);
+    headHpGearFrame_->Update();
+    headHpGearFrame_->Draw();
+
+    const auto drawGauge = [&](auto& objects, float fraction, const Vector3& light, bool flash) {
+        const float filledSegments = std::clamp(fraction, 0.0f, 1.0f)
+            * static_cast<float>(kHeadHpGearSegmentCount);
+        for (size_t index = 0; index < objects.size(); ++index) {
+            Object3d& segment = *objects[index];
+            const float fill = std::clamp(filledSegments - static_cast<float>(index), 0.0f, 1.0f);
+            Vector4 color { 0.055f + light.x * fill, 0.065f + light.y * fill,
+                0.08f + light.z * fill, 1.0f };
+            if (fill > 0.0f && flash) { color = { 1.6f, 1.4f, 0.85f, 1.0f }; }
+            const float angle = -2.0f * std::numbers::pi_v<float>
+                * static_cast<float>(index) / static_cast<float>(kHeadHpGearSegmentCount);
+            segment.SetCamera(camera);
+            segment.SetColor(color);
+            segment.SetCustomWorldMatrix(MatrixMath::Multiply(MatrixMath::MakeRotateZMatrix(angle), world));
+            segment.Update();
+            segment.Draw();
+        }
+    };
+    drawGauge(headHpGearSegments_, GetHeadHpFraction(), { 1.25f, 0.67f, 0.08f }, segments_[0].hitFlashTimer > 0.0f);
+    drawGauge(headShieldGearSegments_, GetBodyHpFraction(), { 0.05f, 0.85f, 1.25f }, false);
 }
 
 // 影を落とす対象のモデルを、影用の描画処理へ渡す。

@@ -49,7 +49,7 @@ inline bool RunPlayerWeaponResetTests()
     for (int index = 0; index < kMaxShots && controller.GetHeatRatio() < 1.0f; ++index) {
         controller.AddShotHeat();
     }
-    controller.UpdateHeat(1.0f, true);
+    controller.UpdateAssaultHeat(1.0f, true);
     assert(controller.IsOverheated());
     controller.SetHomingTargets({ nullptr });
     const auto sharedTargets = controller.homingTargets_;
@@ -65,23 +65,12 @@ inline bool RunPlayerWeaponResetTests()
     int shots = controller.GetRequestedShotCount(true, false, 0.04f);
     assert(shots == 0);
 
-    // ボタンを離すまで禁止し、フォーカス喪失後も意図せず発射しない。
-    assert(controller.UpdateFireInputState(true, true, 0));
-    assert(!controller.UpdateFireInputState(true, true, 0));
+    // メニュー操作後の入力禁止は、戦闘状態のリセットで解除する。
     controller.BlockFireUntilRelease();
-    assert(!controller.UpdateFireInputState(true, true, 0));
-    assert(!controller.UpdateFireInputState(false, true, 0));
-    assert(controller.UpdateFireInputState(true, true, 0));
-    assert(!controller.UpdateFireInputState(false, false, 1));
-    assert(!controller.UpdateFireInputState(true, true, 1));
-    assert(!controller.UpdateFireInputState(false, true, 1));
-    assert(controller.UpdateFireInputState(true, true, 1));
-    // 更新を停止中にフォーカスが失われても、復帰後に禁止する。
-    assert(!controller.UpdateFireInputState(true, true, 2));
-    assert(!controller.UpdateFireInputState(false, true, 2));
-    assert(controller.UpdateFireInputState(true, true, 2));
+    assert(controller.isFireBlocked_);
     // 描画初期化なしで、Initializeと同じ戦闘状態リセットを検証する。
     controller.ResetCombatState();
+    assert(!controller.isFireBlocked_);
     assert(stopped && destroyed && controller.GetBullets().empty());
     assert(controller.currentWeapon_ == controller.kWeaponAssault && controller.GetShotsFired() == 0);
     assert(controller.isNextAssaultShotLeft_);

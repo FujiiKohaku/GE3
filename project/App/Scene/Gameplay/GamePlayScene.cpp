@@ -24,7 +24,7 @@
 #include "Engine/Light/LightManager.h"
 #include "Engine/math/MathStruct.h"
 #include "Engine/audio/SoundManager.h"
-#include <cstdlib>
+#include <random>
 #include <numbers>
 
 #include "App/Scene/Common/SceneManager.h"
@@ -56,7 +56,6 @@
 namespace {
 constexpr const char* kDefaultFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 constexpr const char* kWeaponFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
-constexpr const char* kBossFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 constexpr const char* kGuidanceFont = "resources/Fonts/KurobaraGothic/kurobara-gothic-heavy.ttf";
 const std::string kRailBranchUpperText = "↑ 海上ルート";
 const std::string kRailBranchLowerText = "↓ 海中ルート";
@@ -185,24 +184,12 @@ constexpr float kInitializeWeaponHudLabelTextPositionX = 98.0f;
 constexpr float kInitializeWeaponHudLabelTextPositionY = 92.0f;
 constexpr float kInitializeWeaponHudNameTextPositionX = 98.0f;
 constexpr float kInitializeWeaponHudNameTextPositionY = 68.0f;
-constexpr float kInitializeBossHeadHpBgSpriteSizeY = 14.0f;
-constexpr float kInitializeBossHeadHpBgSpritePositionY = 65.0f;
-constexpr float kInitializeBossHeadHpBarSpriteSizeY = 14.0f;
-constexpr float kInitializeBossHeadHpBarSpritePositionY = 65.0f;
-constexpr float kInitializeBossBodyHpBgSpriteSizeY = 14.0f;
-constexpr float kInitializeBossBodyHpBgSpritePositionY = 91.0f;
-constexpr float kInitializeBossBodyHpBarSpriteSizeY = 14.0f;
-constexpr float kInitializeBossBodyHpBarSpritePositionY = 91.0f;
-constexpr float kInitializeBossNameTextPositionY = 12.0f;
-constexpr float kInitializeBossHeadHpTextPositionX = 12.0f;
-constexpr float kInitializeBossHeadHpTextPositionY = 60.0f;
-constexpr float kInitializeBossBodyHpTextPositionX = 12.0f;
-constexpr float kInitializeBossBodyHpTextPositionY = 86.0f;
 constexpr float kInitializeGetFlightForwardMultiplier = 60.0f;
 constexpr float kInitializeSideOffsetOffset = 8.0f;
 constexpr float kInitializeSideOffsetDefault = 8.0f;
 constexpr float kInitializePaintEnemyPositionMultiplier = 2.0f;
 constexpr float kInitializeOceanWidthDefault = 1000.0f;
+constexpr float kOceanForwardMargin = 1000.0f;
 constexpr float kInitializeOceanWidthMultiplier = 2.0f;
 constexpr float kInitializeOceanWidthOffset = 2000.0f;
 constexpr float kOceanWaveAmplitude = 0.65f;
@@ -262,10 +249,6 @@ constexpr float kTutorialControlsEnableSeconds = 1.5f;
 constexpr float kUpdateTutorialPresentationTutorialExitOverlayColorRed = 0.015f;
 constexpr float kUpdateTutorialPresentationTutorialExitOverlayColorGreen = 0.02f;
 constexpr float kUpdateTutorialPresentationTutorialExitOverlayColorBlue = 0.04f;
-constexpr float kUpdateBossHpHudDisplayedBossHeadHpRatioDefault = 0.10f;
-constexpr float kUpdateBossHpHudDisplayedBossBodyHpRatioDefault = 0.10f;
-constexpr float kUpdateBossHpHudBossHeadHpBarSpriteSizeY = 14.0f;
-constexpr float kUpdateBossHpHudBossBodyHpBarSpriteSizeY = 14.0f;
 constexpr float kBossWarningTextRedGreenComponent = 0.2f;
 constexpr float kBossHeadHpGreenComponent = 0.6f;
 constexpr float kBossHeadHpPanelRed = 0.1f;
@@ -1062,87 +1045,6 @@ void GamePlayScene::Initialize()
     playerBoostArcSprite_ = CreatePlayerGauge(-kGaugeRotation, kPlayerActionCyan, true);
     arePlayerGaugesVisible_ = false;
 
-    const float bossHudCenterX = WinApp::GetInstance()->kClientWidth / 2.0f;
-    const float bossHpBarLeft = bossHudCenterX - 170.0f;
-    const float bossHpBarWidth = 340.0f;
-
-    InitializeHudFrame(
-        bossHudFrameSprites_,
-        { bossHudCenterX, 8.0f },
-        { 620.0f, 110.0f },
-        { 0.5f, 0.0f },
-        kDangerVermilion);
-
-    bossHeadHpBgSprite_ = std::make_unique<Sprite>();
-    bossHeadHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossHeadHpBgSprite_->SetSize({ bossHpBarWidth, kInitializeBossHeadHpBgSpriteSizeY });
-    bossHeadHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossHeadHpBgSprite_->SetPosition({ bossHpBarLeft, kInitializeBossHeadHpBgSpritePositionY });
-    bossHeadHpBgSprite_->SetColor(kHudPanel);
-    bossHeadHpBgSprite_->Update();
-
-    bossHeadHpBarSprite_ = std::make_unique<Sprite>();
-    bossHeadHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossHeadHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
-    bossHeadHpBarSprite_->SetSize({ bossHpBarWidth, kInitializeBossHeadHpBarSpriteSizeY });
-    bossHeadHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossHeadHpBarSprite_->SetPosition({ bossHpBarLeft, kInitializeBossHeadHpBarSpritePositionY });
-    bossHeadHpBarSprite_->SetColor(kHudBrass);
-    bossHeadHpBarSprite_->Update();
-
-    bossBodyHpBgSprite_ = std::make_unique<Sprite>();
-    bossBodyHpBgSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossBodyHpBgSprite_->SetSize({ bossHpBarWidth, kInitializeBossBodyHpBgSpriteSizeY });
-    bossBodyHpBgSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossBodyHpBgSprite_->SetPosition({ bossHpBarLeft, kInitializeBossBodyHpBgSpritePositionY });
-    bossBodyHpBgSprite_->SetColor(kHudPanel);
-    bossBodyHpBgSprite_->Update();
-
-    bossBodyHpBarSprite_ = std::make_unique<Sprite>();
-    bossBodyHpBarSprite_->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
-    bossBodyHpBarSprite_->SetMaterial("resources/Shaders/Sprite/HealthBar");
-    bossBodyHpBarSprite_->SetSize({ bossHpBarWidth, kInitializeBossBodyHpBarSpriteSizeY });
-    bossBodyHpBarSprite_->SetAnchorPoint({ 0.0f, 0.0f });
-    bossBodyHpBarSprite_->SetPosition({ bossHpBarLeft, kInitializeBossBodyHpBarSpritePositionY });
-    bossBodyHpBarSprite_->SetColor(kDangerVermilion);
-    bossBodyHpBarSprite_->Update();
-
-    bossNameText_ = std::make_unique<Text>();
-    bossNameText_->Initialize(kBossFont);
-    bossNameText_->SetText("BOSS: FEAR WORM");
-    if (stageSettings_.bossType == "IceJellyfish") {
-        bossNameText_->SetText("BOSS: ICE JELLYFISH");
-    }
-    bossNameText_->SetPosition({ bossHudCenterX, kInitializeBossNameTextPositionY });
-    bossNameText_->SetAnchorPoint({ 0.5f, 0.0f });
-    bossNameText_->SetFontSize(20.0f);
-    bossNameText_->SetColor(kDangerVermilion);
-    bossNameText_->Update();
-
-    bossHeadHpText_ = std::make_unique<Text>();
-    bossHeadHpText_->Initialize(kDefaultFont);
-    bossHeadHpText_->SetText("HEAD CORE");
-    if (stageSettings_.bossType == "IceJellyfish") {
-        bossHeadHpText_->SetText("CORE HP");
-    }
-    bossHeadHpText_->SetPosition({ bossHpBarLeft - kInitializeBossHeadHpTextPositionX, kInitializeBossHeadHpTextPositionY });
-    bossHeadHpText_->SetAnchorPoint({ 1.0f, 0.0f });
-    bossHeadHpText_->SetFontSize(14.0f);
-    bossHeadHpText_->SetColor(kHudBrass);
-    bossHeadHpText_->Update();
-
-    bossBodyHpText_ = std::make_unique<Text>();
-    bossBodyHpText_->Initialize(kDefaultFont);
-    bossBodyHpText_->SetText("BODY SHIELD");
-    if (stageSettings_.bossType == "IceJellyfish") {
-        bossBodyHpText_->SetText("TENTACLE PARTS");
-    }
-    bossBodyHpText_->SetPosition({ bossHpBarLeft - kInitializeBossBodyHpTextPositionX, kInitializeBossBodyHpTextPositionY });
-    bossBodyHpText_->SetAnchorPoint({ 1.0f, 0.0f });
-    bossBodyHpText_->SetFontSize(14.0f);
-    bossBodyHpText_->SetColor(kDangerVermilion);
-    bossBodyHpText_->Update();
-
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
     TextureManager::GetInstance()->LoadTexture("resources/Textures/uvChecker.png");
     Logger::Log("GamePlayScene::Initialize: Allocating skyBox");
@@ -1264,7 +1166,9 @@ void GamePlayScene::Initialize()
         (stageId_ == "stage01" || stageSettings_.allRangeMode)) {
         oceanSurface_ = std::make_unique<OceanSurface>();
         float oceanWidth = kInitializeOceanWidthDefault;
-        float oceanLength = stageSettings_.railLength;
+        // 描画距離より先まで海を用意し、レール終端を見せない。
+        float oceanLength = (std::max)(stageSettings_.railLength, rail_->GetTotalLength())
+            + camera_->GetFarClip() + kOceanForwardMargin;
         if (stageSettings_.allRangeMode) {
             oceanWidth = stageSettings_.flightAreaRadius * kInitializeOceanWidthMultiplier + kInitializeOceanWidthOffset;
             oceanLength = oceanWidth;
@@ -1716,7 +1620,7 @@ void GamePlayScene::Update()
         }
     }
     if (bossController_->DidExtendRailThisFrame() && oceanSurface_ != nullptr) {
-        oceanSurface_->SetLength(rail_->GetTotalLength());
+        oceanSurface_->SetLength(rail_->GetTotalLength() + camera_->GetFarClip() + kOceanForwardMargin);
     }
     if (bossController_->DidExtendRailThisFrame() && floorObj_ != nullptr) {
         const float floorLength = rail_->GetTotalLength();
@@ -1727,7 +1631,6 @@ void GamePlayScene::Update()
     // ボスの更新
     BaseBoss* activeBoss = GetActiveBoss();
     if (activeBoss != nullptr) {
-        UpdateBossHpHud();
 
         // 発狂モードに入った瞬間を検知してカメラシェイクを開始する
         if (bossController_->DidEnterMadModeThisFrame()) {
@@ -3364,13 +3267,6 @@ void GamePlayScene::Draw2D()
         stageObjectiveAccentSprite_->Draw();
     }
 
-    if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
-        DrawHudFrame(bossHudFrameSprites_);
-        if (bossHeadHpBgSprite_) bossHeadHpBgSprite_->Draw();
-        if (bossHeadHpBarSprite_) bossHeadHpBarSprite_->Draw();
-        if (bossBodyHpBgSprite_) bossBodyHpBgSprite_->Draw();
-        if (bossBodyHpBarSprite_) bossBodyHpBarSprite_->Draw();
-    }
 
     if (isPaused_) {
         if (pauseMenuPanelSprite_) pauseMenuPanelSprite_->Draw();
@@ -3414,11 +3310,6 @@ void GamePlayScene::Draw2D()
         if (railBranchStatusText_ && player_->GetCurrentHp() > 0) railBranchStatusText_->Draw();
         if (scoreHudLabelText_) scoreHudLabelText_->Draw();
         if (scoreHudValueText_) scoreHudValueText_->Draw();
-        if (GetActiveBoss() != nullptr && !GetActiveBoss()->IsDeathSequenceFinished()) {
-            if (bossNameText_) bossNameText_->Draw();
-            if (bossHeadHpText_) bossHeadHpText_->Draw();
-            if (bossBodyHpText_) bossBodyHpText_->Draw();
-        }
     }
     if (stageId_ == "tutorial" && !isPaused_) {
         TextRenderer::GetInstance()->PreDraw();
@@ -3550,73 +3441,6 @@ bool GamePlayScene::UpdateTutorialPresentation()
 }
 
 // ボスの部位HPを表示用の割合へ変換し、HPバーの表示状態を更新する。
-void GamePlayScene::UpdateBossHpHud()
-{
-    if (GetActiveBoss() == nullptr) {
-        return;
-    }
-
-    float headHpFraction = GetActiveBoss()->GetHeadHpFraction();
-    if (headHpFraction < 0.0f) {
-        headHpFraction = 0.0f;
-    }
-    if (headHpFraction > 1.0f) {
-        headHpFraction = 1.0f;
-    }
-
-    float bodyHpFraction = GetActiveBoss()->GetBodyHpFraction();
-    if (bodyHpFraction < 0.0f) {
-        bodyHpFraction = 0.0f;
-    }
-    if (bodyHpFraction > 1.0f) {
-        bodyHpFraction = 1.0f;
-    }
-
-    displayedBossHeadHpRatio_ = std::lerp(
-        displayedBossHeadHpRatio_,
-        headHpFraction,
-        GameTiming::CalculateFollowBlend(kUpdateBossHpHudDisplayedBossHeadHpRatioDefault, TimeManager::GetInstance()->GetDeltaTime()));
-    displayedBossBodyHpRatio_ = std::lerp(
-        displayedBossBodyHpRatio_,
-        bodyHpFraction,
-        GameTiming::CalculateFollowBlend(kUpdateBossHpHudDisplayedBossBodyHpRatioDefault, TimeManager::GetInstance()->GetDeltaTime()));
-
-    if (std::abs(displayedBossHeadHpRatio_ - headHpFraction) < 0.001f) {
-        displayedBossHeadHpRatio_ = headHpFraction;
-    }
-    if (std::abs(displayedBossBodyHpRatio_ - bodyHpFraction) < 0.001f) {
-        displayedBossBodyHpRatio_ = bodyHpFraction;
-    }
-
-    constexpr float kBossHpBarWidth = 340.0f;
-    if (bossHeadHpBarSprite_) {
-        bossHeadHpBarSprite_->SetSize({
-            kBossHpBarWidth * displayedBossHeadHpRatio_,
-            kUpdateBossHpHudBossHeadHpBarSpriteSizeY });
-        bossHeadHpBarSprite_->Update();
-    }
-    if (bossBodyHpBarSprite_) {
-        bossBodyHpBarSprite_->SetSize({
-            kBossHpBarWidth * displayedBossBodyHpRatio_,
-            kUpdateBossHpHudBossBodyHpBarSpriteSizeY });
-        bossBodyHpBarSprite_->Update();
-    }
-    if (bossHeadHpBgSprite_) {
-        bossHeadHpBgSprite_->Update();
-    }
-    if (bossBodyHpBgSprite_) {
-        bossBodyHpBgSprite_->Update();
-    }
-    if (bossNameText_) {
-        bossNameText_->Update();
-    }
-    if (bossHeadHpText_) {
-        bossHeadHpText_->Update();
-    }
-    if (bossBodyHpText_) {
-        bossBodyHpText_->Update();
-    }
-}
 
 void GamePlayScene::SetPaused(bool isPaused)
 {
@@ -3948,12 +3772,16 @@ void GamePlayScene::StartPaintHitEffect()
         { 0.98f, 0.42f, 0.10f },
         { 0.72f, 0.15f, 0.98f }
     };
-    const int colorIndex = rand() % 6;
+    static std::mt19937 randomEngine(std::random_device {}());
+    std::uniform_int_distribution<int> colorDistribution(0, 5);
+    std::uniform_int_distribution<int> seedDistribution(0, 9999);
+    std::uniform_int_distribution<int> patternDistribution(0, 9);
+    const int colorIndex = colorDistribution(randomEngine);
     const float randomSeed =
-        static_cast<float>(rand() % 10000) * 0.137f;
+        static_cast<float>(seedDistribution(randomEngine)) * 0.137f;
 
     int patternType = 0;
-    const int roll = rand() % 10;
+    const int roll = patternDistribution(randomEngine);
     if (roll < 3) {
         patternType = 1;
     } else if (roll < 5) {

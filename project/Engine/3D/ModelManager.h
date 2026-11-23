@@ -31,6 +31,7 @@ public:
     Model* CreateCylinder(const std::string& texturePath = "", uint32_t divisions = 32);
 
     Model* CreateBeamCross(const std::string& texturePath = "");
+    Model* CreateBeamCylinder();
 
     Model* FindModel(const std::string& filePath);
 

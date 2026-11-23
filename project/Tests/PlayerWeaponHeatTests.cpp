@@ -7,7 +7,7 @@
 struct PlayerWeaponHeatTestAccess {
     Player player;
     PlayerWeaponController controller{player};
-    void Update(float deltaTimeSeconds, bool isHeld) { controller.UpdateHeat(deltaTimeSeconds, isHeld); }
+    void Update(float deltaTimeSeconds, bool isHeld) { controller.UpdateAssaultHeat(deltaTimeSeconds, isHeld); }
     void AddShotHeat() { controller.AddShotHeat(); }
     float GetHeatRatio() const { return controller.GetHeatRatio(); }
     bool IsOverheated() const { return controller.IsOverheated(); }
@@ -35,14 +35,14 @@ void TestGraceAndCompleteRecovery()
     assert(heat.GetHeatRatio() == 1.0f);
     heat.Update(0.02f, true);
     assert(heat.IsOverheated());
-    heat.Update(3.0f, true);
-    assert(heat.GetHeatRatio() == 0.25f);
+    heat.Update(1.0f, true);
+    assert(std::abs(heat.GetHeatRatio() - 0.65f) < 0.0001f);
     assert(heat.IsOverheated());
     heat.AddShotHeat();
-    assert(heat.GetHeatRatio() == 0.25f);
-    heat.Update(0.99f, false);
+    assert(std::abs(heat.GetHeatRatio() - 0.65f) < 0.0001f);
+    heat.Update(1.8f, false);
     assert(heat.IsOverheated());
-    heat.Update(0.02f, false);
+    heat.Update(0.1f, false);
     assert(heat.GetHeatRatio() == 0.0f);
     assert(!heat.IsOverheated());
     heat.AddShotHeat();

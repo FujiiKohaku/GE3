@@ -162,7 +162,7 @@ public:
     bool IsMissileSelected() const { return currentWeapon_ == kWeaponMissileBullet; }
     float GetMissileReloadRatio() const;
     const char* GetCurrentWeaponName() const;
-    float GetHeatRatio() const { return heatRatio_; }
+    float GetHeatRatio() const { return heatGauge_; }
     // 照準表示用の基準位置。交互発射でも照準が左右に揺れないよう中央を使う。
     Vector3 CalculateMuzzlePosition() const;
     bool IsOverheated() const { return isOverheated_; }
@@ -176,11 +176,16 @@ private:
     friend bool RunPlayerWeaponPolymorphismTests();
     friend bool RunHomingInvalidationTests();
     friend struct PlayerWeaponHeatTestAccess;
+    struct FireInput {
+        bool isHeld;       // 有効な長押し
+        bool isTriggered;  // 有効な押した瞬間
+    };
+    FireInput ReadFireInput(Input* input);
     void ResetCombatState();
     void UpdateAssaultInput(float deltaTimeSeconds, bool isFireHeld, bool isTriggered);
     void UpdateMissileInput(bool isTriggered);
     void UpdateHomingInput(bool isFireHeld);
-    void UpdateHeat(float deltaTimeSeconds, bool isAssaultFireActive);
+    void UpdateAssaultHeat(float deltaTimeSeconds, bool isAssaultFireActive);
     void AddShotHeat();
     int GetShotDamage(int baseDamage) const;
     bool UpdateHomingFireInput(bool isFireHeld, bool isEnabled, Camera* camera,
@@ -188,7 +193,6 @@ private:
     void UpdateHomingTargets(bool isLocking, Camera* camera, const Vector3& position,
         const Vector3& forward, const Vector2& aimPosition);
     void GetLockedPositions(std::vector<Vector3>& positions) const;
-    bool UpdateFireInputState(bool isFireHeld, bool isForeground, uint64_t focusLossCount);
     // 生存・弾モデル・カメラ・デバッグ状態から射撃の基本条件を確認する。
     bool CanFire(bool isDebugMode) const;
     // 入力機器のいずれかで射撃ボタンが押されているかを確認する。
@@ -215,14 +219,13 @@ private:
     Camera* camera_ = nullptr;
     std::vector<std::unique_ptr<PlayerBullet>> bullets_;
     uint64_t shotsFired_ = 0;
-    uint64_t lastFocusLossCount_ = 0;
     bool isFireBlocked_ = false;
-    bool wasFireHeld_ = false;
     std::shared_ptr<std::vector<CombatTarget*>> homingTargets_ = std::make_shared<std::vector<CombatTarget*>>();
     std::vector<CombatTarget*> lockedTargets_;
     bool wasHomingFireHeld_ = false;
-    float heatRatio_ = 0.0f;
+    float heatGauge_ = 0.0f; // 熱量ゲージ（0〜1）
     bool isOverheated_ = false;
+    //熱量が満タンになってから、オーバーヒートするまでの残り猶予時間
     float graceRemainingSeconds_ = 0.0f;
     static constexpr float kGraceDurationSeconds = 30.0f / 60.0f;
     static constexpr float kAssaultShotHeat = 0.020f;

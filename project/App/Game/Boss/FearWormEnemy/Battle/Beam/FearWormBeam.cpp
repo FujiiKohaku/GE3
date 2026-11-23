@@ -14,11 +14,21 @@ FearWormBeam::~FearWormBeam() = default;
 
 void FearWormBeam::Initialize()
 {
-    Model* model = ModelManager::GetInstance()->CreateBeamCross("resources/Textures/beam.jpg");
-    object_ = std::make_unique<Object3d>();
-    object_->Initialize(Object3dManager::GetInstance());
-    object_->SetModel(model);
-    object_->SetEnableLighting(false);
+    Model* model = ModelManager::GetInstance()->CreateBeamCylinder();
+    const auto createLayer = [model](const Vector4& color) {
+        auto object = std::make_unique<Object3d>();
+        object->Initialize(Object3dManager::GetInstance());
+        object->SetModel(model);
+        object->SetMaterial("resources/Shaders/Object3D/FearWormBeam");
+        object->SetEnableLighting(false);
+        object->SetCastShadow(false);
+        object->SetReceiveShadow(false);
+        object->SetTransparent(true);
+        object->SetColor(color);
+        return object;
+    };
+    object_ = createLayer({ 3.5f, 2.8f, 1.8f, 0.95f });
+    glowObject_ = createLayer({ 1.6f, 0.36f, 0.08f, 0.35f });
     Reset();
 }
 
@@ -28,7 +38,6 @@ void FearWormBeam::Reset()
     position_ = {};
     direction_ = { 0.0f, 0.0f, -1.0f };
     uvScrollOffset_ = 0.0f;
-    rotateAngleRadians_ = 0.0f;
 }
 
 void FearWormBeam::Stop()
@@ -59,18 +68,9 @@ void FearWormBeam::SetPose(const Vector3& position, const Vector3& direction)
 void FearWormBeam::UpdateVisual(float deltaTimeSeconds)
 {
     uvScrollOffset_ += kUvScrollSpeed * deltaTimeSeconds;
-    if (uvScrollOffset_ < -1.0f) {
-        uvScrollOffset_ += 1.0f;
-    }
-    rotateAngleRadians_ += kRotateSpeedRadiansPerSecond * deltaTimeSeconds;
-    if (rotateAngleRadians_ > kPi * 2.0f) {
-        rotateAngleRadians_ -= kPi * 2.0f;
-    }
+    uvScrollOffset_ = std::fmod(uvScrollOffset_, 1.0f);
     if (object_ == nullptr) {
         return;
-    }
-    if (object_->GetMaterial() != nullptr) {
-        object_->SetUvTransform(MatrixMath::MakeTranslateMatrix({ 0.0f, uvScrollOffset_, 0.0f }));
     }
 
     Vector3 referenceUp = { 0.0f, 1.0f, 0.0f };
@@ -79,27 +79,30 @@ void FearWormBeam::UpdateVisual(float deltaTimeSeconds)
     }
     const Vector3 right = NormalizeSafe(Cross(referenceUp, direction_));
     const Vector3 up = Cross(direction_, right);
-    const float cosAngle = std::cos(rotateAngleRadians_);
-    const float sinAngle = std::sin(rotateAngleRadians_);
-    const Vector3 rotatedRight = right * cosAngle + up * sinAngle;
-    const Vector3 rotatedUp = right * -sinAngle + up * cosAngle;
 
     Matrix4x4 rotation = MatrixMath::MakeIdentity4x4();
-    rotation.m[0][0] = rotatedRight.x;
-    rotation.m[0][1] = rotatedRight.y;
-    rotation.m[0][2] = rotatedRight.z;
-    rotation.m[1][0] = rotatedUp.x;
-    rotation.m[1][1] = rotatedUp.y;
-    rotation.m[1][2] = rotatedUp.z;
-    rotation.m[2][0] = direction_.x;
-    rotation.m[2][1] = direction_.y;
-    rotation.m[2][2] = direction_.z;
+    rotation.m[0][0] = right.x;
+    rotation.m[0][1] = right.y;
+    rotation.m[0][2] = right.z;
+    // 円柱の長軸はローカルY（0～1）。根元を発射位置に固定する。
+    rotation.m[1][0] = direction_.x;
+    rotation.m[1][1] = direction_.y;
+    rotation.m[1][2] = direction_.z;
+    rotation.m[2][0] = -up.x;
+    rotation.m[2][1] = -up.y;
+    rotation.m[2][2] = -up.z;
     const float drawLength = (std::max)(length_, kMinimumDrawLength);
-    const Matrix4x4 scale = MatrixMath::Matrix4x4MakeScaleMatrix({ width_, width_, drawLength });
     const Matrix4x4 translation = MatrixMath::MakeTranslateMatrix(position_);
-    const Matrix4x4 world = MatrixMath::Multiply(MatrixMath::Multiply(scale, rotation), translation);
-    object_->SetCustomWorldMatrix(world);
-    object_->Update();
+    const auto updateLayer = [&](Object3d* layer, float radiusRate) {
+        if (layer == nullptr) { return; }
+        const float radius = width_ * 0.5f * radiusRate;
+        const Matrix4x4 scale = MatrixMath::Matrix4x4MakeScaleMatrix({ radius, drawLength, radius });
+        layer->SetCustomWorldMatrix(MatrixMath::Multiply(MatrixMath::Multiply(scale, rotation), translation));
+        layer->SetUvTransform(MatrixMath::MakeTranslateMatrix({ 0.0f, uvScrollOffset_, 0.0f }));
+        layer->Update();
+    };
+    updateLayer(object_.get(), 0.72f);
+    updateLayer(glowObject_.get(), 1.0f);
 }
 
 bool FearWormBeam::IntersectsSphere(const Vector3& spherePosition, float sphereRadius) const
@@ -143,11 +146,12 @@ void FearWormBeam::CheckCollision(Player* player)
 
 void FearWormBeam::Draw()
 {
-    if (object_ == nullptr) {
+    if (object_ == nullptr || length_ <= 0.0f || width_ <= 0.0f) {
         return;
     }
     Object3dManager::GetInstance()->SetBlendMode(kBlendModeAdd);
     object_->Draw();
+    if (glowObject_) { glowObject_->Draw(); }
     Object3dManager::GetInstance()->SetBlendMode(kBlendModeNormal);
 }
 

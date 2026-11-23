@@ -71,15 +71,25 @@ void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
 		UpdateWeaponSwitch(input);
 	}
 	const float dt = TimeManager::GetInstance()->GetDeltaTime();
-	UpdateCooldowns(dt);
+	UpdateCooldowns(dt);//ミサイルとホーミングミサイルのクールダウン処理
+
+	// ホーミングを選択中か
 	const bool isHoming = currentWeapon_ == kWeaponHomingMissile;
+	// アサルトを選択中か
 	const bool isAssault = currentWeapon_ == kWeaponAssault;
+	// デバッグ中かホーミング以外ならロック解除
 	if (isDebugMode || !isHoming) { ResetHomingLock(); }
+
+	// 射撃の基本条件を満たしているか
 	const bool canFire = CanFire(isDebugMode);
-	const bool isPhysicalFireHeld = IsPhysicalFireHeld(input);
-	const bool isTriggered = UpdateFireInputState(isPhysicalFireHeld, input->IsForeground(), input->GetFocusLossCount());
-	const bool isFireHeld = isPhysicalFireHeld && !isFireBlocked_ && input->IsForeground();
-	UpdateHeat(dt, canFire && isAssault && isFireHeld);
+
+	// 射撃入力を取得
+	const FireInput fireInput = ReadFireInput(input);
+
+	// 射撃状態に応じて熱量を更新
+	UpdateAssaultHeat(dt, canFire && isAssault && fireInput.isHeld);
+
+	
 	if (!canFire) {
 		ResetHomingLock();
 		return;
@@ -87,15 +97,32 @@ void PlayerWeaponController::UpdateInput(Input* input, bool isDebugMode)
 
 	switch (currentWeapon_) {
 	case kWeaponAssault:
-		UpdateAssaultInput(dt, isFireHeld, isTriggered);
+		UpdateAssaultInput(dt, fireInput.isHeld, fireInput.isTriggered);
 		break;
 	case kWeaponMissileBullet:
-		UpdateMissileInput(isTriggered);
+		UpdateMissileInput(fireInput.isTriggered);
 		break;
 	case kWeaponHomingMissile:
-		UpdateHomingInput(isFireHeld);
+		UpdateHomingInput(fireInput.isHeld);
 		break;
 	}
+}
+
+// ボタン状態と入力禁止を確認
+PlayerWeaponController::FireInput PlayerWeaponController::ReadFireInput(Input* input)
+{
+	// 射撃ボタンを押しているか
+	const bool isPhysicalFireHeld = IsPhysicalFireHeld(input);
+	// メニュー操作後は一度離すまで待つ
+	if (isFireBlocked_) {
+		if (!isPhysicalFireHeld) { isFireBlocked_ = false; }
+		return {};
+	}
+	// いずれかの射撃ボタンを押した瞬間
+	const bool isTriggered = input->IsKeyTrigger(DIK_SPACE)|| input->IsMouseTrigger(0)|| input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)|| input->IsGamepadRightTriggerTrigger();
+
+	// 長押しと押した瞬間をまとめて返す
+	return { isPhysicalFireHeld, isTriggered };
 }
 
 // アサルトは押した瞬間と、押し続けた時間に応じて連射する。
@@ -131,13 +158,9 @@ void PlayerWeaponController::UpdateHomingInput(bool isFireHeld)
 // 通常弾の命中位置へヒットエフェクトを出す。
 void NormalBullet::OnHitEnemy(const Vector3& position)
 {
-	EffectManager::GetInstance()->PlayEffect(
-		"NormalBulletHit",
-		position);
+	EffectManager::GetInstance()->PlayEffect("NormalBulletHit",position);
 
-	EffectManager::GetInstance()->PlayEffect(
-		"NormalBulletImpactFlash",
-		position);
+	EffectManager::GetInstance()->PlayEffect("NormalBulletImpactFlash",position);
 }
 
 // MissileBullet
@@ -462,13 +485,11 @@ void PlayerWeaponController::ResetCombatState()
 	}
 	bullets_.clear();
 	ClearHomingTargets();
-	heatRatio_ = 0.0f;
+	heatGauge_ = 0.0f;
 	isOverheated_ = false;
 	graceRemainingSeconds_ = 0.0f;
 	shotsFired_ = 0;
 	isFireBlocked_ = false;
-	wasFireHeld_ = false;
-	lastFocusLossCount_ = 0;
 	currentWeapon_ = kWeaponAssault;
 	assaultCooldownSeconds_ = 0.0f;
 	missileCooldownRemainingSeconds_ = 0.0;
@@ -496,16 +517,13 @@ void PlayerWeaponController::SetCamera(Camera* camera)
 void PlayerWeaponController::BlockFireUntilRelease()
 {
 	isFireBlocked_ = true;
-	wasFireHeld_ = false;
 	ResetHomingLock();
 }
-
+//撃てるかどうかを判定する関数。
 bool PlayerWeaponController::CanFire(bool isDebugMode) const
 {
-	return !player_.IsDead()
-		&& bulletModel_ != nullptr
-		&& camera_ != nullptr
-		&& !isDebugMode;
+	//プレイヤーが生きているかつバレットモデルがあるときかつカメラがあるかつデバッグモードではない場合
+	return !player_.IsDead()&& bulletModel_ != nullptr&& camera_ != nullptr&& !isDebugMode;
 }
 
 bool PlayerWeaponController::IsPhysicalFireHeld(Input* input) const
@@ -514,27 +532,6 @@ bool PlayerWeaponController::IsPhysicalFireHeld(Input* input) const
 		|| input->IsMousePressed(0)
 		|| input->IsGamepadButtonPressed(XINPUT_GAMEPAD_A)
 		|| input->IsGamepadRightTriggerPressed();
-}
-
-bool PlayerWeaponController::UpdateFireInputState(bool isFireHeld, bool isForeground, uint64_t focusLossCount)
-{
-	if (focusLossCount != lastFocusLossCount_) {
-		lastFocusLossCount_ = focusLossCount;
-		BlockFireUntilRelease();
-	}
-	if (!isForeground) {
-		BlockFireUntilRelease();
-		return false;
-	}
-	if (isFireBlocked_) {
-		if (!isFireHeld) {
-			isFireBlocked_ = false;
-		}
-		return false;
-	}
-	const bool isTriggered = isFireHeld && !wasFireHeld_;
-	wasFireHeld_ = isFireHeld;
-	return isTriggered;
 }
 
 // 追尾ミサイル選択中だけ、ロック表示に必要な敵の位置を書き出す。
@@ -761,39 +758,38 @@ int PlayerWeaponController::GetShotDamage(int baseDamage) const
 {
 	// 発射時の熱量で威力を確定する。0%で等倍、100%で2倍。
 	if (baseDamage <= 0) { return 0; }
-	return static_cast<int>(std::lround(baseDamage * (1.0f + heatRatio_)));
+	return static_cast<int>(std::lround(baseDamage * (1.0f + heatGauge_)));
 }
 
 // 連射中の過熱猶予と、射撃停止中・過熱中の冷却を進める。
-void PlayerWeaponController::UpdateHeat(float deltaTimeSeconds, bool isAssaultFireActive)
+void PlayerWeaponController::UpdateAssaultHeat(float deltaTimeSeconds, bool isAssaultFireActive)
 {
 	if (deltaTimeSeconds <= 0.0f) {
 		return;
 	}
-	bool shouldCoolHeat = !isAssaultFireActive || isOverheated_;
-	if (graceRemainingSeconds_ > 0.0f) {
-		if (isAssaultFireActive) {
-			shouldCoolHeat = false;
-			graceRemainingSeconds_ = (std::max)(0.0f,
-				graceRemainingSeconds_ - deltaTimeSeconds);
-			if (graceRemainingSeconds_ <= 0.0f) {
-				isOverheated_ = true;
-			}
-		}
-		else {
-			graceRemainingSeconds_ = 0.0f;
-		}
-	}
-	float coolingPerSecond = kCoolingPerSecond;
+
+	// 過熱中は冷却し、熱量0で解除
 	if (isOverheated_) {
-		coolingPerSecond = kOverheatCoolingPerSecond;
+		heatGauge_ = (std::max)(0.0f,heatGauge_ - kOverheatCoolingPerSecond * deltaTimeSeconds);
+		if (heatGauge_ <= 0.0f) {
+			isOverheated_ = false;
+		}
+		return;
 	}
-	if (shouldCoolHeat) {
-		heatRatio_ = (std::max)(0.0f,
-			heatRatio_ - coolingPerSecond * deltaTimeSeconds);
+
+	// 射撃停止中は猶予を終了して冷却
+	if (!isAssaultFireActive) {
+		graceRemainingSeconds_ = 0.0f;
+		heatGauge_ = (std::max)(0.0f,heatGauge_ - kCoolingPerSecond * deltaTimeSeconds);
+		return;
 	}
-	if (isOverheated_ && heatRatio_ <= 0.0f) {
-		isOverheated_ = false;
+
+	// 満タンで撃ち続けると猶予が減り、時間切れで過熱
+	if (heatGauge_ >= 1.0f) {
+		graceRemainingSeconds_ -= deltaTimeSeconds;
+		if (graceRemainingSeconds_ <= 0.0f) {
+			isOverheated_ = true;
+		}
 	}
 }
 
@@ -803,8 +799,10 @@ void PlayerWeaponController::AddShotHeat()
 	if (isOverheated_) {
 		return;
 	}
-	heatRatio_ = (std::min)(1.0f, heatRatio_ + kAssaultShotHeat);
-	if (heatRatio_ >= 1.0f && graceRemainingSeconds_ <= 0.0f) {
+	//ヒートゲージ追加 100パーセント(0～1)を超えないようにminを使用
+	heatGauge_ = (std::min)(1.0f, heatGauge_ + kAssaultShotHeat);
+	// 熱量が100％以上で、猶予が0秒以下なら0.5秒の猶予を設定
+	if (heatGauge_ >= 1.0f && graceRemainingSeconds_ <= 0.0f) {
 		graceRemainingSeconds_ = kGraceDurationSeconds;
 	}
 }
