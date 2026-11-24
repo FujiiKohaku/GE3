@@ -238,12 +238,12 @@ std::string TutorialController::GetStepOperation(const StepInput& input) const
     }
     case StepType::WeaponPractice: {
         std::string operation = "ホイール / 1〜3：";
-        if (input.isGamepadConnected) { operation = "左右で "; }
+        if (input.isGamepadConnected) { operation = "で切替 → "; }
         return operation + step->practiceWeapon + "  撃破 " + std::to_string(input.defeatedTargets) + "/" + std::to_string(step->requiredKills);
     }
     case StepType::Heat:
         if (hasHeatRaised_) { return "射撃を離してゲージを冷ます"; }
-        if (input.isGamepadConnected) { return "アサルトを選んで射撃を長押し"; }
+        if (input.isGamepadConnected) { return "LB / RBでアサルトを選んで射撃を長押し"; }
         return "1でアサルト → 左クリックを長押し";
     default:
         if (input.isGamepadConnected) { return step->gamepadOperation; }
@@ -311,11 +311,11 @@ const std::array<TutorialController::StepData, TutorialController::kStepCount>& 
     static const std::array<StepData, kStepCount> steps = {{
         StepData { StepType::Move, "MOVE", "マウスで照準を操作します。\n左右・上下の4方向へ動かしてください。", "左スティックで機体と照準を操作します。\n左右・上下の4方向へ動かしてください。", "", "", { "LS" }, 0, false, "", 180.0f, false },
         StepData { StepType::DefeatTargets, "FIRE", "マウスで照準を合わせ、左クリック長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "左スティックで照準を合わせ、AまたはRT長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "", "", { "A", "RT" }, 3, true, "", 450.0f, false },
-        StepData { StepType::Heat, "HEAT", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "", "", { "DPAD", "A", "RT" }, 0, false, "", 450.0f, true },
+        StepData { StepType::Heat, "HEAT", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "", "", { "A", "RT" }, 0, false, "", 450.0f, true },
         StepData { StepType::Boost, "BOOST", "SHIFTまたは右クリックを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "Xを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "SHIFT / 右クリック 長押し", "長押しで加速", { "X" }, 0, false, "", 750.0f, false },
         StepData { StepType::Brake, "BRAKE", "CTRLを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "Yを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "CTRL 長押し", "長押しで減速", { "Y" }, 0, false, "", 1050.0f, false },
-        StepData { StepType::WeaponPractice, "ミサイル", kMissileInstruction, kMissileInstruction, "", "", { "DPAD" }, 3, false, "ミサイル", 2070.0f, true },
-        StepData { StepType::WeaponPractice, "ホーミングミサイル", kHomingInstruction, kHomingInstruction, "", "", { "DPAD" }, 3, false, "ホーミングミサイル", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "ミサイル", kMissileInstruction, kMissileInstruction, "", "", { "LB", "RB" }, 3, false, "ミサイル", 2070.0f, true },
+        StepData { StepType::WeaponPractice, "ホーミングミサイル", kHomingInstruction, kHomingInstruction, "", "", { "LB", "RB" }, 3, false, "ホーミングミサイル", 2070.0f, true },
         StepData { StepType::Pause, "PAUSE", "TABでポーズし、設定を確認できます。\nTABまたはESCで訓練へ戻ってください。", "STARTでポーズし、設定を確認できます。\nSTARTまたはBで訓練へ戻れます。", "TAB → 設定 / ESCで戻る", "メニューでポーズ・もう一度押して戻る", { "MENU" }, 0, false, "", 2400.0f, false },
     }};
     return steps;

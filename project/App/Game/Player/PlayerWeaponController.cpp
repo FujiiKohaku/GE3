@@ -689,16 +689,14 @@ Vector3 PlayerWeaponController::CalculateShotMuzzlePosition() const
 	return MatrixMath::Transform(localMuzzle, worldMatrix);
 }
 
-// ホイール・方向キー・数字キーの入力を武器の選択番号へ反映する。
+// ホイール・LB/RB・数字キーの入力を武器の選択番号へ反映する。
 void PlayerWeaponController::UpdateWeaponSwitch(Input* input)
 {
-
-
-	if (input->GetMouseWheel() > 0 || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_RIGHT)) {
+	if (input->GetMouseWheel() > 0 || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_RIGHT_SHOULDER)) {
 		currentWeapon_ = (currentWeapon_ + 1) % kWeaponCount;
 	}
 
-	if (input->GetMouseWheel() < 0 || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_DPAD_LEFT)) {
+	if (input->GetMouseWheel() < 0 || input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_LEFT_SHOULDER)) {
 		currentWeapon_ = (currentWeapon_ + kWeaponCount - 1) % kWeaponCount;
 	}
 

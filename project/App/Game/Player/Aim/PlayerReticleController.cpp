@@ -5,6 +5,7 @@
 #include "Engine/Winapp/WinApp.h"
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 //、同じスティック入力から操舵と照準方向を作る。
 Vector2 PlayerReticleController::UpdateDirectGamepadControl(const Input& input, float deltaTimeSeconds)
@@ -25,11 +26,17 @@ Vector2 PlayerReticleController::UpdateDirectGamepadControl(const Input& input, 
     //倍率をかけて方向をそのままにしたまま傾きの数値を調整している。
     steering.x *= response;
     steering.y *= response;
-    //スティックに対するAIMの反応の速さ、小さいとゆっくり、大きいと早い
-    constexpr float kDirectAimFollowSpeed = 4.5f;
+    constexpr float kDirectAimFollowSpeedPerSecond = 4.5f;
+    // 中立ではすぐに正面へ戻り始め、指定した時間で照準のずれを半分にする。
+    constexpr float kDirectAimReturnHalfLifeSeconds = 0.25f;
+    constexpr float kDirectAimReturnSpeedPerSecond = std::numbers::ln2_v<float> / kDirectAimReturnHalfLifeSeconds;
+    float aimSpeedPerSecond = kDirectAimFollowSpeedPerSecond;
+    if (magnitude == 0.0f) {
+        aimSpeedPerSecond = kDirectAimReturnSpeedPerSecond;
+    }
 
     //FPSに依存せず指定した速さで目標に近づくためにやっている計算
-    const float followRate = 1.0f - std::exp(-kDirectAimFollowSpeed * (std::max)(0.0f, deltaTimeSeconds));
+    const float followRate = 1.0f - std::exp(-aimSpeedPerSecond * (std::max)(0.0f, deltaTimeSeconds));
     const float sensitivity = input.GetGamepadAimSensitivity();
 
     //感度を-1.0から1.0の値でクランプする

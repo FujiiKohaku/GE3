@@ -142,8 +142,14 @@ void TestDirectGamepadAim()
     for (int i = 0; i < 120; ++i) { fine.UpdateDirectGamepadControl(input, 1.0f / 120.0f); }
     assert(IsNear(coarse.GetDirectGamepadAimInput().x, fine.GetDirectGamepadAimInput().x));
     assert(coarse.GetDirectGamepadAimInput().x > 0.9f);
+    const float aimBeforeReleaseX = coarse.GetDirectGamepadAimInput().x;
     InputTestAccess::Set(input, {});
-    for (int i = 0; i < 120; ++i) { coarse.UpdateDirectGamepadControl(input, 1.0f / 60.0f); }
+    const Vector2 releasedSteering = coarse.UpdateDirectGamepadControl(input, 1.0f / 60.0f);
+    assert(releasedSteering.x == 0.0f && releasedSteering.y == 0.0f);
+    assert(coarse.GetDirectGamepadAimInput().x < aimBeforeReleaseX);
+    for (int frameIndex = 1; frameIndex < 15; ++frameIndex) { coarse.UpdateDirectGamepadControl(input, 1.0f / 60.0f); }
+    assert(IsNear(coarse.GetDirectGamepadAimInput().x, aimBeforeReleaseX * 0.5f));
+    for (int frameIndex = 15; frameIndex < 180; ++frameIndex) { coarse.UpdateDirectGamepadControl(input, 1.0f / 60.0f); }
     assert(std::abs(coarse.GetDirectGamepadAimInput().x) < 0.001f);
     pad = {};
     pad.sThumbLY = 32767;
