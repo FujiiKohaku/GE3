@@ -21,9 +21,18 @@ int main()
     assert(settings.isForced);
     assert(std::abs(settings.startDistance-stage.railBranch.endDistance-stage.railSpeed*60*20)<0.01f);
     assert(settings.endDistance < stage.bossSpawnDistance);
-    assert(stage.bossSpawnDistance == stage.bossPosition.z);
     assert(Near(settings.controlPoints.front(), {0,-20,settings.startDistance}));
-    assert(Near(settings.controlPoints.back(), {0,-20,settings.endDistance}));
+    Rail mainRail;
+    mainRail.Initialize();
+    for (const Vector3& point : stage.railControlPoints) {
+        mainRail.AddPoint(point);
+    }
+    const Vector3 mergePosition = mainRail.GetPositionByDistance(settings.endDistance);
+    assert(Near(settings.controlPoints.back(), mergePosition));
+    const Vector3 bossRailPosition = mainRail.GetPositionByDistance(stage.bossSpawnDistance);
+    assert(Near(bossRailPosition, {stage.bossPosition.x, mergePosition.y, stage.bossPosition.z}));
+    const Vector3 bossApproach = bossRailPosition - mergePosition;
+    assert(std::abs(bossApproach.x) < 0.02f && bossApproach.z > 0.0f);
     // 実際のレベルローダーとエンジンの行列を使い、入口・入口直後の位置を照合する。
     LevelDataLoader loader;
     const auto level = loader.Load(stage.layoutFile);
@@ -37,6 +46,9 @@ int main()
     assert(Near(settings.controlPoints[41], MatrixMath::Transform({-diagonal,16,diagonal}, matrix)));
     RuinsBranchRoute forced;
     forced.Initialize(settings);
+    const Vector3 exitStraightPosition = forced.GetPosition(settings.endDistance - 300.0f, {});
+    assert(std::abs(exitStraightPosition.x - mergePosition.x) < 0.02f);
+    assert(exitStraightPosition.z < mergePosition.z);
     assert(forced.IsActive(settings.startDistance));
     forced.Update(settings.startDistance-1,settings.startDistance,20,true);
     assert(forced.IsActive(settings.startDistance)); // 右に寄っていても必ず進入。
