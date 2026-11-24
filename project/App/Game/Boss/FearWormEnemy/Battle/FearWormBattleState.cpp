@@ -47,8 +47,13 @@ void FearWormBattleState::UpdateBattleMovement(FearWormEnemy& boss, const Vector
 {
     const float movementBlend = FearWormTiming::CalculateFollowBlend(boss.moveSpeed_ * movementSpeedRate,
         TimeManager::GetInstance()->GetDeltaTime());
-    boss.segments_[0].position = Lerp(boss.segments_[0].position, target, movementBlend);
-    boss.transform_.translate = boss.segments_[0].position;
+    SetHeadPosition(boss, Lerp(boss.segments_[0].position, target, movementBlend));
+}
+
+void FearWormBattleState::SetHeadPosition(FearWormEnemy& boss, const Vector3& position)
+{
+    boss.segments_[0].position = position;
+    boss.transform_.translate = position;
 }
 
 // 移動の種類に対応する軌道計算を選ぶ。

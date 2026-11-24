@@ -202,7 +202,6 @@ void FearWormEnemy::ResetForInitialize()
     InitializeHealth(kHeadHp);
     moveSpeed_ = kBaseMoveSpeed;
     moveTime_ = 0.0f;
-    vulnerableEffectPlayed_ = false;
     deadState_ = FearWormDeadState{};
 }
 
@@ -216,6 +215,7 @@ void FearWormEnemy::SetPosition(const Vector3& position)
     ChangeState(BossState::Wait);
     entryState_.Reset();
     battleState_.Reset(*this);
+    vulnerableEffectPlayed_ = false;
     oceanWakeCooldownSeconds_ = 0.0f;
     nextOceanSegment_ = 0;
     // 全セグメントを基準位置から後方へ等間隔に並べる。
@@ -256,8 +256,8 @@ void FearWormEnemy::Update()
     UpdateSegments();
     UpdateSegmentObjects();
 
-    // 全胴体破壊時の頭部弱点化チェック
-    if (GetBossState() == BossState::Battle && !vulnerableEffectPlayed_ && !HasAliveBodyParts()) {
+    // 威圧が終わり、頭部にダメージが通るタイミングで通知する。
+    if (GetBossState() == BossState::Battle && !vulnerableEffectPlayed_ && IsHeadVulnerable()) {
         vulnerableEffectPlayed_ = true;
         PlayHeadVulnerableEffect(GetPosition());
     }
@@ -416,7 +416,8 @@ void FearWormEnemy::UpdateSegmentObjects()
         return;
     }
     const bool openHead = state_ == BossState::Battle &&
-        battleState_.actionType_ == FearWormBattleState::ActionType::Beam && battleState_.beamActionState_.IsAiming();
+        battleState_.actionType_ == FearWormBattleState::ActionType::Beam &&
+        (battleState_.beamActionState_.IsAiming() || battleState_.beamActionState_.IsIntimidating());
     const float openStep = (std::max)(0.0f, TimeManager::GetInstance()->GetDeltaTime()) * 3.5f;
     headOpenAmount_ = std::clamp(headOpenAmount_ + (openHead ? openStep : -openStep), 0.0f, 1.0f);
     const int nextHeadPose = static_cast<int>(std::round(headOpenAmount_ * 4.0f));
@@ -442,7 +443,7 @@ void FearWormEnemy::UpdateSegmentObjects()
         if (segment.isHead) {
             color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-            if (!HasAliveBodyParts()) {
+            if (IsHeadVulnerable()) {
                 color = kVulnerableHeadColor;
             }
 
@@ -673,8 +674,8 @@ bool FearWormEnemy::IsCollisionPartDamageable(int32_t partIndex) const
         return false;
     }
 
-    // 胴体が残っている間は頭部を無敵にする。
-    if (segment.isHead && HasAliveBodyParts()) {
+    // 胴体が残っている間と、全壊後の威圧が終わるまでは頭部を守る。
+    if (segment.isHead && !IsHeadVulnerable()) {
         return false;
     }
 
@@ -713,12 +714,6 @@ void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
     // 胴体の場合は対象部位だけを破壊する。
     segment.isAlive = false;
     PlayBodyBreakEffect(segment.position);
-
-    // 最後の胴体が壊れた瞬間に頭部の弱点化を通知する。
-    if (!vulnerableEffectPlayed_ && !HasAliveBodyParts()) {
-        vulnerableEffectPlayed_ = true;
-        PlayHeadVulnerableEffect(GetPosition());
-    }
 }
 
 // ダメージを防いだ部位に、ガードされたことが分かる演出を出す。
@@ -804,6 +799,11 @@ bool FearWormEnemy::HasAliveBodyParts() const
     }
 
     return false;
+}
+
+bool FearWormEnemy::IsHeadVulnerable() const
+{
+    return battleState_.beamActionState_.HasCompletedIntimidation() && !HasAliveBodyParts();
 }
 
 // 部位番号が配列の有効範囲内かを確認し、範囲外アクセスを防ぐ。

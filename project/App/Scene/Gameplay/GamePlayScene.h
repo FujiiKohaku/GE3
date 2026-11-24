@@ -160,6 +160,7 @@ private:
     static constexpr float kPlayerDamageFlashStrength = 0.85f;
     static constexpr float kBossMadShakeDuration = 7.0f;
     static constexpr float kBossMadShakeStrength = 0.008f;
+    static constexpr float kBossIntimidationShakeStrength = 0.004f;
     static constexpr float kBossBeamShakeDuration = 0.1f;
     static constexpr float kBossBeamShakeStrength = 0.0015f;
 

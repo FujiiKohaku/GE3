@@ -498,6 +498,7 @@ void GamePlayScene::Initialize()
         { "BrakeStart", "resources/Audio/GameSfx/brake_start.wav", 0.18f, 0.15f },
         { "EnemyDestroyed", "resources/Audio/GameSfx/enemy_destroyed.wav", 0.25f, 0.10f },
         { "BossDestroyed", "resources/Audio/GameSfx/boss_destroyed.wav", 0.42f, 0.50f },
+        { "FearWormIntimidation", "resources/Audio/GameSfx/fear_worm_intimidation.wav", 0.45f, 0.0f },
         { "EnemyShot", "resources/Audio/GameSfx/enemy_shot.wav", 0.10f, 0.12f },
         { "TurretShot", "resources/Audio/GameSfx/turret_shot.wav", 0.22f, 0.10f },
         { "HomingLock", "resources/Audio/GameSfx/homing_lock.wav", 0.20f, 0.12f },
@@ -1630,6 +1631,7 @@ void GamePlayScene::Update()
 
     // ボスの更新
     BaseBoss* activeBoss = GetActiveBoss();
+    const auto* fearWorm = dynamic_cast<const FearWormEnemy*>(activeBoss);
     if (activeBoss != nullptr) {
 
         // 発狂モードに入った瞬間を検知してカメラシェイクを開始する
@@ -1637,6 +1639,13 @@ void GamePlayScene::Update()
             cameraShakeTime_ = kBossMadShakeDuration;
             cameraShakeDuration_ = kBossMadShakeDuration;
             cameraShakeStrength_ = kBossMadShakeStrength;
+        }
+
+        if (fearWorm != nullptr && fearWorm->DidStartIntimidationThisFrame()) {
+            cameraShakeDuration_ = FearWormBeamState::kIntimidationDurationSeconds;
+            cameraShakeTime_ = cameraShakeDuration_;
+            cameraShakeStrength_ = kBossIntimidationShakeStrength;
+            SoundManager::GetInstance()->Play("FearWormIntimidation");
         }
 
         // ビーム被弾中のカメラ微振動
@@ -1657,7 +1666,7 @@ void GamePlayScene::Update()
         cameraShakeStrength_ = 0.0f;
         // 戦闘中の揺れを解除し、死亡演出自身の時間に同期した揺れを適用する。
         float deathShakeStrength = 0.0f;
-        if (const auto* fearWorm = dynamic_cast<const FearWormEnemy*>(activeBoss)) {
+        if (fearWorm != nullptr) {
             deathShakeStrength = fearWorm->GetDeathCameraShakeStrength();
         }
         SceneManager::GetInstance()->SetCameraShakeStrength(deathShakeStrength);

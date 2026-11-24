@@ -68,6 +68,7 @@ private:
 
     // 攻撃側で計算した目標へ、共通の追従処理を適用する。
     void UpdateBattleMovement(FearWormEnemy& boss, const Vector3& target, float movementSpeedRate);
+    void SetHeadPosition(FearWormEnemy& boss, const Vector3& position);
     // 座標計算の実装は各攻撃と共通軌道へ委譲する。
     static Vector3 CalculateFearWormTarget(FearWormMovementType type, const FearWormMovementContext& context,
         float actionElapsedSeconds = 0.0f, float spiralAngleRadians = 0.0f);

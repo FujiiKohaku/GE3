@@ -10,6 +10,11 @@
 #include "Engine/math/MathStruct.h"
 #include "Engine/Logger/Logger.h"
 #include <cmath>
+#include <typeinfo>
+
+namespace {
+constexpr Vector3 kNormalEnemyRenderScale { 3.0f, 3.0f, 3.0f };
+}
 
 // 通常敵の初期HP・弾速・発射間隔と、射撃に使う参照を設定する。
 void NormalEnemy::Initialize(
@@ -18,6 +23,10 @@ void NormalEnemy::Initialize(
     Player* player)
 {
     BaseEnemy::Initialize(model);
+    if (typeid(*this) == typeid(NormalEnemy)) {
+        transform_.scale = kNormalEnemyRenderScale;
+        object_->SetScale(transform_.scale);
+    }
     SetHealth(4.0f);
 
     bulletModel_ = bulletModel;

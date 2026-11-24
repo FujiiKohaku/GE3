@@ -34,7 +34,7 @@ private:
     static constexpr float kCoilAttackDurationSeconds = 2.4f;
     static constexpr float kCoilReleaseDurationSeconds = 0.8f;
     static constexpr float kCoilBarrageFireIntervalSeconds = 0.6f;
-    static constexpr int32_t kCoilBarrageBulletCount = 6;
+    static constexpr int32_t kCoilBarrageBulletCount = 3;
     static constexpr float kCoilBarrageSegmentAngleRadians = 0.17f;
     static constexpr float kCoilBarrageAngularSpeedRadiansPerSecond = 0.35f;
     static constexpr float kCoilBarrageSpreadRatio = 0.35f;

@@ -57,26 +57,37 @@ PixelShaderOutput main(VertexShaderOutput input)
 #if defined(KOHAKU_TURRET_BULLET)
     const float3 kEnemyBodyTint = float3(0.65f, 0.12f, 1.0f);
     const float3 kEnemyCoreColor = float3(0.90f, 0.70f, 1.0f);
+    const float kEnemyBodyIntensity = 1.0f / 1.2f;
+    const float kEnemyCoreIntensity = 1.15f;
+    const float kEnemyCoreFalloff = 24.0f;
     const float kEnemyBodyOpacity = 0.95f;
     const float kEnemyCoreOpacity = 1.0f;
 #else
-    const float3 kEnemyBodyTint = float3(1.0f, 0.16f, 0.07f);
-    const float3 kEnemyCoreColor = float3(1.0f, 0.55f, 0.60f);
-    const float kEnemyBodyOpacity = 0.70f;
-    const float kEnemyCoreOpacity = 0.88f;
+    const float3 kEnemyBodyTint = float3(1.0f, 0.09f, 0.04f);
+    const float3 kEnemyCoreColor = float3(1.0f, 0.045f, 0.015f);
+    const float kEnemyBodyIntensity = 3.0f;
+    const float kEnemyCoreIntensity = 4.0f;
+    const float kEnemyCoreFalloff = 12.0f;
+    const float kEnemyBodyOpacity = 0.98f;
+    const float kEnemyCoreOpacity = 1.0f;
 #endif
     const float kEnemyOutlineOpacity = 1.0f;
 
-    // 黒い外周で形を保ち、朱色の胴体は海面が少し透けるようにする。
+    // 黒い外周で明るい背景の上でも輪郭を保つ。
     // 球の投影半径に対する外周幅を、従来の境界値から1.3倍へ広げる。
     float enemyOutlineMask = 1.0f - smoothstep(0.284353f, 0.563915f, NdotV);
     float enemyEdgeFade = smoothstep(0.02f, 0.25f, NdotV);
-    float enemyCore = pow(NdotV, 24.0f);
-    const float kEnemyBodyColorDepth = 1.2f;
-    float3 enemyBodyColor = lerp(bulletColor, kEnemyBodyTint, 0.35f) / kEnemyBodyColorDepth;
+    float enemyCore = pow(NdotV, kEnemyCoreFalloff);
+    float3 enemyBodyColor = lerp(bulletColor, kEnemyBodyTint, 0.35f) * kEnemyBodyIntensity;
     float3 finalRgb = lerp(enemyBodyColor, kEnemyOutlineColor, enemyOutlineMask);
-    // 小さな淡いピンクのコアだけを控えめに発光させる。
-    finalRgb = lerp(finalRgb, kEnemyCoreColor * 1.15f, enemyCore);
+    // 通常敵弾は赤い胴体と鮮やかな赤い芯をHDRで描き、既存のブルームで光を広げる。
+    finalRgb = lerp(finalRgb, kEnemyCoreColor * kEnemyCoreIntensity, enemyCore);
+#if !defined(KOHAKU_TURRET_BULLET)
+    // 弾の中央にだけ白い光を残す。
+    const float kWhiteHighlightStart = 0.965f;
+    float whiteHighlight = smoothstep(kWhiteHighlightStart, 1.0f, NdotV);
+    finalRgb = lerp(finalRgb, float3(1.0f, 1.0f, 1.0f) * kEnemyCoreIntensity, whiteHighlight);
+#endif
     float enemyOpacity = lerp(kEnemyBodyOpacity, kEnemyOutlineOpacity, enemyOutlineMask);
     enemyOpacity = lerp(enemyOpacity, kEnemyCoreOpacity, enemyCore);
     alpha = enemyEdgeFade * enemyOpacity * saturate(materialParameters.color.a);

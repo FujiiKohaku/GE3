@@ -69,6 +69,7 @@ public:
     void SetEntryWaterHeight(float waterHeight) { entryState_.SetWaterHeight(waterHeight); }
     bool IsMadModeActive() const override { return battleState_.IsMadModeActive(); }
     bool IsBeamHittingPlayer() const override { return battleState_.IsBeamHittingPlayer(); }
+    bool DidStartIntimidationThisFrame() const { return battleState_.beamActionState_.DidStartIntimidationThisFrame(); }
 
     // HP割合のGetter
     float GetHeadHpFraction() const override;
@@ -192,6 +193,7 @@ private:
     float HealthRate() const;
     // 生き残っている胴体部位があるかを確認する。
     bool HasAliveBodyParts() const;
+    bool IsHeadVulnerable() const;
     // 部位番号が配列の有効範囲内かを確認し、範囲外アクセスを防ぐ。
     bool IsValidSegmentIndex(int32_t partIndex) const;
 

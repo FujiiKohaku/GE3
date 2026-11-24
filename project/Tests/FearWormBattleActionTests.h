@@ -227,12 +227,52 @@ inline bool RunFearWormBattleActionTests()
     battle.ChangeAction(ActionType::DriftBurst, boss);
     battle.driftBurstState_.shotsRemaining_ = 2;
     battle.hasTriggeredMadMode_ = false;
+    const float headHpBeforeIntimidation = boss.segments_[0].hp;
+    constexpr float kHeadTestDamage = 0.5f;
     boss.segments_[1].isAlive = false;
-    boss.segments_[2].isAlive = false;
+    boss.ApplyDamageToPart(2, boss.kBodyHp);
+    boss.ApplyDamageToPart(0, kHeadTestDamage);
+    if (boss.IsCollisionPartDamageable(0) || boss.segments_[0].hp != headHpBeforeIntimidation) {
+        return false;
+    }
     battle.Update(boss);
     if (battle.actionType_ != ActionType::Beam || battle.driftBurstState_.shotsRemaining_ != 0
         || battle.headChargeState_.isActive_ || battle.IsMadModeActive()) {
         return false;
+    }
+    {
+        FearWormTestClock testClock;
+        testClock.SetDelta(1.0f / 60.0f);
+        FearWormBeamState& beamState = battle.beamActionState_;
+        if (beamState.phase_ != FearWormBeamState::Phase::Centering || beamState.IsAiming()) {
+            return false;
+        }
+        beamState.elapsedSeconds_ = FearWormBeamState::kCenteringDurationSeconds;
+        battle.Update(boss);
+        const Vector3 center = beamState.CalculateIntimidationCenter(battle, boss);
+        if (!beamState.IsIntimidating() || !boss.DidStartIntimidationThisFrame()
+            || Vector3LengthSquared(boss.GetPosition() - center) > 0.000001f) {
+            return false;
+        }
+        boss.ApplyDamageToPart(0, kHeadTestDamage);
+        battle.Update(boss);
+        if (boss.DidStartIntimidationThisFrame() || boss.IsCollisionPartDamageable(0)
+            || boss.segments_[0].hp != headHpBeforeIntimidation || beamState.IsHittingPlayer()) {
+            return false;
+        }
+        beamState.elapsedSeconds_ = FearWormBeamState::kIntimidationDurationSeconds;
+        battle.Update(boss);
+        boss.ApplyDamageToPart(0, kHeadTestDamage);
+        if (beamState.phase_ != FearWormBeamState::Phase::Charge || !boss.IsCollisionPartDamageable(0)
+            || boss.segments_[0].hp != headHpBeforeIntimidation - kHeadTestDamage) {
+            return false;
+        }
+        boss.segments_[0].hp = headHpBeforeIntimidation;
+        battle.ChangeAction(ActionType::OrbitShot, boss);
+        battle.Update(boss);
+        if (beamState.phase_ != FearWormBeamState::Phase::Wait || boss.DidStartIntimidationThisFrame()) {
+            return false;
+        }
     }
     boss.ChangeState(FearWormEnemy::BossState::Wait);
     if (battle.currentAction_ != nullptr || battle.beamActionState_.beam_.GetWidth() != 0.0f || battle.IsBeamHittingPlayer()) {

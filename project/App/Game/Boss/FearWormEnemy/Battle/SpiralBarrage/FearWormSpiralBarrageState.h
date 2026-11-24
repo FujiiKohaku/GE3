@@ -21,7 +21,7 @@ private:
     static constexpr float kHeight = 7.0f;
     static constexpr float kMaximumRadius = 25.0f;
     static constexpr float kMinimumHeight = 1.5f;
-    static constexpr float kFireIntervalSeconds = 0.05f;
+    static constexpr float kFireIntervalSeconds = 0.10f;
     static constexpr int32_t kMaxShotsPerUpdate = 3;
     friend bool RunFearWormStateTests();
     friend bool RunFearWormBattleActionTests();
