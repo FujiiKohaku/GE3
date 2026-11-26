@@ -59,6 +59,7 @@
 
 #include "App/Game/Enemy/BaseEnemy.h"
 #include "App/Game/Enemy/Bullet/EnemyBulletManager.h"
+#include "App/Game/Enemy/Bullet/EnemyBulletTrailRenderer.h"
 
 #include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
 #include "App/Game/Enemy/ArmoredEnemy/ArmoredEnemy.h"
@@ -465,6 +466,7 @@ private:
     // エネミー配列
     std::vector<std::unique_ptr<BaseEnemy>> enemies_;
     EnemyBulletManager enemyBulletManager_;
+    EnemyBulletTrailRenderer enemyBulletTrailRenderer_;
     size_t nextSwarmWaveIndex_ = 0;
 
     // エイム用仮想カメラ

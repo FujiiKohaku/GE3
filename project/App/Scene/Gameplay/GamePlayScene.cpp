@@ -568,6 +568,7 @@ void GamePlayScene::Initialize()
     Logger::Log("GamePlayScene::Initialize: Starting camera initialization");
     camera_ = std::make_unique<Camera>();
     camera_->Initialize();
+    enemyBulletTrailRenderer_.Initialize();
     camera_->SetTranslate(kInitializeCameraTranslate);
     camera_->SetRotate({ 0.0f, 0.0f, 0.0f });
     cameraPreferences_.Load();
@@ -2804,6 +2805,7 @@ bool GamePlayScene::SubmitRaytracingScene(DxrRenderer& renderer) {
 // このシーンで使用するパーティクルを描画する。
 void GamePlayScene::DrawParticle()
 {
+    enemyBulletTrailRenderer_.Draw(*camera_, enemyBulletManager_.GetBullets());
     EffectManager::GetInstance()->PreDraw();
     EffectManager::GetInstance()->Draw();
 }

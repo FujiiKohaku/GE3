@@ -53,6 +53,9 @@ void EnemyBulletManager::Update(const Vector3& playerPosition, const Vector3& pl
         if (forwardDistance < -kBulletCullDistanceBehindPlayer) {
             bullet->SetDead();
         }
+        if (bullet->IsAlive()) {
+            bullet->UpdateTrail();
+        }
     }
     for (auto& bullet : bullets_) {
         if (!bullet->IsAlive() && typeid(*bullet) == typeid(NormalEnemyBullet)) {

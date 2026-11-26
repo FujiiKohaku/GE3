@@ -1,7 +1,4 @@
 #include "TurretEnemyBullet.h"
-#include "App/Game/Enemy/TurretEnemy/TurretShotFeedback.h"
-#include "Engine/3D/ModelManager.h"
-#include "Engine/3D/Object3dManager.h"
 
 TurretEnemyBullet::TurretEnemyBullet()
 {
@@ -21,36 +18,7 @@ void TurretEnemyBullet::Initialize(Model* model)
     SetTransparentDepthWrite(false);
     SetCastShadow(false);
     SetColor({ 0.65f, 0.12f, 1.0f, 1.0f });
-    trailObject_ = std::make_unique<Object3d>();
-    trailObject_->Initialize(Object3dManager::GetInstance());
-    trailObject_->SetModel(ModelManager::GetInstance()->Load("Enemy/Turret/TurretTrail.obj"));
-    trailObject_->SetPixelShaderPath("resources/Shaders/Object3D/TurretTrail/Render.PS.hlsl");
-    trailObject_->SetEnableLighting(false);
-    trailObject_->SetTransparent(true);
-    trailObject_->SetTransparentDepthWrite(false);
-    trailObject_->SetCastShadow(false);
-    trailObject_->SetReceiveShadow(false);
-    trailObject_->SetFogEnabled(false);
-    trailObject_->SetColor({ 0.65f, 0.12f, 1.0f, 0.85f });
-    travelDistance_ = 0.0f;
-}
-
-void TurretEnemyBullet::Update()
-{
-    EnemyBullet::Update();
-    if (!IsAlive() || trailObject_ == nullptr || Vector3Length(velocity_) < 0.0001f) { return; }
-    travelDistance_ += Vector3Length(GetPosition() - GetPreviousPosition());
-    const float length = (std::min)(travelDistance_, kTrailLength);
-    trailObject_->SetCustomWorldMatrix(TurretShotFeedback::CalculateTrailWorld(
-        GetPosition(), Normalize(velocity_), length, kTrailWidth));
-    trailObject_->Update();
-}
-
-void TurretEnemyBullet::Draw()
-{
-    if (!IsAlive()) { return; }
-    if (trailObject_ != nullptr && travelDistance_ > 0.001f) { trailObject_->Draw(); }
-    EnemyBullet::Draw();
+    trailStyle_ = { { 0.65f, 0.20f, 1.0f, 0.65f }, 16.0f, 0.38f };
 }
 
 void TurretEnemyBullet::SetLaunchDirection(const Vector3& direction, float normalSpeedPerFrame)

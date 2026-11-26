@@ -545,6 +545,9 @@
     <ClCompile Include="App\Game\Enemy\Bullet\EnemyBulletManager.cpp">
       <Filter>App\Game\Enemy\Bullet</Filter>
     </ClCompile>
+    <ClCompile Include="App\Game\Enemy\Bullet\EnemyBulletTrailRenderer.cpp">
+      <Filter>App\Game\Enemy\Bullet</Filter>
+    </ClCompile>
     <ClCompile Include="App\Game\Enemy\Bullet\Types\NormalEnemyBullet.cpp">
       <Filter>App\Game\Enemy\Bullet\Types</Filter>
     </ClCompile>
@@ -1028,6 +1031,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App\Game\Enemy\Bullet\EnemyBulletManager.h">
+      <Filter>App\Game\Enemy\Bullet</Filter>
+    </ClInclude>
+    <ClInclude Include="App\Game\Enemy\Bullet\EnemyBulletTrailRenderer.h">
       <Filter>App\Game\Enemy\Bullet</Filter>
     </ClInclude>
   </ItemGroup>

@@ -184,6 +184,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Debug\EnemyDebugViews.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Common\EnemyBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\EnemyBulletManager.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\EnemyBulletTrailRenderer.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\NormalEnemyBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\TurretEnemyBullet.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\SwarmPulseBullet.cpp" />
@@ -385,6 +386,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Debug\BaseEnemyDebugView.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Common\EnemyBullet.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\EnemyBulletManager.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\EnemyBulletTrailRenderer.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\PaintEnemy\PaintShooterEnemy.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\PaintBullet.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Enemy\Bullet\Types\NormalEnemyBullet.h" />
