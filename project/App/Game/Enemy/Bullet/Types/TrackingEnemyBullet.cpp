@@ -15,6 +15,7 @@ constexpr float kAccelDuration = 1.50f;      // 最高速度に達するまで�
 constexpr float kTrackingRate = 0.060f;      // 従来値から20%上げた追尾旋回率
 constexpr float kTrackingDuration = 1.50f;   // 追尾する最大時間（秒）
 constexpr float kPassCheckDelay = 0.25f;     // プレイヤー方向へ向き直るまで通過判定を待つ
+constexpr float kMaximumLeadSeconds = 1.0f;
 }
 
 // 追尾時間や旋回に使う状態を初期化し、追尾弾の見た目を設定する。
@@ -55,10 +56,21 @@ void TrackingEnemyBullet::Update()
 void TrackingEnemyBullet::Move()
 {
     const float timeScale = GetTimeScale();
-    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime() * timeScale;
+    const float frameSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    const float deltaTimeSeconds = frameSeconds * timeScale;
     if (deltaTimeSeconds <= 0.0f) {
         return;
     }
+    Vector3 targetRailVelocity {};
+    if (player_ != nullptr) {
+        const Vector3 railPosition = player_->GetRailBasePosition();
+        if (hasPreviousTargetRailPosition_) {
+            targetRailVelocity = (railPosition - previousTargetRailPosition_) * (1.0f / frameSeconds);
+        }
+        previousTargetRailPosition_ = railPosition;
+        hasPreviousTargetRailPosition_ = true;
+    }
+
     if (launchTimer_ < kLaunchDuration) {
         launchTimer_ += deltaTimeSeconds;
         // 打ち上げフェーズ（EaseOutの減速上昇）
@@ -94,7 +106,15 @@ void TrackingEnemyBullet::Move()
                 float easeIn = accelT * accelT;
                 float currentSpeed = kMissileStartSpeed + (kMissileMaxSpeed - kMissileStartSpeed) * easeIn;
 
-                Vector3 targetDirection = NormalizeSafe(toPlayer);
+                // レール上の実測速度から接近時間を見積もり、現在位置より先を狙う。
+                const Vector3 directDirection = NormalizeSafe(toPlayer);
+                const float cruiseSpeed = kMissileMaxSpeed * 60.0f * timeScale;
+                const float closingSpeed = cruiseSpeed - Dot(targetRailVelocity, directDirection);
+                const float leadSeconds = (std::min)(kMaximumLeadSeconds,
+                    Vector3Length(toPlayer) / (std::max)(closingSpeed, 1.0f));
+                const Vector3 aimOffset = toPlayer + targetRailVelocity * leadSeconds;
+                Vector3 targetDirection = Dot(aimOffset, directDirection) > 0.0f
+                    ? NormalizeSafe(aimOffset) : directDirection;
                 Vector3 targetVelocity = targetDirection * currentSpeed;
 
                 const float trackingBlend = 1.0f - std::pow(1.0f - kTrackingRate, deltaTimeSeconds * 60.0f);

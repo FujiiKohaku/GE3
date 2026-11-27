@@ -1,5 +1,6 @@
 // プレイヤーに向けてペイント弾を発射する敵を扱う。
 #include "App/Game/Common/GameTiming.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "Engine/Time/TimeManager.h"
 #include "PaintShooterEnemy.h"
 #include "App/Game/Enemy/Bullet/Types/PaintBullet.h"
@@ -32,22 +33,13 @@ void PaintShooterEnemy::Attack()
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 toEnemy = transform_.translate - playerPosition;
 
-    Vector3 playerVelocity = player_->GetAutomaticWorldVelocity();
-    Vector3 forward = { 0.0f, 0.0f, 1.0f };
-    float speedLength = Vector3Length(playerVelocity);
-    if (speedLength > 0.001f) {
-        forward = Normalize(playerVelocity);
-    }
-
-    float dot = toEnemy.x * forward.x + toEnemy.y * forward.y + toEnemy.z * forward.z;
-
-    if (dot <= 0.0f) {
+    if (!IsEnemyAhead(toEnemy, player_->GetFlightForward())) {
         return;
     }
 
     float distance = Vector3Length(toEnemy);
 
-    if (distance <= 120.0f) {
+    if (distance <= kEnemyShootingRange) {
         const int32_t shotCount = GameTiming::AdvanceInterval(fireElapsedSeconds_,
             kFireIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 3);
         for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {

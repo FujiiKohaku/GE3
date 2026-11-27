@@ -72,7 +72,8 @@ public:
     // ------------------------------
     // 基本処理
     // ------------------------------
-    void Initialize();
+    void Initialize(bool showWindow = true);
+    void ShowMainWindow();
     // 入力と各管理機能を更新し、現在のシーンを一フレーム進める。
     void Update();
     // 描画処理を実行し、更新済みのゲーム画面を表示する。

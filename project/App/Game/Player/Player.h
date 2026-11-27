@@ -239,6 +239,7 @@ public:
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
     bool IsShieldActive() const { return shield_.IsActive(); }
     float GetShieldRatio() const { return shield_.GetChargeRatio(); }
+    float GetShieldDisplayRatio() const { return shield_.GetDisplayRatio(); }
     Sphere GetShieldCollisionSphere() const { return shield_.GetCollisionSphere(transform_.translate); }
     void OnShieldBulletHit(const Vector3& bulletCenter, const Vector3& bulletMovement);
     float GetForwardSpeedMultiplier() const { return movement_.GetForwardSpeedMultiplier(); }

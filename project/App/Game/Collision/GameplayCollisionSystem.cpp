@@ -71,12 +71,10 @@ void CheckEnemyBulletsAgainstPlayer(
     const std::vector<std::unique_ptr<Object3d>>& levelObjects,
     bool collideWithObstacles)
 {
-    Sphere targetSphere {
+    const Sphere bodySphere {
         player.GetTranslate(),
         kPlayerEnemyCollisionRadius * 0.5f
     };
-    const bool isShieldActive = player.IsShieldActive();
-    if (isShieldActive) { targetSphere = player.GetShieldCollisionSphere(); }
     for (const std::unique_ptr<EnemyBullet>& bullet : bullets) {
         if (!bullet->IsAlive()) {
             continue;
@@ -88,6 +86,8 @@ void CheckEnemyBulletsAgainstPlayer(
         };
         const Vector3 movement =
             bullet->GetPosition() - bullet->GetPreviousPosition();
+        const bool isShieldActive = player.IsShieldActive();
+        const Sphere targetSphere = isShieldActive ? player.GetShieldCollisionSphere() : bodySphere;
         const SweepHit playerHit = CollisionManager::SweepSphere(
             bulletSphere,
             movement,

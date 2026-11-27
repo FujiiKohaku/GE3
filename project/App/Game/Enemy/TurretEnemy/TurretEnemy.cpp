@@ -1,4 +1,5 @@
 #include "TurretEnemy.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "App/Game/Enemy/Bullet/Types/TurretEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/3D/Model.h"
@@ -8,7 +9,6 @@
 #include <limits>
 
 namespace {
-constexpr float kAttackRange = 170.0f;
 constexpr float kPassedDistance = 40.0f;
 constexpr float kAimToleranceCosine = 0.9961947f; // 5度
 }
@@ -132,8 +132,9 @@ void TurretEnemy::Attack()
     if (player_ == nullptr || player_->IsDead() || bulletModel_ == nullptr) { return; }
     const Vector3 toPlayer = player_->GetTranslate() - pose_.muzzlePosition;
     const float distance = Vector3Length(toPlayer);
-    const float forwardDistance = Dot(transform_.translate - player_->GetTranslate(), player_->GetFlightForward());
-    const bool isInRange = forwardDistance > 0.0f && distance >= 0.001f && distance <= kAttackRange;
+    const Vector3 toEnemy = transform_.translate - player_->GetTranslate();
+    const bool isInRange = IsEnemyAhead(toEnemy, player_->GetFlightForward()) &&
+        distance >= 0.001f && distance <= kEnemyShootingRange;
     bool isAligned = false;
     if (isInRange) { isAligned = Dot(toPlayer * (1.0f / distance), pose_.forward) >= kAimToleranceCosine; }
     const float deltaSeconds = TimeManager::GetInstance()->GetDeltaTime();

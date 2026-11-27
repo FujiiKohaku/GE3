@@ -785,6 +785,7 @@ Vector3 Player::GetAutomaticWorldVelocity() const
 bool Player::ApplyDamage(int damage)
 {
     if (shield_.IsActive()) {
+        if (damage > 0) { shield_.OnContactHit(transform_.translate); }
         return false;
     }
     const bool hasAppliedDamage = ApplyHealthDamage(damage);

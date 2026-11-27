@@ -54,6 +54,7 @@ enum class PostEffectType {
     ToneMap,
     BoostSparks,
     ScreenLighting,
+    ElectricGateShock,
 };
 
 const char* GetPostEffectTypeName(PostEffectType type);

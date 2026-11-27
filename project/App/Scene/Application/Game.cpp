@@ -73,7 +73,7 @@ uint64_t GetCurrentProcessCpuTime()
 }
 
 // ウィンドウ・描画・入力・音声・シーンなど、アプリ全体で使う機能を準備する。
-void Game::Initialize()
+void Game::Initialize(bool showWindow)
 {
     auto prevTime = std::chrono::steady_clock::now();
     Logger::Log("Game Initialize Start");
@@ -108,12 +108,10 @@ void Game::Initialize()
     }
     GetBootProfilerForGame()->End("Window");
 
-    {
-        StartupTimingScope startupScope("Game.ShowWindow");
-        WinApp::GetInstance()->Show();
+    if (showWindow) {
+        ShowMainWindow();
+        LockCursorToWindow();
     }
-
-    LockCursorToWindow();
 
     CheckInitializeTime("WinApp", prevTime);
 
@@ -525,6 +523,12 @@ void Game::UpdatePerformanceLog()
     performanceLogFrameCount_ = 0;
 }
 #endif
+
+void Game::ShowMainWindow()
+{
+    StartupTimingScope startupScope("Game.ShowWindow");
+    WinApp::GetInstance()->Show();
+}
 
 // 操作中にマウスがゲームの表示範囲から出ないようにする。
 void Game::LockCursorToWindow()

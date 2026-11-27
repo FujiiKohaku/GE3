@@ -1,4 +1,5 @@
 #include "StrafeEnemy.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 #include "Engine/Time/TimeManager.h"
@@ -7,7 +8,6 @@
 namespace {
 constexpr float kPassedDistance = 30.0f;
 constexpr float kTeleportDistance = 240.0f;
-constexpr float kAttackRange = 170.0f;
 }
 
 void StrafeEnemy::Initialize(Model* model, Model* bulletModel, Player* player, const NormalEnemySettings& settings)
@@ -106,8 +106,8 @@ void StrafeEnemy::Attack()
     if (bulletModel_ == nullptr || player_ == nullptr || player_->IsDead()) { return; }
     const Vector3 toPlayer = player_->GetTranslate() - transform_.translate;
     const float distance = Vector3Length(toPlayer);
-    if (distance <= 0.001f || distance > kAttackRange ||
-        Dot(transform_.translate - player_->GetTranslate(), railForward_) <= 0.0f) { return; }
+    if (distance <= 0.001f || distance > kEnemyShootingRange ||
+        !IsEnemyAhead(transform_.translate - player_->GetTranslate(), player_->GetFlightForward())) { return; }
     auto bullet = AcquireNormalBullet(bulletModel_);
     bullet->SetTranslate(transform_.translate);
     bullet->SetVelocity(toPlayer * (bulletSpeedPerFrame_ / distance));

@@ -332,6 +332,8 @@ const wchar_t* CopyImageRenderer::GetPixelShaderPath(PostEffectType type) const
         return L"resources/Shaders/PostEffect/SonicBoom.PS.hlsl";
     case PostEffectType::BoostSparks:
         return L"resources/Shaders/PostEffect/BoostSparks.PS.hlsl";
+    case PostEffectType::ElectricGateShock:
+        return L"resources/Shaders/PostEffect/ElectricGateShock.PS.hlsl";
     case PostEffectType::RainDrops:
         return L"resources/Shaders/PostEffect/RainDrops.PS.hlsl";
     case PostEffectType::CyberScanline:

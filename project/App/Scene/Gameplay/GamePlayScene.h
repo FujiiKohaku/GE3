@@ -526,6 +526,7 @@ private:
 
     // 被弾フラッシュ演出用
     float damageFlashRemainingSeconds_ = 0.0f;
+    float electricGateShockRemainingSeconds_ = 0.0f;
     float lowHpPulseElapsedSeconds_ = 0.0f;
     int lastPlayerHp_ = 0;
 
@@ -597,7 +598,9 @@ private:
 
     // 機体の左右に重ねる円弧ゲージ。
     std::unique_ptr<Sprite> playerHpArcSprite_;
-    std::unique_ptr<Sprite> playerShieldArcSprite_;
+    std::unique_ptr<Sprite> playerShieldPipsSprite_;
+    float lastShieldRatio_ = 1.0f;
+    float shieldPipFlashSeconds_ = 0.0f;
     bool arePlayerGaugesVisible_ = false;
 
     uint32_t bossSpotLightHandle_ = 0xffffffffu;

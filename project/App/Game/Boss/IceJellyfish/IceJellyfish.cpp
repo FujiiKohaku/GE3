@@ -1,5 +1,6 @@
 // 頭・触手・氷柱で構成するボス。攻撃パターン、部位ごとのHPと当たり判定を扱う。
 #include "IceJellyfish.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 
 #include "App/Game/Player/Player.h"
 #include "Engine/3D/ModelManager.h"
@@ -541,5 +542,9 @@ bool IceJellyfish::ApplyAttackDamageToPlayer(int damage)
 
 void IceJellyfish::SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet)
 {
-    AddEnemyBullet(std::move(bullet));
+    if (player_ == nullptr) { return; }
+    const Vector3 toEnemy = GetPosition() - player_->GetTranslate();
+    if (IsEnemyAhead(toEnemy, player_->GetFlightForward()) && Vector3Length(toEnemy) <= kEnemyShootingRange) {
+        AddEnemyBullet(std::move(bullet));
+    }
 }

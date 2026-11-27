@@ -133,8 +133,8 @@ Vector3 FearWormEntryState::CalculateEntryPosition(const Vector3& surfacePositio
     float arcEnvelope = std::sin(flightRate * std::numbers::pi_v<float>);
     float waveEnvelope = arcEnvelope * arcEnvelope;
     float wavePhase = elapsedSeconds * 5.2f - static_cast<float>(segmentIndex) * 0.70f;
-    // 頭から尾へ位相をずらし、着地点に近づくほど振幅を落とす。
-    float lateralWave = std::sin(wavePhase) * 6.0f * waveEnvelope;
+    // 頭の横位置は中央に保ち、胴体と尾だけ左右にうねらせる。
+    float lateralWave = segmentIndex == 0 ? 0.0f : std::sin(wavePhase) * 6.0f * waveEnvelope;
     float verticalWave = std::sin(wavePhase + 0.9f) * 1.8f * waveEnvelope;
     float forwardWave = std::cos(wavePhase) * 2.0f * waveEnvelope;
     return {
