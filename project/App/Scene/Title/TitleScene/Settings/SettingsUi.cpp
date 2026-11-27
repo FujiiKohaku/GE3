@@ -112,7 +112,7 @@ void SettingsUi::Update(const Input* input, float settingsAmount, float titleOff
     }
     settingsItemsText_->SetText("PAD STYLE: " + styleLabel +
         "\n\nPAD PITCH: " + pitchLabel + pitchShortcut +
-        "\n\n" + movementLabel + "\nX BOOST / Y BRAKE");
+        "\n\n" + movementLabel + "\nX SHIELD / Y BRAKE");
     settingsShortcutText_->SetPosition(
         { kSettingsShortcutBaseX + titleOffset * kSettingsShortcutExitOffsetScale, kSettingsShortcutY });
     settingsShortcutText_->SetColor(

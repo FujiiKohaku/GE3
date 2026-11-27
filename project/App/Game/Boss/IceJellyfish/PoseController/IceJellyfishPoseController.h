@@ -10,9 +10,14 @@ class IceJellyfishPoseController final {
 public:
     static constexpr size_t kTentacleCount = 6;
     static constexpr size_t kSegmentsPerTentacle = 7;
+    struct CollisionTransforms {
+        Matrix4x4 core;
+        std::array<std::array<Matrix4x4, kSegmentsPerTentacle>, kTentacleCount> tentacles;
+    };
+
     static Vector4 GetBellAnimationParameters(float time);
     void Reset();
-    void Update(IceJellyfish& boss);
+    void Update(IceJellyfish& boss, float deltaTimeSeconds, CollisionTransforms& collisionTransforms);
 
 private:
     void UpdateIcePillarModelTransforms(IceJellyfish& boss);

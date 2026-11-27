@@ -313,6 +313,7 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     </ClCompile>
     <ClCompile Include="$(projectRootPath)Engine\Winapp\WinApp.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Player.cpp" />
+    <ClCompile Include="$(projectRootPath)App\Game\Player\PlayerShield.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\PlayerWeaponController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Aim\PlayerReticleController.cpp" />
     <ClCompile Include="$(projectRootPath)App\Game\Player\Aim\PlayerShotPointCalculator.cpp" />
@@ -510,10 +511,12 @@ copy "$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x64\dxil.dll" "$(TargetDir)dx
     <ClInclude Include="$(projectRootPath)Engine\Winapp\WinApp.h" />
     <ClInclude Include="$(projectRootPath)Engine\Time\TimeManager.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Player.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Player\PlayerShield.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\PlayerWeaponController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Aim\PlayerReticleController.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Player\Aim\PlayerShotPointCalculator.h" />
     <ClInclude Include="$(projectRootPath)App\Game\Boss\Common\BaseBoss.h" />
+    <ClInclude Include="$(projectRootPath)App\Game\Boss\Common\BossPartHitScale.h" />
     <ClInclude Include="$(projectRootPath)Engine\PostEffect\OffscreenRenderer.h" />
     <ClInclude Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoardMesh.h" />
     <ClInclude Include="$(projectRootPath)Engine\Particle\MeshManager\ParticleBoxMesh.h" />

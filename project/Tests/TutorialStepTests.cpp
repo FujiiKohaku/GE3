@@ -183,12 +183,12 @@ int main()
     assert(steps[2]->IsAchieved());
 
     for (int index : {3, 4}) {
-        input.isBoosting = true; input.speedMultiplier = 0.5f;
+        input.isShieldActive = true; input.speedMultiplier = 0.5f;
         steps[index]->Update(input, 1.0f);
         assert(!steps[index]->IsAchieved());
-        input.isBoosting = false; input.speedMultiplier = 1.0f;
+        input.isShieldActive = false; input.speedMultiplier = 1.0f;
         steps[index]->Update(input, 0.1f); // 途中で離すと継続時間をリセット。
-        input.isBoosting = true; input.speedMultiplier = 0.5f;
+        input.isShieldActive = true; input.speedMultiplier = 0.5f;
         steps[index]->Update(input, 1.0f);
         assert(!steps[index]->IsAchieved());
         steps[index]->Update(input, 0.5f);

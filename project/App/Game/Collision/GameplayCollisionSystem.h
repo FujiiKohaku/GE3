@@ -25,6 +25,7 @@ struct DestructibleLevelObject {
 // 衝突によって発生した通知。得点や画面演出への反映はシーン側で行う。
 struct GameplayCollisionEvents {
     bool paintBulletHitPlayer = false;
+    bool hasShieldDeflectedBullet = false;
     uint32_t scoreAwarded = 0;
     std::vector<std::string> enteredTriggers;
     std::vector<std::string> exitedTriggers;

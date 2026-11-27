@@ -20,7 +20,8 @@ struct PlayerTestAccess {
     static void ResetSteering(Player& player) { player.ResetSteering(); }
     static void UpdateMovement(Player& player, Input* input) { player.UpdateMovement(input); }
     static void StopMovement(Player& player) { player.StopMovement(); }
-    static void UpdateBoost(Player& player, Input* input, bool isDebugMode) { player.UpdateBoost(input, isDebugMode); }
+    static void UpdateFlightActions(Player& player, Input* input, bool isDebugMode) { player.UpdateFlightActions(input, isDebugMode); }
+    static void UpdateShield(Player& player, bool shouldActivate, float deltaTimeSeconds) { player.shield_.Update(shouldActivate, deltaTimeSeconds); }
     static void ApplyRailPosition(Player& player) { player.ApplyRailPosition(); }
     static void SynchronizePosition(Player& player) { player.SynchronizePosition(); }
     static void SynchronizeOrientation(Player& player) { player.SynchronizeOrientation(); }

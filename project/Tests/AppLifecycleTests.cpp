@@ -71,11 +71,11 @@ bool RunGameplayLifecycleTests()
     scene.SetPaused(true);
     scene.SetPaused(false);
     if (!manager->GetPostEffects().empty()) { return false; }
-    scene.wasBoostingForSonicBoom_ = true;
+    scene.brakeReactionStrength_ = 1.0f;
     GamePlayScene nextScene;
-    if (nextScene.wasBoostingForSonicBoom_) { return false; }
+    if (nextScene.brakeReactionStrength_ != 0.0f) { return false; }
     scene.ResetGameplayPostEffects();
-    return !scene.wasBoostingForSonicBoom_;
+    return scene.brakeReactionStrength_ == 0.0f;
 }
 
 class StageCatalogFixture {
@@ -144,6 +144,6 @@ int main()
         std::puts("FAILED: App lifecycle regression tests");
         return 1;
     }
-    std::puts("PASS: homing target invalidation, pause effect restoration, per-scene boost state and atomic stage loading");
+    std::puts("PASS: homing target invalidation, pause effect restoration, per-scene brake state and atomic stage loading");
     return 0;
 }

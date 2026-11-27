@@ -75,6 +75,18 @@ constexpr Vector3 kCoreOffset = { 0.0f, -2.0f, 0.0f };
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr float kBellWaveAmplitude = 1.5f;
 constexpr float kTentacleWaveAmplitude = 0.12f;
+
+Matrix4x4 ScalePartWorld(const Matrix4x4& world, float scale)
+{
+    Matrix4x4 scaledWorld = world;
+    // ローカル原点を保ったまま、姿勢行列の各軸を拡大する。
+    for (size_t row = 0; row < 3; ++row) {
+        for (size_t column = 0; column < 3; ++column) {
+            scaledWorld.m[row][column] *= scale;
+        }
+    }
+    return scaledWorld;
+}
 }
 
 Vector4 IceJellyfishPoseController::GetBellAnimationParameters(float time)
@@ -99,7 +111,8 @@ void IceJellyfishPoseController::Reset()
 }
 
 // 攻撃の姿勢と揺れを反映して、頭や触手の位置・回転・大きさを更新する。
-void IceJellyfishPoseController::Update(IceJellyfish& boss)
+void IceJellyfishPoseController::Update(IceJellyfish& boss, float deltaTimeSeconds,
+    CollisionTransforms& collisionTransforms)
 {
     if (boss.bell_ == nullptr) return;
     const float poseDelta = std::clamp(boss.animationTime_ - softPoseTime_, 0.0f, kMaximumPoseDeltaSeconds);
@@ -128,7 +141,13 @@ void IceJellyfishPoseController::Update(IceJellyfish& boss)
     const Matrix4x4 coreLocal = MatrixMath::MakeAffineMatrix(
         Vector3 { coreScale, coreScale, coreScale },
         Vector3 {}, kCoreOffset);
-    boss.core_->SetCustomWorldMatrix(MatrixMath::Multiply(coreLocal, bodyMatrix));
+    collisionTransforms.core = MatrixMath::Multiply(coreLocal, bodyMatrix);
+    const float coreHitScale = boss.hitScales_[IceJellyfish::kCorePart].Update(deltaTimeSeconds);
+    if (coreHitScale > 1.0f) {
+        boss.core_->SetCustomWorldMatrix(ScalePartWorld(collisionTransforms.core, coreHitScale));
+    } else {
+        boss.core_->SetCustomWorldMatrix(collisionTransforms.core);
+    }
     Vector4 coreColor = kCoreColor;
     if (boss.hitFlashTime_ > 0.0f) {
         coreColor = kCoreHitColor;
@@ -210,7 +229,15 @@ void IceJellyfishPoseController::Update(IceJellyfish& boss)
             local.m[3][1] = joint.y;
             local.m[3][2] = joint.z;
             Object3d& object = *boss.tentacles_[tentacle][segment];
-            object.SetCustomWorldMatrix(MatrixMath::Multiply(local, bodyMatrix));
+            Matrix4x4& segmentWorld = collisionTransforms.tentacles[tentacle][segment];
+            segmentWorld = MatrixMath::Multiply(local, bodyMatrix);
+            const int32_t partIndex = boss.SegmentPartIndex(tentacle, segment);
+            const float hitScale = boss.hitScales_[partIndex].Update(deltaTimeSeconds);
+            if (hitScale > 1.0f) {
+                object.SetCustomWorldMatrix(ScalePartWorld(segmentWorld, hitScale));
+            } else {
+                object.SetCustomWorldMatrix(segmentWorld);
+            }
             const Vector4 baseTentacleColor = kTentacleColor;
             const Vector4 tentacleColor = boss.battleState_.ApplyAttackTentacleColor(
                 boss, attackMotionContext, baseTentacleColor);

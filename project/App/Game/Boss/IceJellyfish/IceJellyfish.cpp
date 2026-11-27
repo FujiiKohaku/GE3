@@ -162,6 +162,7 @@ void IceJellyfish::Initialize(Camera* camera, Model* bulletModel, Player* player
     animationTime_ = 0.0f;
     poseController_.Reset();
     hitFlashTime_ = 0.0f;
+    hitScales_ = {};
     coreExposed_ = false;
 
     bell_ = CreatePart(camera, "Boss/IceJellyfish/IceJellyfishBell.obj",
@@ -226,7 +227,7 @@ void IceJellyfish::Update()
     // Stateが決めた位置を、取得用の位置と共通Transformへ反映する。
     basePosition_ = bodyPosition_;
     transform_.translate = bodyPosition_;
-    UpdatePartTransforms();
+    UpdatePartTransforms(deltaTimeSeconds);
     if (state_ == BossState::Battle) {
         battleState_.EmitPendingAttacks(*this);
     }
@@ -255,11 +256,12 @@ int32_t IceJellyfish::SegmentPartIndex(size_t tentacle, size_t segment) const
 }
 
 // 共通姿勢を反映したモデルから、ゲーム用の当たり判定を更新する。
-void IceJellyfish::UpdatePartTransforms()
+void IceJellyfish::UpdatePartTransforms(float deltaTimeSeconds)
 {
     if (bell_ == nullptr) return;
-    poseController_.Update(*this);
-    const Matrix4x4& coreWorld = core_->GetWorldMatrix();
+    IceJellyfishPoseController::CollisionTransforms collisionTransforms;
+    poseController_.Update(*this, deltaTimeSeconds, collisionTransforms);
+    const Matrix4x4& coreWorld = collisionTransforms.core;
     const float coreScale = Vector3Length({ coreWorld.m[0][0], coreWorld.m[0][1], coreWorld.m[0][2] });
     coreCollider_ = { MatrixMath::Transform({}, coreWorld), kCoreCollisionRadius * coreScale };
     BuildBellColliders(bell_->GetWorldMatrix(), 0.0f, bellColliders_,
@@ -270,7 +272,7 @@ void IceJellyfish::UpdatePartTransforms()
         for (size_t segment = 0; segment < kSegmentsPerTentacle; ++segment) {
             if (IsSegmentAlive(tentacle, segment)) {
                 tentacleColliders_.push_back(MakeCollisionBox(
-                    tentacles_[tentacle][segment]->GetWorldMatrix(),
+                    collisionTransforms.tentacles[tentacle][segment],
                     { 0.0f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }));
                 tentacleColliderParts_.push_back(SegmentPartIndex(tentacle, segment));
             }
@@ -395,12 +397,16 @@ void IceJellyfish::ApplyDamageToPart(int32_t partIndex, float damage)
         if (!coreExposed_) return;
         hitFlashTime_ = kHitFlashSeconds;
         SetHealth((std::max)(0.0f, GetHealth() - damage * kCoreDamageMultiplier));
+        hitScales_[partIndex].Start();
     } else if (partIndex >= kFirstSegmentPart &&
         partIndex < kFirstSegmentPart + static_cast<int32_t>(kTentacleCount * kSegmentsPerTentacle)) {
         const int32_t flat = partIndex - kFirstSegmentPart;
         const size_t tentacle = static_cast<size_t>(flat) / kSegmentsPerTentacle;
+        const size_t hitSegment = static_cast<size_t>(flat) % kSegmentsPerTentacle;
+        if (!IsSegmentAlive(tentacle, hitSegment)) return;
         const float before = tentacleHp_[tentacle];
         tentacleHp_[tentacle] = (std::max)(0.0f, before - damage);
+        hitScales_[partIndex].Start();
         for (size_t remaining = kSegmentsPerTentacle; remaining > 0; --remaining) {
             const size_t segment = remaining - 1;
             const bool wasAlive = before > kSegmentHp * static_cast<float>(segment);

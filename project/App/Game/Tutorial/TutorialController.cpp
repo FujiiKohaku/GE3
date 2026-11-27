@@ -57,7 +57,7 @@ TutorialController::StepInput TutorialController::ReadStepInput(const Input& inp
         state.moveX = static_cast<float>(input.GetMouseDeltaX());
         state.moveY = -static_cast<float>(input.GetMouseDeltaY());
     }
-    state.isBoosting = player.IsBoosting();
+    state.isShieldActive = player.IsShieldActive();
     state.speedMultiplier = player.GetForwardSpeedMultiplier();
     state.heat = player.GetHeatRatio();
     state.isOverheated = player.IsOverheated();
@@ -126,8 +126,8 @@ void TutorialController::UpdateStep(const StepInput& input, float deltaTimeSecon
         hasHeatRaised_ = hasHeatRaised_ || input.heat >= 0.3f;
         hasAchievedStep_ = hasAchievedStep_ || (hasHeatRaised_ && input.heat <= 0.05f && !input.isOverheated);
         break;
-    case StepType::Boost:
-        UpdateHoldStep(input.isBoosting, deltaTimeSeconds);
+    case StepType::Shield:
+        UpdateHoldStep(input.isShieldActive, deltaTimeSeconds);
         break;
     case StepType::Brake:
         UpdateHoldStep(input.speedMultiplier < 0.99f, deltaTimeSeconds);
@@ -312,7 +312,7 @@ const std::array<TutorialController::StepData, TutorialController::kStepCount>& 
         StepData { StepType::Move, "MOVE", "マウスで照準を操作します。\n左右・上下の4方向へ動かしてください。", "左スティックで機体と照準を操作します。\n左右・上下の4方向へ動かしてください。", "", "", { "LS" }, 0, false, "", 180.0f, false },
         StepData { StepType::DefeatTargets, "FIRE", "マウスで照準を合わせ、左クリック長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "左スティックで照準を合わせ、AまたはRT長押しで連射します。\nゆっくり動く敵を3体倒しましょう。敵は反撃しません。", "", "", { "A", "RT" }, 3, true, "", 450.0f, false },
         StepData { StepType::Heat, "HEAT", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "照準の周りの熱ゲージが高いほど、威力も上がります。\nアサルトは熱が高いほど強くなり、威力は最大2倍。\n満タンで撃ち続けると、冷え切るまで撃てません。\nアサルトを少し連射し、射撃を離して冷ましましょう。", "", "", { "A", "RT" }, 0, false, "", 450.0f, true },
-        StepData { StepType::Boost, "BOOST", "SHIFTまたは右クリックを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "Xを長押しすると加速します。\n1.5秒続けて押し、速さと視野の変化を確かめましょう。", "SHIFT / 右クリック 長押し", "長押しで加速", { "X" }, 0, false, "", 750.0f, false },
+        StepData { StepType::Shield, "SHIELD", "SHIFTまたは右クリックを1.5秒長押ししてシールドを展開しましょう。\n最大3秒間ダメージを防ぎ、ボタンを離すと残量が回復します。", "Xを1.5秒長押ししてシールドを展開しましょう。\n最大3秒間ダメージを防ぎ、ボタンを離すと残量が回復します。", "SHIFT / 右クリック 長押し", "長押しでシールド", { "X" }, 0, false, "", 750.0f, false },
         StepData { StepType::Brake, "BRAKE", "CTRLを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "Yを長押しすると速度を落とせます。\n1.5秒続けて押しましょう。離すと元の速度に戻ります。", "CTRL 長押し", "長押しで減速", { "Y" }, 0, false, "", 1050.0f, false },
         StepData { StepType::WeaponPractice, "ミサイル", kMissileInstruction, kMissileInstruction, "", "", { "LB", "RB" }, 3, false, "ミサイル", 2070.0f, true },
         StepData { StepType::WeaponPractice, "ホーミングミサイル", kHomingInstruction, kHomingInstruction, "", "", { "LB", "RB" }, 3, false, "ホーミングミサイル", 2070.0f, true },

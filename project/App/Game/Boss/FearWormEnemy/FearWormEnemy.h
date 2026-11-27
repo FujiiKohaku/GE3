@@ -2,6 +2,7 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "App/Game/Boss/Common/BossPartHitScale.h"
 #include "Wait/FearWormWaitState.h"
 #include "Entry/FearWormEntryState.h"
 #include "Battle/FearWormBattleState.h"
@@ -154,6 +155,7 @@ private:
         float hp = 1.0f;
         float radius = 1.0f;
         float hitFlashTimer = 0.0f;
+        BossPartHitScale hitScale_;
         bool isHead = false;
         bool isAlive = true;
     };
@@ -221,6 +223,7 @@ private:
     std::array<std::unique_ptr<Object3d>, kHeadHpGearSegmentCount> headShieldGearSegments_;
     Vector3 headForward_ { 0.0f, 0.0f, 1.0f };
     float headOpenAmount_ = 0.0f;
+    float headHitScale_ = 1.0f;
     int headPoseIndex_ = 0;
     float oceanWakeCooldownSeconds_ = 0.0f;
     size_t nextOceanSegment_ = 0;

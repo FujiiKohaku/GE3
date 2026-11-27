@@ -2,6 +2,7 @@
 #pragma once
 
 #include "App/Game/Boss/Common/BaseBoss.h"
+#include "App/Game/Boss/Common/BossPartHitScale.h"
 #include "PoseController/IceJellyfishPoseController.h"
 #include "Wait/IceJellyfishWaitState.h"
 #include "Entry/IceJellyfishEntryState.h"
@@ -120,7 +121,7 @@ private:
         Camera* camera, const char* modelPath, const Vector4& color, bool ice);
 
     // 攻撃の姿勢と揺れを反映して、頭や触手の位置・回転・大きさを更新する。
-    void UpdatePartTransforms();
+    void UpdatePartTransforms(float deltaTimeSeconds = 0.0f);
     // 指定した触手の節が破壊されずに残っているかを調べる。
     // すべての触手の破壊状態を確認する。
     bool AreAllTentaclesDestroyed() const;
@@ -136,6 +137,7 @@ private:
         kTentacleCount> tentacles_;
     std::array<std::unique_ptr<Object3d>, kIcePillarModelCount> icePillarModels_;
     std::array<float, kTentacleCount> tentacleHp_ {};
+    std::array<BossPartHitScale, kFirstSegmentPart + kTentacleCount * kSegmentsPerTentacle> hitScales_ {};
     IceJellyfishPoseController poseController_;
 
     Camera* camera_ = nullptr;

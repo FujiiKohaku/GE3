@@ -13,6 +13,7 @@
 #include "Engine/debugcamera/DebugCameraController.h"
 
 #include "App/Game/Player/PlayerWeaponController.h"
+#include "App/Game/Player/PlayerShield.h"
 
 // PlayerMovement
 class Camera;
@@ -28,8 +29,6 @@ public:
     const Vector3& GetRailUp() const { return railUp_; }
     bool IsAllRangeMode() const { return isAllRangeMode_; }
     bool IsReturningToFlightArea() const { return isReturningToFlightArea_; }
-    bool IsBoosting() const { return isBoosting_; }
-    float GetBoostRatio() const { return static_cast<float>(boostRemainingSeconds_ / kBoostDurationSeconds); }
     float GetForwardSpeedMultiplier() const { return velocity_.z / normalMaxSpeed_; }
     float GetMouseSensitivity() const { return mouseSensitivity_; }
     const Vector2& GetSteeringInput() const { return steeringInput_; }
@@ -44,13 +43,11 @@ public:
     void SynchronizePosition(const EulerTransform& transform);
     void SynchronizeOrientation(const EulerTransform& transform);
     void ApplyRailPosition(EulerTransform& transform);
-    void StopMovement();
     Vector3 GetAutomaticMovementVelocity() const;
     void SetRailFrame(const Vector3& railBasePosition,
         const Vector3& railRight, const Vector3& railUp, const Vector3& railForward);
     void ApplyRailAreaForce(const Vector3& force, float deltaTimeSeconds);
-    // ブーストを開始したフレームだけtrueを返す。効果音は呼び出し側で再生する。
-    bool UpdateBoost(bool isBraking, bool shouldBoost, float deltaTimeSeconds);
+    void UpdateBrake(bool isBraking);
     void EnableAllRangeMode(const EulerTransform& transform, float areaRadius, float minHeight, float maxHeight);
     void SetMouseSensitivity(float sensitivity);
     void UpdateSteering(const Vector2& aimPosition, const Vector2& screenSizePixels,
@@ -59,7 +56,7 @@ public:
     Vector3 ClampRailOffsetToScreen(const Vector3& railOffset) const;
 
 private:
-    static constexpr double kBoostDurationSeconds = 4.0;
+    static constexpr float kRailSteeringSpeed = 0.2f;
     void UpdateAllRangeMove(EulerTransform& transform, Vector2 steering, float deltaTimeSeconds);
     void UpdateFlightOrientation(const Vector2& steering, float deltaTimeSeconds);
     void UpdateFlightAreaReturn(const EulerTransform& transform, Vector2& steering, float deltaTimeSeconds);
@@ -71,8 +68,6 @@ private:
     // カメラは外部所有。Playerから設定された参照を利用する。
     const Camera* camera_ = nullptr;
 
-    bool isBoosting_ = false;
-    double boostRemainingSeconds_ = kBoostDurationSeconds;
     bool isAllRangeMode_ = false;
     bool isReturningToFlightArea_ = false;
     float flightAreaRadius_ = 600.0f;
@@ -81,10 +76,6 @@ private:
     float flightYaw_ = 0.0f;
     float flightPitch_ = 0.0f;
     float normalMaxSpeed_ = 0.5f;
-    float boostMaxSpeed_ = 1.0f;
-    float normalAcceleration_ = 0.2f;
-    float boostAcceleration_ = 0.35f;
-    float moveSpeed_ = normalAcceleration_;
     Vector3 velocity_ = { 0.0f, 0.0f, 0.5f };
     Vector3 railBasePosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 railRight_ = { 1.0f, 0.0f, 0.0f };
@@ -118,15 +109,15 @@ class PlayerInput {
 public:
     enum class ControlInputType { Keyboard, Mouse, Gamepad };
 
-    struct BoostInput {
+    struct FlightActionInput {
         bool isBraking = false;
-        bool shouldBoost = false;
+        bool shouldActivateShield = false;
     };
 
     static ControlInputType GetControlInputType(const Input& input, bool shouldUseMouse);
     static Vector2 ReadMousePosition();
     static Vector2 ReadKeyboardSteering(const Input& input);
-    static BoostInput ReadBoost(const Input& input, bool isEnabled);
+    static FlightActionInput ReadFlightActions(const Input& input, bool isEnabled);
 };
 
 // PlayerEntryState
@@ -193,9 +184,9 @@ public:
     // 使用クラス：GamePlayScene。モデル・武器・移動・照準の初期状態を設定する。
     void Initialize(Model* model, const std::string& flightModelPath = {});
     // 使用クラス：GamePlayScene。照準・移動・発射・描画姿勢を順に更新する。
-    void Update(bool hasUpdatedBoost = false);
-    // レール進行の計算前に、このフレームのブースト入力を確定する。
-    void UpdateBoostState();
+    void Update(bool hasUpdatedFlightActions = false);
+    // 敵とレールの更新前に、減速とシールドの入力を確定する。
+    void UpdateFlightActionState();
     // 使用クラス：GamePlayScene。機体・移動・武器で使うカメラを揃える。
     void SetCamera(Camera* camera);
     // 設定中のカメラを返す。カメラの所有権はPlayerにない。
@@ -246,8 +237,10 @@ public:
     // 使用クラス：GamePlayScene。飛行範囲の内側への自動復帰中かを返す。
     bool IsReturningToFlightArea() const { return movement_.IsReturningToFlightArea(); }
     // 使用クラス：GamePlayScene。カメラ・噴射・ポストエフェクトの切り替えに使う。
-    bool IsBoosting() const { return movement_.IsBoosting(); }
-    float GetBoostRatio() const { return movement_.GetBoostRatio(); }
+    bool IsShieldActive() const { return shield_.IsActive(); }
+    float GetShieldRatio() const { return shield_.GetChargeRatio(); }
+    Sphere GetShieldCollisionSphere() const { return shield_.GetCollisionSphere(transform_.translate); }
+    void OnShieldBulletHit(const Vector3& bulletCenter, const Vector3& bulletMovement);
     float GetForwardSpeedMultiplier() const { return movement_.GetForwardSpeedMultiplier(); }
     void ResetHomingLock() { weaponController_.ResetHomingLock(); }
     void BlockFireUntilRelease() { weaponController_.BlockFireUntilRelease(); }
@@ -362,8 +355,8 @@ private:
     void SynchronizePosition();
     // 外部から設定された回転角を、全方向飛行の機首方向へ反映する。
     void SynchronizeOrientation();
-    // 加速・減速の入力を確認し、目標速度へ滑らかに近づける。
-    void UpdateBoost(Input* input, bool isDebugMode);
+    // 減速とシールドの入力をそれぞれ反映する。
+    void UpdateFlightActions(Input* input, bool isDebugMode);
     // 操作入力を読み、レール飛行か全方向飛行かに応じて移動処理を選ぶ。
     void UpdateMovement(Input* input);
     // レール基準位置と操縦によるずれを合成し、画面内に収まる機体位置を決める。
@@ -408,6 +401,7 @@ private:
 
     ControlMode controlMode_ = ControlMode::Controller;
     PlayerMovement movement_;
+    PlayerShield shield_;
 
     // 使用クラス：本クラス。保持している位置・回転・拡大率を描画オブジェクトへ渡す。
     void ApplyTransform();

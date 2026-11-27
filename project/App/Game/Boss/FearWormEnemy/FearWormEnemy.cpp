@@ -418,7 +418,8 @@ void FearWormEnemy::UpdateSegmentObjects()
     const bool openHead = state_ == BossState::Battle &&
         battleState_.actionType_ == FearWormBattleState::ActionType::Beam &&
         (battleState_.beamActionState_.IsAiming() || battleState_.beamActionState_.IsIntimidating());
-    const float openStep = (std::max)(0.0f, TimeManager::GetInstance()->GetDeltaTime()) * 3.5f;
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    const float openStep = (std::max)(0.0f, deltaTimeSeconds) * 3.5f;
     headOpenAmount_ = std::clamp(headOpenAmount_ + (openHead ? openStep : -openStep), 0.0f, 1.0f);
     const int nextHeadPose = static_cast<int>(std::round(headOpenAmount_ * 4.0f));
     if (nextHeadPose != headPoseIndex_ && !segments_.empty() && segments_[0].object && headPoseModels_[nextHeadPose]) {
@@ -433,7 +434,7 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         if (segment.hitFlashTimer > 0.0f) {
-            segment.hitFlashTimer -= TimeManager::GetInstance()->GetDeltaTime();
+            segment.hitFlashTimer -= deltaTimeSeconds;
             if (segment.hitFlashTimer < 0.0f) {
                 segment.hitFlashTimer = 0.0f;
             }
@@ -457,9 +458,12 @@ void FearWormEnemy::UpdateSegmentObjects()
         }
 
         float pulse = 1.0f + std::sin(moveTime_ * kBodyPulseFrequency + static_cast<float>(index)) * kBodyPulseAmplitude;
+        const float hitScale = segment.hitScale_.Update(deltaTimeSeconds);
         if (segment.isHead) {
             pulse = battleState_.ApplyHeadChargePulse(pulse);
+            headHitScale_ = hitScale;
         }
+        pulse *= hitScale;
 
         Vector3 scale { };
         scale.x = segment.scale.x * pulse;
@@ -585,7 +589,7 @@ void FearWormEnemy::DrawHeadHpGear()
     if (camera == nullptr) { return; }
 
     // モデルの表を頭の正面(+Z)へ向け、頭の拡大率を基準サイズに換算する。
-    const float scale = 1.0f / kHeadScale;
+    const float scale = 1.0f / (kHeadScale * headHitScale_);
     const Matrix4x4 local = MatrixMath::MakeAffineMatrix(
         Vector3 { scale, scale, scale }, Vector3 { 0.0f, std::numbers::pi_v<float>, 0.0f }, Vector3 {});
     const Matrix4x4 world = MatrixMath::Multiply(local, segments_[0].object->GetWorldMatrix());
@@ -700,6 +704,7 @@ void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
     Segment& segment = segments_[partIndex];
     segment.hp -= damage;
     segment.hitFlashTimer = kDamageHitFlashDuration;
+    segment.hitScale_.Start();
 
     if (segment.hp > 0.0f) {
         return;

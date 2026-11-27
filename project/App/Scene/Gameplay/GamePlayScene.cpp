@@ -215,8 +215,6 @@ constexpr float kUpdateTutorialGateDistanceOffset = 150.0f;
 constexpr float kUpdateObjectTranslateZ = 3400.0f;
 constexpr float kUpdateForwardMultiplier = 20.0f;
 constexpr float kForwardDebugLineWidth = 3.0f;
-constexpr float kUpdateSonicBoomTimerDefault = 0.85f;
-constexpr float kUpdateBoomProgressDivisor = 0.85f;
 constexpr float kUpdateHpRatioThreshold = 0.45f;
 constexpr float kUpdateDistanceThreshold = 40.0f;
 constexpr float kUpdateStrengthThreshold = 0.04f;
@@ -310,8 +308,6 @@ constexpr float kApplyDevelopmentActionBossOffset = 130.0f;
 constexpr float kApplyDevelopmentActionRailDistanceOffset = 200.0f;
 constexpr float kBossCollisionDebugMargin = 100.0f;
 constexpr float kDrawCollisionDebugDebugRendererAddWireSphereMultiplier = 0.5f;
-constexpr float kConfigureGameplayPostEffectsBlurWidthDefault = 0.25f;
-constexpr float kConfigureGameplayPostEffectsBlurWidthOffset = 0.28f;
 constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthDefault = 0.45f;
 constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthOffset = 0.25f;
 constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthFrequency = 8.5f;
@@ -443,25 +439,6 @@ void DrawHudFrame(const std::vector<std::unique_ptr<Sprite>>& sprites)
     }
 }
 
-Vector2 ScreenPositionToPostEffectCenter(const Vector2& screenPosition, float clientWidth, float clientHeight)
-{
-    Vector2 center {};
-    center.x = 0.5f;
-    center.y = 0.5f;
-
-    if (clientWidth <= 0.0f) {
-        return center;
-    }
-
-    if (clientHeight <= 0.0f) {
-        return center;
-    }
-
-    center.x = screenPosition.x / clientWidth;
-    center.y = screenPosition.y / clientHeight;
-    return center;
-}
-
 }
 
 // 分岐・合流の案内に使う文字を、プレイ開始前にまとめて作成する。
@@ -492,9 +469,9 @@ void GamePlayScene::Initialize()
         { "AssaultShot", "resources/Audio/GameSfx/player_minigun_shot.wav", 0.13f, 0.10f },
         { "EnemyHit", "resources/Audio/GameSfx/enemy_hit.wav", 0.16f, 0.08f },
         { "ArmorDeflect", "resources/Audio/GameSfx/armor_deflect.wav", 0.24f, 0.10f },
+        { "ShieldDeflect", "resources/Audio/GameSfx/armor_deflect.wav", 0.20f, 0.10f },
         { "PlayerDamage", "resources/Audio/GameSfx/player_damage.wav", 0.38f, 0.15f },
         { "HealPickup", "resources/Audio/GameSfx/heal_pickup.wav", 0.28f, 0.20f },
-        { "BoostStart", "resources/Audio/GameSfx/boost_start.wav", 0.22f, 0.30f },
         { "BrakeStart", "resources/Audio/GameSfx/brake_start.wav", 0.18f, 0.15f },
         { "EnemyDestroyed", "resources/Audio/GameSfx/enemy_destroyed.wav", 0.25f, 0.10f },
         { "BossDestroyed", "resources/Audio/GameSfx/boss_destroyed.wav", 0.42f, 0.50f },
@@ -561,7 +538,7 @@ void GamePlayScene::Initialize()
         }
     }
     // 通常画面は輪郭・霧・ブルームだけに固定する。
-    ConfigureGameplayPostEffects(false);
+    ConfigureGameplayPostEffects();
     // =================================================
     // Camera
     // =================================================
@@ -574,7 +551,6 @@ void GamePlayScene::Initialize()
     cameraPreferences_.Load();
     cameraBackwardOffset_ = cameraPreferences_.distance;
     camera_->SetFovY(cameraPreferences_.FovRadians());
-    boostFovY_ = cameraPreferences_.BoostFovRadians();
     normalFovY_ = camera_->GetFovY();
     currentFovY_ = normalFovY_;
 
@@ -1044,7 +1020,7 @@ void GamePlayScene::Initialize()
 
     constexpr float kGaugeRotation = std::numbers::pi_v<float> / 2.0f;
     playerHpArcSprite_ = CreatePlayerGauge(kGaugeRotation, kPlayerHpGreen, false);
-    playerBoostArcSprite_ = CreatePlayerGauge(-kGaugeRotation, kPlayerActionCyan, true);
+    playerShieldArcSprite_ = CreatePlayerGauge(-kGaugeRotation, kPlayerActionCyan, true);
     arePlayerGaugesVisible_ = false;
 
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
@@ -1137,7 +1113,6 @@ void GamePlayScene::Initialize()
     const Vector3 exhaustDirection = player_->GetEngineExhaustDirection();
     EffectManager::GetInstance()->SetEffectDirection(playerJetHandle_, exhaustDirection);
     EffectManager::GetInstance()->SetEffectDirection(playerJetSparkHandle_, exhaustDirection);
-    wasPlayerBoosting_ = false;
     wasPlayerBraking_ = false;
     brakeReactionStrength_ = 0.0f;
     brakeFovStrength_ = 0.0f;
@@ -1578,6 +1553,7 @@ void GamePlayScene::Update()
     UpdateStageObjectiveBanner();
     // レール自体の更新
     rail_->Update();
+    player_->UpdateFlightActionState();
 
     // 敵全体の更新
     {
@@ -1696,7 +1672,6 @@ void GamePlayScene::Update()
     Vector3 railRight {};
     Vector3 railUp {};
     float nextRailDistance = 0.0f;
-    player_->UpdateBoostState();
     UpdateRailMovement(currentPosition, forward, railRight, railUp, nextRailDistance);
 
     if (stageId_ == "stage02" && stageSettings_.bossType == "None"
@@ -1725,8 +1700,6 @@ void GamePlayScene::Update()
         forward = player_->GetFlightForward();
         CalculateRailBasis(forward, railRight, railUp);
     }
-    const bool isPlayerBoosting = player_->IsBoosting();
-    UpdateBoostKick(isPlayerBoosting);
     UpdateBrakeReaction(player_->GetForwardSpeedMultiplier() < 1.0f);
 
     // 進行距離を更新
@@ -1796,69 +1769,15 @@ void GamePlayScene::Update()
         kForwardDebugLineWidth);
 #endif
 
-    // プレイヤーのブースト状態に応じたエフェクト制御
-    if (isPlayerBoosting != wasPlayerBoosting_) {
-        EffectManager::GetInstance()->StopEffect(playerJetHandle_);
-        EffectManager::GetInstance()->StopEffect(playerJetSparkHandle_);
-
-        const char* jetEffectName = "Jet";
-        const char* sparkEffectName = "JetSpark";
-        if (isPlayerBoosting) {
-            jetEffectName = "JetBoost";
-            sparkEffectName = "JetBoostSpark";
-        }
-        playerJetHandle_ = EffectManager::GetInstance()->AttachEffect(
-            jetEffectName, std::bind(&Player::GetEngineExhaustPosition, player_.get()));
-        playerJetSparkHandle_ = EffectManager::GetInstance()->AttachEffect(
-            sparkEffectName, std::bind(&Player::GetEngineExhaustPosition, player_.get()));
-
-        wasPlayerBoosting_ = isPlayerBoosting;
-    }
-
     const Vector3 exhaustDirection = player_->GetEngineExhaustDirection();
     EffectManager::GetInstance()->SetEffectDirection(playerJetHandle_, exhaustDirection);
     EffectManager::GetInstance()->SetEffectDirection(playerJetSparkHandle_, exhaustDirection);
 
-    if (!isPlayerBoosting) {
-        const float jetSpeed = 4.0f * (1.0f - 0.65f * brakeReactionStrength_);
-        const float sparkSpeed = 10.0f * (1.0f - 0.55f * brakeReactionStrength_);
-        EffectManager::GetInstance()->SetEffectVelocity(playerJetHandle_, { 0.0f, 0.0f, -jetSpeed });
-        EffectManager::GetInstance()->SetEffectVelocity(playerJetSparkHandle_, { 0.0f, 0.0f, -sparkSpeed });
-    }
-
-    UpdateBoostPostEffectCenter(nextRailDistance, isPlayerBoosting);
-
-    ConfigureGameplayPostEffects(isPlayerBoosting);
-
-    // -------------------------------------------------
-    // ブースト加速トリガー時の「衝撃音波グラデーション (SonicBoom)」演出
-    // -------------------------------------------------
-    // Ctrlで減速中は発動せず、実際にブーストを開始したときだけ発動する。
-    if (isPlayerBoosting && !wasBoostingForSonicBoom_) {
-        sonicBoomTimer_ = kUpdateSonicBoomTimerDefault;
-
-        // プレイヤーの現在位置を中心発生源として画面UV座標(0.0〜1.0)へ変換
-        if (player_ && camera_) {
-            Vector3 playerWorldPos = player_->GetTranslate();
-            Vector2 screenPos = camera_->WorldToScreen(playerWorldPos);
-            float screenW = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
-            float screenH = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
-            Vector2 playerUV = { screenPos.x / screenW, screenPos.y / screenH };
-            SceneManager::GetInstance()->SetSonicBoomCenter(playerUV);
-        }
-    }
-    wasBoostingForSonicBoom_ = isPlayerBoosting;
-
-    if (sonicBoomTimer_ > 0.0f) {
-        sonicBoomTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
-        if (sonicBoomTimer_ < 0.0f) sonicBoomTimer_ = 0.0f;
-
-        float boomProgress = 1.0f - (sonicBoomTimer_ / kUpdateBoomProgressDivisor);
-        SceneManager::GetInstance()->SetSonicBoomProgress(boomProgress);
-        SceneManager::GetInstance()->AddPostEffect(
-            PostEffectType::SonicBoom,
-            PostEffectStage::BeforeParticle);
-    }
+    const float jetSpeed = 4.0f * (1.0f - 0.65f * brakeReactionStrength_);
+    const float sparkSpeed = 10.0f * (1.0f - 0.55f * brakeReactionStrength_);
+    EffectManager::GetInstance()->SetEffectVelocity(playerJetHandle_, { 0.0f, 0.0f, -jetSpeed });
+    EffectManager::GetInstance()->SetEffectVelocity(playerJetSparkHandle_, { 0.0f, 0.0f, -sparkSpeed });
+    ConfigureGameplayPostEffects();
 
     // ペイントポストエフェクトのタイマー更新（時間経過で垂れて落ちる）
     // ★加点要素: BoxFilter (3点) をインク付着時の油分視界ぼやけとして同時適用し、時間経過で徐々に減衰フェードアウト！
@@ -1981,7 +1900,7 @@ void GamePlayScene::Update()
             const Vector3 oceanVelocity{delta.x / dt, 0, delta.z / dt};
             oceanWakeForward_ = OceanInteraction::FollowWakeDirection(oceanWakeForward_, oceanVelocity, dt);
             const float strength = oceanSurface_->UpdateInteraction(position, oceanWakeForward_,
-                distance / dt, player_->IsBoosting(), dt);
+                distance / dt, false, dt);
             oceanSprayCooldown_ = (std::max)(0.0f, oceanSprayCooldown_ - dt);
             // Temporarily hide white spray so the geometric ocean response is easier to inspect.
             constexpr bool kEnableOceanSpray = false;
@@ -1992,7 +1911,7 @@ void GamePlayScene::Update()
                 const auto handle = EffectManager::GetInstance()->PlayEffect("OceanSpray", sprayPosition);
                 EffectManager::GetInstance()->SetEffectDirection(handle, oceanWakeForward_);
                 EffectManager::GetInstance()->SetEffectVelocity(handle, {0.0f, strength, 0.0f});
-                oceanSprayCooldown_ = (player_->IsBoosting() ? 0.055f : 0.085f) / (0.4f + strength * 0.6f);
+                oceanSprayCooldown_ = 0.085f / (0.4f + strength * 0.6f);
             }
         } else {
             oceanSurface_->EndInteraction();
@@ -2421,7 +2340,7 @@ void GamePlayScene::UpdateCamera(
     const float brakeKickRemainingRatio = 1.0f - std::clamp(brakeKickProgress, 0.0f, 1.0f);
     float brakeKickStrength = brakeKickRemainingRatio *
         brakeKickRemainingRatio * brakeKickRemainingRatio;
-    if (player_->IsBoosting() || debugCameraController_->GetDebugMode()) {
+    if (debugCameraController_->GetDebugMode()) {
         brakeKickStrength = 0.0f;
     }
     const float cameraBackwardOffset = cameraBackwardOffset_ *
@@ -2429,11 +2348,7 @@ void GamePlayScene::UpdateCamera(
             kBrakeCameraKickReduction * brakeKickStrength);
     if (stageSettings_.allRangeMode) {
         const float deltaTime = TimeManager::GetInstance()->GetDeltaTime();
-        float targetFov = normalFovY_;
-        if (player_->IsBoosting()) {
-            targetFov = boostFovY_;
-        }
-        currentFovY_ += (targetFov - currentFovY_) * (1.0f - std::exp(-kUpdateCameraCurrentFovYOffset * deltaTime));
+        currentFovY_ += (normalFovY_ - currentFovY_) * (1.0f - std::exp(-kUpdateCameraCurrentFovYOffset * deltaTime));
         const float renderFovY = currentFovY_ * (1.0f - kBrakeFovReduction * brakeFovStrength_);
         camera_->SetFovY(renderFovY);
         if (!debugCameraController_->GetDebugMode()) {
@@ -2502,19 +2417,8 @@ void GamePlayScene::UpdateCamera(
         return;
     }
 
-    // ブースト中かどうかで視野角（FOV）を切り替える
-    bool isBoostingForCamera = false;
-    if (player_ != nullptr) {
-        isBoostingForCamera = player_->IsBoosting();
-    }
-
-    float targetFovY = normalFovY_;
-    if (isBoostingForCamera) {
-        targetFovY = boostFovY_;
-    }
-
     // FOVの補間計算とカメラへの適用
-    currentFovY_ += (targetFovY - currentFovY_)
+    currentFovY_ += (normalFovY_ - currentFovY_)
         * GameTiming::CalculateFollowBlend(fovLerpRate_, TimeManager::GetInstance()->GetDeltaTime());
     const float renderFovY = currentFovY_ * (1.0f - kBrakeFovReduction * brakeFovStrength_);
     camera_->SetFovY(renderFovY);
@@ -3136,7 +3040,7 @@ void GamePlayScene::UpdateWeaponIcons()
 void GamePlayScene::UpdatePlayerGauges()
 {
     arePlayerGaugesVisible_ = false;
-    if (!player_ || !camera_ || !playerHpArcSprite_ || !playerBoostArcSprite_ || player_->IsDead()) { return; }
+    if (!player_ || !camera_ || !playerHpArcSprite_ || !playerShieldArcSprite_ || player_->IsDead()) { return; }
 
     const Vector3 playerPosition = player_->GetTranslate();
     const Vector3 viewPosition = MatrixMath::Transform(playerPosition, camera_->GetViewMatrix());
@@ -3159,9 +3063,9 @@ void GamePlayScene::UpdatePlayerGauges()
     playerHpArcSprite_->SetColor(hpColor);
     playerHpArcSprite_->SetEffectThreshold(hpRatio);
     playerHpArcSprite_->Update();
-    playerBoostArcSprite_->SetPosition(uiPosition);
-    playerBoostArcSprite_->SetEffectThreshold(player_->GetBoostRatio());
-    playerBoostArcSprite_->Update();
+    playerShieldArcSprite_->SetPosition(uiPosition);
+    playerShieldArcSprite_->SetEffectThreshold(player_->GetShieldRatio());
+    playerShieldArcSprite_->Update();
     arePlayerGaugesVisible_ = true;
 }
 
@@ -3266,7 +3170,7 @@ void GamePlayScene::Draw2D()
     if (!isPaused_ && weaponHudIconSprite_) weaponHudIconSprite_->Draw();
     if (arePlayerGaugesVisible_) {
         playerHpArcSprite_->Draw();
-        playerBoostArcSprite_->Draw();
+        playerShieldArcSprite_->Draw();
     }
     if (!isPaused_ && isWeaponSwitchVisible_) {
         weaponSwitchIconSprite_->Draw();
@@ -3531,7 +3435,6 @@ void GamePlayScene::ApplyCameraPreferences()
     cameraBackwardOffset_ = cameraPreferences_.distance;
     normalFovY_ = cameraPreferences_.FovRadians();
     currentFovY_ = normalFovY_;
-    boostFovY_ = cameraPreferences_.BoostFovRadians();
     hasCameraFollowState_ = false;
     cameraSaveSucceeded_ = cameraPreferences_.Save();
     if (!cameraSaveSucceeded_) Logger::Warning("Camera settings could not be saved");
@@ -3757,6 +3660,13 @@ void GamePlayScene::CheckCollision(const Vector3& previousPlayerPosition)
                 enemyBulletsCollideWithObstacles);
         if (combatEvents.paintBulletHitPlayer) {
             StartPaintHitEffect();
+        }
+        if (combatEvents.hasShieldDeflectedBullet && shieldShakeCooldownSeconds_ <= 0.0f &&
+            (cameraShakeTime_ <= 0.0f || cameraShakeStrength_ < kShieldDeflectShakeStrength)) {
+            shieldShakeCooldownSeconds_ = kShieldDeflectShakeCooldownSeconds;
+            cameraShakeTime_ = kShieldDeflectShakeDurationSeconds;
+            cameraShakeDuration_ = kShieldDeflectShakeDurationSeconds;
+            cameraShakeStrength_ = kShieldDeflectShakeStrength;
         }
     }
 
@@ -4462,50 +4372,17 @@ void GamePlayScene::Finalize()
     // SoundManager::GetInstance()->SoundUnload(&bgm);
 }
 
-// ブーストなどの状態に応じて、プレイ中の画面効果を組み合わせる。
-void GamePlayScene::ConfigureGameplayPostEffects(bool isPlayerBoosting)
+// プレイ中の画面効果を組み合わせる。
+void GamePlayScene::ConfigureGameplayPostEffects()
 {
     std::string presetId = "default";
-    RadialBlurSettings blur;
-    if (isPlayerBoosting) {
-        presetId = "boost";
-        blur.sampleCount = 48;
-        if (boostKickStrength_ > 0.0f) { blur.sampleCount = 64; }
-        blur.width = kConfigureGameplayPostEffectsBlurWidthDefault + kConfigureGameplayPostEffectsBlurWidthOffset * boostKickStrength_;
-        blur.impulseStrength = boostKickStrength_;
-    }
+    if (stageId_ == "tutorial") { presetId = "tutorial"; }
     SceneManager* sceneManager = SceneManager::GetInstance();
-    if (stageId_ == "tutorial") {
-        presetId = isPlayerBoosting ? "tutorial_boost" : "tutorial";
-    }
     sceneManager->ApplyPostEffectChain(VisualPresetLibrary::GetInstance().GetPostEffects(presetId));
     if (stageId_ == "stage04") {
         // 局所的な海霧を確認しやすいよう、距離FOGだけを外す。
         sceneManager->RemovePostEffect(PostEffectType::Fog);
     }
-    sceneManager->SetRadialBlurSettings(blur);
-    constexpr float kSparkFadeRate = 12.0f;
-    constexpr float kSparkStopThreshold = 0.01f;
-    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
-    float targetIntensity = 0.0f;
-    if (isPlayerBoosting) {
-        targetIntensity = 1.0f + 0.5f * boostKickStrength_;
-    }
-    float sparkIntensity = sceneManager->GetBoostSparkIntensity();
-    sparkIntensity += (targetIntensity - sparkIntensity) *
-        (1.0f - std::exp(-kSparkFadeRate * deltaTimeSeconds));
-    if (!isPlayerBoosting && sparkIntensity < kSparkStopThreshold) {
-        sparkIntensity = 0.0f;
-    }
-    sceneManager->SetBoostSparkIntensity(sparkIntensity);
-    if (sparkIntensity > 0.0f) {
-        sceneManager->SetBoostSparkElapsedSeconds(
-            sceneManager->GetBoostSparkElapsedSeconds() + deltaTimeSeconds);
-        sceneManager->AddPostEffect(PostEffectType::BoostSparks, PostEffectStage::AfterParticle);
-    } else {
-        sceneManager->SetBoostSparkElapsedSeconds(0.0f);
-    }
-
     UpdateWeaponHeatPostEffect();
 }
 
@@ -4661,19 +4538,14 @@ void GamePlayScene::ResetGameplayPostEffects()
     SceneManager::GetInstance()->SetCameraShakeStrength(
         SceneManager::kDefaultCameraShakeStrength);
 
-    boostKickTimer_ = 0.0f;
-    boostKickStrength_ = 0.0f;
-    wasBoostingForKick_ = false;
-    wasBoostingForSonicBoom_ = false;
-    wasPlayerBoosting_ = false;
     wasPlayerBraking_ = false;
     brakeReactionStrength_ = 0.0f;
     brakeFovStrength_ = 0.0f;
     brakeCameraKickRemainingSeconds_ = 0.0f;
-    smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
     cameraShakeTime_ = 0.0f;
     cameraShakeDuration_ = 0.0f;
     cameraShakeStrength_ = 0.0f;
+    shieldShakeCooldownSeconds_ = 0.0f;
     waterDropEffectTimer_ = 0.0f;
     damageFlashRemainingSeconds_ = 0.0f;
     lowHpPulseElapsedSeconds_ = 0.0f;
@@ -4731,6 +4603,8 @@ void GamePlayScene::UpdatePlayerDamagePostEffects()
 void GamePlayScene::UpdateCameraShakePostEffect()
 {
     SceneManager* sceneManager = SceneManager::GetInstance();
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    shieldShakeCooldownSeconds_ = (std::max)(0.0f, shieldShakeCooldownSeconds_ - deltaTimeSeconds);
     if (cameraShakeTime_ <= 0.0f ||
         cameraShakeDuration_ <= 0.0f ||
         cameraShakeStrength_ <= 0.0f) {
@@ -4742,7 +4616,7 @@ void GamePlayScene::UpdateCameraShakePostEffect()
         return;
     }
 
-    cameraShakeTime_ -= TimeManager::GetInstance()->GetDeltaTime();
+    cameraShakeTime_ -= deltaTimeSeconds;
     if (cameraShakeTime_ < 0.0f) {
         cameraShakeTime_ = 0.0f;
     }
@@ -5044,112 +4918,6 @@ void GamePlayScene::UpdateBrakeReaction(bool isPlayerBraking)
     }
     const float fovBlendRatio = 1.0f - std::exp(-fovResponsePerSecond * deltaTimeSeconds);
     brakeFovStrength_ += (targetStrength - brakeFovStrength_) * fovBlendRatio;
-}
-
-// ブースト開始時の勢いを示す一時的なカメラ変化を更新する。
-void GamePlayScene::UpdateBoostKick(bool isPlayerBoosting)
-{
-    if (isPlayerBoosting && !wasBoostingForKick_) {
-        boostKickTimer_ = kBoostKickDuration;
-    }
-
-    wasBoostingForKick_ = isPlayerBoosting;
-
-    if (!isPlayerBoosting) {
-        boostKickTimer_ = 0.0f;
-        boostKickStrength_ = 0.0f;
-        return;
-    }
-
-    boostKickStrength_ = 0.0f;
-    if (boostKickTimer_ > 0.0f) {
-        float normalizedTime = boostKickTimer_ / kBoostKickDuration;
-        boostKickStrength_ = normalizedTime * normalizedTime;
-        boostKickTimer_ -= TimeManager::GetInstance()->GetDeltaTime();
-        if (boostKickTimer_ < 0.0f) {
-            boostKickTimer_ = 0.0f;
-        }
-    }
-}
-
-// レールの進行先をもとに、ブーストの放射状効果の中心を更新する。
-void GamePlayScene::UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting)
-{
-    Vector2 targetCenter {};
-    targetCenter.x = 0.5f;
-    targetCenter.y = 0.5f;
-
-    if (isPlayerBoosting) {
-        targetCenter = CalculateBoostPostEffectCenter(nextRailDistance);
-        smoothedBoostPostEffectCenter_ = Lerp(smoothedBoostPostEffectCenter_, targetCenter,
-            GameTiming::CalculateFollowBlend(kBoostPostEffectCenterLerpRate, TimeManager::GetInstance()->GetDeltaTime()));
-    } else {
-        smoothedBoostPostEffectCenter_ = targetCenter;
-    }
-
-    SceneManager::GetInstance()->SetPostEffectCenter(smoothedBoostPostEffectCenter_);
-}
-
-// 少し先の進行方向を画面へ投影し、速度演出を集める中心位置を求める。
-Vector2 GamePlayScene::CalculateBoostPostEffectCenter(float nextRailDistance) const
-{
-    Vector2 center {};
-    center.x = 0.5f;
-    center.y = 0.5f;
-
-    if (camera_ == nullptr) {
-        return center;
-    }
-
-    if (rail_ == nullptr) {
-        return center;
-    }
-
-    if (player_ == nullptr) {
-        return center;
-    }
-
-    float clientWidth = static_cast<float>(WinApp::GetInstance()->GetClientWidth());
-    float clientHeight = static_cast<float>(WinApp::GetInstance()->GetClientHeight());
-
-    if (clientWidth <= 0.0f) {
-        clientWidth = static_cast<float>(WinApp::kClientWidth);
-    }
-
-    if (clientHeight <= 0.0f) {
-        clientHeight = static_cast<float>(WinApp::kClientHeight);
-    }
-
-    float vanishPointDistance = nextRailDistance + kBoostPostEffectVanishPointDistance;
-    float totalLength = rail_->GetTotalLength();
-    if (vanishPointDistance > totalLength) {
-        vanishPointDistance = totalLength;
-    }
-
-    Vector3 vanishPointPosition = GetRailPosition(vanishPointDistance);
-    if (stageSettings_.allRangeMode) {
-        vanishPointPosition = player_->GetTranslate() +
-            player_->GetFlightForward() * kBoostPostEffectVanishPointDistance;
-    }
-    Vector2 vanishPointScreen = camera_->WorldToScreen(vanishPointPosition);
-    Vector2 vanishPointCenter = ScreenPositionToPostEffectCenter(vanishPointScreen, clientWidth, clientHeight);
-
-    Vector2 playerScreen = camera_->WorldToScreen(player_->GetTranslate());
-    Vector2 playerCenter = ScreenPositionToPostEffectCenter(playerScreen, clientWidth, clientHeight);
-
-    center.x =
-        0.5f * kBoostPostEffectBaseWeight +
-        vanishPointCenter.x * kBoostPostEffectVanishPointWeight +
-        playerCenter.x * kBoostPostEffectPlayerWeight;
-    center.y =
-        0.5f * kBoostPostEffectBaseWeight +
-        vanishPointCenter.y * kBoostPostEffectVanishPointWeight +
-        playerCenter.y * kBoostPostEffectPlayerWeight;
-
-    center.x = std::clamp(center.x, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
-    center.y = std::clamp(center.y, kBoostPostEffectCenterMin, kBoostPostEffectCenterMax);
-
-    return center;
 }
 
 // 配置データの種類に応じてモデル・障害物・トリガーなどを生成する。

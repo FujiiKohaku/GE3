@@ -117,10 +117,9 @@ void TestGamepadAimAndRailControls()
     PlayerTestAccess::StopMovement(movement);
     pad.wButtons = XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y;
     InputTestAccess::Set(input, pad);
-    PlayerTestAccess::UpdateBoost(movement, &input, false);
-    assert(!movement.IsBoosting());
+    PlayerTestAccess::UpdateFlightActions(movement, &input, false);
     assert(movement.GetForwardSpeedMultiplier() == 0.5f);
-    PlayerTestAccess::UpdateBoost(movement, &input, true);
+    PlayerTestAccess::UpdateFlightActions(movement, &input, true);
     assert(movement.GetForwardSpeedMultiplier() == 1.0f);
     InputTestAccess::Set(input, {});
 }
@@ -292,13 +291,12 @@ void TestIndependentAllRangeMovement()
         assert(IsNear(transform.translate.z, 30.0f));
         assert(IsNear(transform.translate.y, 50.0f));
 
-        assert(movement.UpdateBoost(false, true, 1.0f));
+        movement.UpdateBrake(false);
         movement.UpdateMovement(transform, {}, 1.0f, 1.0f);
-        assert(IsNear(transform.translate.z, 90.0f));
-        assert(!movement.UpdateBoost(true, true, 1.0f));
-        assert(!movement.IsBoosting());
+        assert(IsNear(transform.translate.z, 60.0f));
+        movement.UpdateBrake(true);
         movement.UpdateMovement(transform, {}, 1.0f, 1.0f);
-        assert(IsNear(transform.translate.z, 105.0f));
+        assert(IsNear(transform.translate.z, 75.0f));
     }
 }
 
@@ -370,47 +368,50 @@ void TestPlayerInputOperations()
     InputTestAccess::SetKeyPressed(input, DIK_A, false);
 
     InputTestAccess::SetKeyPressed(input, DIK_LSHIFT, true);
-    assert(PlayerInput::ReadBoost(input, true).shouldBoost);
+    assert(PlayerInput::ReadFlightActions(input, true).shouldActivateShield);
     InputTestAccess::SetKeyPressed(input, DIK_LSHIFT, false);
     InputTestAccess::SetMousePressed(input, 1, true);
-    assert(PlayerInput::ReadBoost(input, true).shouldBoost);
+    assert(PlayerInput::ReadFlightActions(input, true).shouldActivateShield);
     InputTestAccess::SetMousePressed(input, 1, false);
 
     XINPUT_GAMEPAD pad{};
     pad.wButtons = XINPUT_GAMEPAD_LEFT_SHOULDER | XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y;
     InputTestAccess::Set(input, pad);
-    const PlayerInput::BoostInput boostInput = PlayerInput::ReadBoost(input, true);
-    assert(boostInput.isBraking && boostInput.shouldBoost);
+    const PlayerInput::FlightActionInput flightInput = PlayerInput::ReadFlightActions(input, true);
+    assert(flightInput.isBraking && flightInput.shouldActivateShield);
     PlayerMovement movement;
-    movement.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost, 1.0f / 60.0f);
-    assert(!movement.IsBoosting());
+    movement.UpdateBrake(flightInput.isBraking);
     assert(IsNear(movement.GetForwardSpeedMultiplier(), 0.5f));
-    const PlayerInput::BoostInput disabledBoost = PlayerInput::ReadBoost(input, false);
-    assert(!disabledBoost.isBraking && !disabledBoost.shouldBoost);
+    const PlayerInput::FlightActionInput disabledInput = PlayerInput::ReadFlightActions(input, false);
+    assert(!disabledInput.isBraking && !disabledInput.shouldActivateShield);
 
     InputTestAccess::Set(input, {}, {}, false);
 }
 
-void TestBoostDurationAndRecharge()
+void TestShieldDurationAndRecharge()
 {
     for (int framesPerSecond : { 30, 60, 120 }) {
-        PlayerMovement movement;
+        PlayerShield shield;
         const float deltaTimeSeconds = 1.0f / static_cast<float>(framesPerSecond);
-        for (int frameIndex = 0; frameIndex < 4 * framesPerSecond; ++frameIndex) {
-            const bool hasStarted = movement.UpdateBoost(false, true, deltaTimeSeconds);
-            assert(hasStarted == (frameIndex == 0));
-            assert(movement.IsBoosting());
+        assert(!shield.IsActive());
+        for (int frameIndex = 0; frameIndex < 3 * framesPerSecond; ++frameIndex) {
+            shield.Update(true, deltaTimeSeconds);
+            assert(shield.IsActive());
         }
-        assert(movement.GetBoostRatio() == 0.0f);
-        assert(!movement.UpdateBoost(false, true, 1.0f));
-        assert(!movement.IsBoosting());
-        assert(movement.GetBoostRatio() == 0.0f);
+        assert(shield.GetChargeRatio() == 0.0f);
+        shield.Update(true, 1.0f);
+        assert(!shield.IsActive());
+        assert(shield.GetChargeRatio() == 0.0f);
 
-        for (int frameIndex = 0; frameIndex < 4 * framesPerSecond; ++frameIndex) {
-            movement.UpdateBoost(false, false, deltaTimeSeconds);
+        for (int frameIndex = 0; frameIndex < 3 * framesPerSecond; ++frameIndex) {
+            shield.Update(false, deltaTimeSeconds);
         }
-        assert(IsNear(movement.GetBoostRatio(), 1.0f));
-        assert(movement.UpdateBoost(false, true, deltaTimeSeconds));
+        assert(IsNear(shield.GetChargeRatio(), 1.0f));
+        shield.Update(true, deltaTimeSeconds);
+        assert(shield.IsActive());
+        shield.Reset();
+        assert(!shield.IsActive());
+        assert(shield.GetChargeRatio() == 1.0f);
     }
 }
 
@@ -431,7 +432,7 @@ int main(int argumentCount, char** arguments)
     TestRailFrameAndAreaForce();
     TestAllRangeAndControls();
     TestMovementWithoutBank();
-    TestBoostDurationAndRecharge();
+    TestShieldDurationAndRecharge();
     if (argumentCount == 2 && std::strcmp(arguments[1], "--movement-input-only") == 0) {
         TestIndependentAllRangeMovement();
         TestPlayerInputOperations();

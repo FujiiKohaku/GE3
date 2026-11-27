@@ -69,12 +69,6 @@ void PlayerMovement::ApplyRailPosition(EulerTransform& transform)
     }
 }
 
-void PlayerMovement::StopMovement()
-{
-    // 死亡時に操作状態を解除する。速度や位置を0にする処理ではない。
-    isBoosting_ = false;
-}
-
 Vector3 PlayerMovement::GetAutomaticMovementVelocity() const
 {
     if (isAllRangeMode_) {
@@ -100,30 +94,13 @@ void PlayerMovement::ApplyRailAreaForce(const Vector3& force, float deltaTimeSec
     railOffset_ = ClampRailOffsetToScreen(railOffset_);
 }
 
-bool PlayerMovement::UpdateBoost(bool isBraking, bool shouldBoost, float deltaTimeSeconds)
+void PlayerMovement::UpdateBrake(bool isBraking)
 {
     constexpr float kBrakeSpeedMultiplier = 0.5f;
-    constexpr double kBoostTimeToleranceSeconds = 0.000001;
-    const double elapsedSeconds = (std::max)(0.0, static_cast<double>(deltaTimeSeconds));
-    const bool wasBoosting = isBoosting_;
-    isBoosting_ = shouldBoost && !isBraking && boostRemainingSeconds_ > 0.0;
-    if (isBoosting_) {
-        boostRemainingSeconds_ -= elapsedSeconds;
-        if (boostRemainingSeconds_ < kBoostTimeToleranceSeconds) {
-            boostRemainingSeconds_ = 0.0;
-        }
-    } else if (!shouldBoost) {
-        boostRemainingSeconds_ = (std::min)(kBoostDurationSeconds, boostRemainingSeconds_ + elapsedSeconds);
-    }
     velocity_.z = normalMaxSpeed_;
-    moveSpeed_ = normalAcceleration_;
     if (isBraking) {
         velocity_.z = normalMaxSpeed_ * kBrakeSpeedMultiplier;
-    } else if (isBoosting_) {
-        velocity_.z = boostMaxSpeed_;
-        moveSpeed_ = boostAcceleration_;
     }
-    return isBoosting_ && !wasBoosting;
 }
 
 void PlayerMovement::EnableAllRangeMode(const EulerTransform& transform, float areaRadius, float minHeight, float maxHeight)
@@ -436,9 +413,9 @@ void PlayerMovement::UpdateMovement(EulerTransform& transform, const Vector2& st
         UpdateAllRangeMove(transform, steering, deltaTimeSeconds);
     } else {
         Vector3 nextRailOffset = railOffset_;
-        nextRailOffset.x += steering.x * moveSpeed_ * railResponse
+        nextRailOffset.x += steering.x * kRailSteeringSpeed * railResponse
             * GameTiming::CalculateReferenceStep(deltaTimeSeconds);
-        nextRailOffset.y += steering.y * moveSpeed_ * railResponse
+        nextRailOffset.y += steering.y * kRailSteeringSpeed * railResponse
             * GameTiming::CalculateReferenceStep(deltaTimeSeconds);
         railOffset_ = ClampRailOffsetToScreen(nextRailOffset);
     }
@@ -491,17 +468,17 @@ Vector2 PlayerInput::ReadKeyboardSteering(const Input& input)
     return steering;
 }
 
-PlayerInput::BoostInput PlayerInput::ReadBoost(const Input& input, bool isEnabled)
+PlayerInput::FlightActionInput PlayerInput::ReadFlightActions(const Input& input, bool isEnabled)
 {
-    BoostInput boostInput;
+    FlightActionInput flightInput;
     if (!isEnabled) {
-        return boostInput;
+        return flightInput;
     }
-    boostInput.isBraking = input.IsKeyPressed(DIK_LCONTROL) || input.IsKeyPressed(DIK_RCONTROL) ||
+    flightInput.isBraking = input.IsKeyPressed(DIK_LCONTROL) || input.IsKeyPressed(DIK_RCONTROL) ||
         input.IsGamepadButtonPressed(XINPUT_GAMEPAD_Y);
-    boostInput.shouldBoost = input.IsKeyPressed(DIK_LSHIFT) || input.IsMousePressed(1) ||
+    flightInput.shouldActivateShield = input.IsKeyPressed(DIK_LSHIFT) || input.IsMousePressed(1) ||
         input.IsGamepadButtonPressed(XINPUT_GAMEPAD_X);
-    return boostInput;
+    return flightInput;
 }
 
 // PlayerEntryState
@@ -665,6 +642,7 @@ void Player::Initialize(Model* model, const std::string& flightModelPath)
     }
 
     weaponController_.Initialize();
+    shield_.Initialize(camera_);
 
     transform_.scale = { 1.0f, 1.0f, 1.0f };
     transform_.rotate = { 0.0f, 0.0f, 0.0f };
@@ -680,7 +658,7 @@ void Player::Initialize(Model* model, const std::string& flightModelPath)
 }
 
 // 入力・被弾状態・移動・武器を更新し、最後に機体の姿勢を描画へ反映する。
-void Player::Update(bool hasUpdatedBoost)
+void Player::Update(bool hasUpdatedFlightActions)
 {
     shouldUpdateWeaponsAfterCamera_ = false;
     if (object_ == nullptr || TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
@@ -692,8 +670,8 @@ void Player::Update(bool hasUpdatedBoost)
     }
     switch (state_) {
     case State::Battle:
-        if (!hasUpdatedBoost) {
-            UpdateBoostState();
+        if (!hasUpdatedFlightActions) {
+            UpdateFlightActionState();
         }
         battleState_.Update(*this);
         break;
@@ -727,8 +705,8 @@ void Player::Update(bool hasUpdatedBoost)
     }
 }
 
-// レールを進める前に加減速入力を読み取り、このフレームの速度を確定する。
-void Player::UpdateBoostState()
+// レールを進める前に減速とシールドの入力を反映する。
+void Player::UpdateFlightActionState()
 {
     if (!IsAlive()) {
         StopMovement();
@@ -744,7 +722,7 @@ void Player::UpdateBoostState()
     if (debugCameraController_ != nullptr) {
         isDebugMode_ = debugCameraController_->GetDebugMode();
     }
-    UpdateBoost(input, isDebugMode_);
+    UpdateFlightActions(input, isDebugMode_);
 }
 
 void Player::SetCamera(Camera* camera)
@@ -752,6 +730,7 @@ void Player::SetCamera(Camera* camera)
     camera_ = camera;
     movement_.SetCamera(camera);
     weaponController_.SetCamera(camera);
+    shield_.SetCamera(camera);
     if (object_ != nullptr) {
         object_->SetCamera(camera);
     }
@@ -805,12 +784,20 @@ Vector3 Player::GetAutomaticWorldVelocity() const
 // HP側の被弾判定を行い、死亡した場合は移動とロックオンも停止する。
 bool Player::ApplyDamage(int damage)
 {
+    if (shield_.IsActive()) {
+        return false;
+    }
     const bool hasAppliedDamage = ApplyHealthDamage(damage);
     if (hasAppliedDamage && IsDead()) {
-        // 死亡状態への移行に合わせ、ブースト・ロックオンを解除する。
+        // 死亡状態への移行に合わせ、シールドとロックオンを解除する。
         ChangeState(State::Dead);
     }
     return hasAppliedDamage;
+}
+
+void Player::OnShieldBulletHit(const Vector3& bulletCenter, const Vector3& bulletMovement)
+{
+    shield_.OnBulletHit(transform_.translate, bulletCenter, bulletMovement);
 }
 
 // 現在表示するモデルや追加パーツを描画する。
@@ -830,6 +817,7 @@ void Player::Draw()
             object_->Draw();
         }
     }
+    shield_.Draw(transform_.translate);
 }
 
 // 影を落とす対象のモデルを、影用の描画処理へ渡す。
@@ -1083,7 +1071,7 @@ void Player::ApplyRailPosition()
 // 死亡や操作停止時に、速度とロールなどの移動状態を解除する。
 void Player::StopMovement()
 {
-    movement_.StopMovement();
+    shield_.Reset();
     flightVisualVertical_ = 0.0f;
     flightVisualBank_ = 0.0f;
 }
@@ -1112,13 +1100,11 @@ void Player::SetControlMode(ControlMode mode)
     }
     controlMode_ = mode;
 }
-// 加速・減速の入力を確認し、目標速度へ滑らかに近づける。
-void Player::UpdateBoost(Input* input, bool isDebugMode)
+void Player::UpdateFlightActions(Input* input, bool isDebugMode)
 {
-    const PlayerInput::BoostInput boostInput = PlayerInput::ReadBoost(*input, !isDebugMode);
-    if (movement_.UpdateBoost(boostInput.isBraking, boostInput.shouldBoost, TimeManager::GetInstance()->GetDeltaTime())) {
-        SoundManager::GetInstance()->Play("BoostStart");
-    }
+    const PlayerInput::FlightActionInput flightInput = PlayerInput::ReadFlightActions(*input, !isDebugMode);
+    movement_.UpdateBrake(flightInput.isBraking);
+    shield_.Update(flightInput.shouldActivateShield, TimeManager::GetInstance()->GetDeltaTime());
 }
 
 void Player::EnableAllRangeMode(float areaRadius, float minHeight, float maxHeight)

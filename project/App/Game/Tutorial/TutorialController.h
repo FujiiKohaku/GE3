@@ -36,7 +36,7 @@ public:
 
 private:
     friend struct TutorialTestAccess;
-    enum class StepType { Move, DefeatTargets, Heat, Boost, Brake, WeaponPractice, Pause };
+    enum class StepType { Move, DefeatTargets, Heat, Shield, Brake, WeaponPractice, Pause };
     struct StepData {
         StepType type;
         std::string title;
@@ -57,7 +57,7 @@ private:
         bool isPitchInverted = false;
         float moveX = 0.0f;
         float moveY = 0.0f;
-        bool isBoosting = false;
+        bool isShieldActive = false;
         float speedMultiplier = 1.0f;
         float heat = 0.0f;
         bool isOverheated = false;

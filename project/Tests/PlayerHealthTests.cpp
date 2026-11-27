@@ -72,6 +72,19 @@ void TestHealingAndDeath()
     assert(transform.translate.y == finalHeight);
 }
 
+void TestShieldBlocksDamage()
+{
+    Player player;
+    PlayerTestAccess::UpdateShield(player, true, 1.0f / 60.0f);
+    assert(player.IsShieldActive());
+    assert(!player.ApplyDamage(3));
+    assert(player.GetCurrentHp() == player.GetMaxHp());
+
+    PlayerTestAccess::UpdateShield(player, false, 1.0f / 60.0f);
+    assert(player.ApplyDamage(3));
+    assert(player.GetCurrentHp() == player.GetMaxHp() - 3);
+}
+
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
 void TestDevelopmentInvincibility()
 {
@@ -104,6 +117,7 @@ int main()
     TestEntryBattleAndDeathTransitions();
     TestDamageAndInvincibility();
     TestHealingAndDeath();
+    TestShieldBlocksDamage();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     TestDevelopmentInvincibility();
 #endif

@@ -142,21 +142,14 @@ private:
     static constexpr float kPlayerEnemyCollisionRadius = 2.0f;
     static constexpr float kPlayerBulletEnemyCollisionRadius = 4.0f;
 
-    // ブースト演出
-    static constexpr float kBoostPostEffectBaseWeight = 0.40f;
-    static constexpr float kBoostPostEffectVanishPointWeight = 0.30f;
-    static constexpr float kBoostPostEffectPlayerWeight = 0.30f;
-    static constexpr float kBoostPostEffectCenterMin = 0.28f;
-    static constexpr float kBoostPostEffectCenterMax = 0.72f;
-    static constexpr float kBoostPostEffectVanishPointDistance = 150.0f;
-    static constexpr float kBoostPostEffectCenterLerpRate = 0.1f;
-    static constexpr float kBoostKickDuration = 0.2f;
-    static constexpr float kBoostKickFovAdd = 0.1f;
 
     // カメラシェイク
     static constexpr float kCameraShakeFadeDuration = 5.0f;
     static constexpr float kPlayerDamageShakeDurationSeconds = 0.8f;
     static constexpr float kPlayerDamageShakeStrength = 0.0085f;
+    static constexpr float kShieldDeflectShakeDurationSeconds = 0.09f;
+    static constexpr float kShieldDeflectShakeCooldownSeconds = 0.14f;
+    static constexpr float kShieldDeflectShakeStrength = 0.0022f;
     static constexpr float kPlayerDamageFlashDurationSeconds = 0.35f;
     static constexpr float kPlayerDamageFlashStrength = 0.85f;
     static constexpr float kBossMadShakeDuration = 7.0f;
@@ -231,20 +224,13 @@ private:
     void UpdatePlayerTransform(const Vector3& currentPosition, const Vector3& railRight, const Vector3& railUp, const Vector3& forward);
     // 機体とレールに追従する視点を作り、加減速や旋回によるカメラ演出を加える。
     void UpdateCamera(const Vector3& currentPosition, const Vector3& forward, const Vector3& railRight, const Vector3& railUp, float nextRailDistance, Input* input);
-    // ブースト開始時の勢いを示す一時的なカメラ変化を更新する。
-    void UpdateBoostKick(bool isPlayerBoosting);
     // 減速の開始と継続に合わせて、視点や機体の反応を調整する。
     void UpdateBrakeReaction(bool isPlayerBraking);
-    // レールの進行先をもとに、ブーストの放射状効果の中心を更新する。
-    void UpdateBoostPostEffectCenter(float nextRailDistance, bool isPlayerBoosting);
     // 被弾や演出による揺れの強さを更新し、画面効果に反映する。
     void UpdateCameraShakePostEffect();
     // 衝突判定後のHP変化から、赤い周辺効果と短い被弾シェイクを更新する。
     void UpdatePlayerDamagePostEffects();
-    // 少し先の進行方向を画面へ投影し、速度演出を集める中心位置を求める。
-    Vector2 CalculateBoostPostEffectCenter(float nextRailDistance) const;
-    // ブーストなどの状態に応じて、プレイ中の画面効果を組み合わせる。
-    void ConfigureGameplayPostEffects(bool isPlayerBoosting);
+    void ConfigureGameplayPostEffects();
     // 武器の熱量から画面端の演出強度を計算し、過熱や冷却の変化を滑らかに見せる。
     void UpdateWeaponHeatPostEffect();
     // ステージに指定された照明・霧・画面効果のプリセットを適用する。
@@ -429,18 +415,13 @@ private:
     Vector3 cameraRotate_ = { 0.0f, 0.0f, 0.0f };
     EffectHandle playerJetHandle_ = kInvalidEffectHandle;
     EffectHandle playerJetSparkHandle_ = kInvalidEffectHandle;
-    bool wasPlayerBoosting_ = false;
     bool wasPlayerBraking_ = false;
     float brakeReactionStrength_ = 0.0f;
     float brakeFovStrength_ = 0.0f;
     static constexpr float kBrakeCameraKickDurationSeconds = 0.32f;
     float brakeCameraKickRemainingSeconds_ = 0.0f;
-    bool wasBoostingForKick_ = false;
     float normalFovY_ = 0.45f;
-    float boostFovY_ = 0.60f;
     float currentFovY_ = 0.45f;
-    float boostKickTimer_ = 0.0f;
-    float boostKickStrength_ = 0.0f;
     float fovLerpRate_ = 0.1f;
     float cameraFollowLerpRate_ = 0.2f;
     float cameraForwardLerpRate_ = 0.2f;
@@ -448,7 +429,6 @@ private:
     Vector3 smoothedCameraPosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 smoothedLookAheadPosition_ = { 0.0f, 0.0f, 0.0f };
     Vector3 smoothedCameraForward_ = { 0.0f, 0.0f, 1.0f };
-    Vector2 smoothedBoostPostEffectCenter_ = { 0.5f, 0.5f };
     float weaponHeatEdgeIntensity_ = 0.0f;
     NormalEnemyLevelTable normalEnemyLevels_;
     float weaponOverheatFlashRemainingSeconds_ = 0.0f;
@@ -532,6 +512,7 @@ private:
 
     // カメラシェイク演出用
     float cameraShakeTime_ = 0.0f;
+    float shieldShakeCooldownSeconds_ = 0.0f;
     float cameraShakeStrength_ = 0.0f;
     float cameraShakeDuration_ = 0.0f;
 
@@ -566,9 +547,6 @@ private:
     float clearCameraStartFov_ = 0.45f;
     std::unique_ptr<Sprite> clearFadeSprite_;
 
-    // ブースト加速ソニックブーム衝撃音波タイマー
-    float sonicBoomTimer_ = 0.0f;
-    bool wasBoostingForSonicBoom_ = false;
 
     // ポーズメニュー（TABキー）関連
     bool isPaused_ = false;
@@ -619,7 +597,7 @@ private:
 
     // 機体の左右に重ねる円弧ゲージ。
     std::unique_ptr<Sprite> playerHpArcSprite_;
-    std::unique_ptr<Sprite> playerBoostArcSprite_;
+    std::unique_ptr<Sprite> playerShieldArcSprite_;
     bool arePlayerGaugesVisible_ = false;
 
     uint32_t bossSpotLightHandle_ = 0xffffffffu;

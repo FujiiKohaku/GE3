@@ -17,6 +17,10 @@
 namespace {
 constexpr const char* kDefaultObject3dPixelShader =
     "resources/Shaders/Object3D/Unlit/Render.PS.hlsl";
+constexpr const char* kPlayerShieldPixelShader =
+    "resources/Shaders/Object3D/PlayerShield/Render.PS.hlsl";
+constexpr const char* kTransparentPlayerShieldPixelShader =
+    "resources/Shaders/Object3D/Transparent/PlayerShield.PS.hlsl";
 
 std::string MakePipelineKey(const std::string& pixelShaderPath, BlendMode blendMode,
     bool transparent, bool transparentDepthWrite, const std::string& vertexShaderPath)
@@ -53,6 +57,7 @@ const std::string& Object3dManager::GetTransparentShader(const std::string& shad
         { "resources/Shaders/Object3D/FearWormBeam/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/FearWormBeam.PS.hlsl" },
         { "resources/Shaders/Object3D/DanmakuBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Danmaku.PS.hlsl" },
         { "resources/Shaders/Object3D/PlayerBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/PlayerBullet.PS.hlsl" },
+        { kPlayerShieldPixelShader, kTransparentPlayerShieldPixelShader },
         { "resources/Shaders/Object3D/AssaultBullet/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/AssaultBullet.PS.hlsl" },
         { "resources/Shaders/Object3D/Unlit/Render.PS.hlsl", "resources/Shaders/Object3D/Transparent/Unlit.PS.hlsl" }
     };
@@ -558,6 +563,9 @@ Microsoft::WRL::ComPtr<ID3D12PipelineState> Object3dManager::CreateMaterialPipel
     D3D12_RASTERIZER_DESC rasterizerDesc {};
     rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
     rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+    if (pixelShaderPath == kPlayerShieldPixelShader || pixelShaderPath == kTransparentPlayerShieldPixelShader) {
+        rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+    }
 
     D3D12_DEPTH_STENCIL_DESC depthStencilDesc {};
     depthStencilDesc.DepthEnable = TRUE;

@@ -135,8 +135,12 @@ void FearWormBeam::CheckCollision(Player* player)
         hitEffectElapsedSeconds_ = 0.0f;
         return;
     }
-    isHittingPlayer_ = true;
     player->ApplyDamage(kDamage);
+    if (player->IsShieldActive()) {
+        hitEffectElapsedSeconds_ = 0.0f;
+        return;
+    }
+    isHittingPlayer_ = true;
     const int32_t effectCount = FearWormTiming::AdvanceInterval(hitEffectElapsedSeconds_,
         kHitEffectIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 1);
     if (effectCount > 0) {

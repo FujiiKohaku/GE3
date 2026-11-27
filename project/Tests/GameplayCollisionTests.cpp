@@ -201,6 +201,39 @@ bool RunEnemyBulletObstacleTests()
     return !bullets[0]->IsAlive() && !events.paintBulletHitPlayer;
 }
 
+bool RunPlayerShieldCollisionTests()
+{
+    GameplayCollisionSystem system;
+    std::vector<std::unique_ptr<BaseEnemy>> enemies;
+    std::vector<std::unique_ptr<Object3d>> obstacles;
+    Player player;
+    PlayerTestAccess::Transform(player).translate = { 10.0f, 4.0f, 30.0f };
+    const int initialHp = player.GetCurrentHp();
+    const Sphere shieldSphere = player.GetShieldCollisionSphere();
+    if (Vector3LengthSquared(shieldSphere.center - player.GetTranslate()) != 0.0f) { return false; }
+
+    // Cross the shield at a lateral distance beyond the normal player hitbox.
+    for (bool isShieldActive : { false, true }) {
+        PlayerTestAccess::UpdateShield(player, isShieldActive, 1.0f / 60.0f);
+        std::vector<std::unique_ptr<EnemyBullet>> bullets;
+        auto grazingBullet = std::make_unique<ObstacleTestEnemyBullet>();
+        auto missedBullet = std::make_unique<ObstacleTestEnemyBullet>();
+        const Vector3 grazingStart = shieldSphere.center + Vector3 { shieldSphere.radius - 0.5f, 0.0f, -12.0f };
+        const Vector3 missedStart = shieldSphere.center + Vector3 { shieldSphere.radius + 5.0f, 0.0f, -12.0f };
+        const Vector3 movement { 0.0f, 0.0f, 24.0f };
+        grazingBullet->SetMovement(grazingStart, grazingStart + movement);
+        missedBullet->SetMovement(missedStart, missedStart + movement);
+        bullets.push_back(std::move(grazingBullet));
+        bullets.push_back(std::move(missedBullet));
+
+        const auto events = system.UpdateCombatCollisions(player, enemies, bullets, obstacles);
+        if (bullets[0]->IsAlive() == isShieldActive || !bullets[1]->IsAlive() ||
+            events.hasShieldDeflectedBullet != isShieldActive || events.paintBulletHitPlayer ||
+            player.GetCurrentHp() != initialHp) { return false; }
+    }
+    return true;
+}
+
 bool RunUnderwaterColliderTests()
 {
     // 回転する複合コライダーは中心も追従し、従来の固定オフセットは維持する。
@@ -883,6 +916,12 @@ bool RunWaterPillarHeightTests()
 
 int main(int argumentCount, char** arguments)
 {
+    if (!RunPlayerShieldCollisionTests()) {
+        std::puts("FAILED: shield sphere catches grazing enemy bullets without applying paint or damage");
+        return 1;
+    }
+    std::puts("PASS: shield sphere catches grazing enemy bullets without applying paint or damage");
+    if (argumentCount == 2 && std::strcmp(arguments[1], "--shield-only") == 0) { return 0; }
     if (!RunElectricGateCollisionTests()) {
         std::puts("FAILED: electric gate sweep, safe gap, rotation, radius or damage invincibility");
         return 1;
