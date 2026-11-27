@@ -595,7 +595,7 @@ void GamePlayScene::Initialize()
     clearPlayerBoundsRadius_ = playerModel->GetBoundsRadius();
 
     // エネミー・弾モデル
-    enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
+    enemyModel_ = ModelManager::GetInstance()->Load("Debug/BaikinMusi/baikinMusi.obj");
     if (stageId_ == "stage01") {
         for (const EnemyAppearanceEntry& appearance : kEnemyAppearances) {
             if (appearance.stage == stageId_) {
@@ -1469,10 +1469,6 @@ void GamePlayScene::Update()
         camera_->Update();
         return;
     }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
-        HotReloadLevel();
-    }
-
     // 時間停止中はゲーム世界を更新しない。
     // チュートリアルUIは、今後この判定より前でUnscaledDeltaTimeを使って更新する。
     if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
@@ -5169,49 +5165,6 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 enemies_.push_back(std::move(enemy));
             }
         }
-    }
-}
-
-// 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
-void GamePlayScene::HotReloadLevel()
-{
-    railBranch_.Initialize(stageSettings_.railBranch);
-    if (player_ != nullptr) {
-        player_->ClearHomingTargets();
-    }
-    ClearLevelObjects();
-    enemies_.clear();
-    enemyBulletManager_.Clear();
-    nextSwarmWaveIndex_ = 0;
-    tutorialTargetStep_ = -1;
-    tutorialDefeatedTargets_.reset();
-
-    Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
-    Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
-
-    LevelDataLoader levelDataLoader;
-    LevelData newLevelData =
-        levelDataLoader.Load(stageSettings_.layoutFile);
-
-    if (!newLevelData.playerSpawns.empty()) {
-        const LevelData::PlayerSpawnData& spawn = newLevelData.playerSpawns[0];
-        playerStartPos = spawn.translation;
-        playerStartRot = spawn.rotation;
-    }
-
-    if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
-        playerStartPos = GetRailPosition(0.0f);
-    }
-    player_->SetTranslate(playerStartPos);
-    player_->SetRotate(playerStartRot);
-    player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
-    UpdatePlayerRailHeightRange(0.0f);
-
-    CreateLevelObjects(newLevelData);
-    if (stageSettings_.allRangeMode) {
-        player_->EnableAllRangeMode(stageSettings_.flightAreaRadius,
-            stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
-        hasCameraFollowState_ = false;
     }
 }
 

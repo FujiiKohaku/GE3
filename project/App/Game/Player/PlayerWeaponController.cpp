@@ -625,7 +625,6 @@ void PlayerWeaponController::FireSingleBullet(const Camera& activeCamera, Combat
 	bullet->SetColor(bulletColor);
 	bullet->SetCamera(camera_);
 	Vector3 muzzlePosition = CalculateShotMuzzlePosition();
-	EffectManager::GetInstance()->PlayEffect("ShotBullet", muzzlePosition);
 
 	// 照準更新時に求めた目標点へ銃口を向ける。
 	Vector3 aimPoint = player_.GetAimPoint();
@@ -722,15 +721,9 @@ void PlayerWeaponController::UpdateBullets()
 // 命中や寿命で消滅した弾を一覧から外し、所有していたオブジェクトを破棄する。
 void PlayerWeaponController::RemoveDeadBullets()
 {
-	for (uint32_t i = 0; i < bullets_.size();) {
-		if (!bullets_[i]->IsAlive()) {
-			bullets_.erase(bullets_.begin() + i);
-		}
-		else {
-			++i;
-		}
-	}
-
+	std::erase_if(bullets_, [](const auto& bullet) {
+		return !bullet->IsAlive();
+	});
 }
 
 #ifdef _DEBUG

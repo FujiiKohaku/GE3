@@ -1,4 +1,6 @@
 #include "SrvManager.h"
+
+#include <stdexcept>
 std::unique_ptr<SrvManager> SrvManager::instance = nullptr;
 // テクスチャ・描画バッファ・パーティクルが共有する登録枠。
 const uint32_t SrvManager::kMaxSRVCount = 1024;
@@ -38,7 +40,9 @@ uint32_t SrvManager::Allocate()
     }
 
     // 上限チェック
-    assert(useIndex < kMaxSRVCount);
+    if (useIndex >= kMaxSRVCount) {
+        throw std::runtime_error("SrvManager::Allocate: SRV descriptor heap is full");
+    }
     // retrunする番号を一旦記録しておく
     uint32_t index = useIndex;
     allocatedFlags_[index] = true;
