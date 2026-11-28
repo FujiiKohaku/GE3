@@ -119,7 +119,7 @@ PlayerWeaponController::FireInput PlayerWeaponController::ReadFireInput(Input* i
 		return {};
 	}
 	// いずれかの射撃ボタンを押した瞬間
-	const bool isTriggered = input->IsKeyTrigger(DIK_SPACE)|| input->IsMouseTrigger(0)|| input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)|| input->IsGamepadRightTriggerTrigger();
+	const bool isTriggered = input->IsKeyTrigger(DIK_SPACE)|| input->IsMouseTrigger(MouseButton::Left)|| input->IsGamepadButtonTrigger(XINPUT_GAMEPAD_A)|| input->IsGamepadRightTriggerTrigger();
 
 	// 長押しと押した瞬間をまとめて返す
 	return { isPhysicalFireHeld, isTriggered };
@@ -529,7 +529,7 @@ bool PlayerWeaponController::CanFire(bool isDebugMode) const
 bool PlayerWeaponController::IsPhysicalFireHeld(Input* input) const
 {
 	return input->IsKeyPressed(DIK_SPACE)
-		|| input->IsMousePressed(0)
+		|| input->IsMousePressed(MouseButton::Left)
 		|| input->IsGamepadButtonPressed(XINPUT_GAMEPAD_A)
 		|| input->IsGamepadRightTriggerPressed();
 }

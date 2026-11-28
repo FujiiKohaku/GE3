@@ -476,7 +476,7 @@ PlayerInput::FlightActionInput PlayerInput::ReadFlightActions(const Input& input
     }
     flightInput.isBraking = input.IsKeyPressed(DIK_LCONTROL) || input.IsKeyPressed(DIK_RCONTROL) ||
         input.IsGamepadButtonPressed(XINPUT_GAMEPAD_Y);
-    flightInput.shouldActivateShield = input.IsKeyPressed(DIK_LSHIFT) || input.IsMousePressed(1) ||
+    flightInput.shouldActivateShield = input.IsKeyPressed(DIK_LSHIFT) || input.IsMousePressed(MouseButton::Right) ||
         input.IsGamepadButtonPressed(XINPUT_GAMEPAD_X);
     return flightInput;
 }

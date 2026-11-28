@@ -3491,7 +3491,7 @@ bool GamePlayScene::HandlePauseMouseInput()
     const float x = float(point.x) * WinApp::kClientWidth / client.right;
     const float y = float(point.y) * WinApp::kClientHeight / client.bottom;
     const auto hit = HitTestPauseButtons(*pauseState_, x, y);
-    const bool click = input->IsMouseTrigger(0);
+    const bool click = input->IsMouseTrigger(MouseButton::Left);
     if (hit.row < 0) return false;
     if (click || input->GetMouseDeltaX() != 0 || input->GetMouseDeltaY() != 0) pauseSelection_ = hit.row;
     if (!click) return false;

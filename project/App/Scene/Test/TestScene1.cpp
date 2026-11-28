@@ -186,7 +186,7 @@ void TestScene1::Initialize()
     debugCameraController_ = std::make_unique<DebugCameraController>();
     debugCameraController_->SetTargetCamera(camera_.get());
     debugCameraController_->SetArrowKeyRotationEnabled(false);
-    debugCameraController_->SetRotationMouseButton(1);
+    debugCameraController_->SetRotationMouseButton(MouseButton::Right);
     debugCameraController_->SetDebugMode(false);
 
     // 環境マップの設定
@@ -660,7 +660,7 @@ void TestScene1::Update()
     if (currentAnimState_ == PlayerAnimState::Attacking) {
         attackTimer_ += TimeManager::GetInstance()->GetDeltaTime();
 
-        if (Input::GetInstance()->IsMouseTrigger(0) ||
+        if (Input::GetInstance()->IsMouseTrigger(MouseButton::Left) ||
             Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_X)) {
             if (comboStep_ + queuedComboAttacks_ < 2) {
                 queuedComboAttacks_++;
@@ -694,7 +694,7 @@ void TestScene1::Update()
     }
     else if (!isJumping_) {
         // 地上にいる場合
-        if (Input::GetInstance()->IsMouseTrigger(0) ||
+        if (Input::GetInstance()->IsMouseTrigger(MouseButton::Left) ||
             Input::GetInstance()->IsGamepadButtonTrigger(XINPUT_GAMEPAD_X)) {
             // 攻撃開始 (両手ビームアニメーション)
             currentAnimState_ = PlayerAnimState::Attacking;

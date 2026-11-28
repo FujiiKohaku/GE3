@@ -6,6 +6,11 @@
 #include <memory>
 #include <wrl.h>
 
+enum class MouseButton {
+    Left = 0,
+    Right = 1,
+};
+
 class Input {
 public:
     static Input* GetInstance();
@@ -16,10 +21,10 @@ public:
 
     bool IsKeyPressed(BYTE keyCode) const; // 押されているか
 
-    bool IsMousePressed(int button) const; // 押されているか
+    bool IsMousePressed(MouseButton button) const; // 押されているか
 
     bool IsKeyTrigger(BYTE keyCode) const; // 一回だけ押されたか
-    bool IsMouseTrigger(int button) const; // 一回だけ押されたか
+    bool IsMouseTrigger(MouseButton button) const; // 一回だけ押されたか
     LONG GetMouseDeltaX() const;
     LONG GetMouseDeltaY() const;
     LONG GetMouseWheel() const;

@@ -172,7 +172,7 @@ void Input::Update()
         (gamepadState_.Gamepad.wButtons != 0 || IsGamepadRightTriggerPressed() ||
          GetGamepadLeftStickX() != 0.0f || GetGamepadLeftStickY() != 0.0f);
     const bool mouseActivity = mouseState_.lX != 0 || mouseState_.lY != 0 ||
-        mouseState_.lZ != 0 || IsMousePressed(0) || IsMousePressed(1);
+        mouseState_.lZ != 0 || IsMousePressed(MouseButton::Left) || IsMousePressed(MouseButton::Right);
     if (hasKeyboardActivity) {
         isUsingGamepad_ = false;
     } else if (gamepadActivity) {
@@ -242,8 +242,9 @@ bool Input::IsKeyPressed(BYTE keyCode) const
     return (keys_[keyCode] & 0x80) != 0;
 }
 
-bool Input::IsMousePressed(int button) const
+bool Input::IsMousePressed(MouseButton mouseButton) const
 {
+    const int button = static_cast<int>(mouseButton);
     if (button < 0) {
         return false;
     }
@@ -262,8 +263,9 @@ bool Input::IsKeyTrigger(BYTE keyCode) const
 
     return isNowPressed && !wasPressed;
 }
-bool Input::IsMouseTrigger(int button) const
+bool Input::IsMouseTrigger(MouseButton mouseButton) const
 {
+    const int button = static_cast<int>(mouseButton);
     if (button < 0) {
         return false;
     }
