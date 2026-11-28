@@ -135,8 +135,9 @@ void FearWormBeam::CheckCollision(Player* player)
         hitEffectElapsedSeconds_ = 0.0f;
         return;
     }
+    const bool wasShieldActive = player->IsShieldActive();
     player->ApplyDamage(kDamage);
-    if (player->IsShieldActive()) {
+    if (wasShieldActive) {
         hitEffectElapsedSeconds_ = 0.0f;
         return;
     }

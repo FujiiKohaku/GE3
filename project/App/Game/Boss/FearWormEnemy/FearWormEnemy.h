@@ -218,9 +218,12 @@ private:
     std::array<Model*, 5> headPoseModels_ {};
     std::unique_ptr<Object3d> headEye_;
     static constexpr size_t kHeadHpGearSegmentCount = 24;
+    static constexpr float kHeadHpGearFlashDurationSeconds = 0.22f;
     std::unique_ptr<Object3d> headHpGearFrame_;
     std::array<std::unique_ptr<Object3d>, kHeadHpGearSegmentCount> headHpGearSegments_;
     std::array<std::unique_ptr<Object3d>, kHeadHpGearSegmentCount> headShieldGearSegments_;
+    std::array<float, kHeadHpGearSegmentCount> headHpGearFlashSeconds_ {};
+    std::array<float, kHeadHpGearSegmentCount> headShieldGearFlashSeconds_ {};
     Vector3 headForward_ { 0.0f, 0.0f, 1.0f };
     float headOpenAmount_ = 0.0f;
     float headHitScale_ = 1.0f;

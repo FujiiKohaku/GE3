@@ -100,6 +100,29 @@ inline bool RunFearWormTimingTests()
             trackedMissile.Step();
         }
         trackedPositions[rateIndex] = trackedMissile.MotionPosition();
+
+        // 同じ位置を観測しても、レールが前進する場合は先読みで横方向の照準が強くなる。
+        Player movingTarget;
+        Player directTarget;
+        FearWormTrackingBulletProbe leadingMissile;
+        FearWormTrackingBulletProbe directMissile;
+        leadingMissile.SetPlayer(&movingTarget);
+        directMissile.SetPlayer(&directTarget);
+        for (int32_t stepIndex = 0; stepIndex < framesPerSecond * 4 / 5; ++stepIndex) {
+            const Vector3 targetPosition { 35.0f, 0.0f, -100.0f + stepIndex * deltaTimeSeconds * 48.0f };
+            movingTarget.SetTranslate(targetPosition);
+            directTarget.SetTranslate(targetPosition);
+            movingTarget.SetRailFrame({ 0.0f, 0.0f, targetPosition.z },
+                { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+            directTarget.SetRailFrame({}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
+            leadingMissile.Step();
+            directMissile.Step();
+        }
+        if (leadingMissile.MotionPosition().x <= directMissile.MotionPosition().x + 0.1f) {
+            std::printf("FearWorm missile lead failed at %d FPS.\n", framesPerSecond);
+            return false;
+        }
+
         const Vector3 pausedPosition = missile.MotionPosition();
         testClock.SetDelta(0.0f);
         missile.Step();

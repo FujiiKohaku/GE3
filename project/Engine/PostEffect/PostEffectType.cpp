@@ -24,6 +24,8 @@ const char* GetPostEffectTypeName(PostEffectType type)
     case PostEffectType::HexShield: return "HexShield";
     case PostEffectType::BoostSparks:
         return "BoostSparks";
+    case PostEffectType::ElectricGateShock:
+        return "ElectricGateShock";
     case PostEffectType::ScreenLighting:
         return "ScreenLighting";
     case PostEffectType::ToneMap:

@@ -1,4 +1,5 @@
 #include "Battle/State/FearWormTiming.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "App/Game/Enemy/Bullet/Types/TrackingEnemyBullet.h"
 #include "App/Game/Player/Player.h"
 // 頭と胴体が連なるボス。水面からの登場、移動、各種攻撃、部位破壊と死亡演出を扱う。
@@ -243,12 +244,19 @@ Vector3 FearWormEnemy::GetPosition() const
 // ボスの状態を進め、連結部位と描画オブジェクトを現在の位置へ追従させる。
 void FearWormEnemy::Update()
 {
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    for (auto* flashes : { &headHpGearFlashSeconds_, &headShieldGearFlashSeconds_ }) {
+        for (float& remaining : *flashes) {
+            remaining = (std::max)(0.0f, remaining - deltaTimeSeconds);
+        }
+    }
+
     // 外部から撃破された場合も、死亡状態への移行は一度だけ行う。
     if (IsDead()) {
         ChangeState(BossState::Dead);
     }
 
-    moveTime_ += TimeManager::GetInstance()->GetDeltaTime();
+    moveTime_ += deltaTimeSeconds;
     UpdateState();
 
     // 各セグメントの移動・回転・拡縮・カラー等の更新
@@ -553,6 +561,8 @@ void FearWormEnemy::Draw()
 // 頭の外周に置く歯車とHP目盛りを作る。
 void FearWormEnemy::InitializeHeadHpGear()
 {
+    headHpGearFlashSeconds_.fill(0.0f);
+    headShieldGearFlashSeconds_.fill(0.0f);
     ModelManager* models = ModelManager::GetInstance();
     Model* frameModel = models->Load("Boss/FearWorm/HpGear/Frame.obj");
     Model* segmentModel = models->Load("Boss/FearWorm/HpGear/HpSegment.obj");
@@ -589,7 +599,8 @@ void FearWormEnemy::DrawHeadHpGear()
     if (camera == nullptr) { return; }
 
     // モデルの表を頭の正面(+Z)へ向け、頭の拡大率を基準サイズに換算する。
-    const float scale = 1.0f / (kHeadScale * headHitScale_);
+    constexpr float kHpGearScale = 1.4f;
+    const float scale = kHpGearScale / (kHeadScale * headHitScale_);
     const Matrix4x4 local = MatrixMath::MakeAffineMatrix(
         Vector3 { scale, scale, scale }, Vector3 { 0.0f, std::numbers::pi_v<float>, 0.0f }, Vector3 {});
     const Matrix4x4 world = MatrixMath::Multiply(local, segments_[0].object->GetWorldMatrix());
@@ -598,7 +609,7 @@ void FearWormEnemy::DrawHeadHpGear()
     headHpGearFrame_->Update();
     headHpGearFrame_->Draw();
 
-    const auto drawGauge = [&](auto& objects, float fraction, const Vector3& light, bool flash) {
+    const auto drawGauge = [&](auto& objects, const auto& flashes, float fraction, const Vector3& light) {
         const float filledSegments = std::clamp(fraction, 0.0f, 1.0f)
             * static_cast<float>(kHeadHpGearSegmentCount);
         for (size_t index = 0; index < objects.size(); ++index) {
@@ -606,7 +617,10 @@ void FearWormEnemy::DrawHeadHpGear()
             const float fill = std::clamp(filledSegments - static_cast<float>(index), 0.0f, 1.0f);
             Vector4 color { 0.055f + light.x * fill, 0.065f + light.y * fill,
                 0.08f + light.z * fill, 1.0f };
-            if (fill > 0.0f && flash) { color = { 1.6f, 1.4f, 0.85f, 1.0f }; }
+            const float flash = flashes[index] / kHeadHpGearFlashDurationSeconds;
+            color.x += flash * 1.4f;
+            color.y += flash * 1.45f;
+            color.z += flash * 1.55f;
             const float angle = -2.0f * std::numbers::pi_v<float>
                 * static_cast<float>(index) / static_cast<float>(kHeadHpGearSegmentCount);
             segment.SetCamera(camera);
@@ -616,8 +630,8 @@ void FearWormEnemy::DrawHeadHpGear()
             segment.Draw();
         }
     };
-    drawGauge(headHpGearSegments_, GetHeadHpFraction(), { 1.25f, 0.67f, 0.08f }, segments_[0].hitFlashTimer > 0.0f);
-    drawGauge(headShieldGearSegments_, GetBodyHpFraction(), { 0.05f, 0.85f, 1.25f }, false);
+    drawGauge(headHpGearSegments_, headHpGearFlashSeconds_, GetHeadHpFraction(), { 1.25f, 0.67f, 0.08f });
+    drawGauge(headShieldGearSegments_, headShieldGearFlashSeconds_, GetBodyHpFraction(), { 0.05f, 0.85f, 1.25f });
 }
 
 // 影を落とす対象のモデルを、影用の描画処理へ渡す。
@@ -702,7 +716,19 @@ void FearWormEnemy::ApplyDamageToPart(int32_t partIndex, float damage)
 
     // HPを減らし、まだ残っていれば被弾表示だけ更新する。
     Segment& segment = segments_[partIndex];
+    const float previousFraction = segment.isHead ? GetHeadHpFraction() : GetBodyHpFraction();
     segment.hp -= damage;
+    const float currentFraction = segment.isHead ? GetHeadHpFraction() : GetBodyHpFraction();
+    auto& flashes = segment.isHead ? headHpGearFlashSeconds_ : headShieldGearFlashSeconds_;
+    const float previousFill = previousFraction * static_cast<float>(flashes.size());
+    const float currentFill = currentFraction * static_cast<float>(flashes.size());
+    for (size_t index = 0; index < flashes.size(); ++index) {
+        const float start = static_cast<float>(index);
+        // ダメージで失われた範囲と重なる目盛りだけを発光させる。
+        if ((std::min)(previousFill, start + 1.0f) > (std::max)(currentFill, start)) {
+            flashes[index] = kHeadHpGearFlashDurationSeconds;
+        }
+    }
     segment.hitFlashTimer = kDamageHitFlashDuration;
     segment.hitScale_.Start();
 
@@ -898,5 +924,9 @@ void FearWormEnemy::SetMissileTarget(TrackingEnemyBullet& bullet) const
 
 void FearWormEnemy::SpawnAttackBullet(std::unique_ptr<EnemyBullet> bullet)
 {
-    AddEnemyBullet(std::move(bullet));
+    if (player_ == nullptr) { return; }
+    const Vector3 toEnemy = GetPosition() - player_->GetTranslate();
+    if (IsEnemyAhead(toEnemy, player_->GetFlightForward()) && Vector3Length(toEnemy) <= kEnemyShootingRange) {
+        AddEnemyBullet(std::move(bullet));
+    }
 }

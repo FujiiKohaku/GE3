@@ -5,6 +5,7 @@
 #include "WaitForBody/FearWormWaitForBodyState.h"
 #include "Engine/Math/MathStruct.h"
 #include <cstddef>
+#include <numbers>
 
 // 登場全体の経過時間・内部状態と、各段階で共有する軌道計算を管理する。
 class FearWormEntryState final : public FearWormState {
@@ -46,7 +47,7 @@ private:
     static constexpr float kEntryShadowDurationSeconds = 2.0f;
     static constexpr float kEntryFlightDurationSeconds = 2.4f;
     static constexpr float kEntrySegmentDelaySeconds = 0.075f;
-    static constexpr float kExitOrbitAngleRadians = 2.35f;
+    static constexpr float kExitOrbitAngleRadians = std::numbers::pi_v<float> / 2.0f;
     // レール中央を基準にした、水面上の出現位置のオフセット。
     static constexpr float kEntrySurfaceOffsetX = 0.0f;
     static constexpr float kEntrySurfaceOffsetZ = 86.0f;

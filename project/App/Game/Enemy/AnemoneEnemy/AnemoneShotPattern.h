@@ -1,5 +1,6 @@
 #pragma once
 #include "Engine/math/MathStruct.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include <array>
 #include <cmath>
 #include <limits>
@@ -8,14 +9,13 @@ namespace AnemoneShotPattern {
 inline constexpr int kBulletCount = 5;
 inline constexpr float kBulletSpeed = 0.55f; // 60FPS基準。BaseBulletが経過秒へ変換する。
 inline constexpr float kFireIntervalSeconds = 2.4f;
-inline constexpr float kAttackRange = 180.0f;
 
 inline bool IsTargetInRange(const Vector3& muzzle, const Vector3& target,
     const Vector3& targetForward, float waterHeight)
 {
     const Vector3 offset = muzzle - target;
-    return target.y < waterHeight - 5.0f && Dot(offset, targetForward) > 0.0f &&
-        Vector3Length(offset) <= kAttackRange && Vector3Length(offset) > 0.001f;
+    return target.y < waterHeight - 5.0f && IsEnemyAhead(offset, targetForward) &&
+        Vector3Length(offset) <= kEnemyShootingRange && Vector3Length(offset) > 0.001f;
 }
 
 // 自動前進を先読みし、中央の弾がプレイヤーと交差する方向を求める。

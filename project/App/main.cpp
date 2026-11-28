@@ -27,8 +27,103 @@
 #include <cstring>
 #endif
 
+namespace {
+constexpr wchar_t kStartupSplashClass[] = L"KohakuEngineStartupSplash";
+
+LRESULT CALLBACK StartupSplashWindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
+{
+    if (message != WM_PAINT) {
+        return DefWindowProcW(window, message, wparam, lparam);
+    }
+
+    PAINTSTRUCT paint{};
+    HDC dc = BeginPaint(window, &paint);
+    RECT client{};
+    GetClientRect(window, &client);
+    SetDCBrushColor(dc, RGB(18, 16, 14));
+    FillRect(dc, &client, static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+    RECT accent{client.left, client.bottom - 3, client.right, client.bottom};
+    SetDCBrushColor(dc, RGB(201, 120, 42));
+    FillRect(dc, &accent, static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(249, 183, 99));
+    HFONT titleFont = CreateFontW(-38, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+        DEFAULT_PITCH, L"Segoe UI");
+    HGDIOBJ previousFont = SelectObject(dc, titleFont ? titleFont : GetStockObject(DEFAULT_GUI_FONT));
+    RECT title{client.left, 0, client.right, client.bottom - 24};
+    DrawTextW(dc, L"KohakuEngine", -1, &title, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+    SelectObject(dc, GetStockObject(DEFAULT_GUI_FONT));
+    SetTextColor(dc, RGB(209, 197, 184));
+    RECT status{client.left, client.bottom / 2 + 24, client.right, client.bottom - 3};
+    DrawTextW(dc, L"\u8d77\u52d5\u4e2d\u2026", -1, &status, DT_CENTER | DT_SINGLELINE);
+    SelectObject(dc, previousFont);
+    if (titleFont) {
+        DeleteObject(titleFont);
+    }
+    EndPaint(window, &paint);
+    return 0;
+}
+
+class StartupSplash {
+public:
+    explicit StartupSplash(HINSTANCE instance) : instance_(instance)
+    {
+        WNDCLASSW windowClass{};
+        windowClass.lpfnWndProc = StartupSplashWindowProc;
+        windowClass.hInstance = instance_;
+        windowClass.lpszClassName = kStartupSplashClass;
+        if (!RegisterClassW(&windowClass)) {
+            return;
+        }
+        registered_ = true;
+
+        POINT cursor{};
+        GetCursorPos(&cursor);
+        MONITORINFO monitor{};
+        monitor.cbSize = sizeof(monitor);
+        GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY), &monitor);
+        const RECT& work = monitor.rcWork;
+        constexpr int width = 480;
+        constexpr int height = 240;
+        window_ = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
+            kStartupSplashClass, L"KohakuEngine", WS_POPUP,
+            work.left + (work.right - work.left - width) / 2,
+            work.top + (work.bottom - work.top - height) / 2, width, height,
+            nullptr, nullptr, instance_, nullptr);
+        if (window_) {
+            ShowWindow(window_, SW_SHOWNOACTIVATE);
+            UpdateWindow(window_);
+        }
+    }
+
+    ~StartupSplash()
+    {
+        Close();
+        if (registered_) {
+            UnregisterClassW(kStartupSplashClass, instance_);
+        }
+    }
+
+    void Close()
+    {
+        if (window_) {
+            DestroyWindow(window_);
+            window_ = nullptr;
+        }
+    }
+
+private:
+    HINSTANCE instance_;
+    HWND window_ = nullptr;
+    bool registered_ = false;
+};
+}
+
 // 起動時の準備を行い、入力・更新・描画を繰り返した後にゲームを終了する。
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR commandLine, int)
 {
 // デバッグ用の検証指定がある場合は、通常のゲーム起動より先に実行する。
 #ifdef _DEBUG
@@ -85,6 +180,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     const std::chrono::steady_clock::time_point startupBeginTime =std::chrono::steady_clock::now();
 
     StartupTiming::Begin(startupBeginTime);
+    StartupSplash splash(instance);
     // ログ出力の初期化を行い、アプリケーション開始をログに残す。
     Logger::Initialize();
     // ログ出力の初期化を行い、アプリケーション開始をログに残す。
@@ -97,7 +193,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
     Logger::Log("Game Initialize");
     {
         StartupTimingScope startupScope("Main.GameInitialize");
-        game.Initialize();
+        game.Initialize(/*showWindow=*/false);
     }
 
     bool hasLoggedStartupTime = false;
@@ -149,6 +245,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR commandLine, int)
                     StartupTimingScope startupScope("Main.FirstDraw");
                     game.Draw();
                 }
+                splash.Close();
+                game.ShowMainWindow();
             } else {
                 game.Update();
                 game.Draw();

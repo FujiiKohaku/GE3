@@ -1,5 +1,6 @@
 // 戦闘行動の切り替えと、共通の座標・弾生成・描画処理。
 #include "FearWormBattleState.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "State/FearWormTiming.h"
 #include "../FearWormEnemy.h"
 #include "Engine/3D/Object3d.h"
@@ -35,7 +36,11 @@ void FearWormBattleState::Update(FearWormEnemy& boss)
         missileAttackTimer_ += deltaTimeSeconds;
     }
 
+    const Vector3 previousHeadPosition = boss.segments_[0].position;
     currentAction_->Update(*this, boss);
+    if (deltaTimeSeconds > 0.0f) {
+        headVelocity_ = (boss.segments_[0].position - previousHeadPosition) * (1.0f / deltaTimeSeconds);
+    }
     if (currentAction_->IsFinished()) {
         FinishAction(boss);
     }
@@ -45,9 +50,19 @@ void FearWormBattleState::Update(FearWormEnemy& boss)
 // 攻撃側で計算した目標位置へ、速度倍率と経過秒を反映して頭を動かす。
 void FearWormBattleState::UpdateBattleMovement(FearWormEnemy& boss, const Vector3& target, float movementSpeedRate)
 {
+    const float deltaTimeSeconds = TimeManager::GetInstance()->GetDeltaTime();
+    const Vector3 position = boss.segments_[0].position;
     const float movementBlend = FearWormTiming::CalculateFollowBlend(boss.moveSpeed_ * movementSpeedRate,
-        TimeManager::GetInstance()->GetDeltaTime());
-    SetHeadPosition(boss, Lerp(boss.segments_[0].position, target, movementBlend));
+        deltaTimeSeconds);
+    Vector3 nextPosition = Lerp(position, target, movementBlend);
+    if (movementTransitionRemainingSeconds_ > 0.0f && deltaTimeSeconds > 0.0f) {
+        movementTransitionRemainingSeconds_ =
+            (std::max)(0.0f, movementTransitionRemainingSeconds_ - deltaTimeSeconds);
+        const float progress = 1.0f - movementTransitionRemainingSeconds_ / kMovementTransitionSeconds;
+        const float blend = progress * progress * (3.0f - 2.0f * progress);
+        nextPosition = Lerp(position + transitionStartVelocity_ * deltaTimeSeconds, nextPosition, blend);
+    }
+    SetHeadPosition(boss, nextPosition);
 }
 
 void FearWormBattleState::SetHeadPosition(FearWormEnemy& boss, const Vector3& position)
@@ -180,6 +195,9 @@ void FearWormBattleState::Reset(FearWormEnemy& boss)
     missileAttackTimer_ = 0.0f;
     hasTriggeredMadMode_ = false;
     headAimDirection_ = kDefaultHeadAimDirection;
+    headVelocity_ = {};
+    transitionStartVelocity_ = {};
+    movementTransitionRemainingSeconds_ = 0.0f;
 }
 
 void FearWormBattleState::SetStartOrbitAngleRadians(float orbitAngleRadians)
@@ -263,6 +281,10 @@ void FearWormBattleState::ChangeAction(ActionType type, FearWormEnemy& boss)
     case ActionType::Beam: nextAction = &beamActionState_; break;
     default: return;
     }
+    // ビームへの移行は専用のセンタリング演出に任せる。
+    movementTransitionRemainingSeconds_ =
+        currentAction_ != nullptr && type != ActionType::Beam ? kMovementTransitionSeconds : 0.0f;
+    transitionStartVelocity_ = headVelocity_;
     Exit(boss);
     actionType_ = type;
     // 攻撃選択に使う記録は統括側だけで更新する。
@@ -298,7 +320,8 @@ bool FearWormBattleState::CanFire(const FearWormEnemy& boss) const
         || boss.player_ == nullptr || bulletModel_ == nullptr || boss.segments_.empty()) {
         return false;
     }
-    return Vector3Length(boss.player_->GetTranslate() - boss.GetPosition()) <= kAttackRange;
+    const Vector3 toEnemy = boss.GetPosition() - boss.player_->GetTranslate();
+    return IsEnemyAhead(toEnemy, boss.player_->GetFlightForward()) && Vector3Length(toEnemy) <= kEnemyShootingRange;
 }
 
 int32_t FearWormBattleState::SelectFiringSegment(FearWormEnemy& boss)

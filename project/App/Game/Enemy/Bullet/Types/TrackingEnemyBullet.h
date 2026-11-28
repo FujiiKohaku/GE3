@@ -21,6 +21,8 @@ protected:
 
 private:
     Player* player_ = nullptr;
+    Vector3 previousTargetRailPosition_ {};
+    bool hasPreviousTargetRailPosition_ = false;
     float launchTimer_ = 0.0f;        // 打ち上げフェーズの経過時間
     float trackingTimer_ = 0.0f;      // 追尾フェーズの経過時間
     bool isTracking_ = false;         // 追尾状態に入ったか

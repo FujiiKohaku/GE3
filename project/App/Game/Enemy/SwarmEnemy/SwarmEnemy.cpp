@@ -1,5 +1,6 @@
 // 編隊内の担当位置へ移動する敵。編隊の形・進行・射撃を個体ごとに計算する。
 #include "App/Game/Enemy/SwarmEnemy/SwarmEnemy.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 
 #include "App/Game/Enemy/Bullet/Types/SwarmPulseBullet.h"
 #include "App/Game/Player/Player.h"
@@ -168,6 +169,10 @@ void SwarmEnemy::Attack()
         return;
     }
     if (player_ == nullptr || bulletModel_ == nullptr) {
+        return;
+    }
+    const Vector3 toEnemy = transform_.translate - player_->GetTranslate();
+    if (!IsEnemyAhead(toEnemy, player_->GetFlightForward()) || !(Vector3Length(toEnemy) <= kEnemyShootingRange)) {
         return;
     }
     if (shotsFired_ >= kMaximumShots) {

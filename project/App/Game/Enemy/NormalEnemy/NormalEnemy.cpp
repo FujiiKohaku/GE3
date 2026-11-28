@@ -1,5 +1,7 @@
 // 通常敵の射撃と難易度設定を扱う。発射間隔・弾速・HPなどを設定から変更できる。
+#include <algorithm>
 #include <numbers>
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "App/Game/Common/GameTiming.h"
 #include "Engine/Time/TimeManager.h"
 #include "App/Game/Enemy/NormalEnemy/NormalEnemy.h"
@@ -81,25 +83,15 @@ void NormalEnemy::Attack()
         return;
     }
 
-    Vector3 playerPosition = player_->GetTranslate();
-    Vector3 toEnemy = transform_.translate - playerPosition;
+    const Vector3 toEnemy = transform_.translate - player_->GetTranslate();
 
-    Vector3 playerVelocity = player_->GetAutomaticWorldVelocity();
-    Vector3 forward = { 0.0f, 0.0f, 1.0f };
-    float speedLength = Vector3Length(playerVelocity);
-    if (speedLength > 0.001f) {
-        forward = Normalize(playerVelocity);
-    }
-
-    float dot = toEnemy.x * forward.x + toEnemy.y * forward.y + toEnemy.z * forward.z;
-
-    if (dot <= 0.0f) {
+    if (!IsEnemyAhead(toEnemy, player_->GetFlightForward())) {
         return;
     }
 
     float distance = Vector3Length(toEnemy);
 
-    if (distance <= 170.0f) {
+    if (distance <= kEnemyShootingRange) {
         const int32_t shotCount = GameTiming::AdvanceInterval(fireElapsedSeconds_,
             fireIntervalSeconds_, TimeManager::GetInstance()->GetDeltaTime(), 3);
         for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {
@@ -119,27 +111,29 @@ void NormalEnemy::FireBullet()
         return;
     }
 
-    Vector3 playerPosition = player_->GetTranslate();
-
-    // 弾の到達時間からPlayerの自動前進位置を予測する。
-    // 65%だけ先読みし、上下左右へ動けば避けられる余地は残す。
-    constexpr float kPredictionRatio = 0.65f;
-    const float distance = Vector3Length(
-        playerPosition - transform_.translate);
-    if (bulletSpeed_ > 0.0f) {
-        const float flightFrames = distance / bulletSpeed_;
-        playerPosition += player_->GetAutomaticWorldVelocity() *
-            (flightFrames * kPredictionRatio);
-    }
-
+    const Vector3 directAim = player_->GetTranslate() - transform_.translate;
     constexpr float kMinimumAimDistance = 0.0001f;
-    const Vector3 aimOffset = playerPosition - transform_.translate;
-    const float aimDistance = Vector3Length(aimOffset);
-    if (!std::isfinite(aimDistance) || aimDistance <= kMinimumAimDistance) {
+    const float distance = Vector3Length(directAim);
+    if (!std::isfinite(distance) || distance <= kMinimumAimDistance) {
         return;
     }
 
-    const Vector3 aimDirection = Normalize(aimOffset);
+    // 弾の到達時間からPlayerの自動前進位置を予測する。
+    // 65%先読みし、補正量を現在の距離より短く抑えて狙いの反転を防ぐ。
+    constexpr float kPredictionRatio = 0.65f;
+    constexpr float kMaxLeadDistanceRatio = 0.75f;
+    Vector3 aimDirection = directAim * (1.0f / distance);
+    if (bulletSpeed_ > 0.0f) {
+        const float flightFrames = distance / bulletSpeed_;
+        const Vector3 lead = player_->GetAutomaticWorldVelocity() *
+            (flightFrames * kPredictionRatio);
+        const float leadDistance = Vector3Length(lead);
+        if (std::isfinite(leadDistance) && leadDistance > kMinimumAimDistance) {
+            const float leadScale = (std::min)(1.0f, distance * kMaxLeadDistanceRatio / leadDistance);
+            aimDirection = Normalize(directAim + lead * leadScale);
+        }
+    }
+
     SpawnBullet(aimDirection, true);
     if (!isRadialShotEnabled_) {
         return;

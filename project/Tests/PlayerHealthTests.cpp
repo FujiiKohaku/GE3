@@ -79,10 +79,46 @@ void TestShieldBlocksDamage()
     assert(player.IsShieldActive());
     assert(!player.ApplyDamage(3));
     assert(player.GetCurrentHp() == player.GetMaxHp());
+    assert(player.GetShieldRatio() == 0.75f);
 
     PlayerTestAccess::UpdateShield(player, false, 1.0f / 60.0f);
     assert(player.ApplyDamage(3));
     assert(player.GetCurrentHp() == player.GetMaxHp() - 3);
+}
+
+void TestShieldDurabilityRecovery()
+{
+    Player player;
+    PlayerTestAccess::UpdateShield(player, true, 0.5f);
+    assert(player.GetShieldRatio() == 1.0f);
+
+    for (int hit = 0; hit < 3; ++hit) {
+        player.OnShieldBulletHit({}, {});
+    }
+    assert(player.IsShieldActive() && player.GetShieldRatio() == 0.25f);
+    PlayerTestAccess::UpdateShield(player, false, 1.0f);
+    PlayerTestAccess::UpdateShield(player, false, 1.5f);
+    assert(player.GetShieldRatio() == 0.25f);
+    assert(player.GetShieldDisplayRatio() == 0.4375f);
+    PlayerTestAccess::UpdateShield(player, false, 0.5f);
+    assert(player.GetShieldRatio() == 0.5f);
+
+    PlayerTestAccess::UpdateShield(player, true, 0.5f);
+    player.OnShieldBulletHit({}, {});
+    player.OnShieldBulletHit({}, {});
+    assert(!player.IsShieldActive() && player.GetShieldRatio() == 0.0f);
+    assert(player.GetCurrentHp() == player.GetMaxHp());
+    PlayerTestAccess::UpdateShield(player, false, 4.0f);
+    PlayerTestAccess::UpdateShield(player, false, 1.5f);
+    assert(player.GetShieldRatio() == 0.0f);
+    assert(player.GetShieldDisplayRatio() == 0.1875f);
+    PlayerTestAccess::UpdateShield(player, false, 0.5f);
+    assert(player.GetShieldRatio() == 0.25f);
+
+    PlayerTestAccess::UpdateShield(player, true, 8.0f);
+    assert(player.IsShieldActive() && player.GetShieldRatio() == 0.25f);
+    PlayerTestAccess::UpdateShield(player, false, 0.5f);
+    assert(!player.IsShieldActive() && player.GetShieldRatio() == 0.25f);
 }
 
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
@@ -118,6 +154,7 @@ int main()
     TestDamageAndInvincibility();
     TestHealingAndDeath();
     TestShieldBlocksDamage();
+    TestShieldDurabilityRecovery();
 #if defined(ENABLE_DEVELOPMENT_TOOLS)
     TestDevelopmentInvincibility();
 #endif

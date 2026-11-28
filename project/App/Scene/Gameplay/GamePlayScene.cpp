@@ -311,6 +311,7 @@ constexpr float kApplyDevelopmentActionRailDistanceOffset = 200.0f;
 constexpr float kBossCollisionDebugMargin = 100.0f;
 constexpr float kDrawCollisionDebugDebugRendererAddWireSphereMultiplier = 0.5f;
 constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthDefault = 0.45f;
+constexpr float kElectricGateShockDurationSeconds = 0.30f;
 constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthOffset = 0.25f;
 constexpr float kUpdatePlayerDamagePostEffectsVignetteStrengthFrequency = 8.5f;
 constexpr float kSwarmRailHeightOffset = 2.0f;
@@ -381,17 +382,16 @@ constexpr Vector4 kHudIvory { 0.910f, 0.870f, 0.750f, 1.0f };
 constexpr Vector4 kHudBrass { 0.714f, 0.541f, 0.290f, 1.0f };
 constexpr Vector4 kHudPanel { 0.025f, 0.055f, 0.100f, 0.84f };
 
-std::unique_ptr<Sprite> CreatePlayerGauge(float rotation, const Vector4& color, bool isFlipped)
+std::unique_ptr<Sprite> CreatePlayerGauge(float rotation, const Vector4& color, const char* pixelShader)
 {
     auto gauge = std::make_unique<Sprite>();
     gauge->Initialize(SpriteManager::GetInstance(), "resources/Textures/white.png");
     gauge->SetShaderPaths(
         "resources/Shaders/Sprite/Standard/Render.VS.hlsl",
-        "resources/Shaders/Sprite/PlayerHpArc/PlayerHpArc.PS.hlsl");
+        pixelShader);
     gauge->SetSize({ 144.0f, 144.0f });
     gauge->SetAnchorPoint({ 0.5f, 0.5f });
     gauge->SetRotation(rotation);
-    gauge->SetIsFlipX(isFlipped);
     gauge->SetColor(color);
     gauge->SetEffectThreshold(1.0f);
     gauge->Update();
@@ -604,7 +604,7 @@ void GamePlayScene::Initialize()
     clearPlayerBoundsRadius_ = playerModel->GetBoundsRadius();
 
     // エネミー・弾モデル
-    enemyModel_ = ModelManager::GetInstance()->Load("Debug/baikinMusi/baikinMusi.obj");
+    enemyModel_ = ModelManager::GetInstance()->Load("Debug/BaikinMusi/baikinMusi.obj");
     if (stageId_ == "stage01") {
         for (const EnemyAppearanceEntry& appearance : kEnemyAppearances) {
             if (appearance.stage == stageId_) {
@@ -1028,8 +1028,10 @@ void GamePlayScene::Initialize()
     scoreHudValueText_->Update();
 
     constexpr float kGaugeRotation = std::numbers::pi_v<float> / 2.0f;
-    playerHpArcSprite_ = CreatePlayerGauge(kGaugeRotation, kPlayerHpGreen, false);
-    playerShieldArcSprite_ = CreatePlayerGauge(-kGaugeRotation, kPlayerActionCyan, true);
+    playerHpArcSprite_ = CreatePlayerGauge(kGaugeRotation, kPlayerHpGreen,
+        "resources/Shaders/Sprite/PlayerHpArc/PlayerHpArc.PS.hlsl");
+    playerShieldPipsSprite_ = CreatePlayerGauge(0.0f, kPlayerActionCyan,
+        "resources/Shaders/Sprite/PlayerShieldPips/PlayerShieldPips.PS.hlsl");
     arePlayerGaugesVisible_ = false;
 
     Logger::Log("GamePlayScene::Initialize: Loading uvChecker texture");
@@ -1055,7 +1057,10 @@ void GamePlayScene::Initialize()
     player_->SetMouseSensitivity(gMouseSensitivity);
     InitializeWeaponIcons();
     lastPlayerHp_ = player_->GetCurrentHp();
+    lastShieldRatio_ = player_->GetShieldRatio();
+    shieldPipFlashSeconds_ = 0.0f;
     damageFlashRemainingSeconds_ = 0.0f;
+    electricGateShockRemainingSeconds_ = 0.0f;
     lowHpPulseElapsedSeconds_ = 0.0f;
 
     Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
@@ -1473,10 +1478,6 @@ void GamePlayScene::Update()
         camera_->Update();
         return;
     }
-    if (Input::GetInstance()->IsKeyTrigger(DIK_F5) || Input::GetInstance()->IsKeyTrigger(DIK_R)) {
-        HotReloadLevel();
-    }
-
     // 時間停止中はゲーム世界を更新しない。
     // チュートリアルUIは、今後この判定より前でUnscaledDeltaTimeを使って更新する。
     if (TimeManager::GetInstance()->GetDeltaTime() <= 0.0f) {
@@ -1493,6 +1494,7 @@ void GamePlayScene::Update()
 
     // HPが尽きた後は通常のゲーム進行を止め、落下と爆発だけを更新する。
     if (player_ && player_->IsDead()) {
+        arePlayerGaugesVisible_ = false;
         StopPlayerEngineEffects();
         player_->Update();
 
@@ -1724,6 +1726,7 @@ void GamePlayScene::Update()
         gate->Update(player_->GetTranslate(), TimeManager::GetInstance()->GetDeltaTime());
         if (gate->CheckCollision(previousPlayerPosition, player_->GetTranslate()) &&
             player_->ApplyDamage(ElectricGate::kContactDamage)) {
+            electricGateShockRemainingSeconds_ = kElectricGateShockDurationSeconds;
             EffectManager::GetInstance()->PlayEffect("DamageHit", player_->GetTranslate());
         }
     }
@@ -1818,7 +1821,6 @@ void GamePlayScene::Update()
 
     UpdateWaterDropEffect();
 
-    UpdatePlayerGauges();
     UpdateWeaponIcons();
 
     // レティクル（AimSprite）のスクリーン位置更新
@@ -1963,6 +1965,7 @@ void GamePlayScene::Update()
 
     // コリジョン判定の実行
     CheckCollision(previousPlayerPosition);
+    UpdatePlayerGauges();
     if (isDashVerification_) {
         for (const auto& enemy : enemies_) {
             const auto* dash = dynamic_cast<const DashEnemy*>(enemy.get());
@@ -3053,7 +3056,7 @@ void GamePlayScene::UpdateWeaponIcons()
 void GamePlayScene::UpdatePlayerGauges()
 {
     arePlayerGaugesVisible_ = false;
-    if (!player_ || !camera_ || !playerHpArcSprite_ || !playerShieldArcSprite_ || player_->IsDead()) { return; }
+    if (!player_ || !camera_ || !playerHpArcSprite_ || !playerShieldPipsSprite_ || player_->IsDead()) { return; }
 
     const Vector3 playerPosition = player_->GetTranslate();
     const Vector3 viewPosition = MatrixMath::Transform(playerPosition, camera_->GetViewMatrix());
@@ -3076,9 +3079,19 @@ void GamePlayScene::UpdatePlayerGauges()
     playerHpArcSprite_->SetColor(hpColor);
     playerHpArcSprite_->SetEffectThreshold(hpRatio);
     playerHpArcSprite_->Update();
-    playerShieldArcSprite_->SetPosition(uiPosition);
-    playerShieldArcSprite_->SetEffectThreshold(player_->GetShieldRatio());
-    playerShieldArcSprite_->Update();
+    constexpr float kShieldPipFlashDuration = 0.16f;
+    shieldPipFlashSeconds_ = (std::max)(0.0f,
+        shieldPipFlashSeconds_ - TimeManager::GetInstance()->GetDeltaTime());
+    const float shieldRatio = player_->GetShieldRatio();
+    if (shieldRatio < lastShieldRatio_) {
+        shieldPipFlashSeconds_ = kShieldPipFlashDuration;
+        playerShieldPipsSprite_->SetEffectDirection({ shieldRatio, lastShieldRatio_ });
+    }
+    lastShieldRatio_ = shieldRatio;
+    playerShieldPipsSprite_->SetPosition(uiPosition);
+    playerShieldPipsSprite_->SetEffectThreshold(player_->GetShieldDisplayRatio());
+    playerShieldPipsSprite_->SetEffectStrength(shieldPipFlashSeconds_ / kShieldPipFlashDuration);
+    playerShieldPipsSprite_->Update();
     arePlayerGaugesVisible_ = true;
 }
 
@@ -3183,7 +3196,7 @@ void GamePlayScene::Draw2D()
     if (!isPaused_ && weaponHudIconSprite_) weaponHudIconSprite_->Draw();
     if (arePlayerGaugesVisible_) {
         playerHpArcSprite_->Draw();
-        playerShieldArcSprite_->Draw();
+        playerShieldPipsSprite_->Draw();
     }
     if (!isPaused_ && isWeaponSwitchVisible_) {
         weaponSwitchIconSprite_->Draw();
@@ -4543,6 +4556,7 @@ void GamePlayScene::ResetGameplayPostEffects()
     wasWeaponOverheated_ = false;
     SceneManager::GetInstance()->SetPostEffectParameters(PostEffectType::ToneMap, {});
     SceneManager::GetInstance()->SetPostEffectParameters(PostEffectType::FXAA, {});
+    SceneManager::GetInstance()->SetPostEffectParameters(PostEffectType::ElectricGateShock, {});
     SceneManager::GetInstance()->ClearPostEffects();
     SceneManager::GetInstance()->SetPostEffectCenter({ 0.5f, 0.5f });
     SceneManager::GetInstance()->SetRadialBlurSettings({});
@@ -4561,6 +4575,7 @@ void GamePlayScene::ResetGameplayPostEffects()
     shieldShakeCooldownSeconds_ = 0.0f;
     waterDropEffectTimer_ = 0.0f;
     damageFlashRemainingSeconds_ = 0.0f;
+    electricGateShockRemainingSeconds_ = 0.0f;
     lowHpPulseElapsedSeconds_ = 0.0f;
     SceneManager::GetInstance()->SetVignetteStrength(0.0f);
     SceneManager::GetInstance()->SetWaterEffectIntensity(0.0f);
@@ -4572,10 +4587,20 @@ void GamePlayScene::UpdatePlayerDamagePostEffects()
     SceneManager* sceneManager = SceneManager::GetInstance();
     if (player_ == nullptr) {
         sceneManager->RemovePostEffect(PostEffectType::Vignette);
+        sceneManager->RemovePostEffect(PostEffectType::ElectricGateShock);
         return;
     }
 
     const float deltaTimeSeconds = (std::max)(TimeManager::GetInstance()->GetDeltaTime(), 0.0f);
+    if (electricGateShockRemainingSeconds_ > 0.0f) {
+        const float progress = 1.0f - electricGateShockRemainingSeconds_ / kElectricGateShockDurationSeconds;
+        sceneManager->SetPostEffectParameters(PostEffectType::ElectricGateShock, { progress, 0.0f, 0.0f });
+        sceneManager->AddPostEffect(PostEffectType::ElectricGateShock, PostEffectStage::AfterParticle);
+        electricGateShockRemainingSeconds_ = (std::max)(0.0f, electricGateShockRemainingSeconds_ - deltaTimeSeconds);
+    } else {
+        sceneManager->RemovePostEffect(PostEffectType::ElectricGateShock);
+    }
+
     const int currentHp = player_->GetCurrentHp();
     const bool hasTakenDamage = currentHp < lastPlayerHp_;
     damageFlashRemainingSeconds_ = (std::max)(0.0f, damageFlashRemainingSeconds_ - deltaTimeSeconds);
@@ -5153,49 +5178,6 @@ void GamePlayScene::CreateLevelObjects(const LevelData& levelData)
                 enemies_.push_back(std::move(enemy));
             }
         }
-    }
-}
-
-// 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
-void GamePlayScene::HotReloadLevel()
-{
-    railBranch_.Initialize(stageSettings_.railBranch);
-    if (player_ != nullptr) {
-        player_->ClearHomingTargets();
-    }
-    ClearLevelObjects();
-    enemies_.clear();
-    enemyBulletManager_.Clear();
-    nextSwarmWaveIndex_ = 0;
-    tutorialTargetStep_ = -1;
-    tutorialDefeatedTargets_.reset();
-
-    Vector3 playerStartPos = { 0.0f, 0.0f, 0.0f };
-    Vector3 playerStartRot = { 0.0f, 0.0f, 0.0f };
-
-    LevelDataLoader levelDataLoader;
-    LevelData newLevelData =
-        levelDataLoader.Load(stageSettings_.layoutFile);
-
-    if (!newLevelData.playerSpawns.empty()) {
-        const LevelData::PlayerSpawnData& spawn = newLevelData.playerSpawns[0];
-        playerStartPos = spawn.translation;
-        playerStartRot = spawn.rotation;
-    }
-
-    if (stageId_ == "stage01" && !stageSettings_.allRangeMode) {
-        playerStartPos = GetRailPosition(0.0f);
-    }
-    player_->SetTranslate(playerStartPos);
-    player_->SetRotate(playerStartRot);
-    player_->SetRailFrame(playerStartPos, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
-    UpdatePlayerRailHeightRange(0.0f);
-
-    CreateLevelObjects(newLevelData);
-    if (stageSettings_.allRangeMode) {
-        player_->EnableAllRangeMode(stageSettings_.flightAreaRadius,
-            stageSettings_.flightMinHeight, stageSettings_.flightMaxHeight);
-        hasCameraFollowState_ = false;
     }
 }
 

@@ -186,8 +186,6 @@ private:
         const LevelData::StrafeEnemySpawnData& settings, int enemyLevel);
     // レベルから生成したオブジェクトと、それに付随する判定情報を破棄する。
     void ClearLevelObjects();
-    // 開発中の配置データを再読み込みし、レベル内のオブジェクトを作り直す。
-    void HotReloadLevel();
     // ステージの配置情報を、敵や編隊の出現条件へ変換する。
     void LoadEnemyPopData(const LevelData& levelData);
     // 衝突システムの結果を受け取り、得点・ダメージ演出・ステージイベントへ反映する。
@@ -526,6 +524,7 @@ private:
 
     // 被弾フラッシュ演出用
     float damageFlashRemainingSeconds_ = 0.0f;
+    float electricGateShockRemainingSeconds_ = 0.0f;
     float lowHpPulseElapsedSeconds_ = 0.0f;
     int lastPlayerHp_ = 0;
 
@@ -597,7 +596,9 @@ private:
 
     // 機体の左右に重ねる円弧ゲージ。
     std::unique_ptr<Sprite> playerHpArcSprite_;
-    std::unique_ptr<Sprite> playerShieldArcSprite_;
+    std::unique_ptr<Sprite> playerShieldPipsSprite_;
+    float lastShieldRatio_ = 1.0f;
+    float shieldPipFlashSeconds_ = 0.0f;
     bool arePlayerGaugesVisible_ = false;
 
     uint32_t bossSpotLightHandle_ = 0xffffffffu;

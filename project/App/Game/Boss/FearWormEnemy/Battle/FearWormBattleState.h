@@ -55,7 +55,6 @@ private:
     // 戦闘専用の設定値。
     static constexpr Vector3 kDefaultHeadAimDirection = { 0.0f, 0.0f, -1.0f };
     static constexpr float kMissileAttackInterval = 18.0f;  // ミサイル攻撃の間隔（秒）
-    static constexpr float kAttackRange = 240.0f;
     static constexpr float kHeadMuzzleOffset = 4.2f;
     static constexpr float kPi = std::numbers::pi_v<float>;
 
@@ -122,6 +121,10 @@ private:
     // 戦闘移動の周回角と、通常行動の継続時間設定。
     float orbitAngle_ = 0.0f;
     float movementPatternDuration_ = 3.40f;
+    static constexpr float kMovementTransitionSeconds = 0.22f;
+    Vector3 headVelocity_ {};
+    Vector3 transitionStartVelocity_ {};
+    float movementTransitionRemainingSeconds_ = 0.0f;
 
     // 共通の射撃設定と描画用の照準・移動情報。
     static constexpr float kFireIntervalSeconds = 22.0f / 60.0f;

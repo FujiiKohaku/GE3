@@ -3,11 +3,13 @@
 #include "App/Game/Player/Player.h"
 #include <cmath>
 #include <cstdio>
+#include <numbers>
 
 inline bool RunFearWormEntryTests()
 {
     constexpr size_t kSegmentCount = 10;
     constexpr float kSpacing = 5.0f;
+    constexpr float kCenteredOrbitAngle = std::numbers::pi_v<float> / 2.0f;
     const Vector3 battlePosition = { -11.2f, 12.0f, 5200.0f };
     const float durationSeconds = FearWormEntryState::CalculateEntryDurationSeconds(kSegmentCount);
     for (float waterHeight : { -30.0f, 15.0f }) {
@@ -80,7 +82,7 @@ inline bool RunFearWormEntryTests()
             boss.entryState_.currentPhase_->Update(boss.entryState_, boss);
             if (boss.entryState_.elapsedSeconds_ != elapsedSeconds) { return false; }
             const Vector3 surfacePosition = boss.entryState_.EntrySurfacePosition(player.GetTranslate());
-            const FearWormMovementContext movementContext { boss.GetBattleMovementOrigin(), 2.35f, boss.parallelForwardOffset_ };
+            const FearWormMovementContext movementContext { boss.GetBattleMovementOrigin(), kCenteredOrbitAngle, boss.parallelForwardOffset_ };
             const Vector3 targetPosition = FearWormMovement::CalculateOrbitTarget(movementContext);
             if (boss.battleState_.orbitAngle_ != 0.4f
                 || boss.battleState_.movementPattern_ != FearWormBattleState::MovementPattern::Line
@@ -108,12 +110,13 @@ inline bool RunFearWormEntryTests()
 
             const float entryDurationSeconds = FearWormEntryState::CalculateEntryDurationSeconds(segmentCount);
             const Vector3 surfacePosition = boss.entryState_.EntrySurfacePosition(player.GetTranslate());
-            const FearWormMovementContext movementContext { boss.GetBattleMovementOrigin(), 2.35f, boss.parallelForwardOffset_ };
+            const FearWormMovementContext movementContext { boss.GetBattleMovementOrigin(), kCenteredOrbitAngle, boss.parallelForwardOffset_ };
             const Vector3 targetPosition = FearWormMovement::CalculateOrbitTarget(movementContext);
             for (float elapsedSeconds = 0.0f; elapsedSeconds < entryDurationSeconds; elapsedSeconds += deltaSeconds) {
                 boss.entryState_.elapsedSeconds_ = elapsedSeconds;
                 boss.UpdateState();
                 if (boss.GetBossState() != FearWormEnemy::BossState::Entry) { return false; }
+                if (std::abs(boss.GetPosition().x - player.GetRailBasePosition().x) > 0.001f) { return false; }
                 EntryPhase expectedPhase = EntryPhase::JumOut;
                 if (elapsedSeconds >= FearWormEntryState::kEntryShadowDurationSeconds
                     + FearWormEntryState::kEntryFlightDurationSeconds) {
@@ -133,7 +136,7 @@ inline bool RunFearWormEntryTests()
             boss.UpdateState();
             if (boss.GetBossState() != FearWormEnemy::BossState::Battle
                 || boss.entryState_.currentPhase_ != nullptr || !boss.HasBreachedSurface()) { return false; }
-            if (boss.battleState_.orbitAngle_ != 2.35f
+            if (boss.battleState_.orbitAngle_ != kCenteredOrbitAngle
                 || boss.battleState_.currentAction_ != &boss.battleState_.orbitShotState_
                 || Vector3LengthSquared(boss.GetPosition() - targetPosition) > 0.000001f) { return false; }
 
@@ -144,7 +147,7 @@ inline bool RunFearWormEntryTests()
             boss.entryState_.elapsedSeconds_ = entryDurationSeconds + 1.0f;
             boss.UpdateState();
             if (boss.GetBossState() != FearWormEnemy::BossState::Battle
-                || !boss.HasBreachedSurface() || boss.battleState_.orbitAngle_ != 2.35f) { return false; }
+                || !boss.HasBreachedSurface() || boss.battleState_.orbitAngle_ != kCenteredOrbitAngle) { return false; }
 
             // 登場の中断で内部ステートを終了し、水位設定を保ったまま配置し直す。
             boss.ChangeState(FearWormEnemy::BossState::Entry);

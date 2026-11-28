@@ -53,14 +53,15 @@ function Write-RingMesh([string]$name, [bool]$isGear, [bool]$isShield = $false) 
     $back = 0.28
     if (-not $isGear) {
         $steps = 4
-        $start = [Math]::PI / 2.0 - 6.0 * [Math]::PI / 180.0
-        $sweep = 12.0 * [Math]::PI / 180.0
-        $inner = 4.14
-        $outer = 4.52
+        $sweep = 14.9 * [Math]::PI / 180.0
+        $inner = 4.04
+        $outer = 4.56
         if ($isShield) {
+            $sweep = 9.0 * [Math]::PI / 180.0
             $inner = 4.66
             $outer = 5.06
         }
+        $start = [Math]::PI / 2.0 - $sweep / 2.0
         $front = -0.32
         $back = -0.19
     }

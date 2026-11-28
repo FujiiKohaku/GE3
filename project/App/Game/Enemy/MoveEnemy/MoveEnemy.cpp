@@ -1,5 +1,6 @@
 // 移動パターンに沿って位置を変えながら、プレイヤーに向けて射撃する敵を扱う。
 #include "MoveEnemy.h"
+#include "App/Game/Enemy/EnemyShootingRange.h"
 #include "App/Game/Common/GameTiming.h"
 
 #include "App/Game/Enemy/Bullet/Types/NormalEnemyBullet.h"
@@ -83,22 +84,13 @@ void MoveEnemy::Attack()
     Vector3 playerPosition = player_->GetTranslate();
     Vector3 toEnemy = transform_.translate - playerPosition;
 
-    Vector3 playerVelocity = player_->GetAutomaticWorldVelocity();
-    Vector3 forward = { 0.0f, 0.0f, 1.0f };
-    float speedLength = Vector3Length(playerVelocity);
-    if (speedLength > 0.001f) {
-        forward = Normalize(playerVelocity);
-    }
-
-    float dot = toEnemy.x * forward.x + toEnemy.y * forward.y + toEnemy.z * forward.z;
-
-    if (dot <= 0.0f) {
+    if (!IsEnemyAhead(toEnemy, player_->GetFlightForward())) {
         return;
     }
 
     float distance = Vector3Length(toEnemy);
 
-    if (distance <= 120.0f) {
+    if (distance <= kEnemyShootingRange) {
         const int32_t shotCount = GameTiming::AdvanceInterval(fireElapsedSeconds_,
             kFireIntervalSeconds, TimeManager::GetInstance()->GetDeltaTime(), 3);
         for (int32_t shotIndex = 0; shotIndex < shotCount; shotIndex++) {

@@ -21,6 +21,26 @@ float4 main(ShieldVertexOutput input, bool isFrontFace : SV_IsFrontFace) : SV_Ta
 {
     const float kHexGridScale = 6.5f;
     const float3 localDirection = normalize(input.localPosition);
+    const float breakCode = gMaterial.uvTransform[0].w;
+    if (breakCode < 0.0f)
+    {
+        // 球面にヒビを一瞬表示する。飛散する破片は別のメッシュで描く。
+        const float progress = saturate(-breakCode - 1.0f);
+        const float2 sphereUV = float2(atan2(localDirection.z, localDirection.x) / 6.2831853f + 0.5f,
+            asin(clamp(localDirection.y, -1.0f, 1.0f)) / 3.1415927f + 0.5f);
+        const float2 grid = sphereUV * float2(16.0f, 8.0f);
+        const float2 tile = floor(grid);
+        float2 cell = frac(grid);
+        cell.x = lerp(cell.x, 1.0f - cell.x, fmod(tile.x + tile.y, 2.0f));
+        const float triangleSide = step(1.0f, cell.x + cell.y);
+        cell = lerp(cell, 1.0f - cell, triangleSide);
+        const float crackDistance = min(min(cell.x, cell.y), (1.0f - cell.x - cell.y) * 0.7071f);
+        const float crack = (1.0f - smoothstep(0.012f, 0.039f, crackDistance)) *
+            (1.0f - smoothstep(0.0f, 1.0f, progress));
+        const float opacity = crack * (isFrontFace ? 1.0f : 0.45f);
+        clip(opacity - 0.001f);
+        return float4(2.0f, 2.8f, 3.4f, opacity);
+    }
 
     float impactLight = 0.0f;
     float centerLight = 0.0f;
