@@ -111,6 +111,8 @@ constexpr Vector4 kTrainingArchitectureColor = { 0.008f, 0.022f, 0.050f, 1.0f };
 constexpr Vector4 kTrainingEdgesColor = { 0.10f, 1.2f, 1.6f, 1.0f };
 constexpr Vector4 kTrainingRingsColor = { 0.12f, 1.6f, 2.0f, 1.0f };
 constexpr Vector4 kTrainingLaunchGateColor = { 0.04f, 0.12f, 0.18f, 1.0f };
+constexpr Vector4 kTutorialTargetGlowColor = { 5.0f, 1.3f, 0.12f, 1.0f };
+constexpr float kTutorialTargetRadius = 2.5f;
 constexpr float kMoveZOffset = 85.0f;
 constexpr float kTutorialTargetSlotCenterFraction = 0.5f;
 constexpr float kTutorialTargetSpacing = 10.0f;
@@ -340,6 +342,13 @@ public:
         : player_(player), defeated_(std::move(defeated)), slot_(slot), count_(count), moving_(moving) {}
     void Initialize(Model* model) override {
         BaseEnemy::Initialize(model);
+        transform_.scale = { kTutorialTargetRadius, kTutorialTargetRadius, kTutorialTargetRadius };
+        object_->SetEnableLighting(false);
+        object_->SetEnableEnvironmentMap(false);
+        object_->SetCastShadow(false);
+        object_->SetReceiveShadow(false);
+        object_->SetRaytracingEnabled(false);
+        object_->SetColor(kTutorialTargetGlowColor);
         InitializeHealth(1.0f);
         Move();
         BaseEnemy::Update();
@@ -1738,7 +1747,7 @@ void GamePlayScene::Update()
             for (int slot = 0; slot < targetCount; ++slot) {
                 auto target = std::make_unique<TutorialTarget>(player_.get(), tutorialDefeatedTargets_,
                     slot, targetCount, tutorialController_.HasMovingTargets());
-                target->Initialize(enemyModel_);
+                target->Initialize(enemyBulletModel_);
                 enemies_.push_back(std::move(target));
             }
         }
@@ -2654,11 +2663,6 @@ void GamePlayScene::Draw3D()
         for (std::unique_ptr<Object3d>& fish : oceanFish_) fish->Draw();
     }
     for (std::unique_ptr<Object3d>& bird : oceanBirds_) bird->Draw();
-    if (waterPillarRenderer_) {
-        waterPillarRenderer_->PreDraw();
-        for (std::unique_ptr<WaterPillarHazard>& pillar : waterPillars_) pillar->DrawPillar();
-        Object3dManager::GetInstance()->PreDraw();
-    }
     for (std::unique_ptr<BaseEnemy>& enemy : enemies_) {
         enemy->Draw();
     }
@@ -2666,6 +2670,15 @@ void GamePlayScene::Draw3D()
 
     if (GetActiveBoss() != nullptr) {
         GetActiveBoss()->Draw();
+    }
+
+    // 不透明物の深度がそろってから水柱を合成する。
+    if (waterPillarRenderer_) {
+        waterPillarRenderer_->PreDraw();
+        for (const auto& pillar : waterPillars_) {
+            pillar->DrawPillar();
+        }
+        Object3dManager::GetInstance()->PreDraw();
     }
 #if defined(_DEBUG) || defined(ENABLE_DEVELOPMENT_TOOLS)
     if (DebugRenderer::GetInstance()->IsVisible()) {
